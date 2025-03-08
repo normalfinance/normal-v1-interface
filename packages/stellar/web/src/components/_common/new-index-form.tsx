@@ -120,6 +120,27 @@ export function NewIndexForm({ currentUser }: Props) {
           <Field.Text name="zipCode" label="Zip/code" />
           <Field.Text name="company" label="Company" />
           <Field.Text name="role" label="Role" />
+          <Box sx={{ mb: 5 }}>
+            <Field.UploadAvatar
+              name="avatarUrl"
+              maxSize={3145728}
+              helperText={
+                <Typography
+                  variant="caption"
+                  sx={{
+                    mt: 3,
+                    mx: 'auto',
+                    display: 'block',
+                    textAlign: 'center',
+                    color: 'text.disabled',
+                  }}
+                >
+                  Allowed *.jpeg, *.jpg, *.png, *.gif
+                  <br /> max size of {fData(3145728)}
+                </Typography>
+              }
+            />
+          </Box>
         </Box>
 
         <Stack sx={{ mt: 3, alignItems: 'flex-end' }}>
