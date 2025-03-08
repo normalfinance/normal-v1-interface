@@ -1,19 +1,10 @@
 export type IIndexItem = {
-  id: string;
   indexName: string;
   indexSymbol: string;
   indexDescription: string;
+  weightingMethod: 'Constant' | 'Custom' | 'Market Cap';
+  initialPrice: number;
+  initialDeposit: number;
   isPublic: boolean;
-  city: string;
-  role: string;
-  email: string;
-  state: string;
-  status: string;
-  address: string;
-  country: string;
-  zipCode: string;
-  company: string;
-  avatarUrl: string;
-  phoneNumber: string;
-  isVerified: boolean;
+  avatarUrl: File | null;
 };
