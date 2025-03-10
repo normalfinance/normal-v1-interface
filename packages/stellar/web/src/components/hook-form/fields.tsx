@@ -12,6 +12,7 @@ import { RHFSwitch, RHFMultiSwitch } from './rhf-switch';
 import { RHFSelect, RHFMultiSelect } from './rhf-select';
 import { RHFCheckbox, RHFMultiCheckbox } from './rhf-checkbox';
 import { RHFDatePicker, RHFMobileDateTimePicker } from './rhf-date-picker';
+import { RHFUploadAvatar } from './rhf-upload';
 
 // ----------------------------------------------------------------------
 
@@ -30,6 +31,7 @@ export const Field = {
   NumberInput: RHFNumberInput,
   MultiSelect: RHFMultiSelect,
   MultiSwitch: RHFMultiSwitch,
+  UploadAvatar: RHFUploadAvatar,
   Autocomplete: RHFAutocomplete,
   MultiCheckbox: RHFMultiCheckbox,
   CountrySelect: RHFCountrySelect,
