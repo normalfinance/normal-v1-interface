@@ -2,14 +2,11 @@
 
 import Grid2 from '@mui/material/Grid2';
 import { DashboardContent } from '@/layouts/dashboard';
-import { Stack, Typography, useTheme } from '@mui/material';
+import { Stack, Typography } from '@mui/material';
 import { NewIndexForm } from '@/components/_common/new-index-form';
-import IndexCoinList from '@/components/_common/index-coin-list';
 import { IndexCoin } from '@/types/indexes';
 
 export default function CreateAnIndexView() {
-  const theme = useTheme();
-
   // Example data for available coins
   const availableCoins: IndexCoin[] = [
     {

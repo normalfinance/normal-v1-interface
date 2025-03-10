@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Box from '@mui/material/Box';
-import { CONFIG } from 'src/global-config';
 import { IndexCoinStorageOverview } from './index-coin-storage-overview';
 import { IndexCoin } from '@/types/indexes';
 

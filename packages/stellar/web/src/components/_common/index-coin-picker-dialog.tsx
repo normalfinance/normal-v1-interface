@@ -5,9 +5,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  List,
-  ListItemButton,
-  ListItemText,
   Box,
   Typography,
   Button,
@@ -17,7 +14,7 @@ import {
 } from '@mui/material';
 import { IndexCoin } from '@/types/indexes';
 import { Iconify } from '../iconify';
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import { fCurrencyTwoDecimals, fShortenNumber } from '@/utils/format-number';
 
 type Props = {
