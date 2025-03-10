@@ -1,66 +1,84 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
   Typography,
+  Box,
+  IconButton,
+  Stack,
+  Button,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { useFormContext } from 'react-hook-form';
-import { IndexCoin } from '@/types/indexes';
-import { NewIndexSchemaType } from './new-index-form'; // your main form type
+import { NewIndexSchemaType } from './new-index-form';
+import { Iconify } from '../iconify';
+import { fCurrencyTwoDecimals, fRawPercent } from '@/utils/format-number';
+import { useTheme } from '@mui/material/styles';
+import { NativeToken } from '@/types/native-token';
 
 type NewIndexSubmissionDialogProps = {
   open: boolean;
   onClose: () => void;
   onSubmit: () => Promise<void>;
+  tokenSymbol: NativeToken;
 };
 
 export default function NewIndexSubmissionDialog({
   open,
   onClose,
   onSubmit,
+  tokenSymbol,
 }: NewIndexSubmissionDialogProps) {
-  const { formState, watch } = useFormContext<NewIndexSchemaType>();
-  const { isSubmitting, errors } = formState;
+  const { watch, formState } = useFormContext<NewIndexSchemaType>();
+  const { isSubmitting } = formState;
 
-  // 1) Watch the weighting method
-  const weightingMethod = watch('weightingMethod');
-  // 2) Watch the coin list
-  const coinList = watch('indexCoinList') || [];
-  // 3) Compute sum of all indexPercentages if Custom
-  const totalPercentage = coinList.reduce((acc, c) => acc + (c.indexPercentage ?? 0), 0);
+  const coinList = watch('indexCoinList');
+  const allFields = watch();
 
-  // We'll track our local error if the custom weighting sum != 100
-  const [customError, setCustomError] = useState('');
+  const theme = useTheme();
 
-  // Submit handler for the button
-  const handleSubmitClick = async () => {
-    // If weightingMethod is Custom, ensure sum = 100
-    if (weightingMethod === 'Custom') {
-      const sum = Math.round(totalPercentage);
-      if (sum !== 100) {
-        setCustomError(
-          `Custom weighting must total 100%. Currently: ${totalPercentage.toFixed(2)}%`
-        );
-        return;
-      }
-    }
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
 
-    // Clear old error if it exists
-    setCustomError('');
+  // 3) On each render, detect if `avatarUrl` is a File or string
+  useEffect(() => {
+    const avatarValue = allFields.avatarUrl;
 
-    // If any form errors exist in react-hook-form, don't proceed
-    // (Though normally you'd rely on onSubmit failing for an invalid form)
-    if (Object.keys(errors).length > 0) {
-      // You can gather them or just show a generic message
+    if (!avatarValue) {
+      // No file or string
+      setAvatarPreview('');
       return;
     }
 
+    // If it's a string, maybe user has an existing hosted avatar URL
+    if (typeof avatarValue === 'string') {
+      setAvatarPreview(avatarValue);
+      return;
+    }
+
+    // If it's a File, create an object URL to preview
+    if (avatarValue instanceof File) {
+      const objectUrl = URL.createObjectURL(avatarValue);
+      setAvatarPreview(objectUrl);
+
+      // Clean up the object URL when component unmounts or changes
+      return () => {
+        URL.revokeObjectURL(objectUrl);
+      };
+    }
+
+    // If it’s something else, fallback
+    setAvatarPreview('');
+  }, [allFields.avatarUrl]);
+
+  // Submit handler for the button
+  const handleSubmitClick = async () => {
     // If all good, call the parent's onSubmit
     try {
       await onSubmit();
@@ -72,30 +90,380 @@ export default function NewIndexSubmissionDialog({
   };
 
   // Build error messages if fields are invalid
-  const hasError = Object.keys(errors).length > 0 || customError;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Confirm Submission</DialogTitle>
-      <DialogContent dividers>
-        <Typography variant="body2" paragraph>
-          Please verify your inputs. Make sure all required fields are complete.
-        </Typography>
-
-        {/* If any required fields are missing or Custom sum is not 100 */}
-        {hasError && (
-          <Typography variant="body2" color="error">
-            {customError
-              ? customError
-              : 'Please fill in all required fields or correct form errors.'}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      slotProps={{
+        paper: {
+          sx: {
+            gap: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            width: '100%',
+            maxWidth: '400px',
+            maxHeight: '600px',
+          },
+        },
+      }}
+    >
+      <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" component="div" color="text.primary">
+            Confirm Submission
           </Typography>
-        )}
+          <IconButton onClick={onClose}>
+            <Iconify icon="mingcute:close-line" width={24} />
+          </IconButton>
+        </Box>
+      </DialogTitle>
+      <DialogContent dividers sx={{ width: '100%' }}>
+        <Typography variant="body2">{allFields.indexName}</Typography>
+
+        <Stack
+          spacing={3}
+          sx={{
+            px: 0,
+            py: 2,
+            zIndex: 1,
+            position: 'relative',
+            bgcolor: 'background.paper',
+            width: '100%',
+          }}
+        >
+          {coinList.map((coin) => (
+            <Box
+              key={coin.id}
+              sx={{
+                gap: 2,
+                display: 'flex',
+                alignItems: 'center',
+                typography: 'subtitle2',
+                width: '100%',
+              }}
+            >
+              <Box sx={{ width: 36, height: 36 }} component="img" src={coin.url} alt={coin.name} />
+
+              <Stack flex="1 1 auto" textAlign={'left'}>
+                <div>{coin.name}</div>
+                <Box component="span" sx={{ typography: 'caption', color: 'text.disabled' }}>
+                  {coin.shortName}
+                </Box>
+              </Stack>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                <Stack flex="1 1 auto" textAlign="right">
+                  <div>{fRawPercent(coin.indexPercentage)}</div>
+                  <Box component="span" sx={{ typography: 'caption', color: 'text.disabled' }}>
+                    {fCurrencyTwoDecimals(coin.price)}
+                  </Box>
+                </Stack>
+              </Box>
+            </Box>
+          ))}
+        </Stack>
+
+        <Accordion
+          defaultExpanded
+          disableGutters
+          sx={{
+            mt: 0,
+            backgroundColor: 'transparent !important',
+            boxShadow: 'none !important',
+            width: '100%',
+            padding: '0px !important',
+            '::before': {
+              display: 'none',
+            },
+          }}
+        >
+          <AccordionSummary
+            aria-controls="panel3-content"
+            id="panel3-header"
+            sx={{
+              padding: '0 !important',
+              minHeight: 0,
+              '&.Mui-expanded': {
+                minHeight: 0,
+              },
+              '& .MuiAccordionSummary-content': {
+                margin: 0,
+                padding: 0,
+              },
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              <Box
+                sx={{
+                  flex: 1,
+                  height: '1px',
+                  bgcolor: theme.palette.text.disabled,
+                }}
+              />
+              <Box sx={{ display: 'flex', alignItems: 'center', mx: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 500,
+                    color: theme.palette.text.secondary,
+                    fontSize: '12px',
+                  }}
+                >
+                  Show less
+                </Typography>
+                <Iconify
+                  icon="carbon:chevron-sort"
+                  width={14}
+                  sx={{ color: theme.palette.text.secondary, ml: 0.5 }}
+                />
+              </Box>
+              <Box
+                sx={{
+                  flex: 1,
+                  height: '1px',
+                  bgcolor: theme.palette.text.disabled,
+                }}
+              />
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 0, px: 0, pt: 2 }}>
+            <Box
+              sx={{
+                mt: 0,
+                px: 0,
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 1,
+              }}
+            >
+              <Box
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1,
+                  px: 0,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.secondary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      Index Name
+                    </Typography>
+                  </Box>
+
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 500,
+                      color: theme.palette.text.primary,
+                      fontSize: '12px',
+                    }}
+                  >
+                    {allFields.indexName}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.secondary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      Index Symbol
+                    </Typography>
+                  </Box>
+
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 500,
+                      color: theme.palette.text.primary,
+                      fontSize: '12px',
+                    }}
+                  >
+                    {allFields.indexSymbol}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.secondary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      Weighting Method
+                    </Typography>
+                  </Box>
+
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 500,
+                      color: theme.palette.text.primary,
+                      fontSize: '12px',
+                    }}
+                  >
+                    {allFields.weightingMethod}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.secondary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      Initial Price
+                    </Typography>
+                  </Box>
+
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 500,
+                      color: theme.palette.text.primary,
+                      fontSize: '12px',
+                    }}
+                  >
+                    {fCurrencyTwoDecimals(allFields.initialPrice)}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.secondary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      Initial Deposit
+                    </Typography>
+                  </Box>
+
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 500,
+                      color: theme.palette.text.primary,
+                      fontSize: '12px',
+                    }}
+                  >
+                    {allFields.initialDeposit} {tokenSymbol}
+                  </Typography>
+                </Box>
+
+                {!!avatarPreview && (
+                  <Box sx={{ my: 2, textAlign: 'center' }}>
+                    <Box
+                      sx={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }}
+                      component="img"
+                      src={avatarPreview}
+                      alt="Avatar Preview"
+                    />
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          </AccordionDetails>
+        </Accordion>
       </DialogContent>
-      <DialogActions>
-        <Button variant="outlined" onClick={onClose} disabled={isSubmitting}>
-          Cancel
-        </Button>
+      <DialogActions sx={{ width: '100%' }}>
         <LoadingButton
+          fullWidth
           loading={isSubmitting}
           variant="soft"
           color="success"

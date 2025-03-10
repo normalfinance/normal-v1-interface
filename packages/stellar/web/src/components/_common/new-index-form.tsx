@@ -28,6 +28,7 @@ import IndexCoinList from './index-coin-list';
 import IndexCoinPickerDialog from './index-coin-picker-dialog';
 import { Snackbar, Alert } from '@mui/material';
 import CustomCoinPercentageDialog from './custom-coin-percentage-dialog';
+import NewIndexSubmissionDialog from './new-index-submission-dialog';
 
 // Define a Zod schema for an individual coin (if not defined elsewhere)
 const IndexCoinSchema = z.object({
@@ -106,6 +107,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
     handleSubmit,
     control,
     setValue,
+    trigger,
     watch,
     formState: { isSubmitting },
   } = methods;
@@ -341,6 +343,42 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
   };
 
   // ------------------ SUBMIT FORM ------------------ //
+  const [openSubmissionDialog, setOpenSubmissionDialog] = useState(false);
+  const [validationError, setValidationError] = useState('');
+
+  const handleOpenDialog = async () => {
+    // Re-validate the entire form
+    const formValid = await trigger(); // returns boolean
+    if (!formValid) {
+      // If form has field errors, display a generic error or handle them individually
+      setValidationError('Please complete all required fields.');
+      return;
+    }
+
+    // If weightingMethod = Custom, check sum = 100
+    if (weightingMethod === 'Custom') {
+      const totalPct = coinList.reduce((acc, c) => acc + (c.indexPercentage ?? 0), 0);
+      // rounding check if you want to account for decimals
+      if (Math.round(totalPct) !== 100) {
+        setValidationError(
+          `For Custom weighting, total must be 100%. Currently it's ${totalPct.toFixed(2)}%.`
+        );
+        return;
+      }
+    } else {
+      // 3) If NOT Custom, ensure at least one coin was selected
+      if (coinList.length === 0) {
+        setValidationError('Please select at least one coin.');
+        return;
+      }
+    }
+
+    // Everything is good => clear error, open the dialog
+    setValidationError('');
+    setOpenSubmissionDialog(true);
+  };
+
+  // The actual function we call to finalize submission:
   const onSubmit = handleSubmit(async (data) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 500)); // mock API
@@ -608,18 +646,31 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
         />
 
         <Stack sx={{ mt: 3, alignItems: 'flex-end' }}>
-          <LoadingButton
-            fullWidth
-            type="submit"
-            variant="soft"
-            color="success"
-            size="large"
-            loading={isSubmitting}
-          >
-            {currentIndex ? 'Save changes' : 'Create index'}
-          </LoadingButton>
+          <Box sx={{ width: '100%' }}>
+            {validationError && (
+              <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+                {validationError}
+              </Typography>
+            )}
+            <Button
+              fullWidth
+              variant="soft"
+              color="success"
+              size="large"
+              onClick={handleOpenDialog}
+            >
+              {currentIndex ? 'Save changes' : 'Create index'}
+            </Button>
+          </Box>
         </Stack>
       </Card>
+
+      <NewIndexSubmissionDialog
+        open={openSubmissionDialog}
+        onClose={() => setOpenSubmissionDialog(false)}
+        onSubmit={onSubmit} // calls the handleSubmit flow
+        tokenSymbol={tokenSymbol}
+      />
 
       <Snackbar
         open={Boolean(duplicateMessage)}

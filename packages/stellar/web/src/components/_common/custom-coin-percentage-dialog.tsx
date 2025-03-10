@@ -46,11 +46,27 @@ export default function CustomCoinPercentageDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      slotProps={{
+        paper: {
+          sx: {
+            gap: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            width: '100%',
+            maxWidth: '400px',
+            maxHeight: 'auto',
+          },
+        },
+      }}
+    >
       <DialogTitle>Enter Custom Percentages</DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ width: '100%' }}>
         {localCoins.map((coin) => (
-          <Box key={coin.id} sx={{ mt: 2 }}>
+          <Box key={coin.id} sx={{ mt: 2, width: '100%' }}>
             <Typography variant="subtitle2">
               {coin.name} ({coin.shortName})
             </Typography>
