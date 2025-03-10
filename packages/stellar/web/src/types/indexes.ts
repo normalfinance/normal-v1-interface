@@ -1,3 +1,13 @@
+export type IndexCoin = {
+  id: number;
+  url: string;
+  name: string;
+  shortName: string;
+  price: number;
+  marketCap: number;
+  indexPercentage?: number;
+};
+
 export type IIndexItem = {
   indexName: string;
   indexSymbol: string;
@@ -7,4 +17,5 @@ export type IIndexItem = {
   initialDeposit: number;
   isPublic: boolean;
   avatarUrl: File | null;
+  indexCoinList: IndexCoin[];
 };

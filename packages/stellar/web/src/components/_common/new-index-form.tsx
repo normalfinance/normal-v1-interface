@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -14,18 +15,32 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Tooltip from '@mui/material/Tooltip';
+import Button from '@mui/material/Button';
 import { Icon } from '@iconify/react';
 
 import { useRouter } from 'src/routes/hooks';
 import { fData } from 'src/utils/format-number';
 import { toast } from 'src/components/snackbar';
 import { Form, Field, schemaHelper } from 'src/components/hook-form';
-import { IIndexItem } from '@/types/indexes';
+import { IIndexItem, IndexCoin } from '@/types/indexes';
 import { NativeToken } from '@/types/native-token';
+import IndexCoinList from './index-coin-list';
+import IndexCoinPickerDialog from './index-coin-picker-dialog';
+import { Snackbar, Alert } from '@mui/material';
+import CustomCoinPercentageDialog from './custom-coin-percentage-dialog';
 
-// ----------------------------------------------------------------------
-// New schema for the form with character limits, description, weighting method,
-// initial price slider/input, initial deposit input, and public/private switch.
+// Define a Zod schema for an individual coin (if not defined elsewhere)
+const IndexCoinSchema = z.object({
+  id: z.number(),
+  url: z.string(),
+  name: z.string(),
+  shortName: z.string(),
+  price: z.number(),
+  marketCap: z.number(),
+  indexPercentage: z.number().optional(),
+});
+
+// NewIndexSchema now includes the coin list
 export const NewIndexSchema = z.object({
   avatarUrl: schemaHelper.file({ message: 'Avatar is required!' }),
   indexName: z
@@ -51,20 +66,19 @@ export const NewIndexSchema = z.object({
     .number({ invalid_type_error: 'Initial deposit must be a number' })
     .min(0, { message: 'Deposit must be 0 or more' }),
   isPublic: z.boolean(),
+  indexCoinList: z.array(IndexCoinSchema),
 });
 
 export type NewIndexSchemaType = z.infer<typeof NewIndexSchema>;
 
-// ----------------------------------------------------------------------
 // Component Props
 type Props = {
   currentIndex?: IIndexItem;
   tokenSymbol: NativeToken;
+  availableCoins: IndexCoin[];
 };
 
-// ----------------------------------------------------------------------
-// NewIndexForm Component
-export function NewIndexForm({ currentIndex, tokenSymbol }: Props) {
+export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Props) {
   const router = useRouter();
   const MAX_AVATAR_SIZE = 3145728;
 
@@ -77,6 +91,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol }: Props) {
     initialPrice: 1,
     initialDeposit: 0,
     isPublic: true,
+    indexCoinList: [], // default empty list of coins
   };
 
   const methods = useForm<NewIndexSchemaType>({
@@ -90,18 +105,248 @@ export function NewIndexForm({ currentIndex, tokenSymbol }: Props) {
     reset,
     handleSubmit,
     control,
+    setValue,
+    watch,
     formState: { isSubmitting },
   } = methods;
+  const coinList = useWatch({ control, name: 'indexCoinList' });
+  const weightingMethod = watch('weightingMethod');
 
+  const [openCoinPicker, setOpenCoinPicker] = useState(false);
+
+  const handleOpenCoinPicker = () => {
+    setOpenCoinPicker(true);
+  };
+
+  const handleCloseCoinPicker = () => {
+    setOpenCoinPicker(false);
+  };
+
+  // Dialog state for custom percentages
+  const [openCustomPercentageDialog, setOpenCustomPercentageDialog] = useState(false);
+
+  // Temporarily store newly added coins, so we can assign custom percentages
+  const [tempCoins, setTempCoins] = useState<IndexCoin[]>([]);
+
+  const [duplicateMessage, setDuplicateMessage] = useState('');
+
+  const handleCloseSnackbar = () => {
+    setDuplicateMessage('');
+  };
+
+  //Whenever weightingMethod changes, clear the coin list
+  useEffect(() => {
+    // Clear the coin list every time weightingMethod changes
+    setValue('indexCoinList', []);
+  }, [weightingMethod, setValue]);
+
+  // ------------------ MAIN: handleSelectCoins ------------------ //
+  const handleSelectCoins = (selectedCoins: IndexCoin[]) => {
+    // If we are in "replace" mode (coinIdToReplace is not null):
+    if (coinIdToReplace !== null && selectedCoins.length > 0) {
+      const [newCoin] = selectedCoins; // we only pick one coin at a time
+
+      // Replace the coin in coinList with newCoin
+      const replacedList = replaceCoinInList(coinList, coinIdToReplace, newCoin);
+      setValue('indexCoinList', replacedList);
+
+      // Reset
+      setCoinIdToReplace(null);
+      setOpenCoinPicker(false);
+
+      // Reapply weighting logic
+      if (weightingMethod === 'Constant') {
+        const each = replacedList.length > 0 ? 100 / replacedList.length : 0;
+        const updated = replacedList.map((c) => ({ ...c, indexPercentage: each }));
+        setValue('indexCoinList', updated);
+      } else if (weightingMethod === 'Market Cap') {
+        const totalCap = replacedList.reduce((acc, c) => acc + c.marketCap, 0);
+        const updated = replacedList.map((c) => {
+          if (totalCap === 0) return { ...c, indexPercentage: 0 };
+          return { ...c, indexPercentage: (c.marketCap / totalCap) * 100 };
+        });
+        setValue('indexCoinList', updated);
+      } else if (weightingMethod === 'Custom') {
+        // 1) Optionally zero out the replaced coin or keep old value
+        // 2) Re-open the custom percentage dialog for the replaced coin
+        //    so the user can set it again
+        const replacedCoin = replacedList.find((c) => c.id === newCoin.id);
+        if (replacedCoin) {
+          // If you want to zero out first, do it:
+          replacedCoin.indexPercentage = 0;
+          setValue('indexCoinList', replacedList);
+        }
+
+        // Now open your CustomCoinPercentageDialog with just this new coin
+        setTempCoins([replacedCoin!]);
+        setOpenCustomPercentageDialog(true);
+      }
+
+      return; // Done handling "replace" mode
+    }
+
+    // ----------------------
+    // Else: "Add" mode (original code)
+    // ----------------------
+    const currentList = coinList || [];
+    const newList = [...currentList];
+
+    const duplicates: string[] = [];
+    selectedCoins.forEach((coin) => {
+      const alreadyInList = newList.some((existing) => existing.id === coin.id);
+      if (alreadyInList) {
+        duplicates.push(coin.name);
+      } else {
+        // Add coin with no pre-defined indexPercentage yet
+        newList.push({ ...coin, indexPercentage: 0 });
+      }
+    });
+
+    if (duplicates.length > 0) {
+      setDuplicateMessage(`Coin(s) already in the list: ${duplicates.join(', ')}`);
+    }
+
+    // Update the form with all selected coins (minus duplicates)
+    setValue('indexCoinList', newList);
+    setOpenCoinPicker(false);
+
+    // Next, handle weighting logic
+    if (weightingMethod === 'Custom') {
+      // Open a second dialog so the user can input percentages
+      // We only care about the newly added coins => ones that were not duplicates
+      const newlyAddedCoins = selectedCoins.filter((coin) => !duplicates.includes(coin.name));
+      if (newlyAddedCoins.length > 0) {
+        setTempCoins(newlyAddedCoins);
+        setOpenCustomPercentageDialog(true);
+      }
+    } else if (weightingMethod === 'Constant') {
+      // auto-calc each coin's percentage as 1 / totalCoins * 100
+      const each = 100 / newList.length;
+      const updated = newList.map((c) => ({ ...c, indexPercentage: each }));
+      setValue('indexCoinList', updated);
+    } else if (weightingMethod === 'Market Cap') {
+      // auto-calc each coin's percentage by market cap fraction
+      const totalCap = newList.reduce((acc, c) => acc + c.marketCap, 0);
+      const updated = newList.map((c) => {
+        if (totalCap === 0) return { ...c, indexPercentage: 0 };
+        return { ...c, indexPercentage: (c.marketCap / totalCap) * 100 };
+      });
+      setValue('indexCoinList', updated);
+    }
+  };
+
+  function replaceCoinInList(list: IndexCoin[], idToReplace: number, newCoin: IndexCoin) {
+    // 1) If the new coin is already in the list (other than the replaced coin), skip
+    const coinAlreadyInList = list.some((c) => c.id === newCoin.id && c.id !== idToReplace);
+    if (coinAlreadyInList) {
+      setDuplicateMessage(`Coin ${newCoin.name} is already in the list!`);
+      return list; // No changes
+    }
+
+    // 2) Replace the coin
+    return list.map((c) => {
+      if (c.id === idToReplace) {
+        // keep old coin’s indexPercentage or reset to 0
+        return {
+          ...newCoin,
+          indexPercentage: c.indexPercentage,
+        };
+      }
+      return c;
+    });
+  }
+
+  // ------------------ AFTER user sets custom percentages ------------------ //
+  const handleSaveCustomPercentages = (coinsWithPercentages: IndexCoin[]) => {
+    // 1) Merge the newly updated coins into the entire list
+    const finalList = (coinList || []).map((c) => {
+      const updatedCoin = coinsWithPercentages.find((nc) => nc.id === c.id);
+      return updatedCoin ? { ...updatedCoin } : c;
+    });
+
+    // 2) Calculate the sum of all percentages
+    let totalPercentage = finalList.reduce((acc, coin) => acc + (coin.indexPercentage ?? 0), 0);
+
+    // If it exceeds 100%, adjust the *last updated coin* so total = 100%
+    if (totalPercentage > 100) {
+      // 3) Figure out the difference we need to remove
+      const difference = totalPercentage - 100;
+
+      // For demonstration, let's adjust only the LAST coin in `coinsWithPercentages`
+      const lastUpdatedCoin = coinsWithPercentages[coinsWithPercentages.length - 1];
+      if (lastUpdatedCoin) {
+        // Find it in finalList
+        const indexOfLastUpdated = finalList.findIndex((c) => c.id === lastUpdatedCoin.id);
+        if (indexOfLastUpdated !== -1) {
+          const oldValue = finalList[indexOfLastUpdated].indexPercentage ?? 0;
+          const newValue = Math.max(0, oldValue - difference);
+
+          finalList[indexOfLastUpdated] = {
+            ...finalList[indexOfLastUpdated],
+            indexPercentage: newValue,
+          };
+
+          // Recompute total
+          totalPercentage = finalList.reduce((acc, coin) => acc + (coin.indexPercentage ?? 0), 0);
+
+          // 4) Show a warning snackbar
+          setDuplicateMessage(
+            `Total exceeded 100%. ${lastUpdatedCoin.name}'s percentage was adjusted to ${newValue.toFixed(
+              2
+            )}%`
+          );
+        }
+      }
+    }
+
+    setValue('indexCoinList', finalList);
+    setOpenCustomPercentageDialog(false);
+  };
+
+  // ------------------ REMOVE COIN ------------------ //
+
+  const handleRemoveCoin = (id: number) => {
+    // 1) Remove the coin
+    const updatedList = coinList.filter((c) => c.id !== id);
+
+    // 2) Recalculate if needed
+    if (weightingMethod === 'Constant') {
+      const each = updatedList.length > 0 ? 100 / updatedList.length : 0;
+      const recalculated = updatedList.map((c) => ({
+        ...c,
+        indexPercentage: each,
+      }));
+      setValue('indexCoinList', recalculated);
+    } else if (weightingMethod === 'Market Cap') {
+      const totalCap = updatedList.reduce((acc, c) => acc + c.marketCap, 0);
+      const recalculated = updatedList.map((c) => {
+        if (totalCap === 0) return { ...c, indexPercentage: 0 };
+        return { ...c, indexPercentage: (c.marketCap / totalCap) * 100 };
+      });
+      setValue('indexCoinList', recalculated);
+    } else {
+      // If Custom or anything else, just use the updated list
+      setValue('indexCoinList', updatedList);
+    }
+  };
+
+  // ------------------ REPLACE COIN ------------------ //
+
+  const [coinIdToReplace, setCoinIdToReplace] = useState<number | null>(null);
+
+  // Called when user clicks an existing coin in the list
+  const handleReplaceCoin = (id: number) => {
+    setCoinIdToReplace(id);
+    setOpenCoinPicker(true);
+  };
+
+  // ------------------ SUBMIT FORM ------------------ //
   const onSubmit = handleSubmit(async (data) => {
     try {
-      // Simulate an API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500)); // mock API
       reset();
       toast.success(currentIndex ? 'Update success!' : 'Create success!');
       console.info('Submitted data', data);
-      // Optionally redirect after submission
-      // router.push('/your-target-route');
     } catch (error) {
       console.error(error);
     }
@@ -110,12 +355,82 @@ export function NewIndexForm({ currentIndex, tokenSymbol }: Props) {
   return (
     <Form methods={methods} onSubmit={onSubmit}>
       <Card sx={{ p: 3 }}>
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-          }}
-        >
+        <Box sx={{ mt: 3, mb: 5 }}>
+          <Field.UploadAvatar
+            name="avatarUrl"
+            maxSize={MAX_AVATAR_SIZE}
+            helperText={
+              <Typography
+                variant="caption"
+                sx={{
+                  mt: 3,
+                  mx: 'auto',
+                  display: 'block',
+                  textAlign: 'center',
+                  color: 'text.disabled',
+                }}
+              >
+                Allowed *.jpeg, *.jpg, *.png, *.gif
+                <br /> max size of {fData(MAX_AVATAR_SIZE)}
+              </Typography>
+            }
+          />
+        </Box>
+
+        {/* Public/Private Switch Section */}
+        <Box sx={{ my: 4 }}>
+          <Controller
+            name="isPublic"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={<Switch {...field} checked={field.value} />}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {field.value ? 'Public' : 'Private'}
+                    <Tooltip
+                      title={
+                        <>
+                          <Typography variant="body2" mb={2}>
+                            Public: Public indexes cannot be edited once created, but can be used by
+                            anyone.
+                          </Typography>
+                          <Typography variant="body2">
+                            Private: Private indexes can be edited, but can only be used by you (the
+                            creator) and whitelisted accounts.
+                          </Typography>
+                        </>
+                      }
+                      enterTouchDelay={0}
+                    >
+                      <span
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                        style={{
+                          marginLeft: 4,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Icon icon="solar:info-circle-bold" />
+                      </span>
+                    </Tooltip>
+                  </Box>
+                }
+              />
+            )}
+          />
+        </Box>
+
+        <Box sx={{ display: 'grid', gap: 2 }}>
           <Box
             sx={{
               display: 'grid',
@@ -253,87 +568,68 @@ export function NewIndexForm({ currentIndex, tokenSymbol }: Props) {
           />
         </Box>
 
-        {/* Public/Private Switch Section */}
-        <Box sx={{ mt: 4 }}>
-          <Controller
-            name="isPublic"
-            control={control}
-            render={({ field }) => (
-              <FormControlLabel
-                control={<Switch {...field} checked={field.value} />}
-                label={
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {field.value ? 'Public' : 'Private'}
-                    <Tooltip
-                      title={
-                        <>
-                          <Typography variant="body2" mb={2}>
-                            Public: Public indexes cannot be edited once created, but can be used by
-                            anyone.
-                          </Typography>
-                          <Typography variant="body2">
-                            Private: Private indexes can be edited, but can only be used by you (the
-                            creator) and whitelisted accounts.
-                          </Typography>
-                        </>
-                      }
-                      enterTouchDelay={0}
-                    >
-                      <span
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                        }}
-                        style={{
-                          marginLeft: 4,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Icon icon="solar:info-circle-bold" />
-                      </span>
-                    </Tooltip>
-                  </Box>
-                }
-              />
-            )}
+        {/* Index Coin List Section */}
+        <Box
+          sx={{
+            mt: 4,
+          }}
+        >
+          <Typography variant="subtitle1" gutterBottom>
+            Index Coin List
+          </Typography>
+          <IndexCoinList
+            indexCoinList={coinList}
+            onRemoveCoin={handleRemoveCoin}
+            onReplaceCoin={handleReplaceCoin}
           />
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="outlined" sx={{ mt: 0 }} onClick={handleOpenCoinPicker}>
+              Add Coin
+            </Button>
+          </Box>
         </Box>
 
-        <Box sx={{ mt: 3, mb: 5 }}>
-          <Field.UploadAvatar
-            name="avatarUrl"
-            maxSize={MAX_AVATAR_SIZE}
-            helperText={
-              <Typography
-                variant="caption"
-                sx={{
-                  mt: 3,
-                  mx: 'auto',
-                  display: 'block',
-                  textAlign: 'center',
-                  color: 'text.disabled',
-                }}
-              >
-                Allowed *.jpeg, *.jpg, *.png, *.gif
-                <br /> max size of {fData(MAX_AVATAR_SIZE)}
-              </Typography>
-            }
+        {/* Render the Coin Picker Dialog */}
+        {openCoinPicker && (
+          <IndexCoinPickerDialog
+            open={openCoinPicker}
+            onClose={handleCloseCoinPicker}
+            onSelectCoins={handleSelectCoins}
+            availableCoins={availableCoins}
           />
-        </Box>
+        )}
+
+        {/* Custom Percentage Dialog (only if weightingMethod === 'Custom') */}
+        <CustomCoinPercentageDialog
+          open={openCustomPercentageDialog}
+          coins={tempCoins}
+          onClose={() => setOpenCustomPercentageDialog(false)}
+          onSave={handleSaveCustomPercentages}
+        />
 
         <Stack sx={{ mt: 3, alignItems: 'flex-end' }}>
-          <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
+          <LoadingButton
+            fullWidth
+            type="submit"
+            variant="soft"
+            color="success"
+            size="large"
+            loading={isSubmitting}
+          >
             {currentIndex ? 'Save changes' : 'Create index'}
           </LoadingButton>
         </Stack>
       </Card>
+
+      <Snackbar
+        open={Boolean(duplicateMessage)}
+        onClose={handleCloseSnackbar}
+        autoHideDuration={3000}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="warning" sx={{ width: '100%' }}>
+          {duplicateMessage}
+        </Alert>
+      </Snackbar>
     </Form>
   );
 }
