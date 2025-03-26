@@ -115,7 +115,7 @@ export const CONFIG: ConfigValue = {
       id: 9,
       url: 'https://app.normalfinance.io/assets/icons/indexes/normal_crypto_index.png',
       name: 'Normal Crypto Index',
-      shortname: 'nTOP',
+      shortname: 'nIDX',
       owned: true,
       countstatus: 12.52,
       pricestatus: 115.89,
