@@ -1,6 +1,7 @@
 import { RHFCode } from './rhf-code';
 import { RHFRating } from './rhf-rating';
 import { RHFSlider } from './rhf-slider';
+import { RHFUploadAvatar } from './rhf-upload';
 import { RHFTextField } from './rhf-text-field';
 import { RHFRadioGroup } from './rhf-radio-group';
 import { RHFPhoneInput } from './rhf-phone-input';
@@ -28,6 +29,7 @@ export const Field = {
   NumberInput: RHFNumberInput,
   MultiSelect: RHFMultiSelect,
   MultiSwitch: RHFMultiSwitch,
+  UploadAvatar: RHFUploadAvatar,
   Autocomplete: RHFAutocomplete,
   MultiCheckbox: RHFMultiCheckbox,
   CountrySelect: RHFCountrySelect,
