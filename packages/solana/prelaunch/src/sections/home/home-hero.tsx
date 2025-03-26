@@ -78,9 +78,9 @@ export function HomeHero({ sx, ...other }: BoxProps) {
           },
         ]}
       >
-        <Box component="span" sx={{ width: 1, opacity: 0.24 }}>
-          Swap any crypto,
-        </Box>
+        {/* <Box component="span" sx={{ width: 1, opacity: 0.24 }}>
+          Trade any crypto,
+        </Box> */}
         <Box
           component={m.span}
           animate={{ backgroundPosition: '200% center' }}
@@ -99,7 +99,9 @@ export function HomeHero({ sx, ...other }: BoxProps) {
             marginBottom: 1,
           }}
         >
-          on-chain.
+          Trade any crypto,
+          <br />
+          index every crypto.
         </Box>
       </Box>
     </m.div>
@@ -116,7 +118,7 @@ export function HomeHero({ sx, ...other }: BoxProps) {
           marginBottom: 3,
         }}
       >
-        {`Invest in any crypto directly on Solana without bridges or CEXes -\ncreate & use crypto index funds to diversify & automate your investing.`}
+        {`Invest in any Top 200 crypto from a single DEX -\ncreate Crypto Index Fund tokens to diversify & automate your investing.`}
       </Typography>
     </m.div>
   );

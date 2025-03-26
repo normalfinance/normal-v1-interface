@@ -19,10 +19,10 @@ export const paths = {
     root: '/markets',
     details: (title: string) => `/markets/${kebabCase(title)}`,
   },
-  indexes: {
-    root: '/indexes',
-    details: (title: string) => `/indexes/${kebabCase(title)}`,
-    create: '/indexes/create',
+  index: {
+    root: '/index',
+    details: (title: string) => `/index/${kebabCase(title)}`,
+    create: '/index/create',
   },
   insurance: '/insurance',
   rewards: '/rewards',

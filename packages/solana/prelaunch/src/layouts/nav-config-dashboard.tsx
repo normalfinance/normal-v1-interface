@@ -52,7 +52,7 @@ export const navData: NavSectionProps['data'] = [
           },
           {
             title: 'Indexes',
-            path: '#', // paths.indexes.root,
+            path: paths.index.create,
             icon: ICONS.indexes,
             caption: 'Build diversified portfolios of assets to automate or hedge your investing',
           },
