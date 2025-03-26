@@ -22,7 +22,7 @@ export const paths = {
   index: {
     root: '/index',
     details: (title: string) => `/index/${kebabCase(title)}`,
-    create: '/index/create',
+    create: '/create-an-index',
   },
   insurance: '/insurance',
   rewards: '/rewards',
