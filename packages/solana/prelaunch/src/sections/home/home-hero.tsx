@@ -114,7 +114,6 @@ export function HomeHero({ sx, ...other }: BoxProps) {
           [theme.breakpoints.up(smKey)]: { whiteSpace: 'pre' },
           [theme.breakpoints.up(lgKey)]: { fontSize: 14, lineHeight: '20px' },
           marginBottom: 3,
-          maxWidth: '360px',
         }}
       >
         {`Invest in any crypto directly on Solana without bridges or CEXes -\ncreate & use crypto index funds to diversify & automate your investing.`}

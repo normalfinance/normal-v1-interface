@@ -75,7 +75,7 @@ export function HomeExplainer({ sx, ...other }: BoxProps) {
         sx={[
           (theme) => ({
             left: 0,
-            width: 720,
+            width: 'auto',
             borderRadius: 2,
             position: 'absolute',
             bgcolor: 'background.default',
