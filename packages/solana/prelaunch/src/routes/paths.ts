@@ -24,7 +24,6 @@ export const paths = {
     details: (title: string) => `/index/${kebabCase(title)}`,
     create: '/create-an-index',
   },
-  insurance: '/insurance',
   rewards: '/rewards',
   analytics: '/analytics',
 };

@@ -94,8 +94,8 @@ export function HomeStats({ sx, ...other }: BoxProps) {
         sx={{ gap: 5, flexDirection: { xs: 'column', md: 'row' } }}
       >
         {[
-          { label: 'TVL', value: 332000 },
-          { label: 'Users', value: 160 },
+          { label: 'TVL', value: 351000 },
+          { label: 'Users', value: 200 },
           { label: 'Countries', value: 30 },
         ].map((item) => (
           <Stack key={item.label} spacing={2} sx={{ textAlign: 'center', width: 1 }}>

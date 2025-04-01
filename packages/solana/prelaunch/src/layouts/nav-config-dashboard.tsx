@@ -45,7 +45,7 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.trade,
         children: [
           {
-            title: 'Synths',
+            title: 'Spot',
             path: '#', // paths.markets.root,
             icon: ICONS.synths,
             caption: 'Trade any Top 100 asset directly on-chain',
@@ -74,12 +74,6 @@ export const navData: NavSectionProps['data'] = [
             path: '#', // paths.markets.root,
             icon: ICONS.lp,
             caption: 'Provide liquidity to pools and earn yield from swaps',
-          },
-          {
-            title: 'Insurance',
-            path: '#', // paths.insurance,
-            icon: ICONS.insurance,
-            caption: 'Stake your assets into a vault and earn yield from exchange fees',
           },
         ],
       },

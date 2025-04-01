@@ -9,7 +9,7 @@ import { ScrollProgress, useScrollProgress } from 'src/components/animate/scroll
 import { HomeHero } from '../home-hero';
 import { HomeFAQs } from '../home-faqs';
 import { HomeStats } from '../home-stats';
-import { HomeQuests } from '../home-quests';
+import { HomeIndex } from '../home-index';
 import { HomeFooter } from '../home-footer';
 import { HomeExplainer } from '../home-explainer';
 
@@ -33,7 +33,7 @@ export function HomeView() {
 
         <HomeStats />
 
-        <HomeQuests />
+        <HomeIndex />
 
         <HomeFAQs />
       </Stack>
