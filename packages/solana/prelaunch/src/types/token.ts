@@ -1,5 +1,6 @@
 export interface Token {
   id: number;
+  logo?: string;
   url: string;
   name: string;
   shortname: string;

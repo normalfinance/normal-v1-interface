@@ -98,9 +98,9 @@ export function HomeHero({ sx, ...other }: BoxProps) {
             marginBottom: 1,
           }}
         >
-          Trade any crypto,
+          Trade any asset,
           <br />
-          index every crypto.
+          index every asset.
         </Box>
       </Box>
     </m.div>

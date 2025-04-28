@@ -414,7 +414,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
                 sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
               >
                 <SwapSendPopupButton
-                  imgUrl={sellToken.url}
+                  imgUrl={sellToken.logo ?? sellToken.url}
                   label={sellToken.shortname}
                   onClick={() => {
                     setActiveButton('sell');
@@ -577,7 +577,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           >
             {buyToken ? (
               <SwapSendPopupButton
-                imgUrl={buyToken.url}
+                imgUrl={buyToken.logo ?? buyToken.url}
                 label={buyToken.shortname}
                 onClick={() => {
                   setActiveButton('buy');

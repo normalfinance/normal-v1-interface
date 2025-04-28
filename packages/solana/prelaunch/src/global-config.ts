@@ -36,6 +36,7 @@ export const CONFIG: ConfigValue = {
   tokenList: [
     {
       id: 0,
+      logo: `${process.env.NEXT_PUBLIC_ASSETS_DIR ?? ''}/assets/icons/logos/SOL.svg`,
       url: 'https://cryptologos.cc/logos/solana-sol-logo.png?v=040',
       name: 'Solana',
       shortname: 'SOL',
@@ -47,6 +48,7 @@ export const CONFIG: ConfigValue = {
     },
     {
       id: 1,
+      logo: `${process.env.NEXT_PUBLIC_ASSETS_DIR ?? ''}/assets/icons/logos/XLM.svg`,
       url: 'https://cryptologos.cc/logos/stellar-xlm-logo.png?v=040',
       name: 'Stellar',
       shortname: 'XLM',
@@ -58,6 +60,7 @@ export const CONFIG: ConfigValue = {
     },
     {
       id: 2,
+      logo: `${process.env.NEXT_PUBLIC_ASSETS_DIR ?? ''}/assets/icons/logos/nBTC.png`,
       url: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=040',
       name: 'Normal Bitcoin',
       shortname: 'nBTC',
@@ -69,6 +72,7 @@ export const CONFIG: ConfigValue = {
     },
     {
       id: 3,
+      logo: `${process.env.NEXT_PUBLIC_ASSETS_DIR ?? ''}/assets/icons/logos/nETH.png`,
       url: 'https://token-icons.s3.amazonaws.com/eth.png',
       name: 'Normal Ethereum',
       shortname: 'nETH',
@@ -80,6 +84,7 @@ export const CONFIG: ConfigValue = {
     },
     {
       id: 4,
+      logo: `${process.env.NEXT_PUBLIC_ASSETS_DIR ?? ''}/assets/icons/logos/nXRP.png`,
       url: 'https://cryptologos.cc/logos/xrp-xrp-logo.png?v=040',
       name: 'Normal Ripple',
       shortname: 'nXRP',
@@ -91,6 +96,7 @@ export const CONFIG: ConfigValue = {
     },
     {
       id: 5,
+      logo: `${process.env.NEXT_PUBLIC_ASSETS_DIR ?? ''}/assets/icons/logos/nSUI.png`,
       url: 'https://cryptologos.cc/logos/sui-sui-logo.png?v=040',
       name: 'Normal Sui',
       shortname: 'nSUI',
@@ -102,6 +108,7 @@ export const CONFIG: ConfigValue = {
     },
     {
       id: 6,
+      logo: `${process.env.NEXT_PUBLIC_ASSETS_DIR ?? ''}/assets/icons/logos/nDOGE.png`,
       url: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png?v=040',
       name: 'Normal DogeCoin',
       shortname: 'nDOGE',
@@ -113,6 +120,7 @@ export const CONFIG: ConfigValue = {
     },
     {
       id: 7,
+      logo: `${process.env.NEXT_PUBLIC_ASSETS_DIR ?? ''}/assets/icons/logos/USDC.svg`,
       url: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694',
       name: 'USDC',
       shortname: 'USDC',

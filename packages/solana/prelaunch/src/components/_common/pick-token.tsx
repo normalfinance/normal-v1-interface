@@ -151,7 +151,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
-                      src={token.url}
+                      src={token.logo ?? token.url}
                       sx={{
                         width: 40,
                         height: 40,
@@ -284,7 +284,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   >
                     <Box
                       component="img"
-                      src={token.url}
+                      src={token.logo ?? token.url}
                       sx={{
                         width: 20,
                         height: 20,
@@ -340,7 +340,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           >
                             <Box
                               component="img"
-                              src={token.url}
+                              src={token.logo ?? token.url}
                               sx={{
                                 width: 40,
                                 height: 40,
@@ -437,7 +437,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
-                          src={token.url}
+                          src={token.logo ?? token.url}
                           sx={{
                             width: 40,
                             height: 40,

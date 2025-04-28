@@ -1,21 +1,23 @@
+import type { Token } from '@/types/token';
+
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
-  IconButton,
-  Box,
-  TextField,
-  InputAdornment,
-} from '@mui/material';
-import { Iconify } from 'src/components/iconify';
-import { Token } from '@/types/token';
-import { alpha, useTheme } from '@mui/material/styles';
 import { fCurrency } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
+
+import { alpha, useTheme } from '@mui/material/styles';
+import {
+  Box,
+  Dialog,
+  Button,
+  TextField,
+  Typography,
+  IconButton,
+  DialogTitle,
+  DialogContent,
+  InputAdornment,
+} from '@mui/material';
+
+import { Iconify } from 'src/components/iconify';
 
 export interface PickTokenProps {
   open: boolean;
@@ -127,7 +129,7 @@ const PickToken: React.FC<PickTokenProps> = ({
 
         {/* Conditionally render different components */}
         {searchTerm.length > 0 ? (
-          <Box width={'100%'}>
+          <Box width="100%">
             <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <Iconify icon="eva:search-fill" width={14} />
 
@@ -147,14 +149,14 @@ const PickToken: React.FC<PickTokenProps> = ({
                   onClick={() => handleTokenClick(token)}
                 >
                   <Box
-                    display={'flex'}
-                    alignItems={'center'}
-                    justifyContent={'center'}
-                    gap={'10px'}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    gap="10px"
                   >
                     <Box
                       component="img"
-                      src={token.url}
+                      src={token.logo ?? token.url}
                       sx={{
                         width: 40,
                         height: 40,
@@ -305,7 +307,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                 ))}
               </Box>
               {tokensList.some((token) => token.owned) && (
-                <Box sx={{ mt: '12px' }} width={'100%'}>
+                <Box sx={{ mt: '12px' }} width="100%">
                   <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <Iconify icon="carbon:skill-level-basic" width={14} />
 
@@ -336,10 +338,10 @@ const PickToken: React.FC<PickTokenProps> = ({
                           onClick={() => handleTokenClick(token)}
                         >
                           <Box
-                            display={'flex'}
-                            alignItems={'center'}
-                            justifyContent={'center'}
-                            gap={'10px'}
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            gap="10px"
                           >
                             <Box
                               component="img"
@@ -409,7 +411,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   </Box>
                 </Box>
               )}
-              <Box sx={{ mt: '12px' }} width={'100%'}>
+              <Box sx={{ mt: '12px' }} width="100%">
                 <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <Iconify icon="eva:star-outline" width={14} />
 
@@ -438,10 +440,10 @@ const PickToken: React.FC<PickTokenProps> = ({
                       onClick={() => handleTokenClick(token)}
                     >
                       <Box
-                        display={'flex'}
-                        alignItems={'center'}
-                        justifyContent={'center'}
-                        gap={'10px'}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        gap="10px"
                       >
                         <Box
                           component="img"
