@@ -5,10 +5,8 @@
   "scripts": {
     "test": "yarn workspace @normalfinance/utils run test --passWithNoTests",
     "build": "yarn workspace @normalfinance/utils run build && yarn workspace @normalfinance/types run build && yarn workspace @normalfinance/ui run build && yarn run build:solana && yarn run build:stellar",
-    "dev:solana-prelaunch": "yarn workspace @normalfinance/solana-prelaunch dev",
     "dev:solana": "yarn workspace @normalfinance/solana dev",
     "dev:stellar": "yarn workspace @normalfinance/stellar-web dev",
-    "build:solana-prelaunch": "yarn workspace @normalfinance/solana-prelaunch build",
     "build:solana": "yarn workspace @normalfinance/solana build",
     "build:stellar": "yarn workspace @normalfinance/stellar-contracts build && yarn workspace @normalfinance/stellar-web build",
     "build:stellar:contracts": "yarn workspace @normalfinance/stellar-contracts build",
@@ -27,7 +25,7 @@
   },
   "homepage": "https://github.com/normalfinance/normal-v1-interface",
   "workspaces": [
-    "packages/solana/*",
+    "packages/solana",
     "packages/stellar/*",
     "packages/types",
     "packages/ui",
