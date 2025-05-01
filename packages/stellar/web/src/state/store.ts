@@ -1,11 +1,13 @@
+import type { AppStore, AppStorePersist } from '@normalfinance/types';
+
 import { create } from 'zustand';
-import { createWalletActions } from './wallet/actions';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 import { Horizon } from '@stellar/stellar-sdk';
-import { AppStore, AppStorePersist } from '@normalfinance/types';
-import { createConnectWalletActions } from './persist/createConnectWalletActions';
+
+import { createWalletActions } from './wallet/actions';
 import { createLayoutActions } from './layout/actions';
 import { createDisclaimerAction } from './persist/createDisclaimerActions';
+import { createConnectWalletActions } from './persist/createConnectWalletActions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {

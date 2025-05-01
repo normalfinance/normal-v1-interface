@@ -1,5 +1,5 @@
 import type { AppStore, AppStorePersist } from '@/state/types';
-import type { AssembledTransaction} from '@stellar/stellar-sdk/lib/contract';
+import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/useToast';
@@ -7,31 +7,27 @@ import { Signer, constants } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@/state/store';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import {
-  NormalMarketContract,
+  NormalPoolContract,
   SorobanTokenContract,
-  NormalInsuranceContract,
-  NormalMarketFactoryContract,
-} from '@normalfinance/contracts';
+  NormalPoolRouterContract,
+} from '@normalfinance/stellar-contracts';
 
 // Define Contract Types
-type ContractType = 'market' | 'market_factory' | 'insurance' | 'token';
+type ContractType = 'pool' | 'pool_router' | 'token';
 
 const contractClients = {
-  market: NormalMarketContract.Client,
-  market_factory: NormalMarketFactoryContract.Client,
-  insurance: NormalInsuranceContract.Client,
+  market: NormalPoolContract.Client,
+  pool_router: NormalPoolRouterContract.Client,
   token: SorobanTokenContract.Client,
 };
 
-type ContractClientType<T extends ContractType> = T extends 'market'
-  ? NormalMarketContract.Client
-  : T extends 'market_factory'
-    ? NormalMarketFactoryContract.Client
-    : T extends 'insurance'
-      ? NormalInsuranceContract.Client
-      : T extends 'token'
-        ? SorobanTokenContract.Client
-        : never;
+type ContractClientType<T extends ContractType> = T extends 'pool'
+  ? NormalPoolContract.Client
+  : T extends 'pool_router'
+    ? NormalPoolRouterContract.Client
+    : T extends 'token'
+      ? SorobanTokenContract.Client
+      : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;
@@ -46,14 +42,15 @@ interface ExecuteContractTransactionParams<T extends ContractType>
   contractType: T;
 }
 
-const getSigner = (storePersist: AppStorePersist, appStore: AppStore) => storePersist.wallet.walletType === 'wallet-connect'
+const getSigner = (storePersist: AppStorePersist, appStore: AppStore) =>
+  storePersist.wallet.walletType === 'wallet-connect'
     ? appStore.walletConnectInstance
     : new Signer();
 
 const getSignerFunction = (signer: any, storePersist: any) => (tx: string) =>
-    storePersist.wallet.walletType === 'wallet-connect'
-      ? signer.signTransaction(tx)
-      : signer.sign(tx);
+  storePersist.wallet.walletType === 'wallet-connect'
+    ? signer.signTransaction(tx)
+    : signer.sign(tx);
 
 const getContractClient = <T extends ContractType>(
   contractType: T,
@@ -91,8 +88,8 @@ export const useContractTransaction = () => {
       transactionFunction,
     }: ExecuteContractTransactionParams<T>) => {
       const signer = getSigner(storePersist, appStore);
-      const networkPassphrase = constants.NETWORK_PASSPHRASE;
-      const rpcUrl = constants.RPC_URL;
+      const networkPassphrase = constants.SOROBAN_NETWORK_PASSPHRASE;
+      const rpcUrl = constants.SOROBAN_RPC_URL;
       const loadingMessage = 'Transaction in progress...';
       const publicKey = storePersist.wallet.address!;
 

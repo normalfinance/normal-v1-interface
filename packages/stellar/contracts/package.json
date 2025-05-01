@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "@normalfinance/stellar-contracts",
+  "name": "@normalfinance/contracts",
   "files": [
     "build/**/*"
   ],

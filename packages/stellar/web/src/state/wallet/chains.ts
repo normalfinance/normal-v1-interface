@@ -1,4 +1,5 @@
-import { WalletChain } from '@normalfinance/types';
+import type { WalletChain } from '@normalfinance/types';
+
 import { Networks } from '@stellar/stellar-sdk';
 
 export const public_chain: WalletChain = {

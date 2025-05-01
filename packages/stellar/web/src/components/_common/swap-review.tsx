@@ -1,22 +1,25 @@
+import type { Token } from '@/types/token';
+
 import React from 'react';
+import { getSwapConversionText } from '@/utils/conversion-helpers';
+import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+
+import { useTheme } from '@mui/material/styles';
 import {
+  Box,
   Dialog,
+  Button,
+  Accordion,
+  Typography,
+  IconButton,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
-  Typography,
-  Box,
-  IconButton,
-  Accordion,
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
-import { fCurrencyTwoDecimals, fRawPercent } from '@/utils/format-number';
-import { Token } from '@/types/token';
+
 import { Iconify } from '../iconify';
-import { useTheme } from '@mui/material/styles';
-import { getSwapConversionText } from '@/utils/conversion-helpers';
 
 export interface SwapReviewProps {
   open: boolean;
@@ -30,6 +33,7 @@ export interface SwapReviewProps {
   priceImpact: number;
   maxSlippage: number;
   sellFiatValue: number;
+  onSubmit: () => void;
 }
 
 const SwapReview: React.FC<SwapReviewProps> = ({
@@ -44,6 +48,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
   priceImpact,
   maxSlippage,
   sellFiatValue,
+  onSubmit,
 }) => {
   const theme = useTheme();
 
@@ -501,7 +506,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button fullWidth variant="soft" color="success" size="large">
+          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>
             Swap
           </Button>
         </Box>

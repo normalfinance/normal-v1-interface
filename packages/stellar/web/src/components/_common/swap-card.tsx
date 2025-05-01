@@ -1,17 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Typography, Box, Button, InputBase, CardProps } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
-import { Iconify } from 'src/components/iconify';
-import SwapSendPopupButton from './swap-send-popup-button';
-import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-import PickToken from './pick-token';
-import { Token } from '@/types/token';
+import type { Token } from '@/types/token';
+import type { CardProps } from '@mui/material';
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
+
 import { fCurrency } from '@/utils/format-number';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
+import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { useAppStore, usePersistStore } from '@/state/store';
+import { getConversionText } from '@/utils/conversion-helpers';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useContractTransaction } from '@/hooks/use-contract-transaction';
+import { NormalPoolRouterContract } from '@normalfinance/stellar-contracts';
+import { constants, checkTrustline, fetchAndIssueTrustline } from '@normalfinance/utils';
+
+import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Button, InputBase, Typography } from '@mui/material';
+
+import { Iconify } from 'src/components/iconify';
+
+import PickToken from './pick-token';
 import SwapReview from './swap-review';
 import FeeInfoAccordion from './fee-info-accordion';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { getConversionText } from '@/utils/conversion-helpers';
+import SwapSendPopupButton from './swap-send-popup-button';
+import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];
@@ -20,6 +29,22 @@ interface SwapCardProps extends CardProps {
 
 const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...other }) => {
   const theme = useTheme();
+
+  // Using the store
+  const storePersist = usePersistStore();
+  const appStore = useAppStore();
+
+  const { executeContractTransaction } = useContractTransaction();
+
+  const [txBroadcasting, setTxBroadcasting] = useState<boolean>(false);
+  const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
+  const [maxSpread, setMaxSpread] = useState<number>(1);
+  const [exchangeRate, setExchangeRate] = useState<string>('');
+  const [networkFee, setNetworkFee] = useState<string>('');
+  const [poolFee, setPoolFee] = useState<string>('');
+  const [trustlineButtonActive, setTrustlineButtonActive] = useState<boolean>(false);
+  const [trustlineTokenName, setTrustlineTokenName] = useState<string>('');
+  const [trustlineAssetAmount, setTrustlineAssetAmount] = useState<number>(0);
 
   // 1) States for tokens, default sell token is first in the list
   const [sellToken, setSellToken] = useState<Token | null>(
@@ -160,6 +185,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
       if (insufficientBalance) {
         return `Insufficient ${sellToken.shortname}`;
       }
+      if (trustlineButtonActive) {
+        return 'Add trustline';
+      }
       return 'Review';
     }
     return 'Enter an amount';
@@ -169,9 +197,15 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
     if (label === 'Select a token') {
+      return;
     } else if (label === 'Enter an amount') {
+      return;
     } else if (label === 'Finalizing quote...') {
+      return;
     } else if (label.startsWith('Insufficient')) {
+      return;
+    } else if (label === 'Add trustline') {
+      addTrustLine();
     } else if (label === 'Review') {
       // open a review popup
       setReviewOpen(true);
@@ -184,6 +218,172 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
       setAmount(sellToken.countstatus.toString());
     }
   };
+
+  // Effect hook to fetch all tokens once the component mounts
+  useEffect(() => {
+    const getAllTokens = async (): Promise<void> => {
+      setIsLoading(true);
+      try {
+        // Get all pools
+        const poolRouterContract = new NormalPoolRouterContract.Client({
+          contractId: constants.POOL_ROUTER_ADDRESS,
+          networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
+          rpcUrl: constants.SOROBAN_RPC_URL,
+        });
+        // const { result } = await poolRouterContract.query_all_pools_details();
+        const { result } = await poolRouterContract.get_pools({ tokens: [] });
+
+        const allPairs = result.map((pool: any) => ({
+          asset_a: pool.pool_response.asset_a.address,
+          asset_b: pool.pool_response.asset_b.address,
+        }));
+        setAllPools(allPairs);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        appStore.setLoading(false);
+      }
+    };
+    getAllTokens();
+  }, []);
+
+  /**
+   * Executes the swap transaction.
+   * This function signs and sends the transaction using WalletConnect or Signer.
+   *
+   * @async
+   */
+  const doSwap = useCallback(async (): Promise<void> => {
+    if (sellToken && buyToken) {
+      try {
+        // Execute the transaction using the hook
+        await executeContractTransaction({
+          contractType: 'pool_router',
+          contractAddress: constants.POOL_ROUTER_ADDRESS,
+          transactionFunction: async (client, restore) =>
+            client.swap(
+              {
+                user: storePersist.wallet.address!,
+                tokens: [],
+                token_in: sellToken.address,
+                token_out: buyToken.address,
+                pool_index: Buffer.from('0'),
+                in_amount: BigInt(amount),
+                out_min: BigInt(buyAmount),
+              },
+              { simulate: !restore }
+            ),
+        });
+
+        // Wait for the next block and fetch token balances
+        setTimeout(async () => {
+          await appStore.fetchTokenInfo(sellToken.name!);
+          await appStore.fetchTokenInfo(buyToken.name!);
+        }, 7000);
+      } catch (error) {
+        console.log('Error during swap transaction', error);
+      }
+    }
+  }, [
+    appStore,
+    sellToken?.name,
+    storePersist,
+    buyToken?.name,
+    amount,
+    buyAmount,
+    executeContractTransaction,
+  ]);
+
+  /**
+   * Simulates the swap transaction to determine the exchange rate and network fee.
+   *
+   * @async
+   */
+  const doSimulateSwap = useCallback(async (): Promise<void> => {
+    if (sellToken && buyToken) {
+      if (amount === '0') {
+        // setTokenAmounts([0, 0]);
+        setAmount('0');
+        setBuyAmount(0);
+        setExchangeRate('');
+        setNetworkFee('');
+        return;
+      }
+
+      setLoadingSimulate(true);
+      try {
+        const contract = new NormalPoolRouterContract.Client({
+          contractId: constants.POOL_ROUTER_ADDRESS,
+          networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
+          rpcUrl: constants.SOROBAN_RPC_URL,
+        });
+
+        const tx = await contract.estimate_swap({
+          tokens: [],
+          token_in: sellToken.address,
+          token_out: buyToken.address,
+          pool_index: Buffer.from('0'),
+          in_amount: BigInt(amount),
+        });
+
+        if (tx.result) {
+          const _exchangeRate = Number(tx.result) / Number(amount);
+
+          setExchangeRate(
+            `${(_exchangeRate / 10 ** 7).toFixed(2)} ${buyToken?.name} per ${sellToken?.name}`
+          );
+          setNetworkFee(
+            `${Number(tx.result.commission_amounts[0][1]) / 10 ** 7} ${sellToken?.name}`
+          );
+          setPoolFee('');
+
+          // setTokenAmounts((prevAmounts) => {
+          //   const newToTokenAmount = Number(tx.result.ask_amount) / 10 ** 7;
+          //   return [prevAmounts[0], newToTokenAmount];
+          // });
+        }
+      } catch (e) {
+        console.log(e);
+      }
+      setLoadingSimulate(false);
+    }
+  }, [sellToken?.name, buyToken, amount, buyAmount]);
+
+  /**
+   * Handles adding a trustline for a token.
+   *
+   * @param {string} tokenAddress - The address of the token.
+   * @async
+   */
+  const handleTrustLine = useCallback(
+    async (tokenAddress: string): Promise<void> => {
+      const trust = await checkTrustline(storePersist.wallet.address!, tokenAddress);
+      setTrustlineButtonActive(!trust.exists);
+      // setTrustlineTokenSymbol(trust.asset?.code || '');
+      const tlAsset = await appStore.fetchTokenInfo(
+        'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA'
+      );
+      setTrustlineAssetAmount(Number(tlAsset?.balance) / 10 ** tlAsset?.decimals!);
+      setTrustlineTokenName(trust.asset?.contract || '');
+    },
+    [storePersist.wallet.address]
+  );
+
+  /**
+   * Adds a trustline for the specified token.
+   *
+   * @async
+   */
+  const addTrustLine = useCallback(async (): Promise<void> => {
+    try {
+      setTxBroadcasting(true);
+      await fetchAndIssueTrustline(storePersist.wallet.address!, trustlineTokenName);
+      setTrustlineButtonActive(false);
+    } catch (e) {
+      console.log(e);
+    }
+    setTxBroadcasting(false);
+  }, [storePersist.wallet.address, trustlineTokenName]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -557,11 +757,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           buyToken={buyToken!}
           sellAmount={amount}
           buyAmount={buyAmount}
-          feePercentage={swapFeeInfo?.feePercentage ?? 0}
-          networkCost={swapFeeInfo?.networkCost ?? 0}
+          feePercentage={poolFee}
+          networkCost={networkFee ?? 0}
           priceImpact={swapFeeInfo?.priceImpact ?? 0}
-          maxSlippage={swapFeeInfo?.maxSlippage ?? 0}
+          maxSlippage={`${maxSpread}%`}
           sellFiatValue={sellFiatValue}
+          onSubmit={() => doSwap()}
         />
       )}
 

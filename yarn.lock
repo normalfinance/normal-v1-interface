@@ -4078,9 +4078,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@normalfinance/stellar-contracts@workspace:packages/stellar/contracts":
+"@normalfinance/contracts@workspace:packages/stellar/contracts":
   version: 0.0.0-use.local
-  resolution: "@normalfinance/stellar-contracts@workspace:packages/stellar/contracts"
+  resolution: "@normalfinance/contracts@workspace:packages/stellar/contracts"
   dependencies:
     "@stellar/freighter-api": 1.7.1
     bigint-conversion: 2.4.1

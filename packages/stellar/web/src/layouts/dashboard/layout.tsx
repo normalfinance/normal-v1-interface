@@ -3,8 +3,15 @@
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from 'src/components/nav-section';
 
+import { useEffect } from 'react';
 import { merge } from 'es-toolkit';
+import { xbull } from '@/state/wallet/xbull';
+import { lobstr } from '@/state/wallet/lobstr';
 import { useBoolean } from 'minimal-shared/hooks';
+import { freighter } from '@/state/wallet/freighter';
+import { useAppStore, usePersistStore } from '@/state/store';
+import { WalletConnect } from '@normalfinance/utils/build/stellar';
+import { ConnectWalletButton } from '@/components/_common/connect-wallet-button';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
@@ -22,6 +29,7 @@ import { NavVertical } from './nav-vertical';
 import { layoutClasses } from '../core/classes';
 import { NavHorizontal } from './nav-horizontal';
 import { MainSection } from '../core/main-section';
+import { Searchbar } from '../components/searchbar';
 import { MenuButton } from '../components/menu-button';
 import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
@@ -33,7 +41,6 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
-import { Searchbar } from '../components/searchbar';
 
 // ----------------------------------------------------------------------
 
@@ -70,6 +77,34 @@ export function DashboardLayout({
   const isNavMini = settings.state.navLayout === 'mini';
   const isNavHorizontal = settings.state.navLayout === 'horizontal';
   const isNavVertical = isNavMini || settings.state.navLayout === 'vertical';
+
+  const store = useAppStore();
+  const storePersist = usePersistStore();
+
+  const connect = async (connector: any) => {
+    await storePersist.connectWallet(connector.id);
+
+    return;
+  };
+
+  const disconnectWallet = async () => {
+    storePersist.disconnectWallet();
+    return;
+  };
+
+  const token = store.tokens.find(
+    (el) => el.id === 'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA'
+  );
+
+  const tokenBalance = token ? Number(token?.balance) / 10 ** token?.decimals : 0;
+
+  const fetch = async () =>
+    await store.fetchTokenInfo('CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA');
+
+  useEffect(() => {
+    fetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storePersist.wallet.address]);
 
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = {
@@ -131,8 +166,21 @@ export function DashboardLayout({
           {/** @slot Language popover */}
           <LanguagePopover data={allLangs} />
 
+          <ConnectWalletButton
+            open={store.walletModalOpen}
+            // @ts-ignore
+            connectors={[freighter(), xbull(), lobstr(), hana(), new WalletConnect(true)]}
+            setOpen={() => store.setWalletModalOpen(!store.walletModalOpen)}
+            connect={connect}
+          />
+
           {/** @slot Account drawer */}
-          <AccountDrawer user={null} data={[]} />
+          <AccountDrawer
+            balance={tokenBalance}
+            walletAddress={storePersist.wallet.address}
+            connectWallet={() => store.setWalletModalOpen(true)}
+            disconnectWallet={disconnectWallet}
+          />
         </Box>
       ),
     };
