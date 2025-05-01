@@ -3,7 +3,8 @@ import 'src/global.css';
 import type { Metadata, Viewport } from 'next';
 
 import { DashboardLayout } from '@/layouts/dashboard';
-import PrivyProviderWrapper from '@/components/PrivyProviderWrapper';
+import { SolanaWalletConnectors } from '@dynamic-labs/solana';
+import { DynamicContextProvider } from '@dynamic-labs/sdk-react-core';
 import { ConfettiProvider, defaultConfettiConfig } from '@/components/confetti';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
@@ -88,7 +89,12 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   defaultMode={themeConfig.defaultMode}
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
-                  <PrivyProviderWrapper>
+                  <DynamicContextProvider
+                    settings={{
+                      environmentId: 'a990227e-d108-4c2d-8635-ab13aec08f36',
+                      walletConnectors: [SolanaWalletConnectors],
+                    }}
+                  >
                     <MotionLazy>
                       <Snackbar />
                       <ProgressBar />
@@ -98,7 +104,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                         </ConfettiProvider>
                       </DashboardLayout>
                     </MotionLazy>
-                  </PrivyProviderWrapper>
+                  </DynamicContextProvider>
                 </ThemeProvider>
               </AppRouterCacheProvider>
             </LocalizationProvider>

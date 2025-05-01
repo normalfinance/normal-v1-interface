@@ -1,6 +1,6 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import { usePrivy } from '@privy-io/react-auth';
+// import { usePrivy } from '@privy-io/react-auth';
 import { usePopover } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
