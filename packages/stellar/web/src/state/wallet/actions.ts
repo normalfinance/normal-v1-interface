@@ -1,4 +1,4 @@
-import type { LiquidityPoolInfo } from '@normalfinance/stellar-contracts/build/phoenix-pair';
+import type { LiquidityPoolInfo } from '@normalfinance/contracts/build/soroban_pool_router_contract';
 import type {
   AppStore,
   GetStateType,
@@ -7,18 +7,14 @@ import type {
   StateToken as Token,
 } from '@normalfinance/types';
 
-import { constants, fetchTokenPrices } from '@normalfinance/utils';
-import { SorobanTokenContract, NormalPoolRouterContract } from '@normalfinance/stellar-contracts';
+import { constants } from '@normalfinance/utils';
+import { SorobanTokenContract, NormalPoolRouterContract } from '@normalfinance/contracts';
 
 import { usePersistStore } from '../store';
 
 const getCategory = (name: string) => {
   switch (name.toLowerCase()) {
     case 'usdc':
-    case 'usdx':
-    case 'eurc':
-    case 'veur':
-    case 'vchf':
       return 'Stable';
 
     default:
@@ -51,7 +47,7 @@ export const createWalletActions = (
     try {
       const publicKey = address || constants.TESTING_SOURCE.accountId();
 
-      // Factory contract
+      // Pool Router contract
       const poolRouterContract = new NormalPoolRouterContract.Client({
         publicKey,
         contractId: constants.POOL_ROUTER_ADDRESS,
@@ -75,7 +71,6 @@ export const createWalletActions = (
       });
       // Fetch all available tokens from chain
       const allPoolsDetails = await poolRouterContract.query_all_pools_details();
-
       // Parse results
       parsedResults = allPoolsDetails.result;
     }
@@ -86,7 +81,7 @@ export const createWalletActions = (
       // Flatten the array
       .reduce((acc: string[], curr: string[]) => [...acc, ...curr], [])
       // Remove duplicates
-      .filter((address, index, self) => self.indexOf(address) === index);
+      .filter((_address, index, self) => self.indexOf(_address) === index);
 
     const allAssets = _allAssets
       ? _allAssets.map(async (asset) => {
@@ -97,26 +92,16 @@ export const createWalletActions = (
     await Promise.all(allAssets);
 
     const _tokens = getState()
-      .tokens.filter(
-        (token: Token) =>
-          token?.symbol !== 'POOL' &&
-          token?.symbol !== 'PUST' &&
-          token?.symbol !== 'EXUT' &&
-          token?.symbol !== 'XEXT' &&
-          token?.symbol !== 'XGXT' &&
-          token?.symbol !== 'GXUT' &&
-          token.isStakingToken !== true
-      )
+      .tokens.filter((token: Token) => token?.symbol !== 'POOL' && token.isStakingToken !== true)
       .map(async (token: Token) => ({
         name: token?.symbol === 'native' ? 'XLM' : token?.symbol,
-        icon: `/cryptoIcons/${
+        icon: `/assets/icons/cryptoIcons/${
           token?.symbol === 'native' ? 'XLM' : token?.symbol.toLowerCase()
         }.svg`,
         amount: Number(token?.balance) / 10 ** token?.decimals,
         category: getCategory(token?.symbol === 'native' ? 'XLM' : token?.symbol),
-        usdValue: Number(
-          await fetchTokenPrices(token?.symbol)
-        ).toFixed(2),
+        // usdValue: Number(await fetchTokenPrices(token?.symbol)).toFixed(2),
+        usdValue: Number(token.balance).toFixed(2),
         contractId: token?.id,
       }));
     // Wait promise
@@ -195,6 +180,7 @@ export const createWalletActions = (
       updatedTokenInfo = updatedTokens.find((token: Token) => token.id === tokenAddress);
       return { tokens: updatedTokens };
     });
+    // eslint-disable-next-line consistent-return
     return updatedTokenInfo;
   },
 });

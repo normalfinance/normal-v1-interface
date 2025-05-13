@@ -2,28 +2,24 @@
 
 import type { Token } from '@normalfinance/types';
 
-import { use, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { constants } from '@normalfinance/utils';
+import { fPercent } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@/state/store';
-import { NormalPoolContract } from '@normalfinance/stellar-contracts';
+import { NormalPoolContract } from '@normalfinance/contracts';
+import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
+import PoolStatsTemp from '@/components/_pool-page-components/pool-stats-temp';
+import PoolLiquidityTemp from '@/components/_pool-page-components/pool-liquidity-temp';
 
-import Grid2 from '@mui/material/Grid2';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Box, Grid, Alert, Stack, Typography, CircularProgress } from '@mui/material';
 
 interface _Token extends Token {
   readonly decimals: number;
 }
 
-interface PoolPageProps {
-  readonly params: Promise<{
-    readonly poolAddress: string;
-  }>;
-}
-
-export default function PoolView(props: PoolPageProps) {
-  const params = use(props.params);
+export default function PoolView({ poolAddress }: { poolAddress: string }) {
   // Load App Store
   const store = useAppStore();
   const storePersist = usePersistStore();
@@ -41,37 +37,35 @@ export default function PoolView(props: PoolPageProps) {
   const [tokenB, setTokenB] = useState<_Token | undefined>(undefined);
   const [lpToken, setLpToken] = useState<_Token | undefined>(undefined);
 
-  // Set APR
-  const [maxApr, setMaxApr] = useState<number>(0);
-
   // Rewards
-  const [rewards, setRewards] = useState<Token[]>([]);
+  // const [rewards, setRewards] = useState<Token[]>([]);
 
   // Pool Liquidity
+  const [poolFee, setPoolFee] = useState<number>(0);
   const [poolLiquidity, setPoolLiquidity] = useState<number>(0);
   const [poolLiquidityTokenA, setPoolLiquidityTokenA] = useState<number>(0);
   const [poolLiquidityTokenB, setPoolLiquidityTokenB] = useState<number>(0);
   const [assetLpShare, setAssetLpShare] = useState<number>(0);
   const [userShare, setUserShare] = useState<number>(0);
-  const [lpTokenPrice, setLpTokenPrice] = useState<number>(0);
+  // const [lpTokenPrice, setLpTokenPrice] = useState<number>(0);
 
   const PoolContract = new NormalPoolContract.Client({
-    contractId: params.poolAddress,
+    contractId: poolAddress,
     networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
     rpcUrl: constants.SOROBAN_RPC_URL,
   });
   const appStore = useAppStore();
 
   // Provide Liquidity
-  const provideLiquidity = async (tokenBAmount: number, minShares: number) => {
+  const provideLiquidity = async (tokenAmount: number, minShares: number) => {
     await executeContractTransaction({
       contractType: 'pool',
-      contractAddress: params.poolAddress,
+      contractAddress: poolAddress,
       transactionFunction: async (client, restore) =>
         client.deposit(
           {
             user: storePersist.wallet.address!,
-            desired_amount: BigInt((tokenBAmount * 10 ** (tokenB?.decimals || 7)).toFixed(0)),
+            desired_amount: BigInt((tokenAmount * 10 ** (tokenB?.decimals || 7)).toFixed(0)),
             min_shares: BigInt(minShares),
           },
           { simulate: !restore }
@@ -79,7 +73,7 @@ export default function PoolView(props: PoolPageProps) {
     });
     // Refresh pool data
     await getPool();
-    setTokenAmounts([_, tokenBAmount]);
+    setTokenAmounts([0, tokenAmount]);
     setTimeout(() => {
       getPool();
     }, 7000);
@@ -89,13 +83,13 @@ export default function PoolView(props: PoolPageProps) {
   const removeLiquidity = async (shareTokenAmount: number, fix?: boolean) => {
     await executeContractTransaction({
       contractType: 'pool',
-      contractAddress: params.poolAddress,
+      contractAddress: poolAddress,
       transactionFunction: async (client, restore) =>
         client.withdraw(
           {
             user: storePersist.wallet.address!,
             share_amount: BigInt((shareTokenAmount * 10 ** (lpToken?.decimals || 7)).toFixed(0)),
-            min_amount: BigInt(1),
+            min_amount: BigInt(0),
           },
           { simulate: !restore }
         ),
@@ -111,38 +105,32 @@ export default function PoolView(props: PoolPageProps) {
   const getPool = async () => {
     try {
       // Fetch pool info from chain
-      const poolInfo = await PoolContract.get_info();
-      const poolTokens = await PoolContract.get_tokens();
-      const poolReserves = await PoolContract.get_reserves();
-      const poolTotalShares = await PoolContract.get_total_shares();
+      const { result } = await PoolContract.get_info();
 
-      console.log(poolInfo.result);
+      if (result) {
+        setPoolFee(result.total_fee_bps);
+      }
 
-      // When results ok...
-      if (poolInfo?.result) {
+      // When results ok... poolTokens.result && poolReserves.result
+      if (result) {
         // Fetch token infos from chain and save in global appstore
         const [_tokenA, _tokenB, _lpToken] = await Promise.all([
-          store.fetchTokenInfo(poolTokens.result[0]),
-          store.fetchTokenInfo(poolTokens.result[1]),
-          store.fetchTokenInfo(poolInfo.result.share_token, true),
-        ]);
-        console.log(_lpToken);
-
-        // Fetch prices and calculate TVL
-        const [priceA, priceB] = await Promise.all([
-          API.getPrice(_tokenA?.symbol || ''),
-          API.getPrice(_tokenB?.symbol || ''),
+          store.fetchTokenInfo(result.pool_response.asset_a.address),
+          store.fetchTokenInfo(result.pool_response.asset_b.address),
+          store.fetchTokenInfo(result.pool_response.asset_lp_share.address, true),
         ]);
 
+        const priceA =
+          Number(result.pool_response.asset_b.amount) / Number(result.pool_response.asset_a.amount);
         const tvl =
-          (priceA * Number(poolReserves.result[0])) / 10 ** Number(_tokenA?.decimals) +
-          (priceB * Number(poolReserves.result[1])) / 10 ** Number(_tokenB?.decimals);
+          (priceA * Number(result.pool_response.asset_a.amount)) / 10 ** Number(_tokenA?.decimals) +
+          Number(result.pool_response.asset_b.amount) / 10 ** Number(_tokenB?.decimals);
 
         setPoolLiquidity(tvl);
         // Set token states
         setTokenA({
           name: _tokenA?.symbol as string,
-          icon: `/cryptoIcons/${_tokenA?.symbol.toLowerCase()}.svg`,
+          icon: `/assets/icons/cryptoIcons/${_tokenA?.symbol.toLowerCase()}.svg`,
           usdValue: Number(priceA),
           amount: Number(_tokenA?.balance) / 10 ** Number(_tokenA?.decimals),
           category: 'none',
@@ -150,71 +138,50 @@ export default function PoolView(props: PoolPageProps) {
         });
         setTokenB({
           name: _tokenB?.symbol as string,
-          icon: `/cryptoIcons/${_tokenB?.symbol.toLowerCase()}.svg`,
-          usdValue: Number(priceB),
+          icon: `/assets/icons/cryptoIcons/${_tokenB?.symbol.toLowerCase()}.png`,
+          usdValue: 1,
           amount: Number(_tokenB?.balance) / 10 ** Number(_tokenB?.decimals),
           category: 'none',
           decimals: Number(_tokenB?.decimals),
         });
         setLpToken({
           name: _lpToken?.symbol as string,
-          icon: `/cryptoIcons/poolIcon.png`,
+          icon: `/assets/icons/cryptoIcons/poolIcon.png`,
           usdValue: 0,
           amount: Number(_lpToken?.balance) / 10 ** Number(_lpToken?.decimals),
           category: 'none',
           decimals: Number(_lpToken?.decimals),
         });
-        setAssetLpShare(Number(poolTotalShares.result) / 10 ** Number(_lpToken?.decimals));
+        setAssetLpShare(
+          Number(result.pool_response.asset_lp_share.amount) / 10 ** Number(_lpToken?.decimals)
+        );
         setPoolLiquidityTokenA(
-          Number((Number(poolReserves.result[0]) / 10 ** Number(_tokenA?.decimals)).toFixed(2))
+          Number(
+            (Number(result.pool_response.asset_a.amount) / 10 ** Number(_tokenA?.decimals)).toFixed(
+              2
+            )
+          )
         );
         setPoolLiquidityTokenB(
-          Number((Number(poolReserves.result[1]) / 10 ** Number(_tokenB?.decimals)).toFixed(2))
+          Number(
+            (Number(result.pool_response.asset_b.amount) / 10 ** Number(_tokenB?.decimals)).toFixed(
+              2
+            )
+          )
         );
 
-        const poolIncentives = [
-          {
-            // XLM / USDC
-            address: 'CBHCRSVX3ZZ7EGTSYMKPEFGZNWRVCSESQR3UABET4MIW52N4EVU6BIZX',
-            amount: 12500,
-          },
-        ];
-
-        // const stakingInfoA = await stakeContractAddress.query_total_staked({
-        //   simulate: false,
-        // });
-        // const stakingInfo = await stakingInfoA.simulate({ restore: true });
-        const totalStaked = Number(stakingInfo?.result);
-
-        const ratioStaked = totalStaked / Number(poolInfo.result.asset_lp_share.amount);
-        // const valueStaked = tvl * ratioStaked;
-        const poolIncentive = poolIncentives.find(
-          (incentive) => incentive.address === params.poolAddress
-        )!;
-        const phoprice = await fetchPho();
-        const apr = ((poolIncentive?.amount * phoprice) / valueStaked) * 100 * 6;
-
-        const tokenPrice = valueStaked / (totalStaked / 10 ** 7);
-        setLpTokenPrice(tokenPrice);
-        // const stakes = await fetchStakes(_lpToken?.symbol, stakeContractAddress, apr, tokenPrice);
+        // LP token stuff..
         // Get user share
         if (storePersist.wallet.address) {
-          if (poolInfo.result) {
+          if (result) {
             // Get the total amount of LP tokens in the pool
-            const info = poolInfo.result;
 
-            const lpShareAmount = Number(info.asset_lp_share.amount);
+            const lpShareAmount = Number(result.pool_response.asset_lp_share.amount);
             const lpShareAmountDec = Number(lpShareAmount) / 10 ** (_lpToken?.decimals || 7);
 
             // Get the amount of LP tokens the user has as balance or staked
-            const userLpTokenAmount =
+            const totalUserLPTokens =
               Number(_lpToken!.balance || 0) / 10 ** (_lpToken?.decimals || 7);
-
-            const summedStakes =
-              stakes?.reduce((acc, stake) => acc + Number(stake.amount.tokenAmount), 0) || 0;
-
-            // Total LP tokens of the user
-            const totalUserLPTokens = userLpTokenAmount + summedStakes;
 
             // Price per Unit
             const pricePerUnit = tvl / lpShareAmountDec;
@@ -234,30 +201,12 @@ export default function PoolView(props: PoolPageProps) {
     }
   };
 
-  const claimTokens = async () => {
-    await executeContractTransaction({
-      contractType: 'pool',
-      contractAddress: params.poolAddress,
-      transactionFunction: async (client, restore) =>
-        client.claim(
-          {
-            user: storePersist.wallet.address!,
-          },
-          { simulate: !restore }
-        ),
-    });
-    // Wait 7 Seconds for the next block and fetch new balances
-    setTimeout(() => {
-      getPool();
-    }, 7000);
-  };
-
   useEffect(() => {
     getPool();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storePersist.wallet.address]);
 
-  if (!params.poolAddress || poolNotFound) {
+  if (!poolAddress || poolNotFound) {
     return <Alert severity="info">{`The pool you're looking for doesn't exist.`}</Alert>;
   }
 
@@ -268,13 +217,88 @@ export default function PoolView(props: PoolPageProps) {
           Pool
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          {params.poolAddress}
+          {poolAddress}
         </Typography>
       </Stack>
-      {/* First row: PortfolioValue/AssetsAndLiabilities */}
-      <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        <Grid2 size={{ xs: 12, md: 4 }}>{tokenA?.name}</Grid2>
-      </Grid2>
+
+      <Grid container spacing={3} sx={{ mt: 3 }}>
+        <Box sx={{ mt: { xs: 12, md: 0 }, maxWidth: '1440px' }}>
+          {loading && <CircularProgress />}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            {tokenA?.icon ? (
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box
+                  sx={{ height: '2.5rem', width: '2.5rem' }}
+                  component="img"
+                  src={tokenA?.icon}
+                />
+                <Box
+                  sx={{ ml: -1, height: '2.5rem', width: '2.5rem' }}
+                  component="img"
+                  src={tokenB?.icon}
+                />
+              </Box>
+            ) : (
+              <CircularProgress />
+            )}
+
+            {tokenA?.name ? (
+              <Typography sx={{ fontSize: '2rem', fontWeight: 700, ml: 1 }}>
+                {tokenA?.name}-{tokenB?.name}
+              </Typography>
+            ) : (
+              <CircularProgress />
+            )}
+          </Box>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={8}>
+              <Box sx={{ mb: 2 }}>
+                <PoolStatsTemp
+                  stats={[
+                    {
+                      title: 'TVL',
+                      value: formatCurrency('USD', poolLiquidity.toString(), navigator.language),
+                    },
+                    {
+                      title: 'My Share',
+                      value: storePersist.wallet.address
+                        ? formatCurrency('USD', userShare.toString(), navigator.language)
+                        : '-',
+                    },
+                    {
+                      title: 'LP tokens',
+                      value: lpToken?.amount.toString() || '0',
+                    },
+                    {
+                      title: 'Swap fee',
+                      value: fPercent(poolFee),
+                    },
+                  ]}
+                />
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              {tokenA && tokenB && lpToken ? (
+                <PoolLiquidityTemp
+                  tokenA={tokenA}
+                  tokenB={tokenB}
+                  liquidityA={Number(poolLiquidityTokenA)}
+                  liquidityB={Number(poolLiquidityTokenB)}
+                  liquidityToken={lpToken}
+                  onAddLiquidity={(tokenAmount) => {
+                    provideLiquidity(tokenAmount, 0);
+                  }}
+                  onRemoveLiquidity={(liquidityTokenAmount, fix) => {
+                    removeLiquidity(liquidityTokenAmount, fix);
+                  }}
+                />
+              ) : (
+                <CircularProgress />
+              )}
+            </Grid>
+          </Grid>
+        </Box>
+      </Grid>
     </DashboardContent>
   );
 }

@@ -3982,6 +3982,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@normalfinance/contracts@workspace:packages/stellar/contracts":
+  version: 0.0.0-use.local
+  resolution: "@normalfinance/contracts@workspace:packages/stellar/contracts"
+  dependencies:
+    "@stellar/freighter-api": 1.7.1
+    bigint-conversion: 2.4.1
+    buffer: 6.0.3
+    typescript: 5.0.4
+  languageName: unknown
+  linkType: soft
+
 "@normalfinance/normal-v1-interface@workspace:.":
   version: 0.0.0-use.local
   resolution: "@normalfinance/normal-v1-interface@workspace:."
@@ -4078,17 +4089,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@normalfinance/contracts@workspace:packages/stellar/contracts":
-  version: 0.0.0-use.local
-  resolution: "@normalfinance/contracts@workspace:packages/stellar/contracts"
-  dependencies:
-    "@stellar/freighter-api": 1.7.1
-    bigint-conversion: 2.4.1
-    buffer: 6.0.3
-    typescript: 5.0.4
-  languageName: unknown
-  linkType: soft
-
 "@normalfinance/stellar-web@workspace:packages/stellar/web":
   version: 0.0.0-use.local
   resolution: "@normalfinance/stellar-web@workspace:packages/stellar/web"
@@ -4143,6 +4143,7 @@ __metadata:
     minimal-shared: ^1.0.5
     mui-one-time-password-input: ^3.0.2
     next: ^14.2.22
+    notistack: ^3.0.2
     nprogress: ^0.2.0
     prettier: ^3.4.2
     react: ^18.3.1
@@ -8330,6 +8331,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"clsx@npm:^1.1.0":
+  version: 1.2.1
+  resolution: "clsx@npm:1.2.1"
+  checksum: 30befca8019b2eb7dbad38cff6266cf543091dae2825c856a62a8ccf2c3ab9c2907c4d12b288b73101196767f66812365400a227581484a05f968b0307cfaf12
+  languageName: node
+  linkType: hard
+
 "clsx@npm:^2.1.0, clsx@npm:^2.1.1":
   version: 2.1.1
   resolution: "clsx@npm:2.1.1"
@@ -10480,7 +10488,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"goober@npm:^2.1.16":
+"goober@npm:^2.0.33, goober@npm:^2.1.16":
   version: 2.1.16
   resolution: "goober@npm:2.1.16"
   peerDependencies:
@@ -14252,6 +14260,19 @@ __metadata:
   dependencies:
     svg-arc-to-cubic-bezier: ^3.0.0
   checksum: 106e108b2f99e9e222a1c6edfc859523c6c3c2b0a6ba64743ed08af120b23b9bc2c16682bc2ae043a24c011c34c8252376c68525cf11735c6f110b571740eb2e
+  languageName: node
+  linkType: hard
+
+"notistack@npm:^3.0.2":
+  version: 3.0.2
+  resolution: "notistack@npm:3.0.2"
+  dependencies:
+    clsx: ^1.1.0
+    goober: ^2.0.33
+  peerDependencies:
+    react: ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: f7d6d2edb43496a1132b9dd10d1f3b962567c92edf4d577b28ff4e6c9877cf0a50cc0a16f6d7834e3772093051597192a620dd36d4108597b118e8a2ad47d048
   languageName: node
   linkType: hard
 

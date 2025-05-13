@@ -1,22 +1,25 @@
+'use client';
+
 import type { AppStore, AppStorePersist } from '@/state/types';
-import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
+import type { AssembledTransaction } from '@stellar/stellar-sdk/contract';
 
 import { useCallback } from 'react';
-import { useToast } from '@/hooks/useToast';
-import { Signer, constants } from '@normalfinance/utils';
+import { constants } from '@normalfinance/utils';
+import { useSnackbar } from '@/components/snackbar';
+import { Signer } from '@normalfinance/utils/build/stellar';
 import { useAppStore, usePersistStore } from '@/state/store';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import {
   NormalPoolContract,
   SorobanTokenContract,
   NormalPoolRouterContract,
-} from '@normalfinance/stellar-contracts';
+} from '@normalfinance/contracts';
 
 // Define Contract Types
 type ContractType = 'pool' | 'pool_router' | 'token';
 
 const contractClients = {
-  market: NormalPoolContract.Client,
+  pool: NormalPoolContract.Client,
   pool_router: NormalPoolRouterContract.Client,
   token: SorobanTokenContract.Client,
 };
@@ -75,7 +78,8 @@ const getContractClient = <T extends ContractType>(
 };
 
 export const useContractTransaction = () => {
-  const { addAsyncToast } = useToast();
+  const { enqueueSnackbar } = useSnackbar();
+
   const storePersist = usePersistStore();
   const appStore = useAppStore();
 
@@ -111,6 +115,7 @@ export const useContractTransaction = () => {
           console.log('Attempting to sign and send transaction...');
 
           // Step 2: Handle signing and sending the transaction with async toast
+          // eslint-disable-next-line no-async-promise-executor
           const promise = new Promise<{ transactionId?: string }>(async (resolve, reject) => {
             try {
               if (restore) {
@@ -147,21 +152,23 @@ export const useContractTransaction = () => {
           });
 
           // Add the promise to the toast for UI updates
-          addAsyncToast(promise, loadingMessage);
+          // addAsyncToast(promise, loadingMessage);
+          enqueueSnackbar(loadingMessage, { variant: 'info' });
 
           // Delay at least 5 seconds before finishing the transaction process
           await promise;
           await new Promise((resolve) => setTimeout(resolve, 5000));
         } catch (error) {
           console.log('Unexpected error executing contract transaction', error);
-          addAsyncToast(Promise.reject(error), loadingMessage);
+          // addAsyncToast(Promise.reject(error), loadingMessage);
+          enqueueSnackbar(loadingMessage, { variant: 'info' });
         }
       };
 
       // Start transaction execution
       await executeTransaction();
     },
-    [addAsyncToast, storePersist, openRestoreModal, closeRestoreModal]
+    [enqueueSnackbar, storePersist, openRestoreModal, closeRestoreModal]
   );
 
   return {

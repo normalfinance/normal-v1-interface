@@ -1,17 +1,22 @@
+import type { Token } from '@/types/token';
+
 // fee-info-accordion.tsx
 import React from 'react';
-import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+
 import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Accordion, Typography, AccordionSummary, AccordionDetails } from '@mui/material';
+
 import { Iconify } from '../iconify';
-import { fCurrencyTwoDecimals, fRawPercent } from '@/utils/format-number';
-import { Token } from '@/types/token';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
 
 interface FeeInfoAccordionProps {
   conversionText: string;
   insufficientBalance: boolean;
   sellToken?: Token;
-  swapFeeInfo?: SwapFeeInfo;
+  poolFee: number;
+  networkCost: number;
+  priceImpact: number;
+  maxSlippage: number;
   sellFiatValue: number;
 }
 
@@ -19,7 +24,10 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
   conversionText,
   insufficientBalance,
   sellToken,
-  swapFeeInfo,
+  poolFee,
+  networkCost,
+  priceImpact,
+  maxSlippage,
   sellFiatValue,
 }) => {
   const theme = useTheme();
@@ -134,7 +142,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     fontSize: '12px',
                   }}
                 >
-                  Fee <Box component="span">({swapFeeInfo?.feePercentage}%)</Box>
+                  Fee <Box component="span">({poolFee}%)</Box>
                 </Typography>
                 <Iconify
                   icon="solar:info-circle-bold"
@@ -150,7 +158,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {fCurrencyTwoDecimals(sellFiatValue * ((swapFeeInfo?.feePercentage ?? 0) / 100))}
+                {fCurrencyTwoDecimals(sellFiatValue * ((poolFee ?? 0) / 100))}
               </Typography>
             </Box>
             <Box
@@ -193,7 +201,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {fCurrencyTwoDecimals(swapFeeInfo?.networkCost)}
+                {fCurrencyTwoDecimals(networkCost)}
               </Typography>
             </Box>
             <Box
@@ -236,7 +244,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {fRawPercent(swapFeeInfo?.priceImpact)}
+                {fRawPercent(priceImpact)}
               </Typography>
             </Box>
             <Box
@@ -279,7 +287,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {fRawPercent(swapFeeInfo?.maxSlippage)}
+                {fRawPercent(maxSlippage)}
               </Typography>
             </Box>
           </Box>

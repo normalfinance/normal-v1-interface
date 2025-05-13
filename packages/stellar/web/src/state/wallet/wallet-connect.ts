@@ -1,7 +1,10 @@
-import { Connector, NetworkDetails } from '@normalfinance/types';
-import { WalletConnect as WalletClient } from '@normalfinance/utils';
-import { WalletConnectAllowedMethods } from '@normalfinance/utils/build/wallets/wallet-connect';
-import { NETWORK_PASSPHRASE } from '@normalfinance/utils/build/constants';
+import type { Connector, NetworkDetails } from '@normalfinance/types';
+
+import { SOROBAN_NETWORK_PASSPHRASE } from '@normalfinance/utils/build/constants';
+import {
+  WalletConnectAllowedMethods,
+  WalletConnect as WalletClient,
+} from '@normalfinance/utils/build/stellar';
 
 export class WalletConnect implements Connector {
   id: string;
@@ -21,16 +24,16 @@ export class WalletConnect implements Connector {
     this.iconUrl = 'https://stellar.creit.tech/wallet-icons/walletconnect.svg';
     this.iconBackground = '#fff';
     this.installed = true;
-    this.downloadUrls = {
-      browserExtension:
-        'https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en',
-    };
+    // this.downloadUrls = {
+    //   browserExtension:
+    //     'https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en',
+    // };
     if (ignoreClient) return;
     this.client = new WalletClient({
-      projectId: '1cca500fbafdda38a70f8bf3bcb91b15',
-      name: 'Phoenix DeFi Hub',
+      projectId: 'c23b8cc582d9a0db289b74ddda7bfc6e',
+      name: 'Normal',
       description: 'Serving only the tastiest DeFi',
-      url: 'https://app.phoenix-hub.io',
+      url: 'https://app.normalfinance.io',
       icons: ['https://app.phoenix-hub.io/logoIcon.png'],
       method: WalletConnectAllowedMethods.SIGN_AND_SUBMIT,
       network: 'stellar:pubnet',
@@ -45,13 +48,14 @@ export class WalletConnect implements Connector {
   async getNetworkDetails(): Promise<NetworkDetails> {
     return {
       network: 'public',
-      networkPassphrase: NETWORK_PASSPHRASE,
+      networkPassphrase: SOROBAN_NETWORK_PASSPHRASE,
       networkUrl:
         'https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0',
     };
   }
 
   getPublicKey(): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
     return this.client?.getPublicKey()!;
   }
 

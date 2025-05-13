@@ -34,7 +34,7 @@ if (typeof window !== 'undefined') {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CDKHW2DSABADOE3LB7UFJADES5OH6O7CZIHBTRNVU4UYWE3WWNKR7SMM",
+    contractId: "CAULQVF54ZTDK43IFEQQMDMAKYUZQE67PHTXH5DP6LLWENEMIEWR5OGW",
   }
 } as const
 
@@ -109,6 +109,44 @@ export const PoolError = {
 
   404: {message:"PoolNotFound"}
 }
+
+export interface AddressAndAmount {
+  /**
+ * Address of the asset
+ */
+address: string;
+  /**
+ * The total amount of those tokens in the pool
+ */
+amount: i128;
+}
+
+
+/**
+ * This struct is used to return a query result with the total amount of LP tokens and assets in a specific pool.
+ */
+export interface PoolResponse {
+  /**
+ * The asset A in the pool together with asset amounts
+ */
+asset_a: AddressAndAmount;
+  /**
+ * The asset B in the pool together with asset amounts
+ */
+asset_b: AddressAndAmount;
+  /**
+ * The total amount of LP tokens currently issued
+ */
+asset_lp_share: AddressAndAmount;
+}
+
+
+export interface LiquidityPoolInfo {
+  pool_address: string;
+  pool_response: PoolResponse;
+  total_fee_bps: i64;
+}
+
 export const AccessControlError = {
   /**
    * AccessControlError: RoleNotFound
@@ -677,86 +715,6 @@ export interface Client {
   }) => Promise<AssembledTransaction<null>>
 
   /**
-   * Construct and simulate a configure_init_pool_payment transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  configure_init_pool_payment: ({admin, token, standard_pool_amount, to}: {admin: string, token: string, standard_pool_amount: u128, to: string}, options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number;
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number;
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean;
-  }) => Promise<AssembledTransaction<null>>
-
-  /**
-   * Construct and simulate a get_init_pool_payment_token transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  get_init_pool_payment_token: (options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number;
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number;
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean;
-  }) => Promise<AssembledTransaction<string>>
-
-  /**
-   * Construct and simulate a get_init_pool_payment_address transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  get_init_pool_payment_address: (options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number;
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number;
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean;
-  }) => Promise<AssembledTransaction<string>>
-
-  /**
-   * Construct and simulate a get_standard_pool_payment_amount transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  get_standard_pool_payment_amount: (options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number;
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number;
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean;
-  }) => Promise<AssembledTransaction<u128>>
-
-  /**
    * Construct and simulate a set_reward_token transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
   set_reward_token: ({admin, reward_token}: {admin: string, reward_token: string}, options?: {
@@ -1097,6 +1055,66 @@ export interface Client {
   }) => Promise<AssembledTransaction<readonly [Buffer, string]>>
 
   /**
+   * Construct and simulate a query_pools transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  query_pools: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<Array<string>>>
+
+  /**
+   * Construct and simulate a query_pool_details transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  query_pool_details: ({pool_address}: {pool_address: string}, options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<LiquidityPoolInfo>>
+
+  /**
+   * Construct and simulate a query_all_pools_details transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  query_all_pools_details: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<Array<LiquidityPoolInfo>>>
+
+  /**
    * Construct and simulate a get_pools transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
   get_pools: ({tokens}: {tokens: Array<string>}, options?: {
@@ -1330,9 +1348,8 @@ export class Client extends ContractClient {
         format?: "hex" | "base64";
       }
   ): Promise<AssembledTransaction<T>> {
-    // return ContractClient.
     // return ContractClient.deploy(null, options)
-    return undefined as any;
+    return undefined as any
   }
   constructor(public readonly options: ContractClientOptions) {
     super(
@@ -1360,10 +1377,6 @@ export class Client extends ContractClient {
         "AAAAAAAAAAAAAAAUZ2V0X3ByaXZpbGVnZWRfYWRkcnMAAAAAAAAAAQAAA+wAAAARAAAD6gAAABM=",
         "AAAAAAAAAAAAAAAOc2V0X3Rva2VuX2hhc2gAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAIbmV3X2hhc2gAAAPuAAAAIAAAAAA=",
         "AAAAAAAAAAAAAAANc2V0X3Bvb2xfaGFzaAAAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAIbmV3X2hhc2gAAAPuAAAAIAAAAAA=",
-        "AAAAAAAAAAAAAAAbY29uZmlndXJlX2luaXRfcG9vbF9wYXltZW50AAAAAAQAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAFdG9rZW4AAAAAAAATAAAAAAAAABRzdGFuZGFyZF9wb29sX2Ftb3VudAAAAAoAAAAAAAAAAnRvAAAAAAATAAAAAA==",
-        "AAAAAAAAAAAAAAAbZ2V0X2luaXRfcG9vbF9wYXltZW50X3Rva2VuAAAAAAAAAAABAAAAEw==",
-        "AAAAAAAAAAAAAAAdZ2V0X2luaXRfcG9vbF9wYXltZW50X2FkZHJlc3MAAAAAAAAAAAAAAQAAABM=",
-        "AAAAAAAAAAAAAAAgZ2V0X3N0YW5kYXJkX3Bvb2xfcGF5bWVudF9hbW91bnQAAAAAAAAAAQAAAAo=",
         "AAAAAAAAAAAAAAAQc2V0X3Jld2FyZF90b2tlbgAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAMcmV3YXJkX3Rva2VuAAAAEwAAAAA=",
         "AAAAAAAAAAAAAAAXc2V0X3Jld2FyZF9ib29zdF9jb25maWcAAAAAAwAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAABJyZXdhcmRfYm9vc3RfdG9rZW4AAAAAABMAAAAAAAAAEXJld2FyZF9ib29zdF9mZWVkAAAAAAAAEwAAAAA=",
         "AAAAAAAAAAAAAAASZ2V0X3Jld2FyZHNfY29uZmlnAAAAAAAAAAAAAQAAA+wAAAARAAAACw==",
@@ -1381,6 +1394,9 @@ export class Client extends ContractClient {
         "AAAAAAAAAAAAAAAdZGlzdHJpYnV0ZV9vdXRzdGFuZGluZ19yZXdhcmQAAAAAAAAEAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEZnJvbQAAABMAAAAAAAAABnRva2VucwAAAAAD6gAAABMAAAAAAAAACnBvb2xfaW5kZXgAAAAAA+4AAAAgAAAAAQAAAAo=",
         "AAAAAAAAAAAAAAAFY2xhaW0AAAAAAAADAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAGdG9rZW5zAAAAAAPqAAAAEwAAAAAAAAAKcG9vbF9pbmRleAAAAAAD7gAAACAAAAABAAAACg==",
         "AAAAAAAAAAAAAAASaW5pdF9zdGFuZGFyZF9wb29sAAAAAAAFAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAGdG9rZW5zAAAAAAPqAAAAEwAAAAAAAAAGb3JhY2xlAAAAAAATAAAAAAAAAAx0YXJnZXRfYXNzZXQAAAfQAAAABUFzc2V0AAAAAAAAAAAAAAxmZWVfZnJhY3Rpb24AAAAEAAAAAQAAA+0AAAACAAAD7gAAACAAAAAT",
+        "AAAAAAAAAAAAAAALcXVlcnlfcG9vbHMAAAAAAAAAAAEAAAPqAAAAEw==",
+        "AAAAAAAAAAAAAAAScXVlcnlfcG9vbF9kZXRhaWxzAAAAAAABAAAAAAAAAAxwb29sX2FkZHJlc3MAAAATAAAAAQAAB9AAAAARTGlxdWlkaXR5UG9vbEluZm8AAAA=",
+        "AAAAAAAAAAAAAAAXcXVlcnlfYWxsX3Bvb2xzX2RldGFpbHMAAAAAAAAAAAEAAAPqAAAH0AAAABFMaXF1aWRpdHlQb29sSW5mbwAAAA==",
         "AAAAAAAAAAAAAAAJZ2V0X3Bvb2xzAAAAAAAAAQAAAAAAAAAGdG9rZW5zAAAAAAPqAAAAEwAAAAEAAAPsAAAD7gAAACAAAAAT",
         "AAAAAAAAAAAAAAALcmVtb3ZlX3Bvb2wAAAAAAwAAAAAAAAAEdXNlcgAAABMAAAAAAAAABnRva2VucwAAAAAD6gAAABMAAAAAAAAACXBvb2xfaGFzaAAAAAAAA+4AAAAgAAAAAA==",
         "AAAAAAAAAAAAAAAVZ2V0X3Rva2Vuc19zZXRzX2NvdW50AAAAAAAAAAAAAAEAAAAK",
@@ -1398,6 +1414,9 @@ export class Client extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAAE0dsb2JhbFJld2FyZHNDb25maWcAAAAAAgAAAAAAAAAKZXhwaXJlZF9hdAAAAAAABgAAAAAAAAADdHBzAAAAAAo=",
         "AAAAAQAAAAAAAAAAAAAAF0xpcXVpZGl0eVBvb2xSZXdhcmRJbmZvAAAAAAMAAAAAAAAACXByb2Nlc3NlZAAAAAAAAAEAAAAAAAAAD3RvdGFsX2xpcXVpZGl0eQAAAAAMAAAAAAAAAAx2b3Rpbmdfc2hhcmUAAAAE",
         "AAAABAAAAAAAAAAAAAAACVBvb2xFcnJvcgAAAAAAAAIAAAAcUG9vbEVycm9yOiBQb29sQWxyZWFkeUV4aXN0cwAAABFQb29sQWxyZWFkeUV4aXN0cwAAAAAAAZEAAAAAAAAADFBvb2xOb3RGb3VuZAAAAZQ=",
+        "AAAAAQAAAAAAAAAAAAAAEEFkZHJlc3NBbmRBbW91bnQAAAACAAAAFEFkZHJlc3Mgb2YgdGhlIGFzc2V0AAAAB2FkZHJlc3MAAAAAEwAAACxUaGUgdG90YWwgYW1vdW50IG9mIHRob3NlIHRva2VucyBpbiB0aGUgcG9vbAAAAAZhbW91bnQAAAAAAAs=",
+        "AAAAAQAAAG5UaGlzIHN0cnVjdCBpcyB1c2VkIHRvIHJldHVybiBhIHF1ZXJ5IHJlc3VsdCB3aXRoIHRoZSB0b3RhbCBhbW91bnQgb2YgTFAgdG9rZW5zIGFuZCBhc3NldHMgaW4gYSBzcGVjaWZpYyBwb29sLgAAAAAAAAAAAAxQb29sUmVzcG9uc2UAAAADAAAAM1RoZSBhc3NldCBBIGluIHRoZSBwb29sIHRvZ2V0aGVyIHdpdGggYXNzZXQgYW1vdW50cwAAAAAHYXNzZXRfYQAAAAfQAAAAEEFkZHJlc3NBbmRBbW91bnQAAAAzVGhlIGFzc2V0IEIgaW4gdGhlIHBvb2wgdG9nZXRoZXIgd2l0aCBhc3NldCBhbW91bnRzAAAAAAdhc3NldF9iAAAAB9AAAAAQQWRkcmVzc0FuZEFtb3VudAAAAC5UaGUgdG90YWwgYW1vdW50IG9mIExQIHRva2VucyBjdXJyZW50bHkgaXNzdWVkAAAAAAAOYXNzZXRfbHBfc2hhcmUAAAAAB9AAAAAQQWRkcmVzc0FuZEFtb3VudA==",
+        "AAAAAQAAAAAAAAAAAAAAEUxpcXVpZGl0eVBvb2xJbmZvAAAAAAAAAwAAAAAAAAAMcG9vbF9hZGRyZXNzAAAAEwAAAAAAAAANcG9vbF9yZXNwb25zZQAAAAAAB9AAAAAMUG9vbFJlc3BvbnNlAAAAAAAAAA10b3RhbF9mZWVfYnBzAAAAAAAABw==",
         "AAAABAAAAAAAAAAAAAAAEkFjY2Vzc0NvbnRyb2xFcnJvcgAAAAAABwAAACBBY2Nlc3NDb250cm9sRXJyb3I6IFJvbGVOb3RGb3VuZAAAAAxSb2xlTm90Rm91bmQAAABlAAAAAAAAAAxVbmF1dGhvcml6ZWQAAABmAAAAAAAAAA9BZG1pbkFscmVhZHlTZXQAAAAAZwAAAAAAAAAMQmFkUm9sZVVzYWdlAAAAaAAAAAAAAAATQW5vdGhlckFjdGlvbkFjdGl2ZQAAAAtaAAAAAAAAAA5Ob0FjdGlvbkFjdGl2ZQAAAAALWwAAAAAAAAARQWN0aW9uTm90UmVhZHlZZXQAAAAAAAtc",
         "AAAABAAAAAAAAAAAAAAADFJld2FyZHNFcnJvcgAAAAIAAAAgUmV3YXJkc0Vycm9yOiBQYXN0VGltZU5vdEFsbG93ZWQAAAASUGFzdFRpbWVOb3RBbGxvd2VkAAAAAAK9AAAAAAAAABFTYW1lUmV3YXJkc0NvbmZpZwAAAAAAAr4=",
         "AAAAAQAAAAAAAAAAAAAAEFBvb2xSZXdhcmRDb25maWcAAAACAAAAAAAAAApleHBpcmVkX2F0AAAAAAAGAAAAAAAAAAN0cHMAAAAACg==",
@@ -1436,10 +1455,6 @@ export class Client extends ContractClient {
         get_privileged_addrs: this.txFromJSON<Map<string, Array<string>>>,
         set_token_hash: this.txFromJSON<null>,
         set_pool_hash: this.txFromJSON<null>,
-        configure_init_pool_payment: this.txFromJSON<null>,
-        get_init_pool_payment_token: this.txFromJSON<string>,
-        get_init_pool_payment_address: this.txFromJSON<string>,
-        get_standard_pool_payment_amount: this.txFromJSON<u128>,
         set_reward_token: this.txFromJSON<null>,
         set_reward_boost_config: this.txFromJSON<null>,
         get_rewards_config: this.txFromJSON<Map<string, i128>>,
@@ -1457,6 +1472,9 @@ export class Client extends ContractClient {
         distribute_outstanding_reward: this.txFromJSON<u128>,
         claim: this.txFromJSON<u128>,
         init_standard_pool: this.txFromJSON<readonly [Buffer, string]>,
+        query_pools: this.txFromJSON<Array<string>>,
+        query_pool_details: this.txFromJSON<LiquidityPoolInfo>,
+        query_all_pools_details: this.txFromJSON<Array<LiquidityPoolInfo>>,
         get_pools: this.txFromJSON<Map<Buffer, string>>,
         remove_pool: this.txFromJSON<null>,
         get_tokens_sets_count: this.txFromJSON<u128>,

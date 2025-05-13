@@ -10,6 +10,7 @@
     "build:solana": "yarn workspace @normalfinance/solana build",
     "build:stellar": "yarn workspace @normalfinance/contracts build && yarn workspace @normalfinance/stellar-web build",
     "build:stellar:contracts": "yarn workspace @normalfinance/contracts build",
+    "build:stellar:web": "yarn workspace @normalfinance/stellar-web build",
     "build:ui": "yarn workspace @normalfinance/ui build",
     "build:utils": "yarn workspace @normalfinance/utils build",
     "build:types": "yarn workspace @normalfinance/types build"

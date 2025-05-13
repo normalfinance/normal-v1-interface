@@ -25,7 +25,7 @@ export function dashboardLayoutVars(theme: Theme) {
 export function dashboardNavColorVars(
   theme: Theme,
   navColor: SettingsState['navColor'] = 'integrate',
-  navLayout: SettingsState['navLayout'] = 'vertical'
+  navLayout: SettingsState['navLayout'] = 'horizontal'
 ): Record<'layout' | 'section', CSSObject | undefined> {
   const {
     vars: { palette },

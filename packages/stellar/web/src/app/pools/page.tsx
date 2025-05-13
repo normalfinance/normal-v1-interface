@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import OverviewView from '@/sections/overview';
+import PoolsView from '@/sections/pools';
 
 // ----------------------------------------------------------------------
 
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <OverviewView />;
+  return <PoolsView />;
 }

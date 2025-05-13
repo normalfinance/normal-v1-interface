@@ -28,7 +28,7 @@ export function NavHorizontal({
       className={mergeClasses([layoutClasses.nav.root, layoutClasses.nav.horizontal, className])}
       sx={[
         (theme) => ({
-          width: 1,
+          width: 'auto',
           position: 'relative',
           flexDirection: 'column',
           display: { xs: 'none', [layoutQuery]: 'flex' },

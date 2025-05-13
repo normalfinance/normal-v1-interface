@@ -1,3 +1,4 @@
+import { Token } from '@/types/token';
 import type { NavSectionProps } from 'src/components/nav-section';
 
 // ----------------------------------------------------------------------
@@ -9,48 +10,45 @@ type NavItem = {
 };
 
 type OutputItem = {
-  title: string;
-  path: string;
-  group: string;
+  name: string;
+  shortname: string;
 };
 
-const flattenNavItems = (navItems: NavItem[], parentGroup?: string): OutputItem[] => {
+const flattenNavItems = (navItems: Token[], parentGroup?: string): OutputItem[] => {
   let flattenedItems: OutputItem[] = [];
 
   navItems.forEach((navItem) => {
-    const currentGroup = parentGroup ? `${parentGroup}-${navItem.title}` : navItem.title;
-    const groupArray = currentGroup.split('-');
+    // const currentGroup = parentGroup ? `${parentGroup}-${navItem.title}` : navItem.title;
 
     flattenedItems.push({
-      title: navItem.title,
-      path: navItem.path,
-      group: groupArray.length > 2 ? `${groupArray[0]}.${groupArray[1]}` : groupArray[0],
+      name: navItem.name,
+      shortname: navItem.shortname,
     });
 
-    if (navItem.children) {
-      flattenedItems = flattenedItems.concat(flattenNavItems(navItem.children, currentGroup));
-    }
+    // if (navItem.children) {
+    //   flattenedItems = flattenedItems.concat(flattenNavItems(navItem.children, currentGroup));
+    // }
   });
   return flattenedItems;
 };
 
-export function flattenNavSections(navSections: NavSectionProps['data']): OutputItem[] {
-  return navSections.flatMap((navSection) =>
-    flattenNavItems(navSection.items, navSection.subheader)
-  );
-}
+// export function flattenNavSections(navSections: NavSectionProps['data']): OutputItem[] {
+//   return navSections.flatMap((navSection) =>
+//     flattenNavItems(navSection.items, navSection.subheader)
+//   );
+// }
 
 // ----------------------------------------------------------------------
 
 type ApplyFilterProps = {
   query: string;
-  inputData: OutputItem[];
+  inputData: Token[];
 };
 
-export function applyFilter({ inputData, query }: ApplyFilterProps): OutputItem[] {
+export function applyFilter({ inputData, query }: ApplyFilterProps): Token[] {
   if (!query) return inputData;
 
-  return inputData.filter(({ title, path, group }) =>
-    [title, path, group].some((field) => field?.toLowerCase().includes(query.toLowerCase()))
+  return inputData.filter(({ name, shortname }) =>
+    [name, shortname].some((field) => field?.toLowerCase().includes(query.toLowerCase()))
   );
 }

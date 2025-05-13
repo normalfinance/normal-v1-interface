@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import PoolsView from '@/sections/pools';
+import PoolView from '@/sections/pools/[poolAddress]';
 
 // ----------------------------------------------------------------------
 
@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   description: '',
 };
 
-export default function Page() {
-  return <PoolsView />;
+interface PageProps {
+  params: { poolAddress: string };
+}
+
+export default function Page({ params }: PageProps) {
+  return <PoolView poolAddress={params.poolAddress} />;
 }

@@ -3,6 +3,7 @@ import type { IndexCoin, IIndexItem } from '@/types/indexes';
 
 import { z } from 'zod';
 import { Icon } from '@iconify/react';
+import { useSnackbar } from 'notistack';
 import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch, Controller } from 'react-hook-form';
@@ -25,7 +26,7 @@ import { useRouter } from 'src/routes/hooks';
 
 import { fData } from 'src/utils/format-number';
 
-import { toast } from 'src/components/snackbar';
+// import { toast } from 'src/components/snackbar';
 import { Form, Field, schemaHelper } from 'src/components/hook-form';
 
 import IndexCoinList from './index-coin-list';
@@ -85,6 +86,8 @@ type Props = {
 export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Props) {
   const router = useRouter();
   const MAX_AVATAR_SIZE = 3145728;
+
+  const { enqueueSnackbar } = useSnackbar();
 
   const defaultValues: NewIndexSchemaType = {
     avatarUrl: null,
@@ -386,7 +389,10 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
     try {
       await new Promise((resolve) => setTimeout(resolve, 500)); // mock API
       reset();
-      toast.success(currentIndex ? 'Update success!' : 'Create success!');
+      // toast.success(currentIndex ? 'Update success!' : 'Create success!');
+      enqueueSnackbar(currentIndex ? 'Update success!' : 'Create success!', {
+        variant: 'success',
+      });
       console.info('Submitted data', data);
     } catch (error) {
       console.error(error);

@@ -34,7 +34,7 @@ if (typeof window !== 'undefined') {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CANGL465BITB7A6UO5LB5JPIZVQVN5FLQC443J4645AVRM6RGUGHNRXG",
+    contractId: "CC5ZEGRQ7QG3TIV2B4FTSVJ3LOWNQYRJYV6VT3DSAGMAHVODOLUZ3RDO",
   }
 } as const
 
@@ -98,6 +98,44 @@ export const LiquidityPoolValidationError = {
 
   2020: {message:"InMaxNotSatisfied"}
 }
+
+export interface AddressAndAmount {
+  /**
+ * Address of the asset
+ */
+address: string;
+  /**
+ * The total amount of those tokens in the pool
+ */
+amount: u128;
+}
+
+
+/**
+ * This struct is used to return a query result with the total amount of LP tokens and assets in a specific pool.
+ */
+export interface PoolResponse {
+  /**
+ * The asset A in the pool together with asset amounts
+ */
+asset_a: AddressAndAmount;
+  /**
+ * The asset B in the pool together with asset amounts
+ */
+asset_b: AddressAndAmount;
+  /**
+ * The total amount of LP tokens currently issued
+ */
+asset_lp_share: AddressAndAmount;
+}
+
+
+export interface LiquidityPoolInfo {
+  pool_address: string;
+  pool_response: PoolResponse;
+  total_fee_bps: u32;
+}
+
 export const AccessControlError = {
   /**
    * AccessControlError: RoleNotFound
@@ -483,7 +521,7 @@ export interface Client {
      * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
      */
     simulate?: boolean;
-  }) => Promise<AssembledTransaction<Map<string, any>>>
+  }) => Promise<AssembledTransaction<LiquidityPoolInfo>>
 
   /**
    * Construct and simulate a set_privileged_addrs transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -1300,7 +1338,7 @@ export class Client extends ContractClient {
       }
   ): Promise<AssembledTransaction<T>> {
     // return ContractClient.deploy(null, options)
-    return undefined as any;
+    return undefined as any
   }
   constructor(public readonly options: ContractClientOptions) {
     super(
@@ -1318,7 +1356,7 @@ export class Client extends ContractClient {
         "AAAAAAAAAAAAAAAId2l0aGRyYXcAAAADAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAMc2hhcmVfYW1vdW50AAAACgAAAAAAAAAKbWluX2Ftb3VudAAAAAAACgAAAAEAAAAK",
         "AAAAAAAAAAAAAAAMZ2V0X3Jlc2VydmVzAAAAAAAAAAEAAAPqAAAACg==",
         "AAAAAAAAAAAAAAAQZ2V0X2ZlZV9mcmFjdGlvbgAAAAAAAAABAAAABA==",
-        "AAAAAAAAAAAAAAAIZ2V0X2luZm8AAAAAAAAAAQAAA+wAAAARAAAAAA==",
+        "AAAAAAAAAAAAAAAIZ2V0X2luZm8AAAAAAAAAAQAAB9AAAAARTGlxdWlkaXR5UG9vbEluZm8AAAA=",
         "AAAAAAAAAAAAAAAUc2V0X3ByaXZpbGVnZWRfYWRkcnMAAAAFAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAADXJld2FyZHNfYWRtaW4AAAAAAAATAAAAAAAAABBvcGVyYXRpb25zX2FkbWluAAAAEwAAAAAAAAALcGF1c2VfYWRtaW4AAAAAEwAAAAAAAAAWZW1lcmdlbmN5X3BhdXNlX2FkbWlucwAAAAAD6gAAABMAAAAA",
         "AAAAAAAAAAAAAAAUZ2V0X3ByaXZpbGVnZWRfYWRkcnMAAAAAAAAAAQAAA+wAAAARAAAD6gAAABM=",
         "AAAAAAAAAAAAAAAMa2lsbF9kZXBvc2l0AAAAAQAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAA==",
@@ -1361,6 +1399,9 @@ export class Client extends ContractClient {
         "AAAAAAAAAAAAAAASZ2V0X2Z1dHVyZV9hZGRyZXNzAAAAAAABAAAAAAAAAAlyb2xlX25hbWUAAAAAAAARAAAAAQAAABM=",
         "AAAABAAAAAAAAAAAAAAAEkxpcXVpZGl0eVBvb2xFcnJvcgAAAAAACAAAACZMaXF1aWRpdHlQb29sRXJyb3I6IEFscmVhZHlJbml0aWFsaXplZAAAAAAAEkFscmVhZHlJbml0aWFsaXplZAAAAAAAyQAAAAAAAAAXUGxhbmVBbHJlYWR5SW5pdGlhbGl6ZWQAAAAAygAAAAAAAAAZUmV3YXJkc0FscmVhZHlJbml0aWFsaXplZAAAAAAAAMsAAAAAAAAAFEludmFyaWFudERvZXNOb3RIb2xkAAAAzAAAAAAAAAARUG9vbERlcG9zaXRLaWxsZWQAAAAAAADNAAAAAAAAAA5Qb29sU3dhcEtpbGxlZAAAAAAAzgAAAAAAAAAPUG9vbENsYWltS2lsbGVkAAAAAM8AAAAAAAAAE0Z1dHVyZVNoYXJlSWROb3RTZXQAAAAA0A==",
         "AAAABAAAAAAAAAAAAAAAHExpcXVpZGl0eVBvb2xWYWxpZGF0aW9uRXJyb3IAAAASAAAAL0xpcXVpZGl0eVBvb2xWYWxpZGF0aW9uRXJyb3I6IFdyb25nSW5wdXRWZWNTaXplAAAAABFXcm9uZ0lucHV0VmVjU2l6ZQAAAAAAB9EAAAAAAAAADkZlZU91dE9mQm91bmRzAAAAAAfTAAAAAAAAABBBbGxDb2luc1JlcXVpcmVkAAAH1AAAAAAAAAARSW5NaW5Ob3RTYXRpc2ZpZWQAAAAAAAfVAAAAAAAAABJPdXRNaW5Ob3RTYXRpc2ZpZWQAAAAAB9YAAAAAAAAAE0Nhbm5vdFN3YXBTYW1lVG9rZW4AAAAH1wAAAAAAAAASSW5Ub2tlbk91dE9mQm91bmRzAAAAAAfYAAAAAAAAABNPdXRUb2tlbk91dE9mQm91bmRzAAAAB9kAAAAAAAAACUVtcHR5UG9vbAAAAAAAB9oAAAAAAAAAFEludmFsaWREZXBvc2l0QW1vdW50AAAH2wAAAAAAAAATQWRtaW5GZWVPdXRPZkJvdW5kcwAAAAfcAAAAAAAAAA9Vbmtub3duUG9vbFR5cGUAAAAH3QAAAAAAAAAQWmVyb1NoYXJlc0J1cm5lZAAAB94AAAAAAAAAE1Rvb01hbnlTaGFyZXNCdXJuZWQAAAAH3wAAAAAAAAASQ2Fubm90Q29tcGFyZVBvb2xzAAAAAAfhAAAAAAAAAApaZXJvQW1vdW50AAAAAAfiAAAAAAAAABNJbnN1ZmZpY2llbnRCYWxhbmNlAAAAB+MAAAAAAAAAEUluTWF4Tm90U2F0aXNmaWVkAAAAAAAH5A==",
+        "AAAAAQAAAAAAAAAAAAAAEEFkZHJlc3NBbmRBbW91bnQAAAACAAAAFEFkZHJlc3Mgb2YgdGhlIGFzc2V0AAAAB2FkZHJlc3MAAAAAEwAAACxUaGUgdG90YWwgYW1vdW50IG9mIHRob3NlIHRva2VucyBpbiB0aGUgcG9vbAAAAAZhbW91bnQAAAAAAAo=",
+        "AAAAAQAAAG5UaGlzIHN0cnVjdCBpcyB1c2VkIHRvIHJldHVybiBhIHF1ZXJ5IHJlc3VsdCB3aXRoIHRoZSB0b3RhbCBhbW91bnQgb2YgTFAgdG9rZW5zIGFuZCBhc3NldHMgaW4gYSBzcGVjaWZpYyBwb29sLgAAAAAAAAAAAAxQb29sUmVzcG9uc2UAAAADAAAAM1RoZSBhc3NldCBBIGluIHRoZSBwb29sIHRvZ2V0aGVyIHdpdGggYXNzZXQgYW1vdW50cwAAAAAHYXNzZXRfYQAAAAfQAAAAEEFkZHJlc3NBbmRBbW91bnQAAAAzVGhlIGFzc2V0IEIgaW4gdGhlIHBvb2wgdG9nZXRoZXIgd2l0aCBhc3NldCBhbW91bnRzAAAAAAdhc3NldF9iAAAAB9AAAAAQQWRkcmVzc0FuZEFtb3VudAAAAC5UaGUgdG90YWwgYW1vdW50IG9mIExQIHRva2VucyBjdXJyZW50bHkgaXNzdWVkAAAAAAAOYXNzZXRfbHBfc2hhcmUAAAAAB9AAAAAQQWRkcmVzc0FuZEFtb3VudA==",
+        "AAAAAQAAAAAAAAAAAAAAEUxpcXVpZGl0eVBvb2xJbmZvAAAAAAAAAwAAAAAAAAAMcG9vbF9hZGRyZXNzAAAAEwAAAAAAAAANcG9vbF9yZXNwb25zZQAAAAAAB9AAAAAMUG9vbFJlc3BvbnNlAAAAAAAAAA10b3RhbF9mZWVfYnBzAAAAAAAABA==",
         "AAAABAAAAAAAAAAAAAAAEkFjY2Vzc0NvbnRyb2xFcnJvcgAAAAAABwAAACBBY2Nlc3NDb250cm9sRXJyb3I6IFJvbGVOb3RGb3VuZAAAAAxSb2xlTm90Rm91bmQAAABlAAAAAAAAAAxVbmF1dGhvcml6ZWQAAABmAAAAAAAAAA9BZG1pbkFscmVhZHlTZXQAAAAAZwAAAAAAAAAMQmFkUm9sZVVzYWdlAAAAaAAAAAAAAAATQW5vdGhlckFjdGlvbkFjdGl2ZQAAAAtaAAAAAAAAAA5Ob0FjdGlvbkFjdGl2ZQAAAAALWwAAAAAAAAARQWN0aW9uTm90UmVhZHlZZXQAAAAAAAtc",
         "AAAABAAAAAAAAAAAAAAADFJld2FyZHNFcnJvcgAAAAIAAAAgUmV3YXJkc0Vycm9yOiBQYXN0VGltZU5vdEFsbG93ZWQAAAASUGFzdFRpbWVOb3RBbGxvd2VkAAAAAAK9AAAAAAAAABFTYW1lUmV3YXJkc0NvbmZpZwAAAAAAAr4=",
         "AAAAAQAAAAAAAAAAAAAAEFBvb2xSZXdhcmRDb25maWcAAAACAAAAAAAAAApleHBpcmVkX2F0AAAAAAAGAAAAAAAAAAN0cHMAAAAACg==",
@@ -1389,7 +1430,7 @@ export class Client extends ContractClient {
         withdraw: this.txFromJSON<u128>,
         get_reserves: this.txFromJSON<Array<u128>>,
         get_fee_fraction: this.txFromJSON<u32>,
-        get_info: this.txFromJSON<Map<string, any>>,
+        get_info: this.txFromJSON<LiquidityPoolInfo>,
         set_privileged_addrs: this.txFromJSON<null>,
         get_privileged_addrs: this.txFromJSON<Map<string, Array<string>>>,
         kill_deposit: this.txFromJSON<null>,

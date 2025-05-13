@@ -11,7 +11,7 @@ import { varTap, varHover, transitionTap } from 'src/components/animate';
 
 // ----------------------------------------------------------------------
 
-export function SettingsButton({ sx, ...other }: IconButtonProps) {
+export function LightDarkModeButton({ sx, ...other }: IconButtonProps) {
   const settings = useSettingsContext();
 
   return (
@@ -21,7 +21,9 @@ export function SettingsButton({ sx, ...other }: IconButtonProps) {
       whileHover={varHover(1.04)}
       transition={transitionTap()}
       aria-label="Settings button"
-      onClick={settings.onToggleDrawer}
+      onClick={() => {
+        settings.setField('colorScheme', settings.state.colorScheme === 'light' ? 'dark' : 'light');
+      }}
       sx={[{ p: 0, width: 40, height: 40 }, ...(Array.isArray(sx) ? sx : [sx])]}
       {...other}
     >

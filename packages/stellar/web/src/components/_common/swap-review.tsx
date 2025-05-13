@@ -28,8 +28,8 @@ export interface SwapReviewProps {
   buyToken?: Token;
   sellAmount: string;
   buyAmount: number;
-  feePercentage: number;
-  networkCost: number;
+  feePercentage: string;
+  networkCost: string;
   priceImpact: number;
   maxSlippage: number;
   sellFiatValue: number;
@@ -315,7 +315,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fCurrencyTwoDecimals(sellFiatValue * ((feePercentage ?? 0) / 100))}
+                      {fCurrencyTwoDecimals(sellFiatValue * ((Number(feePercentage)) / 100))}
                     </Typography>
                   </Box>
 

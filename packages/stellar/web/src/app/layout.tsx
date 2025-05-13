@@ -2,22 +2,23 @@ import 'src/global.css';
 
 import type { Metadata, Viewport } from 'next';
 
+import { CONFIG } from '@/global-config';
+import { DashboardLayout } from '@/layouts/dashboard';
+
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
-import { CONFIG } from '@/global-config';
 import { primary } from 'src/theme/core/palette';
 import { LocalizationProvider } from 'src/locales';
 import { detectLanguage } from 'src/locales/server';
 import { themeConfig, ThemeProvider } from 'src/theme';
 import { I18nProvider } from 'src/locales/i18n-provider';
 
-import { Snackbar } from 'src/components/snackbar';
 import { ProgressBar } from 'src/components/progress-bar';
+import { SnackbarProvider } from 'src/components/snackbar';
 import { MotionLazy } from 'src/components/animate/motion-lazy';
 import { detectSettings } from 'src/components/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from 'src/components/settings';
-import { DashboardLayout } from '@/layouts/dashboard';
 
 // import { ExternalProvider } from '@/providers/ExternalProvider';
 
@@ -96,10 +97,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                 >
                   {/* <ExternalProvider> */}
                   <MotionLazy>
-                    <Snackbar />
-                    <ProgressBar />
-                    <SettingsDrawer defaultSettings={defaultSettings} />
-                    <DashboardLayout>{children}</DashboardLayout>
+                    <SnackbarProvider>
+                      <ProgressBar />
+                      <SettingsDrawer defaultSettings={defaultSettings} />
+                      <DashboardLayout>{children}</DashboardLayout>
+                    </SnackbarProvider>
                   </MotionLazy>
                   {/* </ExternalProvider> */}
                 </ThemeProvider>

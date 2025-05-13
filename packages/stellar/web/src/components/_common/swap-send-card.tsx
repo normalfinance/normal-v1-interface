@@ -1,16 +1,19 @@
-import React from 'react';
-import Card from '@mui/material/Card';
+import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material/Card';
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
+
+import React from 'react';
+import { useTabs } from 'minimal-shared/hooks';
+
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
+import Card from '@mui/material/Card';
 import { Typography } from '@mui/material';
-import { useTabs } from 'minimal-shared/hooks';
-import { CustomTabsSwapSend } from './swap-send-card-custom-card';
+import { alpha, useTheme } from '@mui/material/styles';
+
 import SwapCard from './swap-card';
 import SendCard from './send-card';
-import { alpha, useTheme } from '@mui/material/styles';
-import { Token } from '@/types/token';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
+import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 interface SwapSendCardProps extends CardProps {
   title?: string;

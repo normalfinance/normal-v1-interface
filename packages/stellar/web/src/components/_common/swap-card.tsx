@@ -1,14 +1,13 @@
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
-import type { SwapFeeInfo } from '@/types/swap-fee-info';
 
 import { fCurrency } from '@/utils/format-number';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { useAppStore, usePersistStore } from '@/state/store';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
+import { NormalPoolRouterContract } from '@normalfinance/contracts';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
-import { NormalPoolRouterContract } from '@normalfinance/stellar-contracts';
 import { constants, checkTrustline, fetchAndIssueTrustline } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -22,12 +21,9 @@ import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
-interface SwapCardProps extends CardProps {
-  tokensList?: Token[];
-  swapFeeInfo?: SwapFeeInfo;
-}
+interface SwapCardProps extends CardProps {}
 
-const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...other }) => {
+const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const theme = useTheme();
 
   // Using the store
@@ -38,18 +34,21 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
 
   const [txBroadcasting, setTxBroadcasting] = useState<boolean>(false);
   const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
-  const [maxSpread, setMaxSpread] = useState<number>(1);
+
+  const [maxSlippage, setMaxSlippage] = useState<number>(10_000); // bps
   const [exchangeRate, setExchangeRate] = useState<string>('');
   const [networkFee, setNetworkFee] = useState<string>('');
   const [poolFee, setPoolFee] = useState<string>('');
+  const [priceImpact, setPriceImpact] = useState<number>(0); // bps
+
   const [trustlineButtonActive, setTrustlineButtonActive] = useState<boolean>(false);
   const [trustlineTokenName, setTrustlineTokenName] = useState<string>('');
   const [trustlineAssetAmount, setTrustlineAssetAmount] = useState<number>(0);
+  const [allPools, setAllPools] = useState<any[]>([]);
 
   // 1) States for tokens, default sell token is first in the list
-  const [sellToken, setSellToken] = useState<Token | null>(
-    tokensList.length ? tokensList[0] : null
-  );
+  const [tokens, setTokens] = useState<Token[]>([]);
+  const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
 
   // 2) State for the user’s sell amount
@@ -98,6 +97,16 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
     // Start “fetching” quote
     setIsLoading(true);
 
+    doSimulateSwap();
+
+    const buyTokenContractID = appStore.allTokens.find(
+      (token: Token) => token.name === buyToken.name
+    )?.contractId;
+
+    if (storePersist.wallet.address) {
+      handleTrustLine(buyTokenContractID);
+    }
+
     // Simulate an async fetch with a 1s delay
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -112,6 +121,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
     }, 1000);
 
     // Cleanup if user changes input quickly
+    // eslint-disable-next-line consistent-return
     return () => clearTimeout(timer);
   }, [sellToken, buyToken, amount, sellVal]);
 
@@ -224,20 +234,25 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
     const getAllTokens = async (): Promise<void> => {
       setIsLoading(true);
       try {
+        const allTokens = await appStore.getAllTokens();
+        setTokens(allTokens.slice(2));
+        setSellToken(allTokens[0]);
+        setBuyToken(allTokens[1]);
+        setIsLoading(false);
+
         // Get all pools
         const poolRouterContract = new NormalPoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,
           networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
           rpcUrl: constants.SOROBAN_RPC_URL,
         });
-        // const { result } = await poolRouterContract.query_all_pools_details();
-        const { result } = await poolRouterContract.get_pools({ tokens: [] });
+        const { result } = await poolRouterContract.query_all_pools_details();
 
-        const allPairs = result.map((pool: any) => ({
+        const _allPools = result.map((pool: any) => ({
           asset_a: pool.pool_response.asset_a.address,
           asset_b: pool.pool_response.asset_b.address,
         }));
-        setAllPools(allPairs);
+        setAllPools(_allPools);
       } catch (e) {
         console.error(e);
       } finally {
@@ -264,7 +279,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
             client.swap(
               {
                 user: storePersist.wallet.address!,
-                tokens: [],
+                tokens: [sellToken.address, buyToken.address],
                 token_in: sellToken.address,
                 token_out: buyToken.address,
                 pool_index: Buffer.from('0'),
@@ -312,30 +327,48 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
 
       setLoadingSimulate(true);
       try {
-        const contract = new NormalPoolRouterContract.Client({
+        const poolRouterContract = new NormalPoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,
           networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
           rpcUrl: constants.SOROBAN_RPC_URL,
         });
 
-        const tx = await contract.estimate_swap({
-          tokens: [],
+        const poolInfo = await poolRouterContract.query_pool_details({
+          pool_address: '',
+        });
+
+        const tx = await poolRouterContract.estimate_swap({
+          tokens: [sellToken.address, buyToken.address],
           token_in: sellToken.address,
           token_out: buyToken.address,
           pool_index: Buffer.from('0'),
           in_amount: BigInt(amount),
         });
 
-        if (tx.result) {
+        if (poolInfo.result && tx.result) {
           const _exchangeRate = Number(tx.result) / Number(amount);
 
           setExchangeRate(
             `${(_exchangeRate / 10 ** 7).toFixed(2)} ${buyToken?.name} per ${sellToken?.name}`
           );
-          setNetworkFee(
-            `${Number(tx.result.commission_amounts[0][1]) / 10 ** 7} ${sellToken?.name}`
-          );
-          setPoolFee('');
+          // setNetworkFee(
+          //   `${Number(tx.result.commission_amounts[0][1]) / 10 ** 7} ${sellToken?.name}`
+          // );
+          setPoolFee(poolInfo.result.total_fee_bps.toString());
+
+          // dy = (y * dx) / (x + dx)
+          const dy =
+            (poolInfo.result.pool_response.asset_b.amount * BigInt(amount)) /
+            (poolInfo.result.pool_response.asset_a.amount + BigInt(amount));
+
+          const execution_price = BigInt(amount) / dy;
+          const market_price =
+            poolInfo.result.pool_response.asset_a.amount /
+            poolInfo.result.pool_response.asset_b.amount;
+
+          // price_impact = (execution_price - market_price) / market_price * 100
+          const _priceImpact = ((execution_price - market_price) / market_price) * BigInt(100);
+          setPriceImpact(Number(_priceImpact));
 
           // setTokenAmounts((prevAmounts) => {
           //   const newToTokenAmount = Number(tx.result.ask_amount) / 10 ** 7;
@@ -363,6 +396,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
       const tlAsset = await appStore.fetchTokenInfo(
         'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA'
       );
+      // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
       setTrustlineAssetAmount(Number(tlAsset?.balance) / 10 ** tlAsset?.decimals!);
       setTrustlineTokenName(trust.asset?.contract || '');
     },
@@ -744,7 +778,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           conversionText={sellToken && buyToken ? getConversionText(sellToken, buyToken) : ''}
           insufficientBalance={insufficientBalance}
           sellToken={sellToken || undefined}
-          swapFeeInfo={swapFeeInfo}
+          poolFee={Number(poolFee)}
+          networkCost={0}
+          priceImpact={priceImpact ?? 0}
+          maxSlippage={maxSlippage}
           sellFiatValue={sellFiatValue}
         />
       )}
@@ -758,9 +795,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           sellAmount={amount}
           buyAmount={buyAmount}
           feePercentage={poolFee}
-          networkCost={networkFee ?? 0}
-          priceImpact={swapFeeInfo?.priceImpact ?? 0}
-          maxSlippage={`${maxSpread}%`}
+          networkCost={networkFee ?? '0'}
+          priceImpact={priceImpact ?? 0}
+          maxSlippage={maxSlippage}
           sellFiatValue={sellFiatValue}
           onSubmit={() => doSwap()}
         />
@@ -771,7 +808,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
         open={open}
         onClose={handleClose}
         buttonSource={activeButton}
-        tokensList={tokensList}
+        tokens={tokens}
         onTokenSelect={handleTokenSelect}
       />
     </Box>

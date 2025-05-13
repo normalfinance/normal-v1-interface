@@ -23,7 +23,7 @@ export interface PickTokenProps {
   open: boolean;
   onClose: () => void;
   buttonSource: string;
-  tokensList?: Token[];
+  tokens?: Token[];
   onTokenSelect: (token: Token) => void;
 }
 
@@ -31,14 +31,14 @@ const PickToken: React.FC<PickTokenProps> = ({
   open,
   onClose,
   buttonSource,
-  tokensList = [],
+  tokens = [],
   onTokenSelect,
 }) => {
   const theme = useTheme();
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredTokens = tokensList.filter((token) => {
+  const filteredTokens = tokens.filter((token) => {
     const lowerTerm = searchTerm.toLowerCase();
     return (
       token.name.toLowerCase().includes(lowerTerm) ||
@@ -51,10 +51,10 @@ const PickToken: React.FC<PickTokenProps> = ({
     onClose();
   };
 
-  const featuredTokens = tokensList.filter((token) => token.featured);
+  const featuredTokens = tokens.filter((token) => token.featured);
 
-  const ownedTokens = tokensList.filter((token) => token.owned);
-  const unownedTokens = tokensList.filter((token) => !token.owned);
+  const ownedTokens = tokens.filter((token) => token.owned);
+  const unownedTokens = tokens.filter((token) => !token.owned);
   const arrangedTokens = [...ownedTokens, ...unownedTokens];
 
   return (
@@ -306,7 +306,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   </Button>
                 ))}
               </Box>
-              {tokensList.some((token) => token.owned) && (
+              {tokens.some((token) => token.owned) && (
                 <Box sx={{ mt: '12px' }} width="100%">
                   <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <Iconify icon="carbon:skill-level-basic" width={14} />
@@ -323,7 +323,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       alignSelf: 'stretch',
                     }}
                   >
-                    {tokensList
+                    {tokens
                       .filter((token) => token.owned)
                       .map((token) => (
                         <Button

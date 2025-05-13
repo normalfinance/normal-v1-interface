@@ -3,15 +3,16 @@
 import type { Pool } from '@/components/_common/pools';
 
 import { useRouter } from 'next/navigation';
-import Pools from '@/components/_common/pools';
 import { constants } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@/state/store';
-import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/stellar-contracts';
+import { formatCurrency } from '@normalfinance/utils/build/stellar';
+import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
+import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
 
-import Grid2 from '@mui/material/Grid2';
-import { Stack, Typography } from '@mui/material';
+// import Grid2 from '@mui/material/Grid2';
+import { Grid, Stack, Typography } from '@mui/material';
 
 export default function PoolsView() {
   const store = useAppStore(); // Global state management
@@ -38,70 +39,49 @@ export default function PoolsView() {
       });
 
       const poolInfo = await PoolContract.get_info();
-      const poolTokens = await PoolContract.get_tokens();
-      const poolReserves = await PoolContract.get_reserves();
-      const poolTotalShares = await PoolContract.get_total_shares();
 
-      if (poolInfo?.result) {
+      if (poolInfo.result) {
         const [tokenA, tokenB] = await Promise.all([
-          store.fetchTokenInfo(poolTokens.result[0]),
-          store.fetchTokenInfo(poolTokens.result[1]),
+          store.fetchTokenInfo(poolInfo.result.pool_response.asset_a.address),
+          store.fetchTokenInfo(poolInfo.result.pool_response.asset_b.address),
         ]);
 
         // Fetch prices and calculate TVL
-        const [priceA, priceB] = await Promise.all([
-          API.getPrice(tokenA?.symbol || ''),
-          API.getPrice(tokenB?.symbol || ''),
-        ]);
+
+        const priceA =
+          Number(poolInfo.result.pool_response.asset_b.amount) /
+          Number(poolInfo.result.pool_response.asset_a.amount);
 
         const tvl =
-          (priceA * Number(poolReserves.result[0])) / 10 ** Number(tokenA?.decimals) +
-          (priceB * Number(poolReserves.result[1])) / 10 ** Number(tokenB?.decimals);
-
-        const totalStaked = Number(stakingInfo.result);
-        const totalTokens = Number(
-          allPoolDetails.result.find((pool: any) => pool.pool_address === poolAddress)
-            ?.pool_response.asset_lp_share.amount
-        );
-
-        const ratioStaked = totalStaked / totalTokens;
-        const valueStaked = tvl * ratioStaked;
-
-        // Calculate APR based on incentives
-        const poolIncentives = [
-          {
-            address: 'CBHCRSVX3ZZ7EGTSYMKPEFGZNWRVCSESQR3UABET4MIW52N4EVU6BIZX',
-            amount: 12500,
-          },
-        ];
-
-        const poolIncentive = poolIncentives.find((incentive) => incentive.address === poolAddress);
-
-        const phoprice = await fetchPho();
-        const _apr = ((poolIncentive?.amount || 0 * phoprice) / valueStaked) * 100 * 6;
-
-        const apr = isNaN(_apr) ? 0 : _apr;
+          (priceA * Number(poolInfo.result.pool_response.asset_a.amount)) /
+            10 ** Number(tokenA?.decimals) +
+          Number(poolInfo.result.pool_response.asset_b.amount) / 10 ** Number(tokenB?.decimals);
 
         // Construct and return pool object if all fetches are successful
         return {
           tokens: [
             {
               name: tokenA?.symbol || '',
-              icon: `/cryptoIcons/${tokenA?.symbol.toLowerCase()}.svg`,
-              amount: Number(poolReserves.result[0]) / 10 ** Number(tokenA?.decimals),
+              icon: `/assets/icons/cryptoIcons/${tokenA?.symbol.toLowerCase()}.svg`,
+              amount:
+                Number(poolInfo.result.pool_response.asset_a.amount) /
+                10 ** Number(tokenA?.decimals),
               category: '',
               usdValue: 0,
             },
             {
               name: tokenB?.symbol || '',
-              icon: `/cryptoIcons/${tokenB?.symbol.toLowerCase()}.svg`,
-              amount: Number(poolReserves.result[1]) / 10 ** Number(tokenB?.decimals),
+              icon: `/assets/icons/cryptoIcons/${tokenB?.symbol.toLowerCase()}.png`,
+              amount:
+                Number(poolInfo.result.pool_response.asset_b.amount) /
+                10 ** Number(tokenB?.decimals),
               category: '',
               usdValue: 0,
             },
           ],
           tvl: formatCurrency('USD', tvl.toString(), navigator.language),
-          maxApr: `${(apr / 2).toFixed(2)}%`,
+          // maxApr: `${(apr / 2).toFixed(2)}%`,
+          maxApr: '0',
           userLiquidity: 0,
           poolAddress,
         };
@@ -109,6 +89,7 @@ export default function PoolsView() {
     } catch (e) {
       console.log(e);
     }
+    // eslint-disable-next-line consistent-return
     return;
   }, []);
 
@@ -126,22 +107,20 @@ export default function PoolsView() {
         rpcUrl: constants.SOROBAN_RPC_URL,
       });
 
-      const pools = await PoolRouterContract.get_pools_for_tokens_range({
-        start: BigInt(0),
-        end: BigInt(10),
-      });
+      const pools = await PoolRouterContract.query_all_pools_details();
 
       const poolWithData =
         pools && Array.isArray(pools.result)
-          ? await Promise.all(pools.result.map(async (pool: string) => await fetchPool(pool)))
+          ? await Promise.all(pools.result.map(async (pool) => await fetchPool(pool.pool_address)))
           : [];
 
-      const poolsFiltered: Pool[] = poolWithData.filter(
-        (el: any) =>
+      const poolsFiltered = poolWithData.filter(
+        (el) =>
           el !== undefined &&
           el.tokens.length >= 2 &&
           el.poolAddress !== 'CBXBKAB6QIRUGTG77OQZHC46BIIPA5WDKIKZKPA2H7Q7CPKQ555W3EVB'
       );
+
       setAllPools(poolsFiltered as Pool[]);
       setLoading(false);
     } catch (e) {
@@ -157,27 +136,24 @@ export default function PoolsView() {
     fetchPools();
   }, [fetchPools]);
 
+  console.log(allPools);
+
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
         <Typography variant="h4" color="text.primary">
           Pools
         </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Account Overview
-        </Typography>
       </Stack>
-      <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        <Grid2 size={{ xs: 12, md: 4 }}>
-          <Pools
-            pools={allPools}
-            onAddLiquidityClick={() => {}}
-            onShowDetailsClick={(pool) => {
-              router.push(`/pools/${pool.poolAddress}`);
-            }}
-          />
-        </Grid2>
-      </Grid2>
+      <Grid container spacing={3} sx={{ mt: 3 }}>
+        <PoolsTemp
+          pools={allPools}
+          onAddLiquidityClick={() => {}}
+          onShowDetailsClick={(pool) => {
+            router.push(`/pools/${pool.poolAddress}`);
+          }}
+        />
+      </Grid>
     </DashboardContent>
   );
 }

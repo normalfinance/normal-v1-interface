@@ -1,8 +1,8 @@
 'use client';
 
 import { isEqual } from 'es-toolkit';
+import { useMemo, useEffect, useCallback } from 'react';
 import { getCookie, getStorage } from 'minimal-shared/utils';
-import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useCookies, useLocalStorage } from 'minimal-shared/hooks';
 
 import { SettingsContext } from './settings-context';
@@ -27,16 +27,6 @@ export function SettingsProvider({
     storageKey,
     initialSettings
   );
-
-  const [openDrawer, setOpenDrawer] = useState(false);
-
-  const onToggleDrawer = useCallback(() => {
-    setOpenDrawer((prev) => !prev);
-  }, []);
-
-  const onCloseDrawer = useCallback(() => {
-    setOpenDrawer(false);
-  }, []);
 
   const canReset = !isEqual(state, defaultSettings);
 
@@ -64,14 +54,11 @@ export function SettingsProvider({
     () => ({
       canReset,
       onReset,
-      openDrawer,
-      onCloseDrawer,
-      onToggleDrawer,
       state,
       setState,
       setField,
     }),
-    [canReset, onReset, openDrawer, onCloseDrawer, onToggleDrawer, state, setField, setState]
+    [canReset, onReset, state, setField, setState]
   );
 
   return <SettingsContext.Provider value={memoizedValue}>{children}</SettingsContext.Provider>;

@@ -1,3 +1,5 @@
-export * from 'sonner';
+'use client';
 
-export * from './snackbar';
+export * from 'notistack';
+
+export { default as SnackbarProvider } from './snackbar-provider';

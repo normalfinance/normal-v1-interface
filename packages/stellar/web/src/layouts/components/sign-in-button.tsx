@@ -1,23 +1,32 @@
+'use client';
+
 import type { ButtonProps } from '@mui/material/Button';
+
+import { usePrivy } from '@privy-io/react-auth';
 
 import Button from '@mui/material/Button';
 
-import { RouterLink } from 'src/routes/components';
-
-import { CONFIG } from '@/global-config';
-
 // ----------------------------------------------------------------------
 
-export function SignInButton({ sx, ...other }: ButtonProps) {
+type Props = ButtonProps & {
+  title: string;
+};
+
+export function SignInButton({ title, sx, ...other }: Props) {
+  const { ready, authenticated, login } = usePrivy();
+  // Disable login when Privy is not ready or the user is already authenticated
+  const disableLogin = !ready || (ready && authenticated);
+
   return (
     <Button
-      component={RouterLink}
-      href={'https://google.com'}
-      variant="outlined"
+      disabled={disableLogin}
+      onClick={login}
+      variant="contained"
+      color="info"
       sx={sx}
       {...other}
     >
-      Sign in
+      {title}
     </Button>
   );
 }

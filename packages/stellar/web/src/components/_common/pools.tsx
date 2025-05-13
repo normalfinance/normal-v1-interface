@@ -1,215 +1,25 @@
-import type { Token } from '@/types/token';
+'use client';
 
-import React from 'react';
+import type { Token } from '@normalfinance/types';
 
-import { Box, Grid2, Typography } from '@mui/material';
+import { useState, useCallback } from 'react';
 
-const PoolItem = React.memo(
-  ({
-    pool,
-    onAddLiquidityClick,
-    onShowDetailsClick,
-  }: {
-    pool: Pool;
-    onAddLiquidityClick: (pool: Pool) => void;
-    onShowDetailsClick: (pool: Pool) => void;
-  }) => (
-    <Grid2
-      item
-      xs={12}
-      sm={6}
-      md={4}
-      lg={3}
-      xl={3}
-      onClick={() => onShowDetailsClick(pool)}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, ease: 'easeInOut' }}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-    >
-      <Box
-        sx={{
-          padding: '24px',
-          borderRadius: '20px',
-          background:
-            'var(--Secondary-S3, linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.03) 100%))',
-          position: 'relative',
-          overflow: 'hidden',
-          cursor: 'pointer',
-          boxShadow: '0 6px 18px rgba(0, 0, 0, 0.4)',
-        }}
-      >
-        {/* Logos in the background */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '-10%',
-            left: '-10%',
-            width: '120px',
-            height: '120px',
-            opacity: 0.1,
-            background: `url(${pool.tokens[0].icon}) center / cover no-repeat`,
-            filter: 'grayscale(100%)',
-            borderRadius: '50%',
-          }}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '-10%',
-            right: '-10%',
-            width: '120px',
-            height: '120px',
-            opacity: 0.1,
-            background: `url(${pool.tokens[1].icon}) center / cover no-repeat`,
-            filter: 'grayscale(100%)',
-            borderRadius: '50%',
-          }}
-        />
+import Box from '@mui/material/Box';
+import Link from '@mui/material/Link';
+import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
+import Avatar from '@mui/material/Avatar';
+// @mui
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import { Button, AvatarGroup } from '@mui/material';
+import InputAdornment from '@mui/material/InputAdornment';
 
-        {/* Pool Information */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '16px',
-            zIndex: 1,
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              width: '36px',
-              height: '36px',
-              padding: '4px',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '32px',
-              background:
-                'var(--Secondary-S3, linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.03) 100%))',
-            }}
-          >
-            <Box
-              sx={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: `url(${pool.tokens[0].icon}) transparent 50% / cover no-repeat`,
-              }}
-            />
-          </Box>
-          <Typography
-            sx={{
-              fontWeight: 700,
-              fontSize: '20px',
-              color: '#fff',
-            }}
-          >
-            {`${pool.tokens[0].name} - ${pool.tokens[1].name}`}
-          </Typography>
-          <Box
-            sx={{
-              display: 'flex',
-              width: '36px',
-              height: '36px',
-              padding: '4px',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '32px',
-              background:
-                'var(--Secondary-S3, linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.03) 100%))',
-            }}
-          >
-            <Box
-              sx={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: `url(${pool.tokens[1].icon}) transparent 50% / cover no-repeat`,
-              }}
-            />
-          </Box>
-        </Box>
+// components
+import { Iconify } from '../iconify';
+import { SearchNotFound } from '../search-not-found';
 
-        {/* Pool Stats */}
-        <Grid2 container rowSpacing={1} sx={{ zIndex: 1 }}>
-          <Grid2 item xs={6}>
-            <Typography
-              sx={{
-                color: 'var(--Secondary-S2-2, #BDBEBE)',
-                fontSize: '14px',
-                fontWeight: 700,
-              }}
-            >
-              TVL
-            </Typography>
-          </Grid2>
-          <Grid2 item xs={6} textAlign="right">
-            <Typography
-              sx={{
-                color: 'var(--Secondary-S2, #FFF)',
-                fontSize: '18px',
-                fontWeight: 700,
-              }}
-            >
-              {pool.tvl}
-            </Typography>
-          </Grid2>
-          <Grid2 item xs={6}>
-            <Typography
-              sx={{
-                color: 'var(--Secondary-S2-2, #BDBEBE)',
-                fontSize: '14px',
-                fontWeight: 700,
-              }}
-            >
-              Max APR
-            </Typography>
-          </Grid2>
-          <Grid2 item xs={6} textAlign="right">
-            <Typography
-              sx={{
-                color: 'var(--Secondary-S2, #FFF)',
-                fontSize: '18px',
-                fontWeight: 700,
-              }}
-            >
-              {pool.maxApr}
-            </Typography>
-          </Grid2>
-          {filter === 'MY' && (
-            <>
-              <Grid2 item xs={6}>
-                <Typography
-                  sx={{
-                    color: 'var(--Secondary-S2-2, #BDBEBE)',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                  }}
-                >
-                  My Liquidity
-                </Typography>
-              </Grid2>
-              <Grid2 item xs={6} textAlign="right">
-                <Typography
-                  sx={{
-                    color: 'var(--Secondary-S2, #FFF)',
-                    fontSize: '18px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {pool.userLiquidity}
-                </Typography>
-              </Grid2>
-            </>
-          )}
-        </Grid2>
-      </Box>
-    </Grid2>
-  )
-);
+// ----------------------------------------------------------------------
 
 export interface Pool {
   tokens: Token[];
@@ -219,40 +29,144 @@ export interface Pool {
   poolAddress: string;
 }
 
-type PoolsProps = {
+type Props = {
   pools: Pool[];
-  onAddLiquidityClick: (pool: Pool) => void;
   onShowDetailsClick: (pool: Pool) => void;
 };
 
-const Pools: React.FC<PoolsProps> = ({
-  pools,
-  onAddLiquidityClick,
-  onShowDetailsClick,
-}: PoolsProps) => (
-  <Box sx={{ flex: 1 }}>
-    <Typography
+export default function ProfileFriends({ pools, onShowDetailsClick }: Props) {
+  const [searchPools, setSearchPools] = useState('');
+
+  const handleSearchPools = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchPools(event.target.value);
+  }, []);
+
+  const dataFiltered = applyFilter({
+    inputData: pools,
+    query: searchPools,
+  });
+
+  const notFound = !dataFiltered.length && !!searchPools;
+
+  return (
+    <>
+      <Stack
+        spacing={2}
+        justifyContent="space-between"
+        direction={{ xs: 'column', sm: 'row' }}
+        sx={{ my: 5 }}
+      >
+        <Typography variant="h4">Friends</Typography>
+
+        <TextField
+          value={searchPools}
+          onChange={handleSearchPools}
+          placeholder="Search pool..."
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ width: { xs: 1, sm: 260 } }}
+        />
+      </Stack>
+
+      {notFound ? (
+        <SearchNotFound query={searchPools} sx={{ mt: 10 }} />
+      ) : (
+        <Box
+          gap={3}
+          display="grid"
+          gridTemplateColumns={{
+            xs: 'repeat(1, 1fr)',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(3, 1fr)',
+          }}
+        >
+          {dataFiltered.map((pool, index) => (
+            <PoolCard
+              key={index}
+              // onAddLiquidityClick={() => onAddLiquidityClick(pool)}
+              onShowDetailsClick={onShowDetailsClick}
+              pool={pool}
+            />
+          ))}
+        </Box>
+      )}
+    </>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+type FriendCardProps = {
+  pool: Pool;
+  onShowDetailsClick: (pool: Pool) => void;
+};
+
+function PoolCard({ pool, onShowDetailsClick }: FriendCardProps) {
+  return (
+    <Card
+      onClick={() => onShowDetailsClick(pool)}
       sx={{
-        color: '#FFF',
-        fontSize: '32px',
-        fontWeight: 700,
-        marginBottom: '16px',
+        py: 5,
+        display: 'flex',
+        position: 'relative',
+        alignItems: 'center',
+        flexDirection: 'column',
       }}
     >
-      Pools
-    </Typography>
-
-    <Grid2 container spacing={3}>
-      {pools.map((pool, index) => (
-        <PoolItem
-          key={index}
-          onAddLiquidityClick={() => onAddLiquidityClick(pool)}
-          onShowDetailsClick={onShowDetailsClick}
-          pool={pool}
+      {/* <Avatar alt={name} src={avatarUrl} sx={{ width: 64, height: 64, mb: 3 }} /> */}
+      <AvatarGroup>
+        <Avatar
+          key={pool.tokens[0].name}
+          alt={pool.tokens[0].name}
+          src={pool.tokens[0].icon}
+          sx={{ width: 64, height: 64, mb: 3 }}
         />
-      ))}
-    </Grid2>
-  </Box>
-);
+        <Avatar
+          key={pool.tokens[1].name}
+          alt={pool.tokens[1].name}
+          src={pool.tokens[1].icon}
+          sx={{ width: 64, height: 64, mb: 3 }}
+        />
+      </AvatarGroup>
 
-export default Pools;
+      <Link variant="subtitle1" color="text.primary">
+        {`${pool.tokens[0].name} - ${pool.tokens[1].name}`}
+      </Link>
+
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1, mt: 0.5 }}>
+        {pool.tvl}
+      </Typography>
+
+      <Stack alignItems="center" justifyContent="center" direction="row">
+        <Stack direction="row" spacing={1.5}>
+          <Button fullWidth variant="contained" color="warning">
+            Deposit
+          </Button>
+
+          <Button fullWidth variant="contained" color="primary">
+            Withdraw
+          </Button>
+        </Stack>
+      </Stack>
+    </Card>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+function applyFilter({ inputData, query }: { inputData: Pool[]; query: string }) {
+  if (query) {
+    return inputData.filter(
+      (pool) =>
+        pool.tokens[0].name.toLowerCase().indexOf(query.toLowerCase()) !== -1 ||
+        pool.tokens[1].name.toLowerCase().indexOf(query.toLowerCase()) !== -1
+    );
+  }
+
+  return inputData;
+}
