@@ -10,7 +10,10 @@ import { createChartData, RealtimeChartData } from 'src/utils/portfolio-value-ch
 import { StatCardData } from '@/types/stat-card-data';
 import { fCurrencyCompact, fShortenNumber } from '@/utils/format-number';
 import { StatCard } from '@/components/_common/stat-card';
-import { AreaChartCard, LegendValue } from '@/components/_common/area-chart-card';
+import {
+  AreaChartCard,
+  LegendValue,
+} from '@normalfinance/ui/src/components/common/area-chart-card';
 import { SwapSendCard } from '@/components/_common/swap-send-card';
 import { Token } from '@/types/token';
 import { SwapFeeInfo } from '@/types/swap-fee-info';

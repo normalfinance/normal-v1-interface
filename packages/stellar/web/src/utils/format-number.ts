@@ -112,6 +112,10 @@ export function fData(inputValue: InputNumberValue) {
   return fm;
 }
 
+// ----------------------------------------------------------------------
+// 6) Raw percent formatting (two decimals)
+//    e.g. 2.5 => "2.50%", 100 => "100.00%"
+// ----------------------------------------------------------------------
 export function fRawPercent(inputValue: InputNumberValue, options?: Options) {
   const locale = formatNumberLocale() || DEFAULT_LOCALE;
   const number = processInput(inputValue);
@@ -125,6 +129,10 @@ export function fRawPercent(inputValue: InputNumberValue, options?: Options) {
   return fm + '%';
 }
 
+// ----------------------------------------------------------------------
+// 7) Currency formatting with exactly two decimals
+//    e.g. 1234.5 => "$1,234.50"
+// ----------------------------------------------------------------------
 export function fCurrencyTwoDecimals(inputValue: InputNumberValue, options?: Options) {
   const locale = formatNumberLocale() || DEFAULT_LOCALE;
   const number = processInput(inputValue);
@@ -139,6 +147,10 @@ export function fCurrencyTwoDecimals(inputValue: InputNumberValue, options?: Opt
   return fm;
 }
 
+// ----------------------------------------------------------------------
+// 8) Compact currency formatting
+//    e.g. 1500000 => "$1.5m", 2000000000 => "$2b"
+// ----------------------------------------------------------------------
 export function fCurrencyCompact(inputValue: InputNumberValue, options?: Options) {
   const locale = formatNumberLocale() || DEFAULT_LOCALE;
   const number = processInput(inputValue);
