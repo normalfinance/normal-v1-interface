@@ -1,22 +1,27 @@
 'use client';
 
 import Grid2 from '@mui/material/Grid2';
-import { AssetsAndLiabilities } from '@/components/_overview-page-components/assets-and-liabilities/assets-and-liabilities';
 import { DashboardContent } from '@/layouts/dashboard';
 import { Stack, Typography, useTheme } from '@mui/material';
 import { Markets } from '@normalfinance/ui/src/components/markets/markets';
-import { MarketTable } from '@/components/_overview-page-components/market-table/market-table';
-import { createChartData, RealtimeChartData } from 'src/utils/portfolio-value-chart-series';
-import { StatCardData } from '@/types/stat-card-data';
-import { fCurrencyCompact, fShortenNumber } from '@/utils/format-number';
+import { MarketTable } from '@normalfinance/ui/src/components/market-table/market-table';
+import {
+  createChartData,
+  RealtimeChartData,
+} from '@normalfinance/utils/src/chart/portfolio-value-chart-series';
+import { StatCardData } from '@normalfinance/types/src/general/stat-card-data';
+import {
+  fCurrencyCompact,
+  fShortenNumber,
+} from '@normalfinance/utils/src/format/format-number-locale';
 import { StatCard } from '@normalfinance/ui/src/components/stat-card/stat-card';
 import {
   AreaChartCard,
   LegendValue,
 } from '@normalfinance/ui/src/components/area-chart-card/area-chart-card';
 import { SwapSendCard } from '@normalfinance/ui/src/components/swap-send-card/swap-send-card';
-import { Token } from '@/types/token';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
+import { Token } from '@normalfinance/types/src/general/token';
+import { SwapFeeInfo } from '@normalfinance/types/src/general/swap-fee-info';
 
 export default function OverviewView() {
   const theme = useTheme();

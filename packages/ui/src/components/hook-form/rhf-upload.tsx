@@ -5,11 +5,11 @@ import { Controller, useFormContext } from 'react-hook-form';
 import Box from '@mui/material/Box';
 
 import { HelperText } from './help-text';
-import { Upload } from '../_common/upload';
-import { UploadBox } from '../_common/upload-box';
-import { UploadAvatar } from '../_common/upload-avatar';
+import { Upload } from '@normalfinance/ui/src/components/upload/upload';
+import { UploadBox } from '@normalfinance/ui/src/components/upload/upload-box';
+import { UploadAvatar } from '@normalfinance/ui/src/components/upload/upload-avatar';
 
-import type { UploadProps } from '@/types/upload';
+import type { UploadProps } from '@normalfinance/types/src/general/upload';
 
 // ----------------------------------------------------------------------
 

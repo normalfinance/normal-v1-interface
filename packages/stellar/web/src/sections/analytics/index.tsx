@@ -1,12 +1,15 @@
 'use client';
 
-import type { LegendValue } from '@/components/_common/area-chart-card';
+import type { LegendValue } from '@normalfinance/ui/src/components/area-chart-card/area-chart-card';
 
 import { DashboardContent } from '@/layouts/dashboard';
-import { fCurrencyCompact } from '@/utils/format-number';
-import { AreaChartCard } from '@/components/_common/area-chart-card';
-import { VolumeChartCard } from '@/components/_analytics-page-components/volume-chart-card';
-import { createChartData, type RealtimeChartData } from '@/utils/portfolio-value-chart-series';
+import { fCurrencyCompact } from '@normalfinance/utils/src/format/format-number-locale';
+import { AreaChartCard } from '@normalfinance/ui/src/components/area-chart-card/area-chart-card';
+import { VolumeChartCard } from '@normalfinance/ui/src/components/volume-chart/volume-chart-card';
+import {
+  createChartData,
+  type RealtimeChartData,
+} from '@normalfinance/utils/src/chart/portfolio-value-chart-series';
 
 import Grid2 from '@mui/material/Grid2';
 import { Stack, useTheme, Typography } from '@mui/material';
