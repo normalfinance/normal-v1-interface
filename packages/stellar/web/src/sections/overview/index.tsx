@@ -13,8 +13,8 @@ import { StatCard } from '@/components/_common/stat-card';
 import {
   AreaChartCard,
   LegendValue,
-} from '@normalfinance/ui/src/components/common/area-chart-card';
-import { SwapSendCard } from '@normalfinance/ui/src/components/common/swap-send-card';
+} from '@normalfinance/ui/src/components/area-chart-card/area-chart-card';
+import { SwapSendCard } from '@normalfinance/ui/src/components/swap-send-card/swap-send-card';
 import { Token } from '@/types/token';
 import { SwapFeeInfo } from '@/types/swap-fee-info';
 
