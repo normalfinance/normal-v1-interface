@@ -5,3 +5,7 @@ export { StatCard } from './src/components/stat-card/stat-card';
 export { SwapSendCard } from './src/components/swap-send-card/swap-send-card';
 export { MarketTable } from '@normalfinance/ui/src/components/market-table/market-table';
 export { VolumeChartCard } from '@normalfinance/ui/src/components/volume-chart/volume-chart-card';
+export { NewIndexForm } from '@normalfinance/ui/src/components/new-index-form/new-index-form';
+export { TabsTable } from '@normalfinance/ui/src/components/tabs-table/tabs-table-card';
+export { CurrentBalance } from '@normalfinance/ui/src/components/current-balance/current-balance-card';
+export { default as SwapCard } from './src/components/swap-send-card/swap-card';

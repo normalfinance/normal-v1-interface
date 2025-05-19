@@ -1,6 +1,6 @@
 'use client';
 
-import SwapCard from '@normalfinance/ui/src/components/swap-send-card/swap-card';
+import { SwapCard } from '@normalfinance/ui';
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Grid2 from '@mui/material/Grid2';
