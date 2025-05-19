@@ -2,23 +2,21 @@
 import Grid2 from '@mui/material/Grid2';
 import { DashboardContent } from '@/layouts/dashboard';
 import { Stack, Typography, useTheme } from '@mui/material';
-import { StatCard } from '@normalfinance/ui/src/components/stat-card/stat-card';
 import {
   fShortenNumber,
   fRawPercent,
   fCurrencyTwoDecimals,
-} from '@normalfinance/utils/src/format/format-number-locale';
-import { StatCardData } from '@normalfinance/types/src/general/stat-card-data';
-import { CurrentBalance } from '@normalfinance/ui/src/components/current-balance/current-balance-card';
-import {
   createChartData,
   RealtimeChartData,
-} from '@normalfinance/utils/src/chart/portfolio-value-chart-series';
+} from '@normalfinance/utils/src';
+import { StatCardData } from '@normalfinance/types/src';
 import {
   AreaChartCard,
   LegendValue,
-} from '@normalfinance/ui/src/components/area-chart-card/area-chart-card';
-import { TabsTable } from '@normalfinance/ui/src/components/tabs-table/tabs-table-card';
+  TabsTable,
+  CurrentBalance,
+  StatCard,
+} from '@normalfinance/ui/';
 
 export default function InsuranceView() {
   const theme = useTheme();
