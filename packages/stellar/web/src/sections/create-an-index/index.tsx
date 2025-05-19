@@ -3,8 +3,8 @@
 import Grid2 from '@mui/material/Grid2';
 import { DashboardContent } from '@/layouts/dashboard';
 import { Stack, Typography } from '@mui/material';
-import { NewIndexForm } from '@normalfinance/ui/src/components/new-index-form/new-index-form';
-import { IndexCoin } from '@normalfinance/types/src/general/indexes';
+import { NewIndexForm } from '@normalfinance/ui';
+import { IndexCoin } from '@normalfinance/types/src';
 
 export default function CreateAnIndexView() {
   // Example data for available coins
