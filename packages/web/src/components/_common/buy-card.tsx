@@ -291,6 +291,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
                   px: '12px',
                   py: '6px',
                   minWidth: 0, // keep pill-shaped
+                  fontSize: '12px',
                 }}
               >
                 ${quick}
