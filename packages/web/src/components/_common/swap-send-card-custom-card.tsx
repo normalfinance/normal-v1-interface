@@ -7,7 +7,7 @@ import Tabs, { tabsClasses } from '@mui/material/Tabs';
 
 // ----------------------------------------------------------------------
 
-export type CustomTabsSwapSendProps = TabsProps & {
+export type CustomTabsProps = TabsProps & {
   slotProps?: TabsProps['slotProps'] & {
     scroller?: SxProps<Theme>;
     indicator?: SxProps<Theme>;
@@ -18,7 +18,7 @@ export type CustomTabsSwapSendProps = TabsProps & {
   };
 };
 
-export function CustomTabsSwapSend({ children, slotProps, sx, ...other }: CustomTabsSwapSendProps) {
+export function CustomTabs({ children, slotProps, sx, ...other }: CustomTabsProps) {
   return (
     <Tabs
       sx={[
