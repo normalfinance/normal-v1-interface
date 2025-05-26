@@ -17,6 +17,22 @@ interface BuyCardProps extends CardProps {
   cashBalance?: number;
 }
 
+export interface QuickAmountButton {
+  amount: number;
+}
+
+const QUICK_BUTTONS: QuickAmountButton[] = [
+  {
+    amount: 100,
+  },
+  {
+    amount: 300,
+  },
+  {
+    amount: 1000,
+  },
+];
+
 const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...other }) => {
   const theme = useTheme();
 
@@ -251,6 +267,36 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
               }}
             />
           )}
+
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ mt: 2, justifyContent: 'center', width: '100%' }}
+          >
+            {QUICK_BUTTONS.map(({ amount: quick }) => (
+              <Button
+                key={quick}
+                variant="outlined"
+                onClick={() => setAmount(String(quick))}
+                sx={{
+                  border: `1px solid ${theme.palette.divider}`,
+                  backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                  textTransform: 'none',
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.grey[500], 0.16),
+                    border: `1px solid ${theme.palette.divider}`,
+                  },
+                  gap: 1,
+                  borderRadius: '32px',
+                  px: '12px',
+                  py: '6px',
+                  minWidth: 0, // keep pill-shaped
+                }}
+              >
+                ${quick}
+              </Button>
+            ))}
+          </Stack>
         </Stack>
         <Box>
           <Button
