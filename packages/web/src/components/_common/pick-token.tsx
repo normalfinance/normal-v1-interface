@@ -22,7 +22,7 @@ import { Iconify } from '@/components/template/iconify';
 export interface PickTokenProps {
   open: boolean;
   onClose: () => void;
-  buttonSource: string;
+  buttonSource?: string;
   tokens?: Token[];
   onTokenSelect: (token: Token) => void;
 }
@@ -148,12 +148,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   }}
                   onClick={() => handleTokenClick(token)}
                 >
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    gap="10px"
-                  >
+                  <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
                       src={token.logo ?? token.url}
@@ -439,12 +434,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       }}
                       onClick={() => handleTokenClick(token)}
                     >
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        gap="10px"
-                      >
+                      <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
                           src={token.url}

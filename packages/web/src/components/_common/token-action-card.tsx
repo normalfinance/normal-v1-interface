@@ -49,6 +49,8 @@ export interface TokenActionCardProps extends CardProps {
    * Example: `['swap', 'buy']` will hide the **Send** tab.
    */
   enabledTabs?: TokenActionKey[];
+
+  cashBalance?: number;
 }
 
 // ----------------------------------------------------------------------
@@ -61,6 +63,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   tokensList,
   swapFeeInfo,
   enabledTabs,
+  cashBalance,
   ...other
 }) => {
   const theme = useTheme();
@@ -89,7 +92,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
       case 'send':
         return <SendCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />;
       case 'buy':
-        return <BuyCard tokensList={tokensList} />;
+        return <BuyCard tokensList={tokensList} cashBalance={cashBalance} />;
       default:
         return null;
     }

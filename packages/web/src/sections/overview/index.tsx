@@ -254,6 +254,8 @@ export default function OverviewView() {
     maxSlippage: 0.5,
   };
 
+  const cashBalance = 3000;
+
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
@@ -280,6 +282,7 @@ export default function OverviewView() {
           <TokenActionCard
             tokensList={tokensList}
             swapFeeInfo={swapFeeInfo}
+            cashBalance={cashBalance}
             enabledTabs={['swap', 'send', 'buy']}
           />
         </Grid2>
