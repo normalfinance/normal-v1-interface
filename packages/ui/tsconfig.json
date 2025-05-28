@@ -1,26 +1,26 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
-    "rootDir": "src",
-    "outDir": "types",
     "target": "es2015",
-    "jsx": "react-jsx",
-    "moduleResolution": "bundler",
     "skipLibCheck": true,
-    "allowJs": true,
+    "declaration": true,
+    "declarationDir": "./types",
+    "emitDeclarationOnly": true,
     "isolatedModules": true,
+    "allowJs": true,
+    "jsx": "react-jsx",
     "esModuleInterop": true,
     "downlevelIteration": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
-    "composite": true,
+    "moduleResolution": "node",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*",
+    "../stellar/web/src/components/wallet-popover.tsx",
+    "../stellar/web/src/components/footer.tsx",
+    "../stellar/web/src/components/oldFooter.tsx"
+  ],
   "exclude": ["node_modules"]
 }
