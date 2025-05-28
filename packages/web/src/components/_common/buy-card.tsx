@@ -1,16 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Typography, Box, CardProps, Button, InputBase, Stack } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
-import { Token } from '@/types/token';
-import { fCurrency } from '@/utils/format-number';
-import { Iconify } from '../iconify';
-import PickToken from './pick-token';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { Token } from '@/types/token';
+import type { CardProps } from '@mui/material';
+
+import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { convertCoinToFiat, convertFiatToCoin, getMaxAmount } from '@/utils/conversion-helpers';
+import { convertFiatToCoin } from '@/utils/conversion-helpers';
+
+import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
+
+import PickToken from './pick-token';
+import CheckoutDialog from './checkout-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-import ConnectWalletDialog from './connect-wallet-dialog';
 
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];
@@ -318,7 +319,14 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
           onTokenSelect={handleTokenSelect}
         />
 
-        {reviewOpen && <ConnectWalletDialog open={reviewOpen} onClose={handleReviewClose} />}
+        {reviewOpen && (
+          <CheckoutDialog
+            open={reviewOpen}
+            token={buyToken?.shortname ?? 'USDC'}
+            amount={amount}
+            onClose={handleReviewClose}
+          />
+        )}
       </Stack>
     </Stack>
   );
