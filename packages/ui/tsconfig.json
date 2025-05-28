@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "es2015",
     "skipLibCheck": true,
     "declaration": true,
@@ -13,7 +14,8 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "src/*": ["./src/*"]
     }
   },
   "include": [
