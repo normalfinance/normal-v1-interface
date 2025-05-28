@@ -1,6 +1,10 @@
+import type { ButtonProps } from '@mui/material';
+
 import React from 'react';
-import { Button, ButtonProps, Typography } from '@mui/material';
-import { useTheme, alpha } from '@mui/material/styles';
+
+import { Button, Typography } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
+
 import { Iconify } from '../iconify';
 
 /**
@@ -10,10 +14,15 @@ import { Iconify } from '../iconify';
 export interface GetHelpButtonProps extends ButtonProps {
   /** Overwrite the default label ("Get help") */
   label?: string;
+  url: string;
 }
 
-const GetHelpButton: React.FC<GetHelpButtonProps> = ({ label = 'Get help', sx, ...other }) => {
+const GetHelpButton: React.FC<GetHelpButtonProps> = ({ label = 'Get help', url, sx, ...other }) => {
   const theme = useTheme();
+
+  const handleButtonClick = () => {
+    window.open(url, '_blank', 'noopener');
+  };
 
   return (
     <Button
@@ -33,6 +42,7 @@ const GetHelpButton: React.FC<GetHelpButtonProps> = ({ label = 'Get help', sx, .
         px: '6px',
         py: '4px',
       }}
+      onClick={handleButtonClick}
     >
       <Iconify icon="fluent:mail-checkmark-24-filled" width={14} />
 
