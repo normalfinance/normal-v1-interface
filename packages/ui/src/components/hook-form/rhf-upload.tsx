@@ -5,11 +5,9 @@ import { Controller, useFormContext } from 'react-hook-form';
 import Box from '@mui/material/Box';
 
 import { HelperText } from './help-text';
-import { Upload } from '../_common/upload';
-import { UploadBox } from '../_common/upload-box';
-import { UploadAvatar } from '../_common/upload-avatar';
+import { Upload, UploadBox, UploadAvatar } from '../upload';
 
-import type { UploadProps } from '@/types/upload';
+import type { UploadProps } from '@normalfinance/types';
 
 // ----------------------------------------------------------------------
 

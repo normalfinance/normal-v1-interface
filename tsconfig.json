@@ -6,7 +6,11 @@
     "declaration": true,
     "moduleResolution": "Node",
     "paths": {
-      "stellar/*": ["packages/ui/src/*"]     
+      "stellar/*": ["packages/ui/src/*"],
+      "@normalfinance/types": ["packages/types/index.ts"], 
+      "@normalfinance/types/*": ["packages/types/src/*"],
+      "@normalfinance/utils": ["packages/utils/index.ts"],  
+      "@normalfinance/utils/*": ["packages/utils/src/*"]
     }
   },
   "exclude": ["**/*.spec.ts"]

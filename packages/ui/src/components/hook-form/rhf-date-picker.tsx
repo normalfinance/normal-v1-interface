@@ -9,7 +9,7 @@ import { Controller, useFormContext } from 'react-hook-form';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { MobileDateTimePicker } from '@mui/x-date-pickers/MobileDateTimePicker';
 
-import { formatPatterns } from 'src/utils/format-time';
+import { formatPatterns } from '@normalfinance/utils/src';
 
 // ----------------------------------------------------------------------
 

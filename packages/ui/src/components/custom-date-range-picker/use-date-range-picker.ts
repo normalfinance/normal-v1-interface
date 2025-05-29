@@ -1,8 +1,8 @@
-import type { IDatePickerControl } from 'src/types/common';
+import type { IDatePickerControl } from '@normalfinance/types';
 
 import { useState, useCallback } from 'react';
 
-import { fIsAfter, fDateRangeShortLabel } from 'src/utils/format-time';
+import { fIsAfter, fDateRangeShortLabel } from '@normalfinance/utils/src';
 
 // ----------------------------------------------------------------------
 

@@ -22,6 +22,10 @@ export type SettingsContextValue = {
   onReset: () => void;
   setState: (updateValue: Partial<SettingsState>) => void;
   setField: (name: keyof SettingsState, updateValue: SettingsState[keyof SettingsState]) => void;
+  // Drawer
+  openDrawer: boolean;
+  onCloseDrawer: () => void;
+  onToggleDrawer: () => void;
 };
 
 export type SettingsProviderProps = {
