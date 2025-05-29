@@ -1,12 +1,12 @@
 import type { Breakpoint } from '@mui/material/styles';
-import type { NavSectionProps } from 'src/components/nav-section';
+import type { NavSectionProps } from '@normalfinance/ui/src/components/nav-section';
 
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 
-import { NavSectionHorizontal } from 'src/components/nav-section';
+import { NavSectionHorizontal } from '@normalfinance/ui/src/components/nav-section';
 
 import { layoutClasses } from '../core/classes';
 

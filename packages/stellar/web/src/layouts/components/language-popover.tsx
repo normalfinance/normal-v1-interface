@@ -13,9 +13,9 @@ import IconButton from '@mui/material/IconButton';
 
 import { useTranslate } from 'src/locales';
 
-import { FlagIcon } from 'src/components/flag-icon';
-import { CustomPopover } from 'src/components/custom-popover';
-import { varTap, varHover, transitionTap } from 'src/components/animate';
+import { FlagIcon } from '@normalfinance/ui/src';
+import { CustomPopover } from '@normalfinance/ui/src';
+import { varTap, varHover, transitionTap } from '@normalfinance/ui/src';
 
 // ----------------------------------------------------------------------
 

@@ -1,7 +1,7 @@
 'use client';
 
 import type { Breakpoint } from '@mui/material/styles';
-import type { NavSectionProps } from 'src/components/nav-section';
+import type { NavSectionProps } from '@normalfinance/ui/src/components/nav-section';
 
 import { merge } from 'es-toolkit';
 import { varAlpha } from 'minimal-shared/utils';
@@ -14,8 +14,8 @@ import { iconButtonClasses } from '@mui/material/IconButton';
 
 import { allLangs } from 'src/locales';
 
-import { Logo } from 'src/components/logo';
-import { useSettingsContext } from 'src/components/settings';
+import { Logo } from '@normalfinance/ui/src';
+import { useSettingsContext } from '@normalfinance/ui/src';
 
 import { NavMobile } from './nav-mobile';
 import { NavVertical } from './nav-vertical';

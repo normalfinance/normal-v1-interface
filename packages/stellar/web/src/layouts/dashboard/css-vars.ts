@@ -1,9 +1,9 @@
-import type { SettingsState } from 'src/components/settings';
+import type { SettingsState } from '@normalfinance/ui/src';
 import type { Theme, CSSObject } from '@mui/material/styles';
 
 import { varAlpha } from 'minimal-shared/utils';
 
-import { bulletColor } from 'src/components/nav-section';
+import { bulletColor } from '@normalfinance/ui/src/components/nav-section';
 
 // ----------------------------------------------------------------------
 

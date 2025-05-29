@@ -38,3 +38,4 @@ export * from './stat-card';
 export * from './swap-send-card';
 export * from './tabs-table';
 export * from './volume-chart';
+export * from './buttons';

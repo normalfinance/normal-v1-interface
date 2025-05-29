@@ -1,7 +1,7 @@
-import type { NavSectionProps } from '@/components/nav-section';
+import type { NavSectionProps } from '@normalfinance/ui/src/components/nav-section';
 
 import { CONFIG } from '@/global-config';
-import { SvgColor } from '@/components/svg-color';
+import { SvgColor } from '@normalfinance/ui/src';
 
 import { paths } from 'src/routes/paths';
 

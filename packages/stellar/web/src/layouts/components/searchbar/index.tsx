@@ -2,7 +2,7 @@
 
 import type { BoxProps } from '@mui/material/Box';
 import type { Breakpoint } from '@mui/material/styles';
-import type { NavSectionProps } from 'src/components/nav-section';
+import type { NavSectionProps } from '@normalfinance/ui/src/components/nav-section/types';
 
 import { paths } from '@/routes/paths';
 import parse from 'autosuggest-highlight/parse';
@@ -22,10 +22,10 @@ import Dialog, { dialogClasses } from '@mui/material/Dialog';
 import MenuItem, { menuItemClasses } from '@mui/material/MenuItem';
 import InputBase, { inputBaseClasses } from '@mui/material/InputBase';
 
-import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
-import { Scrollbar } from 'src/components/scrollbar';
-import { SearchNotFound } from 'src/components/search-not-found';
+import { Label } from '@normalfinance/ui/src';
+import { Iconify } from '@normalfinance/ui/src';
+import { Scrollbar } from '@normalfinance/ui/src';
+import { SearchNotFound } from '@normalfinance/ui/src';
 
 import { applyFilter } from './utils';
 import { ResultItem } from './result-item';

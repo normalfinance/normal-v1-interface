@@ -8,7 +8,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 
 import { RouterLink } from 'src/routes/components';
 
-import { Label } from 'src/components/label';
+import { Label } from '@normalfinance/ui/src';
 
 // ----------------------------------------------------------------------
 

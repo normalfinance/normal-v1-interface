@@ -1,6 +1,6 @@
-import type { FC, ReactNode} from 'react';
+import type { FC, ReactNode } from 'react';
 
-import { RestoreModal } from '@/components/RestoreModal';
+import { RestoreModal } from '@normalfinance/ui/src';
 import React, { useState, useContext, createContext } from 'react';
 
 interface RestoreModalContextProps {

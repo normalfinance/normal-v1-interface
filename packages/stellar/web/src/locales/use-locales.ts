@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useRouter } from 'src/routes/hooks';
 
-import { toast } from 'src/components/snackbar';
+import { toast } from '@normalfinance/ui/src';
 
 import { allLangs } from './all-langs';
 import { fallbackLng, changeLangMessages as messages } from './locales-config';
