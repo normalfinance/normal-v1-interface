@@ -3,7 +3,7 @@
 import Grid2 from '@mui/material/Grid2';
 import { DashboardContent } from '@/layouts/dashboard';
 import { Stack, Typography } from '@mui/material';
-import { NewIndexForm } from '@/components/_common/new-index-form';
+import { NewIndexForm } from '@normalfinance/ui/src';
 import { IndexCoin } from '@/types/indexes';
 
 export default function CreateAnIndexView() {

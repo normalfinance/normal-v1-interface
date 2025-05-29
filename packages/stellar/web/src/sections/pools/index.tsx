@@ -1,6 +1,6 @@
 'use client';
 
-import type { Pool } from '@/components/_common/pools';
+import type { Pool } from '@normalfinance/ui/src';
 
 import { useRouter } from 'next/navigation';
 import { constants } from '@normalfinance/utils';
@@ -8,7 +8,7 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@/state/store';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
-import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
+import { PoolsTemp } from '@normalfinance/ui/src';
 import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
 
 // import Grid2 from '@mui/material/Grid2';

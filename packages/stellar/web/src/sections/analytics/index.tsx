@@ -1,11 +1,9 @@
 'use client';
 
-import type { LegendValue } from '@/components/_common/area-chart-card';
+import { LegendValue, AreaChartCard, VolumeChartCard } from '@normalfinance/ui/src';
 
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrencyCompact } from '@/utils/format-number';
-import { AreaChartCard } from '@/components/_common/area-chart-card';
-import { VolumeChartCard } from '@/components/_analytics-page-components/volume-chart-card';
 import { createChartData, type RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 import Grid2 from '@mui/material/Grid2';

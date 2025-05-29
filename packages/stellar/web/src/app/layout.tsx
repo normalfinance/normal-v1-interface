@@ -14,11 +14,11 @@ import { detectLanguage } from 'src/locales/server';
 import { themeConfig, ThemeProvider } from 'src/theme';
 import { I18nProvider } from 'src/locales/i18n-provider';
 
-import { ProgressBar } from 'src/components/progress-bar';
-import { SnackbarProvider } from 'src/components/snackbar';
-import { MotionLazy } from 'src/components/animate/motion-lazy';
-import { detectSettings } from 'src/components/settings/server';
-import { SettingsDrawer, defaultSettings, SettingsProvider } from 'src/components/settings';
+import { ProgressBar } from '@normalfinance/ui/src';
+import { SnackbarProvider } from '@normalfinance/ui/src';
+import { MotionLazy } from '@normalfinance/ui/src/components/animate/motion-lazy';
+import { detectSettings } from '@normalfinance/ui/src/components/settings/server';
+import { SettingsDrawer, defaultSettings, SettingsProvider } from '@normalfinance/ui/src';
 
 // import { ExternalProvider } from '@/providers/ExternalProvider';
 
