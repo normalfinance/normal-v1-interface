@@ -3,7 +3,7 @@ import { xbull } from '@/state/wallet/xbull';
 import { lobstr } from '@/state/wallet/lobstr';
 import { freighter } from '@/state/wallet/freighter';
 import { useAppStore, usePersistStore } from '@/state/store';
-//import { WalletConnect } from '@normalfinance/utils/build/stellar';
+import { WalletConnect } from '@normalfinance/utils/build/stellar';
 
 import { Button } from '@mui/material';
 
