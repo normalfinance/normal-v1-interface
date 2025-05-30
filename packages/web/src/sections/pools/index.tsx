@@ -10,6 +10,8 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
 import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
+import Grid2 from '@mui/material/Grid2';
+import { PoolsApr, PoolBalance, PoolStat } from '@/components/_common//pools-apr/pools-apr';
 
 // import Grid2 from '@mui/material/Grid2';
 import { Grid, Stack, Typography } from '@mui/material';
@@ -138,6 +140,21 @@ export default function PoolsView() {
 
   console.log(allPools);
 
+  const TOTAL_APR_PERCENTAGE = 88.93;
+
+  // 👉 pool balances (exactly two coins)
+  const POOL_BALANCES: [PoolBalance, PoolBalance] = [
+    { coinShortName: 'USDC', value: 68700000 },
+    { coinShortName: 'ETH', value: 19800000 },
+  ];
+
+  // 👉 stats list
+  const POOL_STATS: PoolStat[] = [
+    { statName: 'TVL', value: 114500000, percentage: 13.39 },
+    { statName: '24H volume', value: 557900000, percentage: -12.11 },
+    { statName: 'Liquidity', value: 123456 },
+  ];
+
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
@@ -145,7 +162,7 @@ export default function PoolsView() {
           Pools
         </Typography>
       </Stack>
-      <Grid container spacing={3} sx={{ mt: 3 }}>
+      <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <PoolsTemp
           pools={allPools}
           onAddLiquidityClick={() => {}}
@@ -153,7 +170,16 @@ export default function PoolsView() {
             router.push(`/pools/${pool.poolAddress}`);
           }}
         />
-      </Grid>
+      </Grid2>
+      <Grid2 container spacing={3} sx={{ mt: 3 }}>
+        <Grid2 size={{ xs: 12, md: 4 }}>
+          <PoolsApr
+            totalAprPercentage={TOTAL_APR_PERCENTAGE}
+            poolBalances={POOL_BALANCES}
+            stats={POOL_STATS}
+          />
+        </Grid2>
+      </Grid2>
     </DashboardContent>
   );
 }
