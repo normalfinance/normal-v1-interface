@@ -15,6 +15,7 @@ import { PoolsApr, PoolBalance, PoolStat } from '@/components/_common//pools-apr
 
 // import Grid2 from '@mui/material/Grid2';
 import { Grid, Stack, Typography } from '@mui/material';
+import PoolsTable from '@/components/_common/pools-table/pools-table';
 
 export default function PoolsView() {
   const store = useAppStore(); // Global state management
@@ -178,6 +179,9 @@ export default function PoolsView() {
             poolBalances={POOL_BALANCES}
             stats={POOL_STATS}
           />
+        </Grid2>
+        <Grid2 size={{ xs: 12, md: 8 }}>
+          <PoolsTable />
         </Grid2>
       </Grid2>
     </DashboardContent>
