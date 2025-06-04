@@ -12,12 +12,19 @@ import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
 import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
 import Grid2 from '@mui/material/Grid2';
 import { PoolsApr, PoolBalance, PoolStat } from '@/components/_common//pools-apr/pools-apr';
+import { createChartData, RealtimeChartData } from 'src/utils/portfolio-value-chart-series';
+import { useTheme } from '@mui/material';
+import { fCurrencyCompact } from '@/utils/format-number';
 
 // import Grid2 from '@mui/material/Grid2';
 import { Grid, Stack, Typography } from '@mui/material';
 import PoolsTable from '@/components/_common/pools-table/pools-table';
+import { PoolTxRow } from '@/types/pools';
+import { LegendValue } from '@/components/_common/area-chart-card';
+import { PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
 
 export default function PoolsView() {
+  const theme = useTheme();
   const store = useAppStore(); // Global state management
   const router = useRouter(); // Next.js router
   const [loading, setLoading] = useState(true); // Loading state for async operations
@@ -156,6 +163,76 @@ export default function PoolsView() {
     { statName: 'Liquidity', value: 123456 },
   ];
 
+  const MOCK_POOL_TXS: PoolTxRow[] = [
+    {
+      timestamp: Date.now() / 1000 - 45,
+      type: 'Buy',
+      usdValue: 32000,
+      usdcValue: 31990,
+      ethValue: 10.24,
+      wallet: 'GABCD…1234',
+    },
+    {
+      timestamp: Date.now() / 1000 - 90,
+      type: 'Sell',
+      usdValue: 21000,
+      usdcValue: 20990,
+      ethValue: 6.75,
+      wallet: 'GXYZ…9876',
+    },
+    {
+      timestamp: Date.now() / 1000 - 180,
+      type: 'Mint',
+      usdValue: 50000,
+      usdcValue: 49980,
+      ethValue: 15.0,
+      wallet: 'G123…ABCD',
+    },
+    {
+      timestamp: Date.now() / 1000 - 300,
+      type: 'Redeem',
+      usdValue: 15000,
+      usdcValue: 14990,
+      ethValue: 4.5,
+      wallet: 'G777…4444',
+    },
+    {
+      timestamp: Date.now() / 1000 - 380,
+      type: 'Mint',
+      usdValue: 50000,
+      usdcValue: 49980,
+      ethValue: 15.0,
+      wallet: 'G123…ABCD',
+    },
+  ];
+
+  const data24h = [
+      3444, 3600, 3750, 3900, 4100, 4300, 4500, 4700, 4900, 5200, 5400, 5500, 5650, 5800, 6000, 6200,
+      6400, 6600, 6800, 7000, 7200, 7300, 7320, 7334,
+    ];
+    const data7d = [3444, 4000, 4800, 8200, 5800, 6800, 7334];
+    const data30d = [
+      3444, 3500, 3600, 3700, 3800, 3900, 4000, 4200, 4300, 4400, 4500, 4600, 4800, 5000, 5200, 5400,
+      5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7100, 7200, 7250, 7300, 7320, 7330, 7334,
+    ];
+    // Hardcoded 12 month data
+  
+    // Create chart data objects using our helper.
+    const chartData24h: RealtimeChartData = createChartData('24h', data24h, 8);
+    const chartData7d: RealtimeChartData = createChartData('7d', data7d, 7);
+    const chartData30d: RealtimeChartData = createChartData('30d', data30d, 8);
+  
+    // Combine chart data into one object.
+    const portfolioChartData: { [key in '24h' | '7d' | '30d']: RealtimeChartData } = {
+      '24h': chartData24h,
+      '7d': chartData7d,
+      '30d': chartData30d,
+    };
+
+    const myLegendValues: LegendValue[] = [
+        { title: 'Balance', number: 7334, formatter: fCurrencyCompact },
+      ];
+
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
@@ -181,8 +258,20 @@ export default function PoolsView() {
           />
         </Grid2>
         <Grid2 size={{ xs: 12, md: 8 }}>
-          <PoolsTable />
+          <PoolsTable rows={MOCK_POOL_TXS} />
         </Grid2>
+      </Grid2>
+      <Grid2 container spacing={3} sx={{ mt: 3 }}>
+        <Grid2 size={{ xs: 12, md: 8 }}>
+          <PoolsExplorer
+            id="portfolio_value"
+            title="Portfolio Value"
+            chart={portfolioChartData}
+            legendValues={myLegendValues}
+            color={theme.palette.primary.main} // for example, using a different color
+          />
+        </Grid2>
+       
       </Grid2>
     </DashboardContent>
   );

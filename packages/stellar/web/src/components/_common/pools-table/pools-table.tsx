@@ -1,6 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   Table,
   TableBody,
@@ -11,66 +10,15 @@ import {
   Paper,
   Chip,
   Typography,
+  TableSortLabel,
+  Menu,
+  MenuItem,
+  Card,
 } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
+import { PoolTxRow, TxType } from '@/types/pools';
 
-dayjs.extend(relativeTime);
 
-// ----------------------------------------------------------------------
-// Types
-// ----------------------------------------------------------------------
-export type TxType = 'Buy' | 'Sell' | 'Mint' | 'Redeem';
-
-export interface PoolTxRow {
-  /** JS epoch seconds */
-  timestamp: number;
-  type: TxType;
-  usdValue: number;
-  usdcValue: number;
-  ethValue: number;
-  wallet: string;
-}
-
-// ----------------------------------------------------------------------
-// Demo data — newest first (already sorted)
-// ----------------------------------------------------------------------
-const MOCK_ROWS: PoolTxRow[] = [
-  {
-    timestamp: Math.floor(Date.now() / 1000) - 45,
-    type: 'Buy',
-    usdValue: 32000,
-    usdcValue: 31990,
-    ethValue: 10.24,
-    wallet: 'GABCD…1234',
-  },
-  {
-    timestamp: Math.floor(Date.now() / 1000) - 90,
-    type: 'Sell',
-    usdValue: 21000,
-    usdcValue: 20990,
-    ethValue: 6.75,
-    wallet: 'GXYZ…9876',
-  },
-  {
-    timestamp: Math.floor(Date.now() / 1000) - 180,
-    type: 'Mint',
-    usdValue: 50000,
-    usdcValue: 49980,
-    ethValue: 15.0,
-    wallet: 'G123…ABCD',
-  },
-  {
-    timestamp: Math.floor(Date.now() / 1000) - 300,
-    type: 'Redeem',
-    usdValue: 15000,
-    usdcValue: 14990,
-    ethValue: 4.5,
-    wallet: 'G777…4444',
-  },
-];
-
-// ----------------------------------------------------------------------
-// Helpers
-// ----------------------------------------------------------------------
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Buy: 'success',
   Sell: 'error',
@@ -78,66 +26,178 @@ const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Redeem: 'info',
 };
 
-function formatAgo(sec: number) {
-  return dayjs(sec * 1000).fromNow();
+function ago(sec: number) {
+  // floor the entire subtraction so we get an integer second count
+  const diff = Math.max(1, Math.floor(Date.now() / 1000 - sec));
+
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86_400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86_400)}d`;
 }
 
-// ----------------------------------------------------------------------
-// Component
-// ----------------------------------------------------------------------
-export const PoolsTable: React.FC<{ rows?: PoolTxRow[] }> = ({ rows = MOCK_ROWS }) => {
-  // Sort newest first just in case caller gives unsorted data
-  const ordered = useMemo(() => [...rows].sort((a, b) => b.timestamp - a.timestamp), [rows]);
+type Order = 'asc' | 'desc' | undefined;
+type ColumnKey = 'timestamp' | 'usdValue' | 'usdcValue' | 'ethValue' | 'wallet';
 
+// ----------------------------------------------------------------------
+
+export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  const theme = useTheme();
+
+  // ------- local sort state ------------------------------------------
+  const [orderBy, setOrderBy] = useState<ColumnKey>('timestamp');
+  const [order, setOrder] = useState<Order>('desc');                // newest first by default
+
+  // ------- type filter  ----------------------------------------------
+  const [typeAnchor, setTypeAnchor] = useState<null | HTMLElement>(null);
+  const [typeFilter, setTypeFilter] = useState<TxType | 'All'>('All');
+
+  // -------------------------------------------------------------------
+  const filtered = typeFilter === 'All' ? rows : rows.filter((r) => r.type === typeFilter);
+
+  const ordered = useMemo(() => {
+    if (!order) return filtered; // no sorting
+    const sorted = [...filtered].sort((a, b) => {
+      const valA = a[orderBy];
+      const valB = b[orderBy];
+      if (valA < valB) return order === 'asc' ? -1 : 1;
+      if (valA > valB) return order === 'asc' ? 1 : -1;
+      return 0;
+    });
+    // special case: wallet grouping (just keeps equal wallets adjacent)
+    return orderBy === 'wallet' ? sorted : sorted;
+  }, [filtered, order, orderBy]);
+
+  // -------------------------------------------------------------------
+  const toggleSort = (key: ColumnKey) => {
+    if (orderBy !== key) {
+      setOrderBy(key);
+      setOrder('desc');
+    } else {
+      setOrder((prev) => (prev === 'desc' ? 'asc' : prev === 'asc' ? undefined : 'desc'));
+    }
+  };
+  
+
+  // -------------------------------------------------------------------
   return (
-    <Paper sx={{ width: '100%', overflow: 'auto' }}>
-      <TableContainer>
-        <Table stickyHeader aria-label="pools transactions table">
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <Typography variant="subtitle2">Time</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="subtitle2">Type</Typography>
-              </TableCell>
-              <TableCell align="right">
-                <Typography variant="subtitle2">USD</Typography>
-              </TableCell>
-              <TableCell align="right">
-                <Typography variant="subtitle2">USDC</Typography>
-              </TableCell>
-              <TableCell align="right">
-                <Typography variant="subtitle2">ETH</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="subtitle2">Wallet</Typography>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {ordered.map((row, idx) => (
-              <TableRow hover key={idx} sx={{ cursor: 'pointer' }}>
-                <TableCell>{formatAgo(row.timestamp)}</TableCell>
+    <Card sx={{ p: 1 }}>
+      <Paper sx={{ width: '100%', overflow: 'auto' }}>
+        <TableContainer
+          sx={{
+            border: `1px solid ${theme.palette.divider}`,
+            borderRadius: 1,
+          }}
+        >
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: alpha(theme.palette.grey[500], 0.08) }}>
+                <TableCell sortDirection={orderBy === 'timestamp' ? order : false}>
+                  <TableSortLabel
+                    active={orderBy === 'timestamp'}
+                    direction={order === null ? 'asc' : order ?? 'asc'}
+                    onClick={() => toggleSort('timestamp')}
+                    sx={{
+                      '& .MuiTableSortLabel-icon': {
+                        fontSize: 14,          // affects the SVG size
+                        width: 14,
+                        height: 14,
+                      },
+                    }}
+                  >
+                    Time
+                  </TableSortLabel>
+                </TableCell>
+
+                {/* --- Type with dropdown -------------------------------- */}
                 <TableCell>
-                  <Chip label={row.type} color={typeColor[row.type]} size="small" />
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ cursor: 'pointer' }}
+                    onClick={(e) => setTypeAnchor(e.currentTarget)}
+                  >
+                    Type ▾
+                  </Typography>
+                  <Menu
+                    open={Boolean(typeAnchor)}
+                    anchorEl={typeAnchor}
+                    onClose={() => setTypeAnchor(null)}
+                  >
+                    {(['All', 'Buy', 'Sell', 'Mint', 'Redeem'] as const).map((t) => (
+                      <MenuItem
+                        key={t}
+                        selected={typeFilter === t}
+                        onClick={() => {
+                          setTypeFilter(t);
+                          setTypeAnchor(null);
+                        }}
+                      >
+                        {t}
+                      </MenuItem>
+                    ))}
+                  </Menu>
                 </TableCell>
-                <TableCell align="right">
-                  {row.usdValue.toLocaleString('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                    maximumFractionDigits: 0,
-                  })}
+
+                {(['usdValue', 'usdcValue', 'ethValue'] as const).map((key) => (
+                  <TableCell
+                    key={key}
+                    align="right"
+                    sortDirection={orderBy === key ? order : false}
+                  >
+                    <TableSortLabel
+                      active={orderBy === key}
+                      direction={order === null ? 'asc' : order ?? 'asc'}
+                      onClick={() => toggleSort(key)}
+                      sx={{
+                        '& .MuiTableSortLabel-icon': {
+                          fontSize: 14,        
+                          width: 14,
+                          height: 14,
+                        },
+                      }}
+                    >
+                      {key === 'usdValue'
+                        ? 'USD'
+                        : key === 'usdcValue'
+                        ? 'USDC'
+                        : 'ETH'}
+                    </TableSortLabel>
+                  </TableCell>
+                ))}
+
+                <TableCell
+                  sortDirection={orderBy === 'wallet' ? order : false}
+                  onClick={() => toggleSort('wallet')}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <Typography variant="subtitle2">Wallet</Typography>
                 </TableCell>
-                <TableCell align="right">{row.usdcValue.toLocaleString()}</TableCell>
-                <TableCell align="right">{row.ethValue.toFixed(3)}</TableCell>
-                <TableCell>{row.wallet}</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Paper>
+            </TableHead>
+
+            <TableBody>
+              {ordered.map((row, idx) => (
+                <TableRow hover key={idx}>
+                  <TableCell>{ago(row.timestamp)}</TableCell>
+                  <TableCell>
+                    <Chip label={row.type} color={typeColor[row.type]} size="small" />
+                  </TableCell>
+                  <TableCell align="right">
+                    {row.usdValue.toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                      maximumFractionDigits: 0,
+                    })}
+                  </TableCell>
+                  <TableCell align="right">{row.usdcValue.toLocaleString()}</TableCell>
+                  <TableCell align="right">{row.ethValue.toFixed(3)}</TableCell>
+                  <TableCell>{row.wallet}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </Card>
   );
 };
 
