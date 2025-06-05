@@ -4,16 +4,37 @@ import type { CardProps } from '@mui/material/Card';
 import type { RealtimeChartData } from 'src/utils/portfolio-value-chart-series';
 
 import { useState, useCallback } from 'react';
-
 import Card from '@mui/material/Card';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import CardHeader from '@mui/material/CardHeader';
 
-import { fShortenNumber } from 'src/utils/format-number';
-
+import { fPercent, fShortenNumber } from 'src/utils/format-number';
 import { Chart, useChart, ChartSelect, ChartLegends } from 'src/components/chart';
+import { Avatar, Box, Stack, Tab } from '@mui/material';
+import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
+import {
+  TokenPairInfo,
+  PoolMetadata,
+  ExchangeRateInfo,
+  PerformanceInfo,
+} from '../pools-explore/explorer-chart-data';
+import { varAlpha } from 'minimal-shared/utils';
 
-// Define a type for legend values
+import Typography from '@mui/material/Typography';
+import { CustomBreadcrumbs } from '@/components/custom-breadcrumbs';
+import { Iconify } from '@/components/iconify';
+import { relative } from 'path';
+
+// Types
+export type ChartMetricKey = 'price' | 'volume' | 'liquidity';
+export type ChartTimeframeKey = '24h' | '7d' | '30d' | '12m';
+
+export type ExplorerChartData = {
+  [metric in ChartMetricKey]?: {
+    [timeframe in ChartTimeframeKey]?: RealtimeChartData;
+  };
+};
+
 export type LegendValue = {
   title: string;
   number: number;
@@ -24,17 +45,12 @@ type Props = CardProps & {
   title?: string;
   subheader?: string;
   legendValues?: LegendValue[];
-  /**
-   * Optional palette color to override the default chart color.
-   */
   color?: string;
-  // Chart prop holds realtime chart data for each timeframe.
-  chart: Partial<{
-    '24h': RealtimeChartData;
-    '7d': RealtimeChartData;
-    '30d': RealtimeChartData;
-    '12m': RealtimeChartData;
-  }>;
+  chart: ExplorerChartData;
+  pairInfo?: TokenPairInfo;
+  metadata?: PoolMetadata;
+  exchangeRate?: ExchangeRateInfo;
+  performance?: PerformanceInfo;
 };
 
 export function PoolsExplorer({
@@ -43,22 +59,38 @@ export function PoolsExplorer({
   legendValues,
   chart,
   color,
+  pairInfo,
+  metadata,
+  exchangeRate,
+  performance,
   sx,
   ...other
 }: Props) {
   const theme = useTheme();
-
-  // Use provided color or fallback to theme palette primary
   const effectiveColor = color || theme.palette.primary.main;
 
-  // Compute available timeframes based on provided keys
-  const availableOptions = Object.keys(chart) as Array<'24h' | '7d' | '30d' | '12m'>;
-  const [selectedSeries, setSelectedSeries] = useState<(typeof availableOptions)[number]>(
-    availableOptions[0]
+  const [selectedMetric, setSelectedMetric] = useState<ChartMetricKey>('price');
+  const availableTimeframes = Object.keys(chart[selectedMetric] || {}) as ChartTimeframeKey[];
+  const [selectedTimeframe, setSelectedTimeframe] = useState<ChartTimeframeKey>(
+    availableTimeframes[0] || '24h'
   );
 
-  // Make sure there's data for the selected timeframe
-  const realtimeData = chart[selectedSeries];
+  const handleChangeMetric = useCallback(
+    (newMetric: string) => {
+      const metric = newMetric as ChartMetricKey;
+      const newTFs = Object.keys(chart[metric] || {}) as ChartTimeframeKey[];
+      setSelectedMetric(metric);
+      setSelectedTimeframe(newTFs[0] || '24h');
+    },
+    [chart]
+  );
+
+  const handleChangeTimeframe = useCallback((newTF: string) => {
+    setSelectedTimeframe(newTF as ChartTimeframeKey);
+  }, []);
+
+  const realtimeData = chart[selectedMetric]?.[selectedTimeframe];
+
   if (!realtimeData) {
     return <div>No chart data available</div>;
   }
@@ -76,45 +108,192 @@ export function PoolsExplorer({
     },
   });
 
-  const handleChangeSeries = useCallback((newValue: string) => {
-    if (newValue === '24h' || newValue === '7d' || newValue === '30d' || newValue === '12m') {
-      setSelectedSeries(newValue);
-    }
-  }, []);
+  const timeframeLabels: Record<ChartTimeframeKey, string> = {
+    '24h': '1D',
+    '7d': '1W',
+    '30d': '1M',
+    '12m': '1Y',
+  };
 
   return (
     <Card sx={sx} {...other}>
-      <CardHeader
-        title={title}
-        subheader={subheader}
-        action={
-          availableOptions.length > 1 ? (
-            <ChartSelect
-              options={availableOptions}
-              value={selectedSeries}
-              onChange={handleChangeSeries}
-            />
-          ) : null
-        }
-        sx={{ mb: 3 }}
+      <CardHeader title={title} subheader={subheader} sx={{ mb: 2 }} />
+
+      <CustomBreadcrumbs
+        activeLast
+        links={[
+          { name: 'Explore', href: '/' },
+          { name: 'Pools', href: '/pools' },
+          {
+            name: (
+              <>
+                {pairInfo?.tokenA.name} / {pairInfo?.tokenB.name}{' '}
+                <Typography component="span" color="text.secondary" variant="body2">
+                  {pairInfo?.address}
+                </Typography>
+              </>
+            ),
+          },
+        ]}
+        sx={{ mb: '20px', px: 2.5 }}
       />
 
-      <ChartLegends
-        colors={[effectiveColor]}
-        labels={
-          legendValues
-            ? legendValues.map((v) => v.title)
-            : realtimeData.series[0].data.map((item) => item.name)
-        }
-        values={
-          legendValues
-            ? legendValues.map((v) =>
-                v.formatter ? v.formatter(v.number) : fShortenNumber(v.number)
-              )
-            : [fShortenNumber(realtimeData.series[0].data[0].data.slice(-1)[0])]
-        }
-        sx={{ px: 3, gap: 3 }}
-      />
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          px: 2.5,
+          mb: '20px',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+          }}
+        >
+          <Avatar src={pairInfo?.tokenA.iconUrl} alt="Token A" sx={{ width: 27, height: 27 }} />
+
+          <Avatar
+            src={pairInfo?.tokenB.iconUrl}
+            alt="Token B"
+            sx={{
+              width: 27,
+              height: 27,
+              ml: '-12px',
+              zIndex: 1,
+            }}
+          />
+        </Box>
+
+        <Typography component="span" color="text.primary" variant="h6" ml={1}>
+          {pairInfo?.tokenA.name} / {pairInfo?.tokenB.name}
+        </Typography>
+
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+            }}
+          >
+            <Typography
+              color="text.primary"
+              variant="caption"
+              ml={1}
+              sx={{
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: '4px',
+                px: '6px',
+                py: '2px',
+              }}
+            >
+              {metadata?.feeTier}
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+            }}
+          >
+            <Typography
+              color="text.primary"
+              variant="caption"
+              ml={1}
+              sx={{
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: '4px',
+                px: '6px',
+                py: '2px',
+              }}
+            >
+              {metadata?.version}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
+      <Stack sx={{ px: 2.5, mb: '20px' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            flexWrap: 'wrap',
+            mb: 2,
+          }}
+        >
+          <Typography variant="h4" color="text.primary" noWrap sx={{ mr: 1 }}>
+            {exchangeRate?.label}
+          </Typography>
+
+          <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>
+            ({exchangeRate?.usdEquivalent})
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <Box
+            component="span"
+            sx={{
+              width: 24,
+              height: 24,
+              display: 'flex',
+              borderRadius: '50%',
+              position: 'relative',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: varAlpha(theme.vars.palette.success.mainChannel, 0.16),
+              color: 'success.dark',
+              ...theme.applyStyles('dark', {
+                color: 'success.light',
+              }),
+              ...(performance &&
+                performance.percentageChange < 0 && {
+                  bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
+                  color: 'error.dark',
+                  ...theme.applyStyles('dark', {
+                    color: 'error.light',
+                  }),
+                }),
+            }}
+          >
+            <Iconify
+              width={16}
+              icon={
+                performance && performance.percentageChange < 0
+                  ? 'eva:trending-down-fill'
+                  : 'eva:trending-up-fill'
+              }
+              color={
+                performance && performance.percentageChange < 0 ? 'error.main' : 'success.main'
+              }
+            />
+          </Box>
+          <Typography
+            variant="caption"
+            sx={{
+              color:
+                performance && performance.percentageChange < 0 ? 'error.main' : 'success.main',
+            }}
+          >
+            {performance && performance.percentageChange >= 0 && '+'}
+            {fPercent(performance && performance.percentageChange)}
+          </Typography>
+        </Stack>
+      </Stack>
 
       <Chart
         type="area"
@@ -128,6 +307,54 @@ export function PoolsExplorer({
           height: 320,
         }}
       />
+
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderRadius: '16px',
+          px: 2.5,
+          pb: '20px',
+          ...sx,
+        }}
+      >
+        <CustomTabsSwapSend
+          value={selectedTimeframe}
+          onChange={(_, newValue) => setSelectedTimeframe(newValue as ChartTimeframeKey)}
+          variant="standard"
+          sx={{
+            bgcolor: 'background.paper',
+            padding: '0px',
+            py: 0,
+          }}
+          slotProps={{
+            flexContainer: { gap: '8px', p: 0 },
+            tab: {
+              borderRadius: '8px',
+              px: '12px',
+              color: theme.palette.text.primary,
+            },
+            selected: {},
+            indicator: {
+              boxShadow: 'none !important',
+              backgroundColor: alpha(theme.palette.grey[500], 0.08),
+              border: `1px solid ${theme.palette.divider}`,
+            },
+          }}
+        >
+          {(Object.keys(chart[selectedMetric] || {}) as ChartTimeframeKey[]).map((tf) => (
+            <Tab key={tf} value={tf} label={timeframeLabels[tf] ?? tf.toUpperCase()} />
+          ))}
+        </CustomTabsSwapSend>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <ChartSelect
+            options={['price', 'volume', 'liquidity']}
+            value={selectedMetric}
+            onChange={handleChangeMetric}
+          />
+        </div>
+      </Box>
     </Card>
   );
 }

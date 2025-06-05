@@ -21,7 +21,8 @@ import { Grid, Stack, Typography } from '@mui/material';
 import PoolsTable from '@/components/_common/pools-table/pools-table';
 import { PoolTxRow } from '@/types/pools';
 import { LegendValue } from '@/components/_common/area-chart-card';
-import { PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
+import { ExplorerChartData, PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
+import { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
 export default function PoolsView() {
   const theme = useTheme();
@@ -207,31 +208,95 @@ export default function PoolsView() {
   ];
 
   const data24h = [
-      3444, 3600, 3750, 3900, 4100, 4300, 4500, 4700, 4900, 5200, 5400, 5500, 5650, 5800, 6000, 6200,
-      6400, 6600, 6800, 7000, 7200, 7300, 7320, 7334,
-    ];
-    const data7d = [3444, 4000, 4800, 8200, 5800, 6800, 7334];
-    const data30d = [
-      3444, 3500, 3600, 3700, 3800, 3900, 4000, 4200, 4300, 4400, 4500, 4600, 4800, 5000, 5200, 5400,
-      5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7100, 7200, 7250, 7300, 7320, 7330, 7334,
-    ];
-    // Hardcoded 12 month data
-  
-    // Create chart data objects using our helper.
-    const chartData24h: RealtimeChartData = createChartData('24h', data24h, 8);
-    const chartData7d: RealtimeChartData = createChartData('7d', data7d, 7);
-    const chartData30d: RealtimeChartData = createChartData('30d', data30d, 8);
-  
-    // Combine chart data into one object.
-    const portfolioChartData: { [key in '24h' | '7d' | '30d']: RealtimeChartData } = {
-      '24h': chartData24h,
-      '7d': chartData7d,
-      '30d': chartData30d,
-    };
+    3444, 3600, 3750, 3900, 4100, 4300, 4500, 4700, 4900, 5200, 5400, 5500, 5650, 5800, 6000, 6200,
+    6400, 6600, 6800, 7000, 7200, 7300, 7320, 7334,
+  ];
+  const data7d = [3444, 4000, 4800, 8200, 5800, 6800, 7334];
+  const data30d = [
+    3444, 3500, 3600, 3700, 3800, 3900, 4000, 4200, 4300, 4400, 4500, 4600, 4800, 5000, 5200, 5400,
+    5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7100, 7200, 7250, 7300, 7320, 7330, 7334,
+  ];
+  // Hardcoded 12 month data
 
-    const myLegendValues: LegendValue[] = [
-        { title: 'Balance', number: 7334, formatter: fCurrencyCompact },
-      ];
+  // Create chart data objects using our helper.
+  const chartData24h: RealtimeChartData = createChartData('24h', data24h, 8);
+  const chartData7d: RealtimeChartData = createChartData('7d', data7d, 7);
+  const chartData30d: RealtimeChartData = createChartData('30d', data30d, 8);
+
+  // Combine chart data into one object.
+  const portfolioChartData: { [key in '24h' | '7d' | '30d']: RealtimeChartData } = {
+    '24h': chartData24h,
+    '7d': chartData7d,
+    '30d': chartData30d,
+  };
+
+  const myLegendValues: LegendValue[] = [
+    { title: 'Balance', number: 7334, formatter: fCurrencyCompact },
+  ];
+
+  // Price data samples
+  const priceData24h = Array.from({ length: 24 }, (_, i) => 1000 + i * 5);
+  const priceData7d = Array.from({ length: 7 }, (_, i) => 1100 + i * 20);
+  const priceData30d = Array.from({ length: 31 }, (_, i) => 1050 + i * 10);
+  const priceData12m = Array.from({ length: 12 }, (_, i) => 950 + i * 50);
+
+  // Volume data samples
+  const volumeData24h = Array.from({ length: 24 }, (_, i) => 5000 + i * 100);
+  const volumeData7d = Array.from({ length: 7 }, (_, i) => 10000 + i * 200);
+  const volumeData30d = Array.from({ length: 31 }, (_, i) => 15000 + i * 150);
+  const volumeData12m = Array.from({ length: 12 }, (_, i) => 20000 + i * 500);
+
+  // Liquidity data samples
+  const liquidityData24h = Array.from({ length: 24 }, (_, i) => 75000 + i * 300);
+  const liquidityData7d = Array.from({ length: 7 }, (_, i) => 80000 + i * 600);
+  const liquidityData30d = Array.from({ length: 31 }, (_, i) => 85000 + i * 400);
+  const liquidityData12m = Array.from({ length: 12 }, (_, i) => 90000 + i * 1000);
+
+  const poolChartData: ExplorerChartData = {
+    price: {
+      '24h': createChartData('24h', priceData24h, 8),
+      '7d': createChartData('7d', priceData7d, 7),
+      '30d': createChartData('30d', priceData30d, 8),
+      '12m': createChartData('12m', priceData12m, 12),
+    },
+    volume: {
+      '24h': createChartData('24h', volumeData24h, 8),
+      '7d': createChartData('7d', volumeData7d, 7),
+      '30d': createChartData('30d', volumeData30d, 8),
+      '12m': createChartData('12m', volumeData12m, 12),
+    },
+    liquidity: {
+      '24h': createChartData('24h', liquidityData24h, 8),
+      '7d': createChartData('7d', liquidityData7d, 7),
+      '30d': createChartData('30d', liquidityData30d, 8),
+      '12m': createChartData('12m', liquidityData12m, 12),
+    },
+  };
+
+  const poolsExplorerData: PoolDetails = {
+    pairInfo: {
+      tokenA: {
+        name: 'USDC',
+        iconUrl: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694',
+      },
+      tokenB: { name: 'ETH', iconUrl: 'https://token-icons.s3.amazonaws.com/eth.png' },
+      address: '0x88e6...5640',
+    },
+    metadata: {
+      version: 'v3',
+      feeTier: '0.05%',
+    },
+    exchangeRate: {
+      label: '1 WETH = 2,304.28 USDC',
+      usdEquivalent: '$2,289.11',
+      tokenSymbol: 'WETH',
+      tokenRate: '2,304.28 USDC',
+      tokenUSDValue: '$2,289.11',
+    },
+    performance: {
+      percentageChange: 1.23,
+    },
+  };
 
   return (
     <DashboardContent maxWidth="xl">
@@ -265,13 +330,15 @@ export default function PoolsView() {
         <Grid2 size={{ xs: 12, md: 8 }}>
           <PoolsExplorer
             id="portfolio_value"
-            title="Portfolio Value"
-            chart={portfolioChartData}
-            legendValues={myLegendValues}
-            color={theme.palette.primary.main} // for example, using a different color
+            pairInfo={poolsExplorerData.pairInfo}
+            metadata={poolsExplorerData.metadata}
+            exchangeRate={poolsExplorerData.exchangeRate}
+            performance={poolsExplorerData.performance}
+            legendValues={[{ title: 'Price', number: 7334, formatter: fCurrencyCompact }]}
+            chart={poolChartData}
+            color={theme.palette.primary.main}
           />
         </Grid2>
-       
       </Grid2>
     </DashboardContent>
   );
