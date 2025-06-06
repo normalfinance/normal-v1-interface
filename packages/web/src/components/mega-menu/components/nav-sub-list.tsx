@@ -8,7 +8,7 @@ import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { megaMenuClasses } from '../styles';
-import { NavUl, NavLi } from '../components/nav-elements';
+import { NavUl, NavLi } from './nav-elements';
 
 import type { NavSubItemProps, NavSubListProps } from '../types';
 

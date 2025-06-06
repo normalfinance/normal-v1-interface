@@ -10,7 +10,7 @@ import { Iconify } from '../../iconify';
 import { NavSubList } from './nav-sub-list';
 import { megaMenuClasses } from '../styles';
 import { NavCarousel } from './nav-carousel';
-import { NavUl } from '../components/nav-elements';
+import { NavUl } from './nav-elements';
 
 import type { NavListProps } from '../types';
 
