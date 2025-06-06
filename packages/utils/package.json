@@ -1,6 +1,6 @@
 {
   "name": "@normalfinance/utils",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -8,17 +8,18 @@
     "build/**/*"
   ],
   "scripts": {
-    "test": "jest",
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "echo \"Error: no test specified\" && exit 0"
   },
   "np": {
     "publish": false,
     "tests": false
   },
-  "author": "Normal Finance",
-  "license": "Apache-2.0",
+  "author": "Normal",
+  "license": "GPL-3.0-or-later",
   "devDependencies": {
-    "@types/numeral": "^2.0.2",
+    "@phoenix-protocol/types": "*",
     "jest": "^29.7.0",
     "jest-mock": "^29.7.0",
     "ts-jest": "^29.1.0",
@@ -26,11 +27,10 @@
   },
   "dependencies": {
     "@creit.tech/xbull-wallet-connect": "0.3.0",
-    "@lobstrco/signer-extension-api": "^1.0.0-beta.0",
+    "@stellar/stellar-sdk": "^13.1.0",
     "big.js": "^6.2.1",
     "bignumber.js": "^9.1.1",
     "date-fns": "^3.3.1",
-    "numeral": "^2.0.6",
     "soroban-client": "^1.0.0",
     "toml": "^3.0.0"
   }

@@ -4,8 +4,6 @@
   "compilerOptions": {
     "jsx": "react",
     "outDir": "./build",
-    "target": "ESNext",
-    "module": "Node16",
-    "moduleResolution": "Node16"
+    "target": "ES5"
   }
 }

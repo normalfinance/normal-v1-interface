@@ -1,32 +1,70 @@
 import { Wallet } from "./types";
-import {
-  getPublicKey,
-  isConnected,
-  signTransaction,
-} from "@lobstrco/signer-extension-api";
+
+interface SignTransactionProps {
+  xdr: string;
+  accountToSign?: string;
+  networkPassphrase?: string;
+}
+
+interface SignBlobProps {
+  blob: string;
+  accountToSign: string;
+}
+
+interface SignAuthEntryProps {
+  xdr: string;
+  accountToSign?: string;
+}
+
+interface SignMessageProps {
+  message: string;
+  accountToSign?: string;
+}
+
+declare const window: Window & {
+  hanaWallet?: {
+    stellar?: {
+      getPublicKey(): Promise<string>;
+      signTransaction({
+        xdr,
+        accountToSign,
+        networkPassphrase,
+      }: SignTransactionProps): Promise<string>;
+      signBlob({ blob, accountToSign }: SignBlobProps): Promise<string>;
+      signAuthEntry({
+        xdr,
+        accountToSign,
+      }: SignAuthEntryProps): Promise<string>;
+      signMessage({
+        message,
+        accountToSign,
+      }: SignMessageProps): Promise<string>;
+    };
+  };
+};
 
 /**
- * Lobstr wallet implementation
+ * hana wallet implementation
  * @implements {Wallet}
- * @class lobstr
- * @export lobstr
- * @see {https://github.com/Lobstrco/lobstr-browser-extension}
+ * @class hana
+ * @export hana
+ * @see {https://github.com/hanaco/hana-browser-extension}
  */
-export class lobstr implements Wallet {
+export class hana implements Wallet {
   /**
-   * Check if Lobstr is connected
+   * Check if hana is connected
    * @returns {Promise<boolean>}
-   * @memberof lobstr
+   * @memberof hana
    * @instance isConnected
    */
   async isConnected(): Promise<boolean> {
-    return isConnected();
+    return window.hanaWallet!.stellar!.getPublicKey() !== undefined;
   }
 
   /**
-   * Check if Lobstr is allowed
+   * Check if hana is allowed
    * @returns {Promise<boolean>}
-   * @memberof lobstr
+   * @memberof hana
    * @instance isAllowed
    */
   async isAllowed(): Promise<boolean> {
@@ -34,27 +72,28 @@ export class lobstr implements Wallet {
   }
 
   /**
-   * Get user info from Lobstr
+   * Get user info from hana
    * @returns {Promise<{ publicKey?: string }>}
-   * @memberof lobstr
+   * @memberof hana
    * @instance getUserInfo
    */
   async getAddress(): Promise<{ address?: string }> {
-    if (!(await isConnected())) {
-      throw new Error(`Lobstr is not connected`);
+    if (!(await this.isConnected())) {
+      throw new Error(`hana is not connected`);
     }
 
     const pubKey =
-      getAddressFromLocalStorageByKey("app-storage") || (await getPublicKey());
+      getAddressFromLocalStorageByKey("app-storage") ||
+      (await window.hanaWallet!.stellar!.getPublicKey());
     return { address: pubKey };
   }
 
   /**
-   * Sign a transaction using Lobstr
+   * Sign a transaction using hana
    * @param {string} tx - Transaction XDR
    * @param {{ network?: string; networkPassphrase?: string; accountToSign?: string }} [opts] - Options
    * @returns {Promise<string>}
-   * @memberof lobstr
+   * @memberof hana
    * @instance signTransaction
    */
   async signTransaction(
@@ -65,24 +104,28 @@ export class lobstr implements Wallet {
       accountToSign?: string;
     }
   ): Promise<{ signedTxXdr: string; signerAddress: string }> {
-    if (!(await isConnected())) {
-      throw new Error(`Lobstr is not connected`);
+    if (!(await this.isConnected())) {
+      throw new Error(`hana is not connected`);
     }
 
     return {
-      signedTxXdr: await signTransaction(tx),
+      signedTxXdr: await window.hanaWallet!.stellar!.signTransaction({
+        xdr: tx,
+        accountToSign: opts?.accountToSign,
+        networkPassphrase: opts?.networkPassphrase,
+      }),
       signerAddress: (await this.getAddress()).address!,
     };
   }
 
   /**
-   * Sign an authorization entry using Lobstr
+   * Sign an authorization entry using hana
    * @param {string} entryXdr - Authorization entry XDR
    * @param {{ accountToSign?: string }} [opts] - Options
    * @returns {Promise<string>}
-   * @memberof lobstr
+   * @memberof hana
    * @instance signAuthEntry
-   * @throws {Error} Lobstr does not support signing authorization entries
+   * @throws {Error} hana does not support signing authorization entries
    */
   async signAuthEntry(
     entryXdr: string,
@@ -96,7 +139,7 @@ export class lobstr implements Wallet {
     signedAuthEntry: Buffer | null;
     signerAddress: string;
   }> {
-    throw new Error("Lobstr does not support signing authorization entries");
+    throw new Error("hana does not support signing authorization entries");
   }
 }
 
@@ -104,7 +147,7 @@ export class lobstr implements Wallet {
  * Get address from local storage by key
  * @param {string} key
  * @returns {string | undefined}
- * @memberof lobstr
+ * @memberof hana
  * @instance getAddressFromLocalStorageByKey
  */
 function getAddressFromLocalStorageByKey(key: string): string | undefined {
