@@ -28,10 +28,18 @@ export interface PoolStat {
   percentage?: number;
 }
 
+export interface PoolActionButton {
+  label: string;
+  icon: string;
+  href?: string; // Optional external/internal link
+  onClick?: () => void; // Optional click handler
+}
+
 export type PoolsAprProps = CardProps & {
   totalAprPercentage: number;
   poolBalances: [PoolBalance, PoolBalance]; // exactly two items
   stats: PoolStat[]; // any length (e.g. 3-4)
+  actionButtons?: PoolActionButton[];
 };
 
 // ----------------------------------------------------------------------
@@ -40,6 +48,19 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
   const theme = useTheme();
 
   const [showSwap, setShowSwap] = useState(false);
+
+  const actionButtons = [
+    {
+      label: 'Swap',
+      icon: 'solar:transfer-horizontal-bold-duotone',
+      onClick: () => setShowSwap((prev) => !prev),
+    },
+    {
+      label: 'Add liquidity',
+      icon: 'mingcute:add-line',
+      href: '/position/create-url',
+    },
+  ];
 
   const [balA, balB] = poolBalances;
   const total = balA.value + balB.value || 1;
@@ -55,54 +76,37 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
       {...other}
     >
       <Stack direction="row" spacing={1} width={'100%'}>
-        <Button
-          fullWidth
-          variant="soft"
-          color="success"
-          size="large"
-          onClick={() => setShowSwap((prev) => !prev)}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '2px',
-            }}
+        {actionButtons.map((btn, idx) => (
+          <Button
+            key={idx}
+            fullWidth
+            variant="soft"
+            color="success"
+            size="large"
+            onClick={btn.onClick}
+            href={btn.href}
           >
-            <Iconify
-              icon="solar:transfer-horizontal-bold-duotone"
-              width={14}
+            <Box
               sx={{
-                color: theme.palette.primary.dark,
-                cursor: 'pointer',
-                rotate: '-90deg',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '2px',
               }}
-            />
-            Swap
-          </Box>
-        </Button>
-        <Button fullWidth variant="soft" color="success" size="large">
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '2px',
-            }}
-          >
-            <Iconify
-              icon="mingcute:add-line"
-              width={14}
-              sx={{
-                color: theme.palette.primary.dark,
-                cursor: 'pointer',
-                rotate: '-90deg',
-              }}
-            />
-            Add liquidity
-          </Box>
-        </Button>
+            >
+              <Iconify
+                icon={btn.icon}
+                width={14}
+                sx={{
+                  color: theme.palette.primary.dark,
+                  cursor: 'pointer',
+                  rotate: '-90deg',
+                }}
+              />
+              {btn.label}
+            </Box>
+          </Button>
+        ))}
       </Stack>
 
       {/* NEED TO ADD TOKENLIST */}
