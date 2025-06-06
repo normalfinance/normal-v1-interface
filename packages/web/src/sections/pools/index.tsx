@@ -336,7 +336,7 @@ export default function PoolsView() {
         </Grid2>
       </Grid2>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        <Grid2 size={{ xs: 12, md: 8 }}>
+        <Grid2 size={{ xs: 12, md: 12 }}>
           <PoolsTable rows={MOCK_POOL_TXS} />
         </Grid2>
       </Grid2>

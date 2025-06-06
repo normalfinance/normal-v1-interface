@@ -58,7 +58,7 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
     {
       label: 'Add liquidity',
       icon: 'mingcute:add-line',
-      href: '/position/create-url',
+      href: '/positions/create',
     },
   ];
 
