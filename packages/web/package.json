@@ -6,7 +6,7 @@
     "i18n:upload": "crowdin upload",
     "i18n:download": "crowdin download",
     "i18n:extract": "i18next && node ./scripts/fix-empty-i18n-values.js",
-    "dev": "next dev -p 8082 --turbopack",
+    "dev": "next dev -p 8082",
     "dev:experimental": "SKIP_NODE_VERSION_CHECK=1 next dev --experimental-https",
     "start": "next start -p 8082",
     "build": "next build",
