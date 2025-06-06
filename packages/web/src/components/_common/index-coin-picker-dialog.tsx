@@ -13,7 +13,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { IndexCoin } from '@/types/indexes';
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 import { useTheme } from '@mui/material/styles';
 import { fCurrencyTwoDecimals, fShortenNumber } from '@/utils/format-number';
 

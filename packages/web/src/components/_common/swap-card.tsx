@@ -3,7 +3,7 @@ import type { CardProps } from '@mui/material';
 
 import { fCurrency } from '@/utils/format-number';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { useAppStore, usePersistStore } from '@/state/store';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { NormalPoolRouterContract } from '@normalfinance/contracts';
@@ -13,7 +13,7 @@ import { constants, checkTrustline, fetchAndIssueTrustline } from '@normalfinanc
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
 
-import { Iconify } from 'src/components/iconify';
+import { Iconify } from '@/components/template/iconify';
 
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
@@ -243,8 +243,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
         // Get all pools
         const poolRouterContract = new NormalPoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,
-          networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
-          rpcUrl: constants.SOROBAN_RPC_URL,
+          networkPassphrase: constants.NETWORK_PASSPHRASE,
+          rpcUrl: constants.RPC_URL,
         });
         const { result } = await poolRouterContract.query_all_pools_details();
 
@@ -329,8 +329,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
       try {
         const poolRouterContract = new NormalPoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,
-          networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
-          rpcUrl: constants.SOROBAN_RPC_URL,
+          networkPassphrase: constants.NETWORK_PASSPHRASE,
+          rpcUrl: constants.RPC_URL,
         });
 
         const poolInfo = await poolRouterContract.query_pool_details({
@@ -367,7 +367,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
             poolInfo.result.pool_response.asset_b.amount;
 
           // price_impact = (execution_price - market_price) / market_price * 100
-          const _priceImpact = ((execution_price - market_price) / market_price) * BigInt(100);
+          const _priceImpact = BigInt((execution_price - market_price) / market_price) * BigInt(100);
           setPriceImpact(Number(_priceImpact));
 
           // setTokenAmounts((prevAmounts) => {

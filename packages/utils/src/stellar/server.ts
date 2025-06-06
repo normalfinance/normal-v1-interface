@@ -1,5 +1,5 @@
 import { Horizon } from "@stellar/stellar-sdk";
-import { constants } from ".";
+import { constants } from "..";
 
 /**
  * SorobanClient.Server instance, initialized using {@link RPC_URL} used to

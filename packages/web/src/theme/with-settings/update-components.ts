@@ -1,4 +1,4 @@
-import type { SettingsState } from 'src/components/settings';
+import type { SettingsState } from '@/components/template/settings';
 import type {
   Theme,
   CSSObject,

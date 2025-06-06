@@ -3,7 +3,7 @@ import { Typography, Box, CardProps, Button, InputBase } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Token } from '@/types/token';
 import { fCurrency } from '@/utils/format-number';
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { SwapFeeInfo } from '@/types/swap-fee-info';

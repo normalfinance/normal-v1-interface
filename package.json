@@ -7,12 +7,10 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=@normalfinance/web",
-    "dev:ui": "turbo run dev --filter=@normalfinance/ui",
     "dev:experimental": "yarn workspace @normalfinance/web dev:experimental",
     "build:web": "turbo run build --filter=@normalfinance/web",
     "build:contracts": "turbo run build --filter=@normalfinance/contracts",
     "build:state": "turbo run build --filter=@normalfinance/state",
-    "build:ui": "turbo run build --filter=@normalfinance/ui",
     "build:utils": "turbo run build --filter=@normalfinance/utils",
     "build:types": "turbo run build --filter=@normalfinance/types"
   },
@@ -32,7 +30,6 @@
     "packages/contracts",
     "packages/state",
     "packages/contracts",
-    "packages/ui",
     "packages/*"
   ],
   "devDependencies": {

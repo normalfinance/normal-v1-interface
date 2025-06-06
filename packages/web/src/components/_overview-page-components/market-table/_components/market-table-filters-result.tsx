@@ -1,12 +1,12 @@
-import type { IMarketTableFilters } from 'src/types/marketTable';
+import type { IMarketTableFilters } from '@/types/marketTable';
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
-import type { FiltersResultProps } from 'src/components/filters-result';
+import type { FiltersResultProps } from '@/components/template/filters-result';
 
 import { useCallback } from 'react';
 
 import Chip from '@mui/material/Chip';
 
-import { chipProps, FiltersBlock, FiltersResult } from 'src/components/filters-result';
+import { chipProps, FiltersBlock, FiltersResult } from '@/components/template/filters-result';
 
 // ----------------------------------------------------------------------
 

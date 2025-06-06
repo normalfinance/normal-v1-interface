@@ -16,8 +16,8 @@ import { Button, AvatarGroup } from '@mui/material';
 import InputAdornment from '@mui/material/InputAdornment';
 
 // components
-import { Iconify } from '../iconify';
-import { SearchNotFound } from '../search-not-found';
+import { Iconify } from '../template/iconify';
+import { SearchNotFound } from '../template/search-not-found';
 
 // ----------------------------------------------------------------------
 

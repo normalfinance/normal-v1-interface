@@ -7,7 +7,7 @@ import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 
-import { CustomPopover } from 'src/components/custom-popover';
+import { CustomPopover } from '@/components/template/custom-popover';
 
 import { AccountButton } from './account-button';
 

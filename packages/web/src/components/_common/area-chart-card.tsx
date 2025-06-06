@@ -1,7 +1,7 @@
 'use client';
 
 import type { CardProps } from '@mui/material/Card';
-import type { RealtimeChartData } from 'src/utils/portfolio-value-chart-series';
+import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 import { useState, useCallback } from 'react';
 
@@ -9,9 +9,9 @@ import Card from '@mui/material/Card';
 import { useTheme } from '@mui/material/styles';
 import CardHeader from '@mui/material/CardHeader';
 
-import { fShortenNumber } from 'src/utils/format-number';
+import { fShortenNumber } from '@/utils/format-number';
 
-import { Chart, useChart, ChartSelect, ChartLegends } from 'src/components/chart';
+import { Chart, useChart, ChartSelect, ChartLegends } from '@/components/template/chart';
 
 // Define a type for legend values
 export type LegendValue = {

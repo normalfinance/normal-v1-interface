@@ -17,7 +17,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 
-import { Iconify } from 'src/components/iconify';
+import { Iconify } from '@/components/template/iconify';
 
 export interface PickTokenProps {
   open: boolean;

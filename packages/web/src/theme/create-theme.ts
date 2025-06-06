@@ -1,6 +1,6 @@
 'use client';
 
-import type { SettingsState } from 'src/components/settings';
+import type { SettingsState } from '@/components/template/settings';
 import type { Theme, Components } from '@mui/material/styles';
 
 import { createTheme as createMuiTheme } from '@mui/material/styles';

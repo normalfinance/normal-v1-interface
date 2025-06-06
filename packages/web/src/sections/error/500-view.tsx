@@ -6,12 +6,12 @@ import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 
-import { RouterLink } from 'src/routes/components';
+import { RouterLink } from '@/routes/components';
 
-import { SimpleLayout } from 'src/layouts/simple';
-import { ServerErrorIllustration } from 'src/assets/illustrations';
+import { SimpleLayout } from '@/layouts/simple';
+import { ServerErrorIllustration } from '@/assets/illustrations';
 
-import { varBounce, MotionContainer } from 'src/components/animate';
+import { varBounce, MotionContainer } from '@/components/template/animate';
 
 // ----------------------------------------------------------------------
 

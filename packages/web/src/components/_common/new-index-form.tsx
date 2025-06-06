@@ -22,12 +22,12 @@ import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-import { useRouter } from 'src/routes/hooks';
+import { useRouter } from '@/routes/hooks';
 
-import { fData } from 'src/utils/format-number';
+import { fData } from '@/utils/format-number';
 
-// import { toast } from 'src/components/snackbar';
-import { Form, Field, schemaHelper } from 'src/components/hook-form';
+// import { toast } from '@/components/template/snackbar';
+import { Form, Field, schemaHelper } from '@/components/template/hook-form';
 
 import IndexCoinList from './index-coin-list';
 import IndexCoinPickerDialog from './index-coin-picker-dialog';

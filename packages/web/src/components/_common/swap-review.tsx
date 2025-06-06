@@ -19,7 +19,7 @@ import {
   AccordionDetails,
 } from '@mui/material';
 
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 
 export interface SwapReviewProps {
   open: boolean;

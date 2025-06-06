@@ -140,7 +140,7 @@ const sortImportsRules = () => {
             [customGroups.types]: ['^src/types/.+'],
             [customGroups.routes]: ['^src/routes/.+'],
             [customGroups.sections]: ['^src/sections/.+'],
-            [customGroups.components]: ['^src/components/.+'],
+            [customGroups.components]: ['^@/components/.+'],
           },
         },
       },

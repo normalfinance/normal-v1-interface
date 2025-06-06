@@ -1,9 +1,9 @@
-import type { SettingsState } from 'src/components/settings';
+import type { SettingsState } from '@/components/template/settings';
 import type { Theme, CSSObject } from '@mui/material/styles';
 
 import { varAlpha } from 'minimal-shared/utils';
 
-import { bulletColor } from 'src/components/nav-section';
+import { bulletColor } from '@/components/template/nav-section';
 
 // ----------------------------------------------------------------------
 

@@ -4,8 +4,8 @@ import { mergeClasses } from 'minimal-shared/utils';
 
 import { styled } from '@mui/material/styles';
 
-import { createClasses } from 'src/theme/create-classes';
-import { UploadIllustration } from 'src/assets/illustrations';
+import { createClasses } from '@/theme/create-classes';
+import { UploadIllustration } from '@/assets/illustrations';
 
 // ----------------------------------------------------------------------
 

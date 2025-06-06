@@ -6,7 +6,7 @@ import { varAlpha } from 'minimal-shared/utils';
 import ButtonBase from '@mui/material/ButtonBase';
 import IconButton from '@mui/material/IconButton';
 
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 
 // ----------------------------------------------------------------------
 

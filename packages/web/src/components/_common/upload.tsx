@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import FormHelperText from '@mui/material/FormHelperText';
 
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 import { uploadClasses } from '@/classes/upload';
 import { UploadPlaceholder } from './upload-placeholder';
 import { RejectionFiles } from './rejection-files';

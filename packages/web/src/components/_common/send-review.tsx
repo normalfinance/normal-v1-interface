@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
 import { Token } from '@/types/token';
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 import { useTheme } from '@mui/material/styles';
 import { shortenAddress } from '@/utils/format-address';
 

@@ -1,12 +1,12 @@
 import type { CardProps } from '@mui/material/Card';
-import type { ChartOptions } from 'src/components/chart';
+import type { ChartOptions } from '@/components/template/chart';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
-import { Chart, useChart } from 'src/components/chart';
+import { Chart, useChart } from '@/components/template/chart';
 import { IndexCoin } from '@/types/indexes';
 
-import { fRawPercent, fCurrencyTwoDecimals } from 'src/utils/format-number';
+import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { Button } from '@mui/material';
 
 type ChartConfig = {

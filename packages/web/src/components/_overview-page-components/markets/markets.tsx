@@ -7,8 +7,8 @@ import Card from '@mui/material/Card';
 import Avatar from '@mui/material/Avatar';
 import CardHeader from '@mui/material/CardHeader';
 
-import { fCurrency, fPercent } from 'src/utils/format-number';
-import { Scrollbar } from 'src/components/scrollbar';
+import { fCurrency, fPercent } from '@/utils/format-number';
+import { Scrollbar } from '@/components/template/scrollbar';
 import { Icon } from '@iconify/react';
 import { useTheme } from '@mui/material/styles';
 import NextLink from 'next/link';

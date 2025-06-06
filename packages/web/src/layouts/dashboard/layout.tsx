@@ -1,7 +1,7 @@
 'use client';
 
 import type { Breakpoint } from '@mui/material/styles';
-import type { NavSectionProps } from 'src/components/nav-section';
+import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { merge } from 'es-toolkit';
 import { varAlpha } from 'minimal-shared/utils';
@@ -12,10 +12,10 @@ import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
-import { allLangs } from 'src/locales';
+import { allLangs } from '@/locales';
 
-import { Logo } from 'src/components/logo';
-import { useSettingsContext } from 'src/components/settings';
+import { Logo } from '@/components/template/logo';
+import { useSettingsContext } from '@/components/template/settings';
 
 import { NavMobile } from './nav-mobile';
 import { NavVertical } from './nav-vertical';

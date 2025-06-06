@@ -6,7 +6,7 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { Stack, Typography, useTheme } from '@mui/material';
 import { Markets } from '@/components/_overview-page-components/markets/markets';
 import { MarketTable } from '@/components/_overview-page-components/market-table/market-table';
-import { createChartData, RealtimeChartData } from 'src/utils/portfolio-value-chart-series';
+import { createChartData, RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 import { StatCardData } from '@/types/stat-card-data';
 import { fCurrencyCompact, fShortenNumber } from '@/utils/format-number';
 import { StatCard } from '@/components/_common/stat-card';

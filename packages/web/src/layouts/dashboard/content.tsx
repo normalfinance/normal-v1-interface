@@ -8,7 +8,7 @@ import { mergeClasses } from 'minimal-shared/utils';
 import { styled } from '@mui/material/styles';
 import Container from '@mui/material/Container';
 
-import { useSettingsContext } from 'src/components/settings';
+import { useSettingsContext } from '@/components/template/settings';
 
 import { layoutClasses } from '../core/classes';
 

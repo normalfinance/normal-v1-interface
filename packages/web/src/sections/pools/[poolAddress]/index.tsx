@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { constants } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useAppStore, usePersistStore } from '@/state/store';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { NormalPoolContract } from '@normalfinance/contracts';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
@@ -51,8 +51,8 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
 
   const PoolContract = new NormalPoolContract.Client({
     contractId: poolAddress,
-    networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
-    rpcUrl: constants.SOROBAN_RPC_URL,
+    networkPassphrase: constants.NETWORK_PASSPHRASE,
+    rpcUrl: constants.RPC_URL,
   });
   const appStore = useAppStore();
 

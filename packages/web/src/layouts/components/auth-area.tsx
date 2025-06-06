@@ -1,8 +1,5 @@
 import { useEffect } from 'react';
-import { xbull } from '@/state/wallet/xbull';
-import { lobstr } from '@/state/wallet/lobstr';
-import { freighter } from '@/state/wallet/freighter';
-import { useAppStore, usePersistStore } from '@/state/store';
+import { freighter, lobstr, useAppStore, usePersistStore, xbull } from '@normalfinance/state';
 import { WalletConnect } from '@normalfinance/utils/build/stellar';
 
 import { Button } from '@mui/material';

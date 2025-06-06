@@ -3,7 +3,7 @@ import Grid2 from '@mui/material/Grid2';
 import { DashboardContent } from '@/layouts/dashboard';
 import { Stack, Typography, useTheme } from '@mui/material';
 import { StatCard } from '@/components/_common/stat-card';
-import { fShortenNumber, fRawPercent, fCurrencyTwoDecimals } from 'src/utils/format-number';
+import { fShortenNumber, fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { StatCardData } from '@/types/stat-card-data';
 import { CurrentBalance } from '@/components/_common/current-balance-card';
 import { createChartData, RealtimeChartData } from '@/utils/portfolio-value-chart-series';

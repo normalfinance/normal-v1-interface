@@ -1,5 +1,5 @@
 import { Token } from '@/types/token';
-import type { NavSectionProps } from 'src/components/nav-section';
+import type { NavSectionProps } from '@/components/template/nav-section';
 
 // ----------------------------------------------------------------------
 

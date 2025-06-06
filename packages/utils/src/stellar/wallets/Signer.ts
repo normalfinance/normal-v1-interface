@@ -6,7 +6,7 @@ import {
   WalletConnect as WalletClient,
   WalletConnectAllowedMethods,
 } from "./wallet-connect";
-import { NETWORK_PASSPHRASE } from "../constants";
+import { NETWORK_PASSPHRASE } from "../../constants/stellar";
 
 const initializeWalletConnect = async () => {
   const walletConnectInstance = new WalletClient({

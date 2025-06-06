@@ -6,7 +6,7 @@ import {
   StrKey,
   TransactionBuilder,
 } from "@stellar/stellar-sdk";
-import { constants } from ".";
+import { constants } from "..";
 import { assetList } from "./assets/assetList";
 import { xBull } from "./wallets/xbull";
 import { lobstr } from "./wallets/lobstr";

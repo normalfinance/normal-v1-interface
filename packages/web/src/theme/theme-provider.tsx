@@ -6,9 +6,9 @@ import type { ThemeProviderProps as MuiThemeProviderProps } from '@mui/material/
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider as ThemeVarsProvider } from '@mui/material/styles';
 
-import { useTranslate } from 'src/locales';
+import { useTranslate } from '@/locales';
 
-import { useSettingsContext } from 'src/components/settings';
+import { useSettingsContext } from '@/components/template/settings';
 
 import { createTheme } from './create-theme';
 import { Rtl } from './with-settings/right-to-left';

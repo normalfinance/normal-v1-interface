@@ -7,8 +7,8 @@ import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
 
-import { DashboardContent } from 'src/layouts/dashboard';
-import { Iconify } from 'src/components/iconify';
+import { DashboardContent } from '@/layouts/dashboard';
+import { Iconify } from '@/components/template/iconify';
 
 import { SelectTableCard } from './select-table-card';
 import { SelectTableTmpCard } from './select-table-tmp-card';

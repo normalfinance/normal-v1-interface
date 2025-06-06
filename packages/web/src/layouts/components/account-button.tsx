@@ -7,7 +7,7 @@ import Avatar from '@mui/material/Avatar';
 import SvgIcon from '@mui/material/SvgIcon';
 import IconButton from '@mui/material/IconButton';
 
-import { varTap, varHover, AnimateBorder, transitionTap } from 'src/components/animate';
+import { varTap, varHover, AnimateBorder, transitionTap } from '@/components/template/animate';
 
 // ----------------------------------------------------------------------
 

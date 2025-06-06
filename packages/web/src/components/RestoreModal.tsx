@@ -11,7 +11,7 @@ import {
   Modal as MuiModal,
 } from '@mui/material';
 
-import { Iconify } from './iconify';
+import { Iconify } from './template/iconify';
 
 export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
   const [isLoading, setIsLoading] = useState(false);

@@ -20,10 +20,10 @@
 * Plugins
 *************************************** */
 /* scrollbar */
-@import './components/scrollbar/styles.css';
+@import './components/template/scrollbar/styles.css';
 
 /* chart */
-@import './components/chart/styles.css';
+@import './components/template/chart/styles.css';
 
 /** **************************************
 * Baseline

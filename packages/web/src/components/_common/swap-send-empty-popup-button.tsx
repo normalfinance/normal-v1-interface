@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Typography, Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Iconify } from 'src/components/iconify';
+import { Iconify } from '@/components/template/iconify';
 
 interface SwapSendEmptyPopupButtonProps {
   label: string;

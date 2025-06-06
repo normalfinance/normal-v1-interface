@@ -3,7 +3,7 @@ import {
   AppStore,
   GetStateType,
   SetStateType,
-} from "@phoenix-protocol/types";
+} from "@normalfinance/types";
 
 export const createLayoutActions = (
   setState: SetStateType,

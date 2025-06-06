@@ -17,7 +17,7 @@ import {
 import LoadingButton from '@mui/lab/LoadingButton';
 import { useFormContext } from 'react-hook-form';
 import { NewIndexSchemaType } from './new-index-form';
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 import { fCurrencyTwoDecimals, fRawPercent } from '@/utils/format-number';
 import { useTheme } from '@mui/material/styles';
 import { NativeToken } from '@/types/native-token';

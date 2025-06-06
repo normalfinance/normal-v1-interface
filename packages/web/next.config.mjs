@@ -20,6 +20,17 @@ const nextConfig = {
       transform: '@mui/lab/{{member}}',
     },
   },
+  experimental: {
+    reactCompiler: true,
+    turbo: {
+      resolveAlias: {
+        '@normalfinance/types': '../types/src',
+        '@normalfinance/utils': '../utils/src',
+        '@normalfinance/contracts': '../contracts/src',
+        '@normalfinance/state': '../state/src',
+      },
+    },
+  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,
@@ -27,6 +38,14 @@ const nextConfig = {
     });
 
     return config;
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/.well-known/stellar.toml',
+        destination: '/api/stellar',
+      },
+    ];
   },
   ...(isStaticExport === 'true' && {
     output: 'export',

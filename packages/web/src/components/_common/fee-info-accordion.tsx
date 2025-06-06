@@ -7,7 +7,7 @@ import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Accordion, Typography, AccordionSummary, AccordionDetails } from '@mui/material';
 
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 
 interface FeeInfoAccordionProps {
   conversionText: string;

@@ -1,7 +1,7 @@
-import { Connector, NetworkDetails } from "@phoenix-protocol/types";
-import { WalletConnect as WalletClient } from "@phoenix-protocol/utils";
-import { WalletConnectAllowedMethods } from "@phoenix-protocol/utils/build/wallets/wallet-connect";
-import { NETWORK_PASSPHRASE } from "@phoenix-protocol/utils/build/constants";
+import { Connector, NetworkDetails } from "@normalfinance/types";
+import { WalletConnect as WalletClient } from "@normalfinance/utils";
+import { NETWORK_PASSPHRASE } from "@normalfinance/utils/build/stellar/constants";
+import { WalletConnectAllowedMethods } from "@normalfinance/utils/build/stellar/wallets/wallet-connect";
 
 export class WalletConnect implements Connector {
   id: string;
@@ -28,10 +28,10 @@ export class WalletConnect implements Connector {
     if (ignoreClient) return;
     this.client = new WalletClient({
       projectId: "1cca500fbafdda38a70f8bf3bcb91b15",
-      name: "Phoenix DeFi Hub",
+      name: "Normal",
       description: "Serving only the tastiest DeFi",
-      url: "https://app.phoenix-hub.io",
-      icons: ["https://app.phoenix-hub.io/logoIcon.png"],
+      url: "https://app.normalfinance.io",
+      icons: ["https://app.normalfinance.io/logoIcon.png"],
       method: WalletConnectAllowedMethods.SIGN_AND_SUBMIT,
       network: "stellar:pubnet",
     });

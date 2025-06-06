@@ -1,7 +1,7 @@
 'use client';
 
-import type { TableHeadCellProps } from 'src/components/table';
-import type { IMarketTableFilters } from 'src/types/marketTable';
+import type { TableHeadCellProps } from '@/components/template/table';
+import type { IMarketTableFilters } from '@/types/marketTable';
 
 import { useState, useCallback } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
@@ -14,7 +14,7 @@ import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 
-import { Scrollbar } from 'src/components/scrollbar';
+import { Scrollbar } from '@/components/template/scrollbar';
 import {
   useTable,
   emptyRows,
@@ -23,9 +23,9 @@ import {
   TableEmptyRows,
   TableHeadCustom,
   TablePaginationCustom,
-} from 'src/components/table';
+} from '@/components/template/table';
 
-import { Label, LabelColor } from 'src/components/label';
+import { Label, LabelColor } from '@/components/template/label';
 import { MarketTableRow } from './_components/market-table-row';
 import { MarketTableToolbar } from './_components/market-table-toolbar';
 import { MarketTableFiltersResult } from './_components/market-table-filters-result';

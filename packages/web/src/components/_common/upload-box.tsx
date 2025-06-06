@@ -3,7 +3,7 @@ import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 import { uploadClasses } from '@/classes/upload';
 
 import type { UploadProps } from '@/types/upload';

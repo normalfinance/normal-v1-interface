@@ -6,8 +6,8 @@ import Badge from '@mui/material/Badge';
 import SvgIcon from '@mui/material/SvgIcon';
 import IconButton from '@mui/material/IconButton';
 
-import { useSettingsContext } from 'src/components/settings';
-import { varTap, varHover, transitionTap } from 'src/components/animate';
+import { useSettingsContext } from '@/components/template/settings';
+import { varTap, varHover, transitionTap } from '@/components/template/animate';
 
 // ----------------------------------------------------------------------
 

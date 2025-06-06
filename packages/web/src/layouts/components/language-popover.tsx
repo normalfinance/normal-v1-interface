@@ -1,6 +1,6 @@
 'use client';
 
-import type { LanguageValue } from 'src/locales';
+import type { LanguageValue } from '@/locales';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { m } from 'framer-motion';
@@ -11,11 +11,11 @@ import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 
-import { useTranslate } from 'src/locales';
+import { useTranslate } from '@/locales';
 
-import { FlagIcon } from 'src/components/flag-icon';
-import { CustomPopover } from 'src/components/custom-popover';
-import { varTap, varHover, transitionTap } from 'src/components/animate';
+import { FlagIcon } from '@/components/template/flag-icon';
+import { CustomPopover } from '@/components/template/custom-popover';
+import { varTap, varHover, transitionTap } from '@/components/template/animate';
 
 // ----------------------------------------------------------------------
 

@@ -1,13 +1,13 @@
 'use client';
 
-import type { AppStore, AppStorePersist } from '@/state/types';
+import type { AppStore, AppStorePersist } from '@normalfinance/types';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/contract';
 
 import { useCallback } from 'react';
 import { constants } from '@normalfinance/utils';
-import { useSnackbar } from '@/components/snackbar';
+import { useSnackbar } from '@/components/template/snackbar';
 import { Signer } from '@normalfinance/utils/build/stellar';
-import { useAppStore, usePersistStore } from '@/state/store';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import {
   NormalPoolContract,
@@ -92,8 +92,8 @@ export const useContractTransaction = () => {
       transactionFunction,
     }: ExecuteContractTransactionParams<T>) => {
       const signer = getSigner(storePersist, appStore);
-      const networkPassphrase = constants.SOROBAN_NETWORK_PASSPHRASE;
-      const rpcUrl = constants.SOROBAN_RPC_URL;
+      const networkPassphrase = constants.NETWORK_PASSPHRASE;
+      const rpcUrl = constants.RPC_URL;
       const loadingMessage = 'Transaction in progress...';
       const publicKey = storePersist.wallet.address!;
 

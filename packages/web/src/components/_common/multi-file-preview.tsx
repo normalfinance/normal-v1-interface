@@ -4,9 +4,9 @@ import { styled } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 import ListItemText from '@mui/material/ListItemText';
 
-import { fData } from 'src/utils/format-number';
+import { fData } from '@/utils/format-number';
 
-import { Iconify } from '../iconify';
+import { Iconify } from '../template/iconify';
 import { uploadClasses } from '@/classes/upload';
 import { fileData } from '@/utils/file-thumbnail';
 import { FileThumbnail } from './file-thumbnail';

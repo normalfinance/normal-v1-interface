@@ -25,7 +25,7 @@ To use the State package in your application, follow these steps:
 1. Import the desired stores from the State package:
 
    ```typescript
-   import { useAppStore, useWalletStore } from "@phoenix-protocol/state";
+   import { useAppStore, useWalletStore } from "@normalfinance/state";
    ```
 
 2. Use the store hooks in your components:

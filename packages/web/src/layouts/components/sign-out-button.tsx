@@ -5,9 +5,9 @@ import { usePrivy } from '@privy-io/react-auth';
 
 import Button from '@mui/material/Button';
 
-import { useRouter } from 'src/routes/hooks';
+import { useRouter } from '@/routes/hooks';
 
-import { toast } from 'src/components/snackbar';
+import { toast } from '@/components/template/snackbar';
 
 // ----------------------------------------------------------------------
 

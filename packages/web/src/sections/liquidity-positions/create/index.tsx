@@ -3,7 +3,7 @@
 // mui
 import { paths } from '@/routes/paths';
 import { DashboardContent } from '@/layouts/dashboard';
-import { CustomBreadcrumbs } from '@/components/custom-breadcrumbs';
+import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
 // import CreateLiquidityPositionProgressTab from '@/components/create-liquidity-position-progress-tab';
 // import CreateLiquidityPositionStepOne from '@/components/create-liquidity-position-step-one';
 // import CreateLiquidityPositionStepTwo from '@/components/create-liquidity-position-step-two';

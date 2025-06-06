@@ -1,5 +1,5 @@
 import type { CardProps } from '@mui/material/Card';
-import type { ChartOptions, ChartProps } from 'src/components/chart';
+import type { ChartOptions, ChartProps } from '@/components/template/chart';
 
 import { varAlpha } from 'minimal-shared/utils';
 
@@ -8,10 +8,10 @@ import Card from '@mui/material/Card';
 import { useTheme } from '@mui/material/styles';
 
 // Import all formatting functions
-import { fNumber, fCurrency, fPercent, fShortenNumber, fData } from 'src/utils/format-number';
+import { fNumber, fCurrency, fPercent, fShortenNumber, fData } from '@/utils/format-number';
 
-import { Iconify } from 'src/components/iconify';
-import { Chart, useChart } from 'src/components/chart';
+import { Iconify } from '@/components/template/iconify';
+import { Chart, useChart } from '@/components/template/chart';
 
 // ----------------------------------------------------------------------
 

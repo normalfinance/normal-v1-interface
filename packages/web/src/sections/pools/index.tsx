@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { constants } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useState, useEffect, useCallback } from 'react';
-import { useAppStore, usePersistStore } from '@/state/store';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
 import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
@@ -34,8 +34,8 @@ export default function PoolsView() {
     try {
       const PoolContract = new NormalPoolContract.Client({
         contractId: poolAddress,
-        networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
-        rpcUrl: constants.SOROBAN_RPC_URL,
+        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        rpcUrl: constants.RPC_URL,
       });
 
       const poolInfo = await PoolContract.get_info();
@@ -103,8 +103,8 @@ export default function PoolsView() {
     try {
       const PoolRouterContract = new NormalPoolRouterContract.Client({
         contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.SOROBAN_NETWORK_PASSPHRASE,
-        rpcUrl: constants.SOROBAN_RPC_URL,
+        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        rpcUrl: constants.RPC_URL,
       });
 
       const pools = await PoolRouterContract.query_all_pools_details();

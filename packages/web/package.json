@@ -1,12 +1,13 @@
 {
-  "name": "@normalfinance/stellar-web",
+  "name": "@normalfinance/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "i18n:upload": "crowdin upload",
     "i18n:download": "crowdin download",
     "i18n:extract": "i18next && node ./scripts/fix-empty-i18n-values.js",
-    "dev": "next dev -p 8082",
+    "dev": "next dev -p 8082 --turbopack",
+    "dev:experimental": "SKIP_NODE_VERSION_CHECK=1 next dev --experimental-https",
     "start": "next start -p 8082",
     "build": "next build",
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
@@ -44,9 +45,10 @@
     "@mui/x-data-grid": "^7.23.5",
     "@mui/x-date-pickers": "^7.23.3",
     "@mui/x-tree-view": "^7.23.2",
+    "@normalfinance/state": "workspace:^",
     "@normalfinance/types": "workspace:^",
-    "@normalfinance/ui": "workspace:^",
     "@normalfinance/utils": "workspace:^",
+    "@stellar/stellar-sdk": "^13.1.0",
     "apexcharts": "^4.3.0",
     "autosuggest-highlight": "^3.3.4",
     "axios": "^1.7.9",
@@ -81,8 +83,7 @@
     "swr": "^2.3.0",
     "turndown": "^7.2.0",
     "yet-another-react-lightbox": "^3.21.7",
-    "zod": "^3.24.1",
-    "zustand": "^4.3.9"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

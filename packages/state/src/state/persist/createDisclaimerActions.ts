@@ -1,4 +1,4 @@
-import { AppStorePersist } from "@phoenix-protocol/types";
+import { AppStorePersist } from "@normalfinance/types";
 import { usePersistStore } from "../store";
 
 export const createDisclaimerAction = () => {

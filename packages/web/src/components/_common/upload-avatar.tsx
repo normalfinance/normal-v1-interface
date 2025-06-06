@@ -5,8 +5,8 @@ import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
-import { Image } from '../image';
-import { Iconify } from '../iconify';
+import { Image } from '../template/image';
+import { Iconify } from '../template/iconify';
 import { uploadClasses } from '@/classes/upload';
 import { RejectionFiles } from './rejection-files';
 

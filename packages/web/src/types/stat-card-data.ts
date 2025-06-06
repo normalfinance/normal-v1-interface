@@ -1,5 +1,5 @@
 // src/types/stat-card-data.ts
-import type { ChartOptions } from 'src/components/chart';
+import type { ChartOptions } from '@/components/template/chart';
 
 export type StatCardData = {
   title: string;

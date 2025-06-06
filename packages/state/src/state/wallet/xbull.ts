@@ -1,5 +1,5 @@
 import freighterApi from "@stellar/freighter-api";
-import { Connector, NetworkDetails } from "@phoenix-protocol/types";
+import { Connector, NetworkDetails } from "@normalfinance/types";
 import { xBullWalletConnect } from "@creit.tech/xbull-wallet-connect";
 
 export function xbull(): Connector {

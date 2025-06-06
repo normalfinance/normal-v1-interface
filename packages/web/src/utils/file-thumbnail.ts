@@ -1,6 +1,6 @@
 import type { ExtendFile } from '@/types/file-thumbnail';
 
-import { CONFIG } from 'src/global-config';
+import { CONFIG } from '@/global-config';
 
 // ----------------------------------------------------------------------
 

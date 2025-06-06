@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { createWalletActions } from "./wallet/actions";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { Horizon } from "@stellar/stellar-sdk";
-import { AppStore, AppStorePersist } from "@phoenix-protocol/types";
+import { AppStore, AppStorePersist } from "@normalfinance/types";
 import { createConnectWalletActions } from "./persist/createConnectWalletActions";
 import { createLayoutActions } from "./layout/actions";
 import { createDisclaimerAction } from "./persist/createDisclaimerActions";

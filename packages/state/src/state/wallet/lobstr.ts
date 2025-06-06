@@ -3,7 +3,7 @@ import {
   isConnected,
   signTransaction,
 } from "@lobstrco/signer-extension-api";
-import { Connector, NetworkDetails } from "@phoenix-protocol/types";
+import { Connector, NetworkDetails } from "@normalfinance/types";
 
 export function lobstr(): Connector {
   return {

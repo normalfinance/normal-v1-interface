@@ -1,5 +1,5 @@
 import { Horizon } from "@stellar/stellar-sdk";
-import { AppStore, AppStorePersist } from "@phoenix-protocol/types";
+import { AppStore, AppStorePersist } from "@normalfinance/types";
 import { freighter } from "../wallet/freighter";
 import { allChains, networkToActiveChain } from "../wallet/chains";
 import { useAppStore, usePersistStore } from "../store";

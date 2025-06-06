@@ -4,7 +4,7 @@ import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
 import { styled } from '@mui/material/styles';
 
-import { fData } from 'src/utils/format-number';
+import { fData } from '@/utils/format-number';
 
 import { uploadClasses } from '@/classes/upload';
 import { fileData } from '../../utils/file-thumbnail';

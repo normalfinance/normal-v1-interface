@@ -2,7 +2,7 @@
 
 import type { BoxProps } from '@mui/material/Box';
 import type { Breakpoint } from '@mui/material/styles';
-import type { NavSectionProps } from 'src/components/nav-section';
+import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
 import parse from 'autosuggest-highlight/parse';
@@ -22,10 +22,10 @@ import Dialog, { dialogClasses } from '@mui/material/Dialog';
 import MenuItem, { menuItemClasses } from '@mui/material/MenuItem';
 import InputBase, { inputBaseClasses } from '@mui/material/InputBase';
 
-import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
-import { Scrollbar } from 'src/components/scrollbar';
-import { SearchNotFound } from 'src/components/search-not-found';
+import { Label } from '@/components/template/label';
+import { Iconify } from '@/components/template/iconify';
+import { Scrollbar } from '@/components/template/scrollbar';
+import { SearchNotFound } from '@/components/template/search-not-found';
 
 import { applyFilter } from './utils';
 import { ResultItem } from './result-item';

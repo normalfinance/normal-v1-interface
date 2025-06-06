@@ -1,4 +1,4 @@
-import { formatNumberLocale } from 'src/locales';
+import { formatNumberLocale } from '@/locales';
 
 // ----------------------------------------------------------------------
 
