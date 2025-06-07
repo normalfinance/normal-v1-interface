@@ -1,5 +1,5 @@
+import ExploreView from '@/sections/explore';
 import type { Metadata } from 'next';
-
 
 // ----------------------------------------------------------------------
 
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return null; // TODO:
+  return <ExploreView />;
 }

@@ -85,30 +85,6 @@ export function ResponsiveLinearStepper({
       </Stepper>
 
       {/* horizontal: description + navigation ------------------- */}
-      {!vertical && (
-        <Box
-          sx={(t) => ({
-            p: 3,
-            mt: 3,
-            minHeight: 120,
-            bgcolor: varAlpha(t.vars.palette.grey['500Channel'], 0.12),
-          })}
-        >
-          <Typography sx={{ mb: 2 }} variant="caption" color="text.secondary">
-            {steps[activeStep].description}
-          </Typography>
-
-          <Box sx={{ display: 'flex' }}>
-            <Button color="inherit" disabled={activeStep === 0} onClick={onBack} sx={{ mr: 1 }}>
-              Back
-            </Button>
-            <Box sx={{ flexGrow: 1 }} />
-            <Button variant="contained" onClick={handleNextClick}>
-              {nextLabel}
-            </Button>
-          </Box>
-        </Box>
-      )}
     </Box>
   );
 }
