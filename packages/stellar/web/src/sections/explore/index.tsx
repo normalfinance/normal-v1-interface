@@ -15,6 +15,13 @@ import {
 } from '@/components/_common/pools-explore/explorer-chart-data';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
 import { fCurrencyCompact } from '@/utils/format-number';
+import { ExploreStat } from '@/components/_common/explore-stats/explore-stat';
+import ExploreStats from '@/components/_common/explore-stats/explore-stats';
+import {
+  ExploreTokensTable,
+  Market,
+} from '@/components/_common/explore-tokens-table/explore-tokens-table';
+import { url } from 'inspector';
 
 // Price data samples
 const priceData24h = Array.from({ length: 24 }, (_, i) => 1000 + i * 5);
@@ -80,10 +87,90 @@ const poolsExplorerData: PoolDetails = {
   },
 };
 
+const stats = [
+  { title: '1D Volume', total: 1212123, percent: 100 },
+  { title: 'Total TVL', total: 534123, percent: 47 },
+  { title: 'Total Markets', total: 321231, percent: -26 },
+  { title: 'Total Indexes', total: 821318, percent: 7 },
+  { title: 'Total Index TVL', total: 261239, percent: 22 },
+];
+
+const allMarkets = [
+  {
+    id: '1',
+    name: 'BTC-SOL',
+    price: 1531.34325346456,
+    percentageChange: 4.5,
+    performance: 'CEO',
+    status: 'trending',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg',
+    url: '/markets/btc-sol',
+  },
+  {
+    id: '2',
+    name: 'ETH-SOL',
+    price: 531.32,
+    percentageChange: 2.5,
+    performance: 'CEO',
+    status: 'meme',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Ethereum-icon-purple.svg',
+    url: '/markets/btc-sol',
+  },
+  {
+    id: '3',
+    name: 'XRP-SOL',
+    price: 731.32,
+    percentageChange: -2.5,
+    performance: 'CEO',
+    status: 'rwa',
+    avatarUrl: 'https://cryptologos.cc/logos/xrp-xrp-logo.svg?v=040',
+    url: '/markets/btc-sol',
+  },
+];
+
 export default function ExploreView() {
   const theme = useTheme();
   const store = useAppStore(); // Global state management
   const router = useRouter(); // Next.js router
+
+  const tokens = [
+    {
+      id: '1',
+      rank: 1,
+      name: 'USD Coin',
+      symbol: 'USDC',
+      iconUrl: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png',
+      price: 1,
+      change1h: 0.02,
+      change1d: 0.11,
+      fdv: 61700000000,
+      volume24h: 2340000000,
+      spark: {
+        colors: [theme.palette.success.main],
+        categories: Array.from({ length: 24 }, (_, i) => `${i}`),
+        series: Array.from({ length: 24 }, () => 0.99 + Math.random() * 0.02),
+      },
+      url: '',
+    },
+    {
+      id: '2',
+      rank: 2,
+      name: 'Ethereum',
+      symbol: 'ETH',
+      iconUrl: 'https://token-icons.s3.amazonaws.com/eth.png',
+      price: 2814.25,
+      change1h: -0.4,
+      change1d: 2.3,
+      fdv: 337000000000,
+      volume24h: 15400000000,
+      spark: {
+        colors: [theme.palette.warning.main],
+        categories: Array.from({ length: 24 }, (_, i) => `${i}`),
+        series: Array.from({ length: 24 }, () => 2700 + Math.random() * 150),
+      },
+      url: '',
+    },
+  ];
 
   return (
     <DashboardContent maxWidth="xl">
@@ -92,6 +179,12 @@ export default function ExploreView() {
           Explore
         </Typography>
       </Stack>
+      <Grid2 width={1} sx={{ mt: 3 }}>
+        <ExploreStats stats={stats} />
+      </Grid2>
+      <Grid2 sx={{ mt: 3 }}>
+        <ExploreTokensTable markets={tokens} />
+      </Grid2>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <PoolsExplorer
           id="portfolio_value"
