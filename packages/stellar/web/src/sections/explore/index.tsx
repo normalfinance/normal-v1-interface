@@ -150,7 +150,7 @@ export default function ExploreView() {
         categories: Array.from({ length: 24 }, (_, i) => `${i}`),
         series: Array.from({ length: 24 }, () => 0.99 + Math.random() * 0.02),
       },
-      url: '',
+      url: '/pools/usdc',
     },
     {
       id: '2',
@@ -168,7 +168,7 @@ export default function ExploreView() {
         categories: Array.from({ length: 24 }, (_, i) => `${i}`),
         series: Array.from({ length: 24 }, () => 2700 + Math.random() * 150),
       },
-      url: '',
+      url: '/pools/eth',
     },
   ];
 
