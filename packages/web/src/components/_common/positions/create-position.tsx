@@ -1,16 +1,19 @@
 // app/components/_common/positions/create-position.tsx
+
 'use client';
 
+import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material/Card';
+
 import { useState } from 'react';
 
-import { Box, Button, Stack, Typography, Avatar, alpha, useTheme } from '@mui/material';
-
 import Card from '@mui/material/Card';
-import { Iconify } from '@/components/iconify';
+import { Box, Stack, alpha, Button, useTheme, Typography } from '@mui/material';
+
+import { Iconify } from '@/components/template/iconify';
+
 import { StepContentPanel } from './step-content-panel';
 import { ResponsiveLinearStepper } from './responsive-linear-stepper';
-import { Token } from '@/types/token';
 
 interface CreatePositionProps extends CardProps {
   tokens: Token[];

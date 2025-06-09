@@ -1,29 +1,30 @@
 'use client';
 
 import type { CardProps } from '@mui/material/Card';
-import type { RealtimeChartData } from 'src/utils/portfolio-value-chart-series';
+import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 import { useState, useCallback } from 'react';
-import Card from '@mui/material/Card';
-import { useTheme, alpha } from '@mui/material/styles';
-import CardHeader from '@mui/material/CardHeader';
-
-import { fPercent, fShortenNumber } from 'src/utils/format-number';
-import { Chart, useChart, ChartSelect, ChartLegends } from 'src/components/chart';
-import { Avatar, Box, Stack, Tab } from '@mui/material';
-import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
-import {
-  TokenPairInfo,
-  PoolMetadata,
-  ExchangeRateInfo,
-  PerformanceInfo,
-} from '../pools-explore/explorer-chart-data';
 import { varAlpha } from 'minimal-shared/utils';
+import { fPercent, fShortenNumber } from '@/utils/format-number';
 
+import Card from '@mui/material/Card';
+import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
-import { CustomBreadcrumbs } from '@/components/custom-breadcrumbs';
-import { Iconify } from '@/components/iconify';
-import { relative } from 'path';
+import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Tab, Stack, Avatar } from '@mui/material';
+
+import { Iconify } from '@/components/template/iconify';
+import { Chart, useChart, ChartSelect } from '@/components/template/chart';
+import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
+
+import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
+
+import type {
+  PoolMetadata,
+  TokenPairInfo,
+  PerformanceInfo,
+  ExchangeRateInfo,
+} from '../pools-explore/explorer-chart-data';
 
 // Types
 export type ChartMetricKey = 'price' | 'volume' | 'liquidity';

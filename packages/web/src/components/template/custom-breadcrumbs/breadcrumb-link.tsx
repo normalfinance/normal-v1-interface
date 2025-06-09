@@ -1,10 +1,9 @@
 import type { Theme, SxProps } from '@mui/material/styles';
 
+import { RouterLink } from '@/routes/components';
+
 import Link from '@mui/material/Link';
 import { styled } from '@mui/material/styles';
-
-import { RouterLink } from 'src/routes/components';
-import type { ReactNode } from 'react';
 
 // ----------------------------------------------------------------------
 

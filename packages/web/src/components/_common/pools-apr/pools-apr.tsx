@@ -1,17 +1,18 @@
-import { useState } from 'react';
-
 import type { CardProps } from '@mui/material/Card';
+
+import { useState } from 'react';
+import { varAlpha } from 'minimal-shared/utils';
+import { fPercent, fShortenNumber } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import { Button } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { Button } from '@mui/material';
-
 import { alpha, useTheme } from '@mui/material/styles';
-import { fShortenNumber, fPercent } from '@/utils/format-number';
-import { Iconify } from '@/components/iconify';
-import { varAlpha } from 'minimal-shared/utils';
+
+import { Iconify } from '@/components/template/iconify';
+
 import SwapCard from '../swap-card';
 
 // ----------------------------------------------------------------------
@@ -75,7 +76,7 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
       ]}
       {...other}
     >
-      <Stack direction="row" spacing={1} width={'100%'}>
+      <Stack direction="row" spacing={1} width="100%">
         {actionButtons.map((btn, idx) => (
           <Button
             key={idx}

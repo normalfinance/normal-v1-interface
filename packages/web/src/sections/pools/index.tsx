@@ -1,28 +1,32 @@
 'use client';
 
+import type { PoolTxRow } from '@/types/pools';
 import type { Pool } from '@/components/_common/pools';
+import type { LegendValue } from '@/components/_common/area-chart-card';
+import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
+import type { PoolStat, PoolBalance } from '@/components/_common//pools-apr/pools-apr';
+import type { ExplorerChartData} from '@/components/_common/pools-explore/pools-explore';
+import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
 import { useRouter } from 'next/navigation';
 import { constants } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useState, useEffect, useCallback } from 'react';
+import { fCurrencyCompact } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
-import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
+import { createChartData } from '@/utils/portfolio-value-chart-series';
 import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
-import Grid2 from '@mui/material/Grid2';
-import { PoolsApr, PoolBalance, PoolStat } from '@/components/_common//pools-apr/pools-apr';
-import { createChartData, RealtimeChartData } from 'src/utils/portfolio-value-chart-series';
-import { useTheme } from '@mui/material';
-import { fCurrencyCompact } from '@/utils/format-number';
 
+import Grid2 from '@mui/material/Grid2';
+import { useTheme } from '@mui/material';
 // import Grid2 from '@mui/material/Grid2';
-import { Grid, Stack, Typography } from '@mui/material';
+import { Stack, Typography } from '@mui/material';
+
+import { PoolsApr } from '@/components/_common//pools-apr/pools-apr';
 import PoolsTable from '@/components/_common/pools-table/pools-table';
-import { PoolTxRow } from '@/types/pools';
-import { LegendValue } from '@/components/_common/area-chart-card';
-import { ExplorerChartData, PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
-import { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
+import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
+import { PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
 
 export default function PoolsView() {
   const theme = useTheme();

@@ -10,7 +10,7 @@ import { DashboardContent } from '@/layouts/dashboard';
 
 import { Grid2 } from '@mui/material';
 
-import { CustomBreadcrumbs } from '@/components/custom-breadcrumbs';
+import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
 import { CreatePosition } from '@/components/_common/positions/create-position';
 // import CreateLiquidityPositionProgressTab from '@/components/create-liquidity-position-progress-tab';
 // import CreateLiquidityPositionStepOne from '@/components/create-liquidity-position-step-one';

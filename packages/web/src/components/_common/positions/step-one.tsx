@@ -7,7 +7,7 @@ import { useFormContext } from 'react-hook-form';
 import { Token } from '@/types/token';
 import PickToken from '../pick-token';
 import { FormValues } from './step-content-panel';
-import { Iconify } from '@/components/iconify';
+import { Iconify } from '@/components/template/iconify';
 
 interface StepOneProps {
   tokens: Token[];
