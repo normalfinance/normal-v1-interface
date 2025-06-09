@@ -1,17 +1,18 @@
 'use client';
 
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
+import type { ApexOptions } from 'apexcharts';
+
+import { useRouter } from 'next/navigation';
+import { fPercent, fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
+
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
+import TableRow from '@mui/material/TableRow';
+import TableCell from '@mui/material/TableCell';
 import { useTheme } from '@mui/material/styles';
-import { useRouter } from 'next/navigation';
+import Typography from '@mui/material/Typography';
 
-import { Chart } from '@/components/chart';
-import { fCurrencyCompact, fPercent, fShortenNumber } from '@/utils/format-number';
-import type { ApexOptions } from 'apexcharts';
+import { Chart } from '@/components/template/chart';
 
 /* ------------------------------------------------------------------ */
 /* Row props & type -------------------------------------------------- */

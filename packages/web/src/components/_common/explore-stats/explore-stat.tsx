@@ -1,14 +1,12 @@
 import { varAlpha } from 'minimal-shared/utils';
+import { fPercent, fShortenNumber } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
-import { useTheme, alpha } from '@mui/material/styles';
 
-import { fCurrency, fPercent, fShortenNumber } from 'src/utils/format-number';
-
-import { Iconify } from 'src/components/iconify';
+import { Iconify } from '@/components/template/iconify';
 
 // ----------------------------------------------------------------------
 

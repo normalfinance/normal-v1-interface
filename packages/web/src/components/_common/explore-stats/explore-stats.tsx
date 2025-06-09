@@ -1,11 +1,13 @@
 'use client';
 
+import type { Theme, SxProps } from '@mui/material/styles';
+
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
-import { SxProps, Theme } from '@mui/material/styles';
 
-import { Scrollbar } from 'src/components/scrollbar'; // ⬅ adjust the path if yours is different
+import { Scrollbar } from '@/components/template/scrollbar'; // ⬅ adjust the path if yours is different
+
 import { ExploreStat } from './explore-stat';
 
 /* -------------------------------------------------- */

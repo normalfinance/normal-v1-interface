@@ -1,25 +1,25 @@
 'use client';
 
+import type { IMarketTableFilters } from '@/types/marketTable';
+import type { TableHeadCellProps } from '@/components/template/table';
+
 import { useState } from 'react';
-import { Card, Divider, Table, TableBody } from '@mui/material';
-
-import { Scrollbar } from 'src/components/scrollbar';
-import {
-  useTable,
-  TableNoData,
-  TableEmptyRows,
-  emptyRows,
-  getComparator,
-  TablePaginationCustom,
-} from 'src/components/table';
-
 import { useSetState } from 'minimal-shared/hooks';
+
+import { Card, Table, Divider, TableBody } from '@mui/material';
+
+import { Scrollbar } from '@/components/template/scrollbar';
+import { useTable ,
+  emptyRows,
+  TableNoData,
+  getComparator,
+  TableEmptyRows,
+  TableHeadCustom,
+  TablePaginationCustom,
+} from '@/components/template/table';
 
 import { ExploreTokensTableRow } from './components/explore-tokens-table-row';
 import { ExploreTokensTableToolbar } from './components/explore-tokens-toolbar';
-import type { IMarketTableFilters } from 'src/types/marketTable';
-import type { TableHeadCellProps } from 'src/components/table';
-import { TableHeadCustom } from 'src/components/table';
 
 /* ------------------------------------------------------------------ */
 /* columns                                                             */
@@ -174,7 +174,7 @@ function applyFilter({
   nameFilter: string;
 }) {
   // --- filter by name ----------------------------------------------------
-  let out = nameFilter
+  const out = nameFilter
     ? data.filter((m) => m.name.toLowerCase().includes(nameFilter.toLowerCase()))
     : data;
 
@@ -185,6 +185,6 @@ function applyFilter({
     return order !== 0 ? order : a[1] - b[1];
   });
 
-  // eslint-disable-next-line @typescript-eslint/return-await
+   
   return stabilised.map((el) => el[0]);
 }

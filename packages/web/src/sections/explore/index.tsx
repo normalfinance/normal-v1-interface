@@ -1,27 +1,25 @@
 'use client';
 
+import type {
+  PoolDetails,
+  ExplorerChartData,
+} from '@/components/_common/pools-explore/explorer-chart-data';
+
 import { useRouter } from 'next/navigation';
-import { useAppStore } from '@/state/store';
+import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
-import { PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
+import { fCurrencyCompact } from '@/utils/format-number';
+import { createChartData } from '@/utils/portfolio-value-chart-series';
 
 import Grid2 from '@mui/material/Grid2';
-import { useTheme } from '@mui/material';
 // import Grid2 from '@mui/material/Grid2';
-import { Stack, Typography } from '@mui/material';
-import {
-  ExplorerChartData,
-  PoolDetails,
-} from '@/components/_common/pools-explore/explorer-chart-data';
-import { createChartData } from '@/utils/portfolio-value-chart-series';
-import { fCurrencyCompact } from '@/utils/format-number';
-import { ExploreStat } from '@/components/_common/explore-stats/explore-stat';
+import { Stack, useTheme, Typography } from '@mui/material';
+
 import ExploreStats from '@/components/_common/explore-stats/explore-stats';
+import { PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
 import {
   ExploreTokensTable,
-  Market,
 } from '@/components/_common/explore-tokens-table/explore-tokens-table';
-import { url } from 'inspector';
 
 // Price data samples
 const priceData24h = Array.from({ length: 24 }, (_, i) => 1000 + i * 5);
