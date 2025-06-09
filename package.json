@@ -3,17 +3,16 @@
   "description": "",
   "version": "0.0.1",
   "scripts": {
-    "test": "yarn workspace @normalfinance/utils run test --passWithNoTests",
-    "build": "yarn workspace @normalfinance/utils run build && yarn workspace @normalfinance/types run build && yarn workspace @normalfinance/ui run build && yarn run build:solana && yarn run build:stellar",
-    "dev:solana": "yarn workspace @normalfinance/solana dev",
-    "dev:stellar": "yarn workspace @normalfinance/stellar-web dev",
-    "build:solana": "yarn workspace @normalfinance/solana build",
-    "build:stellar": "yarn workspace @normalfinance/contracts build && yarn workspace @normalfinance/stellar-web build",
-    "build:stellar:contracts": "yarn workspace @normalfinance/contracts build",
-    "build:stellar:web": "yarn workspace @normalfinance/stellar-web build",
-    "build:ui": "yarn workspace @normalfinance/ui build",
-    "build:utils": "yarn workspace @normalfinance/utils build",
-    "build:types": "yarn workspace @normalfinance/types build"
+    "test": "turbo run test",
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=@normalfinance/web",
+    "dev:experimental": "yarn workspace @normalfinance/web dev:experimental",
+    "build:web": "turbo run build --filter=@normalfinance/web",
+    "build:contracts": "turbo run build --filter=@normalfinance/contracts",
+    "build:state": "turbo run build --filter=@normalfinance/state",
+    "build:utils": "turbo run build --filter=@normalfinance/utils",
+    "build:types": "turbo run build --filter=@normalfinance/types"
   },
   "repository": {
     "type": "git",
@@ -26,22 +25,25 @@
   },
   "homepage": "https://github.com/normalfinance/normal-v1-interface",
   "workspaces": [
-    "packages/solana",
-    "packages/stellar/contracts",
-    "packages/stellar/web",
     "packages/types",
-    "packages/ui",
     "packages/utils",
+    "packages/contracts",
+    "packages/state",
+    "packages/contracts",
     "packages/*"
   ],
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.2",
     "@types/jest": "^29.5.2",
-    "jest": "^29.5.0"
+    "concurrently": "^9.1.2",
+    "jest": "^29.5.0",
+    "turbo": "^2.5.3"
   },
   "packageManager": "yarn@3.6.4",
   "dependencies": {
-    "@stellar/stellar-sdk": "^12.1.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@stellar/stellar-sdk": "^13.1.0",
     "@walletconnect/modal": "^2.6.2",
     "@walletconnect/sign-client": "^2.13.1",
     "@walletconnect/types": "^2.13.1",

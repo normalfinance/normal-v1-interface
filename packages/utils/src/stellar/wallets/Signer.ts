@@ -1,12 +1,12 @@
 import { lobstr } from "./lobstr";
 import { Wallet } from "./types";
 import { xBull } from "./xbull";
+import { hana } from "./hana";
 import {
   WalletConnect as WalletClient,
   WalletConnectAllowedMethods,
 } from "./wallet-connect";
-import { SOROBAN_NETWORK_PASSPHRASE } from "../../constants";
-// import { NETWORK_PASSPHRASE } from "../constants";
+import { NETWORK_PASSPHRASE } from "../../constants/stellar";
 
 const initializeWalletConnect = async () => {
   const walletConnectInstance = new WalletClient({
@@ -16,7 +16,7 @@ const initializeWalletConnect = async () => {
     url: "https://app.phoenix-hub.io",
     icons: ["https://app.phoenix-hub.io/logoIcon.png"],
     method: WalletConnectAllowedMethods.SIGN_AND_SUBMIT,
-    network: SOROBAN_NETWORK_PASSPHRASE,
+    network: NETWORK_PASSPHRASE,
   });
   console.log("Initialized Wallet Connect");
 
@@ -81,6 +81,8 @@ export default class Signer {
       this.wallet = new xBull();
     } else if (this.walletType === "lobstr") {
       this.wallet = new lobstr();
+    } else if (this.walletType === "hana") {
+      this.wallet = new hana();
     } else if (this.walletType === "wallet-connect") {
       this.wallet = await initializeWalletConnect();
     } else {

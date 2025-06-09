@@ -1,9 +1,6 @@
 export * as constants from './constants';
 export * as format from './format';
-export * as time from './time';
-export * from './stellar/trustlines';
-
-export * as Stellar from './stellar';
+export * from './stellar';
 
 export function splitByPredicate<T>(array: T[], predicate: (element: T) => boolean): [T[], T[]] {
   return array.reduce<[T[], T[]]>(

@@ -22,10 +22,6 @@ The Normal v1 Interface is built with TypeScript and leverages yarn workspaces f
 
 ## Packages
 
-### [UI](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/ui)
-
-Our `UI` package is an MUI-based UI kit, providing reusable components and styles in line with Material Design principles. It ensures a uniform and appealing visual experience across the app.
-
 ### [Types](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/types)
 
 The `Types` package focuses on state management, incorporating zustand along with its actions to optimally manage and update the app's data based on user interactions and other events.
@@ -34,26 +30,13 @@ The `Types` package focuses on state management, incorporating zustand along wit
 
 Housing a range of utility and helper functions, the `Utils` package offers a one-stop-shop for common tasks like data manipulation, date formatting, string handling, and network calls.
 
-### [Solana](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/solana)
-
-#### [SDK](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/solana/sdk)
-
-The `SDK` package provides a Typescript SDK for interacting with Normal v1 contracts on Solana. 
-
 #### [Web](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/solana/web)
 
 As the heart of the application, the `Core` package orchestrates the UI, state management, and utility functions. It's built on Next.js and serves as the primary entry point, setting the architectural groundwork and facilitating inter-package interactions.
 
-### [Stellar](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/stellar)
-
 #### [Contracts](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/stellar/contracts)
 
 The `Contracts` package provides generated contract classes and associated types, created through Soroban bindings. For more information, refer to [Soroban's documentation](https://soroban.stellar.org/docs/getting-started/create-an-app#generate-an-npm-package-for-the-hello-world-contract).
-
-#### [Web](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/stellar/web)
-
-A Next.js app
-
 
 ## Quick Start
 
