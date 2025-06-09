@@ -68,7 +68,7 @@ export function CustomBreadcrumbs({
       <Breadcrumbs separator={<BreadcrumbsSeparator />} {...slotProps?.breadcrumbs}>
         {links.map((link, index) => (
           <BreadcrumbsLink
-            key={link.name ?? index}
+            key={typeof link.name === 'string' ? link.name : `breadcrumb-${index}`}
             icon={link.icon}
             href={link.href}
             name={link.name}

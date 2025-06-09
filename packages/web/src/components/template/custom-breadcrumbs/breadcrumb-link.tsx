@@ -1,14 +1,14 @@
 import type { Theme, SxProps } from '@mui/material/styles';
 
+import { RouterLink } from '@/routes/components';
+
 import Link from '@mui/material/Link';
 import { styled } from '@mui/material/styles';
-
-import { RouterLink } from '@/routes/components';
 
 // ----------------------------------------------------------------------
 
 export type BreadcrumbsLinkProps = React.ComponentProps<'div'> & {
-  name?: string;
+  name?: React.ReactNode;
   href?: string;
   disabled?: boolean;
   icon?: React.ReactNode;

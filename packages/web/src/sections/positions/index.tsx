@@ -2,7 +2,7 @@ import { DashboardContent } from '@/layouts/dashboard';
 
 // ----------------------------------------------------------------------
 
-export default function LiquidityPositionsView() {
+export default function PositionsView() {
   // const { positions } = useLPs();
   // const { pools } = usePools();
 
