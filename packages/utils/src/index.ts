@@ -1,6 +1,7 @@
 export * as constants from './constants';
 export * as format from './format';
 export * from './stellar';
+export * from './checkout';
 
 // tacky, i know
 import { WalletConnectAllowedMethods } from './stellar/wallets/wallet-connect';
