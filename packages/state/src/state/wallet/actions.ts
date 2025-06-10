@@ -6,13 +6,12 @@ import {
   WalletActions,
 } from "@normalfinance/types";
 import {
-  NormalPoolRouterContract,
+PoolRouterContract,
   SorobanTokenContract,
 } from "@normalfinance/contracts";
 import { usePersistStore } from "../store";
 import {
-  constants,
-  Signer,
+  constants
 } from "@normalfinance/utils";
 
 const getCategory = (name: string) => {
@@ -47,12 +46,12 @@ export const createWalletActions = (
         console.log('Error parsing app-storage value:', error);
       }
     }
-    let parsedResults: NormalPoolRouterContract.LiquidityPoolInfo[];
+    let parsedResults: PoolRouterContract.PoolInfo[];
     try {
       const publicKey = address || constants.TESTING_SOURCE.accountId();
 
       // Pool Router contract
-      const poolRouterContract = new NormalPoolRouterContract.Client({
+      const poolRouterContract = new PoolRouterContract.Client({
         publicKey,
         contractId: constants.POOL_ROUTER_ADDRESS,
         networkPassphrase: constants.NETWORK_PASSPHRASE,
@@ -67,7 +66,7 @@ export const createWalletActions = (
       const publicKey = constants.TESTING_SOURCE.accountId();
 
       // Factory contract
-      const poolRouterContract = new NormalPoolRouterContract.Client({
+      const poolRouterContract = new PoolRouterContract.Client({
         publicKey,
         contractId: constants.POOL_ROUTER_ADDRESS,
         networkPassphrase: constants.NETWORK_PASSPHRASE,

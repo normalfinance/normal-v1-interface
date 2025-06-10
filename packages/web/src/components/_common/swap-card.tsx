@@ -3,10 +3,10 @@ import type { CardProps } from '@mui/material';
 
 import { fCurrency } from '@/utils/format-number';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { PoolRouterContract } from '@normalfinance/contracts';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
-import { NormalPoolRouterContract } from '@normalfinance/contracts';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
 import { constants, checkTrustline, fetchAndIssueTrustline } from '@normalfinance/utils';
 
@@ -241,7 +241,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
         setIsLoading(false);
 
         // Get all pools
-        const poolRouterContract = new NormalPoolRouterContract.Client({
+        const poolRouterContract = new PoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,
           networkPassphrase: constants.NETWORK_PASSPHRASE,
           rpcUrl: constants.RPC_URL,
@@ -327,7 +327,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
 
       setLoadingSimulate(true);
       try {
-        const poolRouterContract = new NormalPoolRouterContract.Client({
+        const poolRouterContract = new PoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,
           networkPassphrase: constants.NETWORK_PASSPHRASE,
           rpcUrl: constants.RPC_URL,

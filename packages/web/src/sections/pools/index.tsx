@@ -16,7 +16,6 @@ import { fCurrencyCompact } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
-import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
 
 import Grid2 from '@mui/material/Grid2';
 import { useTheme } from '@mui/material';
@@ -47,7 +46,7 @@ export default function PoolsView() {
    */
   const fetchPool = useCallback(async (poolAddress: string) => {
     try {
-      const PoolContract = new NormalPoolContract.Client({
+      const PoolContract = new PoolContract.Client({
         contractId: poolAddress,
         networkPassphrase: constants.NETWORK_PASSPHRASE,
         rpcUrl: constants.RPC_URL,
@@ -116,7 +115,7 @@ export default function PoolsView() {
    */
   const fetchPools = useCallback(async () => {
     try {
-      const PoolRouterContract = new NormalPoolRouterContract.Client({
+      const PoolRouterContract = new PoolRouterContract.Client({
         contractId: constants.POOL_ROUTER_ADDRESS,
         networkPassphrase: constants.NETWORK_PASSPHRASE,
         rpcUrl: constants.RPC_URL,

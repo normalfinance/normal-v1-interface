@@ -5,32 +5,56 @@ import type { AssembledTransaction } from '@stellar/stellar-sdk/contract';
 
 import { useCallback } from 'react';
 import { constants } from '@normalfinance/utils';
-import { useSnackbar } from '@/components/template/snackbar';
 import { Signer } from '@normalfinance/utils/build/stellar';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import {
-  NormalPoolContract,
+  PoolContract,
+  BufferContract,
+  PoolRouterContract,
+  PoolSwapFeeContract,
   SorobanTokenContract,
-  NormalPoolRouterContract,
+  InsuranceFundContract,
+  OracleRegistryContract,
 } from '@normalfinance/contracts';
 
+import { useSnackbar } from '@/components/template/snackbar';
+
 // Define Contract Types
-type ContractType = 'pool' | 'pool_router' | 'token';
+type ContractType =
+  | 'pool'
+  | 'pool_router'
+  | 'pool_swap_fee'
+  | 'buffer'
+  | 'insurance_fund'
+  | 'oracle_registry'
+  | 'token';
 
 const contractClients = {
-  pool: NormalPoolContract.Client,
-  pool_router: NormalPoolRouterContract.Client,
+  pool: PoolContract.Client,
+  pool_router: PoolRouterContract.Client,
+  pool_swap_fee: PoolSwapFeeContract.Client,
+  buffer: BufferContract.Client,
+  insurance_fund: InsuranceFundContract.Client,
+  oracle_registry: OracleRegistryContract.Client,
   token: SorobanTokenContract.Client,
 };
 
 type ContractClientType<T extends ContractType> = T extends 'pool'
-  ? NormalPoolContract.Client
+  ? PoolContract.Client
   : T extends 'pool_router'
-    ? NormalPoolRouterContract.Client
-    : T extends 'token'
-      ? SorobanTokenContract.Client
-      : never;
+    ? PoolRouterContract.Client
+    : T extends 'pool_swap_fee'
+      ? PoolSwapFeeContract.Client
+      : T extends 'buffer'
+        ? BufferContract.Client
+        : T extends 'insurance_fund'
+          ? InsuranceFundContract.Client
+          : T extends 'oracle_registry'
+            ? OracleRegistryContract.Client
+            : T extends 'token'
+              ? SorobanTokenContract.Client
+              : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;

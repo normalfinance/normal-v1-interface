@@ -7,13 +7,13 @@ import { constants } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { NormalPoolContract } from '@normalfinance/contracts';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
-import PoolStatsTemp from '@/components/_pool-page-components/pool-stats-temp';
-import PoolLiquidityTemp from '@/components/_pool-page-components/pool-liquidity-temp';
 
 import { Box, Grid, Alert, Stack, Typography, CircularProgress } from '@mui/material';
+
+import PoolStatsTemp from '@/components/_pool-page-components/pool-stats-temp';
+import PoolLiquidityTemp from '@/components/_pool-page-components/pool-liquidity-temp';
 
 interface _Token extends Token {
   readonly decimals: number;
@@ -49,7 +49,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const [userShare, setUserShare] = useState<number>(0);
   // const [lpTokenPrice, setLpTokenPrice] = useState<number>(0);
 
-  const PoolContract = new NormalPoolContract.Client({
+  const PoolContract = new PoolContract.Client({
     contractId: poolAddress,
     networkPassphrase: constants.NETWORK_PASSPHRASE,
     rpcUrl: constants.RPC_URL,
