@@ -14,8 +14,6 @@ import {
   constants,
   Signer,
 } from "@normalfinance/utils";
-import { LiquidityPoolInfo } from "@normalfinance/contracts/build/soroban_pool_router_contract";
-import { NETWORK_PASSPHRASE, POOL_ROUTER_ADDRESS, RPC_URL, TESTING_SOURCE } from "@normalfinance/utils/build/stellar/constants";
 
 const getCategory = (name: string) => {
   switch (name.toLowerCase()) {
@@ -49,16 +47,16 @@ export const createWalletActions = (
         console.log('Error parsing app-storage value:', error);
       }
     }
-    let parsedResults: LiquidityPoolInfo[];
+    let parsedResults: NormalPoolRouterContract.LiquidityPoolInfo[];
     try {
-      const publicKey = address || TESTING_SOURCE.accountId();
+      const publicKey = address || constants.TESTING_SOURCE.accountId();
 
       // Pool Router contract
       const poolRouterContract = new NormalPoolRouterContract.Client({
         publicKey,
-        contractId: POOL_ROUTER_ADDRESS,
-        networkPassphrase: NETWORK_PASSPHRASE,
-        rpcUrl: RPC_URL,
+        contractId: constants.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        rpcUrl: constants.RPC_URL,
       });
       // Fetch all available tokens from chain
       const allPoolsDetails = await poolRouterContract.query_all_pools_details();
@@ -66,14 +64,14 @@ export const createWalletActions = (
       // Parse results
       parsedResults = allPoolsDetails.result;
     } catch (e) {
-      const publicKey = TESTING_SOURCE.accountId();
+      const publicKey = constants.TESTING_SOURCE.accountId();
 
       // Factory contract
       const poolRouterContract = new NormalPoolRouterContract.Client({
         publicKey,
-        contractId: POOL_ROUTER_ADDRESS,
-        networkPassphrase: NETWORK_PASSPHRASE,
-        rpcUrl: RPC_URL,
+        contractId: constants.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        rpcUrl: constants.RPC_URL,
       });
       // Fetch all available tokens from chain
       const allPoolsDetails = await poolRouterContract.query_all_pools_details();
@@ -125,8 +123,8 @@ export const createWalletActions = (
     // Token contract
     const TokenContract = new SorobanTokenContract.Client({
       contractId: tokenAddress.toString(),
-      networkPassphrase: NETWORK_PASSPHRASE,
-      rpcUrl: RPC_URL,
+      networkPassphrase: constants.NETWORK_PASSPHRASE,
+      rpcUrl: constants.RPC_URL,
     });
     let balance: bigint;
     try {

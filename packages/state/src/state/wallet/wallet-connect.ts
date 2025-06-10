@@ -1,7 +1,5 @@
 import { Connector, NetworkDetails } from "@normalfinance/types";
-import { WalletConnect as WalletClient } from "@normalfinance/utils";
-import { NETWORK_PASSPHRASE } from "@normalfinance/utils/build/stellar/constants";
-import { WalletConnectAllowedMethods } from "@normalfinance/utils/build/stellar/wallets/wallet-connect";
+import { WalletConnect as WalletClient, constants, WalletConnectAllowedMethods } from "@normalfinance/utils";
 
 export class WalletConnect implements Connector {
   id: string;
@@ -46,7 +44,7 @@ export class WalletConnect implements Connector {
   async getNetworkDetails(): Promise<NetworkDetails> {
     return {
       network: "public",
-      networkPassphrase: NETWORK_PASSPHRASE,
+      networkPassphrase: constants.NETWORK_PASSPHRASE,
       networkUrl:
         "https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0",
     };
