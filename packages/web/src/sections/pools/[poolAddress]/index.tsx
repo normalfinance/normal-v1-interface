@@ -54,7 +54,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const [userShare, setUserShare] = useState<number>(0);
   // const [lpTokenPrice, setLpTokenPrice] = useState<number>(0);
 
-  const PoolContract = new NormalPoolContract.Client({
+  const PoolContract = new PoolContract.Client({
     contractId: poolAddress,
     networkPassphrase: constants.NETWORK_PASSPHRASE,
     rpcUrl: constants.RPC_URL,

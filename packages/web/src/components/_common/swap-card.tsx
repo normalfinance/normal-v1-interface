@@ -249,7 +249,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
         setIsLoading(false);
 
         // Get all pools
-        const poolRouterContract = new NormalPoolRouterContract.Client({
+        const poolRouterContract = new PoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,
           networkPassphrase: constants.NETWORK_PASSPHRASE,
           rpcUrl: constants.RPC_URL,
@@ -340,7 +340,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
 
       setLoadingSimulate(true);
       try {
-        const poolRouterContract = new NormalPoolRouterContract.Client({
+        const poolRouterContract = new PoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,
           networkPassphrase: constants.NETWORK_PASSPHRASE,
           rpcUrl: constants.RPC_URL,
