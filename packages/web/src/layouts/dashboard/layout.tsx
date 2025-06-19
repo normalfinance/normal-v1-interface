@@ -34,6 +34,7 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
+import { AccountDrawer } from '../components/account-drawer';
 
 // ----------------------------------------------------------------------
 
@@ -115,6 +116,7 @@ export function DashboardLayout({
           <Searchbar data={navData} />
           <LanguagePopover data={allLangs} />
           <AuthArea />
+          <AccountDrawer />
         </Box>
       ),
     };

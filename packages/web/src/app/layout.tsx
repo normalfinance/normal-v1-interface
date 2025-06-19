@@ -19,6 +19,7 @@ import { SnackbarProvider } from '@/components/template/snackbar';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
+import { AccountDrawer } from '@/layouts/components/account-drawer';
 
 // import { ExternalProvider } from '@/providers/ExternalProvider';
 
