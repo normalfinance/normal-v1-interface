@@ -92,6 +92,9 @@ export default function NetworkStatusFooter() {
               <Box component="span" sx={{ color: 'primary.main', fontWeight: 600 }}>
                 {selected.label}
               </Box>
+              <Box component="span" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                {selected.pingMs}ms
+              </Box>
             </Typography>
             <Iconify icon="eva:arrow-ios-downward-fill" width={14} />
           </Stack>
