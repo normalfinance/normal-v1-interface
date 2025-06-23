@@ -168,16 +168,6 @@ function WalletConnected({
     >
       <Stack direction="row" width={1} justifyContent={'space-between'} alignItems={'center'}>
         <Typography variant="subtitle1">{address}0x3c39...d14B</Typography>
-
-        <Button
-          variant="soft"
-          size="small"
-          color="error"
-          onClick={onDisconnect}
-          sx={{ width: 'auto' }}
-        >
-          Disconnect
-        </Button>
       </Stack>
       <ConnectedWallet
         balance={83.42}
@@ -216,11 +206,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
   /* ↓ main button uses dummy avatar ------------------------------ */
-  const avatarURL = '/assets/avatar_default.jpg';
+  const avatarURL = '/assets/icons/navbar/logo.webp';
 
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address;
-  const isConnected = true; //Boolean(connectedAddress);
+  const [isConnected, setIsConnected] = useState(Boolean(connectedAddress));
 
   const tokens: Token[] = [
     {
@@ -391,8 +381,13 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   return (
     <>
-      <AccountButton onClick={onOpen} photoURL={avatarURL} displayName=" " {...props} />
-
+      {isConnected ? (
+        <AccountButton onClick={onOpen} photoURL={avatarURL} displayName=" " {...props} />
+      ) : (
+        <Button variant="contained" color="info" onClick={onOpen}>
+          Connect&nbsp;Wallet
+        </Button>
+      )}
       <Drawer
         open={open}
         onClose={onClose}
@@ -405,10 +400,35 @@ export function AccountDrawer(props: AccountDrawerProps) {
         }}
       >
         {/* close (X) */}
-        <IconButton onClick={onClose} sx={{ position: 'absolute', top: 12, left: 12, zIndex: 9 }}>
-          <Iconify icon="mingcute:close-line" />
-        </IconButton>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            right: 12,
+            zIndex: 9,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          {/* ← close (X) */}
+          <IconButton onClick={onClose}>
+            <Iconify icon="mingcute:close-line" />
+          </IconButton>
 
+          {isConnected && (
+            <IconButton
+              onClick={() => {
+                setIsConnected(false);
+                disconnect();
+              }}
+              sx={{ ml: 'auto' }}
+            >
+              <Iconify icon="solar:power-bold" />
+            </IconButton>
+          )}
+        </Box>
         <Scrollbar>
           {isConnected ? (
             <WalletConnected
@@ -425,8 +445,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <WalletDisconnected
               connectors={connectors}
               onSelect={async (c) => {
-                await connect(c);
-                onClose();
+                //await connect(c);
+                setIsConnected(true);
+                //onClose();
               }}
             />
           )}
