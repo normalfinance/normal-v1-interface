@@ -4,6 +4,7 @@ import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { merge } from 'es-toolkit';
+import { allLangs } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
@@ -11,8 +12,6 @@ import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
-
-import { allLangs } from '@/locales';
 
 import { Logo } from '@/components/template/logo';
 import { useSettingsContext } from '@/components/template/settings';
@@ -22,11 +21,11 @@ import { NavVertical } from './nav-vertical';
 import { layoutClasses } from '../core/classes';
 import { NavHorizontal } from './nav-horizontal';
 import { MainSection } from '../core/main-section';
-import { AuthArea } from '../components/auth-area';
 import { Searchbar } from '../components/searchbar';
 import { MenuButton } from '../components/menu-button';
 import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
+import { AccountDrawer } from '../components/account-drawer';
 import { LanguagePopover } from '../components/language-popover';
 import { navData as dashboardNavData } from '../nav-config-dashboard';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
@@ -34,7 +33,6 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
-import { AccountDrawer } from '../components/account-drawer';
 
 // ----------------------------------------------------------------------
 
@@ -115,7 +113,6 @@ export function DashboardLayout({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
           <Searchbar data={navData} />
           <LanguagePopover data={allLangs} />
-          <AuthArea />
           <AccountDrawer />
         </Box>
       ),
