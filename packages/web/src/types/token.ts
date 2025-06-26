@@ -21,9 +21,10 @@ export interface Token {
   url: string;
   logo?: string;
   shortname: string;
-  owned: boolean;
+  owned?: boolean;
   countstatus: number;
   pricestatus: number;
   featured: boolean;
-  address: string;
+  address?: string;
+  percentageChange?: number;
 }

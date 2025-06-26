@@ -1,5 +1,5 @@
-import type { IMarketTableFilters } from 'src/types/marketTable';
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
+import type { IMarketTableFilters } from '@/types/marketTable';
 
 import { useCallback } from 'react';
 
@@ -28,8 +28,7 @@ export function ExploreTokensTableToolbar({ filters, onResetPage }: Props) {
   );
 
   return (
-    <>
-      <Box
+    <Box
         sx={{
           p: 2.5,
           gap: 2,
@@ -65,6 +64,5 @@ export function ExploreTokensTableToolbar({ filters, onResetPage }: Props) {
           />
         </Box>
       </Box>
-    </>
   );
 }

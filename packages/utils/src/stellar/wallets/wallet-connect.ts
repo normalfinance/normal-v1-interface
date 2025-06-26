@@ -47,7 +47,7 @@ export class WalletConnect implements Wallet {
   private qrModal!: WalletConnectModal;
 
   constructor(public wcParams: IWalletConnectConstructorParams) {
-    if (wcParams.sessionId) {
+    if (wcParams?.sessionId) {
       this.setSession(wcParams.sessionId);
     }
 

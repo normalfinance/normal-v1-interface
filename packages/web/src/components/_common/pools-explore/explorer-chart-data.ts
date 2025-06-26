@@ -19,7 +19,7 @@ export type PoolDetails = {
     version: string;
     feeTier: string;
   };
-  exchangeRate: {
+  exchangeRate?: {
     label: string;
     usdEquivalent: string;
     tokenSymbol: string;
@@ -27,7 +27,9 @@ export type PoolDetails = {
     tokenUSDValue: string;
   };
   performance: {
-    percentageChange: number;
+    percentageChange?: number;
+    position?: number;
+    fees?: number;
   };
 };
 
