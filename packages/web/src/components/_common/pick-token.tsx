@@ -201,7 +201,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               fontSize: '12px',
                             }}
                           >
-                            {shortenAddress(token.address)}
+                            {token.address && shortenAddress(token.address)}
                           </Typography>
                         )}
                       </Box>

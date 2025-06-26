@@ -1,3 +1,5 @@
+import OverviewView from '@/sections/overview';
+
 // ----------------------------------------------------------------------
 
 import OverviewView from "@/sections/overview";
