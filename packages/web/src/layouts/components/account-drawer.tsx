@@ -1,31 +1,34 @@
 'use client';
 
+import type { Token } from '@/types/token';
+import type { Activity } from '@/types/activity';
+import type { Connector } from '@normalfinance/types';
+import type { IconButtonProps } from '@mui/material/IconButton';
+import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
+
+import { useState, useEffect } from 'react';
+import { format } from '@normalfinance/utils';
+import { useBoolean } from 'minimal-shared/hooks';
+import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
+
+import { useTheme } from '@mui/material/styles';
 import {
   Box,
+  Paper,
+  Stack,
   Drawer,
+  Button,
+  Tooltip,
   IconButton,
   Typography,
   CircularProgress,
-  Paper,
-  Stack,
-  Button,
 } from '@mui/material';
+
 import { Iconify } from '@/components/template/iconify';
 import { Scrollbar } from '@/components/template/scrollbar';
-import { AccountButton } from './account-button';
-
-import { useEffect, useState } from 'react';
-import { useBoolean } from 'minimal-shared/hooks';
-import { freighter, lobstr, xbull, usePersistStore, useAppStore } from '@normalfinance/state';
-import { WalletConnect } from '@normalfinance/utils/build/stellar';
-
-import type { IconButtonProps } from '@mui/material/IconButton';
-import type { Connector } from '@normalfinance/types';
-import { alpha, useTheme } from '@mui/material/styles';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
-import { Token } from '@/types/token';
-import { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
-import { Activity } from '@/types/activity';
+
+import { AccountButton } from './account-button';
 
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
@@ -114,7 +117,7 @@ function WalletDisconnected({
         alignItems: 'start',
       }}
     >
-      <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign={'left'}>
+      <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
         Connect your wallet
       </Typography>
 
@@ -150,7 +153,7 @@ function WalletConnected({
   pools,
   activity,
 }: {
-  address?: string;
+  address: string;
   onDisconnect: () => void;
   tokens?: Token[];
   pools?: PoolDetails[];
@@ -166,8 +169,9 @@ function WalletConnected({
         alignItems: 'start',
       }}
     >
-      <Stack direction="row" width={1} justifyContent={'space-between'} alignItems={'center'}>
-        <Typography variant="subtitle1">{address}0x3c39...d14B</Typography>
+      <Stack direction="row" width={1} justifyContent="space-between" alignItems="center">
+        <Typography variant="subtitle1">{format.fTruncate(address, 12)}</Typography>
+        {/* <CopyIconButton value={address} alert="Address copied" /> */}
       </Stack>
       <ConnectedWallet
         balance={83.42}
@@ -210,7 +214,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address;
-  const [isConnected, setIsConnected] = useState(Boolean(connectedAddress));
+  const [isConnected, setIsConnected] = useState(
+    connectedAddress != '' && connectedAddress != undefined
+  );
 
   const tokens: Token[] = [
     {
@@ -413,26 +419,30 @@ export function AccountDrawer(props: AccountDrawerProps) {
           }}
         >
           {/* ← close (X) */}
-          <IconButton onClick={onClose}>
-            <Iconify icon="mingcute:close-line" />
-          </IconButton>
+          <Tooltip title="Close">
+            <IconButton onClick={onClose}>
+              <Iconify icon="mingcute:close-line" />
+            </IconButton>
+          </Tooltip>
 
           {isConnected && (
-            <IconButton
-              onClick={() => {
-                setIsConnected(false);
-                disconnect();
-              }}
-              sx={{ ml: 'auto' }}
-            >
-              <Iconify icon="solar:power-bold" />
-            </IconButton>
+            <Tooltip title="Disconnect">
+              <IconButton
+                onClick={() => {
+                  setIsConnected(false);
+                  disconnect();
+                }}
+                sx={{ ml: 'auto' }}
+              >
+                <Iconify icon="solar:power-bold" />
+              </IconButton>
+            </Tooltip>
           )}
         </Box>
         <Scrollbar>
           {isConnected ? (
             <WalletConnected
-              address={connectedAddress}
+              address={connectedAddress!}
               tokens={tokens}
               pools={pools}
               activity={activity}
@@ -445,9 +455,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <WalletDisconnected
               connectors={connectors}
               onSelect={async (c) => {
-                //await connect(c);
-                setIsConnected(true);
-                //onClose();
+                await connect(c);
+                // setIsConnected(true);
+                onClose();
               }}
             />
           )}
