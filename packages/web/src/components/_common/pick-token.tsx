@@ -4,6 +4,7 @@ import type { Token } from '@/types/token';
 import React, { useState } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -152,7 +153,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
-                      src={token.logo ?? token.url}
+                      src={token.logo ?? getCryptoIconUrl(token.shortname)}
                       sx={{
                         width: 40,
                         height: 40,
@@ -285,7 +286,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   >
                     <Box
                       component="img"
-                      src={token.url}
+                      src={token.logo ?? getCryptoIconUrl(token.shortname)}
                       sx={{
                         width: 20,
                         height: 20,
@@ -341,7 +342,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           >
                             <Box
                               component="img"
-                              src={token.url}
+                              src={token.logo ?? getCryptoIconUrl(token.shortname)}
                               sx={{
                                 width: 40,
                                 height: 40,
@@ -438,7 +439,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
-                          src={token.url}
+                          src={token.logo ?? getCryptoIconUrl(token.shortname)}
                           sx={{
                             width: 40,
                             height: 40,

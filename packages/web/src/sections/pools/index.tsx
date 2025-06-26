@@ -6,18 +6,19 @@ import type { Pool } from '@/components/_common/pools';
 import type { LegendValue } from '@/components/_common/area-chart-card';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 import type { PoolStat, PoolBalance } from '@/components/_common//pools-apr/pools-apr';
-import type { ExplorerChartData} from '@/components/_common/pools-explore/pools-explore';
+import type { ExplorerChartData } from '@/components/_common/pools-explore/pools-explore';
 import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
 import { useRouter } from 'next/navigation';
 import { constants } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useState, useEffect, useCallback } from 'react';
-import { fCurrencyCompact } from '@/utils/format-number';
+import { fCurrencyCompact, fShortenNumber, fPercent } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
 import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import Grid2 from '@mui/material/Grid2';
 import { useTheme } from '@mui/material';
@@ -79,7 +80,7 @@ export default function PoolsView() {
           tokens: [
             {
               name: tokenA?.symbol || '',
-              icon: `/assets/icons/cryptoIcons/${tokenA?.symbol.toLowerCase()}.svg`,
+              icon: getCryptoIconUrl(tokenA?.symbol || ''),
               amount:
                 Number(poolInfo.result.pool_response.asset_a.amount) /
                 10 ** Number(tokenA?.decimals),
@@ -88,7 +89,7 @@ export default function PoolsView() {
             },
             {
               name: tokenB?.symbol || '',
-              icon: `/assets/icons/cryptoIcons/${tokenB?.symbol.toLowerCase()}.png`,
+              icon: getCryptoIconUrl(tokenB?.symbol || ''),
               amount:
                 Number(poolInfo.result.pool_response.asset_b.amount) /
                 10 ** Number(tokenB?.decimals),

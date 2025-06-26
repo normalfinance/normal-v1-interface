@@ -7,6 +7,7 @@ import { Avatar, Button, Stack, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { column } from 'stylis';
 import { fCurrency } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 export interface PoolsTabsProps {
   pools?: PoolDetails[];
@@ -40,13 +41,13 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
                 }}
               >
                 <Avatar
-                  src={pool.pairInfo?.tokenA.iconUrl}
+                  src={getCryptoIconUrl(pool.pairInfo?.tokenA.name ?? '')}
                   alt="Token A"
                   sx={{ width: 40, height: 40 }}
                 />
 
                 <Avatar
-                  src={pool.pairInfo?.tokenB.iconUrl}
+                  src={getCryptoIconUrl(pool.pairInfo?.tokenB.name ?? '')}
                   alt="Token B"
                   sx={{
                     width: 40,

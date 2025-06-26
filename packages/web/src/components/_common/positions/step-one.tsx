@@ -6,6 +6,7 @@ import { Avatar, Box, Button, Stack, Typography, alpha, useTheme } from '@mui/ma
 import { useFormContext } from 'react-hook-form';
 
 import { Token } from '@/types/token';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import PickToken from '../pick-token';
 import { FormValues } from './step-content-panel';
 import { Iconify } from '@/components/template/iconify';
@@ -30,7 +31,7 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
   };
 
   const selected = tokens.find((t) => t.shortname === tokenASymbol);
-  const avatarSrc = selected?.logo ?? selected?.url;
+  const avatarSrc = selected ? (selected.logo ?? getCryptoIconUrl(selected.shortname)) : undefined;
 
   return (
     <Stack>

@@ -4,6 +4,7 @@
 import { Avatar } from '@mui/material';
 import { CardProps } from '@mui/material/Card';
 import AvatarGroup, { avatarGroupClasses } from '@mui/material/AvatarGroup';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 // ----------------------------------------------------------------------
 
@@ -29,7 +30,7 @@ export default function AssetAvatarGroup({ assets, size, max, fontSize }: Props)
       }}
     >
       {assets.map((asset) => (
-        <Avatar key={asset} alt={asset} src={`/assets/icons/cryptoLogos/${asset}.svg`} />
+        <Avatar key={asset} alt={asset} src={getCryptoIconUrl(asset)} />
       ))}
     </AvatarGroup>
   );

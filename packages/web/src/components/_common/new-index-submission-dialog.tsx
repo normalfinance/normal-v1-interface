@@ -22,6 +22,7 @@ import { Iconify } from '../template/iconify';
 import { fCurrencyTwoDecimals, fRawPercent } from '@/utils/format-number';
 import { useTheme } from '@mui/material/styles';
 import { NativeToken } from '@/types/native-token';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 type NewIndexSubmissionDialogProps = {
   open: boolean;
@@ -74,7 +75,7 @@ export default function NewIndexSubmissionDialog({
       };
     }
 
-    // If it’s something else, fallback
+    // If it's something else, fallback
     setAvatarPreview('');
   }, [allFields.avatarUrl]);
 
@@ -144,7 +145,12 @@ export default function NewIndexSubmissionDialog({
                 width: '100%',
               }}
             >
-              <Box sx={{ width: 36, height: 36 }} component="img" src={coin.url} alt={coin.name} />
+              <Box
+                sx={{ width: 36, height: 36 }}
+                component="img"
+                src={getCryptoIconUrl(coin.shortName)}
+                alt={coin.name}
+              />
 
               <Stack flex="1 1 auto" textAlign={'left'}>
                 <div>{coin.name}</div>

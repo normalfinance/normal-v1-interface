@@ -9,6 +9,7 @@ import { Token } from '@/types/token';
 import { FormValues } from './step-content-panel';
 import { fCurrency } from '@/utils/format-number';
 import { column } from 'stylis';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 /* ------------------------------------------------------------------ */
 /* props                                                               */
@@ -74,7 +75,7 @@ export default function StepTwo({ token }: StepTwoProps) {
                 inputProps={{ min: 0 }}
                 sx={{
                   border: 'none',
-                  // 🔽  remove flexGrow so it doesn’t fill the column
+                  // 🔽  remove flexGrow so it doesn't fill the column
                   '& input': { fontSize: 32, fontWeight: 700 },
                 }}
               />
@@ -94,7 +95,7 @@ export default function StepTwo({ token }: StepTwoProps) {
             spacing={1}
             sx={{ mr: 2, borderRadius: 99, p: 1 }}
           >
-            <Avatar src={token.url} sx={{ width: 32, height: 32 }} />
+            <Avatar src={getCryptoIconUrl(token.shortname)} sx={{ width: 32, height: 32 }} />
             <Typography variant="body1" fontWeight={'bold'}>
               {token.shortname}
             </Typography>
