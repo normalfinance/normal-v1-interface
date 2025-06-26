@@ -5,7 +5,7 @@ export function freighter(): Connector {
   return {
     id: "freighter",
     name: "Freighter",
-    iconUrl: "/freighter.svg",
+    iconUrl: "/assets/icons/wallets/freighter.svg",
     iconBackground: "#fff",
     installed: true,
     downloadUrls: {

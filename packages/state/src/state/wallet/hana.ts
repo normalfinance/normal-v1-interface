@@ -48,7 +48,7 @@ export function hana(): Connector {
   return {
     id: "hana",
     name: "Hana Wallet",
-    iconUrl: "/hana.png",
+    iconUrl: "/assets/icons/wallets/hana.png",
     iconBackground: "#fff",
     installed: true,
     downloadUrls: {
