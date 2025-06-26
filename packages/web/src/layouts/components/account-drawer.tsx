@@ -195,8 +195,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
     freighter(),
     xbull(),
     lobstr(),
-    // @ts-expect-error – WalletConnect ctor typing
-    new WalletConnect({ projectId: 'c23b8cc582d9a0db289b74ddda7bfc6e' }),
+    hana(),
+    // new WalletConnect(),
   ];
 
   const connect = (c: Connector) => persist.connectWallet(c.id);

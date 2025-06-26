@@ -25,9 +25,9 @@ export class WalletConnect implements Connector {
     };
     if (ignoreClient) return;
     this.client = new WalletClient({
-      projectId: "1cca500fbafdda38a70f8bf3bcb91b15",
+      projectId: "c23b8cc582d9a0db289b74ddda7bfc6e",
       name: "Normal",
-      description: "Serving only the tastiest DeFi",
+      description: "Making crypto normal",
       url: "https://app.normalfinance.io",
       icons: ["https://app.normalfinance.io/logoIcon.png"],
       method: WalletConnectAllowedMethods.SIGN_AND_SUBMIT,
