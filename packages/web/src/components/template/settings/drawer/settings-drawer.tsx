@@ -1,4 +1,5 @@
 'use client';
+import { useTranslate } from '@/locales';
 
 import type { ThemeColorScheme } from '@/theme/types';
 
@@ -35,6 +36,8 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
 
   const { mode, setMode, systemMode } = useColorScheme();
 
+  const { t } = useTranslate('auto');
+
   useEffect(() => {
     if (mode === 'system' && systemMode) {
       settings.setState({ colorScheme: systemMode });
@@ -69,7 +72,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
       }}
     >
       <Typography variant="h6" sx={{ flexGrow: 1 }}>
-        Settings
+        {t('Settings')}
       </Typography>
 
       <FullScreenButton />

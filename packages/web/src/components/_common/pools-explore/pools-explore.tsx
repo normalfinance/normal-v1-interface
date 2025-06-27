@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { CardProps } from '@mui/material/Card';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
@@ -68,6 +69,7 @@ export function PoolsExplorer({
   ...other
 }: Props) {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
   const effectiveColor = color || theme.palette.primary.main;
 
   const [selectedMetric, setSelectedMetric] = useState<ChartMetricKey>('price');
@@ -93,7 +95,7 @@ export function PoolsExplorer({
   const realtimeData = chart[selectedMetric]?.[selectedTimeframe];
 
   if (!realtimeData) {
-    return <div>No chart data available</div>;
+    return <div>{t('No chart data available')}</div>;
   }
 
   const chartOptions = useChart({
@@ -119,7 +121,6 @@ export function PoolsExplorer({
   return (
     <Card sx={sx} {...other}>
       <CardHeader title={title} subheader={subheader} sx={{ mb: 2 }} />
-
       <CustomBreadcrumbs
         activeLast
         links={[
@@ -128,7 +129,7 @@ export function PoolsExplorer({
           {
             name: (
               <>
-                {pairInfo?.tokenA.name} / {pairInfo?.tokenB.name}{' '}
+                {pairInfo?.tokenA.name}{t('/')}{pairInfo?.tokenB.name}{' '}
                 <Typography component="span" color="text.secondary" variant="body2">
                   {pairInfo?.address}
                 </Typography>
@@ -138,7 +139,6 @@ export function PoolsExplorer({
         ]}
         sx={{ mb: '20px', px: 2.5 }}
       />
-
       <Box
         sx={{
           display: 'flex',
@@ -170,7 +170,7 @@ export function PoolsExplorer({
         </Box>
 
         <Typography component="span" color="text.primary" variant="h6" ml={1}>
-          {pairInfo?.tokenA.name} / {pairInfo?.tokenB.name}
+          {pairInfo?.tokenA.name}{t('/')}{pairInfo?.tokenB.name}
         </Typography>
 
         <Box
@@ -226,7 +226,6 @@ export function PoolsExplorer({
           </Box>
         </Box>
       </Box>
-
       <Stack sx={{ px: 2.5, mb: '20px' }}>
         <Box
           sx={{
@@ -241,9 +240,7 @@ export function PoolsExplorer({
             {exchangeRate?.label}
           </Typography>
 
-          <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>
-            ({exchangeRate?.usdEquivalent})
-          </Typography>
+          <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>{t('(')}{exchangeRate?.usdEquivalent}{t(')')}</Typography>
         </Box>
         <Stack direction="row" spacing={0.5} alignItems="center">
           <Box
@@ -262,6 +259,7 @@ export function PoolsExplorer({
                 color: 'success.light',
               }),
               ...(performance &&
+                performance.percentageChange &&
                 performance.percentageChange < 0 && {
                   bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
                   color: 'error.dark',
@@ -274,12 +272,12 @@ export function PoolsExplorer({
             <Iconify
               width={16}
               icon={
-                performance && performance.percentageChange < 0
+                performance && performance.percentageChange && performance.percentageChange < 0
                   ? 'eva:trending-down-fill'
                   : 'eva:trending-up-fill'
               }
               color={
-                performance && performance.percentageChange < 0 ? 'error.main' : 'success.main'
+                performance && performance.percentageChange && performance.percentageChange < 0 ? 'error.main' : 'success.main'
               }
             />
           </Box>
@@ -287,15 +285,14 @@ export function PoolsExplorer({
             variant="caption"
             sx={{
               color:
-                performance && performance.percentageChange < 0 ? 'error.main' : 'success.main',
+                performance && performance.percentageChange && performance.percentageChange < 0 ? 'error.main' : 'success.main',
             }}
           >
-            {performance && performance.percentageChange >= 0 && '+'}
+            {performance && performance.percentageChange && performance.percentageChange >= 0 && '+'}
             {fPercent(performance && performance.percentageChange)}
           </Typography>
         </Stack>
       </Stack>
-
       <Chart
         type="area"
         series={realtimeData.series[0].data}
@@ -308,7 +305,6 @@ export function PoolsExplorer({
           height: 320,
         }}
       />
-
       <Box
         sx={{
           display: 'flex',

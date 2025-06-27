@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { ChipProps } from '@mui/material/Chip';
 import type { Theme, SxProps } from '@mui/material/styles';
 
@@ -23,13 +24,13 @@ export function FiltersResult({
   totalResults,
   ...other
 }: FiltersResultProps) {
+  const { t } = useTranslate();
   return (
     <ResultRoot sx={sx} {...other}>
       <ResultLabel>
         <strong>{totalResults}</strong>
-        <span> results found</span>
+        <span>{t('results found')}</span>
       </ResultLabel>
-
       <ResultContent>
         {children}
 
@@ -37,9 +38,7 @@ export function FiltersResult({
           color="error"
           onClick={onReset}
           startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
-        >
-          Clear
-        </Button>
+        >{t('Clear')}</Button>
       </ResultContent>
     </ResultRoot>
   );

@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react';
 
 // Crisp
-import { load as loadCrisp } from '@normalfinance/utils';
-
-// StatusPage
-import { load as loadStatuspage } from '@normalfinance/utils';
+import { loadCrisp, loadStatuspage } from '@normalfinance/utils';
 
 type Props = {
   children: React.ReactNode;

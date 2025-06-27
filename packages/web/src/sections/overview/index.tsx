@@ -1,4 +1,5 @@
 'use client';
+import { useTranslate } from '@/locales';
 
 import Grid2 from '@mui/material/Grid2';
 import { AssetsAndLiabilities } from '@/components/_overview-page-components/assets-and-liabilities/assets-and-liabilities';
@@ -17,6 +18,7 @@ import { SwapFeeInfo } from '@/types/swap-fee-info';
 
 export default function OverviewView() {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   // -------------------------
   // Hardcoded chart data arrays.
@@ -260,10 +262,10 @@ export default function OverviewView() {
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
         <Typography variant="h4" color="text.primary">
-          Welcome back 👋
+          {t('Welcome back 👋')}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Account Overview
+          {t('Account Overview')}
         </Typography>
       </Stack>
       {/* First row: PortfolioValue/AssetsAndLiabilities */}

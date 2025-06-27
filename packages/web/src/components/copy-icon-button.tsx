@@ -6,7 +6,7 @@ import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { Tooltip, IconButton } from '@mui/material';
 
 // components
-import Iconify from '@/components/template/iconify';
+import { Iconify } from '@/components/template/iconify';
 // hooks
 import { useSnackbar } from '@/components/template/snackbar';
 

@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { DialogProps } from '@mui/material';
 import type { Connector } from '@normalfinance/types';
 
@@ -36,6 +37,7 @@ export function ConnectWallet({
   const [allowedConnectors, setAllowedConnectors] = useState<Connector[]>([]);
   const [disallowedConnectors, setDisallowedConnectors] = useState<Connector[]>([]);
   const [loadingConnectors, setLoadingConnectors] = useState(true);
+  const { t } = useTranslate();
   console.log(allowedConnectors);
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export function ConnectWallet({
 
   return (
     <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" {...other}>
-      <DialogTitle> Connect Wallet </DialogTitle>
+      <DialogTitle>{t('Connect Wallet')}</DialogTitle>
       <DialogContent sx={{ overflow: 'unset' }}>
         <Box display="grid" gap={2} gridTemplateColumns="repeat(2, 1fr)" sx={{ p: 3 }}>
           {!loadingConnectors ? (
@@ -135,7 +137,9 @@ const OptionComponent = ({
   onClick,
   selected,
   allowed,
-}: OptionComponentProps & { allowed: boolean }) => (
+}: OptionComponentProps & { allowed: boolean }) => {
+  const { t } = useTranslate();
+  return (
   <Paper
     key={connector.id}
     variant="outlined"
@@ -149,9 +153,8 @@ const OptionComponent = ({
     </Typography>
 
     {!allowed && (
-      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-        Not installed
-      </Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('Not installed')}</Typography>
     )}
   </Paper>
-);
+  );
+};

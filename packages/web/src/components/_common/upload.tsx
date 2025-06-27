@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import { useDropzone } from 'react-dropzone';
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
@@ -31,6 +32,7 @@ export function Upload({
   multiple = false,
   ...other
 }: UploadProps) {
+  const { t } = useTranslate('auto');
   const { getRootProps, getInputProps, isDragActive, isDragReject, fileRejections } = useDropzone({
     multiple,
     disabled,
@@ -52,9 +54,7 @@ export function Upload({
         {(onRemoveAll || onUpload) && (
           <Box sx={{ gap: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
             {onRemoveAll && (
-              <Button color="inherit" variant="outlined" size="small" onClick={onRemoveAll}>
-                Remove all
-              </Button>
+              <Button color="inherit" variant="outlined" size="small" onClick={onRemoveAll}>{t('Remove all')}</Button>
             )}
 
             {onUpload && (
@@ -63,9 +63,7 @@ export function Upload({
                 variant="contained"
                 onClick={onUpload}
                 startIcon={<Iconify icon="eva:cloud-upload-fill" />}
-              >
-                Upload
-              </Button>
+              >{t('Upload')}</Button>
             )}
           </Box>
         )}

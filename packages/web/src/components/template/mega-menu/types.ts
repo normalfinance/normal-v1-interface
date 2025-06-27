@@ -3,7 +3,7 @@ import type { MasonryProps } from '@mui/lab/Masonry';
 import type { ButtonBaseProps } from '@mui/material/ButtonBase';
 import type { Theme, SxProps, CSSObject } from '@mui/material/styles';
 
-import type { CarouselOptions } from '../carousel';
+// import type { CarouselOptions } from '../carousel';
 
 // ----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ export type NavSlotProps = {
   masonry?: Omit<MasonryProps<'ul'>, 'ref' | 'children'>;
   carousel?: {
     sx?: SxProps<Theme>;
-    options?: CarouselOptions;
+    // options?: CarouselOptions;
   };
 };
 

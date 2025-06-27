@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import React from 'react';
 import {
   Dialog,
@@ -35,6 +36,7 @@ const SendReview: React.FC<SendReviewProps> = ({
   networkCost,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   return (
     <Dialog
@@ -56,9 +58,7 @@ const SendReview: React.FC<SendReviewProps> = ({
     >
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" component="div" color="text.primary">
-            Review send
-          </Typography>
+          <Typography variant="h6" component="div" color="text.primary">{t('Review send')}</Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
           </IconButton>
@@ -81,9 +81,7 @@ const SendReview: React.FC<SendReviewProps> = ({
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           <Box>
-            <Typography variant="caption" color="text.secondary" mb={1}>
-              You're sending
-            </Typography>
+            <Typography variant="caption" color="text.secondary" mb={1}>{t('You\'re sending')}</Typography>
 
             <Box
               sx={{
@@ -95,7 +93,7 @@ const SendReview: React.FC<SendReviewProps> = ({
               }}
             >
               <Box>
-                <Typography variant="h4">${fiatValue}</Typography>
+                <Typography variant="h4">{t('$')}{fiatValue}</Typography>
                 <Typography
                   variant="body1"
                   sx={{
@@ -126,9 +124,7 @@ const SendReview: React.FC<SendReviewProps> = ({
               />
             </Box>
 
-            <Typography variant="caption" color="text.secondary" mb={1}>
-              To
-            </Typography>
+            <Typography variant="caption" color="text.secondary" mb={1}>{t('To')}</Typography>
             <Box
               sx={{
                 width: '100%',
@@ -167,9 +163,7 @@ const SendReview: React.FC<SendReviewProps> = ({
                   color: theme.palette.text.secondary,
                   fontSize: '12px',
                 }}
-              >
-                Network cost
-              </Typography>
+              >{t('Network cost')}</Typography>
               <Iconify
                 icon="solar:info-circle-bold"
                 width={14}
@@ -192,9 +186,7 @@ const SendReview: React.FC<SendReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button fullWidth variant="soft" color="success" size="large">
-            Send
-          </Button>
+          <Button fullWidth variant="soft" color="success" size="large">{t('Send')}</Button>
         </Box>
       </DialogActions>
     </Dialog>

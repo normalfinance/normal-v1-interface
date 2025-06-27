@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { TextFieldProps } from '@mui/material/TextField';
 import type {
   AutocompleteProps,
@@ -49,6 +50,7 @@ export function CountrySelect({
   getValue = 'label',
   ...other
 }: CountrySelectProps) {
+  const { t } = useTranslate('auto');
   const options = useMemo(
     () => countries.map((country) => (getValue === 'label' ? country.label : country.code)),
     [getValue]
@@ -81,7 +83,7 @@ export function CountrySelect({
               borderRadius: '50%',
             }}
           />
-          {country.label} ({country.code}) +{country.phone}
+          {country.label}{t('(')}{country.code}{t(') +')}{country.phone}
         </li>
       );
     },

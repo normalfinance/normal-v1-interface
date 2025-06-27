@@ -4,6 +4,7 @@ import type { Theme, SxProps } from '@mui/material/styles';
 import NoSsr from '@mui/material/NoSsr';
 import { tabClasses } from '@mui/material/Tab';
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
+import { useTranslate } from '@/locales';
 
 // ----------------------------------------------------------------------
 

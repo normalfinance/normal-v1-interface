@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 
 import React from 'react';
@@ -51,6 +52,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
   onSubmit,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   return (
     <Dialog
@@ -72,9 +74,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
     >
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" component="div" color="text.primary">
-            You're swapping
-          </Typography>
+          <Typography variant="h6" component="div" color="text.primary">{t('You\'re swapping')}</Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
           </IconButton>
@@ -235,9 +235,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                       color: theme.palette.text.secondary,
                       fontSize: '12px',
                     }}
-                  >
-                    Show less
-                  </Typography>
+                  >{t('Show less')}</Typography>
                   <Iconify
                     icon="carbon:chevron-sort"
                     width={14}
@@ -297,8 +295,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >
-                        Fee <Box component="span">({feePercentage}%)</Box>{' '}
+                      >{t('Fee')}<Box component="span">{t('(')}{feePercentage}{t('%)')}</Box>{' '}
                       </Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
@@ -342,9 +339,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >
-                        Network cost
-                      </Typography>
+                      >{t('Network cost')}</Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
                         width={14}
@@ -387,9 +382,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >
-                        Rate
-                      </Typography>
+                      >{t('Rate')}</Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
                         width={14}
@@ -432,9 +425,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >
-                        Price impact
-                      </Typography>
+                      >{t('Price impact')}</Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
                         width={14}
@@ -477,9 +468,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >
-                        Max slippage
-                      </Typography>
+                      >{t('Max slippage')}</Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
                         width={14}
@@ -506,9 +495,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>
-            Swap
-          </Button>
+          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>{t('Swap')}</Button>
         </Box>
       </DialogActions>
     </Dialog>

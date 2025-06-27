@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import { Token } from '@/types/token';
@@ -15,6 +16,7 @@ export interface ToeknsTabsProps {
 
 export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   return (
     <Box sx={{ p: 2, pt: 0 }}>
@@ -159,7 +161,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
           </Button>
         ))
       ) : (
-        <Typography>No tokens match your search.</Typography>
+        <Typography>{t('No tokens match your search.')}</Typography>
       )}
     </Box>
   );

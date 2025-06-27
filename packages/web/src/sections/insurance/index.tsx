@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 import Grid2 from '@mui/material/Grid2';
 import { DashboardContent } from '@/layouts/dashboard';
 import { Stack, Typography, useTheme } from '@mui/material';
@@ -12,6 +13,7 @@ import { TabsTable } from '@/components/_common/tabs-table-card';
 
 export default function InsuranceView() {
   const theme = useTheme();
+  const { t } = useTranslate();
 
   // Stat card data array
   const statCardsData: StatCardData[] = [
@@ -113,14 +115,11 @@ export default function InsuranceView() {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">
-          Insurance
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Review how insured the Normal Protocol is and earn yield by providing additional funds
-        </Typography>
+        <Typography variant="h4" color="text.primary">{t('Insurance')}</Typography>
+        <Typography variant="body1" color="text.secondary">{t(
+          'Review how insured the Normal Protocol is and earn yield by providing additional funds',
+        )}</Typography>
       </Stack>
-
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         {statCardsData.map((item, index) => (
           <Grid2 key={index} size={{ xs: 12, md: 4 }}>
@@ -136,15 +135,11 @@ export default function InsuranceView() {
           </Grid2>
         ))}
       </Grid2>
-
       <Stack sx={{ mt: 3, maxWidth: '976px', mx: 'auto', px: 2 }} textAlign="center">
-        <Typography variant="body1" color="text.secondary">
-          Insurance covering protocol debt is covered first by the Normal Buffer, which receives a
-          portion of protocol revenue, and then by the Normal Insurance Fund, which pays yield to
-          3rd party liquidity providers.
-        </Typography>
+        <Typography variant="body1" color="text.secondary">{t(
+          'Insurance covering protocol debt is covered first by the Normal Buffer, which receives a portion of protocol revenue, and then by the Normal Insurance Fund, which pays yield to 3rd party liquidity providers.',
+        )}</Typography>
       </Stack>
-
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         {currentBalanceData.map((balance, index) => (
           <Grid2 key={index} size={{ xs: 12, md: 4 }}>
