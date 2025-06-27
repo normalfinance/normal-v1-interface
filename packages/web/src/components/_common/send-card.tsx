@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import React, { useState, useRef, useEffect } from 'react';
 import { Typography, Box, CardProps, Button, InputBase } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -19,6 +20,7 @@ const DEFAULT_DESTINATION = 'Wallet address or ENS name';
 
 const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...other }) => {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   // State declarations...
   const [sendToken, setSendToken] = useState<Token | null>(
@@ -158,7 +160,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
         >
           <Box sx={{ height: '82px' }}>
             <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-              You're sending
+              {t("You're sending")}
             </Typography>
           </Box>
           <Box
@@ -172,7 +174,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           >
             {isFiatMode && (
               <Typography sx={{ color: theme.palette.text.secondary, fontSize: '64px' }}>
-                $
+                {t('$')}
               </Typography>
             )}
             <InputBase
@@ -298,9 +300,12 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
                   textAlign: 'start',
                 }}
               >
-                Balance: <Box component="span">{sendToken?.countstatus}</Box>{' '}
+                {t('Balance:')}
+                <Box component="span">{sendToken?.countstatus}</Box>{' '}
                 <Box component="span" sx={{ color: theme.palette.text.secondary }}>
-                  ({fCurrency((sendToken?.countstatus ?? 0) * (sendToken?.pricestatus ?? 0))})
+                  {t('(')}
+                  {fCurrency((sendToken?.countstatus ?? 0) * (sendToken?.pricestatus ?? 0))}
+                  {t(')')}
                 </Box>
               </Typography>
             </Box>
@@ -325,7 +330,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
                 }
               }}
             >
-              Max
+              {t('Max')}
             </Button>
             <Iconify
               width={24}
@@ -335,7 +340,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           </Box>
         </Button>
       </Box>
-
       {/* Destination Input for Wallet Address/ENS */}
       <Box
         sx={{
@@ -352,7 +356,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
         }}
       >
         <Typography variant="caption" sx={{ color: theme.palette.text.primary }}>
-          To
+          {t('To')}
         </Typography>
         <InputBase
           type="text"
@@ -386,7 +390,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           }}
         />
       </Box>
-
       {/* Main Button */}
       <Box>
         <Button
@@ -399,7 +402,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           {getButtonLabel()}
         </Button>
       </Box>
-
       {reviewOpen && (
         <SendReview
           open={reviewOpen}
@@ -411,13 +413,12 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           networkCost={swapFeeInfo?.networkCost ?? 0}
         />
       )}
-
       {/* Token Picker Popup */}
       <PickToken
         open={open}
         onClose={() => setOpen(false)}
         buttonSource="send"
-        tokensList={tokensList}
+        tokens={tokensList}
         onTokenSelect={(token) => {
           setSendToken(token);
           setOpen(false);

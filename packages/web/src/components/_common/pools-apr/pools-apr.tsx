@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { CardProps } from '@mui/material/Card';
 
 import { useState } from 'react';
@@ -47,6 +48,7 @@ export type PoolsAprProps = CardProps & {
 
 export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other }: PoolsAprProps) {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   const [showSwap, setShowSwap] = useState(false);
 
@@ -109,7 +111,6 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
           </Button>
         ))}
       </Stack>
-
       {/* NEED TO ADD TOKENLIST */}
       {showSwap && (
         <Box sx={{ mt: 2 }}>
@@ -126,14 +127,10 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
           width: '100%',
         }}
       >
-        <Typography variant="subtitle1" color="text.secondary">
-          Total APR
-        </Typography>
+        <Typography variant="subtitle1" color="text.secondary">{t('Total APR')}</Typography>
         <Typography variant="h3" color="text.primary">
-          {totalAprPercentage}%
-        </Typography>
+          {totalAprPercentage}{t('%')}</Typography>
       </Stack>
-
       {/* —— Stats list ———————————————————— */}
       <Stack
         sx={{
@@ -146,9 +143,7 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
           gap: '15px',
         }}
       >
-        <Typography variant="h5" color="text.primary">
-          Stats
-        </Typography>
+        <Typography variant="h5" color="text.primary">{t('Stats')}</Typography>
 
         <Stack
           sx={{
@@ -156,9 +151,7 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
             gap: '4px',
           }}
         >
-          <Typography variant="subtitle2" color="text.secondary">
-            Pool balances
-          </Typography>
+          <Typography variant="subtitle2" color="text.secondary">{t('Pool balances')}</Typography>
           <Box
             sx={{
               display: 'flex',

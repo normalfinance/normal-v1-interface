@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { CardProps } from '@mui/material/Card';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
@@ -47,6 +48,7 @@ export function AreaChartCard({
   ...other
 }: Props) {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   // Use provided color or fallback to theme palette primary
   const effectiveColor = color || theme.palette.primary.main;
@@ -60,7 +62,7 @@ export function AreaChartCard({
   // Make sure there's data for the selected timeframe
   const realtimeData = chart[selectedSeries];
   if (!realtimeData) {
-    return <div>No chart data available</div>;
+    return <div>{t('No chart data available')}</div>;
   }
 
   const chartOptions = useChart({
@@ -85,7 +87,7 @@ export function AreaChartCard({
   return (
     <Card sx={sx} {...other}>
       <CardHeader
-        title={title}
+        title={t(title || 'Portfolio Value')}
         subheader={subheader}
         action={
           availableOptions.length > 1 ? (

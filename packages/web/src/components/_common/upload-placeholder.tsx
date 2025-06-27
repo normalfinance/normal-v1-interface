@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { Theme, SxProps } from '@mui/material/styles';
 
 import { mergeClasses } from 'minimal-shared/utils';
@@ -21,6 +22,7 @@ const uploadPlaceholderClasses = {
 };
 
 export function UploadPlaceholder({ sx, className, ...other }: UploadPlaceholderProps) {
+  const { t } = useTranslate('auto');
   return (
     <PlaceholderRoot
       className={mergeClasses([uploadPlaceholderClasses.root, className])}
@@ -29,12 +31,8 @@ export function UploadPlaceholder({ sx, className, ...other }: UploadPlaceholder
     >
       <UploadIllustration hideBackground sx={{ width: 200 }} />
       <PlaceholderContent>
-        <div className={uploadPlaceholderClasses.title}>Drop or select file</div>
-        <div className={uploadPlaceholderClasses.description}>
-          Drop files here or click to
-          <span>browse</span>
-          through your machine.
-        </div>
+        <div className={uploadPlaceholderClasses.title}>{t('Drop or select file')}</div>
+        <div className={uploadPlaceholderClasses.description}>{t('Drop files here or click to')}<span>{t('browse')}</span>{t('through your machine.')}</div>
       </PlaceholderContent>
     </PlaceholderRoot>
   );

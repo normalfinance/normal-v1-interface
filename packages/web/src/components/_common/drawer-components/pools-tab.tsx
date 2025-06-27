@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import { PoolDetails } from '../pools-explore/explorer-chart-data';
@@ -13,6 +14,7 @@ export interface PoolsTabsProps {
 
 export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   return (
     <Box sx={{ p: 2, pt: 0 }}>
@@ -56,7 +58,7 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
               </Box>
               <Stack direction="column" width={1} alignItems={'start'}>
                 <Typography component="span" color="text.primary" variant="h6" ml={1}>
-                  {pool.pairInfo?.tokenA.name} / {pool.pairInfo?.tokenB.name}
+                  {pool.pairInfo?.tokenA.name}{t('/')}{pool.pairInfo?.tokenB.name}
                 </Typography>
                 <Box
                   sx={{
@@ -118,24 +120,20 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
                 <Typography color="text.primary" variant="body1">
                   {fCurrency(pool.performance?.position)}
                 </Typography>
-                <Typography color="text.secondary" variant="caption">
-                  Position
-                </Typography>
+                <Typography color="text.secondary" variant="caption">{t('Position')}</Typography>
               </Stack>
 
               <Stack direction="column" alignItems={'start'}>
                 <Typography color="text.primary" variant="body1">
                   {fCurrency(pool.performance?.fees)}
                 </Typography>
-                <Typography color="text.secondary" variant="caption">
-                  Fees
-                </Typography>
+                <Typography color="text.secondary" variant="caption">{t('Fees')}</Typography>
               </Stack>
             </Stack>
           </Button>
         ))
       ) : (
-        <Typography>No tokens match your search.</Typography>
+        <Typography>{t('No tokens match your search.')}</Typography>
       )}
     </Box>
   );

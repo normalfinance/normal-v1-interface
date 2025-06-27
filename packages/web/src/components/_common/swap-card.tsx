@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
 
@@ -25,6 +26,7 @@ interface SwapCardProps extends CardProps {}
 
 const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   // Using the store
   const storePersist = usePersistStore();
@@ -51,7 +53,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
 
-  // 2) State for the user’s sell amount
+  // 2) State for the user's sell amount
   const [amount, setAmount] = useState<string>('0');
 
   // 3) Popup states for picking tokens
@@ -67,7 +69,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const [quoteFetched, setQuoteFetched] = useState(false);
   const [insufficientBalance, setInsufficientBalance] = useState(false);
 
-  // Compute the fiat value for the user’s sell input
+  // Compute the fiat value for the user's sell input
   const sellVal = parseFloat(amount) || 0;
   const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.pricestatus : 0;
 
@@ -94,7 +96,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
       return;
     }
 
-    // Start “fetching” quote
+    // Start "fetching" quote
     setIsLoading(true);
 
     doSimulateSwap();
@@ -180,7 +182,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
     setBuyAmount(0);
   };
 
-  // 10) Derive the main button’s label
+  // 10) Derive the main button's label
   const getButtonLabel = (): string => {
     if (!sellToken || !buyToken) {
       return 'Select a token';
@@ -279,9 +281,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
             client.swap(
               {
                 user: storePersist.wallet.address!,
-                tokens: [sellToken.address, buyToken.address],
-                token_in: sellToken.address,
-                token_out: buyToken.address,
+                tokens: [sellToken.address!, buyToken.address!],
+                token_in: sellToken.address!,
+                token_out: buyToken.address!,
                 pool_index: Buffer.from('0'),
                 in_amount: BigInt(amount),
                 out_min: BigInt(buyAmount),
@@ -338,9 +340,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
         });
 
         const tx = await poolRouterContract.estimate_swap({
-          tokens: [sellToken.address, buyToken.address],
-          token_in: sellToken.address,
-          token_out: buyToken.address,
+          tokens: [sellToken.address!, buyToken.address!],
+          token_in: sellToken.address!,
+          token_out: buyToken.address!,
           pool_index: Buffer.from('0'),
           in_amount: BigInt(amount),
         });
@@ -367,7 +369,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
             poolInfo.result.pool_response.asset_b.amount;
 
           // price_impact = (execution_price - market_price) / market_price * 100
-          const _priceImpact = BigInt((execution_price - market_price) / market_price) * BigInt(100);
+          const executionPriceNum = Number(execution_price);
+          const marketPriceNum = Number(market_price);
+          const _priceImpact = ((executionPriceNum - marketPriceNum) / marketPriceNum) * 100;
           setPriceImpact(Number(_priceImpact));
 
           // setTokenAmounts((prevAmounts) => {
@@ -507,7 +511,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
               }}
             >
               <Typography variant="body1" noWrap>
-                Sell
+                {t('Sell')}
               </Typography>
               <InputBase
                 type="number"
@@ -642,7 +646,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                       minWidth: '36px',
                     }}
                   >
-                    Max
+                    {t('Max')}
                   </Button>
                 </Box>
               </Box>
@@ -685,7 +689,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
             }}
           >
             <Typography variant="body1" noWrap>
-              Buy
+              {t('Buy')}
             </Typography>
 
             <Box
@@ -757,7 +761,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
           </Box>
         </Box>
       </Box>
-
       {/* Main button with multiple states */}
       <Box>
         <Button
@@ -771,7 +774,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
           {getButtonLabel()}
         </Button>
       </Box>
-
       {/* Additional box with fee info */}
       {quoteFetched && !isLoading && (
         <FeeInfoAccordion
@@ -785,7 +787,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
           sellFiatValue={sellFiatValue}
         />
       )}
-
       {reviewOpen && (
         <SwapReview
           open={reviewOpen}
@@ -802,7 +803,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
           onSubmit={() => doSwap()}
         />
       )}
-
       {/* Token Picker Popup */}
       <PickToken
         open={open}

@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -25,6 +26,7 @@ export default function CustomCoinPercentageDialog({
   onSave,
 }: CustomCoinPercentageDialogProps) {
   const [localCoins, setLocalCoins] = useState<IndexCoin[]>([]);
+  const { t } = useTranslate('auto');
 
   // On open, copy props.coins into local state so user can edit
   useEffect(() => {
@@ -63,13 +65,12 @@ export default function CustomCoinPercentageDialog({
         },
       }}
     >
-      <DialogTitle>Enter Custom Percentages</DialogTitle>
+      <DialogTitle>{t('Enter Custom Percentages')}</DialogTitle>
       <DialogContent sx={{ width: '100%' }}>
         {localCoins.map((coin) => (
           <Box key={coin.id} sx={{ mt: 2, width: '100%' }}>
             <Typography variant="subtitle2">
-              {coin.name} ({coin.shortName})
-            </Typography>
+              {coin.name}{t('(')}{coin.shortName}{t(')')}</Typography>
             <TextField
               type="number"
               value={coin.indexPercentage ?? ''}
@@ -83,10 +84,8 @@ export default function CustomCoinPercentageDialog({
         ))}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained">
-          Save
-        </Button>
+        <Button onClick={onClose}>{t('Cancel')}</Button>
+        <Button onClick={handleSave} variant="contained">{t('Save')}</Button>
       </DialogActions>
     </Dialog>
   );

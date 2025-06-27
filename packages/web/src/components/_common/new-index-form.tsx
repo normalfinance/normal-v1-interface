@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { NativeToken } from '@/types/native-token';
 import type { IndexCoin, IIndexItem } from '@/types/indexes';
 
@@ -88,6 +89,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
   const MAX_AVATAR_SIZE = 3145728;
 
   const { enqueueSnackbar } = useSnackbar();
+  const { t } = useTranslate('auto');
 
   const defaultValues: NewIndexSchemaType = {
     avatarUrl: null,
@@ -416,9 +418,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
                   textAlign: 'center',
                   color: 'text.disabled',
                 }}
-              >
-                Allowed *.jpeg, *.jpg, *.png, *.gif
-                <br /> max size of {fData(MAX_AVATAR_SIZE)}
+              >{t('Allowed *.jpeg, *.jpg, *.png, *.gif')}<br />{t('max size of')}{fData(MAX_AVATAR_SIZE)}
               </Typography>
             }
           />
@@ -438,14 +438,12 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
                     <Tooltip
                       title={
                         <>
-                          <Typography variant="body2" mb={2}>
-                            Public: Public indexes cannot be edited once created, but can be used by
-                            anyone.
-                          </Typography>
-                          <Typography variant="body2">
-                            Private: Private indexes can be edited, but can only be used by you (the
-                            creator) and whitelisted accounts.
-                          </Typography>
+                          <Typography variant="body2" mb={2}>{t(
+                            'Public: Public indexes cannot be edited once created, but can be used by anyone.',
+                          )}</Typography>
+                          <Typography variant="body2">{t(
+                            'Private: Private indexes can be edited, but can only be used by you (the creator) and whitelisted accounts.',
+                          )}</Typography>
                         </>
                       }
                       enterTouchDelay={0}
@@ -500,28 +498,22 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
             label="Weighting Method"
             sx={{ gridColumn: 'span 2' }}
           >
-            <MenuItem value="Constant">
-              Constant: Every asset is given the same weight within the index (1/x, where x is the
-              number of assets).
-            </MenuItem>
-            <MenuItem value="Custom" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
-              Custom: The user sets totally custom weights for each asset. They must add up to 100%.
-            </MenuItem>
-            <MenuItem value="Market Cap" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
-              Market Cap: Each asset's weight is the proportion of its market cap to the total
-              market cap of all assets combined.
-            </MenuItem>
+            <MenuItem value="Constant">{t(
+              'Constant: Every asset is given the same weight within the index (1/x, where x is the number of assets).',
+            )}</MenuItem>
+            <MenuItem value="Custom" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{t(
+              'Custom: The user sets totally custom weights for each asset. They must add up to 100%.',
+            )}</MenuItem>
+            <MenuItem value="Market Cap" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{t(
+              'Market Cap: Each asset\'s weight is the proportion of its market cap to the total market cap of all assets combined.',
+            )}</MenuItem>
           </Field.Select>
         </Box>
 
         {/* Initial Price Section */}
         <Box sx={{ mt: 4 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Initial Price
-          </Typography>
-          <Typography variant="caption" display="block" gutterBottom>
-            First price of the crypto index token once it's created.
-          </Typography>
+          <Typography variant="subtitle1" gutterBottom>{t('Initial Price')}</Typography>
+          <Typography variant="caption" display="block" gutterBottom>{t('First price of the crypto index token once it\'s created.')}</Typography>
           <Controller
             name="initialPrice"
             control={control}
@@ -547,7 +539,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
                     slotProps={{
                       htmlInput: { min: 1, max: 1000 },
                       input: {
-                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                        startAdornment: <InputAdornment position="start">{t('$')}</InputAdornment>,
                       },
                     }}
                     sx={{ width: '100%' }}
@@ -576,13 +568,8 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
 
         {/* Initial Deposit Section */}
         <Box sx={{ mt: 4 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Initial Deposit
-          </Typography>
-          <Typography variant="caption" display="block" gutterBottom>
-            The token amount of the native token ({tokenSymbol}) the user must deposit into the
-            crypto index to initialize it.
-          </Typography>
+          <Typography variant="subtitle1" gutterBottom>{t('Initial Deposit')}</Typography>
+          <Typography variant="caption" display="block" gutterBottom>{t('The token amount of the native token (')}{tokenSymbol}{t(') the user must deposit into the crypto index to initialize it.')}</Typography>
           <Controller
             name="initialDeposit"
             control={control}
@@ -621,18 +608,14 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
             mt: 4,
           }}
         >
-          <Typography variant="subtitle1" gutterBottom>
-            Index Coin List
-          </Typography>
+          <Typography variant="subtitle1" gutterBottom>{t('Index Coin List')}</Typography>
           <IndexCoinList
             indexCoinList={coinList}
             onRemoveCoin={handleRemoveCoin}
             onReplaceCoin={handleReplaceCoin}
           />
           <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="outlined" sx={{ mt: 0 }} onClick={handleOpenCoinPicker}>
-              Add Coin
-            </Button>
+            <Button variant="outlined" sx={{ mt: 0 }} onClick={handleOpenCoinPicker}>{t('Add Coin')}</Button>
           </Box>
         </Box>
 
@@ -673,14 +656,12 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
           </Box>
         </Stack>
       </Card>
-
       <NewIndexSubmissionDialog
         open={openSubmissionDialog}
         onClose={() => setOpenSubmissionDialog(false)}
         onSubmit={onSubmit} // calls the handleSubmit flow
         tokenSymbol={tokenSymbol}
       />
-
       <Snackbar
         open={Boolean(duplicateMessage)}
         onClose={handleCloseSnackbar}

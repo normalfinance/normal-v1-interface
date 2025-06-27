@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { ButtonProps } from '@mui/material/Button';
 
 import Button from '@mui/material/Button';
@@ -9,6 +10,7 @@ type Props = ButtonProps & {
 };
 
 export function SignOutButton({ onLogout, sx, ...other }: Props) {
+  const { t } = useTranslate('auto');
   return (
     <Button
       fullWidth
@@ -18,8 +20,6 @@ export function SignOutButton({ onLogout, sx, ...other }: Props) {
       onClick={onLogout}
       sx={sx}
       {...other}
-    >
-      Logout
-    </Button>
+    >{t('Logout')}</Button>
   );
 }

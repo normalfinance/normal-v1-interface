@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 
 import React, { useState } from 'react';
@@ -35,6 +36,7 @@ const PickToken: React.FC<PickTokenProps> = ({
   onTokenSelect,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -78,14 +80,13 @@ const PickToken: React.FC<PickTokenProps> = ({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div">
-            Select a token
+            {t('Select a token')}
           </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
           </IconButton>
         </Box>
       </DialogTitle>
-
       <DialogContent
         sx={{
           p: 2,
@@ -133,7 +134,7 @@ const PickToken: React.FC<PickTokenProps> = ({
             <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <Iconify icon="eva:search-fill" width={14} />
 
-              <Typography variant="caption">Search results</Typography>
+              <Typography variant="caption">{t('Search results')}</Typography>
             </Box>
             {filteredTokens.length > 0 ? (
               filteredTokens.map((token) => (
@@ -148,12 +149,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   }}
                   onClick={() => handleTokenClick(token)}
                 >
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    gap="10px"
-                  >
+                  <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
                       src={token.logo ?? token.url}
@@ -196,7 +192,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                         >
                           {token.shortname}
                         </Typography>
-                        {!token.owned && (
+                        {!token.owned && token.address && (
                           <Typography
                             variant="body2"
                             sx={{
@@ -243,7 +239,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                 </Button>
               ))
             ) : (
-              <Typography>No tokens match your search.</Typography>
+              <Typography>{t('No tokens match your search.')}</Typography>
             )}
           </Box>
         ) : (
@@ -311,7 +307,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <Iconify icon="carbon:skill-level-basic" width={14} />
 
-                    <Typography variant="caption">Your tokens</Typography>
+                    <Typography variant="caption">{t('Your tokens')}</Typography>
                   </Box>
                   <Box
                     sx={{
@@ -415,7 +411,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                 <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <Iconify icon="eva:star-outline" width={14} />
 
-                  <Typography variant="caption">Tokens by 24h</Typography>
+                  <Typography variant="caption">{t('Tokens by 24h')}</Typography>
                 </Box>
                 <Box
                   sx={{
@@ -439,12 +435,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       }}
                       onClick={() => handleTokenClick(token)}
                     >
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        gap="10px"
-                      >
+                      <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
                           src={token.url}
@@ -487,7 +478,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             >
                               {token.shortname}
                             </Typography>
-                            {!token.owned && (
+                            {!token.owned && token.address && (
                               <Typography
                                 variant="body2"
                                 sx={{

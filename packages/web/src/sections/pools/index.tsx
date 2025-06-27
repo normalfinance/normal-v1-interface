@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { PoolTxRow } from '@/types/pools';
 import type { Pool } from '@/components/_common/pools';
@@ -29,6 +30,7 @@ import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
 import { PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
 
 export default function PoolsView() {
+  const { t } = useTranslate();
   const theme = useTheme();
   const store = useAppStore(); // Global state management
   const router = useRouter(); // Next.js router
@@ -126,11 +128,11 @@ export default function PoolsView() {
 
       const poolWithData =
         pools && Array.isArray(pools.result)
-          ? await Promise.all(pools.result.map(async (pool) => await fetchPool(pool.pool_address)))
+          ? await Promise.all(pools.result.map(async (pool: Pool) => await fetchPool(pool.poolAddress)))
           : [];
 
       const poolsFiltered = poolWithData.filter(
-        (el) =>
+        (el: Pool) =>
           el !== undefined &&
           el.tokens.length >= 2 &&
           el.poolAddress !== 'CBXBKAB6QIRUGTG77OQZHC46BIIPA5WDKIKZKPA2H7Q7CPKQ555W3EVB'
@@ -305,9 +307,7 @@ export default function PoolsView() {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">
-          Pools
-        </Typography>
+        <Typography variant="h4" color="text.primary">{t('Pools')}</Typography>
       </Stack>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <PoolsTemp

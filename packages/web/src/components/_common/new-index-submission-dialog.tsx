@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -37,6 +38,7 @@ export default function NewIndexSubmissionDialog({
 }: NewIndexSubmissionDialogProps) {
   const { watch, formState } = useFormContext<NewIndexSchemaType>();
   const { isSubmitting } = formState;
+  const { t } = useTranslate('auto');
 
   const coinList = watch('indexCoinList');
   const allFields = watch();
@@ -111,9 +113,7 @@ export default function NewIndexSubmissionDialog({
     >
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" component="div" color="text.primary">
-            Confirm Submission
-          </Typography>
+          <Typography variant="h6" component="div" color="text.primary">{t('Confirm Submission')}</Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
           </IconButton>
@@ -210,9 +210,7 @@ export default function NewIndexSubmissionDialog({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >
-                  Show less
-                </Typography>
+                >{t('Show less')}</Typography>
                 <Iconify
                   icon="carbon:chevron-sort"
                   width={14}
@@ -272,9 +270,7 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >
-                      Index Name
-                    </Typography>
+                    >{t('Index Name')}</Typography>
                   </Box>
 
                   <Typography
@@ -311,9 +307,7 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >
-                      Index Symbol
-                    </Typography>
+                    >{t('Index Symbol')}</Typography>
                   </Box>
 
                   <Typography
@@ -350,9 +344,7 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >
-                      Weighting Method
-                    </Typography>
+                    >{t('Weighting Method')}</Typography>
                   </Box>
 
                   <Typography
@@ -389,9 +381,7 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >
-                      Initial Price
-                    </Typography>
+                    >{t('Initial Price')}</Typography>
                   </Box>
 
                   <Typography
@@ -428,9 +418,7 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >
-                      Initial Deposit
-                    </Typography>
+                    >{t('Initial Deposit')}</Typography>
                   </Box>
 
                   <Typography
@@ -467,9 +455,7 @@ export default function NewIndexSubmissionDialog({
           variant="soft"
           color="success"
           onClick={handleSubmitClick}
-        >
-          Submit
-        </LoadingButton>
+        >{t('Submit')}</LoadingButton>
       </DialogActions>
     </Dialog>
   );

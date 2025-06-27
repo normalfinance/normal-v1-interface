@@ -13,7 +13,7 @@ export type UseDateRangePickerReturn = {
   onChangeEndDate: (newValue: IDatePickerControl) => void;
   /********/
   open: boolean;
-  onOpen?: () => void;
+  onOpen?: () => void; 
   onClose: () => void;
   onReset?: () => void;
   /********/

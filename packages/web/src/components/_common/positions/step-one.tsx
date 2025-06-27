@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import { useState } from 'react';
 import { Avatar, Box, Button, Stack, Typography, alpha, useTheme } from '@mui/material';
@@ -15,6 +16,7 @@ interface StepOneProps {
 
 export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
   const { register, setValue, watch, clearErrors } = useFormContext<FormValues>();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -34,13 +36,10 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
     <Stack>
       {/* hidden input registers the field */}
       <input type="hidden" {...register('tokenASymbol')} />
-
-      <Typography variant="subtitle1">Select pair</Typography>
-      <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>
-        Choose the tokens you want to provide liquidity for. You can select tokens on all supported
-        networks
-      </Typography>
-
+      <Typography variant="subtitle1">{t('Select pair')}</Typography>
+      <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>{t(
+        'Choose the tokens you want to provide liquidity for. You can select tokens on all supported networks',
+      )}</Typography>
       <Stack direction="row" spacing={2}>
         {/* token-A button */}
         <Button
@@ -96,11 +95,8 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
             width: 1,
           }}
         >
-          <Avatar src="/assets/icons/cryptoIcons/xlm.svg" sx={{ width: 24, height: 24 }} />
-          XLM
-        </Button>
+          <Avatar src="/assets/icons/cryptoIcons/xlm.svg" sx={{ width: 24, height: 24 }} />{t('XLM')}</Button>
       </Stack>
-
       {/* token picker dialog */}
       <PickToken
         open={dialogOpen}

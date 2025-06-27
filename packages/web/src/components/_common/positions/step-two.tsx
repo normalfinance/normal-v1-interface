@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import { useTheme, alpha } from '@mui/material/styles';
 import { Stack, Typography, InputBase, Box, Avatar } from '@mui/material';
@@ -18,6 +19,7 @@ export interface StepTwoProps {
 
 export default function StepTwo({ token }: StepTwoProps) {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
   const { control, setValue, watch } = useFormContext<FormValues>();
 
   // -- keep field in sync with the text input ------------------------
@@ -31,10 +33,8 @@ export default function StepTwo({ token }: StepTwoProps) {
 
   return (
     <Stack spacing={3} width={1}>
-      <Typography variant="h6">
-        Step 2 – Enter&nbsp;amount {token ? `(${token.shortname})` : ''}
+      <Typography variant="h6">{t('Step 2 – Enter amount')}{token ? `(${token.shortname})` : ''}
       </Typography>
-
       {/* ---- amount input ------------------------------------------- */}
       <Box
         sx={{

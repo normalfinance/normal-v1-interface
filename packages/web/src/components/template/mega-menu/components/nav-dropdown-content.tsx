@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Masonry from '@mui/lab/Masonry';
@@ -9,7 +10,7 @@ import { RouterLink } from '@/routes/components';
 import { Iconify } from '../../iconify';
 import { NavSubList } from './nav-sub-list';
 import { megaMenuClasses } from '../styles';
-import { NavCarousel } from './nav-carousel';
+// import { NavCarousel } from './nav-carousel';
 import { NavUl } from './nav-elements';
 
 import type { NavListProps } from '../types';
@@ -21,6 +22,7 @@ export function NavDropdownContent({
   slotProps,
   isMultiList,
 }: NavListProps & { isMultiList: boolean }) {
+  const { t } = useTranslate();
   if (!data.children) {
     return null;
   }
@@ -46,7 +48,6 @@ export function NavDropdownContent({
       >
         <NavSubList data={data.children} slotProps={slotProps} />
       </Masonry>
-
       {!!data.moreLink && (
         <Link
           component={RouterLink}
@@ -63,25 +64,21 @@ export function NavDropdownContent({
           {data.moreLink.title} <Iconify width={16} icon="eva:arrow-ios-forward-fill" />
         </Link>
       )}
-
       {!!data.slides && (
         <>
           <Divider sx={{ borderStyle: 'dashed', my: 3 }} />
-          <NavCarousel
+          {/* <NavCarousel
             slides={data.slides}
             options={slotProps?.carousel?.options}
             sx={slotProps?.carousel?.sx}
-          />
+          /> */}
         </>
       )}
-
       {!!data.tags && (
         <>
           <Divider sx={{ borderStyle: 'dashed', my: 3 }} />
           <Box sx={slotProps?.tags}>
-            <Typography variant="caption" sx={{ mr: 0.5, fontWeight: 'fontWeightBold' }}>
-              Hot products:
-            </Typography>
+            <Typography variant="caption" sx={{ mr: 0.5, fontWeight: 'fontWeightBold' }}>{t('Hot products:')}</Typography>
 
             {data.tags.map((tag, index) => (
               <Link

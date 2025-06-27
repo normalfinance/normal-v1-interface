@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { Token } from '@normalfinance/types';
 
@@ -20,6 +21,7 @@ interface _Token extends Token {
 }
 
 export default function PoolView({ poolAddress }: { poolAddress: string }) {
+  const { t } = useTranslate();
   // Load App Store
   const store = useAppStore();
   const storePersist = usePersistStore();
@@ -213,14 +215,11 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">
-          Pool
-        </Typography>
+        <Typography variant="h4" color="text.primary">{t('Pool')}</Typography>
         <Typography variant="body1" color="text.secondary">
           {poolAddress}
         </Typography>
       </Stack>
-
       <Grid container spacing={3} sx={{ mt: 3 }}>
         <Box sx={{ mt: { xs: 12, md: 0 }, maxWidth: '1440px' }}>
           {loading && <CircularProgress />}
@@ -244,7 +243,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
 
             {tokenA?.name ? (
               <Typography sx={{ fontSize: '2rem', fontWeight: 700, ml: 1 }}>
-                {tokenA?.name}-{tokenB?.name}
+                {tokenA?.name}{t('-')}{tokenB?.name}
               </Typography>
             ) : (
               <CircularProgress />

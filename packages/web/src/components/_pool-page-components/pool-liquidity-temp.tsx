@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@normalfinance/types';
 
 import React, { useState, useCallback } from 'react';
@@ -43,6 +44,8 @@ const LabTabs = ({ tokenB, liquidityToken, onAddLiquidity, onRemoveLiquidity }: 
   const [tokenBValue, setTokenBValue] = useState<string | undefined>(undefined);
   const [tokenCValue, setTokenCValue] = useState<string | undefined>(undefined);
 
+  const { t } = useTranslate('auto');
+
   const keepRatioB = useCallback((val: string) => {
     setTokenBValue(val);
   }, []);
@@ -77,9 +80,7 @@ const LabTabs = ({ tokenB, liquidityToken, onAddLiquidity, onRemoveLiquidity }: 
                   : 'none',
               filter: value === '1' ? 'brightness(1.2)' : 'brightness(1)',
             }}
-          >
-            Add Liquidity
-          </MuiButton>
+          >{t('Add Liquidity')}</MuiButton>
           <MuiButton
             onClick={() => setValue('2')}
             sx={{
@@ -90,9 +91,7 @@ const LabTabs = ({ tokenB, liquidityToken, onAddLiquidity, onRemoveLiquidity }: 
                   : 'none',
               filter: value === '2' ? 'brightness(1.2)' : 'brightness(1)',
             }}
-          >
-            Remove Liquidity
-          </MuiButton>
+          >{t('Remove Liquidity')}</MuiButton>
         </Box>
         <TabPanel value="1" sx={{ p: 0, mt: 3 }}>
           <Box mt={2}>
@@ -103,9 +102,7 @@ const LabTabs = ({ tokenB, liquidityToken, onAddLiquidity, onRemoveLiquidity }: 
               hideDropdownButton
             />
           </Box>
-          <Button onClick={() => onAddLiquidity(Number(tokenBValue))} fullWidth sx={{ mt: 3 }}>
-            Add Liquidity
-          </Button>
+          <Button onClick={() => onAddLiquidity(Number(tokenBValue))} fullWidth sx={{ mt: 3 }}>{t('Add Liquidity')}</Button>
         </TabPanel>
         <TabPanel value="2" sx={{ p: 0, mt: 3 }}>
           <Box>
@@ -116,9 +113,7 @@ const LabTabs = ({ tokenB, liquidityToken, onAddLiquidity, onRemoveLiquidity }: 
               hideDropdownButton
             />
           </Box>
-          <Button onClick={() => onRemoveLiquidity(Number(tokenCValue))} fullWidth sx={{ mt: 3 }}>
-            Remove Liquidity
-          </Button>
+          <Button onClick={() => onRemoveLiquidity(Number(tokenCValue))} fullWidth sx={{ mt: 3 }}>{t('Remove Liquidity')}</Button>
         </TabPanel>
       </TabContext>
     </Box>
@@ -136,7 +131,10 @@ const PoolLiquidityTemp = ({
   liquidityToken,
   onAddLiquidity,
   onRemoveLiquidity,
-}: PoolLiquidityProps) => (
+}: PoolLiquidityProps) => {
+  const { t } = useTranslate('auto');
+
+  return (
   <Box
     sx={{
       borderRadius: '16px',
@@ -149,9 +147,7 @@ const PoolLiquidityTemp = ({
       <img src={tokenA.icon} alt={tokenA.name} width={48} height={48} />
       <img src={tokenB.icon} alt={tokenB.name} width={48} height={48} />
     </Box>
-    <Typography sx={{ textAlign: 'center', fontWeight: 700, mb: 2 }}>
-      Pool Liquidity
-    </Typography>
+    <Typography sx={{ textAlign: 'center', fontWeight: 700, mb: 2 }}>{t('Pool Liquidity')}</Typography>
     <Divider sx={{ mb: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
 
     <Grid2 container spacing={2} mt={2}>
@@ -164,8 +160,8 @@ const PoolLiquidityTemp = ({
         <Typography sx={{ fontWeight: 700 }}>{liquidityB}</Typography>
       </Grid2>
       <Grid2 size={{ xs: 4 }}>
-        <Typography sx={{ fontSize: '0.875rem', opacity: 0.7 }}>Ratio</Typography>
-        <Typography sx={{ fontWeight: 700 }}>1:{(liquidityB / liquidityA).toFixed(2)}</Typography>
+        <Typography sx={{ fontSize: '0.875rem', opacity: 0.7 }}>{t('Ratio')}</Typography>
+        <Typography sx={{ fontWeight: 700 }}>{t('1:')}{(liquidityB / liquidityA).toFixed(2)}</Typography>
       </Grid2>
     </Grid2>
     <LabTabs
@@ -175,6 +171,7 @@ const PoolLiquidityTemp = ({
       onRemoveLiquidity={onRemoveLiquidity}
     />
   </Box>
-);
+  );
+};
 
 export default PoolLiquidityTemp;
