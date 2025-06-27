@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { mergeClasses } from 'minimal-shared/utils';
 
 import { styled } from '@mui/material/styles';
@@ -32,6 +33,9 @@ export const NavItem = forwardRef<HTMLButtonElement, NavItemProps>((props, ref) 
     ...other
   } = props;
 
+  const { t } = useTranslation('navbar');
+  const displayTitle = typeof title === 'string' ? t(title) : title;
+
   const navItem = createNavItem({
     path,
     icon,
@@ -47,7 +51,7 @@ export const NavItem = forwardRef<HTMLButtonElement, NavItemProps>((props, ref) 
   return (
     <ItemRoot
       ref={ref}
-      aria-label={title}
+      aria-label={displayTitle}
       {...ownerState}
       {...navItem.baseProps}
       className={mergeClasses([megaMenuClasses.item.root, className], {
@@ -64,9 +68,9 @@ export const NavItem = forwardRef<HTMLButtonElement, NavItemProps>((props, ref) 
         </ItemIcon>
       )}
 
-      {title && (
+      {displayTitle && (
         <ItemTitle {...ownerState} className={megaMenuClasses.item.title} sx={slotProps?.title}>
-          {title}
+          {displayTitle}
         </ItemTitle>
       )}
 
