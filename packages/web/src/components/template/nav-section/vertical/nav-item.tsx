@@ -2,6 +2,7 @@ import type { CSSObject } from '@mui/material/styles';
 
 import { forwardRef } from 'react';
 import { mergeClasses } from 'minimal-shared/utils';
+import { useTranslation } from 'react-i18next';
 
 import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
@@ -37,6 +38,11 @@ export const NavItem = forwardRef<HTMLButtonElement, NavItemProps>((props, ref) 
     ...other
   } = props;
 
+  const { t } = useTranslation('navbar');
+
+  const displayTitle = typeof title === 'string' ? t(title) : title;
+  const displayCaption = caption && typeof caption === 'string' ? t(caption) : caption;
+
   const navItem = createNavItem({
     path,
     icon,
@@ -58,7 +64,7 @@ export const NavItem = forwardRef<HTMLButtonElement, NavItemProps>((props, ref) 
   return (
     <ItemRoot
       ref={ref}
-      aria-label={title}
+      aria-label={displayTitle}
       {...ownerState}
       {...navItem.baseProps}
       className={mergeClasses([navSectionClasses.item.root, className], {
@@ -75,20 +81,20 @@ export const NavItem = forwardRef<HTMLButtonElement, NavItemProps>((props, ref) 
         </ItemIcon>
       )}
 
-      {title && (
+      {displayTitle && (
         <ItemTexts {...ownerState} className={navSectionClasses.item.texts} sx={slotProps?.texts}>
           <ItemTitle {...ownerState} className={navSectionClasses.item.title} sx={slotProps?.title}>
-            {title}
+            {displayTitle}
           </ItemTitle>
 
-          {caption && (
-            <Tooltip title={caption} placement="top-start">
+          {displayCaption && (
+            <Tooltip title={displayCaption} placement="top-start">
               <ItemCaptionText
                 {...ownerState}
                 className={navSectionClasses.item.caption}
                 sx={slotProps?.caption}
               >
-                {caption}
+                {displayCaption}
               </ItemCaptionText>
             </Tooltip>
           )}

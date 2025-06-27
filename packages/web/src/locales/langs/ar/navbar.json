@@ -2,11 +2,25 @@
   "app": "تطبيق",
   "job": "وظيفة",
   "user": "مستخدم",
-  "travel": "السفر",
+  "travel": "سفر",
   "invoice": "فاتورة",
   "blog": {
     "title": "مدونة",
     "caption": "اختصارات لوحة المفاتيح المخصصة."
   },
-  "subheader": "العنوان الفرعي"
+  "subheader": "عنوان فرعي",
+  "Overview": "نظرة عامة",
+  "Trade": "تداول",
+  "Spot": "فوري",
+  "Indexes": "المؤشرات",
+  "Earn": "كسب",
+  "Yield": "عوائد",
+  "LP": "LP",
+  "Rewards": "مكافآت",
+  "Referrals": "الإحالات",
+  "Analytics": "تحليلات",
+  "More": "المزيد",
+  "Governance": "الحوكمة",
+  "Help & Feedback": "المساعدة و التعليقات",
+  "Docs": "المستندات"
 }

@@ -8,6 +8,8 @@ import { useRouter } from '@/routes/hooks';
 
 import { toast } from '@/components/template/snackbar';
 
+import { useSettingsContext } from '@/components/template/settings';
+
 import { allLangs } from './all-langs';
 import { fallbackLng, changeLangMessages as messages } from './locales-config';
 
@@ -19,6 +21,8 @@ export function useTranslate(ns?: string) {
   const router = useRouter();
 
   const { t, i18n } = useTranslation(ns);
+
+  const settings = useSettingsContext();
 
   const fallback = allLangs.filter((lang) => lang.value === fallbackLng)[0];
 
@@ -37,8 +41,17 @@ export function useTranslate(ns?: string) {
           error: currentMessages.error,
         });
 
-        if (currentLang) {
-          dayjs.locale(currentLang.adapterLocale);
+        // Update dayjs locale according to the selected language
+        const langMeta = allLangs.find((l) => l.value === newLang);
+        if (langMeta) {
+          dayjs.locale(langMeta.adapterLocale);
+        }
+
+        // Update layout direction for RTL languages (only Arabic for now)
+        if (newLang === 'ar') {
+          settings.setField('direction', 'rtl');
+        } else {
+          settings.setField('direction', 'ltr');
         }
 
         router.refresh();
@@ -46,7 +59,7 @@ export function useTranslate(ns?: string) {
         console.error(error);
       }
     },
-    [currentLang, i18n, router]
+    [i18n, router, settings]
   );
 
   return {
