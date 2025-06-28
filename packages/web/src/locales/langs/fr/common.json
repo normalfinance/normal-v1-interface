@@ -154,5 +154,8 @@
   "Trending": "Tendance",
   "New": "Nouveau",
   "Meme": "Mème",
-  "RWA": "RWA"
+  "RWA": "RWA",
+  "Description": "Description",
+  "Public": "Public",
+  "Private": "Privé"
 }

@@ -154,5 +154,8 @@
   "Trending Markets": "Thị trường xu hướng",
   "Top Gainer Markets": "Thị trường tăng mạnh nhất",
   "Select token": "Chọn token",
-  "Search...": "Tìm kiếm..."
+  "Search...": "Tìm kiếm...",
+  "Description": "Mô tả",
+  "Public": "Công khai",
+  "Private": "Riêng tư"
 }

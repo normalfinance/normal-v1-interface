@@ -154,5 +154,8 @@
   "Trending Markets": "الأسواق الرائجة",
   "Top Gainer Markets": "الأسواق الأكثر ربحاً",
   "Select token": "اختر رمز",
-  "Search...": "بحث..."
+  "Search...": "بحث...",
+  "Description": "الوصف",
+  "Public": "عام",
+  "Private": "خاص"
 }
