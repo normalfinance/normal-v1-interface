@@ -16,3 +16,6 @@ export function splitByPredicate<T>(array: T[], predicate: (element: T) => boole
     [[], []]
   );
 }
+
+export { load as loadCrisp, boot as bootCrisp, show as showCrisp } from './injected/crisp';
+export { load as loadStatuspage, show as showStatuspage } from './injected/statuspage';
