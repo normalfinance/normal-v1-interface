@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Typography, Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Iconify } from '@/components/template/iconify';
+import { useTranslate } from '@/locales';
 
 interface SwapSendEmptyPopupButtonProps {
   label: string;
@@ -13,7 +14,7 @@ export const SwapSendEmptyPopupButton: React.FC<SwapSendEmptyPopupButtonProps> =
   onClick,
 }) => {
   const theme = useTheme();
-
+  const { t } = useTranslate();
   return (
     <Button
       onClick={onClick}
@@ -40,7 +41,7 @@ export const SwapSendEmptyPopupButton: React.FC<SwapSendEmptyPopupButtonProps> =
           color: theme.palette.common.white,
         }}
       >
-        {label}
+        {t(label)}
       </Typography>
 
       <Iconify

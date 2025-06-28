@@ -95,7 +95,7 @@ export const SwapSendCard: React.FC<SwapSendCardProps> = ({
         }}
       >
         {TABS.map((tab) => (
-          <Tab key={tab.value} value={tab.value} label={tab.label} />
+          <Tab key={tab.value} value={tab.value} label={t(tab.label)} />
         ))}
       </CustomTabsSwapSend>
 

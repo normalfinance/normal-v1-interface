@@ -3,6 +3,7 @@ import { mergeClasses } from 'minimal-shared/utils';
 import { styled } from '@mui/material/styles';
 
 import { chartClasses } from '../classes';
+import { useTranslate } from '@/locales';
 
 // ----------------------------------------------------------------------
 
@@ -33,6 +34,7 @@ export function ChartLegends({
   sublabels = [],
   ...other
 }: ChartLegendsProps) {
+  const { t } = useTranslate();
   return (
     <ListRoot className={mergeClasses([chartClasses.legends.root, className])} sx={sx} {...other}>
       {labels.map((series, index) => (
@@ -59,7 +61,7 @@ export function ChartLegends({
             )}
 
             <ItemLabel className={chartClasses.legends.item.label} {...slotProps?.label}>
-              {series}
+              {t(series)}
               {!!sublabels.length && <> {` (${sublabels[index]})`}</>}
             </ItemLabel>
           </ItemRoot>
