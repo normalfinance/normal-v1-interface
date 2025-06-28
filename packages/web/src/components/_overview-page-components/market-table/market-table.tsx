@@ -3,9 +3,10 @@
 import type { TableHeadCellProps } from '@/components/template/table';
 import type { IMarketTableFilters } from '@/types/marketTable';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 import { useSetState } from 'minimal-shared/hooks';
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -105,6 +106,20 @@ export function MarketTable({ markets }: MarketTableProps) {
     [updateFilters, table]
   );
 
+  const { t } = useTranslate();
+
+  const TABLE_HEAD_I18N = useMemo<TableHeadCellProps[]>(
+    () => [
+      { id: 'name', label: t('Name') },
+      { id: 'price', label: t('Price') },
+      { id: 'percentageChange', label: t('Change (%)') },
+      { id: 'performance', label: t('Performance') },
+      { id: 'status', label: t('Status') },
+      { id: '', width: 88 },
+    ],
+    [t]
+  );
+
   return (
     <>
       <Card>
@@ -123,7 +138,7 @@ export function MarketTable({ markets }: MarketTableProps) {
               key={tab.value}
               iconPosition="end"
               value={tab.value}
-              label={tab.label}
+              label={t(tab.label)}
               icon={
                 <Label
                   variant={
@@ -166,7 +181,7 @@ export function MarketTable({ markets }: MarketTableProps) {
               <TableHeadCustom
                 order={table.order}
                 orderBy={table.orderBy}
-                headCells={TABLE_HEAD}
+                headCells={TABLE_HEAD_I18N}
                 rowCount={dataFiltered.length}
                 numSelected={table.selected.length}
                 onSort={table.onSort}
