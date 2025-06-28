@@ -154,5 +154,8 @@
   "Trending Markets": "热门市场",
   "Top Gainer Markets": "涨幅最大市场",
   "Select token": "选择代币",
-  "Search...": "搜索..."
+  "Search...": "搜索...",
+  "Description": "描述",
+  "Public": "公开",
+  "Private": "私有"
 }

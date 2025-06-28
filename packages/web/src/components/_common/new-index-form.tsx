@@ -434,7 +434,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
                 control={<Switch {...field} checked={field.value} />}
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {field.value ? 'Public' : 'Private'}
+                    {field.value ? t('Public') : t('Private')}
                     <Tooltip
                       title={
                         <>
@@ -483,12 +483,12 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
               gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', gridColumn: 'span 2' },
             }}
           >
-            <Field.Text name="indexName" label="Index Name" autoComplete="off" />
-            <Field.Text name="indexSymbol" label="Index Symbol" autoComplete="off" />
+            <Field.Text name="indexName" label={t('Index Name')} autoComplete="off" />
+            <Field.Text name="indexSymbol" label={t('Index Symbol')} autoComplete="off" />
           </Box>
           <Field.Text
             name="indexDescription"
-            label="Description"
+            label={t('Description')}
             multiline
             rows={4}
             sx={{ gridColumn: 'span 2' }}
