@@ -118,7 +118,9 @@ export function StatCard({
         {fPercent(percent)}
       </Box>
 
-      <Box component="span" sx={{ color: 'text.secondary', typography: 'body2' }}>{t('last 7 days')}</Box>
+      <Box component="span" sx={{ color: 'text.secondary', typography: 'body2' }}>
+        {t('last 7 days')}
+      </Box>
     </Box>
   );
 
@@ -131,7 +133,7 @@ export function StatCard({
       {...other}
     >
       <Box sx={{ flexGrow: 1 }}>
-        <Box sx={{ typography: 'subtitle2' }}>{title}</Box>
+        <Box sx={{ typography: 'subtitle2' }}>{t(title)}</Box>
 
         <Box sx={{ my: 1.5, typography: 'h3' }}>{formatTotal(total)}</Box>
 

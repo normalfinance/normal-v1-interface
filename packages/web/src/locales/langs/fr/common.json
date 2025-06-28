@@ -136,5 +136,13 @@
   "Welcome back 👋": "Bienvenue 👋",
   "Account Overview": "Aperçu du compte",
   "Pool": "Pool",
-  "Portfolio Value": "Valeur du portefeuille"
+  "Portfolio Value": "Valeur du portefeuille",
+  "Total 30d Trading Volume": "Volume de trading total sur 30 jours",
+  "Total 24h Trading Volume": "Volume de trading total sur 24 heures",
+  "Total Value Locked": "Valeur bloquée totale",
+  "New Markets": "Nouveaux marchés",
+  "Trending Markets": "Marchés en tendance",
+  "Top Gainer Markets": "Marchés les plus performants",
+  "Select token": "Sélectionner un jeton",
+  "Search...": "Rechercher..."
 }
