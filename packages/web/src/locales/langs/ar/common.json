@@ -146,5 +146,13 @@
   "Trending": "شائع",
   "New": "جديد",
   "Meme": "ميم",
-  "RWA": "RWA"
+  "RWA": "RWA",
+  "Total 30d Trading Volume": "إجمالي حجم التداول خلال 30 يومًا",
+  "Total 24h Trading Volume": "إجمالي حجم التداول خلال 24 ساعة",
+  "Total Value Locked": "إجمالي القيمة المقفلة",
+  "New Markets": "أسواق جديدة",
+  "Trending Markets": "الأسواق الرائجة",
+  "Top Gainer Markets": "الأسواق الأكثر ربحاً",
+  "Select token": "اختر رمز",
+  "Search...": "بحث..."
 }

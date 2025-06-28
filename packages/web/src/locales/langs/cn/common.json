@@ -146,5 +146,13 @@
   "Trending": "趋势",
   "New": "新",
   "Meme": "迷因",
-  "RWA": "RWA"
+  "RWA": "RWA",
+  "Total 30d Trading Volume": "30天总交易量",
+  "Total 24h Trading Volume": "24小时总交易量",
+  "Total Value Locked": "总锁仓价值",
+  "New Markets": "新市场",
+  "Trending Markets": "热门市场",
+  "Top Gainer Markets": "涨幅最大市场",
+  "Select token": "选择代币",
+  "Search...": "搜索..."
 }
