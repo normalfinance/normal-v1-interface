@@ -145,7 +145,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
       </Box>
 
       {/* ------------ FOREGROUND CONTENT ------------ */}
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, px: 0 }}>
         <Stack spacing={{ xs: 6, md: 10 }} alignItems="center">
           <Box textAlign="center" maxWidth={750}>
             <Typography
@@ -155,9 +155,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 fontWeight: 500,
                 mb: { xs: 3, md: 4 },
                 fontSize: {
-                  xs: '2rem',
-                  md: '2.75rem',
-                  lg: '3rem',
+                  xs: '2.5rem',
+                  md: '3.75rem',
+                  lg: '4rem',
                 },
               }}
             >

@@ -45,6 +45,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@fontsource/figtree": "^5.2.8",
     "@stellar/stellar-sdk": "^13.1.0",
     "@walletconnect/modal": "^2.6.2",
     "@walletconnect/sign-client": "^2.13.1",

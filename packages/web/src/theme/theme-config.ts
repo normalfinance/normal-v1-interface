@@ -36,8 +36,8 @@ export const themeConfig: ThemeConfig = {
    * Typography
    *************************************** */
   fontFamily: {
-    primary: 'Public Sans Variable',
-    secondary: 'Barlow',
+    primary: 'Figtree',
+    secondary: 'Figtree',
   },
   /** **************************************
    * Palette

@@ -2601,6 +2601,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fontsource/figtree@npm:^5.2.8":
+  version: 5.2.8
+  resolution: "@fontsource/figtree@npm:5.2.8"
+  checksum: 29151917b0cb93b0199628f0146b5edbed6f760cf2473c6a8d1b59a1124c48341ed542e5d8f13be952b789dbb6cf86c7b83579d0d2c2444f145869da53f04ffc
+  languageName: node
+  linkType: hard
+
 "@gilbarbara/deep-equal@npm:^0.1.1":
   version: 0.1.2
   resolution: "@gilbarbara/deep-equal@npm:0.1.2"
@@ -4368,6 +4375,7 @@ __metadata:
   dependencies:
     "@emotion/react": ^11.14.0
     "@emotion/styled": ^11.14.0
+    "@fontsource/figtree": ^5.2.8
     "@stellar/stellar-sdk": ^13.1.0
     "@tsconfig/recommended": ^1.0.2
     "@types/jest": ^29.5.2
