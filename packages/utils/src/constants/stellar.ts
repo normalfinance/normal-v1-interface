@@ -47,6 +47,11 @@ export const ORALCE_REGISTY_ADDRESS: string =
 
 export const NORMAL_BASE_FEE = '100000';
 
+/**
+ * Normal History Indexer
+ */
+export const NORMAL_HISTORY_INDEXER: string = 'https://graphql.normalfinance.io';
+
 export const XLM_ADDRESS: string = 'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA';
 
 export const XLM_DECIMALS: number = 7;
