@@ -3365,7 +3365,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@motionone/dom@npm:^10.16.2, @motionone/dom@npm:^10.16.4":
+"@motionone/dom@npm:^10.16.2, @motionone/dom@npm:^10.16.4, @motionone/dom@npm:^10.18.0":
   version: 10.18.0
   resolution: "@motionone/dom@npm:10.18.0"
   dependencies:
@@ -4378,7 +4378,7 @@ __metadata:
     concurrently: ^9.1.2
     copy-to-clipboard: ^3.3.3
     jest: ^29.5.0
-    motion: ^12.19.2
+    motion: ^10
     next: 15.0.3
     simplex-noise: ^4.0.3
     tailwind-merge: ^3.3.1
@@ -12589,6 +12589,7 @@ __metadata:
   linkType: hard
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 "from2@npm:^2.3.0":
   version: 2.3.0
   resolution: "from2@npm:2.3.0"
@@ -12679,6 +12680,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> cba1259 (feat(HeroHeader): add wavy background style)
 "fs-minipass@npm:^3.0.0":
 >>>>>>> 5447647 (feat(HeroHeader): add wavy background)
   version: 3.0.3
@@ -16894,26 +16897,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"motion-dom@npm:^12.19.0":
-  version: 12.19.0
-  resolution: "motion-dom@npm:12.19.0"
-  dependencies:
-    motion-utils: ^12.19.0
-  checksum: c2c9c427287af6f3c538a220fe7a7ad1cc0d584916e9081816eed45c152615b77fcd821934a7b442397a620a67010d209ce31c979fc83d15621a39c94b2944cf
-  languageName: node
-  linkType: hard
-
 "motion-utils@npm:^11.18.1":
   version: 11.18.1
   resolution: "motion-utils@npm:11.18.1"
   checksum: e8789e50dce6e952226608e8f7eb8e03779332849f38c70cc9e1fbd5e34f2e6d0efb2d565091de999135ec3a3d4a0df1a796833cccd8f6a2313f81445c6e5b83
-  languageName: node
-  linkType: hard
-
-"motion-utils@npm:^12.19.0":
-  version: 12.19.0
-  resolution: "motion-utils@npm:12.19.0"
-  checksum: f0e6a10b0fbc65db10d537c91dd2dd2928fadedd9c45f69c24f2be9d5123e200e109467580d248fb6b4d983877377e0cec8aa8cc167a4c0416679ea6648f4db5
   languageName: node
   linkType: hard
 
@@ -16932,6 +16919,7 @@ __metadata:
   linkType: hard
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 "ms@npm:2.0.0":
   version: 2.0.0
   resolution: "ms@npm:2.0.0"
@@ -16944,21 +16932,17 @@ __metadata:
 "motion@npm:^12.19.2":
   version: 12.19.2
   resolution: "motion@npm:12.19.2"
+=======
+"motion@npm:^10":
+  version: 10.18.0
+  resolution: "motion@npm:10.18.0"
+>>>>>>> cba1259 (feat(HeroHeader): add wavy background style)
   dependencies:
-    framer-motion: ^12.19.2
-    tslib: ^2.4.0
-  peerDependencies:
-    "@emotion/is-prop-valid": "*"
-    react: ^18.0.0 || ^19.0.0
-    react-dom: ^18.0.0 || ^19.0.0
-  peerDependenciesMeta:
-    "@emotion/is-prop-valid":
-      optional: true
-    react:
-      optional: true
-    react-dom:
-      optional: true
-  checksum: ee113652145d120aedfcd2ed4482dc9a1c9d6fd0ddbc49bcf943cf11a1b55ba913ab8bbb0fa27e2fd5c85ad6bcf4a81fddb86cedde605f4bbb244366f924e1d4
+    "@motionone/animation": ^10.18.0
+    "@motionone/dom": ^10.18.0
+    "@motionone/types": ^10.17.1
+    "@motionone/utils": ^10.18.0
+  checksum: 9e47f88d05e24c95a657c32b58dcdb434f240e056f11ef94e741b70d700b54b3c74dad78baf9fa6459573e162dc11846e016d34e2a9a84985256ed1fe1db5dcd
   languageName: node
   linkType: hard
 

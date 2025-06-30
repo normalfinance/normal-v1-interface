@@ -39,29 +39,35 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
       component="section"
       id="relume"
       sx={{
-        position: 'relative', // ⬅︎ so the bg can sit behind
-        overflow: 'hidden', // no stray waves outside the hero
+        position: 'relative',
+        overflow: 'hidden',
         px: '5%',
         py: { xs: 8, md: 12, lg: 14 },
+        backgroundColor: 'white',
       }}
       {...sectionProps}
     >
-      {/* ----- animated background layer ----- */}
-      <WavyBackground
-        // make the wrapper fill the section and sit behind content
-        containerClassName="absolute inset-0 -z-10 pointer-events-none"
-        className="w-full h-full"
-        // optional tweaks
-        colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
-        waveWidth={60}
-        blur={20}
-        speed="slow"
-        waveOpacity={0.4}
-        backgroundFill="transparent"
-      />
+      {/* ------------ BACKGROUND LAYER ------------ */}
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      >
+        {/* animated waves */}
+        <WavyBackground
+          containerClassName="w-full h-full"
+          colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
+          waveOpacity={0.35}
+          speed="slow"
+          backgroundFill="white"
+        />
+      </Box>
 
-      {/* ----- foreground content ----- */}
-      <Container maxWidth="lg">
+      {/* ------------ FOREGROUND CONTENT ------------ */}
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         <Stack spacing={{ xs: 6, md: 10 }} alignItems="center">
           <Box textAlign="center" maxWidth={750}>
             <Typography
@@ -71,9 +77,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 fontWeight: 500,
                 mb: { xs: 3, md: 4 },
                 fontSize: {
-                  xs: '2rem', // 32 px
-                  md: '2.75rem', // 44 px
-                  lg: '3rem', // 48 px
+                  xs: '2rem',
+                  md: '2.75rem',
+                  lg: '3rem',
                 },
               }}
             >

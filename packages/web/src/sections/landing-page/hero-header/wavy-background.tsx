@@ -1,7 +1,23 @@
 'use client';
-import { cn } from './lib/utils';
+
 import React, { useEffect, useRef, useState } from 'react';
 import { createNoise3D } from 'simplex-noise';
+import { cn } from './lib/utils';
+
+/* ----------------------------------------------------------------------- */
+
+type WavyBackgroundProps = {
+  children?: React.ReactNode;
+  className?: string; // styles for the *inner* children wrapper
+  containerClassName?: string; // extra classes for the overlay itself
+  colors?: string[];
+  waveWidth?: number;
+  backgroundFill?: string;
+  blur?: number;
+  speed?: 'slow' | 'fast';
+  waveOpacity?: number;
+  fullScreen?: boolean; // <- NEW: true = fixed, false = absolute
+} & React.HTMLAttributes<HTMLDivElement>;
 
 export const WavyBackground = ({
   children,
@@ -13,103 +29,92 @@ export const WavyBackground = ({
   blur = 10,
   speed = 'fast',
   waveOpacity = 0.5,
-  ...props
-}: {
-  children?: any;
-  className?: string;
-  containerClassName?: string;
-  colors?: string[];
-  waveWidth?: number;
-  backgroundFill?: string;
-  blur?: number;
-  speed?: 'slow' | 'fast';
-  waveOpacity?: number;
-  [key: string]: any;
-}) => {
+  fullScreen = false,
+  ...rest
+}: WavyBackgroundProps) => {
+  /* ---------------- animated canvas setup ---------------- */
+
   const noise = createNoise3D();
-  let w: number, h: number, nt: number, i: number, x: number, ctx: any, canvas: any;
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const getSpeed = () => {
-    switch (speed) {
-      case 'slow':
-        return 0.001;
-      case 'fast':
-        return 0.002;
-      default:
-        return 0.001;
-    }
-  };
 
-  const init = () => {
-    canvas = canvasRef.current;
-    ctx = canvas.getContext('2d');
-    w = ctx.canvas.width = window.innerWidth;
-    h = ctx.canvas.height = window.innerHeight;
-    ctx.filter = `blur(${blur}px)`;
-    nt = 0;
-    window.onresize = function () {
-      w = ctx.canvas.width = window.innerWidth;
-      h = ctx.canvas.height = window.innerHeight;
-      ctx.filter = `blur(${blur}px)`;
-    };
-    render();
-  };
-
-  const waveColors = colors ?? ['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee'];
-  const drawWave = (n: number) => {
-    nt += getSpeed();
-    for (i = 0; i < n; i++) {
-      ctx.beginPath();
-      ctx.lineWidth = waveWidth || 50;
-      ctx.strokeStyle = waveColors[i % waveColors.length];
-      for (x = 0; x < w; x += 5) {
-        var y = noise(x / 800, 0.3 * i, nt) * 100;
-        ctx.lineTo(x, y + h * 0.5); // adjust for height, currently at 50% of the container
-      }
-      ctx.stroke();
-      ctx.closePath();
-    }
-  };
-
-  let animationId: number;
-  const render = () => {
-    ctx.fillStyle = backgroundFill || 'black';
-    ctx.globalAlpha = waveOpacity || 0.5;
-    ctx.fillRect(0, 0, w, h);
-    drawWave(5);
-    animationId = requestAnimationFrame(render);
-  };
+  const getSpeed = () => (speed === 'slow' ? 0.001 : 0.002);
 
   useEffect(() => {
-    init();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d')!;
+    const resize = () => {
+      ctx.canvas.width = window.innerWidth;
+      ctx.canvas.height = window.innerHeight;
+      ctx.filter = `blur(${blur}px)`;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const waveColors = colors ?? ['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee'];
+
+    let nt = 0;
+    const drawWave = (n: number) => {
+      nt += getSpeed();
+      for (let i = 0; i < n; i++) {
+        ctx.beginPath();
+        ctx.lineWidth = waveWidth || 50;
+        ctx.strokeStyle = waveColors[i % waveColors.length];
+        for (let x = 0; x < ctx.canvas.width; x += 5) {
+          const y = noise(x / 800, 0.3 * i, nt) * 100;
+          ctx.lineTo(x, y + ctx.canvas.height * 0.5);
+        }
+        ctx.stroke();
+        ctx.closePath();
+      }
+    };
+
+    const render = () => {
+      ctx.fillStyle = backgroundFill || 'black';
+      ctx.globalAlpha = waveOpacity;
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      drawWave(5);
+      animationId = requestAnimationFrame(render);
+    };
+
+    let animationId = requestAnimationFrame(render);
+
     return () => {
       cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', resize);
     };
-  }, []);
+  }, [blur, speed, colors, waveWidth, backgroundFill, waveOpacity]);
+
+  /* ---------------- safari blur fallback ----------------- */
 
   const [isSafari, setIsSafari] = useState(false);
   useEffect(() => {
-    // I'm sorry but i have got to support it on safari.
     setIsSafari(
-      typeof window !== 'undefined' &&
+      typeof navigator !== 'undefined' &&
         navigator.userAgent.includes('Safari') &&
         !navigator.userAgent.includes('Chrome')
     );
   }, []);
 
+  /* --------------------------- JSX ----------------------- */
+
   return (
-    <div className={cn('h-screen flex flex-col items-center justify-center', containerClassName)}>
+    <div
+      className={cn(
+        fullScreen
+          ? 'fixed inset-0 -z-10 pointer-events-none'
+          : 'absolute inset-0 -z-10 pointer-events-none',
+        containerClassName
+      )}
+      {...rest}
+    >
       <canvas
-        className="absolute inset-0 z-0"
         ref={canvasRef}
-        id="canvas"
-        style={{
-          ...(isSafari ? { filter: `blur(${blur}px)` } : {}),
-        }}
-      ></canvas>
-      <div className={cn('relative z-10', className)} {...props}>
-        {children}
-      </div>
+        className="absolute inset-0"
+        style={isSafari ? { filter: `blur(${blur}px)` } : undefined}
+      />
+      {children && <div className={cn('relative z-10', className)}>{children}</div>}
     </div>
   );
 };
