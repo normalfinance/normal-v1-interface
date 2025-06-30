@@ -170,6 +170,10 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 width: '100%',
                 mx: 'auto',
                 my: { xs: 4, md: 5 },
+                p: 1,
+                borderRadius: 3,
+                backgroundColor: 'white',
+                boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
               <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
