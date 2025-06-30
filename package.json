@@ -50,6 +50,10 @@
     "@walletconnect/sign-client": "^2.13.1",
     "@walletconnect/types": "^2.13.1",
     "copy-to-clipboard": "^3.3.3",
-    "next": "15.0.3"
+    "clsx": "^2.1.1",
+    "motion": "^12.19.2",
+    "next": "15.0.3",
+    "simplex-noise": "^4.0.3",
+    "tailwind-merge": "^3.3.1"
   }
 }
