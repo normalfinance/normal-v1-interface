@@ -21,6 +21,7 @@ import SwapReview from './swap-review';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
+import { SwapFeeInfo } from '@/types/swap-fee-info';
 
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];
@@ -402,6 +403,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
               minWidth: 0,
               alignItems: 'flex-start',
               overflow: 'hidden',
+              textAlign: 'left',
             }}
           >
             <Box
@@ -579,6 +581,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: theme.palette.background.paper,
             overflow: 'hidden',
+            textAlign: 'left',
           }}
         >
           <Box
