@@ -1,0 +1,26 @@
+{
+  "app": "App",
+  "job": "Job",
+  "user": "Bruger",
+  "travel": "Rejse",
+  "invoice": "Faktura",
+  "blog": {
+    "title": "Blog",
+    "caption": "Brugerdefinerede tastaturgenveje."
+  },
+  "subheader": "Undertekst",
+  "Overview": "Oversigt",
+  "Trade": "Handel",
+  "Spot": "Spot",
+  "Indexes": "Indekser",
+  "Earn": "Tjen",
+  "Yield": "Afkast",
+  "LP": "LP",
+  "Rewards": "Belønninger",
+  "Referrals": "Henvisninger",
+  "Analytics": "Analyse",
+  "More": "Mere",
+  "Governance": "Styring",
+  "Help & Feedback": "Hjælp & Feedback",
+  "Docs": "Docs"
+}

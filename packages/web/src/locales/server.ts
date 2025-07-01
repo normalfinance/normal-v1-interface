@@ -60,7 +60,11 @@ const initServerI18next = async (language: string, namespace: string) => {
 
   await i18nInstance
     .use(initReactI18next)
-    .use(resourcesToBackend((lang: string, ns: string) => import(`./langs/${lang}/${ns}.json`)))
+    .use(
+      resourcesToBackend((lang: string, ns: string) =>
+        import(`./langs/${lang}/${ns}.json`).catch(() => import(`./langs/en/${ns}.json`))
+      )
+    )
     .init(i18nOptions(language, namespace));
 
   return i18nInstance;

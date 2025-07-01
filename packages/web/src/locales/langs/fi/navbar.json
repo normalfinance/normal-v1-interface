@@ -1,0 +1,26 @@
+{
+  "app": "Sovellus",
+  "job": "Työ",
+  "user": "Käyttäjä",
+  "travel": "Matka",
+  "invoice": "Lasku",
+  "blog": {
+    "title": "Blogi",
+    "caption": "Mukautetut pikanäppäimet."
+  },
+  "subheader": "Alaotsikko",
+  "Overview": "Yleiskatsaus",
+  "Trade": "Treidaa",
+  "Spot": "Spot",
+  "Indexes": "Indeksit",
+  "Earn": "Ansaitse",
+  "Yield": "Tuotto",
+  "LP": "LP",
+  "Rewards": "Palkinnot",
+  "Referrals": "Suosittelut",
+  "Analytics": "Analytiikka",
+  "More": "Lisää",
+  "Governance": "Hallinto",
+  "Help & Feedback": "Apua & Palaute",
+  "Docs": "Dokumentit"
+}
