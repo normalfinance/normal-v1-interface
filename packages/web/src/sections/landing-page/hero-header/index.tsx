@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Container,
+  Paper,
   Stack,
   Typography,
   type ButtonProps as MuiButtonProps,
@@ -13,18 +14,20 @@ import SwapCard from '@/components/_common/swap-card';
 import { WavyBackground } from './wavy-background';
 import { Token } from '@/types/token';
 import { SwapFeeInfo } from '@/types/swap-fee-info';
+import { alpha, useTheme } from '@mui/material/styles';
+import { wrap } from 'module';
+
 type ImageProps = {
   src: string;
   alt?: string;
 };
 
-type ButtonConfig = MuiButtonProps & { title: string };
-
 type Props = {
   heading: string;
   description: string;
-  buttons: ButtonConfig[];
   image: ImageProps;
+  tagline: string;
+  taglineLogo: ImageProps;
 };
 
 export type HeroHeaderProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
@@ -107,20 +110,21 @@ const swapFeeInfo: SwapFeeInfo = {
 };
 
 export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
-  const { heading, description, buttons, image, ...sectionProps } = {
+  const { heading, description, image, tagline, taglineLogo, ...sectionProps } = {
     ...HeroHeaderDefaults,
     ...incomingProps,
   } as Props;
 
+  const theme = useTheme();
+
   return (
     <Box
       component="section"
-      id="relume"
       sx={{
         position: 'relative',
         overflow: 'hidden',
         px: '5%',
-        py: { xs: 8, md: 12, lg: 14 },
+        py: { xs: 6, md: 8, lg: 10 },
         backgroundColor: 'white',
       }}
       {...sectionProps}
@@ -148,6 +152,46 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, px: 0 }}>
         <Stack spacing={{ xs: 6, md: 10 }} alignItems="center">
           <Box textAlign="center" maxWidth={750}>
+            <Paper
+              variant="outlined"
+              sx={{
+                justifyContent: 'center',
+                backgroundColor: 'rgba(145, 158, 171, 0.12)',
+                px: '10px',
+                py: '4px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: '9999px',
+                mb: 2,
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing="6px"
+                sx={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontWeight: 500, fontSize: 14 }}
+                >
+                  {tagline}
+                </Typography>
+                <Box
+                  sx={{
+                    width: '2px',
+                    height: '10px',
+                    backgroundColor: 'rgba(145, 158, 171, 0.12)',
+                  }}
+                />
+                <Box
+                  component="img"
+                  src={taglineLogo.src}
+                  alt={taglineLogo.alt ?? ''}
+                  sx={{ width: '64px', height: '14px', objectFit: 'cover' }}
+                />
+              </Stack>
+            </Paper>
             <Typography
               component="h1"
               variant="h1"
@@ -161,7 +205,42 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 },
               }}
             >
-              Instant crypto swaps, finally made Normal
+              Instant crypto swaps, finally made{' '}
+              <Box
+                component="span"
+                sx={{
+                  background: 'linear-gradient(90deg, #947BFF 79.77%, #F8279C 92.22%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text', // for Firefox
+                  color: 'transparent',
+                }}
+              >
+                Normal
+              </Box>
+            </Typography>
+
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              component="div"
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                columnGap: '10px',
+                rowGap: '10px',
+                fontSize: 14,
+                fontWeight: 600,
+                mx: 'auto',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+              }}
+            >
+              <span>💸 Low fees</span>
+              <span>•</span>
+              <span>🌍 Global access</span>
+              <span>•</span>
+              <span>⚡ Built on Stellar</span>
             </Typography>
 
             <Box
@@ -179,30 +258,16 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
             </Box>
 
-            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
               {description}
             </Typography>
-
-            <Stack
-              direction="row"
-              spacing={2}
-              justifyContent="center"
-              sx={{ mt: { xs: 4, md: 5 } }}
-            >
-              {buttons.map((btn, idx) => (
-                <Button key={idx} {...btn}>
-                  {btn.title}
-                </Button>
-              ))}
-            </Stack>
+            <Box
+              component="img"
+              src={image.src}
+              alt={image.alt ?? ''}
+              sx={{ width: '82px', height: 'auto', objectFit: 'cover', mt: '20px' }}
+            />
           </Box>
-
-          <Box
-            component="img"
-            src={image.src}
-            alt={image.alt ?? ''}
-            sx={{ width: '100%', height: 'auto', objectFit: 'cover' }}
-          />
         </Stack>
       </Container>
     </Box>
@@ -213,15 +278,15 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
 
 export const HeroHeaderDefaults: Props = {
   heading: 'Medium length hero heading goes here',
-  description:
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare, eros dolor interdum nulla, ut commodo diam libero vitae erat.',
-  buttons: [
-    { title: 'Button', variant: 'contained' },
-    { title: 'Button', variant: 'outlined', color: 'secondary' },
-  ],
+  description: 'Largest onchain marketspace built on Stellar. Buy and sell crypto on Stellar.',
   image: {
-    src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg',
-    alt: 'Relume placeholder image',
+    src: '/assets/images/landing-page/stellar-logo.webp',
+    alt: 'Stellar Logo Long',
+  },
+  tagline: 'Crypto that just works',
+  taglineLogo: {
+    src: '/assets/images/landing-page/normal-long.svg',
+    alt: 'Normal Logo Long',
   },
 };
 

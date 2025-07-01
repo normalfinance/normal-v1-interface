@@ -1,0 +1,432 @@
+'use client';
+
+import * as React from 'react';
+import {
+  Box,
+  Button,
+  Container,
+  Paper,
+  Stack,
+  Typography,
+  type ButtonProps as MuiButtonProps,
+} from '@mui/material';
+import { ArrowRightIcon } from '@mui/x-date-pickers/icons';
+import type { Token } from '@/types/token';
+import { Iconify } from '@/components/template/iconify';
+import { fCurrency, fCurrencyCompact, fPercent } from '@/utils/format-number';
+import { useRouter } from 'next/navigation';
+
+/* ––––– Types ––––– */
+
+type Image = { src: string; alt?: string };
+
+interface CardBase {
+  icon?: React.ReactElement;
+  tagline: string;
+  heading: string;
+  image?: Image;
+  url?: string;
+}
+
+interface SmallCard extends CardBase {
+  /** first card can preview up to N tokens instead of an image */
+  tokens?: Token[];
+  button: MuiButtonProps & { title: string };
+}
+
+interface TallCard extends CardBase {
+  buttons: (MuiButtonProps & { title: string })[];
+}
+
+type WideCard = Omit<CardBase, 'image'>; // explicit: no image here
+
+export interface FeatureGridProps extends React.ComponentPropsWithoutRef<'section'> {
+  tagline?: string;
+  heading?: string;
+  cardsSmall?: [SmallCard, SmallCard];
+  cardTall?: TallCard;
+  cardWide?: WideCard;
+}
+
+/* ––––– Shared styles ––––– */
+
+const paperSx = {
+  bgcolor: '#F9FAFB',
+  borderRadius: 3,
+};
+
+const cardPadding = { xs: 2.5, md: 4 };
+
+/* ––––– Helper renderers ––––– */
+
+const SmallCardItem: React.FC<SmallCard> = (c) => {
+  const router = useRouter();
+  const isLink = Boolean(c.url);
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{ ...paperSx, cursor: isLink ? 'pointer' : 'default' }}
+      onClick={() => isLink && router.push(c.url!)}
+      role={isLink ? 'link' : undefined}
+      tabIndex={isLink ? 0 : undefined}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: c.image ? { xs: 'column', md: 'row' } : 'column',
+          height: '100%',
+        }}
+      >
+        <Stack spacing={2} p={cardPadding} flexGrow={1} justifyContent="flex-start">
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1.25,
+              px: 2.5,
+              py: 1,
+              borderRadius: 4,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              width: 'fit-content',
+              alignSelf: { xs: 'flex-start', md: 'flex-start' },
+            }}
+          >
+            {c.icon && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontSize: { xs: 16, md: 18 },
+                }}
+              >
+                {React.cloneElement(c.icon, {
+                  width: undefined,
+                  height: undefined,
+                })}
+              </Box>
+            )}
+            <Typography variant="subtitle2" fontWeight={600}>
+              {c.tagline}
+            </Typography>
+          </Box>
+
+          {/* heading */}
+          <Typography
+            variant="h4"
+            fontWeight={500}
+            color="text.primary"
+            sx={{
+              fontSize: { xs: 20, md: 24 },
+              lineHeight: { xs: '30px', md: '36px' },
+            }}
+          >
+            {c.heading}
+          </Typography>
+
+          {/* token preview list */}
+          {c.tokens && (
+            <Stack spacing={1} mt={2}>
+              {c.tokens.map((t) => (
+                <Box
+                  key={t.id}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  gap={1}
+                  width={1}
+                  onClick={() => t.url && router.push(t.url)}
+                  role={t.url ? 'link' : undefined}
+                  tabIndex={t.url ? 0 : undefined}
+                  sx={{
+                    cursor: t.url ? 'pointer' : 'default',
+                    transition: 'transform 0.15s ease',
+                    '&:hover': {
+                      transform: t.url ? 'scale(1.03)' : 'none',
+                    },
+
+                    px: { xs: '12px', md: '16px' },
+                    py: { xs: '6px', md: '12px' },
+                    bgcolor: 'white',
+                    borderRadius: 1.5,
+                    border: '1px solid rgba(87, 146, 255, 0.15)',
+                  }}
+                >
+                  {/* left side (icon + symbols) */}
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Box
+                      component="img"
+                      src={t.icon}
+                      alt={t.shortname}
+                      sx={{ width: { xs: 24, md: 32 }, height: { xs: 24, md: 32 } }}
+                    />
+                    <Typography
+                      fontWeight={500}
+                      sx={{
+                        fontSize: { xs: 18, md: 20 },
+                        color: 'text.primary',
+                      }}
+                    >
+                      {t.name}
+                    </Typography>
+                    <Typography
+                      fontWeight={500}
+                      sx={{
+                        fontSize: { xs: 18, md: 20 },
+                        color: 'text.secondary',
+                      }}
+                    >
+                      {t.shortname}
+                    </Typography>
+                  </Box>
+
+                  {/* right side (price + change) */}
+                  <Box
+                    display="flex"
+                    alignItems="end"
+                    gap={1}
+                    sx={{ flexDirection: { xs: 'column', md: 'row' } }}
+                    justifyContent="flex-end"
+                    textAlign="end"
+                    rowGap="0px"
+                  >
+                    <Typography
+                      fontWeight={500}
+                      sx={{ fontSize: { xs: 14, md: 20 }, color: 'text.primary' }}
+                    >
+                      {fCurrency(t.pricestatus)}
+                    </Typography>
+
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        columnGap: 1,
+                        rowGap: '2px',
+                      }}
+                    >
+                      <Iconify
+                        icon={
+                          (t.percentageChange ?? 0) < 0
+                            ? 'solar:double-alt-arrow-down-bold-duotone'
+                            : 'solar:double-alt-arrow-up-bold-duotone'
+                        }
+                        sx={{
+                          width: { xs: 10, md: 16 }, // responsive icon size
+                          color: (t.percentageChange ?? 0) < 0 ? 'error.main' : 'success.main',
+                        }}
+                      />
+
+                      <Typography
+                        fontWeight={500}
+                        sx={{
+                          fontSize: { xs: 12, md: 20 },
+                          color: (t.percentageChange ?? 0) < 0 ? 'error.main' : 'success.main',
+                        }}
+                      >
+                        {fPercent(t.percentageChange)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              ))}
+            </Stack>
+          )}
+
+          {/* optional image (placed last for mobile flow) */}
+          {c.image && (
+            <Box flexShrink={0} width={{ xs: '100%', md: '50%' }}>
+              <Box
+                component="img"
+                src={c.image.src}
+                alt={c.image.alt}
+                width="100%"
+                height="100%"
+                sx={{ objectFit: 'cover' }}
+              />
+            </Box>
+          )}
+        </Stack>
+      </Box>
+    </Paper>
+  );
+};
+const TallCardItem: React.FC<TallCard> = (c) => {
+  const router = useRouter();
+  const isLink = Boolean(c.url);
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{ ...paperSx, cursor: isLink ? 'pointer' : 'default', height: '100%' }}
+      onClick={() => isLink && router.push(c.url!)}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {c.image && <Box component="img" src={c.image.src} alt={c.image.alt} width="100%" />}
+        <Stack spacing={2} p={{ xs: 3, md: 4 }} flexGrow={1} justifyContent="center">
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              px: '20px',
+              py: '8px',
+              borderRadius: '32px',
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              justifyContent: 'center',
+              width: 'fit-content',
+            }}
+          >
+            {c.icon && (
+              <Box
+                component="span"
+                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                {c.icon}
+              </Box>
+            )}
+            <Typography variant="subtitle2" fontWeight={600}>
+              {c.tagline}
+            </Typography>
+          </Box>
+          <Typography
+            variant="h4"
+            fontWeight={500}
+            color="text.primary"
+            fontSize={24}
+            lineHeight="36px"
+          >
+            {c.heading}
+          </Typography>
+
+          <Stack direction="row" spacing={2}>
+            {c.buttons.map((b, i) => (
+              <Button key={i} {...b}>
+                {b.title}
+              </Button>
+            ))}
+          </Stack>
+        </Stack>
+      </Box>
+    </Paper>
+  );
+};
+
+const WideCardItem: React.FC<WideCard> = (c) => {
+  const router = useRouter();
+  const isLink = Boolean(c.url);
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{ ...paperSx, cursor: isLink ? 'pointer' : 'default' }}
+      onClick={() => isLink && router.push(c.url!)}
+    >
+      <Stack spacing={2} p={cardPadding} textAlign={{ xs: 'center', md: 'left' }}>
+        <Box
+          component="span"
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            px: '20px',
+            py: '8px',
+            borderRadius: '32px',
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            justifyContent: 'center',
+            width: 'fit-content',
+          }}
+        >
+          {c.icon && (
+            <Box
+              component="span"
+              sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              {c.icon}
+            </Box>
+          )}
+          <Typography variant="subtitle2" fontWeight={600}>
+            {c.tagline}
+          </Typography>
+        </Box>
+        <Typography
+          variant="h4"
+          fontWeight={500}
+          color="text.primary"
+          fontSize={24}
+          lineHeight="36px"
+        >
+          {c.heading}
+        </Typography>
+      </Stack>
+    </Paper>
+  );
+};
+
+/* ––––– Main component ––––– */
+
+export const FeatureGrid: React.FC<FeatureGridProps> = ({
+  tagline = 'Why Normal?',
+  heading = 'Powerful features for every trader',
+  cardsSmall,
+  cardTall,
+  cardWide,
+  ...sectionProps
+}) => (
+  <Box
+    component="section"
+    sx={{
+      position: 'relative',
+      overflow: 'hidden',
+      px: '5%',
+      py: { xs: 6, md: 8, lg: 10 },
+      backgroundColor: 'white',
+    }}
+    {...sectionProps}
+  >
+    <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, px: 0 }}>
+      <Stack spacing={2} maxWidth={640} textAlign="left" mb={{ xs: 3, md: 4 }}>
+        <Typography variant="h2" fontWeight={500}>
+          Crypto made normal
+        </Typography>
+      </Stack>
+
+      <Box
+        sx={{
+          display: 'grid',
+          gap: { xs: 2, md: 2 },
+          gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' },
+        }}
+      >
+        {/* small card #1 (token preview) */}
+        {cardsSmall && <SmallCardItem {...cardsSmall[0]} />}
+
+        {/* tall card spans 2 rows on lg */}
+        {cardTall && (
+          <Box sx={{ gridRow: { lg: 'span 2' } }}>
+            <TallCardItem {...cardTall} />
+          </Box>
+        )}
+
+        {/* small card #2 */}
+        {cardsSmall && <SmallCardItem {...cardsSmall[1]} />}
+
+        {/* wide card spans both columns on lg */}
+        {cardWide && (
+          <Box sx={{ gridColumn: { lg: '1 / span 2' } }}>
+            <WideCardItem {...cardWide} />
+          </Box>
+        )}
+      </Box>
+    </Container>
+  </Box>
+);

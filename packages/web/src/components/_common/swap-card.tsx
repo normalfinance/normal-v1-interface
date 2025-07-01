@@ -340,7 +340,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
             width: '44px',
             height: '44px',
             transform: 'translate(-50%, -50%)',
-            borderRadius: '6px',
+            borderRadius: '8px',
             overflow: 'hidden',
             zIndex: 2,
             cursor: 'pointer',
@@ -352,7 +352,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
             sx={{
               width: '100%',
               height: '100%',
-              borderRadius: 'inherit',
+              borderRadius: '8px',
               backgroundColor:
                 theme.palette.mode === 'light' ? theme.palette.grey[300] : theme.palette.grey[900],
               transition: 'background-color 0.3s',
@@ -390,7 +390,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
             padding: theme.spacing(2),
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            borderRadius: '8px',
+            borderRadius: '20px',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -538,8 +538,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
                     </Typography>
                   </Box>
                   <Button
-                    variant="soft"
-                    color="success"
+                    variant="contained"
                     size="small"
                     onClick={handleMaxClick}
                     disabled={isLoading}
@@ -549,6 +548,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
                       p: 0,
                       height: '24px',
                       minWidth: '36px',
+                      backgroundColor: 'rgba(148,123,255,0.29)',
+                      color: '#6E4BFF',
+                      '&:hover': {
+                        backgroundColor: 'rgba(148,123,255,0.20)',
+                      },
                     }}
                   >
                     {t('Max')}
@@ -577,7 +581,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
             padding: theme.spacing(2),
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderRadius: '8px',
+            borderRadius: '20px',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: theme.palette.background.paper,
             overflow: 'hidden',
@@ -668,18 +672,24 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
         </Box>
       </Box>
       {/* Main button with multiple states */}
-      <Box>
-        <Button
-          fullWidth
-          variant="soft"
-          color="success"
-          size="large"
-          onClick={handleMainButtonClick}
-          disabled={isLoading}
-        >
-          {getButtonLabel()}
-        </Button>
-      </Box>
+      <Button
+        fullWidth
+        variant="contained" // use a supported variant
+        size="large"
+        onClick={handleMainButtonClick}
+        disabled={isLoading}
+        sx={{
+          backgroundColor: 'rgba(148,123,255,0.29)',
+          color: '#6E4BFF',
+          '&:hover': {
+            backgroundColor: 'rgba(148,123,255,0.20)',
+          },
+          borderRadius: '20px',
+        }}
+      >
+        {getButtonLabel()}
+      </Button>
+
       {/* Additional box with fee info */}
       {quoteFetched && !isLoading && (
         <FeeInfoAccordion
