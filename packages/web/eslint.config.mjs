@@ -168,6 +168,14 @@ export const customConfig = {
         project: './tsconfig.json',
       },
     },
+    // ------------------------------------------------------------------
+    // i18next plugin settings – enable rules like `no-missing-key` by
+    // telling the plugin where the translation JSON files are located.
+    // The placeholders `{{lng}}` and `{{ns}}` are understood by the plugin.
+    i18next: {
+      path: 'src/locales/langs/{{lng}}/{{ns}}.json',
+      // langs: ['en', 'fr', 'vi', 'cn', 'ar'], // uncomment to lint only these
+    },
   },
   rules: {
     ...commonRules(),
