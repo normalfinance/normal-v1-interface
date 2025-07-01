@@ -29,16 +29,12 @@ interface CardBase {
 }
 
 interface SmallCard extends CardBase {
-  /** first card can preview up to N tokens instead of an image */
   tokens?: Token[];
-  button: MuiButtonProps & { title: string };
 }
 
-interface TallCard extends CardBase {
-  buttons: (MuiButtonProps & { title: string })[];
-}
+interface TallCard extends CardBase {}
 
-type WideCard = Omit<CardBase, 'image'>; // explicit: no image here
+interface WideCard extends CardBase {}
 
 export interface FeatureGridProps extends React.ComponentPropsWithoutRef<'section'> {
   tagline?: string;
@@ -239,14 +235,17 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
 
           {/* optional image (placed last for mobile flow) */}
           {c.image && (
-            <Box flexShrink={0} width={{ xs: '100%', md: '50%' }}>
+            <Box
+              flexShrink={0}
+              width={{ xs: '100%', md: '100%', display: 'flex', justifyContent: 'center' }}
+            >
               <Box
                 component="img"
                 src={c.image.src}
                 alt={c.image.alt}
-                width="100%"
-                height="100%"
-                sx={{ objectFit: 'cover' }}
+                width="50%"
+                height="auto"
+                sx={{ objectFit: 'cover', mt: 4 }}
               />
             </Box>
           )}
@@ -266,8 +265,7 @@ const TallCardItem: React.FC<TallCard> = (c) => {
       onClick={() => isLink && router.push(c.url!)}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {c.image && <Box component="img" src={c.image.src} alt={c.image.alt} width="100%" />}
-        <Stack spacing={2} p={{ xs: 3, md: 4 }} flexGrow={1} justifyContent="center">
+        <Stack spacing={2} pt={{ xs: 3, md: 4 }} px={{ xs: 3, md: 4 }} justifyContent="start">
           <Box
             component="span"
             sx={{
@@ -305,15 +303,17 @@ const TallCardItem: React.FC<TallCard> = (c) => {
           >
             {c.heading}
           </Typography>
-
-          <Stack direction="row" spacing={2}>
-            {c.buttons.map((b, i) => (
-              <Button key={i} {...b}>
-                {b.title}
-              </Button>
-            ))}
-          </Stack>
         </Stack>
+        {c.image && (
+          <Box
+            component="img"
+            src={c.image.src}
+            alt={c.image.alt}
+            px={{ xs: 3, md: 4 }}
+            pb={{ xs: 3, md: 4 }}
+            width="100%"
+          />
+        )}
       </Box>
     </Paper>
   );
@@ -364,10 +364,21 @@ const WideCardItem: React.FC<WideCard> = (c) => {
           color="text.primary"
           fontSize={24}
           lineHeight="36px"
+          textAlign="left"
         >
           {c.heading}
         </Typography>
       </Stack>
+      {c.image && (
+        <Box
+          component="img"
+          src={c.image.src}
+          alt={c.image.alt}
+          px={{ xs: 3, md: 4 }}
+          pb={{ xs: 3, md: 4 }}
+          width="100%"
+        />
+      )}
     </Paper>
   );
 };

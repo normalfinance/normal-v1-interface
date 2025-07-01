@@ -2,6 +2,10 @@ import { FeatureGrid } from './features-grid';
 import { HeroHeader } from './hero-header';
 import { Token } from '@/types/token';
 import { Icon } from '@iconify/react';
+import { StatsGrid } from './stats-grid/stats-grid';
+import { TestimonialGrid } from './testimonials/testimonials';
+import { FaqAccordion } from './faq';
+import { CtaImage } from './cta';
 
 export const tokens: Token[] = [
   {
@@ -47,7 +51,6 @@ export default function LandingPage() {
     <>
       <HeroHeader />
       <FeatureGrid
-        /* ---------- left column: two small cards ---------- */
         cardsSmall={[
           {
             icon: (
@@ -60,45 +63,68 @@ export default function LandingPage() {
             tagline: 'Invest',
             heading: 'Swap anything, from anywhere. 100+ crypto and RWAs on one exchange.',
             tokens,
-            button: { title: 'Portfolio', variant: 'text' },
             url: '#',
           },
           {
             icon: <Icon icon="ph:spinner-bold" width="14" height="14" />,
 
-            tagline: 'Liquidity',
-            heading: 'Deep on-chain pools',
+            tagline: 'Indexes',
+            heading: 'Diversify with ease. Custom crypto baskets in seconds.',
             image: {
-              src: 'https://picsum.photos/600/800?liquidity',
-              alt: 'Liquidity',
+              src: '/assets/images/landing-page/index-feature.svg',
+              alt: 'Indexes',
             },
-            button: { title: 'Pools', variant: 'text' },
             url: '#',
           },
         ]}
-        /* ---------- right column: tall card (spans 2 rows) ---------- */
         cardTall={{
           icon: <Icon icon="mage:chart-fill" width="14" height="14" />,
-          tagline: 'Speed',
-          heading: 'Sub-second swaps',
+          tagline: 'Liquidity',
+          heading: 'Provide liquidity to pools on Normal and create indexes to earn yield.',
           image: {
-            src: 'https://picsum.photos/800/600?speed',
-            alt: 'Lightning-fast execution',
+            src: '/assets/images/landing-page/pools-feature.svg',
+            alt: 'Pools',
           },
-          buttons: [
-            { title: 'Start swapping', variant: 'contained', color: 'primary' },
-            { title: 'Docs', variant: 'text' },
-          ],
           url: '#',
         }}
-        /* ---------- bottom: wide card (spans 2 columns) ---------- */
         cardWide={{
           icon: <Icon icon="mdi:code-tags" width={14} />,
-          tagline: 'Compliance',
-          heading: 'Regulated in the EU',
+          tagline: 'Developer docs',
+          heading: 'Expand the possibilities of your applications with Normal Tokens.',
+          image: {
+            src: '/assets/images/landing-page/dev-feature.svg',
+            alt: 'Developers',
+          },
           url: '#',
         }}
       />
+      <StatsGrid />
+      <TestimonialGrid />
+      {/*<FaqAccordion
+        questions={[
+          {
+            title: 'How does Normal Finance work?',
+            answer: 'Normal pools liquidity across multiple DEXs to give you the best rate…',
+          },
+          {
+            title: 'Do I need an account to start?',
+            answer: 'Normal pools liquidity across multiple DEXs to give you the best rate…',
+          },
+          {
+            title: 'Which tokens can I trade?',
+            answer: 'Normal pools liquidity across multiple DEXs to give you the best rate…',
+          },
+          {
+            title: 'What are indexes?',
+            answer: 'Normal pools liquidity across multiple DEXs to give you the best rate…',
+          },
+          {
+            title: 'Is it safe to use?',
+            answer: 'Normal pools liquidity across multiple DEXs to give you the best rate…',
+          },
+        ]}
+      />*/}
+      <CtaImage />
     </>
   );
 }
