@@ -98,8 +98,9 @@ export default function LandingPage() {
           url: '#',
         }}
       />
-      <StatsGrid />
       <TestimonialGrid />
+
+      <StatsGrid />
       {/*<FaqAccordion
         questions={[
           {
