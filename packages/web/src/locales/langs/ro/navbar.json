@@ -1,0 +1,26 @@
+{
+  "app": "Aplicație",
+  "job": "Job",
+  "user": "Utilizator",
+  "travel": "Călătorie",
+  "invoice": "Factură",
+  "blog": {
+    "title": "Blog",
+    "caption": "Scurtături de tastatură personalizate."
+  },
+  "subheader": "Sub-antet",
+  "Overview": "Prezentare generală",
+  "Trade": "Tranzacționare",
+  "Spot": "Spot",
+  "Indexes": "Indici",
+  "Earn": "Câștigă",
+  "Yield": "Randament",
+  "LP": "LP",
+  "Rewards": "Recompense",
+  "Referrals": "Recomandări",
+  "Analytics": "Analize",
+  "More": "Mai mult",
+  "Governance": "Guvernanță",
+  "Help & Feedback": "Ajutor & Feedback",
+  "Docs": "Documentație"
+}

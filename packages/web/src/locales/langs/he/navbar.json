@@ -1,0 +1,26 @@
+{
+  "app": "אפליקציה",
+  "job": "משרה",
+  "user": "משתמש",
+  "travel": "נסיעות",
+  "invoice": "חשבונית",
+  "blog": {
+    "title": "בלוג",
+    "caption": "קיצורי מקלדת מותאמים אישית."
+  },
+  "subheader": "כותרת משנה",
+  "Overview": "סקירה כללית",
+  "Trade": "מסחר",
+  "Spot": "ספוט",
+  "Indexes": "אינדקסים",
+  "Earn": "הרווח",
+  "Yield": "תשואה",
+  "LP": "LP",
+  "Rewards": "תגמולים",
+  "Referrals": "הפניות",
+  "Analytics": "ניתוחים",
+  "More": "עוד",
+  "Governance": "ממשל",
+  "Help & Feedback": "עזרה ומשוב",
+  "Docs": "מסמכים"
+}

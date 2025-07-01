@@ -1,7 +1,34 @@
 // ----------------------------------------------------------------------
 
 export const fallbackLng = 'en';
-export const languages = ['en', 'fr', 'vi', 'cn', 'ar'];
+export const languages = [
+  'en',
+  'fr',
+  'vi',
+  'cn',
+  'ar',
+  // Newly added languages
+  'da', // Danish
+  'de', // German
+  'el', // Greek
+  'es', // Spanish
+  'fi', // Finnish
+  'he', // Hebrew
+  'hi', // Hindi
+  'hu', // Hungarian
+  'it', // Italian
+  'ja', // Japanese
+  'ko', // Korean
+  'nl', // Dutch
+  'no', // Norwegian
+  'pl', // Polish
+  'pt', // Portuguese
+  'ro', // Romanian
+  'ru', // Russian
+  'sv', // Swedish
+  'tr', // Turkish
+  'uk', // Ukrainian
+];
 export const defaultNS = 'common';
 export const cookieName = 'i18next';
 
@@ -23,9 +50,8 @@ export function i18nOptions(lng = fallbackLng, ns = defaultNS) {
 
 // ----------------------------------------------------------------------
 
-export const changeLangMessages: Record<
-  LanguageValue,
-  { success: string; error: string; loading: string }
+export const changeLangMessages: Partial<
+  Record<LanguageValue, { success: string; error: string; loading: string }>
 > = {
   en: {
     success: 'Language has been changed!',

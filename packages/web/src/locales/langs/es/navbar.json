@@ -1,0 +1,26 @@
+{
+  "app": "App",
+  "job": "Empleo",
+  "user": "Usuario",
+  "travel": "Viaje",
+  "invoice": "Factura",
+  "blog": {
+    "title": "Blog",
+    "caption": "Atajos de teclado personalizados."
+  },
+  "subheader": "Subencabezado",
+  "Overview": "Visión general",
+  "Trade": "Comerciar",
+  "Spot": "Spot",
+  "Indexes": "Índices",
+  "Earn": "Ganar",
+  "Yield": "Rendimiento",
+  "LP": "LP",
+  "Rewards": "Recompensas",
+  "Referrals": "Referidos",
+  "Analytics": "Análisis",
+  "More": "Más",
+  "Governance": "Gobernanza",
+  "Help & Feedback": "Ayuda y Comentarios",
+  "Docs": "Docs"
+}
