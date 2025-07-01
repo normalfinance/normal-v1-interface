@@ -417,7 +417,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
         open={open}
         onClose={() => setOpen(false)}
         buttonSource="send"
-        tokensList={tokensList}
+        tokens={tokensList}
         onTokenSelect={(token) => {
           setSendToken(token);
           setOpen(false);

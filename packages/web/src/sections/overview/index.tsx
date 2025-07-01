@@ -11,7 +11,7 @@ import { StatCardData } from '@/types/stat-card-data';
 import { fCurrencyCompact, fShortenNumber } from '@/utils/format-number';
 import { StatCard } from '@/components/_common/stat-card';
 import { AreaChartCard, LegendValue } from '@/components/_common/area-chart-card';
-import { SwapSendCard } from '@/components/_common/swap-send-card';
+import { TokenActionCard } from '@/components/_common/token-action-card';
 import { Token } from '@/types/token';
 import { SwapFeeInfo } from '@/types/swap-fee-info';
 
@@ -254,6 +254,8 @@ export default function OverviewView() {
     maxSlippage: 0.5,
   };
 
+  const cashBalance = 3000;
+
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
@@ -277,7 +279,12 @@ export default function OverviewView() {
         </Grid2>
         <Grid2 size={{ xs: 12, md: 4 }}>
           {/*<AssetsAndLiabilities title="Assets & Liabilities" list={_appRelated} />*/}
-          <SwapSendCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
+          <TokenActionCard
+            tokensList={tokensList}
+            swapFeeInfo={swapFeeInfo}
+            cashBalance={cashBalance}
+            enabledTabs={['swap', 'send', 'buy']}
+          />
         </Grid2>
       </Grid2>
       {/* Second row: TradingVolume items */}

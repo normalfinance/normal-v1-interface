@@ -3145,7 +3145,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@normalfinance/contracts@workspace:packages/contracts"
   dependencies:
-    "@stellar/freighter-api": 1.7.1
+    "@normalfinance/utils": "workspace:^"
+    "@stellar/freighter-api": 3.0.0
     bigint-conversion: 2.4.1
     buffer: 6.0.3
     typescript: 5.0.4
@@ -3402,13 +3403,6 @@ __metadata:
   dependencies:
     "@sinonjs/commons": ^3.0.0
   checksum: 614d30cb4d5201550c940945d44c9e0b6d64a888ff2cd5b357f95ad6721070d6b8839cd10e15b76bf5e14af0bcc1d8f9ec00d49a46318f1f669a4bec1d7f3148
-  languageName: node
-  linkType: hard
-
-"@stellar/freighter-api@npm:1.7.1":
-  version: 1.7.1
-  resolution: "@stellar/freighter-api@npm:1.7.1"
-  checksum: 02ff598d67e57bbadf24ab807b61045a8d6bbaa6d82dd25168793716eb960911a3fbbeac9cc59f610336a31d19a41de3fef8dd6a6d02826a241fed1615b36847
   languageName: node
   linkType: hard
 

@@ -26,4 +26,7 @@ export const paths = {
   },
   rewards: '/rewards',
   analytics: '/analytics',
+  help: {
+    buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready
+  },
 };
