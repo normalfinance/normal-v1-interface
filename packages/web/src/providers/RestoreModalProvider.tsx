@@ -1,4 +1,4 @@
-import type { FC, ReactNode} from 'react';
+import type { FC, ReactNode } from 'react';
 
 import React, { useState, useContext, createContext } from 'react';
 

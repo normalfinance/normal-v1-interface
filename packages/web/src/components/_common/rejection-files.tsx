@@ -29,10 +29,15 @@ export function RejectionFiles({ files, sx, className, ...other }: RejectionFile
         return (
           <ListItem key={path}>
             <ItemTitle>
-              {path}{t('-')}{size ? fData(size) : ''}
+              {path}
+              {t('-')}
+              {size ? fData(size) : ''}
             </ItemTitle>
             {errors.map((error) => (
-              <ItemCaption key={error.code}>{t('-')}{error.message}</ItemCaption>
+              <ItemCaption key={error.code}>
+                {t('-')}
+                {error.message}
+              </ItemCaption>
             ))}
           </ListItem>
         );

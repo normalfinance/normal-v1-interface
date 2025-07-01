@@ -15,7 +15,7 @@ import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
 import { useTheme } from '@mui/material/styles';
 
-import { Label  } from '@/components/template/label';
+import { Label } from '@/components/template/label';
 
 type Props = {
   row: Market;
@@ -24,7 +24,6 @@ type Props = {
 };
 
 import { fPercent, fCurrency } from '@/utils/format-number';
-
 
 const statusColorMapping: Record<string, LabelColor> = {
   trending: 'info',

@@ -1,6 +1,5 @@
 'use client';
 
-;
 import type { LegendValue } from '@/components/_common/area-chart-card';
 
 import { useTranslate } from '@/locales';
@@ -67,8 +66,12 @@ export default function AnalyticsView() {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">{t('Analytics')}</Typography>
-        <Typography variant="body1" color="text.secondary">{t('Metrics and dashboards on usage of the Normal Protocol')}</Typography>
+        <Typography variant="h4" color="text.primary">
+          {t('Analytics')}
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          {t('Metrics and dashboards on usage of the Normal Protocol')}
+        </Typography>
       </Stack>
       {/* First row: Normal TVL/Normal Voume */}
       <Grid2 container spacing={3} sx={{ mt: 3 }}>

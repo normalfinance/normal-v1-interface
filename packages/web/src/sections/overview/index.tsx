@@ -267,7 +267,7 @@ export default function OverviewView() {
           {t('Welcome back 👋')}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          {t('Account Overview')} 
+          {t('Account Overview')}
         </Typography>
       </Stack>
       {/* First row: PortfolioValue/AssetsAndLiabilities */}

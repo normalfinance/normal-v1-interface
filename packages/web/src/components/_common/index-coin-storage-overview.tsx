@@ -140,7 +140,9 @@ export function IndexCoinStorageOverview({
                   e.stopPropagation();
                   onRemoveCoin?.(coin.id);
                 }}
-              >{t('Remove')}</Button>
+              >
+                {t('Remove')}
+              </Button>
             </Box>
           </Button>
         ))}

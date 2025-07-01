@@ -140,21 +140,23 @@ const OptionComponent = ({
 }: OptionComponentProps & { allowed: boolean }) => {
   const { t } = useTranslate();
   return (
-  <Paper
-    key={connector.id}
-    variant="outlined"
-    sx={{ py: 2.5, textAlign: 'center' }}
-    onClick={allowed ? onClick : undefined}
-  >
-    <img src={connector.iconUrl} width="37" height="37" alt={connector.name} />
+    <Paper
+      key={connector.id}
+      variant="outlined"
+      sx={{ py: 2.5, textAlign: 'center' }}
+      onClick={allowed ? onClick : undefined}
+    >
+      <img src={connector.iconUrl} width="37" height="37" alt={connector.name} />
 
-    <Typography variant="h6" sx={{ mt: 0.5 }}>
-      {connector.name}
-    </Typography>
+      <Typography variant="h6" sx={{ mt: 0.5 }}>
+        {connector.name}
+      </Typography>
 
-    {!allowed && (
-      <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('Not installed')}</Typography>
-    )}
-  </Paper>
+      {!allowed && (
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          {t('Not installed')}
+        </Typography>
+      )}
+    </Paper>
   );
 };

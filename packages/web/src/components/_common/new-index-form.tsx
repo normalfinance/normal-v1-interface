@@ -416,7 +416,11 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
                   textAlign: 'center',
                   color: 'text.disabled',
                 }}
-              >{t('Allowed *.jpeg, *.jpg, *.png, *.gif')}<br />{t('max size of')}{fData(MAX_AVATAR_SIZE)}
+              >
+                {t('Allowed *.jpeg, *.jpg, *.png, *.gif')}
+                <br />
+                {t('max size of')}
+                {fData(MAX_AVATAR_SIZE)}
               </Typography>
             }
           />
@@ -436,12 +440,16 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
                     <Tooltip
                       title={
                         <>
-                          <Typography variant="body2" mb={2}>{t(
-                            'Public: Public indexes cannot be edited once created, but can be used by anyone.',
-                          )}</Typography>
-                          <Typography variant="body2">{t(
-                            'Private: Private indexes can be edited, but can only be used by you (the creator) and whitelisted accounts.',
-                          )}</Typography>
+                          <Typography variant="body2" mb={2}>
+                            {t(
+                              'Public: Public indexes cannot be edited once created, but can be used by anyone.'
+                            )}
+                          </Typography>
+                          <Typography variant="body2">
+                            {t(
+                              'Private: Private indexes can be edited, but can only be used by you (the creator) and whitelisted accounts.'
+                            )}
+                          </Typography>
                         </>
                       }
                       enterTouchDelay={0}
@@ -496,22 +504,32 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
             label="Weighting Method"
             sx={{ gridColumn: 'span 2' }}
           >
-            <MenuItem value="Constant">{t(
-              'Constant: Every asset is given the same weight within the index (1/x, where x is the number of assets).',
-            )}</MenuItem>
-            <MenuItem value="Custom" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{t(
-              'Custom: The user sets totally custom weights for each asset. They must add up to 100%.',
-            )}</MenuItem>
-            <MenuItem value="Market Cap" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{t(
-              'Market Cap: Each asset\'s weight is the proportion of its market cap to the total market cap of all assets combined.',
-            )}</MenuItem>
+            <MenuItem value="Constant">
+              {t(
+                'Constant: Every asset is given the same weight within the index (1/x, where x is the number of assets).'
+              )}
+            </MenuItem>
+            <MenuItem value="Custom" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+              {t(
+                'Custom: The user sets totally custom weights for each asset. They must add up to 100%.'
+              )}
+            </MenuItem>
+            <MenuItem value="Market Cap" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+              {t(
+                "Market Cap: Each asset's weight is the proportion of its market cap to the total market cap of all assets combined."
+              )}
+            </MenuItem>
           </Field.Select>
         </Box>
 
         {/* Initial Price Section */}
         <Box sx={{ mt: 4 }}>
-          <Typography variant="subtitle1" gutterBottom>{t('Initial Price')}</Typography>
-          <Typography variant="caption" display="block" gutterBottom>{t('First price of the crypto index token once it\'s created.')}</Typography>
+          <Typography variant="subtitle1" gutterBottom>
+            {t('Initial Price')}
+          </Typography>
+          <Typography variant="caption" display="block" gutterBottom>
+            {t("First price of the crypto index token once it's created.")}
+          </Typography>
           <Controller
             name="initialPrice"
             control={control}
@@ -566,8 +584,14 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
 
         {/* Initial Deposit Section */}
         <Box sx={{ mt: 4 }}>
-          <Typography variant="subtitle1" gutterBottom>{t('Initial Deposit')}</Typography>
-          <Typography variant="caption" display="block" gutterBottom>{t('The token amount of the native token (')}{tokenSymbol}{t(') the user must deposit into the crypto index to initialize it.')}</Typography>
+          <Typography variant="subtitle1" gutterBottom>
+            {t('Initial Deposit')}
+          </Typography>
+          <Typography variant="caption" display="block" gutterBottom>
+            {t('The token amount of the native token (')}
+            {tokenSymbol}
+            {t(') the user must deposit into the crypto index to initialize it.')}
+          </Typography>
           <Controller
             name="initialDeposit"
             control={control}
@@ -606,14 +630,18 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
             mt: 4,
           }}
         >
-          <Typography variant="subtitle1" gutterBottom>{t('Index Coin List')}</Typography>
+          <Typography variant="subtitle1" gutterBottom>
+            {t('Index Coin List')}
+          </Typography>
           <IndexCoinList
             indexCoinList={coinList}
             onRemoveCoin={handleRemoveCoin}
             onReplaceCoin={handleReplaceCoin}
           />
           <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="outlined" sx={{ mt: 0 }} onClick={handleOpenCoinPicker}>{t('Add Coin')}</Button>
+            <Button variant="outlined" sx={{ mt: 0 }} onClick={handleOpenCoinPicker}>
+              {t('Add Coin')}
+            </Button>
           </Box>
         </Box>
 

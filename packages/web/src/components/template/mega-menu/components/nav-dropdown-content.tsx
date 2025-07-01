@@ -78,7 +78,9 @@ export function NavDropdownContent({
         <>
           <Divider sx={{ borderStyle: 'dashed', my: 3 }} />
           <Box sx={slotProps?.tags}>
-            <Typography variant="caption" sx={{ mr: 0.5, fontWeight: 'fontWeightBold' }}>{t('Hot products:')}</Typography>
+            <Typography variant="caption" sx={{ mr: 0.5, fontWeight: 'fontWeightBold' }}>
+              {t('Hot products:')}
+            </Typography>
 
             {data.tags.map((tag, index) => (
               <Link

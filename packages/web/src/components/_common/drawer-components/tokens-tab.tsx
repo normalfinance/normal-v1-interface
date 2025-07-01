@@ -1,6 +1,5 @@
 'use client';
 
-;
 import type { Token } from '@/types/token';
 
 import { useTranslate } from '@/locales';

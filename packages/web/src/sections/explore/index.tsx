@@ -1,6 +1,5 @@
 'use client';
 
-;
 import type {
   PoolDetails,
   ExplorerChartData,
@@ -19,9 +18,7 @@ import { Stack, useTheme, Typography } from '@mui/material';
 
 import ExploreStats from '@/components/_common/explore-stats/explore-stats';
 import { PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
-import {
-  ExploreTokensTable,
-} from '@/components/_common/explore-tokens-table/explore-tokens-table';
+import { ExploreTokensTable } from '@/components/_common/explore-tokens-table/explore-tokens-table';
 
 // Price data samples
 const priceData24h = Array.from({ length: 24 }, (_, i) => 1000 + i * 5);
@@ -176,7 +173,9 @@ export default function ExploreView() {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">{t('Explore')}</Typography>
+        <Typography variant="h4" color="text.primary">
+          {t('Explore')}
+        </Typography>
       </Stack>
       <Grid2 width={1} sx={{ mt: 3 }}>
         <ExploreStats stats={stats} />
@@ -190,7 +189,7 @@ export default function ExploreView() {
           pairInfo={poolsExplorerData.pairInfo}
           metadata={poolsExplorerData.metadata}
           exchangeRate={poolsExplorerData.exchangeRate}
-          performance={poolsExplorerData.performance} 
+          performance={poolsExplorerData.performance}
           legendValues={[{ title: 'Price', number: 7334, formatter: fCurrencyCompact }]}
           chart={poolChartData}
           color={theme.palette.primary.main}

@@ -82,7 +82,11 @@ export function CountrySelect({
               borderRadius: '50%',
             }}
           />
-          {country.label}{t('(')}{country.code}{t(') +')}{country.phone}
+          {country.label}
+          {t('(')}
+          {country.code}
+          {t(') +')}
+          {country.phone}
         </li>
       );
     },

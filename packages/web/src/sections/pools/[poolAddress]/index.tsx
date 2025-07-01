@@ -1,6 +1,5 @@
 'use client';
 
-;
 import type { Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
@@ -217,7 +216,9 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">{t('Pool')}</Typography>
+        <Typography variant="h4" color="text.primary">
+          {t('Pool')}
+        </Typography>
         <Typography variant="body1" color="text.secondary">
           {poolAddress}
         </Typography>
@@ -245,7 +246,9 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
 
             {tokenA?.name ? (
               <Typography sx={{ fontSize: '2rem', fontWeight: 700, ml: 1 }}>
-                {tokenA?.name}{t('-')}{tokenB?.name}
+                {tokenA?.name}
+                {t('-')}
+                {tokenB?.name}
               </Typography>
             ) : (
               <CircularProgress />

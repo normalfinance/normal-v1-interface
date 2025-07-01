@@ -1,6 +1,5 @@
 'use client';
 
-;
 import type { IndexCoin } from '@/types/indexes';
 
 import { useTranslate } from '@/locales';
@@ -68,10 +67,14 @@ export default function CreateAnIndexView() {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">{t('Create a Crypto Index')}</Typography>
-        <Typography variant="body1" color="text.secondary">{t(
-          'Automate or diversify your crypto investing by creating a custom crypto index token.',
-        )}</Typography>
+        <Typography variant="h4" color="text.primary">
+          {t('Create a Crypto Index')}
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          {t(
+            'Automate or diversify your crypto investing by creating a custom crypto index token.'
+          )}
+        </Typography>
       </Stack>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 8, lg: 7 }}>

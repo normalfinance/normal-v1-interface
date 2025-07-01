@@ -31,40 +31,40 @@ export function MarketTableToolbar({ filters, onResetPage }: Props) {
 
   return (
     <Box
+      sx={{
+        p: 2.5,
+        gap: 2,
+        display: 'flex',
+        pr: { xs: 2.5, md: 1 },
+        flexDirection: { xs: 'column', md: 'row' },
+        alignItems: { xs: 'flex-end', md: 'center' },
+      }}
+    >
+      <Box
         sx={{
-          p: 2.5,
           gap: 2,
+          width: 1,
+          flexGrow: 1,
           display: 'flex',
-          pr: { xs: 2.5, md: 1 },
-          flexDirection: { xs: 'column', md: 'row' },
-          alignItems: { xs: 'flex-end', md: 'center' },
+          alignItems: 'center',
         }}
       >
-        <Box
-          sx={{
-            gap: 2,
-            width: 1,
-            flexGrow: 1,
-            display: 'flex',
-            alignItems: 'center',
+        <TextField
+          fullWidth
+          value={currentFilters.name}
+          onChange={handleFilterName}
+          placeholder={t('Search...')}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                </InputAdornment>
+              ),
+            },
           }}
-        >
-          <TextField
-            fullWidth
-            value={currentFilters.name}
-            onChange={handleFilterName}
-            placeholder={t('Search...')}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-        </Box>
+        />
       </Box>
+    </Box>
   );
 }

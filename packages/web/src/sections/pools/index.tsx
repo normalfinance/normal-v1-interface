@@ -1,12 +1,11 @@
 'use client';
 
-;
 import type { PoolTxRow } from '@/types/pools';
 import type { Pool } from '@/components/_common/pools';
 import type { LegendValue } from '@/components/_common/area-chart-card';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 import type { PoolStat, PoolBalance } from '@/components/_common//pools-apr/pools-apr';
-import type { ExplorerChartData} from '@/components/_common/pools-explore/pools-explore';
+import type { ExplorerChartData } from '@/components/_common/pools-explore/pools-explore';
 import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
 import { useTranslate } from '@/locales';
@@ -129,7 +128,9 @@ export default function PoolsView() {
 
       const poolWithData =
         pools && Array.isArray(pools.result)
-          ? await Promise.all(pools.result.map(async (pool: Pool) => await fetchPool(pool.poolAddress)))
+          ? await Promise.all(
+              pools.result.map(async (pool: Pool) => await fetchPool(pool.poolAddress))
+            )
           : [];
 
       const poolsFiltered = poolWithData.filter(
@@ -308,7 +309,9 @@ export default function PoolsView() {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">{t('Pools')}</Typography>
+        <Typography variant="h4" color="text.primary">
+          {t('Pools')}
+        </Typography>
       </Stack>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <PoolsTemp

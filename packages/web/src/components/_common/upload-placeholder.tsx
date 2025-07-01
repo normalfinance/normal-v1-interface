@@ -31,7 +31,11 @@ export function UploadPlaceholder({ sx, className, ...other }: UploadPlaceholder
       <UploadIllustration hideBackground sx={{ width: 200 }} />
       <PlaceholderContent>
         <div className={uploadPlaceholderClasses.title}>{t('Drop or select file')}</div>
-        <div className={uploadPlaceholderClasses.description}>{t('Drop files here or click to')}<span>{t('browse')}</span>{t('through your machine.')}</div>
+        <div className={uploadPlaceholderClasses.description}>
+          {t('Drop files here or click to')}
+          <span>{t('browse')}</span>
+          {t('through your machine.')}
+        </div>
       </PlaceholderContent>
     </PlaceholderRoot>
   );

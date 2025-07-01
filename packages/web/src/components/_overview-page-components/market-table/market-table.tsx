@@ -122,102 +122,102 @@ export function MarketTable({ markets }: MarketTableProps) {
 
   return (
     <Card>
-        <Tabs
-          value={currentFilters.status}
-          onChange={handleFilterStatus}
-          sx={[
-            (theme) => ({
-              px: 2.5,
-              boxShadow: `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
-            }),
-          ]}
-        >
-          {STATUS_OPTIONS.map((tab) => (
-            <Tab
-              key={tab.value}
-              iconPosition="end"
-              value={tab.value}
-              label={t(tab.label)}
-              icon={
-                <Label
-                  variant={
-                    ((tab.value === 'all' || tab.value === currentFilters.status) && 'filled') ||
-                    'soft'
-                  }
-                  color={
-                    (tab.value === 'trending' && 'info') ||
-                    (tab.value === 'new' && 'primary') ||
-                    (tab.value === 'meme' && 'warning') ||
-                    (tab.value === 'rwa' && 'error') ||
-                    'default'
-                  }
-                >
-                  {['trending', 'new', 'meme', 'rwa'].includes(tab.value)
-                    ? tableData.filter((market) => market.status === tab.value).length
-                    : tableData.length}
-                </Label>
+      <Tabs
+        value={currentFilters.status}
+        onChange={handleFilterStatus}
+        sx={[
+          (theme) => ({
+            px: 2.5,
+            boxShadow: `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }),
+        ]}
+      >
+        {STATUS_OPTIONS.map((tab) => (
+          <Tab
+            key={tab.value}
+            iconPosition="end"
+            value={tab.value}
+            label={t(tab.label)}
+            icon={
+              <Label
+                variant={
+                  ((tab.value === 'all' || tab.value === currentFilters.status) && 'filled') ||
+                  'soft'
+                }
+                color={
+                  (tab.value === 'trending' && 'info') ||
+                  (tab.value === 'new' && 'primary') ||
+                  (tab.value === 'meme' && 'warning') ||
+                  (tab.value === 'rwa' && 'error') ||
+                  'default'
+                }
+              >
+                {['trending', 'new', 'meme', 'rwa'].includes(tab.value)
+                  ? tableData.filter((market) => market.status === tab.value).length
+                  : tableData.length}
+              </Label>
+            }
+          />
+        ))}
+      </Tabs>
+
+      {/************ SEARCHBAR IN THERE *************/}
+      <MarketTableToolbar filters={filters} onResetPage={table.onResetPage} />
+
+      {canReset && (
+        <MarketTableFiltersResult
+          filters={filters}
+          totalResults={dataFiltered.length}
+          onResetPage={table.onResetPage}
+          sx={{ p: 2.5, pt: 0 }}
+        />
+      )}
+
+      <Box sx={{ position: 'relative' }}>
+        <Scrollbar>
+          <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 960 }}>
+            {/**************** TABLE HEAD HERE *******************/}
+            <TableHeadCustom
+              order={table.order}
+              orderBy={table.orderBy}
+              headCells={TABLE_HEAD_I18N}
+              rowCount={dataFiltered.length}
+              numSelected={table.selected.length}
+              onSort={table.onSort}
+              onSelectAllRows={(checked) =>
+                table.onSelectAllRows(
+                  checked,
+                  dataFiltered.map((row) => row.id)
+                )
               }
             />
-          ))}
-        </Tabs>
 
-        {/************ SEARCHBAR IN THERE *************/}
-        <MarketTableToolbar filters={filters} onResetPage={table.onResetPage} />
+            <TableBody>
+              {dataFiltered
+                .slice(
+                  table.page * table.rowsPerPage,
+                  table.page * table.rowsPerPage + table.rowsPerPage
+                )
+                .map((row) => (
+                  <MarketTableRow
+                    key={row.id}
+                    row={row}
+                    selected={table.selected.includes(row.id)}
+                    editHref="#"
+                  />
+                ))}
 
-        {canReset && (
-          <MarketTableFiltersResult
-            filters={filters}
-            totalResults={dataFiltered.length}
-            onResetPage={table.onResetPage}
-            sx={{ p: 2.5, pt: 0 }}
-          />
-        )}
-
-        <Box sx={{ position: 'relative' }}>
-          <Scrollbar>
-            <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 960 }}>
-              {/**************** TABLE HEAD HERE *******************/}
-              <TableHeadCustom
-                order={table.order}
-                orderBy={table.orderBy}
-                headCells={TABLE_HEAD_I18N}
-                rowCount={dataFiltered.length}
-                numSelected={table.selected.length}
-                onSort={table.onSort}
-                onSelectAllRows={(checked) =>
-                  table.onSelectAllRows(
-                    checked,
-                    dataFiltered.map((row) => row.id)
-                  )
-                }
+              <TableEmptyRows
+                height={table.dense ? 56 : 56 + 20}
+                emptyRows={emptyRows(table.page, table.rowsPerPage, dataFiltered.length)}
               />
 
-              <TableBody>
-                {dataFiltered
-                  .slice(
-                    table.page * table.rowsPerPage,
-                    table.page * table.rowsPerPage + table.rowsPerPage
-                  )
-                  .map((row) => (
-                    <MarketTableRow
-                      key={row.id}
-                      row={row}
-                      selected={table.selected.includes(row.id)}
-                      editHref="#"
-                    />
-                  ))}
-
-                <TableEmptyRows
-                  height={table.dense ? 56 : 56 + 20}
-                  emptyRows={emptyRows(table.page, table.rowsPerPage, dataFiltered.length)}
-                />
-
-                <TableNoData notFound={notFound} />
-              </TableBody>
-            </Table>
-          </Scrollbar>
-        </Box>
-      </Card>
+              <TableNoData notFound={notFound} />
+            </TableBody>
+          </Table>
+        </Scrollbar>
+      </Box>
+    </Card>
   );
 }
 

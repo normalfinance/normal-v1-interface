@@ -24,25 +24,23 @@ export const Logo = forwardRef<HTMLAnchorElement, LogoProps>((props, ref) => {
 
   const gradientId = useId();
 
-  
-    const singleLogo = (
-      <img
-        alt="Single logo"
-        src={`${CONFIG.assetsDir}/logo/logo-single.svg`}
-        width="100%"
-        height="100%"
-      />
-    );
+  const singleLogo = (
+    <img
+      alt="Single logo"
+      src={`${CONFIG.assetsDir}/logo/logo-single.svg`}
+      width="100%"
+      height="100%"
+    />
+  );
 
-    const fullLogo = (
-      <img
-        alt="Full logo"
-        src={`${CONFIG.assetsDir}/logo/logo-full.svg`}
-        width="100%"
-        height="100%"
-      />
-    );
-   
+  const fullLogo = (
+    <img
+      alt="Full logo"
+      src={`${CONFIG.assetsDir}/logo/logo-full.svg`}
+      width="100%"
+      height="100%"
+    />
+  );
 
   return (
     <LogoRoot

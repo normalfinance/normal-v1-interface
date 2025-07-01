@@ -95,19 +95,29 @@ export function CustomDateRangePicker({
             </>
           ) : (
             <>
-              <DatePicker label="Start date" value={startDate as Dayjs} onChange={onChangeStartDate} />
+              <DatePicker
+                label="Start date"
+                value={startDate as Dayjs}
+                onChange={onChangeStartDate}
+              />
               <DatePicker label="End date" value={endDate as Dayjs} onChange={onChangeEndDate} />
             </>
           )}
         </Box>
 
         {error && (
-          <FormHelperText error sx={{ px: 2 }}>{t('End date must be later than start date')}</FormHelperText>
+          <FormHelperText error sx={{ px: 2 }}>
+            {t('End date must be later than start date')}
+          </FormHelperText>
         )}
       </DialogContent>
       <DialogActions>
-        <Button variant="outlined" color="inherit" onClick={onClose}>{t('Cancel')}</Button>
-        <Button disabled={error} variant="contained" onClick={handleSubmit}>{t('Apply')}</Button>
+        <Button variant="outlined" color="inherit" onClick={onClose}>
+          {t('Cancel')}
+        </Button>
+        <Button disabled={error} variant="contained" onClick={handleSubmit}>
+          {t('Apply')}
+        </Button>
       </DialogActions>
     </Dialog>
   );

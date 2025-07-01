@@ -21,6 +21,8 @@ export function SignOutButton({ onLogout, sx, ...other }: Props) {
       onClick={onLogout}
       sx={sx}
       {...other}
-    >{t('Logout')}</Button>
+    >
+      {t('Logout')}
+    </Button>
   );
 }

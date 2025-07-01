@@ -20,7 +20,6 @@ import {
   TableSortLabel,
 } from '@mui/material';
 
-
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Buy: 'success',
   Sell: 'error',
@@ -43,11 +42,12 @@ type ColumnKey = 'timestamp' | 'usdValue' | 'usdcValue' | 'ethValue' | 'wallet';
 
 // ----------------------------------------------------------------------
 
-export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  const theme = useTheme();
+export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {
+  const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
   const [orderBy, setOrderBy] = useState<ColumnKey>('timestamp');
-  const [order, setOrder] = useState<Order>('desc');                // newest first by default
+  const [order, setOrder] = useState<Order>('desc'); // newest first by default
 
   // ------- type filter  ----------------------------------------------
   const [typeAnchor, setTypeAnchor] = useState<null | HTMLElement>(null);
@@ -80,7 +80,6 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  cons
       setOrder((prev) => (prev === 'desc' ? 'asc' : prev === 'asc' ? undefined : 'desc'));
     }
   };
-  
 
   // -------------------------------------------------------------------
   return (
@@ -98,16 +97,18 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  cons
                 <TableCell sortDirection={orderBy === 'timestamp' ? order : false}>
                   <TableSortLabel
                     active={orderBy === 'timestamp'}
-                    direction={order === null ? 'asc' : order ?? 'asc'}
+                    direction={order === null ? 'asc' : (order ?? 'asc')}
                     onClick={() => toggleSort('timestamp')}
                     sx={{
                       '& .MuiTableSortLabel-icon': {
-                        fontSize: 14,          // affects the SVG size
+                        fontSize: 14, // affects the SVG size
                         width: 14,
                         height: 14,
                       },
                     }}
-                  >{t('Time')}</TableSortLabel>
+                  >
+                    {t('Time')}
+                  </TableSortLabel>
                 </TableCell>
 
                 {/* --- Type with dropdown -------------------------------- */}
@@ -116,7 +117,9 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  cons
                     variant="subtitle2"
                     sx={{ cursor: 'pointer' }}
                     onClick={(e) => setTypeAnchor(e.currentTarget)}
-                  >{t('Type ▾')}</Typography>
+                  >
+                    {t('Type ▾')}
+                  </Typography>
                   <Menu
                     open={Boolean(typeAnchor)}
                     anchorEl={typeAnchor}
@@ -145,21 +148,17 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  cons
                   >
                     <TableSortLabel
                       active={orderBy === key}
-                      direction={order === null ? 'asc' : order ?? 'asc'}
+                      direction={order === null ? 'asc' : (order ?? 'asc')}
                       onClick={() => toggleSort(key)}
                       sx={{
                         '& .MuiTableSortLabel-icon': {
-                          fontSize: 14,        
+                          fontSize: 14,
                           width: 14,
                           height: 14,
                         },
                       }}
                     >
-                      {key === 'usdValue'
-                        ? 'USD'
-                        : key === 'usdcValue'
-                        ? 'USDC'
-                        : 'ETH'}
+                      {key === 'usdValue' ? 'USD' : key === 'usdcValue' ? 'USDC' : 'ETH'}
                     </TableSortLabel>
                   </TableCell>
                 ))}

@@ -25,9 +25,8 @@ export function TableSelectedAction({
   onSelectAllRows,
   ...other
 }: TableSelectedActionProps) {
-
   const { t } = useTranslate('auto');
-  
+
   if (!numSelected) {
     return null;
   }

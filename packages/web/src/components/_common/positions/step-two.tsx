@@ -1,6 +1,5 @@
 'use client';
 
-;
 import type { Token } from '@/types/token';
 
 import { useTranslate } from '@/locales';
@@ -36,7 +35,9 @@ export default function StepTwo({ token }: StepTwoProps) {
 
   return (
     <Stack spacing={3} width={1}>
-      <Typography variant="h6">{t('Step 2 – Enter amount')}{token ? `(${token.shortname})` : ''}
+      <Typography variant="h6">
+        {t('Step 2 – Enter amount')}
+        {token ? `(${token.shortname})` : ''}
       </Typography>
       {/* ---- amount input ------------------------------------------- */}
       <Box

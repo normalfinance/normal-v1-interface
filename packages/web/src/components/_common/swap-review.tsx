@@ -74,7 +74,9 @@ const SwapReview: React.FC<SwapReviewProps> = ({
     >
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" component="div" color="text.primary">{t('You\'re swapping')}</Typography>
+          <Typography variant="h6" component="div" color="text.primary">
+            {t("You're swapping")}
+          </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
           </IconButton>
@@ -235,7 +237,9 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                       color: theme.palette.text.secondary,
                       fontSize: '12px',
                     }}
-                  >{t('Show less')}</Typography>
+                  >
+                    {t('Show less')}
+                  </Typography>
                   <Iconify
                     icon="carbon:chevron-sort"
                     width={14}
@@ -295,7 +299,13 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >{t('Fee')}<Box component="span">{t('(')}{feePercentage}{t('%)')}</Box>{' '}
+                      >
+                        {t('Fee')}
+                        <Box component="span">
+                          {t('(')}
+                          {feePercentage}
+                          {t('%)')}
+                        </Box>{' '}
                       </Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
@@ -312,7 +322,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fCurrencyTwoDecimals(sellFiatValue * ((Number(feePercentage)) / 100))}
+                      {fCurrencyTwoDecimals(sellFiatValue * (Number(feePercentage) / 100))}
                     </Typography>
                   </Box>
 
@@ -339,7 +349,9 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >{t('Network cost')}</Typography>
+                      >
+                        {t('Network cost')}
+                      </Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
                         width={14}
@@ -382,7 +394,9 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >{t('Rate')}</Typography>
+                      >
+                        {t('Rate')}
+                      </Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
                         width={14}
@@ -425,7 +439,9 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >{t('Price impact')}</Typography>
+                      >
+                        {t('Price impact')}
+                      </Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
                         width={14}
@@ -468,7 +484,9 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           color: theme.palette.text.secondary,
                           fontSize: '12px',
                         }}
-                      >{t('Max slippage')}</Typography>
+                      >
+                        {t('Max slippage')}
+                      </Typography>
                       <Iconify
                         icon="solar:info-circle-bold"
                         width={14}
@@ -495,7 +513,9 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>{t('Swap')}</Button>
+          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>
+            {t('Swap')}
+          </Button>
         </Box>
       </DialogActions>
     </Dialog>

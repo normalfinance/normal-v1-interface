@@ -21,7 +21,11 @@ type SearchNotFoundProps = BoxProps & {
 export function SearchNotFound({ query, sx, slotProps, ...other }: SearchNotFoundProps) {
   const { t } = useTranslate();
   if (!query) {
-    return (<Typography variant="body2" {...slotProps?.description}>{t('Please enter keywords')}</Typography>);
+    return (
+      <Typography variant="body2" {...slotProps?.description}>
+        {t('Please enter keywords')}
+      </Typography>
+    );
   }
 
   return (
@@ -47,8 +51,16 @@ export function SearchNotFound({ query, sx, slotProps, ...other }: SearchNotFoun
             ? (slotProps?.title?.sx ?? [])
             : [slotProps?.title?.sx]),
         ]}
-      >{t('Not found')}</Typography>
-      <Typography variant="body2" {...slotProps?.description}>{t('No results found for')}<strong>{`"${query}"`}</strong>{t('.')}<br />{t('Try checking for typos or using complete words.')}</Typography>
+      >
+        {t('Not found')}
+      </Typography>
+      <Typography variant="body2" {...slotProps?.description}>
+        {t('No results found for')}
+        <strong>{`"${query}"`}</strong>
+        {t('.')}
+        <br />
+        {t('Try checking for typos or using complete words.')}
+      </Typography>
     </Box>
   );
 }

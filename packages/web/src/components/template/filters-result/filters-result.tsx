@@ -39,7 +39,9 @@ export function FiltersResult({
           color="error"
           onClick={onReset}
           startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
-        >{t('Clear')}</Button>
+        >
+          {t('Clear')}
+        </Button>
       </ResultContent>
     </ResultRoot>
   );

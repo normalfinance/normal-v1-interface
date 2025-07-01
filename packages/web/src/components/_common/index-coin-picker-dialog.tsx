@@ -153,12 +153,7 @@ export default function IndexCoinPickerDialog({
                       }}
                       onClick={() => handleSelectCoin(token)}
                     >
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        gap="10px"
-                      >
+                      <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
                           src={token.url}
@@ -269,12 +264,7 @@ export default function IndexCoinPickerDialog({
                   }}
                   onClick={() => handleSelectCoin(token)}
                 >
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    gap="10px"
-                  >
+                  <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
                       src={token.url}

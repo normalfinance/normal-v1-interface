@@ -26,7 +26,9 @@ export function ConfirmDialog({
       <DialogActions>
         {action}
 
-        <Button variant="outlined" color="inherit" onClick={onClose}>{t('Cancel')}</Button>
+        <Button variant="outlined" color="inherit" onClick={onClose}>
+          {t('Cancel')}
+        </Button>
       </DialogActions>
     </Dialog>
   );
