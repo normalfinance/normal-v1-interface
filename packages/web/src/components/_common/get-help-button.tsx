@@ -5,7 +5,7 @@ import React from 'react';
 import { Button, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
-import { Iconify } from '../iconify';
+import { Iconify } from '@/components/template/iconify';
 
 /**
  * Small utility button for opening a support / help flow.

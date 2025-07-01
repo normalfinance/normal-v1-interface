@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import React, { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import {
@@ -51,6 +52,8 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  cons
   const [typeAnchor, setTypeAnchor] = useState<null | HTMLElement>(null);
   const [typeFilter, setTypeFilter] = useState<TxType | 'All'>('All');
 
+  const { t } = useTranslate('auto');
+
   // -------------------------------------------------------------------
   const filtered = typeFilter === 'All' ? rows : rows.filter((r) => r.type === typeFilter);
 
@@ -103,9 +106,7 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  cons
                         height: 14,
                       },
                     }}
-                  >
-                    Time
-                  </TableSortLabel>
+                  >{t('Time')}</TableSortLabel>
                 </TableCell>
 
                 {/* --- Type with dropdown -------------------------------- */}
@@ -114,9 +115,7 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  cons
                     variant="subtitle2"
                     sx={{ cursor: 'pointer' }}
                     onClick={(e) => setTypeAnchor(e.currentTarget)}
-                  >
-                    Type ▾
-                  </Typography>
+                  >{t('Type ▾')}</Typography>
                   <Menu
                     open={Boolean(typeAnchor)}
                     anchorEl={typeAnchor}
@@ -169,7 +168,7 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  cons
                   onClick={() => toggleSort('wallet')}
                   sx={{ cursor: 'pointer' }}
                 >
-                  <Typography variant="subtitle2">Wallet</Typography>
+                  <Typography variant="subtitle2">{t('Wallet')}</Typography>
                 </TableCell>
               </TableRow>
             </TableHead>

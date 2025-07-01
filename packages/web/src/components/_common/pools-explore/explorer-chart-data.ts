@@ -53,5 +53,5 @@ export type ExchangeRateInfo = {
 };
 
 export type PerformanceInfo = {
-  percentageChange: number;
+  percentageChange?: number;
 };

@@ -8,6 +8,7 @@ import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from '@/components/template/iconify';
+import { useTranslate } from '@/locales';
 
 // ----------------------------------------------------------------------
 
@@ -18,6 +19,7 @@ type Props = {
 
 export function MarketTableToolbar({ filters, onResetPage }: Props) {
   const { state: currentFilters, setState: updateFilters } = filters;
+  const { t } = useTranslate();
 
   const handleFilterName = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,7 +54,7 @@ export function MarketTableToolbar({ filters, onResetPage }: Props) {
             fullWidth
             value={currentFilters.name}
             onChange={handleFilterName}
-            placeholder="Search..."
+            placeholder={t('Search...')}
             slotProps={{
               input: {
                 startAdornment: (

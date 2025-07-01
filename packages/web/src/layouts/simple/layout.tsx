@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { Breakpoint } from '@mui/material/styles';
 
@@ -46,12 +47,11 @@ export function SimpleLayout({
 }: SimpleLayoutProps) {
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = { container: { maxWidth: false } };
+    const { t } = useTranslate();
 
     const headerSlots: HeaderSectionProps['slots'] = {
       topArea: (
-        <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>
-          This is an info Alert.
-        </Alert>
+        <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>{t('This is an info Alert.')}</Alert>
       ),
       leftArea: <Logo />,
       rightArea: (
@@ -62,9 +62,7 @@ export function SimpleLayout({
             component={RouterLink}
             color="inherit"
             sx={{ typography: 'subtitle2' }}
-          >
-            Need help?
-          </Link>
+          >{t('Need help?')}</Link>
 
           {/** @slot Settings button */}
           <LightDarkModeButton />

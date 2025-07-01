@@ -12,6 +12,7 @@ import { Scrollbar } from '@/components/template/scrollbar';
 import { Icon } from '@iconify/react';
 import { useTheme } from '@mui/material/styles';
 import NextLink from 'next/link';
+import { useTranslate } from '@/locales';
 
 // ----------------------------------------------------------------------
 // 1) Update list item type with `percentage` instead of `priceSale`.
@@ -29,9 +30,11 @@ type Props = CardProps & {
 };
 
 export function Markets({ title, subheader, list, sx, ...other }: Props) {
+  const { t } = useTranslate();
+
   return (
     <Card sx={sx} {...other}>
-      <CardHeader title={title} subheader={subheader} />
+      <CardHeader title={t(title || '')} subheader={t(subheader || '')} />
 
       <Scrollbar>
         <Box

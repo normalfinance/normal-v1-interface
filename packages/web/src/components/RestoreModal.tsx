@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import React, { useState } from 'react';
 
@@ -15,6 +16,7 @@ import { Iconify } from './template/iconify';
 
 export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslate('auto');
 
   const handleRestore = async () => {
     setIsLoading(true);
@@ -85,9 +87,7 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
               mb: 1,
               fontFamily: 'Ubuntu',
             }}
-          >
-            Transaction Restore Needed
-          </Typography>
+          >{t('Transaction Restore Needed')}</Typography>
         </Box>
 
         {/* Content Section */}
@@ -108,10 +108,9 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
               color: '#FFF',
               mb: 2,
             }}
-          >
-            You need to restore some contract state before you can invoke this method. Do you want
-            to proceed with restoration?
-          </Typography>
+          >{t(
+            'You need to restore some contract state before you can invoke this method. Do you want to proceed with restoration?',
+          )}</Typography>
 
           {/* Loading Indicator */}
           {isLoading ? (
@@ -132,9 +131,7 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
                   color: '#FFF',
                   mt: 2,
                 }}
-              >
-                Restoring transaction, please wait...
-              </Typography>
+              >{t('Restoring transaction, please wait...')}</Typography>
             </Box>
           ) : (
             <Box
@@ -155,9 +152,7 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
                   },
                   mr: 2,
                 }}
-              >
-                Restore
-              </Button>
+              >{t('Restore')}</Button>
             </Box>
           )}
         </Box>

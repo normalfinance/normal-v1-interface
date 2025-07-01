@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type {
   PoolDetails,
@@ -128,6 +129,7 @@ const allMarkets = [
 
 export default function ExploreView() {
   const theme = useTheme();
+  const { t } = useTranslate();
   const store = useAppStore(); // Global state management
   const router = useRouter(); // Next.js router
 
@@ -173,9 +175,7 @@ export default function ExploreView() {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">
-          Explore
-        </Typography>
+        <Typography variant="h4" color="text.primary">{t('Explore')}</Typography>
       </Stack>
       <Grid2 width={1} sx={{ mt: 3 }}>
         <ExploreStats stats={stats} />
@@ -189,7 +189,7 @@ export default function ExploreView() {
           pairInfo={poolsExplorerData.pairInfo}
           metadata={poolsExplorerData.metadata}
           exchangeRate={poolsExplorerData.exchangeRate}
-          performance={poolsExplorerData.performance}
+          performance={poolsExplorerData.performance} 
           legendValues={[{ title: 'Price', number: 7334, formatter: fCurrencyCompact }]}
           chart={poolChartData}
           color={theme.palette.primary.main}

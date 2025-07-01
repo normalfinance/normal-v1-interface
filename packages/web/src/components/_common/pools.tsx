@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { Token } from '@normalfinance/types';
 
@@ -37,6 +38,8 @@ type Props = {
 export default function ProfileFriends({ pools, onShowDetailsClick }: Props) {
   const [searchPools, setSearchPools] = useState('');
 
+  const { t } = useTranslate('auto');
+
   const handleSearchPools = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchPools(event.target.value);
   }, []);
@@ -56,7 +59,7 @@ export default function ProfileFriends({ pools, onShowDetailsClick }: Props) {
         direction={{ xs: 'column', sm: 'row' }}
         sx={{ my: 5 }}
       >
-        <Typography variant="h4">Friends</Typography>
+        <Typography variant="h4">{t('Friends')}</Typography>
 
         <TextField
           value={searchPools}
@@ -72,7 +75,6 @@ export default function ProfileFriends({ pools, onShowDetailsClick }: Props) {
           sx={{ width: { xs: 1, sm: 260 } }}
         />
       </Stack>
-
       {notFound ? (
         <SearchNotFound query={searchPools} sx={{ mt: 10 }} />
       ) : (
@@ -107,6 +109,7 @@ type FriendCardProps = {
 };
 
 function PoolCard({ pool, onShowDetailsClick }: FriendCardProps) {
+  const { t } = useTranslate('auto');
   return (
     <Card
       onClick={() => onShowDetailsClick(pool)}
@@ -133,24 +136,17 @@ function PoolCard({ pool, onShowDetailsClick }: FriendCardProps) {
           sx={{ width: 64, height: 64, mb: 3 }}
         />
       </AvatarGroup>
-
       <Link variant="subtitle1" color="text.primary">
         {`${pool.tokens[0].name} - ${pool.tokens[1].name}`}
       </Link>
-
       <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1, mt: 0.5 }}>
         {pool.tvl}
       </Typography>
-
       <Stack alignItems="center" justifyContent="center" direction="row">
         <Stack direction="row" spacing={1.5}>
-          <Button fullWidth variant="contained" color="warning">
-            Deposit
-          </Button>
+          <Button fullWidth variant="contained" color="warning">{t('Deposit')}</Button>
 
-          <Button fullWidth variant="contained" color="primary">
-            Withdraw
-          </Button>
+          <Button fullWidth variant="contained" color="primary">{t('Withdraw')}</Button>
         </Stack>
       </Stack>
     </Card>

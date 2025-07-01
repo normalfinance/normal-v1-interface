@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@normalfinance/types';
 
 import React, { useMemo, useCallback } from 'react';
@@ -92,6 +93,8 @@ const TokenBox = ({
   disabled = false,
   loadingValues = false,
 }: TokenBoxProps) => {
+  const { t } = useTranslate('auto');
+
   const usdPrice = useMemo(
     () => Number(value) * Number(token.usdValue) || 0,
     [value, token.usdValue]
@@ -212,8 +215,7 @@ const TokenBox = ({
               lineHeight: '140%',
               color: 'var(--content-medium-emphasis, rgba(255, 255, 255, 0.70));',
             }}
-          >
-            Balance {token.amount}
+          >{t('Balance')}{token.amount}
           </Typography>
           <Button
             onClick={handleMaxClick}
@@ -228,9 +230,7 @@ const TokenBox = ({
                 background: 'transparent',
               },
             }}
-          >
-            Max
-          </Button>
+          >{t('Max')}</Button>
         </Grid2>
       </Grid2>
     </Box>

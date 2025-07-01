@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { ButtonProps } from '@mui/material/Button';
 
 import { useCallback } from 'react';
@@ -7,7 +8,7 @@ import Button from '@mui/material/Button';
 
 import { useRouter } from '@/routes/hooks';
 
-import { toast } from '@/components/template/snackbar';
+import { enqueueSnackbar } from '@/components/template/snackbar';
 
 // ----------------------------------------------------------------------
 
@@ -20,6 +21,8 @@ export function SignOutButton({ onClose, sx, ...other }: Props) {
 
   const { logout } = usePrivy();
 
+  const { t } = useTranslate();
+
   const handleLogout = useCallback(async () => {
     try {
       await logout();
@@ -28,7 +31,7 @@ export function SignOutButton({ onClose, sx, ...other }: Props) {
       router.refresh();
     } catch (error) {
       console.error(error);
-      toast.error('Unable to logout!');
+      enqueueSnackbar('Unable to logout!', { variant: 'error' });
     }
   }, [logout, onClose, router]);
 
@@ -42,7 +45,7 @@ export function SignOutButton({ onClose, sx, ...other }: Props) {
       sx={sx}
       {...other}
     >
-      Logout
+      {t('Logout')}
     </Button>
   );
 }

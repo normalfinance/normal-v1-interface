@@ -13,7 +13,7 @@ import { inputBaseClasses } from '@mui/material/InputBase';
 
 import { countries } from '@/assets/data/countries';
 
-import { Iconify } from '../iconify';
+import { Iconify } from '@/components/template/iconify';
 import { CountryListPopover } from './list-popover';
 
 import type { PhoneInputProps } from './types';

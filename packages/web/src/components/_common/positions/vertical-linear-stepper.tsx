@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import { useState } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 
@@ -45,6 +46,7 @@ export function VerticalLinearStepper({
   onBack: () => void;
   onReset: () => void;
 }) {
+  const { t } = useTranslate('auto');
   return (
     <>
       <Stepper activeStep={activeStep} orientation="vertical">
@@ -57,15 +59,12 @@ export function VerticalLinearStepper({
                 <Button variant="contained" onClick={onNext}>
                   {index === steps.length - 1 ? 'Finish' : 'Continue'}
                 </Button>
-                <Button disabled={index === 0} onClick={onBack}>
-                  Back
-                </Button>
+                <Button disabled={index === 0} onClick={onBack}>{t('Back')}</Button>
               </Box>
             </StepContent>
           </Step>
         ))}
       </Stepper>
-
       {activeStep === steps.length && (
         <Paper
           sx={(theme) => ({
@@ -74,8 +73,8 @@ export function VerticalLinearStepper({
             bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.12),
           })}
         >
-          <Typography sx={{ mb: 2 }}>All steps completed — you’re finished</Typography>
-          <Button onClick={onReset}>Reset</Button>
+          <Typography sx={{ mb: 2 }}>{t('All steps completed — you’re finished')}</Typography>
+          <Button onClick={onReset}>{t('Reset')}</Button>
         </Paper>
       )}
     </>

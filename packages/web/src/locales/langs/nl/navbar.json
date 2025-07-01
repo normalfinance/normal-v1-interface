@@ -1,0 +1,26 @@
+{
+  "app": "App",
+  "job": "Baan",
+  "user": "Gebruiker",
+  "travel": "Reizen",
+  "invoice": "Factuur",
+  "blog": {
+    "title": "Blog",
+    "caption": "Aangepaste sneltoetsen."
+  },
+  "subheader": "Subkop",
+  "Overview": "Overzicht",
+  "Trade": "Handelen",
+  "Spot": "Spot",
+  "Indexes": "Indexen",
+  "Earn": "Verdienen",
+  "Yield": "Rendement",
+  "LP": "LP",
+  "Rewards": "Beloningen",
+  "Referrals": "Verwijzingen",
+  "Analytics": "Analyse",
+  "More": "Meer",
+  "Governance": "Bestuur",
+  "Help & Feedback": "Hulp & Feedback",
+  "Docs": "Documentatie"
+}

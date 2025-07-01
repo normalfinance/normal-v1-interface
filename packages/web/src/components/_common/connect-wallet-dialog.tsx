@@ -18,7 +18,7 @@ import {
   ListItemAvatar,
 } from '@mui/material';
 
-import { Iconify } from '../iconify';
+import { Iconify } from '@/components/template/iconify';
 import GetHelpButton from './get-help-button';
 
 // ----------------------------------------------------------------------

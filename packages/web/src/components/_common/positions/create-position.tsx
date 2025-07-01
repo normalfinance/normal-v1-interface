@@ -1,6 +1,7 @@
 // app/components/_common/positions/create-position.tsx
 
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material/Card';
@@ -21,6 +22,8 @@ interface CreatePositionProps extends CardProps {
 
 export const CreatePosition: React.FC<CreatePositionProps> = ({ sx, tokens, ...other }) => {
   const theme = useTheme();
+
+  const { t } = useTranslate('auto');
 
   /* ------------------------------------------------------------------ */
   /* wizard navigation state                                             */
@@ -57,7 +60,7 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({ sx, tokens, ...o
     >
       {/* ————————————————— Header ————————————————— */}
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h3">New Position</Typography>
+        <Typography variant="h3">{t('New Position')}</Typography>
 
         <Stack direction="row" spacing={1}>
           {/* Reset */}
@@ -70,9 +73,7 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({ sx, tokens, ...o
               px: 1.5,
             }}
           >
-            <Iconify icon="solar:restart-bold" width={16} sx={{ mr: 1 }} />
-            Reset
-          </Button>
+            <Iconify icon="solar:restart-bold" width={16} sx={{ mr: 1 }} />{t('Reset')}</Button>
 
           {/* Settings (placeholder) */}
           <Button
@@ -87,7 +88,6 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({ sx, tokens, ...o
           </Button>
         </Stack>
       </Stack>
-
       {/* ————————————————— Body ————————————————— */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} sx={{ mt: 3 }}>
         {/* left column – stepper */}

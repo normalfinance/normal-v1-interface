@@ -14,6 +14,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
+import { useTranslate } from '@/locales';
 
 interface SwapSendCardProps extends CardProps {
   title?: string;
@@ -31,6 +32,7 @@ export const SwapSendCard: React.FC<SwapSendCardProps> = ({
   ...other
 }) => {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
   // Use the tabs hook with a default value of 'swap'
   const tabs = useTabs('swap');
 
@@ -93,13 +95,13 @@ export const SwapSendCard: React.FC<SwapSendCardProps> = ({
         }}
       >
         {TABS.map((tab) => (
-          <Tab key={tab.value} value={tab.value} label={tab.label} />
+          <Tab key={tab.value} value={tab.value} label={t(tab.label)} />
         ))}
       </CustomTabsSwapSend>
 
       {/* Conditionally render a component based on the active tab */}
       {tabs.value === 'swap' ? (
-        <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
+        <SwapCard />
       ) : (
         <SendCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
       )}

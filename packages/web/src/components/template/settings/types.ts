@@ -19,6 +19,9 @@ export type SettingsState = {
 export type SettingsContextValue = {
   state: SettingsState;
   canReset: boolean;
+  openDrawer: boolean;
+  onOpenDrawer: () => void;
+  onCloseDrawer: () => void;
   onReset: () => void;
   setState: (updateValue: Partial<SettingsState>) => void;
   setField: (name: keyof SettingsState, updateValue: SettingsState[keyof SettingsState]) => void;

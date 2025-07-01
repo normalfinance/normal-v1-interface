@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 
 // fee-info-accordion.tsx
@@ -31,6 +32,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
   sellFiatValue,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   return (
     <Accordion
@@ -104,9 +106,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   color: theme.palette.text.secondary,
                   fontSize: '12px',
                 }}
-              >
-                Not enough {sellToken.shortname} to swap
-              </Typography>
+              >{t('Not enough')}{sellToken.shortname}{t('to swap')}</Typography>
             </Box>
           )}
           <Box
@@ -141,8 +141,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >
-                  Fee <Box component="span">({poolFee}%)</Box>
+                >{t('Fee')}<Box component="span">{t('(')}{poolFee}{t('%)')}</Box>
                 </Typography>
                 <Iconify
                   icon="solar:info-circle-bold"
@@ -184,9 +183,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >
-                  Network cost
-                </Typography>
+                >{t('Network cost')}</Typography>
                 <Iconify
                   icon="solar:info-circle-bold"
                   width={14}
@@ -227,9 +224,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >
-                  Price impact
-                </Typography>
+                >{t('Price impact')}</Typography>
                 <Iconify
                   icon="solar:info-circle-bold"
                   width={14}
@@ -270,9 +265,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >
-                  Max slippage
-                </Typography>
+                >{t('Max slippage')}</Typography>
                 <Iconify
                   icon="solar:info-circle-bold"
                   width={14}

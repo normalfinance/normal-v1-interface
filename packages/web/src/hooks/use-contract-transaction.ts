@@ -1,7 +1,7 @@
 'use client';
 
 import type { AppStore, AppStorePersist } from '@normalfinance/types';
-import type { AssembledTransaction } from '@stellar/stellar-sdk/contract';
+import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 
 import { useCallback } from 'react';
 import { constants } from '@normalfinance/utils';

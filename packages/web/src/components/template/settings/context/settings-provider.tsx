@@ -4,6 +4,7 @@ import { isEqual } from 'es-toolkit';
 import { useMemo, useEffect, useCallback } from 'react';
 import { getCookie, getStorage } from 'minimal-shared/utils';
 import { useCookies, useLocalStorage } from 'minimal-shared/hooks';
+import { useBoolean } from '@/hooks';
 
 import { SettingsContext } from './settings-context';
 import { SETTINGS_STORAGE_KEY } from '../settings-config';
@@ -27,6 +28,9 @@ export function SettingsProvider({
     storageKey,
     initialSettings
   );
+
+  // Drawer open state management
+  const { value: openDrawer, onTrue: onOpenDrawer, onFalse: onCloseDrawer } = useBoolean();
 
   const canReset = !isEqual(state, defaultSettings);
 
@@ -54,11 +58,14 @@ export function SettingsProvider({
     () => ({
       canReset,
       onReset,
+      openDrawer,
+      onOpenDrawer,
+      onCloseDrawer,
       state,
       setState,
       setField,
     }),
-    [canReset, onReset, state, setField, setState]
+    [canReset, onReset, openDrawer, onOpenDrawer, onCloseDrawer, state, setField, setState]
   );
 
   return <SettingsContext.Provider value={memoizedValue}>{children}</SettingsContext.Provider>;

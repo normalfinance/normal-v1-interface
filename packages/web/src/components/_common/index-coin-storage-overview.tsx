@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { CardProps } from '@mui/material/Card';
 import type { ChartOptions } from '@/components/template/chart';
 import Box from '@mui/material/Box';
@@ -32,6 +33,7 @@ export function IndexCoinStorageOverview({
   ...other
 }: Props) {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   // If colors are provided, use them; otherwise default to two theme-based colors
   const chartColors = chart?.colors ?? [
@@ -88,7 +90,6 @@ export function IndexCoinStorageOverview({
         options={chartOptions}
         sx={{ mx: 'auto', width: 240, height: 240 }}
       />
-
       <Stack
         spacing={3}
         sx={{
@@ -137,9 +138,7 @@ export function IndexCoinStorageOverview({
                   e.stopPropagation();
                   onRemoveCoin?.(coin.id);
                 }}
-              >
-                Remove
-              </Button>
+              >{t('Remove')}</Button>
             </Box>
           </Button>
         ))}

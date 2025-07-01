@@ -1,0 +1,26 @@
+{
+  "app": "App",
+  "job": "Jobb",
+  "user": "Bruker",
+  "travel": "Reise",
+  "invoice": "Faktura",
+  "blog": {
+    "title": "Blogg",
+    "caption": "Egendefinerte hurtigtaster."
+  },
+  "subheader": "Underoverskrift",
+  "Overview": "Oversikt",
+  "Trade": "Handle",
+  "Spot": "Spot",
+  "Indexes": "Indekser",
+  "Earn": "Tjen",
+  "Yield": "Avkastning",
+  "LP": "LP",
+  "Rewards": "Belønninger",
+  "Referrals": "Henvisninger",
+  "Analytics": "Analyse",
+  "More": "Mer",
+  "Governance": "Styring",
+  "Help & Feedback": "Hjelp og tilbakemelding",
+  "Docs": "Dokumentasjon"
+}

@@ -1,7 +1,7 @@
 import { styled } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 
-import { Iconify } from '../../iconify';
+import { Iconify } from '@/components/template/iconify';
 
 // ----------------------------------------------------------------------
 

@@ -11,6 +11,7 @@ import { RouterLink } from '@/routes/components';
 import { Label } from '@/components/template/label';
 import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
+import { useTranslate } from '@/locales';
 
 type Props = {
   row: Market;
@@ -33,6 +34,14 @@ const statusColorMapping: Record<string, LabelColor> = {
 export function MarketTableRow({ row, selected, editHref }: Props) {
   const theme = useTheme();
   const router = useRouter();
+  const { t } = useTranslate();
+
+  const statusLabelMapping: Record<string, string> = {
+    trending: 'Trending',
+    new: 'New',
+    meme: 'Meme',
+    rwa: 'RWA',
+  };
 
   return (
     <TableRow
@@ -63,7 +72,7 @@ export function MarketTableRow({ row, selected, editHref }: Props) {
       {/* Status */}
       <TableCell>
         <Label variant="soft" color={statusColorMapping[row.status] || 'default'}>
-          {row.status}
+          {t(statusLabelMapping[row.status] || row.status)}
         </Label>
       </TableCell>
 

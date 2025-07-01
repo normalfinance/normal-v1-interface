@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { BoxProps } from '@mui/material/Box';
 
 import Box from '@mui/material/Box';
@@ -26,6 +27,7 @@ export function TableSelectedAction({
   if (!numSelected) {
     return null;
   }
+  const { t } = useTranslate('auto');
 
   return (
     <Box
@@ -59,7 +61,6 @@ export function TableSelectedAction({
           'aria-label': 'Deselect all checkbox',
         }}
       />
-
       <Typography
         variant="subtitle2"
         sx={{
@@ -69,9 +70,7 @@ export function TableSelectedAction({
           ...(dense && { ml: 3 }),
         }}
       >
-        {numSelected} selected
-      </Typography>
-
+        {numSelected}{t('selected')}</Typography>
       {action && action}
     </Box>
   );

@@ -2,12 +2,13 @@ import type { CSSObject } from '@mui/material/styles';
 
 import { forwardRef } from 'react';
 import { mergeClasses } from 'minimal-shared/utils';
+import { useTranslation } from 'react-i18next';
 
 import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
+import { Iconify } from '@/components/template/iconify';
 import { createNavItem } from '../utils';
 import { navItemStyles, navSectionClasses } from '../styles';
 
@@ -37,6 +38,10 @@ export const NavItem = forwardRef<HTMLButtonElement, NavItemProps>((props, ref) 
     ...other
   } = props;
 
+  const { t } = useTranslation('navbar');
+  const displayTitle = typeof title === 'string' ? t(title) : title;
+  const displayCaption = caption && typeof caption === 'string' ? t(caption) : caption;
+
   const navItem = createNavItem({
     path,
     icon,
@@ -58,7 +63,7 @@ export const NavItem = forwardRef<HTMLButtonElement, NavItemProps>((props, ref) 
   return (
     <ItemRoot
       ref={ref}
-      aria-label={title}
+      aria-label={displayTitle}
       {...ownerState}
       {...navItem.baseProps}
       className={mergeClasses([navSectionClasses.item.root, className], {
@@ -75,14 +80,14 @@ export const NavItem = forwardRef<HTMLButtonElement, NavItemProps>((props, ref) 
         </ItemIcon>
       )}
 
-      {title && (
+      {displayTitle && (
         <ItemTitle {...ownerState} className={navSectionClasses.item.title} sx={slotProps?.title}>
-          {title}
+          {displayTitle}
         </ItemTitle>
       )}
 
-      {caption && (
-        <Tooltip title={caption} arrow placement="right">
+      {displayCaption && (
+        <Tooltip title={displayCaption} arrow placement="right">
           <ItemCaptionIcon
             {...ownerState}
             icon="eva:info-outline"

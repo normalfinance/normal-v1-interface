@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import { useState } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 
@@ -23,6 +24,8 @@ export function HorizontalLinearStepper() {
   const isStepOptional = (step: number) => step === 1;
 
   const isStepSkipped = (step: number) => skipped.has(step);
+
+  const { t } = useTranslate('auto');
 
   const handleNext = () => {
     let newSkipped = skipped;
@@ -69,7 +72,7 @@ export function HorizontalLinearStepper() {
             optional?: React.ReactNode;
           } = {};
           if (isStepOptional(index)) {
-            labelProps.optional = <Typography variant="caption">Optional</Typography>;
+            labelProps.optional = <Typography variant="caption">{t('Optional')}</Typography>;
           }
           if (isStepSkipped(index)) {
             stepProps.completed = false;
@@ -81,7 +84,6 @@ export function HorizontalLinearStepper() {
           );
         })}
       </Stepper>
-
       {activeStep === steps.length ? (
         <>
           <Paper
@@ -94,12 +96,12 @@ export function HorizontalLinearStepper() {
               }),
             ]}
           >
-            <Typography sx={{ my: 1 }}>All steps completed - you&apos;re finished</Typography>
+            <Typography sx={{ my: 1 }}>{t('All steps completed - you\'re finished')}</Typography>
           </Paper>
 
           <Box sx={{ display: 'flex' }}>
             <Box sx={{ flexGrow: 1 }} />
-            <Button onClick={handleReset}>Reset</Button>
+            <Button onClick={handleReset}>{t('Reset')}</Button>
           </Box>
         </>
       ) : (
@@ -114,19 +116,15 @@ export function HorizontalLinearStepper() {
               }),
             ]}
           >
-            <Typography sx={{ my: 1 }}> Step {activeStep + 1}</Typography>
+            <Typography sx={{ my: 1 }}>{t('Step')}{activeStep + 1}</Typography>
           </Paper>
 
           <Box sx={{ display: 'flex' }}>
-            <Button color="inherit" disabled={activeStep === 0} onClick={handleBack} sx={{ mr: 1 }}>
-              Back
-            </Button>
+            <Button color="inherit" disabled={activeStep === 0} onClick={handleBack} sx={{ mr: 1 }}>{t('Back')}</Button>
 
             <Box sx={{ flexGrow: 1 }} />
             {isStepOptional(activeStep) && (
-              <Button color="inherit" onClick={handleSkip} sx={{ mr: 1 }}>
-                Skip
-              </Button>
+              <Button color="inherit" onClick={handleSkip} sx={{ mr: 1 }}>{t('Skip')}</Button>
             )}
             <Button variant="contained" onClick={handleNext}>
               {activeStep === steps.length - 1 ? 'Finish' : 'Next'}

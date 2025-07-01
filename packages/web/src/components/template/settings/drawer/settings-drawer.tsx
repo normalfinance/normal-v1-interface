@@ -1,4 +1,5 @@
 'use client';
+import { useTranslate } from '@/locales';
 
 import type { ThemeColorScheme } from '@/theme/types';
 
@@ -16,7 +17,7 @@ import { useColorScheme } from '@mui/material/styles';
 import { themeConfig } from '@/theme/theme-config';
 import { primaryColorPresets } from '@/theme/with-settings';
 
-import { Iconify } from '../../iconify';
+import { Iconify } from '@/components/template/iconify';
 import { BaseOption } from './base-option';
 import { Scrollbar } from '../../scrollbar';
 import { SmallBlock, LargeBlock } from './styles';
@@ -34,6 +35,8 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
   const settings = useSettingsContext();
 
   const { mode, setMode, systemMode } = useColorScheme();
+
+  const { t } = useTranslate('auto');
 
   useEffect(() => {
     if (mode === 'system' && systemMode) {
@@ -69,7 +72,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
       }}
     >
       <Typography variant="h6" sx={{ flexGrow: 1 }}>
-        Settings
+        {t('Settings')}
       </Typography>
 
       <FullScreenButton />

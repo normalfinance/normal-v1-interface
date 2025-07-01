@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { CardProps } from '@mui/material/Card';
 import type { ChartOptions, ChartProps } from '@/components/template/chart';
 
@@ -46,6 +47,7 @@ export function StatCard({
   ...other
 }: Props) {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   const chartColors = chart.colors ?? [theme.palette.primary.light, theme.palette.primary.main];
 
@@ -117,7 +119,7 @@ export function StatCard({
       </Box>
 
       <Box component="span" sx={{ color: 'text.secondary', typography: 'body2' }}>
-        last 7 days
+        {t('last 7 days')}
       </Box>
     </Box>
   );
@@ -131,7 +133,7 @@ export function StatCard({
       {...other}
     >
       <Box sx={{ flexGrow: 1 }}>
-        <Box sx={{ typography: 'subtitle2' }}>{title}</Box>
+        <Box sx={{ typography: 'subtitle2' }}>{t(title)}</Box>
 
         <Box sx={{ my: 1.5, typography: 'h3' }}>{formatTotal(total)}</Box>
 

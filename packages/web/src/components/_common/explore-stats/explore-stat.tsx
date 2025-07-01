@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
 
@@ -18,6 +19,7 @@ type Props = {
 
 export function ExploreStat({ title, total, percent }: Props) {
   const theme = useTheme();
+  const { t } = useTranslate('auto');
 
   return (
     <Box
@@ -36,8 +38,7 @@ export function ExploreStat({ title, total, percent }: Props) {
           {title}
         </Typography>
 
-        <Box component="span" sx={{ color: 'text.primary', typography: 'h4' }}>
-          ${fShortenNumber(total)}
+        <Box component="span" sx={{ color: 'text.primary', typography: 'h4' }}>{t('$')}{fShortenNumber(total)}
         </Box>
         <Stack direction="row" spacing={0.5} alignItems="center">
           <Box

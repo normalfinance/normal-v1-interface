@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { FileRejection } from 'react-dropzone';
 
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
@@ -16,6 +17,7 @@ type RejectionFilesProps = React.ComponentProps<typeof ListRoot> & {
 };
 
 export function RejectionFiles({ files, sx, className, ...other }: RejectionFilesProps) {
+  const { t } = useTranslate('auto');
   return (
     <ListRoot
       className={mergeClasses([uploadClasses.uploadRejectionFiles, className])}
@@ -28,11 +30,10 @@ export function RejectionFiles({ files, sx, className, ...other }: RejectionFile
         return (
           <ListItem key={path}>
             <ItemTitle>
-              {path} - {size ? fData(size) : ''}
+              {path}{t('-')}{size ? fData(size) : ''}
             </ItemTitle>
-
             {errors.map((error) => (
-              <ItemCaption key={error.code}>- {error.message}</ItemCaption>
+              <ItemCaption key={error.code}>{t('-')}{error.message}</ItemCaption>
             ))}
           </ListItem>
         );

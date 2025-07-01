@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { DialogProps } from '@mui/material/Dialog';
 import type { Theme, SxProps } from '@mui/material/styles';
 
@@ -16,6 +17,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 
 import type { UseDateRangePickerReturn } from './use-date-range-picker';
+import { Dayjs } from 'dayjs';
 
 // ----------------------------------------------------------------------
 
@@ -40,6 +42,7 @@ export function CustomDateRangePicker({
 }: CustomDateRangePickerProps) {
   const theme = useTheme();
   const mdUp = useMediaQuery(theme.breakpoints.up('md'));
+  const { t } = useTranslate('auto');
 
   const isCalendarView = variant === 'calendar';
 
@@ -78,41 +81,33 @@ export function CustomDateRangePicker({
       {...other}
     >
       <DialogTitle sx={{ pb: 2 }}>{title}</DialogTitle>
-
       <DialogContent sx={{ ...(isCalendarView && mdUp && { overflow: 'unset' }) }}>
         <Box sx={contentStyles}>
           {isCalendarView ? (
             <>
               <Box sx={blockStyles}>
-                <DateCalendar value={startDate} onChange={onChangeStartDate} />
+                <DateCalendar value={startDate as Dayjs} onChange={onChangeStartDate} />
               </Box>
 
               <Box sx={blockStyles}>
-                <DateCalendar value={endDate} onChange={onChangeEndDate} />
+                <DateCalendar value={endDate as Dayjs} onChange={onChangeEndDate} />
               </Box>
             </>
           ) : (
             <>
-              <DatePicker label="Start date" value={startDate} onChange={onChangeStartDate} />
-              <DatePicker label="End date" value={endDate} onChange={onChangeEndDate} />
+              <DatePicker label="Start date" value={startDate as Dayjs} onChange={onChangeStartDate} />
+              <DatePicker label="End date" value={endDate as Dayjs} onChange={onChangeEndDate} />
             </>
           )}
         </Box>
 
         {error && (
-          <FormHelperText error sx={{ px: 2 }}>
-            End date must be later than start date
-          </FormHelperText>
+          <FormHelperText error sx={{ px: 2 }}>{t('End date must be later than start date')}</FormHelperText>
         )}
       </DialogContent>
-
       <DialogActions>
-        <Button variant="outlined" color="inherit" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button disabled={error} variant="contained" onClick={handleSubmit}>
-          Apply
-        </Button>
+        <Button variant="outlined" color="inherit" onClick={onClose}>{t('Cancel')}</Button>
+        <Button disabled={error} variant="contained" onClick={handleSubmit}>{t('Apply')}</Button>
       </DialogActions>
     </Dialog>
   );

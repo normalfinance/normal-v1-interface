@@ -8,5 +8,19 @@
     "title": "Blog",
     "caption": "Raccourcis clavier personnalisés."
   },
-  "subheader": "Sous-titre"
+  "subheader": "Sous-titre",
+  "Overview": "Aperçu",
+  "Trade": "Échanger",
+  "Spot": "Spot",
+  "Indexes": "Indices",
+  "Earn": "Gagner",
+  "Yield": "Rendement",
+  "LP": "LP",
+  "Rewards": "Récompenses",
+  "Referrals": "Parrainages",
+  "Analytics": "Analytique",
+  "More": "Plus",
+  "Governance": "Gouvernance",
+  "Help & Feedback": "Aide & Retour",
+  "Docs": "Docs"
 }
