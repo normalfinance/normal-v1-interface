@@ -6,7 +6,7 @@ import { styled } from '@mui/material/styles';
 import ListSubheader from '@mui/material/ListSubheader';
 
 import { navSectionClasses } from '../styles';
-import { Iconify, iconifyClasses } from '../../iconify';
+import { Iconify, iconifyClasses } from '@/components/template/iconify';
 
 // ----------------------------------------------------------------------
 

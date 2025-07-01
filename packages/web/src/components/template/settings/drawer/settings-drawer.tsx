@@ -17,7 +17,7 @@ import { useColorScheme } from '@mui/material/styles';
 import { themeConfig } from '@/theme/theme-config';
 import { primaryColorPresets } from '@/theme/with-settings';
 
-import { Iconify } from '../../iconify';
+import { Iconify } from '@/components/template/iconify';
 import { BaseOption } from './base-option';
 import { Scrollbar } from '../../scrollbar';
 import { SmallBlock, LargeBlock } from './styles';

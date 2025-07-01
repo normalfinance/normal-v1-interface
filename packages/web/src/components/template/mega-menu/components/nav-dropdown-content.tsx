@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 
 import { RouterLink } from '@/routes/components';
 
-import { Iconify } from '../../iconify';
+import { Iconify } from '@/components/template/iconify';
 import { NavSubList } from './nav-sub-list';
 import { megaMenuClasses } from '../styles';
 // import { NavCarousel } from './nav-carousel';

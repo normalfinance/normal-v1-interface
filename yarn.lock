@@ -4568,8 +4568,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
-=======
 "@solana/wallet-adapter-base@npm:0.9.23":
   version: 0.9.23
   resolution: "@solana/wallet-adapter-base@npm:0.9.23"
@@ -4661,14 +4659,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@stellar/freighter-api@npm:1.7.1":
-  version: 1.7.1
-  resolution: "@stellar/freighter-api@npm:1.7.1"
-  checksum: 02ff598d67e57bbadf24ab807b61045a8d6bbaa6d82dd25168793716eb960911a3fbbeac9cc59f610336a31d19a41de3fef8dd6a6d02826a241fed1615b36847
-  languageName: node
-  linkType: hard
-
->>>>>>> 14cc2be ((feat): status page and crisp config - review critical)
 "@stellar/freighter-api@npm:3.0.0":
   version: 3.0.0
   resolution: "@stellar/freighter-api@npm:3.0.0"
