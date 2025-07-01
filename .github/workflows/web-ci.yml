@@ -7,8 +7,8 @@ on:
   push:
     branches: 
       - '**'
-    paths:
-      - 'packages/web/**'
+    # paths:
+    #   - 'packages/web/**'
 
 jobs:
   web:
