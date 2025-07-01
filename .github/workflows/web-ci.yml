@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: yarn
-          cache-dependency-path: packages/web/yarn.lock
+          # cache-dependency-path: packages/web/yarn.lock
 
       - name: Install dependencies (Yarn)
         run: yarn install --frozen-lockfile
