@@ -1,6 +1,6 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@normalfinance/types';
 
+import { useTranslate } from '@/locales';
 import React, { useState, useCallback } from 'react';
 
 import TabPanel from '@mui/lab/TabPanel';

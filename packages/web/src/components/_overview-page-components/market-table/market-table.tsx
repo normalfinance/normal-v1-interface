@@ -1,12 +1,13 @@
 'use client';
 
-import type { TableHeadCellProps } from '@/components/template/table';
+import type { LabelColor } from '@/components/template/label';
 import type { IMarketTableFilters } from '@/types/marketTable';
+import type { TableHeadCellProps } from '@/components/template/table';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { useSetState } from 'minimal-shared/hooks';
-import { useTranslate } from '@/locales';
+import { useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -15,6 +16,7 @@ import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 
+import { Label } from '@/components/template/label';
 import { Scrollbar } from '@/components/template/scrollbar';
 import {
   useTable,
@@ -23,10 +25,8 @@ import {
   getComparator,
   TableEmptyRows,
   TableHeadCustom,
-  TablePaginationCustom,
 } from '@/components/template/table';
 
-import { Label, LabelColor } from '@/components/template/label';
 import { MarketTableRow } from './_components/market-table-row';
 import { MarketTableToolbar } from './_components/market-table-toolbar';
 import { MarketTableFiltersResult } from './_components/market-table-filters-result';
@@ -121,8 +121,7 @@ export function MarketTable({ markets }: MarketTableProps) {
   );
 
   return (
-    <>
-      <Card>
+    <Card>
         <Tabs
           value={currentFilters.status}
           onChange={handleFilterStatus}
@@ -219,7 +218,6 @@ export function MarketTable({ markets }: MarketTableProps) {
           </Scrollbar>
         </Box>
       </Card>
-    </>
   );
 }
 

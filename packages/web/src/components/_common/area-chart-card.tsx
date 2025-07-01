@@ -1,16 +1,15 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import type { CardProps } from '@mui/material/Card';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
+import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
+import { fShortenNumber } from '@/utils/format-number';
 
 import Card from '@mui/material/Card';
 import { useTheme } from '@mui/material/styles';
 import CardHeader from '@mui/material/CardHeader';
-
-import { fShortenNumber } from '@/utils/format-number';
 
 import { Chart, useChart, ChartSelect, ChartLegends } from '@/components/template/chart';
 
@@ -61,15 +60,12 @@ export function AreaChartCard({
 
   // Make sure there's data for the selected timeframe
   const realtimeData = chart[selectedSeries];
-  if (!realtimeData) {
-    return <div>{t('No chart data available')}</div>;
-  }
 
   const chartOptions = useChart({
     colors: [effectiveColor],
     xaxis: {
-      categories: realtimeData.categories,
-      tickAmount: realtimeData.tickAmount,
+      categories: realtimeData?.categories || [],
+      tickAmount: realtimeData?.tickAmount || 0,
     },
     yaxis: {
       labels: {
@@ -83,6 +79,10 @@ export function AreaChartCard({
       setSelectedSeries(newValue);
     }
   }, []);
+
+  if (!realtimeData) {
+    return <div>{t('No chart data available')}</div>;
+  }
 
   return (
     <Card sx={sx} {...other}>

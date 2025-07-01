@@ -1,12 +1,12 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
 
+import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { NormalPoolRouterContract } from '@normalfinance/contracts';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
 import { constants, checkTrustline, fetchAndIssueTrustline } from '@normalfinance/utils';

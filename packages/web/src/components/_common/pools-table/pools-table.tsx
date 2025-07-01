@@ -1,23 +1,24 @@
+import type { TxType, PoolTxRow } from '@/types/pools';
+
 import { useTranslate } from '@/locales';
 import React, { useMemo, useState } from 'react';
-import dayjs from 'dayjs';
+
+import { alpha, useTheme } from '@mui/material/styles';
 import {
+  Chip,
+  Menu,
+  Card,
   Table,
+  Paper,
+  TableRow,
+  MenuItem,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
-  TableRow,
-  Paper,
-  Chip,
   Typography,
+  TableContainer,
   TableSortLabel,
-  Menu,
-  MenuItem,
-  Card,
 } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
-import { PoolTxRow, TxType } from '@/types/pools';
 
 
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
@@ -121,16 +122,16 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  cons
                     anchorEl={typeAnchor}
                     onClose={() => setTypeAnchor(null)}
                   >
-                    {(['All', 'Buy', 'Sell', 'Mint', 'Redeem'] as const).map((t) => (
+                    {(['All', 'Buy', 'Sell', 'Mint', 'Redeem'] as const).map((type) => (
                       <MenuItem
-                        key={t}
-                        selected={typeFilter === t}
+                        key={type}
+                        selected={typeFilter === type}
                         onClick={() => {
-                          setTypeFilter(t);
+                          setTypeFilter(type);
                           setTypeAnchor(null);
                         }}
                       >
-                        {t}
+                        {t(type)}
                       </MenuItem>
                     ))}
                   </Menu>

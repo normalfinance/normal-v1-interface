@@ -1,11 +1,12 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
+;
 import type {
   PoolDetails,
   ExplorerChartData,
 } from '@/components/_common/pools-explore/explorer-chart-data';
 
+import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';

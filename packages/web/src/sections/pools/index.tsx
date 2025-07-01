@@ -1,6 +1,6 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
+;
 import type { PoolTxRow } from '@/types/pools';
 import type { Pool } from '@/components/_common/pools';
 import type { LegendValue } from '@/components/_common/area-chart-card';
@@ -9,6 +9,7 @@ import type { PoolStat, PoolBalance } from '@/components/_common//pools-apr/pool
 import type { ExplorerChartData} from '@/components/_common/pools-explore/pools-explore';
 import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
+import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { constants } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';

@@ -1,16 +1,18 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
+;
 import type { LegendValue } from '@/components/_common/area-chart-card';
 
+import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrencyCompact } from '@/utils/format-number';
-import { AreaChartCard } from '@/components/_common/area-chart-card';
-import { VolumeChartCard } from '@/components/_analytics-page-components/volume-chart-card';
 import { createChartData, type RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 import Grid2 from '@mui/material/Grid2';
 import { Stack, useTheme, Typography } from '@mui/material';
+
+import { AreaChartCard } from '@/components/_common/area-chart-card';
+import { VolumeChartCard } from '@/components/_analytics-page-components/volume-chart-card';
 
 export default function AnalyticsView() {
   const theme = useTheme();

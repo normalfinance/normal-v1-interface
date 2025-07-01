@@ -1,7 +1,8 @@
-import { useTranslate } from '@/locales';
 import type { BoxProps } from '@mui/material/Box';
 import type { Theme, SxProps } from '@mui/material/styles';
 import type { TypographyProps } from '@mui/material/Typography';
+
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';

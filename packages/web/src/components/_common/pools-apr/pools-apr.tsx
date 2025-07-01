@@ -1,7 +1,7 @@
-import { useTranslate } from '@/locales';
 import type { CardProps } from '@mui/material/Card';
 
 import { useState } from 'react';
+import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
 

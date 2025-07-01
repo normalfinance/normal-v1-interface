@@ -1,20 +1,23 @@
-import { useTranslate } from '@/locales';
+import type { Token } from '@/types/token';
+
 import React from 'react';
+import { useTranslate } from '@/locales';
+import { shortenAddress } from '@/utils/format-address';
+import { fCurrencyTwoDecimals } from '@/utils/format-number';
+
+import { useTheme } from '@mui/material/styles';
 import {
+  Box,
   Dialog,
+  Button,
+  Typography,
+  IconButton,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
-  Typography,
-  Box,
-  IconButton,
 } from '@mui/material';
-import { fCurrencyTwoDecimals } from '@/utils/format-number';
-import { Token } from '@/types/token';
+
 import { Iconify } from '../template/iconify';
-import { useTheme } from '@mui/material/styles';
-import { shortenAddress } from '@/utils/format-address';
 
 export interface SendReviewProps {
   open: boolean;

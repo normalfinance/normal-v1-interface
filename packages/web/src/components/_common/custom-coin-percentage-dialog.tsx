@@ -1,16 +1,18 @@
+import type { IndexCoin } from '@/types/indexes';
+
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
+
 import {
+  Box,
   Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   TextField,
   Typography,
-  Box,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
-import { IndexCoin } from '@/types/indexes';
 
 type CustomCoinPercentageDialogProps = {
   open: boolean;

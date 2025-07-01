@@ -1,8 +1,8 @@
 import type { LinkProps } from '@mui/material/Link';
 
-import Link from '@mui/material/Link';
-
 import { RouterLink } from '@/routes/components';
+
+import Link from '@mui/material/Link';
 
 import { Iconify, iconifyClasses } from '@/components/template/iconify';
 

@@ -1,11 +1,10 @@
+import { usePathname } from '@/routes/hooks';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useRef, useEffect, useCallback } from 'react';
 import { isActiveLink, isExternalLink } from 'minimal-shared/utils';
 
 import Divider from '@mui/material/Divider';
 import Drawer, { drawerClasses } from '@mui/material/Drawer';
-
-import { usePathname } from '@/routes/hooks';
 
 import { Scrollbar } from '@/components/template/scrollbar';
 

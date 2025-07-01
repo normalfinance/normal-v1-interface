@@ -1,20 +1,24 @@
 'use client';
+
+import type { Token } from '@/types/token';
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { StatCardData } from '@/types/stat-card-data';
+import type { LegendValue } from '@/components/_common/area-chart-card';
+import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
+
 import { useTranslate } from '@/locales';
+import { DashboardContent } from '@/layouts/dashboard';
+import { createChartData } from '@/utils/portfolio-value-chart-series';
+import { fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
 
 import Grid2 from '@mui/material/Grid2';
-import { AssetsAndLiabilities } from '@/components/_overview-page-components/assets-and-liabilities/assets-and-liabilities';
-import { DashboardContent } from '@/layouts/dashboard';
-import { Stack, Typography, useTheme } from '@mui/material';
+import { Stack, useTheme, Typography } from '@mui/material';
+
+import { StatCard } from '@/components/_common/stat-card';
+import { SwapSendCard } from '@/components/_common/swap-send-card';
+import { AreaChartCard } from '@/components/_common/area-chart-card';
 import { Markets } from '@/components/_overview-page-components/markets/markets';
 import { MarketTable } from '@/components/_overview-page-components/market-table/market-table';
-import { createChartData, RealtimeChartData } from '@/utils/portfolio-value-chart-series';
-import { StatCardData } from '@/types/stat-card-data';
-import { fCurrencyCompact, fShortenNumber } from '@/utils/format-number';
-import { StatCard } from '@/components/_common/stat-card';
-import { AreaChartCard, LegendValue } from '@/components/_common/area-chart-card';
-import { SwapSendCard } from '@/components/_common/swap-send-card';
-import { Token } from '@/types/token';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
 
 export default function OverviewView() {
   const theme = useTheme();

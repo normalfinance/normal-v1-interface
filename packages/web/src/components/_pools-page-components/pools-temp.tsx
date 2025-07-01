@@ -1,9 +1,9 @@
 'use client';
-import { useTranslate } from '@/locales';
 
 import type { Token } from '@normalfinance/types';
 
 import React from 'react';
+import { useTranslate } from '@/locales';
 
 import { Box, Grid2, Typography } from '@mui/material';
 

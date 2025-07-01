@@ -1,13 +1,12 @@
-import { useTranslate } from '@/locales';
 import type { FileRejection } from 'react-dropzone';
 
+import { useTranslate } from '@/locales';
+import { fData } from '@/utils/format-number';
+import { uploadClasses } from '@/classes/upload';
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
 import { styled } from '@mui/material/styles';
 
-import { fData } from '@/utils/format-number';
-
-import { uploadClasses } from '@/classes/upload';
 import { fileData } from '../../utils/file-thumbnail';
 
 // ----------------------------------------------------------------------

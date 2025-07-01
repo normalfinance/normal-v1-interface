@@ -1,12 +1,11 @@
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { useEffect } from 'react';
+import { usePathname } from '@/routes/hooks';
 import { mergeClasses } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
-
-import { usePathname } from '@/routes/hooks';
 
 import { Logo } from '@/components/template/logo';
 import { Scrollbar } from '@/components/template/scrollbar';

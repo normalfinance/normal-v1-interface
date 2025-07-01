@@ -1,12 +1,11 @@
-import { useTranslate } from '@/locales';
 import type { Theme, SxProps } from '@mui/material/styles';
 
+import { useTranslate } from '@/locales';
 import { mergeClasses } from 'minimal-shared/utils';
-
-import { styled } from '@mui/material/styles';
-
 import { createClasses } from '@/theme/create-classes';
 import { UploadIllustration } from '@/assets/illustrations';
+
+import { styled } from '@mui/material/styles';
 
 // ----------------------------------------------------------------------
 

@@ -1,17 +1,21 @@
 'use client';
 
+import type { LabelColor } from '@/components/template/label';
 import type { Market } from '@/components/_overview-page-components/market-table/market-table'; // adjust the path as needed
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
-import Avatar from '@mui/material/Avatar';
+
+import { Icon } from '@iconify/react';
+import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
+import { RouterLink } from '@/routes/components';
+
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
+import Avatar from '@mui/material/Avatar';
+import TableRow from '@mui/material/TableRow';
+import TableCell from '@mui/material/TableCell';
 import { useTheme } from '@mui/material/styles';
-import { RouterLink } from '@/routes/components';
-import { Label } from '@/components/template/label';
-import { Icon } from '@iconify/react';
-import { useRouter } from 'next/navigation';
-import { useTranslate } from '@/locales';
+
+import { Label  } from '@/components/template/label';
 
 type Props = {
   row: Market;
@@ -19,8 +23,8 @@ type Props = {
   editHref: string;
 };
 
-import { LabelColor } from '@/components/template/label';
-import { fCurrency, fPercent } from '@/utils/format-number';
+import { fPercent, fCurrency } from '@/utils/format-number';
+
 
 const statusColorMapping: Record<string, LabelColor> = {
   trending: 'info',

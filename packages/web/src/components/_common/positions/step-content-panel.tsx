@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { Box, Button, Stack } from '@mui/material';
-import { z } from 'zod';
-import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import type { Token } from '@/types/token';
 
-import { Token } from '@/types/token';
-import { StepOne } from './step-one';
+import { z } from 'zod';
+import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, FormProvider } from 'react-hook-form';
+
+import { Box, Stack, Button } from '@mui/material';
+
 import StepTwo from './step-two';
+import { StepOne } from './step-one';
 
 /* ------------------------------------------------------------------ */
 /* props                                                               */

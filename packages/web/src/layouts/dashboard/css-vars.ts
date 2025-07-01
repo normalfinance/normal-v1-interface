@@ -1,5 +1,5 @@
-import type { SettingsState } from '@/components/template/settings';
 import type { Theme, CSSObject } from '@mui/material/styles';
+import type { SettingsState } from '@/components/template/settings';
 
 import { varAlpha } from 'minimal-shared/utils';
 

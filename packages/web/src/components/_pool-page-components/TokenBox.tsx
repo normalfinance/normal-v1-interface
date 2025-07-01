@@ -1,6 +1,6 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@normalfinance/types';
 
+import { useTranslate } from '@/locales';
 import React, { useMemo, useCallback } from 'react';
 
 import { Box, Grid2, Input, Button, Skeleton, Typography } from '@mui/material';

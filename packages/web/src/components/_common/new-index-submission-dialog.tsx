@@ -1,27 +1,31 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
-import React, { useEffect, useState } from 'react';
+import type { NativeToken } from '@/types/native-token';
+
+import { useTranslate } from '@/locales';
+import { useFormContext } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+
+import { useTheme } from '@mui/material/styles';
+import LoadingButton from '@mui/lab/LoadingButton';
 import {
+  Box,
+  Stack,
   Dialog,
+  Accordion,
+  Typography,
+  IconButton,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Typography,
-  Box,
-  IconButton,
-  Stack,
-  Accordion,
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
-import LoadingButton from '@mui/lab/LoadingButton';
-import { useFormContext } from 'react-hook-form';
-import { NewIndexSchemaType } from './new-index-form';
+
 import { Iconify } from '../template/iconify';
-import { fCurrencyTwoDecimals, fRawPercent } from '@/utils/format-number';
-import { useTheme } from '@mui/material/styles';
-import { NativeToken } from '@/types/native-token';
+
+import type { NewIndexSchemaType } from './new-index-form';
 
 type NewIndexSubmissionDialogProps = {
   open: boolean;
@@ -50,32 +54,29 @@ export default function NewIndexSubmissionDialog({
   // 3) On each render, detect if `avatarUrl` is a File or string
   useEffect(() => {
     const avatarValue = allFields.avatarUrl;
+    let objectUrl: string | undefined;
 
     if (!avatarValue) {
       // No file or string
       setAvatarPreview('');
-      return;
-    }
-
-    // If it's a string, maybe user has an existing hosted avatar URL
-    if (typeof avatarValue === 'string') {
+    } else if (typeof avatarValue === 'string') {
+      // If it's a string, maybe user has an existing hosted avatar URL
       setAvatarPreview(avatarValue);
-      return;
-    }
-
-    // If it's a File, create an object URL to preview
-    if (avatarValue instanceof File) {
-      const objectUrl = URL.createObjectURL(avatarValue);
+    } else if (avatarValue instanceof File) {
+      // If it's a File, create an object URL to preview
+      objectUrl = URL.createObjectURL(avatarValue);
       setAvatarPreview(objectUrl);
-
-      // Clean up the object URL when component unmounts or changes
-      return () => {
-        URL.revokeObjectURL(objectUrl);
-      };
+    } else {
+      // If it's something else, fallback
+      setAvatarPreview('');
     }
 
-    // If it’s something else, fallback
-    setAvatarPreview('');
+    // Cleanup: always revoke objectURL if it was created
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
   }, [allFields.avatarUrl]);
 
   // Submit handler for the button
@@ -113,7 +114,9 @@ export default function NewIndexSubmissionDialog({
     >
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" component="div" color="text.primary">{t('Confirm Submission')}</Typography>
+          <Typography variant="h6" component="div" color="text.primary">
+            {t('Confirm Submission')}
+          </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
           </IconButton>
@@ -146,7 +149,7 @@ export default function NewIndexSubmissionDialog({
             >
               <Box sx={{ width: 36, height: 36 }} component="img" src={coin.url} alt={coin.name} />
 
-              <Stack flex="1 1 auto" textAlign={'left'}>
+              <Stack flex="1 1 auto" textAlign="left">
                 <div>{coin.name}</div>
                 <Box component="span" sx={{ typography: 'caption', color: 'text.disabled' }}>
                   {coin.shortName}
@@ -210,7 +213,9 @@ export default function NewIndexSubmissionDialog({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >{t('Show less')}</Typography>
+                >
+                  {t('Show less')}
+                </Typography>
                 <Iconify
                   icon="carbon:chevron-sort"
                   width={14}
@@ -270,7 +275,9 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >{t('Index Name')}</Typography>
+                    >
+                      {t('Index Name')}
+                    </Typography>
                   </Box>
 
                   <Typography
@@ -307,7 +314,9 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >{t('Index Symbol')}</Typography>
+                    >
+                      {t('Index Symbol')}
+                    </Typography>
                   </Box>
 
                   <Typography
@@ -344,7 +353,9 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >{t('Weighting Method')}</Typography>
+                    >
+                      {t('Weighting Method')}
+                    </Typography>
                   </Box>
 
                   <Typography
@@ -381,7 +392,9 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >{t('Initial Price')}</Typography>
+                    >
+                      {t('Initial Price')}
+                    </Typography>
                   </Box>
 
                   <Typography
@@ -418,7 +431,9 @@ export default function NewIndexSubmissionDialog({
                         color: theme.palette.text.secondary,
                         fontSize: '12px',
                       }}
-                    >{t('Initial Deposit')}</Typography>
+                    >
+                      {t('Initial Deposit')}
+                    </Typography>
                   </Box>
 
                   <Typography
@@ -455,7 +470,9 @@ export default function NewIndexSubmissionDialog({
           variant="soft"
           color="success"
           onClick={handleSubmitClick}
-        >{t('Submit')}</LoadingButton>
+        >
+          {t('Submit')}
+        </LoadingButton>
       </DialogActions>
     </Dialog>
   );

@@ -1,14 +1,16 @@
-import { useTranslate } from '@/locales';
+import type { IndexCoin } from '@/types/indexes';
 import type { CardProps } from '@mui/material/Card';
 import type { ChartOptions } from '@/components/template/chart';
+
+import { useTranslate } from '@/locales';
+import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+
 import Box from '@mui/material/Box';
+import { Button } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
-import { Chart, useChart } from '@/components/template/chart';
-import { IndexCoin } from '@/types/indexes';
 
-import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
-import { Button } from '@mui/material';
+import { Chart, useChart } from '@/components/template/chart';
 
 type ChartConfig = {
   colors?: string[];
@@ -114,7 +116,7 @@ export function IndexCoinStorageOverview({
           >
             <Box sx={{ width: 36, height: 36 }} component="img" src={coin.url} alt={coin.name} />
 
-            <Stack flex="1 1 auto" textAlign={'left'}>
+            <Stack flex="1 1 auto" textAlign="left">
               <div>{coin.name}</div>
               <Box component="span" sx={{ typography: 'caption', color: 'text.disabled' }}>
                 {coin.shortName}

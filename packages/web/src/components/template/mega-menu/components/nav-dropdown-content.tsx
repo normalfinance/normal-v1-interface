@@ -1,17 +1,17 @@
 import { useTranslate } from '@/locales';
+import { RouterLink } from '@/routes/components';
+
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Masonry from '@mui/lab/Masonry';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 
-import { RouterLink } from '@/routes/components';
-
+// import { NavCarousel } from './nav-carousel';
+import { NavUl } from './nav-elements';
 import { Iconify } from '../../iconify';
 import { NavSubList } from './nav-sub-list';
 import { megaMenuClasses } from '../styles';
-// import { NavCarousel } from './nav-carousel';
-import { NavUl } from './nav-elements';
 
 import type { NavListProps } from '../types';
 

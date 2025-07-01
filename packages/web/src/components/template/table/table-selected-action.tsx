@@ -1,5 +1,6 @@
-import { useTranslate } from '@/locales';
 import type { BoxProps } from '@mui/material/Box';
+
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
@@ -24,10 +25,12 @@ export function TableSelectedAction({
   onSelectAllRows,
   ...other
 }: TableSelectedActionProps) {
+
+  const { t } = useTranslate('auto');
+  
   if (!numSelected) {
     return null;
   }
-  const { t } = useTranslate('auto');
 
   return (
     <Box
@@ -70,7 +73,9 @@ export function TableSelectedAction({
           ...(dense && { ml: 3 }),
         }}
       >
-        {numSelected}{t('selected')}</Typography>
+        {numSelected}
+        {t('selected')}
+      </Typography>
       {action && action}
     </Box>
   );

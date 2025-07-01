@@ -1,11 +1,13 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
-import SwapCard from '@/components/_common/swap-card';
+;
+import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Grid2 from '@mui/material/Grid2';
 import { Stack, Typography } from '@mui/material';
+
+import SwapCard from '@/components/_common/swap-card';
 
 export default function SwapView() {
   const { t } = useTranslate();

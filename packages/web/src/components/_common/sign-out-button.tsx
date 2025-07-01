@@ -1,5 +1,6 @@
-import { useTranslate } from '@/locales';
 import type { ButtonProps } from '@mui/material/Button';
+
+import { useTranslate } from '@/locales';
 
 import Button from '@mui/material/Button';
 

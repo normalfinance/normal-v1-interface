@@ -1,11 +1,15 @@
-'use client';;
+'use client';
+
+;
+import type { IndexCoin } from '@/types/indexes';
+
 import { useTranslate } from '@/locales';
+import { DashboardContent } from '@/layouts/dashboard';
 
 import Grid2 from '@mui/material/Grid2';
-import { DashboardContent } from '@/layouts/dashboard';
 import { Stack, Typography } from '@mui/material';
+
 import { NewIndexForm } from '@/components/_common/new-index-form';
-import { IndexCoin } from '@/types/indexes';
 
 export default function CreateAnIndexView() {
   const { t } = useTranslate();
@@ -74,7 +78,7 @@ export default function CreateAnIndexView() {
           {/* Pass the native token symbol here */}
           <NewIndexForm tokenSymbol="SOL" availableCoins={availableCoins} />
         </Grid2>
-        <Grid2 size={{ xs: 12, md: 4 }}></Grid2>
+        <Grid2 size={{ xs: 12, md: 4 }} />
       </Grid2>
     </DashboardContent>
   );

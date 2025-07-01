@@ -2,6 +2,7 @@ import type { BoxProps } from '@mui/material/Box';
 import type { CardProps } from '@mui/material/Card';
 
 import { useTabs } from 'minimal-shared/hooks';
+import { fData, fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -12,8 +13,6 @@ import Avatar from '@mui/material/Avatar';
 import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import { svgIconClasses } from '@mui/material/SvgIcon';
-
-import { fData, fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import { Label } from '@/components/template/label';
 import { Iconify } from '@/components/template/iconify';

@@ -1,5 +1,4 @@
 import { CONFIG } from '@/global-config';
-
 import { themeConfig } from '@/theme/theme-config';
 
 import type { SettingsState } from './types';

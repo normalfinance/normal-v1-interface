@@ -1,17 +1,16 @@
+import type { MultiFilePreviewProps } from '@/types/upload';
+
+import { fData } from '@/utils/format-number';
+import { uploadClasses } from '@/classes/upload';
+import { fileData } from '@/utils/file-thumbnail';
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
 import { styled } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 import ListItemText from '@mui/material/ListItemText';
 
-import { fData } from '@/utils/format-number';
-
 import { Iconify } from '../template/iconify';
-import { uploadClasses } from '@/classes/upload';
-import { fileData } from '@/utils/file-thumbnail';
 import { FileThumbnail } from './file-thumbnail';
-
-import type { MultiFilePreviewProps } from '@/types/upload';
 
 // ----------------------------------------------------------------------
 

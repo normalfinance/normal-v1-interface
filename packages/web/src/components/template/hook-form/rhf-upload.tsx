@@ -1,4 +1,5 @@
 import type { BoxProps } from '@mui/material/Box';
+import type { UploadProps } from '@/types/upload';
 
 import { Controller, useFormContext } from 'react-hook-form';
 
@@ -8,8 +9,6 @@ import { HelperText } from './help-text';
 import { Upload } from '../../_common/upload';
 import { UploadBox } from '../../_common/upload-box';
 import { UploadAvatar } from '../../_common/upload-avatar';
-
-import type { UploadProps } from '@/types/upload';
 
 // ----------------------------------------------------------------------
 

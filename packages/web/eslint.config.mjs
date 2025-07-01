@@ -6,6 +6,7 @@ import importPlugin from 'eslint-plugin-import';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import perfectionistPlugin from 'eslint-plugin-perfectionist';
 import unusedImportsPlugin from 'eslint-plugin-unused-imports';
+import i18nextPlugin from 'eslint-plugin-i18next';
 
 // ----------------------------------------------------------------------
 
@@ -191,4 +192,5 @@ export default [
   ...eslintTs.configs.recommended,
   reactPlugin.configs.flat.recommended,
   customConfig,
+  i18nextPlugin.configs['flat/recommended'],
 ];

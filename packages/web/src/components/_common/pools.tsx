@@ -1,8 +1,9 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
+;
 import type { Token } from '@normalfinance/types';
 
+import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';

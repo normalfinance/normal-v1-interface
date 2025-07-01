@@ -1,7 +1,7 @@
-import { useTranslate } from '@/locales';
 import type { DialogProps } from '@mui/material';
 import type { Connector } from '@normalfinance/types';
 
+import { useTranslate } from '@/locales';
 import { useState, useEffect, useCallback } from 'react';
 
 import {

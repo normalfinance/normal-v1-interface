@@ -1,14 +1,17 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
-import { useTheme, alpha } from '@mui/material/styles';
-import { Stack, Typography, InputBase, Box, Avatar } from '@mui/material';
-import { useFormContext, Controller } from 'react-hook-form';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { Token } from '@/types/token';
-import { FormValues } from './step-content-panel';
+;
+import type { Token } from '@/types/token';
+
+import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
-import { column } from 'stylis';
+import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { Controller, useFormContext } from 'react-hook-form';
+
+import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Stack, Avatar, InputBase, Typography } from '@mui/material';
+
+import type { FormValues } from './step-content-panel';
 
 /* ------------------------------------------------------------------ */
 /* props                                                               */
@@ -90,12 +93,12 @@ export default function StepTwo({ token }: StepTwoProps) {
         {token && (
           <Stack
             alignItems="center"
-            direction={'row'}
+            direction="row"
             spacing={1}
             sx={{ mr: 2, borderRadius: 99, p: 1 }}
           >
             <Avatar src={token.url} sx={{ width: 32, height: 32 }} />
-            <Typography variant="body1" fontWeight={'bold'}>
+            <Typography variant="body1" fontWeight="bold">
               {token.shortname}
             </Typography>
           </Stack>

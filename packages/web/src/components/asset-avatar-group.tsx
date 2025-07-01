@@ -1,8 +1,9 @@
 'use client';
 
+import type { CardProps } from '@mui/material/Card';
+
 // @mui
 import { Avatar } from '@mui/material';
-import { CardProps } from '@mui/material/Card';
 import AvatarGroup, { avatarGroupClasses } from '@mui/material/AvatarGroup';
 
 // ----------------------------------------------------------------------

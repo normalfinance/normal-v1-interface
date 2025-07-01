@@ -1,15 +1,19 @@
+import type { Token } from '@/types/token';
+import type { CardProps } from '@mui/material';
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
+
 import { useTranslate } from '@/locales';
-import React, { useState, useRef, useEffect } from 'react';
-import { Typography, Box, CardProps, Button, InputBase } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
-import { Token } from '@/types/token';
 import { fCurrency } from '@/utils/format-number';
-import { Iconify } from '../template/iconify';
+import React, { useRef, useState, useEffect } from 'react';
+import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
+
+import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Button, InputBase, Typography } from '@mui/material';
+
 import PickToken from './pick-token';
 import SendReview from './send-review';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { convertCoinToFiat, convertFiatToCoin, getMaxAmount } from '@/utils/conversion-helpers';
+import { Iconify } from '../template/iconify';
 
 interface SendCardProps extends CardProps {
   tokensList?: Token[];
@@ -131,12 +135,8 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
 
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
-    if (label === 'Select a token') {
-    } else if (label === 'Enter an amount') {
-    } else if (label === 'Input wallet address') {
-    } else if (label.startsWith('Insufficient')) {
-    } else if (label === 'Send') {
-      // open a review popup
+
+    if (label === 'Send') {
       setReviewOpen(true);
     }
   };

@@ -1,22 +1,25 @@
 'use client';
-import { useTranslate } from '@/locales';
+
+import type { IndexCoin } from '@/types/indexes';
 
 import React, { useState } from 'react';
+import { useTranslate } from '@/locales';
+import { fShortenNumber, fCurrencyTwoDecimals } from '@/utils/format-number';
+
+import { useTheme } from '@mui/material/styles';
 import {
+  Box,
   Dialog,
+  Button,
+  TextField,
+  Typography,
+  IconButton,
   DialogTitle,
   DialogContent,
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  TextField,
   InputAdornment,
 } from '@mui/material';
-import { IndexCoin } from '@/types/indexes';
+
 import { Iconify } from '../template/iconify';
-import { useTheme } from '@mui/material/styles';
-import { fCurrencyTwoDecimals, fShortenNumber } from '@/utils/format-number';
 
 type Props = {
   open: boolean;
@@ -120,14 +123,14 @@ export default function IndexCoinPickerDialog({
         </Box>
 
         {searchTerm.length > 0 ? (
-          <Box width={'100%'}>
+          <Box width="100%">
             <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <Iconify icon="eva:search-fill" width={14} />
 
               <Typography variant="caption">{t('Search results')}</Typography>
             </Box>
             {filteredTokens.length > 0 ? (
-              <Box sx={{ mt: '12px' }} width={'100%'}>
+              <Box sx={{ mt: '12px' }} width="100%">
                 <Box
                   sx={{
                     display: 'flex',
@@ -151,10 +154,10 @@ export default function IndexCoinPickerDialog({
                       onClick={() => handleSelectCoin(token)}
                     >
                       <Box
-                        display={'flex'}
-                        alignItems={'center'}
-                        justifyContent={'center'}
-                        gap={'10px'}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        gap="10px"
                       >
                         <Box
                           component="img"
@@ -238,7 +241,7 @@ export default function IndexCoinPickerDialog({
             )}
           </Box>
         ) : (
-          <Box sx={{ mt: '12px' }} width={'100%'}>
+          <Box sx={{ mt: '12px' }} width="100%">
             <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <Iconify icon="eva:star-outline" width={14} />
 
@@ -267,10 +270,10 @@ export default function IndexCoinPickerDialog({
                   onClick={() => handleSelectCoin(token)}
                 >
                   <Box
-                    display={'flex'}
-                    alignItems={'center'}
-                    justifyContent={'center'}
-                    gap={'10px'}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    gap="10px"
                   >
                     <Box
                       component="img"

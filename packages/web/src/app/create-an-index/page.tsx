@@ -1,5 +1,6 @@
+import type { Metadata } from 'next';
+
 import CreateAnIndexView from '@/sections/create-an-index';
-import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Normal | Create an Index',

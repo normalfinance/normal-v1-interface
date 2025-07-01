@@ -1,5 +1,6 @@
+import type { Token } from '@/types/token';
+
 import { fCurrencyTwoDecimals } from './format-number';
-import { Token } from '@/types/token';
 
 //1 USDC = 0.000355263 ETH ($1.00) - We are swaping ETH to USDC
 export const getConversionText = (sellToken: Token, buyToken: Token): string => {
@@ -15,13 +16,9 @@ export const getSwapConversionText = (sellToken: Token, buyToken: Token): string
   return `1 ${sellToken.shortname} = ${fCurrencyTwoDecimals(conversion)} ${buyToken.shortname} (${fCurrencyTwoDecimals(conversion)})`;
 };
 
-export const convertFiatToCoin = (fiatAmount: number, tokenPrice: number): number => {
-  return fiatAmount / tokenPrice;
-};
+export const convertFiatToCoin = (fiatAmount: number, tokenPrice: number): number => fiatAmount / tokenPrice;
 
-export const convertCoinToFiat = (coinAmount: number, tokenPrice: number): number => {
-  return coinAmount * tokenPrice;
-};
+export const convertCoinToFiat = (coinAmount: number, tokenPrice: number): number => coinAmount * tokenPrice;
 
 // In send-card it gets max amount of token in coutn or $ based on the input mode
 export const getMaxAmount = (

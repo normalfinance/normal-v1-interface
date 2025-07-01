@@ -1,12 +1,13 @@
 // app/components/_common/positions/create-position.tsx
 
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
+;
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material/Card';
 
 import { useState } from 'react';
+import { useTranslate } from '@/locales';
 
 import Card from '@mui/material/Card';
 import { Box, Stack, alpha, Button, useTheme, Typography } from '@mui/material';

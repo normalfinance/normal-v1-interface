@@ -1,14 +1,14 @@
-import type { IMarketTableFilters } from '@/types/marketTable';
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
+import type { IMarketTableFilters } from '@/types/marketTable';
 
 import { useCallback } from 'react';
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from '@/components/template/iconify';
-import { useTranslate } from '@/locales';
 
 // ----------------------------------------------------------------------
 
@@ -30,8 +30,7 @@ export function MarketTableToolbar({ filters, onResetPage }: Props) {
   );
 
   return (
-    <>
-      <Box
+    <Box
         sx={{
           p: 2.5,
           gap: 2,
@@ -67,6 +66,5 @@ export function MarketTableToolbar({ filters, onResetPage }: Props) {
           />
         </Box>
       </Box>
-    </>
   );
 }

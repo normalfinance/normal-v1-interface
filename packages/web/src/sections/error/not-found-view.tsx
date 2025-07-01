@@ -1,16 +1,15 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
+;
 import { m } from 'framer-motion';
+import { useTranslate } from '@/locales';
+import { SimpleLayout } from '@/layouts/simple';
+import { RouterLink } from '@/routes/components';
+import { PageNotFoundIllustration } from '@/assets/illustrations';
 
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-
-import { RouterLink } from '@/routes/components';
-
-import { SimpleLayout } from '@/layouts/simple';
-import { PageNotFoundIllustration } from '@/assets/illustrations';
 
 import { varBounce, MotionContainer } from '@/components/template/animate';
 

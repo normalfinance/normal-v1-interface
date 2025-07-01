@@ -1,7 +1,7 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 
 import React, { useState } from 'react';
+import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
 

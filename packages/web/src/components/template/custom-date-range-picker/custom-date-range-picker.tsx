@@ -1,8 +1,9 @@
-import { useTranslate } from '@/locales';
+import type { Dayjs } from 'dayjs';
 import type { DialogProps } from '@mui/material/Dialog';
 import type { Theme, SxProps } from '@mui/material/styles';
 
 import { useCallback } from 'react';
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -17,7 +18,6 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 
 import type { UseDateRangePickerReturn } from './use-date-range-picker';
-import { Dayjs } from 'dayjs';
 
 // ----------------------------------------------------------------------
 

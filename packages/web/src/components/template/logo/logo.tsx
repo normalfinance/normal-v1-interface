@@ -1,15 +1,14 @@
 import type { LinkProps } from '@mui/material/Link';
 
+import { CONFIG } from '@/global-config';
 import { useId, forwardRef } from 'react';
+import { RouterLink } from '@/routes/components';
 import { mergeClasses } from 'minimal-shared/utils';
 
 import Link from '@mui/material/Link';
 import { styled, useTheme } from '@mui/material/styles';
 
-import { RouterLink } from '@/routes/components';
-
 import { logoClasses } from './classes';
-import { CONFIG } from '@/global-config';
 
 // ----------------------------------------------------------------------
 

@@ -1,6 +1,7 @@
 import type { TextFieldProps } from '@mui/material/TextField';
 import type { Value, Country } from 'react-phone-number-input/input';
 
+import { countries } from '@/assets/data/countries';
 import { parsePhoneNumber } from 'react-phone-number-input';
 import PhoneNumberInput from 'react-phone-number-input/input';
 import { useState, useEffect, forwardRef, useCallback, startTransition } from 'react';
@@ -10,8 +11,6 @@ import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import { inputBaseClasses } from '@mui/material/InputBase';
-
-import { countries } from '@/assets/data/countries';
 
 import { Iconify } from '../iconify';
 import { CountryListPopover } from './list-popover';

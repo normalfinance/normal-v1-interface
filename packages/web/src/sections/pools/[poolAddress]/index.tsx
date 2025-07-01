@@ -1,20 +1,22 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
+;
 import type { Token } from '@normalfinance/types';
 
+import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { constants } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { NormalPoolContract } from '@normalfinance/contracts';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
-import PoolStatsTemp from '@/components/_pool-page-components/pool-stats-temp';
-import PoolLiquidityTemp from '@/components/_pool-page-components/pool-liquidity-temp';
 
 import { Box, Grid, Alert, Stack, Typography, CircularProgress } from '@mui/material';
+
+import PoolStatsTemp from '@/components/_pool-page-components/pool-stats-temp';
+import PoolLiquidityTemp from '@/components/_pool-page-components/pool-liquidity-temp';
 
 interface _Token extends Token {
   readonly decimals: number;

@@ -1,8 +1,10 @@
 import type { CardProps } from '@mui/material/Card';
+
+import { fCurrency, fRawPercent } from '@/utils/format-number';
+
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
-import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 // Define a type for each balance row
 export type BalanceRow = {

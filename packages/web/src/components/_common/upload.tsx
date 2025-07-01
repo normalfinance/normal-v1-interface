@@ -1,5 +1,8 @@
+import type { UploadProps } from '@/types/upload';
+
 import { useTranslate } from '@/locales';
 import { useDropzone } from 'react-dropzone';
+import { uploadClasses } from '@/classes/upload';
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
@@ -7,13 +10,10 @@ import Button from '@mui/material/Button';
 import FormHelperText from '@mui/material/FormHelperText';
 
 import { Iconify } from '../template/iconify';
-import { uploadClasses } from '@/classes/upload';
-import { UploadPlaceholder } from './upload-placeholder';
 import { RejectionFiles } from './rejection-files';
 import { MultiFilePreview } from './multi-file-preview';
+import { UploadPlaceholder } from './upload-placeholder';
 import { DeleteButton, SingleFilePreview } from './single-file-preview';
-
-import type { UploadProps } from '@/types/upload';
 
 // ----------------------------------------------------------------------
 

@@ -1,10 +1,10 @@
 'use client';
 
 import { isEqual } from 'es-toolkit';
+import { useBoolean } from '@/hooks';
 import { useMemo, useEffect, useCallback } from 'react';
 import { getCookie, getStorage } from 'minimal-shared/utils';
 import { useCookies, useLocalStorage } from 'minimal-shared/hooks';
-import { useBoolean } from '@/hooks';
 
 import { SettingsContext } from './settings-context';
 import { SETTINGS_STORAGE_KEY } from '../settings-config';

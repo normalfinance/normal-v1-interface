@@ -4,6 +4,7 @@ import type { BoxProps } from '@mui/material/Box';
 import type { Theme, SxProps, CSSObject } from '@mui/material/styles';
 
 import { mergeClasses } from 'minimal-shared/utils';
+import { createClasses } from '@/theme/create-classes';
 import { useRef, useState, useEffect, forwardRef } from 'react';
 import {
   m,
@@ -15,8 +16,6 @@ import {
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
-
-import { createClasses } from '@/theme/create-classes';
 
 // ----------------------------------------------------------------------
 

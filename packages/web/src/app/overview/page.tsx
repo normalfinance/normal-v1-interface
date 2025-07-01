@@ -1,5 +1,6 @@
+import type { Metadata } from 'next';
+
 import OverviewView from '@/sections/overview';
-import { Metadata } from 'next';
 
 // ----------------------------------------------------------------------
 

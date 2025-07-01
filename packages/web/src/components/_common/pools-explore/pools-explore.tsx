@@ -1,9 +1,9 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import type { CardProps } from '@mui/material/Card';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
+import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
@@ -94,15 +94,11 @@ export function PoolsExplorer({
 
   const realtimeData = chart[selectedMetric]?.[selectedTimeframe];
 
-  if (!realtimeData) {
-    return <div>{t('No chart data available')}</div>;
-  }
-
   const chartOptions = useChart({
     colors: [effectiveColor],
     xaxis: {
-      categories: realtimeData.categories,
-      tickAmount: realtimeData.tickAmount,
+      categories: realtimeData?.categories || [],
+      tickAmount: realtimeData?.tickAmount || 0,
     },
     yaxis: {
       labels: {
@@ -110,6 +106,10 @@ export function PoolsExplorer({
       },
     },
   });
+
+  if (!realtimeData) {
+    return <div>{t('No chart data available')}</div>;
+  }
 
   const timeframeLabels: Record<ChartTimeframeKey, string> = {
     '24h': '1D',
@@ -129,7 +129,9 @@ export function PoolsExplorer({
           {
             name: (
               <>
-                {pairInfo?.tokenA.name}{t('/')}{pairInfo?.tokenB.name}{' '}
+                {pairInfo?.tokenA.name}
+                {t('/')}
+                {pairInfo?.tokenB.name}{' '}
                 <Typography component="span" color="text.secondary" variant="body2">
                   {pairInfo?.address}
                 </Typography>
@@ -170,7 +172,9 @@ export function PoolsExplorer({
         </Box>
 
         <Typography component="span" color="text.primary" variant="h6" ml={1}>
-          {pairInfo?.tokenA.name}{t('/')}{pairInfo?.tokenB.name}
+          {pairInfo?.tokenA.name}
+          {t('/')}
+          {pairInfo?.tokenB.name}
         </Typography>
 
         <Box
@@ -240,7 +244,11 @@ export function PoolsExplorer({
             {exchangeRate?.label}
           </Typography>
 
-          <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>{t('(')}{exchangeRate?.usdEquivalent}{t(')')}</Typography>
+          <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>
+            {t('(')}
+            {exchangeRate?.usdEquivalent}
+            {t(')')}
+          </Typography>
         </Box>
         <Stack direction="row" spacing={0.5} alignItems="center">
           <Box
@@ -277,7 +285,9 @@ export function PoolsExplorer({
                   : 'eva:trending-up-fill'
               }
               color={
-                performance && performance.percentageChange && performance.percentageChange < 0 ? 'error.main' : 'success.main'
+                performance && performance.percentageChange && performance.percentageChange < 0
+                  ? 'error.main'
+                  : 'success.main'
               }
             />
           </Box>
@@ -285,10 +295,15 @@ export function PoolsExplorer({
             variant="caption"
             sx={{
               color:
-                performance && performance.percentageChange && performance.percentageChange < 0 ? 'error.main' : 'success.main',
+                performance && performance.percentageChange && performance.percentageChange < 0
+                  ? 'error.main'
+                  : 'success.main',
             }}
           >
-            {performance && performance.percentageChange && performance.percentageChange >= 0 && '+'}
+            {performance &&
+              performance.percentageChange &&
+              performance.percentageChange >= 0 &&
+              '+'}
             {fPercent(performance && performance.percentageChange)}
           </Typography>
         </Stack>

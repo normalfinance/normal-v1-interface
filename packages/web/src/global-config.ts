@@ -31,7 +31,7 @@ export const CONFIG: ConfigValue = {
   assetsDir: process.env.NEXT_PUBLIC_ASSETS_DIR ?? '',
   isStaticExport: JSON.parse(`${process.env.BUILD_STATIC_EXPORT}`),
   analytics: {
-    enabled: Boolean(process.env.ANALYTICS_ENABLED) ?? false,
+    enabled: process.env.ANALYTICS_ENABLED === 'true',
   },
   crisp: {
     websiteId: process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? '',

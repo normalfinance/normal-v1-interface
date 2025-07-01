@@ -1,11 +1,12 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
+;
 import type { BoxProps } from '@mui/material/Box';
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
 import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
 import { varAlpha } from 'minimal-shared/utils';

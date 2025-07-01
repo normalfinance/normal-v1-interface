@@ -1,9 +1,9 @@
 import type { NavSectionProps } from '@/components/template/nav-section';
 
-import { CONFIG } from '@/global-config';
-import { SvgColor } from '@/components/template/svg-color';
-
 import { paths } from '@/routes/paths';
+import { CONFIG } from '@/global-config';
+
+import { SvgColor } from '@/components/template/svg-color';
 
 // ----------------------------------------------------------------------
 

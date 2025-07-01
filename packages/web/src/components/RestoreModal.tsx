@@ -1,7 +1,8 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
+;
 import React, { useState } from 'react';
+import { useTranslate } from '@/locales';
 
 import {
   Box,

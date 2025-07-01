@@ -1,13 +1,12 @@
 import type { ButtonBaseProps } from '@mui/material/ButtonBase';
 
+import { CONFIG } from '@/global-config';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
-
-import { CONFIG } from '@/global-config';
 
 import { Iconify } from '@/components/template/iconify';
 

@@ -1,12 +1,14 @@
-'use client';;
+'use client';
+
+;
 import { useTranslate } from '@/locales';
+import { fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
-import { PoolDetails } from '../pools-explore/explorer-chart-data';
-import { Avatar, Button, Stack, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { column } from 'stylis';
-import { fCurrency } from '@/utils/format-number';
+import { Stack, Avatar, Button, Typography } from '@mui/material';
+
+import type { PoolDetails } from '../pools-explore/explorer-chart-data';
 
 export interface PoolsTabsProps {
   pools?: PoolDetails[];
@@ -31,7 +33,7 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
               border: `1px solid ${theme.palette.divider}`,
             }}
           >
-            <Stack direction="row" width={1} alignItems={'center'}>
+            <Stack direction="row" width={1} alignItems="center">
               <Box
                 sx={{
                   display: 'flex',
@@ -56,7 +58,7 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
                   }}
                 />
               </Box>
-              <Stack direction="column" width={1} alignItems={'start'}>
+              <Stack direction="column" width={1} alignItems="start">
                 <Typography component="span" color="text.primary" variant="h6" ml={1}>
                   {pool.pairInfo?.tokenA.name}{t('/')}{pool.pairInfo?.tokenB.name}
                 </Typography>
@@ -115,15 +117,15 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
               </Stack>
             </Stack>
 
-            <Stack direction="row" width={1} mt={4} gap={3} alignItems={'start'}>
-              <Stack direction="column" alignItems={'start'}>
+            <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
+              <Stack direction="column" alignItems="start">
                 <Typography color="text.primary" variant="body1">
                   {fCurrency(pool.performance?.position)}
                 </Typography>
                 <Typography color="text.secondary" variant="caption">{t('Position')}</Typography>
               </Stack>
 
-              <Stack direction="column" alignItems={'start'}>
+              <Stack direction="column" alignItems="start">
                 <Typography color="text.primary" variant="body1">
                   {fCurrency(pool.performance?.fees)}
                 </Typography>

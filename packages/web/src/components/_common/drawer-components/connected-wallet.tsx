@@ -1,26 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import type { Token } from '@/types/token';
+import type { Activity } from '@/types/activity';
 
-import { shortenAddress } from '@/utils/format-address';
-import { fCurrencyCompact, fPercent } from '@/utils/format-number';
+import { useState } from 'react';
+import { useTabs } from 'minimal-shared/hooks';
+import { varAlpha } from 'minimal-shared/utils';
+import { fPercent, fCurrencyCompact } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
+
 import { Iconify } from '@/components/template/iconify';
-import { Token } from '@/types/token';
-import { varAlpha } from 'minimal-shared/utils';
-import { useTabs } from 'minimal-shared/hooks';
-import Tab from '@mui/material/Tab';
-import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
-import TokensTab from './tokens-tab';
+
 import PoolsTab from './pools-tab';
+import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
-import { PoolDetails } from '../pools-explore/explorer-chart-data';
-import { Activity } from '@/types/activity';
+import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
+
+import type { PoolDetails } from '../pools-explore/explorer-chart-data';
 
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {

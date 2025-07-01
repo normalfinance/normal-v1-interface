@@ -1,8 +1,8 @@
 import type { CSSObject } from '@mui/material/styles';
 
 import { forwardRef } from 'react';
-import { mergeClasses } from 'minimal-shared/utils';
 import { useTranslation } from 'react-i18next';
+import { mergeClasses } from 'minimal-shared/utils';
 
 import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';

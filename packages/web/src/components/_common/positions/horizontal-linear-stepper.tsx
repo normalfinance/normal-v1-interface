@@ -1,5 +1,5 @@
-import { useTranslate } from '@/locales';
 import { useState } from 'react';
+import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
