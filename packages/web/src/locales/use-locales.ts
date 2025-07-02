@@ -33,11 +33,11 @@ export function useTranslate(ns?: string) {
 
         const currentMessages = messages[newLang] || messages.en;
 
-        toast.promise(langChangePromise, {
-          loading: currentMessages.loading,
-          success: () => currentMessages.success,
-          error: currentMessages.error,
-        });
+        // toast.promise(langChangePromise, {
+        //   loading: currentMessages?.loading,
+        //   success: () => currentMessages?.success,
+        //   error: currentMessages?.error,
+        // });
 
         // Update dayjs locale according to the selected language
         const langMeta = allLangs.find((l) => l.value === newLang);

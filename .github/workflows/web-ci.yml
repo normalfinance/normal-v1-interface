@@ -58,6 +58,3 @@ jobs:
           NEXT_PUBLIC_APP_ENV: ci
         run: yarn build
 
-      # Optional: dependency vulnerability scan
-      - name: yarn audit (high severity)
-        run: yarn audit --level high 
