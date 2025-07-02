@@ -1,6 +1,5 @@
 'use client';
 
-
 import type { Token } from '@/types/token';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { StatCardData } from '@/types/stat-card-data';

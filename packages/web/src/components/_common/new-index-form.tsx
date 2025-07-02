@@ -1,4 +1,3 @@
-
 import type { NativeToken } from '@/types/native-token';
 import type { IndexCoin, IIndexItem } from '@/types/indexes';
 

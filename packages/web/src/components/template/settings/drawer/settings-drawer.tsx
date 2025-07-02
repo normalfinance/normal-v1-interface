@@ -1,6 +1,5 @@
 'use client';
 
-
 import type { ThemeColorScheme } from '@/theme/types';
 
 import { useTranslate } from '@/locales';

@@ -1,7 +1,5 @@
 'use client';
 
-;
-
 import type { PoolTxRow } from '@/types/pools';
 import type { Pool } from '@/components/_common/pools';
 import type { LegendValue } from '@/components/_common/area-chart-card';

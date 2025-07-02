@@ -166,6 +166,5 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
         </Box>
       </Box>
     </MuiModal>
-
   );
 };

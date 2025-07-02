@@ -76,7 +76,6 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 
   // Fallback: at least one tab must be rendered ------------------------
   if (activeTabs.length === 0) {
-     
     console.warn('TokenActionCard: enabledTabs is empty – defaulting to all tabs.');
     activeTabs.push(...ALL_TABS);
   }

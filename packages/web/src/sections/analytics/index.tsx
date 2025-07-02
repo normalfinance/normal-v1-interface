@@ -1,7 +1,5 @@
 'use client';
 
-;
-
 import type { LegendValue } from '@/components/_common/area-chart-card';
 
 import { useTranslate } from '@/locales';

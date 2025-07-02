@@ -1,8 +1,5 @@
 'use client';
 
-;
-
-
 import type { Token } from '@/types/token';
 import type { Activity } from '@/types/activity';
 import type { Connector } from '@normalfinance/types';

@@ -7,11 +7,6 @@ import NoSsr from '@mui/material/NoSsr';
 import { tabClasses } from '@mui/material/Tab';
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
 
-
-
-
-
-
 // ----------------------------------------------------------------------
 
 export type CustomTabsProps = TabsProps & {

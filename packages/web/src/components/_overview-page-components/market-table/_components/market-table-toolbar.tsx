@@ -10,7 +10,6 @@ import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from '@/components/template/iconify';
 
-
 // ----------------------------------------------------------------------
 
 type Props = {

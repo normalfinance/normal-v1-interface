@@ -1,7 +1,5 @@
 'use client';
 
-;
-
 import type { NativeToken } from '@/types/native-token';
 
 import { useTranslate } from '@/locales';
