@@ -14,6 +14,13 @@ import { useTheme } from '@mui/material/styles';
 import CardHeader from '@mui/material/CardHeader';
 
 import { Scrollbar } from '@/components/template/scrollbar';
+<<<<<<< HEAD
+=======
+import { Icon } from '@iconify/react';
+import { useTheme } from '@mui/material/styles';
+import NextLink from 'next/link';
+import { useTranslate } from '@/locales';
+>>>>>>> develop
 
 // ----------------------------------------------------------------------
 // 1) Update list item type with `percentage` instead of `priceSale`.

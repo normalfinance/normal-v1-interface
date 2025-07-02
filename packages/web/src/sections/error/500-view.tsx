@@ -1,5 +1,4 @@
 'use client';
-
 import { m } from 'framer-motion';
 import { useTranslate } from '@/locales';
 import { SimpleLayout } from '@/layouts/simple';

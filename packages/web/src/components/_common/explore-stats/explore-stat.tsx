@@ -38,9 +38,13 @@ export function ExploreStat({ title, total, percent }: Props) {
           {title}
         </Typography>
 
+<<<<<<< HEAD
         <Box component="span" sx={{ color: 'text.primary', typography: 'h4' }}>
           {t('$')}
           {fShortenNumber(total)}
+=======
+        <Box component="span" sx={{ color: 'text.primary', typography: 'h4' }}>{t('$')}{fShortenNumber(total)}
+>>>>>>> develop
         </Box>
         <Stack direction="row" spacing={0.5} alignItems="center">
           <Box

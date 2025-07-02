@@ -14,6 +14,7 @@ import { Box, Button, InputBase, Typography } from '@mui/material';
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { Iconify } from '../template/iconify';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 interface SendCardProps extends CardProps {
   tokensList?: Token[];
@@ -276,7 +277,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Box
               component="img"
-              src={sendToken?.url}
+              src={sendToken ? getCryptoIconUrl(sendToken.shortname) : ''}
               sx={{
                 width: 36,
                 height: 36,

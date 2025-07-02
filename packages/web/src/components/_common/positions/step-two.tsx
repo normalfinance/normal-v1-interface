@@ -1,9 +1,11 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { Token } from '@/types/token';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+<<<<<<< HEAD
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
 
@@ -11,6 +13,10 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Avatar, InputBase, Typography } from '@mui/material';
 
 import type { FormValues } from './step-content-panel';
+=======
+import { column } from 'stylis';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+>>>>>>> develop
 
 /* ------------------------------------------------------------------ */
 /* props                                                               */
@@ -35,9 +41,13 @@ export default function StepTwo({ token }: StepTwoProps) {
 
   return (
     <Stack spacing={3} width={1}>
+<<<<<<< HEAD
       <Typography variant="h6">
         {t('Step 2 – Enter amount')}
         {token ? `(${token.shortname})` : ''}
+=======
+      <Typography variant="h6">{t('Step 2 – Enter amount')}{token ? `(${token.shortname})` : ''}
+>>>>>>> develop
       </Typography>
       {/* ---- amount input ------------------------------------------- */}
       <Box
@@ -78,7 +88,7 @@ export default function StepTwo({ token }: StepTwoProps) {
                 inputProps={{ min: 0 }}
                 sx={{
                   border: 'none',
-                  // 🔽  remove flexGrow so it doesn’t fill the column
+                  // 🔽  remove flexGrow so it doesn't fill the column
                   '& input': { fontSize: 32, fontWeight: 700 },
                 }}
               />
@@ -98,8 +108,13 @@ export default function StepTwo({ token }: StepTwoProps) {
             spacing={1}
             sx={{ mr: 2, borderRadius: 99, p: 1 }}
           >
+<<<<<<< HEAD
             <Avatar src={token.url} sx={{ width: 32, height: 32 }} />
             <Typography variant="body1" fontWeight="bold">
+=======
+            <Avatar src={getCryptoIconUrl(token.shortname)} sx={{ width: 32, height: 32 }} />
+            <Typography variant="body1" fontWeight={'bold'}>
+>>>>>>> develop
               {token.shortname}
             </Typography>
           </Stack>

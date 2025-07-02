@@ -13,6 +13,7 @@ import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 
 import { Chart } from '@/components/template/chart';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 /* ------------------------------------------------------------------ */
 /* Row props & type -------------------------------------------------- */
@@ -64,7 +65,11 @@ export function ExploreTokensTableRow({ row, selected }: Props) {
       {/* Name + symbol + avatar ------------------------------------ */}
       <TableCell sx={{ minWidth: 160 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          <Avatar src={row.iconUrl} alt={row.symbol} sx={{ width: 24, height: 24 }} />
+          <Avatar
+            src={getCryptoIconUrl(row.symbol)}
+            alt={row.symbol}
+            sx={{ width: 24, height: 24 }}
+          />
           <Stack>
             <Typography variant="subtitle2">{row.name}</Typography>
             <Typography variant="caption" color="text.secondary">

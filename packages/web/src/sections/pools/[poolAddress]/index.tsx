@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { Token } from '@normalfinance/types';
 
@@ -8,8 +9,13 @@ import { constants } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
 import { NormalPoolContract } from '@normalfinance/contracts';
+<<<<<<< HEAD
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
+=======
+import { formatCurrency } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+>>>>>>> develop
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
 
 import { Box, Grid, Alert, Stack, Typography, CircularProgress } from '@mui/material';
@@ -133,7 +139,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
         // Set token states
         setTokenA({
           name: _tokenA?.symbol as string,
-          icon: `/assets/icons/cryptoIcons/${_tokenA?.symbol.toLowerCase()}.svg`,
+          icon: getCryptoIconUrl(_tokenA?.symbol as string),
           usdValue: Number(priceA),
           amount: Number(_tokenA?.balance) / 10 ** Number(_tokenA?.decimals),
           category: 'none',
@@ -141,7 +147,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
         });
         setTokenB({
           name: _tokenB?.symbol as string,
-          icon: `/assets/icons/cryptoIcons/${_tokenB?.symbol.toLowerCase()}.png`,
+          icon: getCryptoIconUrl(_tokenB?.symbol as string),
           usdValue: 1,
           amount: Number(_tokenB?.balance) / 10 ** Number(_tokenB?.decimals),
           category: 'none',
@@ -149,7 +155,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
         });
         setLpToken({
           name: _lpToken?.symbol as string,
-          icon: `/assets/icons/cryptoIcons/poolIcon.png`,
+          icon: '/assets/icons/crypto-icons/poolIcon.png',
           usdValue: 0,
           amount: Number(_lpToken?.balance) / 10 ** Number(_lpToken?.decimals),
           category: 'none',
@@ -216,9 +222,13 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
+<<<<<<< HEAD
         <Typography variant="h4" color="text.primary">
           {t('Pool')}
         </Typography>
+=======
+        <Typography variant="h4" color="text.primary">{t('Pool')}</Typography>
+>>>>>>> develop
         <Typography variant="body1" color="text.secondary">
           {poolAddress}
         </Typography>
@@ -246,9 +256,13 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
 
             {tokenA?.name ? (
               <Typography sx={{ fontSize: '2rem', fontWeight: 700, ml: 1 }}>
+<<<<<<< HEAD
                 {tokenA?.name}
                 {t('-')}
                 {tokenB?.name}
+=======
+                {tokenA?.name}{t('-')}{tokenB?.name}
+>>>>>>> develop
               </Typography>
             ) : (
               <CircularProgress />

@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
@@ -216,8 +217,7 @@ const TokenBox = ({
               color: 'var(--content-medium-emphasis, rgba(255, 255, 255, 0.70));',
             }}
           >
-            {t('Balance')}
-            {token.amount}
+            Balance {token.amount}
           </Typography>
           <Button
             onClick={handleMaxClick}
@@ -233,7 +233,7 @@ const TokenBox = ({
               },
             }}
           >
-            {t('Max')}
+            Max
           </Button>
         </Grid2>
       </Grid2>

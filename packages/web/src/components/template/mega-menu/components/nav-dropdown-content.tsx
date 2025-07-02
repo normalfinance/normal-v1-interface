@@ -1,17 +1,30 @@
 import { useTranslate } from '@/locales';
+<<<<<<< HEAD
 import { RouterLink } from '@/routes/components';
 
+=======
+>>>>>>> develop
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Masonry from '@mui/lab/Masonry';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 
+<<<<<<< HEAD
 // import { NavCarousel } from './nav-carousel';
 import { NavUl } from './nav-elements';
 import { Iconify } from '../../iconify';
 import { NavSubList } from './nav-sub-list';
 import { megaMenuClasses } from '../styles';
+=======
+import { RouterLink } from '@/routes/components';
+
+import { Iconify } from '@/components/template/iconify';
+import { NavSubList } from './nav-sub-list';
+import { megaMenuClasses } from '../styles';
+// import { NavCarousel } from './nav-carousel';
+import { NavUl } from './nav-elements';
+>>>>>>> develop
 
 import type { NavListProps } from '../types';
 
@@ -78,9 +91,13 @@ export function NavDropdownContent({
         <>
           <Divider sx={{ borderStyle: 'dashed', my: 3 }} />
           <Box sx={slotProps?.tags}>
+<<<<<<< HEAD
             <Typography variant="caption" sx={{ mr: 0.5, fontWeight: 'fontWeightBold' }}>
               {t('Hot products:')}
             </Typography>
+=======
+            <Typography variant="caption" sx={{ mr: 0.5, fontWeight: 'fontWeightBold' }}>{t('Hot products:')}</Typography>
+>>>>>>> develop
 
             {data.tags.map((tag, index) => (
               <Link

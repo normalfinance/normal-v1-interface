@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { BoxProps } from '@mui/material/Box';
 import type { Breakpoint } from '@mui/material/styles';
@@ -123,9 +124,13 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
             d="m20.71 19.29l-3.4-3.39A7.92 7.92 0 0 0 19 11a8 8 0 1 0-8 8a7.92 7.92 0 0 0 4.9-1.69l3.39 3.4a1 1 0 0 0 1.42 0a1 1 0 0 0 0-1.42M5 11a6 6 0 1 1 6 6a6 6 0 0 1-6-6"
           />
         </SvgIcon>
+<<<<<<< HEAD
       </Box>
       {t('Search tokens...')}
       <Label
+=======
+      </Box>{t('Search tokens...')}<Label
+>>>>>>> develop
         sx={{
           color: 'grey.800',
           cursor: 'inherit',
@@ -134,9 +139,13 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           boxShadow: theme.vars.customShadows.z1,
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
         }}
+<<<<<<< HEAD
       >
         {t('⌘K')}
       </Label>
+=======
+      >{t('⌘K')}</Label>
+>>>>>>> develop
     </Box>
   );
 
@@ -198,9 +207,13 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
               <Iconify icon="eva:search-fill" width={24} sx={{ color: 'text.disabled' }} />
             </InputAdornment>
           }
+<<<<<<< HEAD
           endAdornment={
             <Label sx={{ letterSpacing: 1, color: 'text.secondary' }}>{t('esc')}</Label>
           }
+=======
+          endAdornment={<Label sx={{ letterSpacing: 1, color: 'text.secondary' }}>{t('esc')}</Label>}
+>>>>>>> develop
           inputProps={{ id: 'search-input' }}
           sx={{
             p: 3,

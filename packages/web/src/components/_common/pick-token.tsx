@@ -1,9 +1,11 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -23,7 +25,7 @@ import { Iconify } from '@/components/template/iconify';
 export interface PickTokenProps {
   open: boolean;
   onClose: () => void;
-  buttonSource: string;
+  buttonSource?: string;
   tokens?: Token[];
   onTokenSelect: (token: Token) => void;
 }
@@ -152,7 +154,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
-                      src={token.logo ?? token.url}
+                      src={token.logo ?? getCryptoIconUrl(token.shortname)}
                       sx={{
                         width: 40,
                         height: 40,
@@ -201,7 +203,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               fontSize: '12px',
                             }}
                           >
-                            {shortenAddress(token.address)}
+                            {token.address && shortenAddress(token.address)}
                           </Typography>
                         )}
                       </Box>
@@ -285,7 +287,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   >
                     <Box
                       component="img"
-                      src={token.url}
+                      src={token.logo ?? getCryptoIconUrl(token.shortname)}
                       sx={{
                         width: 20,
                         height: 20,
@@ -341,7 +343,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           >
                             <Box
                               component="img"
-                              src={token.url}
+                              src={token.logo ?? getCryptoIconUrl(token.shortname)}
                               sx={{
                                 width: 40,
                                 height: 40,
@@ -438,7 +440,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
-                          src={token.url}
+                          src={token.logo ?? getCryptoIconUrl(token.shortname)}
                           sx={{
                             width: 40,
                             height: 40,

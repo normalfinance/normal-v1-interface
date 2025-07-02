@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { toast } from '@/components/template/snackbar';
 import { useSettingsContext } from '@/components/template/settings';
 
+import { useSettingsContext } from '@/components/template/settings';
+
 import { allLangs } from './all-langs';
 import { fallbackLng, changeLangMessages as messages } from './locales-config';
 

@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { BoxProps } from '@mui/material/Box';
 
 import { useTranslate } from '@/locales';
@@ -30,6 +31,7 @@ export function TableSelectedAction({
   if (!numSelected) {
     return null;
   }
+  const { t } = useTranslate('auto');
 
   return (
     <Box
@@ -72,9 +74,13 @@ export function TableSelectedAction({
           ...(dense && { ml: 3 }),
         }}
       >
+<<<<<<< HEAD
         {numSelected}
         {t('selected')}
       </Typography>
+=======
+        {numSelected}{t('selected')}</Typography>
+>>>>>>> develop
       {action && action}
     </Box>
   );

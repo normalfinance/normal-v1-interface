@@ -30,11 +30,15 @@ The `Types` package focuses on state management, incorporating zustand along wit
 
 Housing a range of utility and helper functions, the `Utils` package offers a one-stop-shop for common tasks like data manipulation, date formatting, string handling, and network calls.
 
-#### [Web](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/solana/web)
+### [State](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/state)
+
+The `State` package focuses on state management, incorporating zustand along with its actions to optimally manage and update the app's data based on user interactions and other events.
+
+### [Web](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/solana/web)
 
 As the heart of the application, the `Core` package orchestrates the UI, state management, and utility functions. It's built on Next.js and serves as the primary entry point, setting the architectural groundwork and facilitating inter-package interactions.
 
-#### [Contracts](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/stellar/contracts)
+### [Contracts](https://github.com/normalfinance/normal-v1-interface/tree/main/packages/stellar/contracts)
 
 The `Contracts` package provides generated contract classes and associated types, created through Soroban bindings. For more information, refer to [Soroban's documentation](https://soroban.stellar.org/docs/getting-started/create-an-app#generate-an-npm-package-for-the-hello-world-contract).
 

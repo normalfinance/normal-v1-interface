@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslate } from '@/locales';
 import { getSwapConversionText } from '@/utils/conversion-helpers';
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -131,7 +132,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={sellToken?.url}
+                src={sellToken ? getCryptoIconUrl(sellToken.shortname) : ''}
                 sx={{
                   width: 40,
                   height: 40,
@@ -182,7 +183,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={buyToken?.url}
+                src={buyToken ? getCryptoIconUrl(buyToken.shortname) : ''}
                 sx={{
                   width: 40,
                   height: 40,

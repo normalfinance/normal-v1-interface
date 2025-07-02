@@ -15,6 +15,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
+import { useTranslate } from '@/locales';
 
 interface SwapSendCardProps extends CardProps {
   title?: string;

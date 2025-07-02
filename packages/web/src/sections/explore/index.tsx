@@ -1,5 +1,4 @@
 'use client';
-
 import type {
   PoolDetails,
   ExplorerChartData,
@@ -189,7 +188,7 @@ export default function ExploreView() {
           pairInfo={poolsExplorerData.pairInfo}
           metadata={poolsExplorerData.metadata}
           exchangeRate={poolsExplorerData.exchangeRate}
-          performance={poolsExplorerData.performance}
+          performance={poolsExplorerData.performance} 
           legendValues={[{ title: 'Price', number: 7334, formatter: fCurrencyCompact }]}
           chart={poolChartData}
           color={theme.palette.primary.main}

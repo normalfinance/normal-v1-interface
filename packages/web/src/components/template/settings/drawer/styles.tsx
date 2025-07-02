@@ -6,7 +6,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
+import { Iconify } from '@/components/template/iconify';
 import { svgColorClasses } from '../../svg-color';
 
 // ----------------------------------------------------------------------

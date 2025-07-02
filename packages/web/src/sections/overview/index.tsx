@@ -1,5 +1,6 @@
 'use client';
 
+
 import type { Token } from '@/types/token';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { StatCardData } from '@/types/stat-card-data';
@@ -10,12 +11,13 @@ import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
 import { fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import Grid2 from '@mui/material/Grid2';
 import { Stack, useTheme, Typography } from '@mui/material';
 
 import { StatCard } from '@/components/_common/stat-card';
-import { SwapSendCard } from '@/components/_common/swap-send-card';
+import { TokenActionCard } from '@/components/_common/token-action-card';
 import { AreaChartCard } from '@/components/_common/area-chart-card';
 import { Markets } from '@/components/_overview-page-components/markets/markets';
 import { MarketTable } from '@/components/_overview-page-components/market-table/market-table';
@@ -117,7 +119,7 @@ export default function OverviewView() {
     {
       id: '1',
       name: 'BTC-SOL',
-      coverUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg',
+      coverUrl: getCryptoIconUrl('BTC'),
       price: 1.69,
       percentage: -2.5,
       url: '/markets/btc-sol',
@@ -125,7 +127,7 @@ export default function OverviewView() {
     {
       id: '2',
       name: 'ETH-SOL',
-      coverUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Ethereum-icon-purple.svg',
+      coverUrl: getCryptoIconUrl('ETH'),
       price: 55.47,
       percentage: 5.2323425,
       url: '/markets/eth-sol',
@@ -133,7 +135,7 @@ export default function OverviewView() {
     {
       id: '3',
       name: 'XRP-SOL',
-      coverUrl: 'https://cryptologos.cc/logos/xrp-xrp-logo.svg?v=040',
+      coverUrl: getCryptoIconUrl('XRP'),
       price: 93.1,
       percentage: 3.1,
       url: '/markets/xrp-sol',
@@ -158,7 +160,7 @@ export default function OverviewView() {
       percentageChange: 4.5,
       performance: 'CEO',
       status: 'trending',
-      avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg',
+      avatarUrl: getCryptoIconUrl('BTC'),
       url: '/markets/btc-sol',
     },
     {
@@ -168,7 +170,7 @@ export default function OverviewView() {
       percentageChange: 2.5,
       performance: 'CEO',
       status: 'meme',
-      avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Ethereum-icon-purple.svg',
+      avatarUrl: getCryptoIconUrl('ETH'),
       url: '/markets/btc-sol',
     },
     {
@@ -178,7 +180,7 @@ export default function OverviewView() {
       percentageChange: -2.5,
       performance: 'CEO',
       status: 'rwa',
-      avatarUrl: 'https://cryptologos.cc/logos/xrp-xrp-logo.svg?v=040',
+      avatarUrl: getCryptoIconUrl('XRP'),
       url: '/markets/btc-sol',
     },
   ];
@@ -260,6 +262,8 @@ export default function OverviewView() {
     maxSlippage: 0.5,
   };
 
+  const cashBalance = 3000;
+
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
@@ -283,7 +287,12 @@ export default function OverviewView() {
         </Grid2>
         <Grid2 size={{ xs: 12, md: 4 }}>
           {/*<AssetsAndLiabilities title="Assets & Liabilities" list={_appRelated} />*/}
-          <SwapSendCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
+          <TokenActionCard
+            tokensList={tokensList}
+            swapFeeInfo={swapFeeInfo}
+            cashBalance={cashBalance}
+            enabledTabs={['swap', 'send', 'buy']}
+          />
         </Grid2>
       </Grid2>
       {/* Second row: TradingVolume items */}

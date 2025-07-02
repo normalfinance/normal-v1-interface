@@ -1,8 +1,9 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 
 // fee-info-accordion.tsx
 import React from 'react';
-import { useTranslate } from '@/locales';
+
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { alpha, useTheme } from '@mui/material/styles';

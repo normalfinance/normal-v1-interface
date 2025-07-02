@@ -1,15 +1,21 @@
 import type { TabsProps } from '@mui/material/Tabs';
 import type { Theme, SxProps } from '@mui/material/styles';
 
+
 import { useTranslate } from '@/locales';
 
 import NoSsr from '@mui/material/NoSsr';
 import { tabClasses } from '@mui/material/Tab';
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
 
+
+
+
+
+
 // ----------------------------------------------------------------------
 
-export type CustomTabsSwapSendProps = TabsProps & {
+export type CustomTabsProps = TabsProps & {
   slotProps?: TabsProps['slotProps'] & {
     scroller?: SxProps<Theme>;
     indicator?: SxProps<Theme>;
@@ -20,7 +26,7 @@ export type CustomTabsSwapSendProps = TabsProps & {
   };
 };
 
-export function CustomTabsSwapSend({ children, slotProps, sx, ...other }: CustomTabsSwapSendProps) {
+export function CustomTabsSwapSend({ children, slotProps, sx, ...other }: CustomTabsProps) {
   const { t } = useTranslate('auto');
   return (
     <Tabs

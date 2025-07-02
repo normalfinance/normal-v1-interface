@@ -1,3 +1,4 @@
+import { useTranslate } from '@/locales';
 import type { CardProps } from '@mui/material/Card';
 
 import { useState } from 'react';
@@ -127,6 +128,7 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
           width: '100%',
         }}
       >
+<<<<<<< HEAD
         <Typography variant="subtitle1" color="text.secondary">
           {t('Total APR')}
         </Typography>
@@ -134,6 +136,11 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
           {totalAprPercentage}
           {t('%')}
         </Typography>
+=======
+        <Typography variant="subtitle1" color="text.secondary">{t('Total APR')}</Typography>
+        <Typography variant="h3" color="text.primary">
+          {totalAprPercentage}{t('%')}</Typography>
+>>>>>>> develop
       </Stack>
       {/* —— Stats list ———————————————————— */}
       <Stack
@@ -147,9 +154,13 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
           gap: '15px',
         }}
       >
+<<<<<<< HEAD
         <Typography variant="h5" color="text.primary">
           {t('Stats')}
         </Typography>
+=======
+        <Typography variant="h5" color="text.primary">{t('Stats')}</Typography>
+>>>>>>> develop
 
         <Stack
           sx={{
@@ -157,9 +168,13 @@ export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other
             gap: '4px',
           }}
         >
+<<<<<<< HEAD
           <Typography variant="subtitle2" color="text.secondary">
             {t('Pool balances')}
           </Typography>
+=======
+          <Typography variant="subtitle2" color="text.secondary">{t('Pool balances')}</Typography>
+>>>>>>> develop
           <Box
             sx={{
               display: 'flex',

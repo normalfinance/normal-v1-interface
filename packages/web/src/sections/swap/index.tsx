@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+
 
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';

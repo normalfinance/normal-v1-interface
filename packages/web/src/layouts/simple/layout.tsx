@@ -1,4 +1,4 @@
-'use client';
+'use client';;
 
 import type { Breakpoint } from '@mui/material/styles';
 

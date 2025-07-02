@@ -1,8 +1,10 @@
+import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -21,8 +23,12 @@ import SwapReview from './swap-review';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
+import { SwapFeeInfo } from '@/types/swap-fee-info';
 
-interface SwapCardProps extends CardProps {}
+interface SwapCardProps extends CardProps {
+  tokensList?: Token[];
+  swapFeeInfo?: SwapFeeInfo;
+}
 
 const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const theme = useTheme();
@@ -271,7 +277,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
    * @async
    */
   const doSwap = useCallback(async (): Promise<void> => {
-    if (sellToken && buyToken) {
+    if (sellToken && buyToken && sellToken.address && buyToken.address) {
       try {
         // Execute the transaction using the hook
         await executeContractTransaction({
@@ -583,7 +589,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                 sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
               >
                 <SwapSendPopupButton
-                  imgUrl={sellToken.url}
+                  imgUrl={getCryptoIconUrl(sellToken.shortname)}
                   label={sellToken.shortname}
                   onClick={() => {
                     setActiveButton('sell');
@@ -742,7 +748,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
           >
             {buyToken ? (
               <SwapSendPopupButton
-                imgUrl={buyToken.url}
+                imgUrl={getCryptoIconUrl(buyToken.shortname)}
                 label={buyToken.shortname}
                 onClick={() => {
                   setActiveButton('buy');

@@ -1,4 +1,5 @@
 'use client';
+import { useTranslate } from '@/locales';
 
 import type { ThemeColorScheme } from '@/theme/types';
 
@@ -16,7 +17,14 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import { useColorScheme } from '@mui/material/styles';
 
+<<<<<<< HEAD
 import { Iconify } from '../../iconify';
+=======
+import { themeConfig } from '@/theme/theme-config';
+import { primaryColorPresets } from '@/theme/with-settings';
+
+import { Iconify } from '@/components/template/iconify';
+>>>>>>> develop
 import { BaseOption } from './base-option';
 import { Scrollbar } from '../../scrollbar';
 import { SmallBlock, LargeBlock } from './styles';

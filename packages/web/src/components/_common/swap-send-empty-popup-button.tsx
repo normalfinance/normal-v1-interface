@@ -5,6 +5,7 @@ import { useTheme } from '@mui/material/styles';
 import { Button, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import { useTranslate } from '@/locales';
 
 interface SwapSendEmptyPopupButtonProps {
   label: string;

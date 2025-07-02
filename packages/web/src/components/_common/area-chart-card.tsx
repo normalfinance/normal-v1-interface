@@ -1,9 +1,9 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { CardProps } from '@mui/material/Card';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
-import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
 import { fShortenNumber } from '@/utils/format-number';
 

@@ -1,7 +1,7 @@
 'use client';
+import { useTranslate } from '@/locales';
 
 import React, { useState } from 'react';
-import { useTranslate } from '@/locales';
 
 import {
   Box,
@@ -166,5 +166,6 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
         </Box>
       </Box>
     </MuiModal>
+
   );
 };

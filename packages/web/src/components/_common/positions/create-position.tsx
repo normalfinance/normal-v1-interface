@@ -1,6 +1,7 @@
 // app/components/_common/positions/create-position.tsx
 
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material/Card';
@@ -73,9 +74,13 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({ sx, tokens, ...o
               px: 1.5,
             }}
           >
+<<<<<<< HEAD
             <Iconify icon="solar:restart-bold" width={16} sx={{ mr: 1 }} />
             {t('Reset')}
           </Button>
+=======
+            <Iconify icon="solar:restart-bold" width={16} sx={{ mr: 1 }} />{t('Reset')}</Button>
+>>>>>>> develop
 
           {/* Settings (placeholder) */}
           <Button

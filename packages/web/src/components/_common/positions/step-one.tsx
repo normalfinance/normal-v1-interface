@@ -1,4 +1,5 @@
-'use client';
+'use client';;
+import { useTranslate } from '@/locales';
 
 import type { Token } from '@/types/token';
 
@@ -6,8 +7,15 @@ import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { useFormContext } from 'react-hook-form';
 
+<<<<<<< HEAD
 import { Stack, alpha, Avatar, Button, useTheme, Typography } from '@mui/material';
 
+=======
+import { Token } from '@/types/token';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import PickToken from '../pick-token';
+import { FormValues } from './step-content-panel';
+>>>>>>> develop
 import { Iconify } from '@/components/template/iconify';
 
 import PickToken from '../pick-token';
@@ -33,19 +41,30 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
     setDialogOpen(false);
   };
 
+<<<<<<< HEAD
   const selected = tokens.find((tkn) => tkn.shortname === tokenASymbol);
   const avatarSrc = selected?.logo ?? selected?.url;
+=======
+  const selected = tokens.find((t) => t.shortname === tokenASymbol);
+  const avatarSrc = selected ? (selected.logo ?? getCryptoIconUrl(selected.shortname)) : undefined;
+>>>>>>> develop
 
   return (
     <Stack>
       {/* hidden input registers the field */}
       <input type="hidden" {...register('tokenASymbol')} />
       <Typography variant="subtitle1">{t('Select pair')}</Typography>
+<<<<<<< HEAD
       <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>
         {t(
           'Choose the tokens you want to provide liquidity for. You can select tokens on all supported networks'
         )}
       </Typography>
+=======
+      <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>{t(
+        'Choose the tokens you want to provide liquidity for. You can select tokens on all supported networks',
+      )}</Typography>
+>>>>>>> develop
       <Stack direction="row" spacing={2}>
         {/* token-A button */}
         <Button
@@ -101,9 +120,13 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
             width: 1,
           }}
         >
+<<<<<<< HEAD
           <Avatar src="/assets/icons/cryptoIcons/xlm.svg" sx={{ width: 24, height: 24 }} />
           {t('XLM')}
         </Button>
+=======
+          <Avatar src="/assets/icons/cryptoIcons/xlm.svg" sx={{ width: 24, height: 24 }} />{t('XLM')}</Button>
+>>>>>>> develop
       </Stack>
       {/* token picker dialog */}
       <PickToken

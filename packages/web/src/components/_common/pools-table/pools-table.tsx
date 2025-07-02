@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 import type { TxType, PoolTxRow } from '@/types/pools';
 
+=======
+>>>>>>> develop
 import { useTranslate } from '@/locales';
 import React, { useMemo, useState } from 'react';
 
@@ -106,9 +109,13 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {
                         height: 14,
                       },
                     }}
+<<<<<<< HEAD
                   >
                     {t('Time')}
                   </TableSortLabel>
+=======
+                  >{t('Time')}</TableSortLabel>
+>>>>>>> develop
                 </TableCell>
 
                 {/* --- Type with dropdown -------------------------------- */}
@@ -117,9 +124,13 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {
                     variant="subtitle2"
                     sx={{ cursor: 'pointer' }}
                     onClick={(e) => setTypeAnchor(e.currentTarget)}
+<<<<<<< HEAD
                   >
                     {t('Type ▾')}
                   </Typography>
+=======
+                  >{t('Type ▾')}</Typography>
+>>>>>>> develop
                   <Menu
                     open={Boolean(typeAnchor)}
                     anchorEl={typeAnchor}

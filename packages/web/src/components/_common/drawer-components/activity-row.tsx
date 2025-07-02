@@ -12,6 +12,7 @@ import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import { grey } from '@mui/material/colors';
 import Typography from '@mui/material/Typography';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 /* ------------------------------------------------------------------ */
 /* Split avatar helper                                                */
@@ -20,11 +21,11 @@ function SplitAvatar({ left, right }: { left: string; right: string }) {
   return (
     <Box sx={{ width: 32, height: 32, position: 'relative' }}>
       <Avatar
-        src={left}
+        src={getCryptoIconUrl(left)}
         sx={{ width: 32, height: 32, position: 'absolute', clipPath: 'inset(0 16px 0 0)' }}
       />
       <Avatar
-        src={right}
+        src={getCryptoIconUrl(right)}
         sx={{ width: 32, height: 32, position: 'absolute', clipPath: 'inset(0 0 0 16px)' }}
       />
     </Box>
@@ -45,14 +46,14 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     case 'Sent':
     case 'Received': {
       const {
-        asset: { token, iconUrl, amount },
+        asset: { token, amount },
         address, // <— comes from the activity, not asset
         type,
       } = activity;
 
-      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
+      icon = <Avatar src={getCryptoIconUrl(token)} sx={{ width: 32, height: 32 }} />;
 
-      // Sent  ➜ “…to …”,  Received ➜ “…from …”
+      // Sent  ➜ "…to …",  Received ➜ "…from …"
       const preposition = type === 'Sent' ? 'to' : 'from';
 
       // Sent / Received use fShortenNumber; others use fCurrencyCompact
@@ -62,25 +63,25 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     }
     case 'Stake':
     case 'Unstake': {
-      const { token, iconUrl, amount } = activity.asset;
-      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
+      const { token, amount } = activity.asset;
+      icon = <Avatar src={getCryptoIconUrl(token)} sx={{ width: 32, height: 32 }} />;
       sentence = `${fCurrencyCompact(amount)} ${token}`;
       break;
     }
     case 'Add Liquidity':
     case 'Remove Liquidity': {
-      const { token, iconUrl, amount } = activity.lpToken;
-      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
+      const { token, amount } = activity.lpToken;
+      icon = <Avatar src={getCryptoIconUrl(token)} sx={{ width: 32, height: 32 }} />;
       sentence = `${fCurrencyCompact(amount)} ${token}`;
       break;
     }
     case 'Swapped': {
       const {
-        sell: { token: sTok, iconUrl: sIcon, amount: sAmt },
-        buy: { token: bTok, iconUrl: bIcon, amount: bAmt },
+        sell: { token: sTok, amount: sAmt },
+        buy: { token: bTok, amount: bAmt },
       } = activity;
 
-      icon = <SplitAvatar left={sIcon} right={bIcon} />;
+      icon = <SplitAvatar left={sTok} right={bTok} />;
       sentence = `${fShortenNumber(sAmt)} ${sTok} for ${fShortenNumber(bAmt)} ${bTok}`;
       break;
     }

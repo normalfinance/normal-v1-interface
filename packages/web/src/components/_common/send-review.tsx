@@ -16,8 +16,9 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-
 import { Iconify } from '../template/iconify';
+
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 export interface SendReviewProps {
   open: boolean;
@@ -124,7 +125,7 @@ const SendReview: React.FC<SendReviewProps> = ({
 
               <Box
                 component="img"
-                src={sendToken?.url}
+                src={sendToken ? getCryptoIconUrl(sendToken.shortname) : ''}
                 sx={{
                   width: 40,
                   height: 40,

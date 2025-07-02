@@ -12,6 +12,8 @@ import { useTheme } from '@mui/material/styles';
 
 import { Chart, useChart } from '@/components/template/chart';
 
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+
 type ChartConfig = {
   colors?: string[];
   options?: ChartOptions;
@@ -114,7 +116,12 @@ export function IndexCoinStorageOverview({
             }}
             onClick={() => onReplaceCoin?.(coin.id)}
           >
-            <Box sx={{ width: 36, height: 36 }} component="img" src={coin.url} alt={coin.name} />
+            <Box
+              sx={{ width: 36, height: 36 }}
+              component="img"
+              src={getCryptoIconUrl(coin.shortName)}
+              alt={coin.name}
+            />
 
             <Stack flex="1 1 auto" textAlign="left">
               <div>{coin.name}</div>

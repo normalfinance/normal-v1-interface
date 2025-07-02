@@ -9,6 +9,7 @@ import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from '@/components/template/iconify';
+import { useTranslate } from '@/locales';
 
 // ----------------------------------------------------------------------
 
@@ -63,7 +64,27 @@ export function MarketTableToolbar({ filters, onResetPage }: Props) {
               ),
             },
           }}
+<<<<<<< HEAD
         />
+=======
+        >
+          <TextField
+            fullWidth
+            value={currentFilters.name}
+            onChange={handleFilterName}
+            placeholder={t('Search...')}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+        </Box>
+>>>>>>> develop
       </Box>
     </Box>
   );

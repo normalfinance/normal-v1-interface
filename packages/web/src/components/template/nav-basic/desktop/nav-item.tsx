@@ -3,11 +3,12 @@ import type { CSSObject } from '@mui/material/styles';
 import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mergeClasses } from 'minimal-shared/utils';
+import { useTranslation } from 'react-i18next';
 
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
+import { Iconify } from '@/components/template/iconify';
 import { createNavItem } from '../utils';
 import { navItemStyles, navBasicClasses } from '../styles';
 
