@@ -1,6 +1,7 @@
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
 
+import { useTranslate } from '@/locales';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { convertFiatToCoin } from '@/utils/conversion-helpers';
@@ -36,6 +37,7 @@ const QUICK_BUTTONS: QuickAmountButton[] = [
 
 const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...other }) => {
   const theme = useTheme();
+  const { t } = useTranslate();
 
   // State declarations...
   const [buyToken, setBuyToken] = useState<Token | null>(tokensList.length ? tokensList[0] : null);
@@ -106,14 +108,12 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
 
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
-    if (label === 'Select a token') {
-    } else if (label === 'Enter an amount') {
-    } else if (label === 'Input wallet address') {
-    } else if (label.startsWith('Insufficient')) {
-    } else if (label === 'Buy') {
-      // open a review popup
-      setReviewOpen(true);
+
+    if (label !== 'Buy') {
+      return;
     }
+
+    setReviewOpen(true);
   };
 
   const handleTokenSelect = (token: Token) => {
@@ -139,7 +139,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
         >
           <Box sx={{ height: '82px' }}>
             <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-              You're buying
+              {t("You're buying")}
             </Typography>
           </Box>
           <Box

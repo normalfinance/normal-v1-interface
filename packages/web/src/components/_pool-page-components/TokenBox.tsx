@@ -216,7 +216,7 @@ const TokenBox = ({
               color: 'var(--content-medium-emphasis, rgba(255, 255, 255, 0.70));',
             }}
           >
-            Balance {token.amount}
+            {t('Balance')} {token.amount}
           </Typography>
           <Button
             onClick={handleMaxClick}
@@ -232,7 +232,7 @@ const TokenBox = ({
               },
             }}
           >
-            Max
+            {t('Max')}
           </Button>
         </Grid2>
       </Grid2>

@@ -14,7 +14,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
-import { CustomTabs } from './swap-send-card-custom-card';
+import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
@@ -124,10 +124,8 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           )}
         </Box>
       )}
-
-      {/* Tabs — hide bar when only one tab is active -------------------- */}
       {activeTabs.length > 1 && (
-        <CustomTabs
+        <CustomTabsSwapSend
           value={tabs.value}
           onChange={tabs.onChange}
           variant="standard"
@@ -151,7 +149,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           {activeTabs.map((tab) => (
             <Tab key={tab.value} value={tab.value} label={tab.label} />
           ))}
-        </CustomTabs>
+        </CustomTabsSwapSend>
       )}
 
       {/* Body ----------------------------------------------------------- */}
