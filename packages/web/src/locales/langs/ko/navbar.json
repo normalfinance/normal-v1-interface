@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "app": "앱",
   "job": "채용",
   "user": "사용자",
@@ -25,30 +24,3 @@
   "Help & Feedback": "도움말 및 피드백",
   "Docs": "문서"
 }
-=======
-  "app": "App",
-  "job": "Job",
-  "user": "User",
-  "travel": "Travel",
-  "invoice": "Invoice",
-  "blog": {
-    "title": "Blog",
-    "caption": "Custom keyboard shortcuts."
-  },
-  "subheader": "Sub header",
-  "Overview": "Overview",
-  "Trade": "Trade",
-  "Spot": "Spot",
-  "Indexes": "Indexes",
-  "Earn": "Earn",
-  "Yield": "Yield",
-  "LP": "LP",
-  "Rewards": "Rewards",
-  "Referrals": "Referrals",
-  "Analytics": "Analytics",
-  "More": "More",
-  "Governance": "Governance",
-  "Help & Feedback": "Help & Feedback",
-  "Docs": "Docs"
-}
->>>>>>> develop
