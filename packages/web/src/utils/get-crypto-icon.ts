@@ -3,5 +3,6 @@ export function getCryptoIconUrl(symbol: string): string {
   if (!symbol) return '';
   // Remove non-alphanumeric characters to match file naming (e.g., strip '/', '-', spaces)
   const sanitized = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return `/assets/icons/crypto-icons/${sanitized}.png`;
+  // All Normal token icons are now stored with an "n" prefix (e.g., nBTC.png)
+  return `/assets/icons/crypto-icons/n${sanitized}.png`;
 }
