@@ -2,12 +2,16 @@
  * @type {import('next').NextConfig}
  */
 
+import pkg from './package.json' assert { type: 'json' };
+
 const isStaticExport = 'false';
+const appVersion = pkg.version;
 
 const nextConfig = {
   trailingSlash: true,
   env: {
     BUILD_STATIC_EXPORT: isStaticExport,
+    NEXT_PUBLIC_APP_VERSION: appVersion,
   },
   modularizeImports: {
     '@mui/icons-material': {

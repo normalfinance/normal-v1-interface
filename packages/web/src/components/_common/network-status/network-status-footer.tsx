@@ -9,7 +9,7 @@ import { Iconify } from '@/components/template/iconify';
 /*  Dummy local data / state                                          */
 /* ------------------------------------------------------------------ */
 
-const APP_VERSION = 'v2.127.1';
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? 'dev';
 
 /** Simulated health flag – flip to false to see the red dot */
 const HEALTHY = true;
