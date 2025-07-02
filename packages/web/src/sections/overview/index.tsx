@@ -9,12 +9,13 @@ import { Markets } from '@/components/_overview-page-components/markets/markets'
 import { MarketTable } from '@/components/_overview-page-components/market-table/market-table';
 import { createChartData, RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 import { StatCardData } from '@/types/stat-card-data';
-import { fCurrencyCompact, fShortenNumber } from '@/utils/format-number';
+import { fCurrencyCompact, fRawPercent, fShortenNumber, fPercent } from '@/utils/format-number';
 import { StatCard } from '@/components/_common/stat-card';
 import { AreaChartCard, LegendValue } from '@/components/_common/area-chart-card';
 import { TokenActionCard } from '@/components/_common/token-action-card';
 import { Token } from '@/types/token';
 import { SwapFeeInfo } from '@/types/swap-fee-info';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 export default function OverviewView() {
   const theme = useTheme();
@@ -113,7 +114,7 @@ export default function OverviewView() {
     {
       id: '1',
       name: 'BTC-SOL',
-      coverUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg',
+      coverUrl: getCryptoIconUrl('BTC'),
       price: 1.69,
       percentage: -2.5,
       url: '/markets/btc-sol',
@@ -121,7 +122,7 @@ export default function OverviewView() {
     {
       id: '2',
       name: 'ETH-SOL',
-      coverUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Ethereum-icon-purple.svg',
+      coverUrl: getCryptoIconUrl('ETH'),
       price: 55.47,
       percentage: 5.2323425,
       url: '/markets/eth-sol',
@@ -129,7 +130,7 @@ export default function OverviewView() {
     {
       id: '3',
       name: 'XRP-SOL',
-      coverUrl: 'https://cryptologos.cc/logos/xrp-xrp-logo.svg?v=040',
+      coverUrl: getCryptoIconUrl('XRP'),
       price: 93.1,
       percentage: 3.1,
       url: '/markets/xrp-sol',
@@ -154,7 +155,7 @@ export default function OverviewView() {
       percentageChange: 4.5,
       performance: 'CEO',
       status: 'trending',
-      avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg',
+      avatarUrl: getCryptoIconUrl('BTC'),
       url: '/markets/btc-sol',
     },
     {
@@ -164,7 +165,7 @@ export default function OverviewView() {
       percentageChange: 2.5,
       performance: 'CEO',
       status: 'meme',
-      avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Ethereum-icon-purple.svg',
+      avatarUrl: getCryptoIconUrl('ETH'),
       url: '/markets/btc-sol',
     },
     {
@@ -174,7 +175,7 @@ export default function OverviewView() {
       percentageChange: -2.5,
       performance: 'CEO',
       status: 'rwa',
-      avatarUrl: 'https://cryptologos.cc/logos/xrp-xrp-logo.svg?v=040',
+      avatarUrl: getCryptoIconUrl('XRP'),
       url: '/markets/btc-sol',
     },
   ];

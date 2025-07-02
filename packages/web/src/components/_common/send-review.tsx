@@ -11,6 +11,7 @@ import {
   IconButton,
 } from '@mui/material';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { Token } from '@/types/token';
 import { Iconify } from '../template/iconify';
 import { useTheme } from '@mui/material/styles';
@@ -114,7 +115,7 @@ const SendReview: React.FC<SendReviewProps> = ({
 
               <Box
                 component="img"
-                src={sendToken?.url}
+                src={sendToken ? getCryptoIconUrl(sendToken.shortname) : ''}
                 sx={{
                   width: 40,
                   height: 40,

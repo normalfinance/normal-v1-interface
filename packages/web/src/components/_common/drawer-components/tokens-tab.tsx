@@ -3,6 +3,7 @@ import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import { Token } from '@/types/token';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { Button, Stack, Typography } from '@mui/material';
 import { fCurrency, fPercent } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
@@ -35,7 +36,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
             <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
               <Box
                 component="img"
-                src={token.logo ?? token.url}
+                src={token.logo ?? getCryptoIconUrl(token.shortname)}
                 sx={{
                   width: 40,
                   height: 40,

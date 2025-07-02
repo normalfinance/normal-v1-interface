@@ -9,7 +9,8 @@ import { fPercent } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { NormalPoolContract } from '@normalfinance/contracts';
-import { formatCurrency } from '@normalfinance/utils/build/stellar';
+import { formatCurrency } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
 import PoolStatsTemp from '@/components/_pool-page-components/pool-stats-temp';
 import PoolLiquidityTemp from '@/components/_pool-page-components/pool-liquidity-temp';
@@ -132,7 +133,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
         // Set token states
         setTokenA({
           name: _tokenA?.symbol as string,
-          icon: `/assets/icons/cryptoIcons/${_tokenA?.symbol.toLowerCase()}.svg`,
+          icon: getCryptoIconUrl(_tokenA?.symbol as string),
           usdValue: Number(priceA),
           amount: Number(_tokenA?.balance) / 10 ** Number(_tokenA?.decimals),
           category: 'none',
@@ -140,7 +141,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
         });
         setTokenB({
           name: _tokenB?.symbol as string,
-          icon: `/assets/icons/cryptoIcons/${_tokenB?.symbol.toLowerCase()}.png`,
+          icon: getCryptoIconUrl(_tokenB?.symbol as string),
           usdValue: 1,
           amount: Number(_tokenB?.balance) / 10 ** Number(_tokenB?.decimals),
           category: 'none',
@@ -148,7 +149,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
         });
         setLpToken({
           name: _lpToken?.symbol as string,
-          icon: `/assets/icons/cryptoIcons/poolIcon.png`,
+          icon: '/assets/icons/crypto-icons/poolIcon.png',
           usdValue: 0,
           amount: Number(_lpToken?.balance) / 10 ** Number(_lpToken?.decimals),
           category: 'none',

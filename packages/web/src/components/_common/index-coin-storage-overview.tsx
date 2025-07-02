@@ -9,6 +9,7 @@ import { IndexCoin } from '@/types/indexes';
 
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { Button } from '@mui/material';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 type ChartConfig = {
   colors?: string[];
@@ -112,7 +113,12 @@ export function IndexCoinStorageOverview({
             }}
             onClick={() => onReplaceCoin?.(coin.id)}
           >
-            <Box sx={{ width: 36, height: 36 }} component="img" src={coin.url} alt={coin.name} />
+            <Box
+              sx={{ width: 36, height: 36 }}
+              component="img"
+              src={getCryptoIconUrl(coin.shortName)}
+              alt={coin.name}
+            />
 
             <Stack flex="1 1 auto" textAlign={'left'}>
               <div>{coin.name}</div>

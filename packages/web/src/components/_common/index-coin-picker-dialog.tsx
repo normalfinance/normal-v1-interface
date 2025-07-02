@@ -17,6 +17,7 @@ import { IndexCoin } from '@/types/indexes';
 import { Iconify } from '../template/iconify';
 import { useTheme } from '@mui/material/styles';
 import { fCurrencyTwoDecimals, fShortenNumber } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 type Props = {
   open: boolean;
@@ -158,7 +159,7 @@ export default function IndexCoinPickerDialog({
                       >
                         <Box
                           component="img"
-                          src={token.url}
+                          src={getCryptoIconUrl(token.shortName)}
                           sx={{
                             width: 40,
                             height: 40,
@@ -274,7 +275,7 @@ export default function IndexCoinPickerDialog({
                   >
                     <Box
                       component="img"
-                      src={token.url}
+                      src={getCryptoIconUrl(token.shortName)}
                       sx={{
                         width: 40,
                         height: 40,

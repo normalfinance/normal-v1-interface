@@ -26,6 +26,7 @@ import type {
   PerformanceInfo,
   ExchangeRateInfo,
 } from '../pools-explore/explorer-chart-data';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 // Types
 export type ChartMetricKey = 'price' | 'volume' | 'liquidity';
@@ -155,10 +156,14 @@ export function PoolsExplorer({
             justifyContent: 'flex-start',
           }}
         >
-          <Avatar src={pairInfo?.tokenA.iconUrl} alt="Token A" sx={{ width: 27, height: 27 }} />
+          <Avatar
+            src={getCryptoIconUrl(pairInfo?.tokenA.name ?? '')}
+            alt="Token A"
+            sx={{ width: 27, height: 27 }}
+          />
 
           <Avatar
-            src={pairInfo?.tokenB.iconUrl}
+            src={getCryptoIconUrl(pairInfo?.tokenB.name ?? '')}
             alt="Token B"
             sx={{
               width: 27,

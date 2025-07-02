@@ -3,6 +3,7 @@ import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
 
 import { fCurrency } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getConversionText } from '@/utils/conversion-helpers';
@@ -275,7 +276,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
    * @async
    */
   const doSwap = useCallback(async (): Promise<void> => {
-    if (sellToken && buyToken) {
+    if (sellToken && buyToken && sellToken.address && buyToken.address) {
       try {
         // Execute the transaction using the hook
         await executeContractTransaction({
@@ -587,7 +588,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                 sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
               >
                 <SwapSendPopupButton
-                  imgUrl={sellToken.url}
+                  imgUrl={getCryptoIconUrl(sellToken.shortname)}
                   label={sellToken.shortname}
                   onClick={() => {
                     setActiveButton('sell');
@@ -746,7 +747,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
           >
             {buyToken ? (
               <SwapSendPopupButton
-                imgUrl={buyToken.url}
+                imgUrl={getCryptoIconUrl(buyToken.shortname)}
                 label={buyToken.shortname}
                 onClick={() => {
                   setActiveButton('buy');
