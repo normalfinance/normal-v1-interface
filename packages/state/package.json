@@ -30,6 +30,7 @@
     "@normalfinance/contracts": "workspace:^",
     "@stellar/freighter-api": "3.0.0",
     "react-query": "^3.39.3",
-    "zustand": "^4.3.9"
+    "zustand": "^4.3.9",
+    "@normalfinance/utils": "workspace:^"
   }
 }
