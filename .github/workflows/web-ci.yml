@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies (Yarn)
         run: yarn install --frozen-lockfile
 
+      - name: Build internal packages (turborepo)
+        run: yarn build --filter "!@normalfinance/web" --cache-dir .turbo
+
       # ---------- Quality Gates ----------
       - name: Prettier – formatting check
         run: yarn fm:check
