@@ -1,4 +1,6 @@
-'use client';;
+'use client';
+
+;
 
 import type { PoolTxRow } from '@/types/pools';
 import type { Pool } from '@/components/_common/pools';
@@ -13,12 +15,12 @@ import { useRouter } from 'next/navigation';
 import { constants } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useState, useEffect, useCallback } from 'react';
-import { fCurrencyCompact, fShortenNumber, fPercent } from '@/utils/format-number';
+import { fCurrencyCompact } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
 import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import Grid2 from '@mui/material/Grid2';
 import { useTheme } from '@mui/material';

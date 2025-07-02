@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import type { Dayjs } from 'dayjs';
-=======
-import { useTranslate } from '@/locales';
->>>>>>> develop
 import type { DialogProps } from '@mui/material/Dialog';
 import type { Theme, SxProps } from '@mui/material/styles';
 
@@ -22,7 +18,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 
 import type { UseDateRangePickerReturn } from './use-date-range-picker';
-import { Dayjs } from 'dayjs';
+// import { Dayjs } from 'dayjs';
 
 // ----------------------------------------------------------------------
 
@@ -100,22 +96,17 @@ export function CustomDateRangePicker({
             </>
           ) : (
             <>
-<<<<<<< HEAD
               <DatePicker
                 label="Start date"
                 value={startDate as Dayjs}
                 onChange={onChangeStartDate}
               />
-=======
-              <DatePicker label="Start date" value={startDate as Dayjs} onChange={onChangeStartDate} />
->>>>>>> develop
               <DatePicker label="End date" value={endDate as Dayjs} onChange={onChangeEndDate} />
             </>
           )}
         </Box>
 
         {error && (
-<<<<<<< HEAD
           <FormHelperText error sx={{ px: 2 }}>
             {t('End date must be later than start date')}
           </FormHelperText>
@@ -128,14 +119,6 @@ export function CustomDateRangePicker({
         <Button disabled={error} variant="contained" onClick={handleSubmit}>
           {t('Apply')}
         </Button>
-=======
-          <FormHelperText error sx={{ px: 2 }}>{t('End date must be later than start date')}</FormHelperText>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button variant="outlined" color="inherit" onClick={onClose}>{t('Cancel')}</Button>
-        <Button disabled={error} variant="contained" onClick={handleSubmit}>{t('Apply')}</Button>
->>>>>>> develop
       </DialogActions>
     </Dialog>
   );

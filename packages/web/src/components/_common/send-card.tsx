@@ -5,6 +5,7 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import React, { useRef, useState, useEffect } from 'react';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
 
@@ -14,7 +15,6 @@ import { Box, Button, InputBase, Typography } from '@mui/material';
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { Iconify } from '../template/iconify';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 interface SendCardProps extends CardProps {
   tokensList?: Token[];

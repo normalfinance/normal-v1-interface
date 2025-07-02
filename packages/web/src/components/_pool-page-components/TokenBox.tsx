@@ -1,4 +1,3 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';

@@ -1,4 +1,3 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 
 import React, { useState } from 'react';

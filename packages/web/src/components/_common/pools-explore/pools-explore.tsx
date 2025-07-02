@@ -1,5 +1,4 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import type { CardProps } from '@mui/material/Card';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
@@ -7,6 +6,7 @@ import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
 
 import Card from '@mui/material/Card';
@@ -27,7 +27,6 @@ import type {
   PerformanceInfo,
   ExchangeRateInfo,
 } from '../pools-explore/explorer-chart-data';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 // Types
 export type ChartMetricKey = 'price' | 'volume' | 'liquidity';
@@ -96,13 +95,6 @@ export function PoolsExplorer({
 
   const realtimeData = chart[selectedMetric]?.[selectedTimeframe];
 
-<<<<<<< HEAD
-=======
-  if (!realtimeData) {
-    return <div>{t('No chart data available')}</div>;
-  }
-
->>>>>>> develop
   const chartOptions = useChart({
     colors: [effectiveColor],
     xaxis: {
@@ -138,13 +130,9 @@ export function PoolsExplorer({
           {
             name: (
               <>
-<<<<<<< HEAD
                 {pairInfo?.tokenA.name}
                 {t('/')}
                 {pairInfo?.tokenB.name}{' '}
-=======
-                {pairInfo?.tokenA.name}{t('/')}{pairInfo?.tokenB.name}{' '}
->>>>>>> develop
                 <Typography component="span" color="text.secondary" variant="body2">
                   {pairInfo?.address}
                 </Typography>
@@ -189,13 +177,9 @@ export function PoolsExplorer({
         </Box>
 
         <Typography component="span" color="text.primary" variant="h6" ml={1}>
-<<<<<<< HEAD
           {pairInfo?.tokenA.name}
           {t('/')}
           {pairInfo?.tokenB.name}
-=======
-          {pairInfo?.tokenA.name}{t('/')}{pairInfo?.tokenB.name}
->>>>>>> develop
         </Typography>
 
         <Box
@@ -265,15 +249,11 @@ export function PoolsExplorer({
             {exchangeRate?.label}
           </Typography>
 
-<<<<<<< HEAD
           <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>
             {t('(')}
             {exchangeRate?.usdEquivalent}
             {t(')')}
           </Typography>
-=======
-          <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>{t('(')}{exchangeRate?.usdEquivalent}{t(')')}</Typography>
->>>>>>> develop
         </Box>
         <Stack direction="row" spacing={0.5} alignItems="center">
           <Box
@@ -310,13 +290,9 @@ export function PoolsExplorer({
                   : 'eva:trending-up-fill'
               }
               color={
-<<<<<<< HEAD
                 performance && performance.percentageChange && performance.percentageChange < 0
                   ? 'error.main'
                   : 'success.main'
-=======
-                performance && performance.percentageChange && performance.percentageChange < 0 ? 'error.main' : 'success.main'
->>>>>>> develop
               }
             />
           </Box>
@@ -324,7 +300,6 @@ export function PoolsExplorer({
             variant="caption"
             sx={{
               color:
-<<<<<<< HEAD
                 performance && performance.percentageChange && performance.percentageChange < 0
                   ? 'error.main'
                   : 'success.main',
@@ -334,12 +309,6 @@ export function PoolsExplorer({
               performance.percentageChange &&
               performance.percentageChange >= 0 &&
               '+'}
-=======
-                performance && performance.percentageChange && performance.percentageChange < 0 ? 'error.main' : 'success.main',
-            }}
-          >
-            {performance && performance.percentageChange && performance.percentageChange >= 0 && '+'}
->>>>>>> develop
             {fPercent(performance && performance.percentageChange)}
           </Typography>
         </Stack>

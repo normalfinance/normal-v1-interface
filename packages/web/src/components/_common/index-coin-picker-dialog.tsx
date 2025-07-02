@@ -1,10 +1,10 @@
 'use client';
-import { useTranslate } from '@/locales';
 
 import type { IndexCoin } from '@/types/indexes';
 
 import React, { useState } from 'react';
-
+import { useTranslate } from '@/locales';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { fShortenNumber, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
@@ -19,7 +19,6 @@ import {
   DialogContent,
   InputAdornment,
 } from '@mui/material';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import { Iconify } from '../template/iconify';
 

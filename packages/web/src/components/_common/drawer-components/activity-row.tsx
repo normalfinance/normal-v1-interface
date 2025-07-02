@@ -5,6 +5,7 @@
 import type { Activity } from '@/types/activity';
 
 import { shortenAddress } from '@/utils/format-address';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -12,7 +13,6 @@ import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import { grey } from '@mui/material/colors';
 import Typography from '@mui/material/Typography';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 /* ------------------------------------------------------------------ */
 /* Split avatar helper                                                */

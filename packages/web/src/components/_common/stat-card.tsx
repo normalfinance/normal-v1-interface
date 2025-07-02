@@ -1,4 +1,3 @@
-import { useTranslate } from '@/locales';
 import type { CardProps } from '@mui/material/Card';
 import type { ChartProps, ChartOptions } from '@/components/template/chart';
 

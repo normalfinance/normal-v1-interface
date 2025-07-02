@@ -1,4 +1,3 @@
-import { useTranslate } from '@/locales';
 import type { TextFieldProps } from '@mui/material/TextField';
 import type {
   AutocompleteProps,
@@ -83,15 +82,11 @@ export function CountrySelect({
               borderRadius: '50%',
             }}
           />
-<<<<<<< HEAD
           {country.label}
           {t('(')}
           {country.code}
           {t(') +')}
           {country.phone}
-=======
-          {country.label}{t('(')}{country.code}{t(') +')}{country.phone}
->>>>>>> develop
         </li>
       );
     },

@@ -2,9 +2,9 @@ import type { Token } from '@/types/token';
 
 import React from 'react';
 import { useTranslate } from '@/locales';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { getSwapConversionText } from '@/utils/conversion-helpers';
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import { useTheme } from '@mui/material/styles';
 import {

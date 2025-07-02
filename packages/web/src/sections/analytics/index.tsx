@@ -1,4 +1,6 @@
-'use client';;
+'use client';
+
+;
 
 import type { LegendValue } from '@/components/_common/area-chart-card';
 

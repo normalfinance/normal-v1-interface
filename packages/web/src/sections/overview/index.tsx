@@ -9,16 +9,16 @@ import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
 import { fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import Grid2 from '@mui/material/Grid2';
 import { Stack, useTheme, Typography } from '@mui/material';
 
 import { StatCard } from '@/components/_common/stat-card';
-import { TokenActionCard } from '@/components/_common/token-action-card';
 import { AreaChartCard } from '@/components/_common/area-chart-card';
+import { TokenActionCard } from '@/components/_common/token-action-card';
 import { Markets } from '@/components/_overview-page-components/markets/markets';
 import { MarketTable } from '@/components/_overview-page-components/market-table/market-table';
 

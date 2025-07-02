@@ -4,7 +4,6 @@ import { mergeClasses } from 'minimal-shared/utils';
 import { styled } from '@mui/material/styles';
 
 import { chartClasses } from '../classes';
-import { useTranslate } from '@/locales';
 
 // ----------------------------------------------------------------------
 

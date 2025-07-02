@@ -7,6 +7,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 import { styled, alpha as hexAlpha } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
+
 import { colorPickerClasses } from './classes';
 
 // ----------------------------------------------------------------------

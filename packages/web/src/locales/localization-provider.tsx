@@ -26,7 +26,6 @@ import 'dayjs/locale/ru'; // Russian
 import 'dayjs/locale/sv'; // Swedish
 import 'dayjs/locale/tr'; // Turkish
 import 'dayjs/locale/uk'; // Ukrainian
-
 // Newly added locales
 import 'dayjs/locale/da'; // Danish
 import 'dayjs/locale/de'; // German

@@ -12,13 +12,7 @@ import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import { inputBaseClasses } from '@mui/material/InputBase';
 
-<<<<<<< HEAD
 import { Iconify } from '../iconify';
-=======
-import { countries } from '@/assets/data/countries';
-
-import { Iconify } from '@/components/template/iconify';
->>>>>>> develop
 import { CountryListPopover } from './list-popover';
 
 import type { PhoneInputProps } from './types';

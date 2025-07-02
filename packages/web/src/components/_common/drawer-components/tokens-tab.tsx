@@ -1,21 +1,10 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
-<<<<<<< HEAD
 import type { Token } from '@/types/token';
 
 import { useTranslate } from '@/locales';
-=======
-import Box from '@mui/material/Box';
-import { Token } from '@/types/token';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
-import { Button, Stack, Typography } from '@mui/material';
-import { fCurrency, fPercent } from '@/utils/format-number';
-import { shortenAddress } from '@/utils/format-address';
-import { alpha, useTheme } from '@mui/material/styles';
-import { Iconify } from '@/components/template/iconify';
->>>>>>> develop
 import { varAlpha } from 'minimal-shared/utils';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';

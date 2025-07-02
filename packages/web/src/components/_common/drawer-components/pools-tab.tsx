@@ -1,5 +1,4 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
@@ -61,13 +60,9 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
               </Box>
               <Stack direction="column" width={1} alignItems="start">
                 <Typography component="span" color="text.primary" variant="h6" ml={1}>
-<<<<<<< HEAD
                   {pool.pairInfo?.tokenA.name}
                   {t('/')}
                   {pool.pairInfo?.tokenB.name}
-=======
-                  {pool.pairInfo?.tokenA.name}{t('/')}{pool.pairInfo?.tokenB.name}
->>>>>>> develop
                 </Typography>
                 <Box
                   sx={{
@@ -129,26 +124,18 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
                 <Typography color="text.primary" variant="body1">
                   {fCurrency(pool.performance?.position)}
                 </Typography>
-<<<<<<< HEAD
                 <Typography color="text.secondary" variant="caption">
                   {t('Position')}
                 </Typography>
-=======
-                <Typography color="text.secondary" variant="caption">{t('Position')}</Typography>
->>>>>>> develop
               </Stack>
 
               <Stack direction="column" alignItems="start">
                 <Typography color="text.primary" variant="body1">
                   {fCurrency(pool.performance?.fees)}
                 </Typography>
-<<<<<<< HEAD
                 <Typography color="text.secondary" variant="caption">
                   {t('Fees')}
                 </Typography>
-=======
-                <Typography color="text.secondary" variant="caption">{t('Fees')}</Typography>
->>>>>>> develop
               </Stack>
             </Stack>
           </Button>

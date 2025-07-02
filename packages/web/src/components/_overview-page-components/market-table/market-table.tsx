@@ -4,17 +4,10 @@ import type { LabelColor } from '@/components/template/label';
 import type { IMarketTableFilters } from '@/types/marketTable';
 import type { TableHeadCellProps } from '@/components/template/table';
 
-<<<<<<< HEAD
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { useSetState } from 'minimal-shared/hooks';
 import { useMemo, useState, useCallback } from 'react';
-=======
-import { useState, useCallback, useMemo } from 'react';
-import { varAlpha } from 'minimal-shared/utils';
-import { useSetState } from 'minimal-shared/hooks';
-import { useTranslate } from '@/locales';
->>>>>>> develop
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -128,7 +121,6 @@ export function MarketTable({ markets }: MarketTableProps) {
   );
 
   return (
-<<<<<<< HEAD
     <Card>
       <Tabs
         value={currentFilters.status}
@@ -197,44 +189,6 @@ export function MarketTable({ markets }: MarketTableProps) {
                   checked,
                   dataFiltered.map((row) => row.id)
                 )
-=======
-    <>
-      <Card>
-        <Tabs
-          value={currentFilters.status}
-          onChange={handleFilterStatus}
-          sx={[
-            (theme) => ({
-              px: 2.5,
-              boxShadow: `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
-            }),
-          ]}
-        >
-          {STATUS_OPTIONS.map((tab) => (
-            <Tab
-              key={tab.value}
-              iconPosition="end"
-              value={tab.value}
-              label={t(tab.label)}
-              icon={
-                <Label
-                  variant={
-                    ((tab.value === 'all' || tab.value === currentFilters.status) && 'filled') ||
-                    'soft'
-                  }
-                  color={
-                    (tab.value === 'trending' && 'info') ||
-                    (tab.value === 'new' && 'primary') ||
-                    (tab.value === 'meme' && 'warning') ||
-                    (tab.value === 'rwa' && 'error') ||
-                    'default'
-                  }
-                >
-                  {['trending', 'new', 'meme', 'rwa'].includes(tab.value)
-                    ? tableData.filter((market) => market.status === tab.value).length
-                    : tableData.length}
-                </Label>
->>>>>>> develop
               }
             />
 
@@ -253,38 +207,9 @@ export function MarketTable({ markets }: MarketTableProps) {
                   />
                 ))}
 
-<<<<<<< HEAD
               <TableEmptyRows
                 height={table.dense ? 56 : 56 + 20}
                 emptyRows={emptyRows(table.page, table.rowsPerPage, dataFiltered.length)}
-=======
-        {canReset && (
-          <MarketTableFiltersResult
-            filters={filters}
-            totalResults={dataFiltered.length}
-            onResetPage={table.onResetPage}
-            sx={{ p: 2.5, pt: 0 }}
-          />
-        )}
-
-        <Box sx={{ position: 'relative' }}>
-          <Scrollbar>
-            <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 960 }}>
-              {/**************** TABLE HEAD HERE *******************/}
-              <TableHeadCustom
-                order={table.order}
-                orderBy={table.orderBy}
-                headCells={TABLE_HEAD_I18N}
-                rowCount={dataFiltered.length}
-                numSelected={table.selected.length}
-                onSort={table.onSort}
-                onSelectAllRows={(checked) =>
-                  table.onSelectAllRows(
-                    checked,
-                    dataFiltered.map((row) => row.id)
-                  )
-                }
->>>>>>> develop
               />
 
               <TableNoData notFound={notFound} />

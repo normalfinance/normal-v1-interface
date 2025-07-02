@@ -1,4 +1,3 @@
-import { useTranslate } from '@/locales';
 import type { BoxProps } from '@mui/material/Box';
 import type { Theme, SxProps } from '@mui/material/styles';
 import type { TypographyProps } from '@mui/material/Typography';
@@ -22,15 +21,11 @@ type SearchNotFoundProps = BoxProps & {
 export function SearchNotFound({ query, sx, slotProps, ...other }: SearchNotFoundProps) {
   const { t } = useTranslate();
   if (!query) {
-<<<<<<< HEAD
     return (
       <Typography variant="body2" {...slotProps?.description}>
         {t('Please enter keywords')}
       </Typography>
     );
-=======
-    return (<Typography variant="body2" {...slotProps?.description}>{t('Please enter keywords')}</Typography>);
->>>>>>> develop
   }
 
   return (
@@ -56,7 +51,6 @@ export function SearchNotFound({ query, sx, slotProps, ...other }: SearchNotFoun
             ? (slotProps?.title?.sx ?? [])
             : [slotProps?.title?.sx]),
         ]}
-<<<<<<< HEAD
       >
         {t('Not found')}
       </Typography>
@@ -67,10 +61,6 @@ export function SearchNotFound({ query, sx, slotProps, ...other }: SearchNotFoun
         <br />
         {t('Try checking for typos or using complete words.')}
       </Typography>
-=======
-      >{t('Not found')}</Typography>
-      <Typography variant="body2" {...slotProps?.description}>{t('No results found for')}<strong>{`"${query}"`}</strong>{t('.')}<br />{t('Try checking for typos or using complete words.')}</Typography>
->>>>>>> develop
     </Box>
   );
 }

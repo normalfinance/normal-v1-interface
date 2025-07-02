@@ -3,6 +3,7 @@ import type { CardProps } from '@mui/material/Card';
 import type { ChartOptions } from '@/components/template/chart';
 
 import { useTranslate } from '@/locales';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -11,8 +12,6 @@ import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
 
 import { Chart, useChart } from '@/components/template/chart';
-
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 type ChartConfig = {
   colors?: string[];

@@ -1,6 +1,6 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
@@ -23,7 +23,6 @@ import SwapReview from './swap-review';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
 
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];

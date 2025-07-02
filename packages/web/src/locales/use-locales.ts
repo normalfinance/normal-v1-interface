@@ -5,9 +5,6 @@ import { useCallback } from 'react';
 import { useRouter } from '@/routes/hooks';
 import { useTranslation } from 'react-i18next';
 
-import { toast } from '@/components/template/snackbar';
-import { useSettingsContext } from '@/components/template/settings';
-
 import { useSettingsContext } from '@/components/template/settings';
 
 import { allLangs } from './all-langs';

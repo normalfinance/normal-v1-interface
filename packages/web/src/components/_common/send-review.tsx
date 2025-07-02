@@ -3,6 +3,7 @@ import type { Token } from '@/types/token';
 import React from 'react';
 import { useTranslate } from '@/locales';
 import { shortenAddress } from '@/utils/format-address';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
@@ -16,9 +17,8 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { Iconify } from '../template/iconify';
 
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { Iconify } from '../template/iconify';
 
 export interface SendReviewProps {
   open: boolean;

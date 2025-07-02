@@ -16,12 +16,6 @@ import TableCell from '@mui/material/TableCell';
 import { useTheme } from '@mui/material/styles';
 
 import { Label } from '@/components/template/label';
-<<<<<<< HEAD
-=======
-import { Icon } from '@iconify/react';
-import { useRouter } from 'next/navigation';
-import { useTranslate } from '@/locales';
->>>>>>> develop
 
 type Props = {
   row: Market;

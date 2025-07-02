@@ -1,5 +1,4 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import type { Token } from '@normalfinance/types';
 
@@ -8,14 +7,10 @@ import { useState, useEffect } from 'react';
 import { constants } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { NormalPoolContract } from '@normalfinance/contracts';
-<<<<<<< HEAD
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
-=======
-import { formatCurrency } from '@/utils/format-number';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
->>>>>>> develop
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
 
 import { Box, Grid, Alert, Stack, Typography, CircularProgress } from '@mui/material';
@@ -222,13 +217,9 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-<<<<<<< HEAD
         <Typography variant="h4" color="text.primary">
           {t('Pool')}
         </Typography>
-=======
-        <Typography variant="h4" color="text.primary">{t('Pool')}</Typography>
->>>>>>> develop
         <Typography variant="body1" color="text.secondary">
           {poolAddress}
         </Typography>
@@ -256,13 +247,9 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
 
             {tokenA?.name ? (
               <Typography sx={{ fontSize: '2rem', fontWeight: 700, ml: 1 }}>
-<<<<<<< HEAD
                 {tokenA?.name}
                 {t('-')}
                 {tokenB?.name}
-=======
-                {tokenA?.name}{t('-')}{tokenB?.name}
->>>>>>> develop
               </Typography>
             ) : (
               <CircularProgress />

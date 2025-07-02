@@ -1,10 +1,13 @@
-'use client';;
+'use client';
+
+;
 
 import type { NativeToken } from '@/types/native-token';
 
 import { useTranslate } from '@/locales';
 import { useFormContext } from 'react-hook-form';
 import React, { useState, useEffect } from 'react';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
@@ -26,8 +29,6 @@ import {
 import { Iconify } from '../template/iconify';
 
 import type { NewIndexSchemaType } from './new-index-form';
-
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 type NewIndexSubmissionDialogProps = {
   open: boolean;

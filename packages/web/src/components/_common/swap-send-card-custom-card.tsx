@@ -1,7 +1,6 @@
 import type { TabsProps } from '@mui/material/Tabs';
 import type { Theme, SxProps } from '@mui/material/styles';
 
-
 import { useTranslate } from '@/locales';
 
 import NoSsr from '@mui/material/NoSsr';

@@ -11,9 +11,9 @@ import Card from '@mui/material/Card';
 import { Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
+import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
-import BuyCard from './buy-card';
 import { CustomTabs } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
@@ -76,7 +76,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 
   // Fallback: at least one tab must be rendered ------------------------
   if (activeTabs.length === 0) {
-    /* eslint-disable-next-line no-console */
+     
     console.warn('TokenActionCard: enabledTabs is empty – defaulting to all tabs.');
     activeTabs.push(...ALL_TABS);
   }

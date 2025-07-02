@@ -1,5 +1,4 @@
 'use client';
-import { useTranslate } from '@/locales';
 
 import type { Token } from '@normalfinance/types';
 

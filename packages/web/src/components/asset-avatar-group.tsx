@@ -2,10 +2,11 @@
 
 import type { CardProps } from '@mui/material/Card';
 
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+
 // @mui
 import { Avatar } from '@mui/material';
 import AvatarGroup, { avatarGroupClasses } from '@mui/material/AvatarGroup';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 // ----------------------------------------------------------------------
 
