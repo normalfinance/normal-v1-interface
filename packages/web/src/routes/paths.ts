@@ -1,12 +1,14 @@
-import { kebabCase } from 'es-toolkit';
-
 // ----------------------------------------------------------------------
 
 export const paths = {
   root: '/',
+  // error
   page404: '/error/404',
   page500: '/error/500',
-  website: {},
+  // helper
+  website: {
+    root: 'https://www.normalfinance.io/',
+  },
   socials: {
     twitter: 'https://x.com/normalfi',
     discord: 'https://discord.com/invite/xQMvceZjeS',
@@ -15,19 +17,17 @@ export const paths = {
   blog: 'https://blog.normalfinance.io/',
   // docs: 'https://docs.normalfinance.io',
   docs: 'https://normalfinance.gitbook.io/docs',
-  overview: '/overview',
-  markets: {
-    root: '/markets',
-    details: (title: string) => `/markets/${kebabCase(title)}`,
+  // main
+  explore: '/explore',
+  pools: {
+    details: (poolAddress: string) => `/pools/${poolAddress}`,
   },
-  index: {
-    root: '/index',
-    details: (title: string) => `/index/${kebabCase(title)}`,
-    create: '/create-an-index',
+  positions: {
+    root: '/positions',
+    create: '/positions/create',
   },
-  rewards: '/rewards',
-  analytics: '/analytics',
+  swap: '/swap',
+  insurance: '/insurance',
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready
-  },
 };
