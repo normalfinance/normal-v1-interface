@@ -31,6 +31,33 @@ export interface FaqAccordionProps extends React.ComponentPropsWithoutRef<'secti
 }
 
 /* ------------------------------------------------------------------ */
+/*  Defaults                                                          */
+/* ------------------------------------------------------------------ */
+
+const DEFAULT_QUESTIONS: Question[] = [
+  {
+    title: 'How does Normal Finance work?',
+    answer: 'Normal pools liquidity across multiple DEXs to give you the best rate…',
+  },
+  {
+    title: 'Do I need an account to start?',
+    answer: 'No account needed—connect your wallet and trade instantly.',
+  },
+  {
+    title: 'Which tokens can I trade?',
+    answer: 'Any ERC-20 token supported by our connected DEXs.',
+  },
+  {
+    title: 'What are indexes?',
+    answer: 'Indexes are baskets of tokens that track themes or sectors (e.g., DeFi, Layer-2).',
+  },
+  {
+    title: 'Is it safe to use?',
+    answer: 'All contracts are audited. You keep custody of your assets at all times.',
+  },
+];
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 const FlatAccordion = styled(MuiAccordion)(({ theme }) => ({
@@ -66,7 +93,7 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
       {/* ------ Accordion list ------ */}
       <Stack>
         <Stack>
-          {questions.map((q, i) => (
+          {DEFAULT_QUESTIONS.map((q, i) => (
             <FlatAccordion key={i} square elevation={0} sx={{ boxShadow: 'none' }}>
               <AccordionSummary
                 expandIcon={
@@ -75,13 +102,16 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
                   </Box>
                 }
               >
-                <Typography fontWeight={500} sx={{ py: { md: 1.5 }, fontSize: { xs: 16, md: 18 } }}>
+                <Typography
+                  fontWeight={500}
+                  sx={{ py: { xs: 1.5, md: 1.5 }, fontSize: { xs: 18, md: 18 } }}
+                >
                   {q.title}
                 </Typography>
               </AccordionSummary>
 
-              <AccordionDetails sx={{ pb: { md: 2 } }}>
-                <Typography>{q.answer}</Typography>
+              <AccordionDetails sx={{ pb: { md: 2 }, mb: 2 }}>
+                <Typography color="text.secondary">{q.answer}</Typography>
               </AccordionDetails>
             </FlatAccordion>
           ))}

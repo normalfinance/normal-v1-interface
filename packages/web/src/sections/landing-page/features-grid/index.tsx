@@ -28,7 +28,7 @@ interface CardBase {
   url?: string;
 }
 
-interface SmallCard extends CardBase {
+export interface SmallCard extends CardBase {
   tokens?: Token[];
 }
 
@@ -135,7 +135,10 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   justifyContent="space-between"
                   gap={1}
                   width={1}
-                  onClick={() => t.url && router.push(t.url)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (t.url) router.push(t.url);
+                  }}
                   role={t.url ? 'link' : undefined}
                   tabIndex={t.url ? 0 : undefined}
                   sx={{
@@ -144,7 +147,6 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                     '&:hover': {
                       transform: t.url ? 'scale(1.03)' : 'none',
                     },
-
                     px: { xs: '12px', md: '16px' },
                     py: { xs: '6px', md: '12px' },
                     bgcolor: 'white',

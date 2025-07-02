@@ -25,7 +25,6 @@ type Testimonial = {
   avatar: ImageProps;
   name: string;
   position: string;
-  companyName: string;
   numberOfStars: number;
 };
 
@@ -52,7 +51,6 @@ const TestimonialCard: React.FC<Testimonial> = ({
   avatar,
   name,
   position,
-  companyName,
   numberOfStars,
 }) => (
   <Paper
@@ -88,7 +86,7 @@ const TestimonialCard: React.FC<Testimonial> = ({
       <Box>
         <Typography fontWeight={600}>{name}</Typography>
         <Typography variant="body2" color="text.secondary">
-          {position}, {companyName}
+          {position}
         </Typography>
       </Box>
     </Stack>
@@ -110,11 +108,8 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
     <Container disableGutters>
       {/* header */}
       <Stack spacing={2} maxWidth={640} mx="auto" textAlign="center" mb={{ xs: 6, md: 8 }}>
-        <Typography variant="h2" fontWeight={500} mb={2}>
+        <Typography variant="h2" fontWeight={500}>
           {heading}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {description}
         </Typography>
       </Stack>
 
@@ -138,56 +133,26 @@ export const TestimonialGridDefaults: Props = {
   testimonials: [
     {
       quote:
-        '"Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare."',
-      avatar: { src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg' },
-      name: 'Name Surname',
-      position: 'Position',
-      companyName: 'Company name',
+        '"Normal saves me time and money - all while being as easy to use as my traditional banking apps."',
+      avatar: { src: '/assets/images/testimonials/1.webp' },
+      name: 'Devin Kopp',
+      position: 'Co-founder @ Rodeo Money',
       numberOfStars: 5,
     },
     {
       quote:
-        '"Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare."',
-      avatar: { src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg' },
-      name: 'Name Surname',
-      position: 'Position',
-      companyName: 'Company name',
+        '"Instead of picking out each coin, Normal allows you to invest in the whole market at once. Normal makes it a no brainer."',
+      avatar: { src: '/assets/images/testimonials/2.webp' },
+      name: 'Jake Penzato',
+      position: 'Student at Aurora University',
       numberOfStars: 5,
     },
     {
       quote:
-        '"Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare."',
-      avatar: { src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg' },
-      name: 'Name Surname',
-      position: 'Position',
-      companyName: 'Company name',
-      numberOfStars: 5,
-    },
-    {
-      quote:
-        '"Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare."',
-      avatar: { src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg' },
-      name: 'Name Surname',
-      position: 'Position',
-      companyName: 'Company name',
-      numberOfStars: 5,
-    },
-    {
-      quote:
-        '"Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare."',
-      avatar: { src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg' },
-      name: 'Name Surname',
-      position: 'Position',
-      companyName: 'Company name',
-      numberOfStars: 5,
-    },
-    {
-      quote:
-        '"Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare."',
-      avatar: { src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg' },
-      name: 'Name Surname',
-      position: 'Position',
-      companyName: 'Company name',
+        '"Normal is a platform that simplifies investing into crypto. The platform is very clean and easy to use."',
+      avatar: { src: '/assets/images/testimonials/3.webp' },
+      name: 'Victor Acevedo',
+      position: 'An OG normie',
       numberOfStars: 5,
     },
   ],
