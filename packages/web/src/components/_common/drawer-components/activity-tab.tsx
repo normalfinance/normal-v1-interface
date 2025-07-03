@@ -1,7 +1,9 @@
 'use client';
 
-import { Activity } from '@/types/activity';
+import type { Activity } from '@/types/activity';
+
 import Box from '@mui/material/Box';
+
 import { ActivityRow } from './activity-row';
 
 export interface ActivityTabsProps {

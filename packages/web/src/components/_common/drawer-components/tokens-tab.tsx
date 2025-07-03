@@ -1,15 +1,17 @@
-'use client';;
+'use client';
+
+import type { Token } from '@/types/token';
+
 import { useTranslate } from '@/locales';
+import { varAlpha } from 'minimal-shared/utils';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
-import { Token } from '@/types/token';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
-import { Button, Stack, Typography } from '@mui/material';
-import { fCurrency, fPercent } from '@/utils/format-number';
-import { shortenAddress } from '@/utils/format-address';
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Stack, Button, Typography } from '@mui/material';
+
 import { Iconify } from '@/components/template/iconify';
-import { varAlpha } from 'minimal-shared/utils';
 
 export interface ToeknsTabsProps {
   tokens?: Token[];
@@ -104,7 +106,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                 >
                   {fCurrency(token.countstatus * token.pricestatus)}
                 </Typography>
-                <Stack direction="row" spacing={0.5} alignItems="center" mt={'4px'}>
+                <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                   <Box
                     component="span"
                     sx={{

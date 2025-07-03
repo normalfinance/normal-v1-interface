@@ -1,6 +1,7 @@
 import React from 'react';
 import { paths } from '@/routes/paths';
 import { CONFIG } from '@/global-config';
+import { useTranslate } from '@/locales';
 import { createZKP2PURL, createOnramperURL, createCoinbasePayURL } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -19,6 +20,7 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+
 import GetHelpButton from './get-help-button';
 
 // ----------------------------------------------------------------------
@@ -44,6 +46,7 @@ export interface CheckoutDialogProps {
 
 const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, token, amount, onClose }) => {
   const theme = useTheme();
+  const { t } = useTranslate();
 
   const handleCheckoutClick = (wallet: CheckoutOption) => {
     window.open(wallet.url, '_blank', 'noopener');
@@ -102,7 +105,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, token, amount, on
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div" color="text.primary">
-            Checkout with
+            {t('Checkout with')}
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
             <GetHelpButton url={paths.help.buy} />
@@ -171,7 +174,9 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, token, amount, on
             textAlign: 'center',
           }}
         >
-          You’ll continue to the provider’s portal to see the fees associated with your transaction
+          {t(
+            'You’ll continue to the provider’s portal to see the fees associated with your transaction'
+          )}
         </Typography>
       </Box>
     </Dialog>

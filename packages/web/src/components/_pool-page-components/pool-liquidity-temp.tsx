@@ -1,6 +1,6 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@normalfinance/types';
 
+import { useTranslate } from '@/locales';
 import React, { useState, useCallback } from 'react';
 
 import TabPanel from '@mui/lab/TabPanel';
@@ -80,7 +80,9 @@ const LabTabs = ({ tokenB, liquidityToken, onAddLiquidity, onRemoveLiquidity }: 
                   : 'none',
               filter: value === '1' ? 'brightness(1.2)' : 'brightness(1)',
             }}
-          >{t('Add Liquidity')}</MuiButton>
+          >
+            {t('Add Liquidity')}
+          </MuiButton>
           <MuiButton
             onClick={() => setValue('2')}
             sx={{
@@ -91,7 +93,9 @@ const LabTabs = ({ tokenB, liquidityToken, onAddLiquidity, onRemoveLiquidity }: 
                   : 'none',
               filter: value === '2' ? 'brightness(1.2)' : 'brightness(1)',
             }}
-          >{t('Remove Liquidity')}</MuiButton>
+          >
+            {t('Remove Liquidity')}
+          </MuiButton>
         </Box>
         <TabPanel value="1" sx={{ p: 0, mt: 3 }}>
           <Box mt={2}>
@@ -102,7 +106,9 @@ const LabTabs = ({ tokenB, liquidityToken, onAddLiquidity, onRemoveLiquidity }: 
               hideDropdownButton
             />
           </Box>
-          <Button onClick={() => onAddLiquidity(Number(tokenBValue))} fullWidth sx={{ mt: 3 }}>{t('Add Liquidity')}</Button>
+          <Button onClick={() => onAddLiquidity(Number(tokenBValue))} fullWidth sx={{ mt: 3 }}>
+            {t('Add Liquidity')}
+          </Button>
         </TabPanel>
         <TabPanel value="2" sx={{ p: 0, mt: 3 }}>
           <Box>
@@ -113,7 +119,9 @@ const LabTabs = ({ tokenB, liquidityToken, onAddLiquidity, onRemoveLiquidity }: 
               hideDropdownButton
             />
           </Box>
-          <Button onClick={() => onRemoveLiquidity(Number(tokenCValue))} fullWidth sx={{ mt: 3 }}>{t('Remove Liquidity')}</Button>
+          <Button onClick={() => onRemoveLiquidity(Number(tokenCValue))} fullWidth sx={{ mt: 3 }}>
+            {t('Remove Liquidity')}
+          </Button>
         </TabPanel>
       </TabContext>
     </Box>
@@ -135,42 +143,47 @@ const PoolLiquidityTemp = ({
   const { t } = useTranslate('auto');
 
   return (
-  <Box
-    sx={{
-      borderRadius: '16px',
-      // background:
-      //   'linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.03) 100%)',
-      p: 3,
-    }}
-  >
-    <Box display="flex" justifyContent="center" gap={2} mb={3}>
-      <img src={tokenA.icon} alt={tokenA.name} width={48} height={48} />
-      <img src={tokenB.icon} alt={tokenB.name} width={48} height={48} />
-    </Box>
-    <Typography sx={{ textAlign: 'center', fontWeight: 700, mb: 2 }}>{t('Pool Liquidity')}</Typography>
-    <Divider sx={{ mb: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
+    <Box
+      sx={{
+        borderRadius: '16px',
+        // background:
+        //   'linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.03) 100%)',
+        p: 3,
+      }}
+    >
+      <Box display="flex" justifyContent="center" gap={2} mb={3}>
+        <img src={tokenA.icon} alt={tokenA.name} width={48} height={48} />
+        <img src={tokenB.icon} alt={tokenB.name} width={48} height={48} />
+      </Box>
+      <Typography sx={{ textAlign: 'center', fontWeight: 700, mb: 2 }}>
+        {t('Pool Liquidity')}
+      </Typography>
+      <Divider sx={{ mb: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
 
-    <Grid2 container spacing={2} mt={2}>
-      <Grid2 size={{ xs: 4 }}>
-        <Typography sx={{ fontSize: '0.875rem', opacity: 0.7 }}>{tokenA.name}</Typography>
-        <Typography sx={{ fontWeight: 700 }}>{liquidityA}</Typography>
+      <Grid2 container spacing={2} mt={2}>
+        <Grid2 size={{ xs: 4 }}>
+          <Typography sx={{ fontSize: '0.875rem', opacity: 0.7 }}>{tokenA.name}</Typography>
+          <Typography sx={{ fontWeight: 700 }}>{liquidityA}</Typography>
+        </Grid2>
+        <Grid2 size={{ xs: 4 }}>
+          <Typography sx={{ fontSize: '0.875rem', opacity: 0.7 }}>{tokenB.name}</Typography>
+          <Typography sx={{ fontWeight: 700 }}>{liquidityB}</Typography>
+        </Grid2>
+        <Grid2 size={{ xs: 4 }}>
+          <Typography sx={{ fontSize: '0.875rem', opacity: 0.7 }}>{t('Ratio')}</Typography>
+          <Typography sx={{ fontWeight: 700 }}>
+            {t('1:')}
+            {(liquidityB / liquidityA).toFixed(2)}
+          </Typography>
+        </Grid2>
       </Grid2>
-      <Grid2 size={{ xs: 4 }}>
-        <Typography sx={{ fontSize: '0.875rem', opacity: 0.7 }}>{tokenB.name}</Typography>
-        <Typography sx={{ fontWeight: 700 }}>{liquidityB}</Typography>
-      </Grid2>
-      <Grid2 size={{ xs: 4 }}>
-        <Typography sx={{ fontSize: '0.875rem', opacity: 0.7 }}>{t('Ratio')}</Typography>
-        <Typography sx={{ fontWeight: 700 }}>{t('1:')}{(liquidityB / liquidityA).toFixed(2)}</Typography>
-      </Grid2>
-    </Grid2>
-    <LabTabs
-      tokenB={tokenB}
-      liquidityToken={liquidityToken}
-      onAddLiquidity={onAddLiquidity}
-      onRemoveLiquidity={onRemoveLiquidity}
-    />
-  </Box>
+      <LabTabs
+        tokenB={tokenB}
+        liquidityToken={liquidityToken}
+        onAddLiquidity={onAddLiquidity}
+        onRemoveLiquidity={onRemoveLiquidity}
+      />
+    </Box>
   );
 };
 

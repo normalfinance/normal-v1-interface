@@ -1,13 +1,14 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
 
+import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { NormalPoolRouterContract } from '@normalfinance/contracts';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
 import { constants, checkTrustline, fetchAndIssueTrustline } from '@normalfinance/utils';
@@ -22,7 +23,6 @@ import SwapReview from './swap-review';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
 
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];

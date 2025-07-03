@@ -1,12 +1,12 @@
+import type { UploadProps } from '@/types/upload';
+
 import { useDropzone } from 'react-dropzone';
+import { uploadClasses } from '@/classes/upload';
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 
 import { Iconify } from '../template/iconify';
-import { uploadClasses } from '@/classes/upload';
-
-import type { UploadProps } from '@/types/upload';
 
 // ----------------------------------------------------------------------
 

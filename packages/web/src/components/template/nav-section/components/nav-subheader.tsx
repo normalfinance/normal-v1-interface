@@ -5,8 +5,9 @@ import { mergeClasses } from 'minimal-shared/utils';
 import { styled } from '@mui/material/styles';
 import ListSubheader from '@mui/material/ListSubheader';
 
-import { navSectionClasses } from '../styles';
 import { Iconify, iconifyClasses } from '@/components/template/iconify';
+
+import { navSectionClasses } from '../styles';
 
 // ----------------------------------------------------------------------
 

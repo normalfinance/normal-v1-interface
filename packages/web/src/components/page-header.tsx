@@ -1,7 +1,8 @@
+import type { ReactNode } from 'react';
+
 // @mui
 import Box from '@mui/material/Box';
 import { Stack, Typography } from '@mui/material';
-import { ReactNode } from 'react';
 
 // ----------------------------------------------------------------------
 

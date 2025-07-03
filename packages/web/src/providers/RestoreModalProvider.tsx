@@ -1,7 +1,8 @@
-import type { FC, ReactNode} from 'react';
+import type { FC, ReactNode } from 'react';
+
+import React, { useState, useContext, createContext } from 'react';
 
 import { RestoreModal } from '@/components/RestoreModal';
-import React, { useState, useContext, createContext } from 'react';
 
 interface RestoreModalContextProps {
   isRestoreModalOpen: boolean;

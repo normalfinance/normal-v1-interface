@@ -1,5 +1,4 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import type { PoolTxRow } from '@/types/pools';
 import type { Pool } from '@/components/_common/pools';
@@ -9,16 +8,17 @@ import type { PoolStat, PoolBalance } from '@/components/_common//pools-apr/pool
 import type { ExplorerChartData } from '@/components/_common/pools-explore/pools-explore';
 import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
+import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { constants } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useState, useEffect, useCallback } from 'react';
-import { fCurrencyCompact, fShortenNumber, fPercent } from '@/utils/format-number';
+import { fCurrencyCompact } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { formatCurrency } from '@normalfinance/utils/build/stellar';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
 import { NormalPoolContract, NormalPoolRouterContract } from '@normalfinance/contracts';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import Grid2 from '@mui/material/Grid2';
 import { useTheme } from '@mui/material';
@@ -129,7 +129,9 @@ export default function PoolsView() {
 
       const poolWithData =
         pools && Array.isArray(pools.result)
-          ? await Promise.all(pools.result.map(async (pool: Pool) => await fetchPool(pool.poolAddress)))
+          ? await Promise.all(
+              pools.result.map(async (pool: Pool) => await fetchPool(pool.poolAddress))
+            )
           : [];
 
       const poolsFiltered = poolWithData.filter(
@@ -308,7 +310,9 @@ export default function PoolsView() {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">{t('Pools')}</Typography>
+        <Typography variant="h4" color="text.primary">
+          {t('Pools')}
+        </Typography>
       </Stack>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <PoolsTemp

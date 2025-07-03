@@ -1,10 +1,9 @@
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 
 import { memo, forwardRef } from 'react';
+import { CONFIG } from '@/global-config';
 
 import SvgIcon from '@mui/material/SvgIcon';
-
-import { CONFIG } from '@/global-config';
 
 import { BackgroundShape } from './background-shape';
 

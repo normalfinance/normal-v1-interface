@@ -2,11 +2,8 @@
 
 import dayjs from 'dayjs';
 import { useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { useRouter } from '@/routes/hooks';
-
-import { toast } from '@/components/template/snackbar';
+import { useTranslation } from 'react-i18next';
 
 import { useSettingsContext } from '@/components/template/settings';
 
@@ -35,11 +32,11 @@ export function useTranslate(ns?: string) {
 
         const currentMessages = messages[newLang] || messages.en;
 
-        toast.promise(langChangePromise, {
-          loading: currentMessages.loading,
-          success: () => currentMessages.success,
-          error: currentMessages.error,
-        });
+        // toast.promise(langChangePromise, {
+        //   loading: currentMessages?.loading,
+        //   success: () => currentMessages?.success,
+        //   error: currentMessages?.error,
+        // });
 
         // Update dayjs locale according to the selected language
         const langMeta = allLangs.find((l) => l.value === newLang);

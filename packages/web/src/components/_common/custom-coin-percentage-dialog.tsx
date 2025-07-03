@@ -1,16 +1,18 @@
+import type { IndexCoin } from '@/types/indexes';
+
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
+
 import {
+  Box,
   Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   TextField,
   Typography,
-  Box,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
-import { IndexCoin } from '@/types/indexes';
 
 type CustomCoinPercentageDialogProps = {
   open: boolean;
@@ -70,7 +72,11 @@ export default function CustomCoinPercentageDialog({
         {localCoins.map((coin) => (
           <Box key={coin.id} sx={{ mt: 2, width: '100%' }}>
             <Typography variant="subtitle2">
-              {coin.name}{t('(')}{coin.shortName}{t(')')}</Typography>
+              {coin.name}
+              {t('(')}
+              {coin.shortName}
+              {t(')')}
+            </Typography>
             <TextField
               type="number"
               value={coin.indexPercentage ?? ''}
@@ -85,7 +91,9 @@ export default function CustomCoinPercentageDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{t('Cancel')}</Button>
-        <Button onClick={handleSave} variant="contained">{t('Save')}</Button>
+        <Button onClick={handleSave} variant="contained">
+          {t('Save')}
+        </Button>
       </DialogActions>
     </Dialog>
   );

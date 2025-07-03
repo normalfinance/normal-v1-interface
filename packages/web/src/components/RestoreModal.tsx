@@ -1,7 +1,7 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import React, { useState } from 'react';
+import { useTranslate } from '@/locales';
 
 import {
   Box,
@@ -87,7 +87,9 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
               mb: 1,
               fontFamily: 'Ubuntu',
             }}
-          >{t('Transaction Restore Needed')}</Typography>
+          >
+            {t('Transaction Restore Needed')}
+          </Typography>
         </Box>
 
         {/* Content Section */}
@@ -108,9 +110,11 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
               color: '#FFF',
               mb: 2,
             }}
-          >{t(
-            'You need to restore some contract state before you can invoke this method. Do you want to proceed with restoration?',
-          )}</Typography>
+          >
+            {t(
+              'You need to restore some contract state before you can invoke this method. Do you want to proceed with restoration?'
+            )}
+          </Typography>
 
           {/* Loading Indicator */}
           {isLoading ? (
@@ -131,7 +135,9 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
                   color: '#FFF',
                   mt: 2,
                 }}
-              >{t('Restoring transaction, please wait...')}</Typography>
+              >
+                {t('Restoring transaction, please wait...')}
+              </Typography>
             </Box>
           ) : (
             <Box
@@ -152,7 +158,9 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
                   },
                   mr: 2,
                 }}
-              >{t('Restore')}</Button>
+              >
+                {t('Restore')}
+              </Button>
             </Box>
           )}
         </Box>

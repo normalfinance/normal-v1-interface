@@ -1,5 +1,4 @@
 import { useTranslate } from '@/locales';
-import { useState } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
@@ -59,7 +58,9 @@ export function VerticalLinearStepper({
                 <Button variant="contained" onClick={onNext}>
                   {index === steps.length - 1 ? 'Finish' : 'Continue'}
                 </Button>
-                <Button disabled={index === 0} onClick={onBack}>{t('Back')}</Button>
+                <Button disabled={index === 0} onClick={onBack}>
+                  {t('Back')}
+                </Button>
               </Box>
             </StepContent>
           </Step>

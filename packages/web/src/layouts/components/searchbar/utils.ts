@@ -1,5 +1,4 @@
-import { Token } from '@/types/token';
-import type { NavSectionProps } from '@/components/template/nav-section';
+import type { Token } from '@/types/token';
 
 // ----------------------------------------------------------------------
 
@@ -15,7 +14,7 @@ type OutputItem = {
 };
 
 const flattenNavItems = (navItems: Token[], parentGroup?: string): OutputItem[] => {
-  let flattenedItems: OutputItem[] = [];
+  const flattenedItems: OutputItem[] = [];
 
   navItems.forEach((navItem) => {
     // const currentGroup = parentGroup ? `${parentGroup}-${navItem.title}` : navItem.title;

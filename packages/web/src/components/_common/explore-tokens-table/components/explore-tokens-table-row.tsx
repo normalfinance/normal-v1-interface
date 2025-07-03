@@ -3,6 +3,7 @@
 import type { ApexOptions } from 'apexcharts';
 
 import { useRouter } from 'next/navigation';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { fPercent, fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
 
 import Stack from '@mui/material/Stack';
@@ -13,7 +14,6 @@ import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 
 import { Chart } from '@/components/template/chart';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 /* ------------------------------------------------------------------ */
 /* Row props & type -------------------------------------------------- */

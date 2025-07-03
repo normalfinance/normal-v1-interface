@@ -1,15 +1,18 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
+
+import type { Token } from '@/types/token';
 
 import { useState } from 'react';
-import { Avatar, Box, Button, Stack, Typography, alpha, useTheme } from '@mui/material';
+import { useTranslate } from '@/locales';
 import { useFormContext } from 'react-hook-form';
 
-import { Token } from '@/types/token';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
-import PickToken from '../pick-token';
-import { FormValues } from './step-content-panel';
+import { Stack, alpha, Avatar, Button, useTheme, Typography } from '@mui/material';
+
 import { Iconify } from '@/components/template/iconify';
+
+import PickToken from '../pick-token';
+
+import type { FormValues } from './step-content-panel';
 
 interface StepOneProps {
   tokens: Token[];
@@ -30,17 +33,19 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
     setDialogOpen(false);
   };
 
-  const selected = tokens.find((t) => t.shortname === tokenASymbol);
-  const avatarSrc = selected ? (selected.logo ?? getCryptoIconUrl(selected.shortname)) : undefined;
+  const selected = tokens.find((tkn) => tkn.shortname === tokenASymbol);
+  const avatarSrc = selected?.logo ?? selected?.url;
 
   return (
     <Stack>
       {/* hidden input registers the field */}
       <input type="hidden" {...register('tokenASymbol')} />
       <Typography variant="subtitle1">{t('Select pair')}</Typography>
-      <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>{t(
-        'Choose the tokens you want to provide liquidity for. You can select tokens on all supported networks',
-      )}</Typography>
+      <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>
+        {t(
+          'Choose the tokens you want to provide liquidity for. You can select tokens on all supported networks'
+        )}
+      </Typography>
       <Stack direction="row" spacing={2}>
         {/* token-A button */}
         <Button
@@ -96,7 +101,9 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
             width: 1,
           }}
         >
-          <Avatar src="/assets/icons/cryptoIcons/xlm.svg" sx={{ width: 24, height: 24 }} />{t('XLM')}</Button>
+          <Avatar src="/assets/icons/cryptoIcons/xlm.svg" sx={{ width: 24, height: 24 }} />
+          {t('XLM')}
+        </Button>
       </Stack>
       {/* token picker dialog */}
       <PickToken

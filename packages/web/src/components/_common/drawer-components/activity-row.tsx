@@ -1,16 +1,18 @@
 // app/components/connected-wallet/tabs/activity-row.tsx
+
 'use client';
 
-import Avatar from '@mui/material/Avatar';
+import type { Activity } from '@/types/activity';
+
+import { shortenAddress } from '@/utils/format-address';
+import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
+
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
+import Avatar from '@mui/material/Avatar';
 import { grey } from '@mui/material/colors';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
-
-import { fCurrencyCompact, fShortenNumber } from '@/utils/format-number';
-import { Activity } from '@/types/activity';
-import { shortenAddress } from '@/utils/format-address';
+import Typography from '@mui/material/Typography';
 
 /* ------------------------------------------------------------------ */
 /* Split avatar helper                                                */

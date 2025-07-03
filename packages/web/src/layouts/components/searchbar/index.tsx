@@ -1,11 +1,11 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import type { BoxProps } from '@mui/material/Box';
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
 import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
 import { varAlpha } from 'minimal-shared/utils';
@@ -123,7 +123,9 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
             d="m20.71 19.29l-3.4-3.39A7.92 7.92 0 0 0 19 11a8 8 0 1 0-8 8a7.92 7.92 0 0 0 4.9-1.69l3.39 3.4a1 1 0 0 0 1.42 0a1 1 0 0 0 0-1.42M5 11a6 6 0 1 1 6 6a6 6 0 0 1-6-6"
           />
         </SvgIcon>
-      </Box>{t('Search tokens...')}<Label
+      </Box>
+      {t('Search tokens...')}
+      <Label
         sx={{
           color: 'grey.800',
           cursor: 'inherit',
@@ -132,7 +134,9 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           boxShadow: theme.vars.customShadows.z1,
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
         }}
-      >{t('⌘K')}</Label>
+      >
+        {t('⌘K')}
+      </Label>
     </Box>
   );
 
@@ -194,7 +198,9 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
               <Iconify icon="eva:search-fill" width={24} sx={{ color: 'text.disabled' }} />
             </InputAdornment>
           }
-          endAdornment={<Label sx={{ letterSpacing: 1, color: 'text.secondary' }}>{t('esc')}</Label>}
+          endAdornment={
+            <Label sx={{ letterSpacing: 1, color: 'text.secondary' }}>{t('esc')}</Label>
+          }
           inputProps={{ id: 'search-input' }}
           sx={{
             p: 3,

@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { DashboardContent } from '@/layouts/dashboard';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
 
-import { DashboardContent } from '@/layouts/dashboard';
 import { Iconify } from '@/components/template/iconify';
 
 import { SelectTableCard } from './select-table-card';

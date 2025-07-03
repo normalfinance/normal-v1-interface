@@ -1,6 +1,7 @@
-import { useTranslate } from '@/locales';
 import type { ChipProps } from '@mui/material/Chip';
 import type { Theme, SxProps } from '@mui/material/styles';
+
+import { useTranslate } from '@/locales';
 
 import Button from '@mui/material/Button';
 import { styled } from '@mui/material/styles';
@@ -38,7 +39,9 @@ export function FiltersResult({
           color="error"
           onClick={onReset}
           startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
-        >{t('Clear')}</Button>
+        >
+          {t('Clear')}
+        </Button>
       </ResultContent>
     </ResultRoot>
   );

@@ -1,0 +1,60 @@
+name: Web CI
+
+on:
+  pull_request:
+    paths:
+      - 'packages/web/**'
+  push:
+    branches: 
+      - '**'
+    # paths:
+    #   - 'packages/web/**'
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: packages/web
+
+    strategy:
+      matrix:
+        node: [20.x]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+          # cache-dependency-path: packages/web/yarn.lock
+
+      - name: Install dependencies (Yarn)
+        run: yarn install --frozen-lockfile
+
+      - name: Build internal packages (turborepo)
+        run: npx turbo build --filter="!@normalfinance/web" --cache-dir=.turbo
+
+      # ---------- Quality Gates ----------
+      - name: Prettier – formatting check
+        run: yarn fm:check
+
+      - name: ESLint – code-quality check
+        run: yarn lint
+
+      # Check for untranslated / missing keys across all locale JSON files
+      - name: i18n – translation completeness check
+        run: yarn i18n:check
+
+      - name: TypeScript – type check
+        run: npx tsc --noEmit --project tsconfig.json
+
+      - name: Next.js – production build
+        env:
+          NEXT_PUBLIC_APP_ENV: ci
+        run: yarn build
+

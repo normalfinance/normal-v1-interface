@@ -3,15 +3,13 @@
 import {
   Box,
   Step,
-  Button,
   Stepper,
-  StepLabel,
-  StepContent,
-  Typography,
-  useMediaQuery,
   useTheme,
+  StepLabel,
+  Typography,
+  StepContent,
+  useMediaQuery,
 } from '@mui/material';
-import { varAlpha } from 'minimal-shared/utils';
 
 const steps = [
   { label: 'Step 1', description: 'Select token pair and fees.' },

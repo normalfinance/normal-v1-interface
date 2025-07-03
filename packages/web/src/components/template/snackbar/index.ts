@@ -8,7 +8,7 @@ export { default as SnackbarProvider } from './snackbar-provider';
 // Simple toast helper that mimics `toast.promise` API (like react-hot-toast)
 // using notistack underneath. Only the subset we need is implemented.
 
-import { enqueueSnackbar, closeSnackbar } from 'notistack';
+import { closeSnackbar, enqueueSnackbar } from 'notistack';
 
 type PromiseMessages<T = any> = {
   loading: string;

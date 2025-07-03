@@ -1,5 +1,4 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import type { Token } from '@/types/token';
 import type { Activity } from '@/types/activity';
@@ -7,6 +6,7 @@ import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
+import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -71,7 +71,9 @@ function WalletOption({
         {connector.name}
       </Typography>
       {!allowed && (
-        <Typography variant="body2" color="text.secondary">{t('Not installed')}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t('Not installed')}
+        </Typography>
       )}
     </Paper>
   );
@@ -100,7 +102,11 @@ function WalletDisconnected({
       const no: Connector[] = [];
 
       for (const c of connectors) {
-        (await c.isConnected()) ? ok.push(c) : no.push(c);
+        if (await c.isConnected()) {
+          ok.push(c);
+        } else {
+          no.push(c);
+        }
       }
       setAllowed(ok);
       setDisallowed(no);
@@ -118,7 +124,9 @@ function WalletDisconnected({
         alignItems: 'start',
       }}
     >
-      <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">{t('Connect your wallet')}</Typography>
+      <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
+        {t('Connect your wallet')}
+      </Typography>
       {loading ? (
         <CircularProgress />
       ) : (
@@ -390,7 +398,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
       {isConnected ? (
         <AccountButton onClick={onOpen} photoURL={avatarURL} displayName=" " {...props} />
       ) : (
-        <Button variant="contained" color="info" onClick={onOpen}>{t('Connect Wallet')}</Button>
+        <Button variant="contained" color="info" onClick={onOpen}>
+          {t('Connect Wallet')}
+        </Button>
       )}
       <Drawer
         open={open}

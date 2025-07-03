@@ -43,7 +43,7 @@ function getCategories(timeframe: '24h' | '7d' | '30d' | '12m'): string[] {
   } else if (timeframe === '12m') {
     const categories: string[] = [];
     // Generate 12 month labels ending with the current month.
-    const now = new Date();
+    // const now = new Date();
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       categories.push(d.toLocaleString('default', { month: 'short' }));

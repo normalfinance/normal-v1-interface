@@ -1,12 +1,11 @@
-import { useTranslate } from '@/locales';
 import type { Theme, SxProps } from '@mui/material/styles';
 
+import { useTranslate } from '@/locales';
 import { mergeClasses } from 'minimal-shared/utils';
-
-import { styled } from '@mui/material/styles';
-
 import { createClasses } from '@/theme/create-classes';
 import { UploadIllustration } from '@/assets/illustrations';
+
+import { styled } from '@mui/material/styles';
 
 // ----------------------------------------------------------------------
 
@@ -32,7 +31,11 @@ export function UploadPlaceholder({ sx, className, ...other }: UploadPlaceholder
       <UploadIllustration hideBackground sx={{ width: 200 }} />
       <PlaceholderContent>
         <div className={uploadPlaceholderClasses.title}>{t('Drop or select file')}</div>
-        <div className={uploadPlaceholderClasses.description}>{t('Drop files here or click to')}<span>{t('browse')}</span>{t('through your machine.')}</div>
+        <div className={uploadPlaceholderClasses.description}>
+          {t('Drop files here or click to')}
+          <span>{t('browse')}</span>
+          {t('through your machine.')}
+        </div>
       </PlaceholderContent>
     </PlaceholderRoot>
   );

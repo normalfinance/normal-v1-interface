@@ -1,5 +1,4 @@
 import { cloneElement } from 'react';
-
 import { RouterLink } from '@/routes/components';
 
 import type { NavItemDataProps, NavItemOptionsProps } from '../types';

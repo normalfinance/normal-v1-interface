@@ -1,5 +1,5 @@
-import { useTranslate } from '@/locales';
 import { useState } from 'react';
+import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
@@ -96,7 +96,7 @@ export function HorizontalLinearStepper() {
               }),
             ]}
           >
-            <Typography sx={{ my: 1 }}>{t('All steps completed - you\'re finished')}</Typography>
+            <Typography sx={{ my: 1 }}>{t("All steps completed - you're finished")}</Typography>
           </Paper>
 
           <Box sx={{ display: 'flex' }}>
@@ -116,15 +116,22 @@ export function HorizontalLinearStepper() {
               }),
             ]}
           >
-            <Typography sx={{ my: 1 }}>{t('Step')}{activeStep + 1}</Typography>
+            <Typography sx={{ my: 1 }}>
+              {t('Step')}
+              {activeStep + 1}
+            </Typography>
           </Paper>
 
           <Box sx={{ display: 'flex' }}>
-            <Button color="inherit" disabled={activeStep === 0} onClick={handleBack} sx={{ mr: 1 }}>{t('Back')}</Button>
+            <Button color="inherit" disabled={activeStep === 0} onClick={handleBack} sx={{ mr: 1 }}>
+              {t('Back')}
+            </Button>
 
             <Box sx={{ flexGrow: 1 }} />
             {isStepOptional(activeStep) && (
-              <Button color="inherit" onClick={handleSkip} sx={{ mr: 1 }}>{t('Skip')}</Button>
+              <Button color="inherit" onClick={handleSkip} sx={{ mr: 1 }}>
+                {t('Skip')}
+              </Button>
             )}
             <Button variant="contained" onClick={handleNext}>
               {activeStep === steps.length - 1 ? 'Finish' : 'Next'}

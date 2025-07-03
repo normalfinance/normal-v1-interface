@@ -1,11 +1,10 @@
+import { usePathname } from '@/routes/hooks';
+import { RouterLink } from '@/routes/components';
 import { isEqualPath } from 'minimal-shared/utils';
 
 import Link from '@mui/material/Link';
 import { styled } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
-
-import { usePathname } from '@/routes/hooks';
-import { RouterLink } from '@/routes/components';
 
 import { megaMenuClasses } from '../styles';
 import { NavUl, NavLi } from './nav-elements';

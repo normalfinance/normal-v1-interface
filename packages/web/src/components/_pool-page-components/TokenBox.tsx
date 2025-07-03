@@ -1,6 +1,6 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@normalfinance/types';
 
+import { useTranslate } from '@/locales';
 import React, { useMemo, useCallback } from 'react';
 
 import { Box, Grid2, Input, Button, Skeleton, Typography } from '@mui/material';
@@ -215,7 +215,8 @@ const TokenBox = ({
               lineHeight: '140%',
               color: 'var(--content-medium-emphasis, rgba(255, 255, 255, 0.70));',
             }}
-          >{t('Balance')}{token.amount}
+          >
+            {t('Balance')} {token.amount}
           </Typography>
           <Button
             onClick={handleMaxClick}
@@ -230,7 +231,9 @@ const TokenBox = ({
                 background: 'transparent',
               },
             }}
-          >{t('Max')}</Button>
+          >
+            {t('Max')}
+          </Button>
         </Grid2>
       </Grid2>
     </Box>

@@ -1,12 +1,11 @@
-import { useTranslate } from '@/locales';
 import type { ButtonProps } from '@mui/material/Button';
 
 import { useCallback } from 'react';
+import { useTranslate } from '@/locales';
+import { useRouter } from '@/routes/hooks';
 import { usePrivy } from '@privy-io/react-auth';
 
 import Button from '@mui/material/Button';
-
-import { useRouter } from '@/routes/hooks';
 
 import { enqueueSnackbar } from '@/components/template/snackbar';
 

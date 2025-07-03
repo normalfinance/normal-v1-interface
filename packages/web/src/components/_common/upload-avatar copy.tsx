@@ -1,5 +1,8 @@
+import type { UploadProps } from '@/types/upload';
+
 import { useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { uploadClasses } from '@/classes/upload';
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
@@ -7,10 +10,7 @@ import Typography from '@mui/material/Typography';
 
 import { Image } from '../template/image';
 import { Iconify } from '../template/iconify';
-import { uploadClasses } from '@/classes/upload';
 import { RejectionFiles } from './rejection-files';
-
-import type { UploadProps } from '@/types/upload';
 
 // ----------------------------------------------------------------------
 

@@ -1,10 +1,12 @@
 'use client';
-import { useTranslate } from '@/locales';
 
 import type { ThemeColorScheme } from '@/theme/types';
 
+import { useTranslate } from '@/locales';
 import { useEffect, useCallback } from 'react';
+import { themeConfig } from '@/theme/theme-config';
 import { hasKeys, varAlpha } from 'minimal-shared/utils';
+import { primaryColorPresets } from '@/theme/with-settings';
 
 import Box from '@mui/material/Box';
 import Badge from '@mui/material/Badge';
@@ -14,10 +16,7 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import { useColorScheme } from '@mui/material/styles';
 
-import { themeConfig } from '@/theme/theme-config';
-import { primaryColorPresets } from '@/theme/with-settings';
-
-import { Iconify } from '@/components/template/iconify';
+import { Iconify } from '../../iconify';
 import { BaseOption } from './base-option';
 import { Scrollbar } from '../../scrollbar';
 import { SmallBlock, LargeBlock } from './styles';

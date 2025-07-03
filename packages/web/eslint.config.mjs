@@ -6,6 +6,7 @@ import importPlugin from 'eslint-plugin-import';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import perfectionistPlugin from 'eslint-plugin-perfectionist';
 import unusedImportsPlugin from 'eslint-plugin-unused-imports';
+import i18nextPlugin from 'eslint-plugin-i18next';
 
 // ----------------------------------------------------------------------
 
@@ -167,6 +168,14 @@ export const customConfig = {
         project: './tsconfig.json',
       },
     },
+    // ------------------------------------------------------------------
+    // i18next plugin settings – enable rules like `no-missing-key` by
+    // telling the plugin where the translation JSON files are located.
+    // The placeholders `{{lng}}` and `{{ns}}` are understood by the plugin.
+    i18next: {
+      path: 'src/locales/langs/{{lng}}/{{ns}}.json',
+      // langs: ['en', 'fr', 'vi', 'cn', 'ar'], // uncomment to lint only these
+    },
   },
   rules: {
     ...commonRules(),
@@ -191,4 +200,5 @@ export default [
   ...eslintTs.configs.recommended,
   reactPlugin.configs.flat.recommended,
   customConfig,
+  i18nextPlugin.configs['flat/recommended'],
 ];

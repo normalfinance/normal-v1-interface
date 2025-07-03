@@ -5,13 +5,12 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { m } from 'framer-motion';
 import { useCallback } from 'react';
+import { useTranslate } from '@/locales';
 import { usePopover } from 'minimal-shared/hooks';
 
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
-
-import { useTranslate } from '@/locales';
 
 import { FlagIcon } from '@/components/template/flag-icon';
 import { CustomPopover } from '@/components/template/custom-popover';

@@ -1,15 +1,21 @@
-'use client';;
+'use client';
+
+import type { StatCardData } from '@/types/stat-card-data';
+import type { LegendValue } from '@/components/_common/area-chart-card';
+import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
+
 import { useTranslate } from '@/locales';
-import Grid2 from '@mui/material/Grid2';
 import { DashboardContent } from '@/layouts/dashboard';
-import { Stack, Typography, useTheme } from '@mui/material';
+import { createChartData } from '@/utils/portfolio-value-chart-series';
+import { fRawPercent, fShortenNumber, fCurrencyTwoDecimals } from '@/utils/format-number';
+
+import Grid2 from '@mui/material/Grid2';
+import { Stack, useTheme, Typography } from '@mui/material';
+
 import { StatCard } from '@/components/_common/stat-card';
-import { fShortenNumber, fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
-import { StatCardData } from '@/types/stat-card-data';
-import { CurrentBalance } from '@/components/_common/current-balance-card';
-import { createChartData, RealtimeChartData } from '@/utils/portfolio-value-chart-series';
-import { AreaChartCard, LegendValue } from '@/components/_common/area-chart-card';
 import { TabsTable } from '@/components/_common/tabs-table-card';
+import { AreaChartCard } from '@/components/_common/area-chart-card';
+import { CurrentBalance } from '@/components/_common/current-balance-card';
 
 export default function InsuranceView() {
   const theme = useTheme();
@@ -75,19 +81,19 @@ export default function InsuranceView() {
       actionButtons: [
         {
           label: 'Deposit',
-          color: 'primary' as 'primary',
+          color: 'primary' as const,
           onClick: () => {
             alert('Deposit');
           },
-          variant: 'contained' as 'contained',
+          variant: 'contained' as const,
         },
         {
           label: 'Withdraw',
-          color: 'error' as 'error',
+          color: 'error' as const,
           onClick: () => {
             alert('Withdraw');
           },
-          variant: 'contained' as 'contained',
+          variant: 'contained' as const,
         },
       ],
     },
@@ -115,10 +121,14 @@ export default function InsuranceView() {
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">{t('Insurance')}</Typography>
-        <Typography variant="body1" color="text.secondary">{t(
-          'Review how insured the Normal Protocol is and earn yield by providing additional funds',
-        )}</Typography>
+        <Typography variant="h4" color="text.primary">
+          {t('Insurance')}
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          {t(
+            'Review how insured the Normal Protocol is and earn yield by providing additional funds'
+          )}
+        </Typography>
       </Stack>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         {statCardsData.map((item, index) => (
@@ -136,9 +146,11 @@ export default function InsuranceView() {
         ))}
       </Grid2>
       <Stack sx={{ mt: 3, maxWidth: '976px', mx: 'auto', px: 2 }} textAlign="center">
-        <Typography variant="body1" color="text.secondary">{t(
-          'Insurance covering protocol debt is covered first by the Normal Buffer, which receives a portion of protocol revenue, and then by the Normal Insurance Fund, which pays yield to 3rd party liquidity providers.',
-        )}</Typography>
+        <Typography variant="body1" color="text.secondary">
+          {t(
+            'Insurance covering protocol debt is covered first by the Normal Buffer, which receives a portion of protocol revenue, and then by the Normal Insurance Fund, which pays yield to 3rd party liquidity providers.'
+          )}
+        </Typography>
       </Stack>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         {currentBalanceData.map((balance, index) => (

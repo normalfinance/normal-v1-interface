@@ -1,13 +1,13 @@
-import type { IMarketTableFilters } from '@/types/marketTable';
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
+import type { IMarketTableFilters } from '@/types/marketTable';
 import type { FiltersResultProps } from '@/components/template/filters-result';
 
 import { useCallback } from 'react';
+import { useTranslate } from '@/locales';
 
 import Chip from '@mui/material/Chip';
 
 import { chipProps, FiltersBlock, FiltersResult } from '@/components/template/filters-result';
-import { useTranslate } from '@/locales';
 
 // ----------------------------------------------------------------------
 

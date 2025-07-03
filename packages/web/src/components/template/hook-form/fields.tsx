@@ -1,6 +1,7 @@
 import { RHFCode } from './rhf-code';
 import { RHFRating } from './rhf-rating';
 import { RHFSlider } from './rhf-slider';
+import { RHFUploadAvatar } from './rhf-upload';
 import { RHFTextField } from './rhf-text-field';
 import { RHFRadioGroup } from './rhf-radio-group';
 import { RHFPhoneInput } from './rhf-phone-input';
@@ -11,7 +12,6 @@ import { RHFSwitch, RHFMultiSwitch } from './rhf-switch';
 import { RHFSelect, RHFMultiSelect } from './rhf-select';
 import { RHFCheckbox, RHFMultiCheckbox } from './rhf-checkbox';
 import { RHFDatePicker, RHFMobileDateTimePicker } from './rhf-date-picker';
-import { RHFUploadAvatar } from './rhf-upload';
 
 // ----------------------------------------------------------------------
 

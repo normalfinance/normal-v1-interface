@@ -1,3 +1,4 @@
+import { usePathname } from '@/routes/hooks';
 import { useEffect, cloneElement } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
 import { mergeClasses } from 'minimal-shared/utils';
@@ -6,8 +7,6 @@ import SvgIcon from '@mui/material/SvgIcon';
 import { useTheme } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 import Drawer, { drawerClasses } from '@mui/material/Drawer';
-
-import { usePathname } from '@/routes/hooks';
 
 import { Scrollbar } from '@/components/template/scrollbar';
 

@@ -1,8 +1,8 @@
-'use client';;
-import { useTranslate } from '@/locales';
+'use client';
 
 import type { Token } from '@normalfinance/types';
 
+import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
@@ -144,9 +144,13 @@ function PoolCard({ pool, onShowDetailsClick }: FriendCardProps) {
       </Typography>
       <Stack alignItems="center" justifyContent="center" direction="row">
         <Stack direction="row" spacing={1.5}>
-          <Button fullWidth variant="contained" color="warning">{t('Deposit')}</Button>
+          <Button fullWidth variant="contained" color="warning">
+            {t('Deposit')}
+          </Button>
 
-          <Button fullWidth variant="contained" color="primary">{t('Withdraw')}</Button>
+          <Button fullWidth variant="contained" color="primary">
+            {t('Withdraw')}
+          </Button>
         </Stack>
       </Stack>
     </Card>

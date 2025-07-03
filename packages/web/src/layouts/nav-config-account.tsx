@@ -1,7 +1,8 @@
+import type { IconButtonProps } from '@mui/material/IconButton';
+
 import SvgIcon from '@mui/material/SvgIcon';
 
 import { Iconify } from '../components/template/iconify';
-import type { IconButtonProps } from '@mui/material/IconButton';
 
 export type AccountDrawerProps = IconButtonProps & {
   data?: {

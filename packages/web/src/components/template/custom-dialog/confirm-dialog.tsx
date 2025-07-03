@@ -1,4 +1,5 @@
 import { useTranslate } from '@/locales';
+
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -25,7 +26,9 @@ export function ConfirmDialog({
       <DialogActions>
         {action}
 
-        <Button variant="outlined" color="inherit" onClick={onClose}>{t('Cancel')}</Button>
+        <Button variant="outlined" color="inherit" onClick={onClose}>
+          {t('Cancel')}
+        </Button>
       </DialogActions>
     </Dialog>
   );

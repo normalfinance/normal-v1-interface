@@ -1,10 +1,9 @@
+import { usePathname } from '@/routes/hooks';
 import { useEffect, useCallback } from 'react';
 import { usePopoverHover } from 'minimal-shared/hooks';
 import { isActiveLink, isExternalLink } from 'minimal-shared/utils';
 
 import { useTheme } from '@mui/material/styles';
-
-import { usePathname } from '@/routes/hooks';
 
 import { NavItem } from './nav-item';
 import { navSectionClasses } from '../styles';

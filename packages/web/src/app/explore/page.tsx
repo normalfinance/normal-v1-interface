@@ -1,5 +1,6 @@
-import ExploreView from '@/sections/explore';
 import type { Metadata } from 'next';
+
+import ExploreView from '@/sections/explore';
 
 // ----------------------------------------------------------------------
 

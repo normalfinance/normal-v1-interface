@@ -3,10 +3,10 @@
 import type { Theme } from '@mui/material/styles';
 import type { ThemeProviderProps as MuiThemeProviderProps } from '@mui/material/styles/ThemeProvider';
 
+import { useTranslate } from '@/locales';
+
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider as ThemeVarsProvider } from '@mui/material/styles';
-
-import { useTranslate } from '@/locales';
 
 import { useSettingsContext } from '@/components/template/settings';
 

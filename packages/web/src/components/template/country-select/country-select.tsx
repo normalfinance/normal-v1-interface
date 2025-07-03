@@ -1,4 +1,3 @@
-import { useTranslate } from '@/locales';
 import type { TextFieldProps } from '@mui/material/TextField';
 import type {
   AutocompleteProps,
@@ -6,7 +5,9 @@ import type {
   AutocompleteRenderGetTagProps,
 } from '@mui/material/Autocomplete';
 
+import { useTranslate } from '@/locales';
 import { useMemo, useCallback } from 'react';
+import { countries } from '@/assets/data/countries';
 
 import Chip from '@mui/material/Chip';
 import TextField from '@mui/material/TextField';
@@ -14,8 +15,6 @@ import Autocomplete from '@mui/material/Autocomplete';
 import InputAdornment from '@mui/material/InputAdornment';
 import { filledInputClasses } from '@mui/material/FilledInput';
 import { outlinedInputClasses } from '@mui/material/OutlinedInput';
-
-import { countries } from '@/assets/data/countries';
 
 import { FlagIcon, flagIconClasses } from '@/components/template/flag-icon';
 
@@ -83,7 +82,11 @@ export function CountrySelect({
               borderRadius: '50%',
             }}
           />
-          {country.label}{t('(')}{country.code}{t(') +')}{country.phone}
+          {country.label}
+          {t('(')}
+          {country.code}
+          {t(') +')}
+          {country.phone}
         </li>
       );
     },

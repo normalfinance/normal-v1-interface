@@ -9,7 +9,8 @@ import { useSetState } from 'minimal-shared/hooks';
 import { Card, Table, Divider, TableBody } from '@mui/material';
 
 import { Scrollbar } from '@/components/template/scrollbar';
-import { useTable ,
+import {
+  useTable,
   emptyRows,
   TableNoData,
   getComparator,
@@ -185,6 +186,5 @@ function applyFilter({
     return order !== 0 ? order : a[1] - b[1];
   });
 
-   
   return stabilised.map((el) => el[0]);
 }

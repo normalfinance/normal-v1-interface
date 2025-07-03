@@ -1,14 +1,14 @@
+import type { FileThumbnailProps } from '@/types/file-thumbnail';
+
 import { forwardRef } from 'react';
 import { mergeClasses } from 'minimal-shared/utils';
+import { fileThumbnailClasses } from '@/classes/file-thumbnail';
+import { fileData, fileThumb, fileFormat } from '@/utils/file-thumbnail';
 
 import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
 
-import { fileThumbnailClasses } from '@/classes/file-thumbnail';
-import { fileData, fileThumb, fileFormat } from '@/utils/file-thumbnail';
 import { RemoveButton, DownloadButton } from './action-buttons';
-
-import type { FileThumbnailProps } from '@/types/file-thumbnail';
 
 // ----------------------------------------------------------------------
 

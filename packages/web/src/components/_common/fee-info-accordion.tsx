@@ -1,8 +1,8 @@
-import { useTranslate } from '@/locales';
 import type { Token } from '@/types/token';
 
 // fee-info-accordion.tsx
 import React from 'react';
+import { useTranslate } from '@/locales';
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -106,7 +106,11 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   color: theme.palette.text.secondary,
                   fontSize: '12px',
                 }}
-              >{t('Not enough')}{sellToken.shortname}{t('to swap')}</Typography>
+              >
+                {t('Not enough')}
+                {sellToken.shortname}
+                {t('to swap')}
+              </Typography>
             </Box>
           )}
           <Box
@@ -141,7 +145,13 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >{t('Fee')}<Box component="span">{t('(')}{poolFee}{t('%)')}</Box>
+                >
+                  {t('Fee')}
+                  <Box component="span">
+                    {t('(')}
+                    {poolFee}
+                    {t('%)')}
+                  </Box>
                 </Typography>
                 <Iconify
                   icon="solar:info-circle-bold"
@@ -183,7 +193,9 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >{t('Network cost')}</Typography>
+                >
+                  {t('Network cost')}
+                </Typography>
                 <Iconify
                   icon="solar:info-circle-bold"
                   width={14}
@@ -224,7 +236,9 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >{t('Price impact')}</Typography>
+                >
+                  {t('Price impact')}
+                </Typography>
                 <Iconify
                   icon="solar:info-circle-bold"
                   width={14}
@@ -265,7 +279,9 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     color: theme.palette.text.secondary,
                     fontSize: '12px',
                   }}
-                >{t('Max slippage')}</Typography>
+                >
+                  {t('Max slippage')}
+                </Typography>
                 <Iconify
                   icon="solar:info-circle-bold"
                   width={14}

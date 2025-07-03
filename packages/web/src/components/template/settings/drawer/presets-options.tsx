@@ -1,9 +1,9 @@
 import type { BoxProps } from '@mui/material/Box';
 
+import { CONFIG } from '@/global-config';
+
 import Box from '@mui/material/Box';
 import { alpha as hexAlpha } from '@mui/material/styles';
-
-import { CONFIG } from '@/global-config';
 
 import { OptionButton } from './styles';
 import { SvgColor } from '../../svg-color';

@@ -3,6 +3,7 @@ import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 
 import React from 'react';
+import { useTranslate } from '@/locales';
 import { useTabs } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
@@ -14,7 +15,6 @@ import { alpha, useTheme } from '@mui/material/styles';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
-import { useTranslate } from '@/locales';
 
 interface SwapSendCardProps extends CardProps {
   title?: string;

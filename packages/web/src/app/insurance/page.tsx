@@ -1,5 +1,6 @@
+import type { Metadata } from 'next';
+
 import InsuranceView from '@/sections/insurance';
-import { Metadata } from 'next';
 
 // ----------------------------------------------------------------------
 

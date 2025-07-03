@@ -1,13 +1,12 @@
-import { useTranslate } from '@/locales';
 import type { FileRejection } from 'react-dropzone';
 
+import { useTranslate } from '@/locales';
+import { fData } from '@/utils/format-number';
+import { uploadClasses } from '@/classes/upload';
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 
 import { styled } from '@mui/material/styles';
 
-import { fData } from '@/utils/format-number';
-
-import { uploadClasses } from '@/classes/upload';
 import { fileData } from '../../utils/file-thumbnail';
 
 // ----------------------------------------------------------------------
@@ -30,10 +29,15 @@ export function RejectionFiles({ files, sx, className, ...other }: RejectionFile
         return (
           <ListItem key={path}>
             <ItemTitle>
-              {path}{t('-')}{size ? fData(size) : ''}
+              {path}
+              {t('-')}
+              {size ? fData(size) : ''}
             </ItemTitle>
             {errors.map((error) => (
-              <ItemCaption key={error.code}>{t('-')}{error.message}</ItemCaption>
+              <ItemCaption key={error.code}>
+                {t('-')}
+                {error.message}
+              </ItemCaption>
             ))}
           </ListItem>
         );

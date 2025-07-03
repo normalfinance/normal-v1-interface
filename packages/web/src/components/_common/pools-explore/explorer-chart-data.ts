@@ -1,4 +1,4 @@
-import { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
+import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 export type ChartMetricKey = 'price' | 'volume' | 'liquidity';
 export type ChartTimeframeKey = '24h' | '7d' | '30d' | '12m';

@@ -4,13 +4,12 @@ import type { MotionValue, MotionProps } from 'framer-motion';
 
 import { Fragment } from 'react';
 import { mergeClasses } from 'minimal-shared/utils';
+import { createClasses } from '@/theme/create-classes';
 import { m, useSpring, useTransform } from 'framer-motion';
 
 import Box from '@mui/material/Box';
 import Portal from '@mui/material/Portal';
 import { styled, useTheme } from '@mui/material/styles';
-
-import { createClasses } from '@/theme/create-classes';
 
 // ----------------------------------------------------------------------
 
