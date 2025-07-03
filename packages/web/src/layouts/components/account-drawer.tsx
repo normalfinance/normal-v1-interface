@@ -30,6 +30,8 @@ import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 
 import { AccountButton } from './account-button';
+import { CURRENT_TOS_VERSION } from '@normalfinance/types';
+import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
@@ -226,6 +228,33 @@ export function AccountDrawer(props: AccountDrawerProps) {
     connectedAddress != '' && connectedAddress != undefined
   );
 
+  const disclaimerVersion = usePersistStore((s) => s.disclaimer.version);
+  const [showTos, setShowTos] = useState(false);
+
+  /** Open drawer OR show ToS dialog, depending on acceptance */
+  const handleMainButtonClick = () => {
+    if (disclaimerVersion < CURRENT_TOS_VERSION) {
+      setShowTos(true);
+    } else {
+      onOpen();
+    }
+  };
+
+  /** Called whenever the ToS modal closes (Accept or Decline).
+   *  If they accepted, open the wallet drawer right away. */
+  const handleTosClose = () => {
+    setShowTos(false);
+
+    // read the latest store value directly (no hooks inside a callback)
+    const latestVersion = usePersistStore.getState().disclaimer.version;
+    if (latestVersion >= CURRENT_TOS_VERSION) {
+      onOpen(); // open the drawer immediately
+    }
+  };
+
+  console.log(CURRENT_TOS_VERSION + 'CURRENT_TOS_VERSION');
+  console.log(disclaimerVersion + 'disclaimerVersion');
+
   const tokens: Token[] = [
     {
       id: 1,
@@ -396,9 +425,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
   return (
     <>
       {isConnected ? (
-        <AccountButton onClick={onOpen} photoURL={avatarURL} displayName=" " {...props} />
+        <AccountButton
+          onClick={handleMainButtonClick}
+          photoURL={avatarURL}
+          displayName=" "
+          {...props}
+        />
       ) : (
-        <Button variant="contained" color="info" onClick={onOpen}>
+        <Button variant="contained" color="info" onClick={handleMainButtonClick}>
           {t('Connect Wallet')}
         </Button>
       )}
@@ -471,6 +505,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           )}
         </Scrollbar>
       </Drawer>
+      <TermsOfServiceDialog open={showTos} onClose={handleTosClose} />
     </>
   );
 }
