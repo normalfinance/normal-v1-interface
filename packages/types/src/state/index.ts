@@ -3,3 +3,4 @@ export * from "./persist";
 export * from "./general";
 export * from "./layout";
 export * from "./disclaimer";
+export * from "./terms";
