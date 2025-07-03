@@ -13,7 +13,8 @@ export const paths = {
     github: 'https://github.com/normalfinance/',
   },
   blog: 'https://blog.normalfinance.io/',
-  docs: 'https://docs.normalfinance.io',
+  // docs: 'https://docs.normalfinance.io',
+  docs: 'https://normalfinance.gitbook.io/docs',
   overview: '/overview',
   markets: {
     root: '/markets',
