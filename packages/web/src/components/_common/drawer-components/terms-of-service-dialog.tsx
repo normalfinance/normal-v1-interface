@@ -43,20 +43,22 @@
  * },
  * ------------------------------------------------------------------ */
 
+import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
+
 import {
+  List,
   Dialog,
+  Button,
+  ListItem,
+  Typography,
   DialogTitle,
+  ListItemText,
   DialogContent,
   DialogActions,
-  Button,
-  Typography,
   Link as MuiLink,
-  List,
-  ListItem,
-  ListItemText,
 } from '@mui/material';
-import { usePersistStore } from '@normalfinance/state';
-import { useTranslate } from '@/locales';
 
 // 🔑  Bump this constant whenever the legal text is updated
 
@@ -100,23 +102,23 @@ export default function TermsOfServiceDialog({ open, onClose }: TermsOfServiceDi
                 <Typography variant="body2" component="span" color="text.secondary">
                   {t('You understand and agree to the')}{' '}
                   <MuiLink
-                    href="/terms-and-conditions"
+                    href={`${paths.docs}/other/legal/terms-of-service`}
                     underline="always"
                     color="secondary"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {t('Drift Terms and Conditions')}
+                    {t('Normal Terms of Service')}
                   </MuiLink>{' '}
                   {t('and')}{' '}
                   <MuiLink
-                    href="/disclaimer"
+                    href={`${paths.docs}/other/legal/disclaimer`}
                     underline="always"
                     color="secondary"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {t('Drift Protocol Disclaimer')}
+                    {t('Normal Protocol Disclaimer')}
                   </MuiLink>
                 </Typography>
               }
@@ -133,42 +135,8 @@ export default function TermsOfServiceDialog({ open, onClose }: TermsOfServiceDi
             <ListItemText
               primary={
                 <Typography variant="body2" component="span" color="text.secondary">
-                  {t('You understand leverage may change after entering a position;')}
-                </Typography>
-              }
-            />
-          </ListItem>
-          <ListItem
-            component="li"
-            sx={{
-              display: 'list-item',
-              listStyleType: 'disc',
-              pl: 1,
-            }}
-          >
-            <ListItemText
-              primary={
-                <Typography variant="body2" component="span" color="text.secondary">
                   {t(
-                    'You understand the rules and risks associated with settlement of P&L, bankrupcies, insurance, socialised losses and use of cross collateral as margin'
-                  )}
-                </Typography>
-              }
-            />
-          </ListItem>
-          <ListItem
-            component="li"
-            sx={{
-              display: 'list-item',
-              listStyleType: 'disc',
-              pl: 1,
-            }}
-          >
-            <ListItemText
-              primary={
-                <Typography variant="body2" component="span" color="text.secondary">
-                  {t(
-                    'You understand your account may be partialy or entirely liquidated if any position breaches margin maintenance requirements.'
+                    'You understand the rules and risks associated with settlement of pool liquidity, synthetic assets, insurance, and socialised losses.'
                   )}
                 </Typography>
               }
