@@ -6,7 +6,6 @@ import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
-import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -30,6 +29,8 @@ import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 
 import { AccountButton } from './account-button';
+
+import { useTranslate } from '@/locales';
 
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
