@@ -11,8 +11,8 @@ import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 
-import { useTheme } from '@mui/material/styles';
 import { useTranslate } from '@/locales';
+import { useTheme } from '@mui/material/styles';
 
 import {
   Box,
