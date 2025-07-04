@@ -515,7 +515,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                 minWidth: 0,
               }}
             >
-              <Typography variant="body1" noWrap>
+              <Typography variant="body1" noWrap data-testid="sell-token-picker">
                 {t('Sell')}
               </Typography>
               <InputBase
@@ -693,7 +693,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
               gap: 2,
             }}
           >
-            <Typography variant="body1" noWrap>
+            <Typography variant="body1" noWrap data-testid="buy-token-picker">
               {t('Buy')}
             </Typography>
 
