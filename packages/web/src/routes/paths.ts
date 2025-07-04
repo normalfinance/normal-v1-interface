@@ -30,4 +30,5 @@ export const paths = {
   insurance: '/insurance',
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready
+  },
 };
