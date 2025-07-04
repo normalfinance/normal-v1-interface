@@ -28,9 +28,8 @@ import { Iconify } from '@/components/template/iconify';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 
-import { AccountButton } from './account-button';
-
 import { useTranslate } from '@/locales';
+import { AccountButton } from './account-button';
 
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
