@@ -12,6 +12,8 @@ import { useBoolean } from 'minimal-shared/hooks';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
+import { useTranslate } from '@/locales';
+
 import {
   Box,
   Paper,
@@ -28,7 +30,6 @@ import { Iconify } from '@/components/template/iconify';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 
-import { useTranslate } from '@/locales';
 import { AccountButton } from './account-button';
 
 /* ------------------------------------------------------------------ */
