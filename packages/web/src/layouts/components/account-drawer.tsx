@@ -1,34 +1,33 @@
 'use client';
 
+import type { Token } from '@/types/token';
+import type { Activity } from '@/types/activity';
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
-import type { Activity } from '@/types/activity';
-import type { Token } from '@/types/token';
-
-import { useEffect, useState } from 'react';
-import { useBoolean } from 'minimal-shared/hooks';
-import { freighter, hana, lobstr, useAppStore, usePersistStore, xbull } from '@normalfinance/state';
-import { format } from '@normalfinance/utils';
-
-import {
-  Box,
-  Button,
-  CircularProgress,
-  Drawer,
-  IconButton,
-  Paper,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 
 import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
+import { format } from '@normalfinance/utils';
+import { useBoolean } from 'minimal-shared/hooks';
+import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 
-import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
+import { useTheme } from '@mui/material/styles';
+import {
+  Box,
+  Paper,
+  Stack,
+  Button,
+  Drawer,
+  Tooltip,
+  IconButton,
+  Typography,
+  CircularProgress,
+} from '@mui/material';
+
 import { Iconify } from '@/components/template/iconify';
 import { Scrollbar } from '@/components/template/scrollbar';
+import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 
 import { AccountButton } from './account-button';
 
