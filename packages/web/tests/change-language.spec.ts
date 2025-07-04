@@ -4,9 +4,15 @@ test.describe('Change language', () => {
   test('should change language', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByTestId('languages-button').click();
-    await page.getByText('Korean').click();
+    const langButton = page.getByTestId('languages-button');
+    await expect(langButton).toBeVisible({ timeout: 15_000 });
+    await langButton.click();
 
-    await expect(page.getByText('Korean')).toBeVisible();
+    const frenchOption = page.getByText('French', { exact: true });
+    await expect(frenchOption).toBeVisible({ timeout: 10_000 });
+    await frenchOption.click();
+
+    const frenchWelcome = page.getByText('Bienvenue 👋');
+    await expect(frenchWelcome).toBeVisible({ timeout: 10_000 });
   });
 });

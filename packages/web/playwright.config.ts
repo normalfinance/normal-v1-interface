@@ -10,7 +10,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.PW_BASE_URL || 'http://localhost:8082',
     trace: 'on-first-retry',
-    // video: 'on',
+    video: 'on',
   },
   webServer: {
     command: 'yarn dev -p 8082',
