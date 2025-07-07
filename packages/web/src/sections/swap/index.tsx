@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Grid2 from '@mui/material/Grid2';

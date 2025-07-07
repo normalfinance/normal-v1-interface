@@ -10,6 +10,7 @@ import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
+import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
@@ -28,10 +29,9 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
+import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
-import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
