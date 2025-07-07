@@ -68,18 +68,28 @@ export function ScrollProgress({
         {
           width: progressSize,
           height: progressSize,
-          ...(color !== 'inherit' && { color: theme.vars.palette[color].main }),
         },
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
       {...other}
     >
+      <defs>
+        <linearGradient id="brand-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor={theme.vars.palette.primary.main} />
+          <stop offset="25%" stopColor={theme.vars.palette.secondary.main} />
+          <stop offset="50%" stopColor={theme.vars.palette.error.main} />
+          <stop offset="75%" stopColor={theme.vars.palette.warning.main} />
+          <stop offset="100%" stopColor={theme.vars.palette.primary.main} />
+        </linearGradient>
+      </defs>
+
       <circle
         cx={progressSize / 2}
         cy={progressSize / 2}
         r={progressSize / 2 - thickness - 4}
         strokeWidth={thickness}
         strokeOpacity={0.2}
+        stroke={theme.vars.palette.grey[500]}
       />
 
       <m.circle
@@ -88,6 +98,7 @@ export function ScrollProgress({
         r={progressSize / 2 - thickness - 4}
         strokeWidth={thickness}
         style={{ pathLength: progress }}
+        stroke="url(#brand-gradient)"
       />
     </CircularRoot>
   );
@@ -99,7 +110,7 @@ export function ScrollProgress({
         {
           height: progressSize,
           ...(color !== 'inherit' && {
-            background: `linear-gradient(135deg, ${theme.vars.palette[color].light}, ${theme.vars.palette[color].main})`,
+            background: `linear-gradient(135deg, ${theme.vars.palette.primary.main} 0%, ${theme.vars.palette.secondary.main} 25%, ${theme.vars.palette.error.main} 50%, ${theme.vars.palette.warning.main} 75%, ${theme.vars.palette.primary.main} 100%)`,
           }),
         },
         ...(Array.isArray(sx) ? sx : [sx]),
@@ -124,7 +135,6 @@ export function ScrollProgress({
 
 const CircularRoot = styled(m.svg)(({ theme }) => ({
   transform: 'rotate(-90deg)',
-  color: theme.vars.palette.text.primary,
   circle: { fill: 'none', strokeDashoffset: 0, stroke: 'currentColor' },
 }));
 
