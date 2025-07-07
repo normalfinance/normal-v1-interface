@@ -1,7 +1,6 @@
 'use client';
 
 import type { PoolTxRow } from '@/types/pools';
-import type { Pool } from '@/components/_common/pools';
 import type { LegendValue } from '@/components/_common/area-chart-card';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 import type { PoolStat, PoolBalance } from '@/components/_common//pools-apr/pools-apr';
@@ -36,7 +35,7 @@ export default function PoolsView() {
   const store = useAppStore(); // Global state management
   const router = useRouter(); // Next.js router
   const [loading, setLoading] = useState(true); // Loading state for async operations
-  const [allPools, setAllPools] = useState<Pool[]>([]); // State to hold pool data
+  const [allPools, setAllPools] = useState<any[]>([]); // State to hold pool data
   const storePersist = usePersistStore(); // Persisted state
   const appStore = useAppStore();
 
@@ -130,18 +129,18 @@ export default function PoolsView() {
       const poolWithData =
         pools && Array.isArray(pools.result)
           ? await Promise.all(
-              pools.result.map(async (pool: Pool) => await fetchPool(pool.poolAddress))
+              pools.result.map(async (pool: any) => await fetchPool(pool.poolAddress))
             )
           : [];
 
       const poolsFiltered = poolWithData.filter(
-        (el: Pool) =>
+        (el: any) =>
           el !== undefined &&
           el.tokens.length >= 2 &&
           el.poolAddress !== 'CBXBKAB6QIRUGTG77OQZHC46BIIPA5WDKIKZKPA2H7Q7CPKQ555W3EVB'
       );
 
-      setAllPools(poolsFiltered as Pool[]);
+      setAllPools(poolsFiltered as any[]);
       setLoading(false);
     } catch (e) {
       console.error(e);
