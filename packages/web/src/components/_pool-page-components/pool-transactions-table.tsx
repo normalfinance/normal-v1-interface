@@ -23,8 +23,8 @@ import {
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Buy: 'success',
   Sell: 'error',
-  Mint: 'warning',
-  Redeem: 'info',
+  Deposit: 'warning',
+  Withdraw: 'info',
 };
 
 function ago(sec: number) {
@@ -42,7 +42,7 @@ type ColumnKey = 'timestamp' | 'usdValue' | 'usdcValue' | 'ethValue' | 'wallet';
 
 // ----------------------------------------------------------------------
 
-export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {
+export const PoolTransactionsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  const theme = useTheme();
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -125,7 +125,7 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {
                     anchorEl={typeAnchor}
                     onClose={() => setTypeAnchor(null)}
                   >
-                    {(['All', 'Buy', 'Sell', 'Mint', 'Redeem'] as const).map((type) => (
+                    {(['All', 'Buy', 'Sell', 'Deposit', 'Withdraw'] as const).map((t) => (
                       <MenuItem
                         key={type}
                         selected={typeFilter === type}
@@ -200,4 +200,4 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {
   );
 };
 
-export default PoolsTable;
+export default PoolTransactionsTable;

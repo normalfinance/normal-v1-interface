@@ -22,14 +22,14 @@ import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
-import type { PoolDetails } from '../pools-explore/explorer-chart-data';
+import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
 
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {
   balance?: number;
   percentageChange?: number;
   tokens?: Token[];
-  pools?: PoolDetails[];
+  poolPositions?: PoolDetails[];
   activity?: Activity[];
 }
 
@@ -37,7 +37,7 @@ export default function ConnectedWallet({
   balance,
   percentageChange,
   tokens,
-  pools,
+  poolPositions,
   activity,
 }: ConnectedWalletProps) {
   const theme = useTheme();

@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { IMarketTableFilters } from '@/types/marketTable';
@@ -19,8 +20,8 @@ import {
   TablePaginationCustom,
 } from '@/components/template/table';
 
-import { ExploreTokensTableRow } from './components/explore-tokens-table-row';
-import { ExploreTokensTableToolbar } from './components/explore-tokens-toolbar';
+import { ExplorePoolsTableRow } from './components/explore-pools-table-row';
+import { ExplorePoolsTableToolbar } from './components/explore-pools-toolbar';
 
 /* ------------------------------------------------------------------ */
 /* columns                                                             */
@@ -62,16 +63,16 @@ export interface Market {
 /* component                                                           */
 /* ------------------------------------------------------------------ */
 
-export interface ExploreTokensTableProps {
-  markets: Market[];
+export interface ExplorePoolsTableProps {
+  pools: Market[];
 }
 
-export function ExploreTokensTable({ markets }: ExploreTokensTableProps) {
+export function ExplorePoolsTable({ pools }: ExplorePoolsTableProps) {
   /* ----- table helpers -------------------------------------------------- */
   const table = useTable({ defaultRowsPerPage: 20 });
 
   /* ----- full dataset --------------------------------------------------- */
-  const [tableData] = useState<Market[]>(markets);
+  const [tableData] = useState<Market[]>(pools);
 
   /* ----- search filter state ------------------------------------------- */
   const filters = useSetState<IMarketTableFilters>({
@@ -103,7 +104,7 @@ export function ExploreTokensTable({ markets }: ExploreTokensTableProps) {
   return (
     <Card>
       {/* — search bar — */}
-      <ExploreTokensTableToolbar filters={filters} onResetPage={table.onResetPage} />
+      <ExplorePoolsTableToolbar filters={filters} onResetPage={table.onResetPage} />
 
       {/* — scrollable table — */}
       <Scrollbar>
@@ -132,7 +133,7 @@ export function ExploreTokensTable({ markets }: ExploreTokensTableProps) {
                 table.page * table.rowsPerPage + table.rowsPerPage
               )
               .map((row) => (
-                <ExploreTokensTableRow key={row.id} row={row} />
+                <ExplorePoolsTableRow key={row.id} row={row} />
               ))}
 
             <TableEmptyRows

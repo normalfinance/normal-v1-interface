@@ -5,6 +5,8 @@ import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 
 import Box from '@mui/material/Box';
+import { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
+import { Avatar, Button, Stack, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Stack, Avatar, Button, Typography } from '@mui/material';
 

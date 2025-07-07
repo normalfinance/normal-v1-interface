@@ -16,7 +16,7 @@ type Props = {
   filters: UseSetStateReturn<IMarketTableFilters>;
 };
 
-export function ExploreTokensTableToolbar({ filters, onResetPage }: Props) {
+export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
   const { state: currentFilters, setState: updateFilters } = filters;
 
   const handleFilterName = useCallback(

@@ -1,10 +1,8 @@
 'use client';
 
-import type { Pool } from '@normalfinance/contracts/build/pool';
-
+import { constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
-import { constants, formatCurrency } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
@@ -12,8 +10,8 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 interface ReturnType {
   error: any | null;
   loading: boolean;
-  pools: Pool[];
-  fetchPool: (poolAddress: string) => Promise<Pool>;
+  pools: PoolRouterContract.PoolResponse[];
+  fetchPool: (poolAddress: string) => Promise<PoolRouterContract.PoolInfo>;
   fetchAllPools: () => Promise<void>;
 }
 
@@ -25,7 +23,7 @@ export function usePools(autoFetch: boolean): ReturnType {
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
-  const [allPools, setAllPools] = useState<Pool[]>([]); // State to hold pool data
+  const [allPools, setAllPools] = useState<PoolRouterContract.PoolResponse[]>([]); // State to hold pool data
 
   /**
    * Fetch pool information by its address.
@@ -33,7 +31,7 @@ export function usePools(autoFetch: boolean): ReturnType {
    * @async
    * @function fetchPool
    * @param {string} poolAddress - The address of the liquidity pool.
-   * @returns {Promise<Pool | undefined>} A promise that resolves to the pool information or undefined in case of failure.
+   * @returns {Promise<PoolRouterContract.PoolResponse | undefined>} A promise that resolves to the pool information or undefined in case of failure.
    */
   const fetchPool = useCallback(async (poolAddress: string) => {
     try {
@@ -43,59 +41,62 @@ export function usePools(autoFetch: boolean): ReturnType {
         rpcUrl: constants.RPC_URL,
       });
 
-      const poolInfo = await PoolRouter.query_pool_details({ pool_address: poolAddress });
+      const pool = await PoolRouter.query_pool_details({ pool_address: poolAddress });
 
-      if (poolInfo.result) {
-        const [tokenA, tokenB] = await Promise.all([
-          store.fetchTokenInfo(poolInfo.result.pool_response.asset_a.address),
-          store.fetchTokenInfo(poolInfo.result.pool_response.asset_b.address),
-        ]);
-
-        // Fetch prices and calculate TVL
-
-        const priceA =
-          Number(poolInfo.result.pool_response.asset_b.amount) /
-          Number(poolInfo.result.pool_response.asset_a.amount);
-
-        const tvl =
-          (priceA * Number(poolInfo.result.pool_response.asset_a.amount)) /
-            10 ** Number(tokenA?.decimals) +
-          Number(poolInfo.result.pool_response.asset_b.amount) / 10 ** Number(tokenB?.decimals);
-
-        // Construct and return pool object if all fetches are successful
-        return {
-          tokens: [
-            {
-              name: tokenA?.symbol || '',
-              icon: `/assets/icons/cryptoIcons/${tokenA?.symbol.toLowerCase()}.svg`,
-              amount:
-                Number(poolInfo.result.pool_response.asset_a.amount) /
-                10 ** Number(tokenA?.decimals),
-              category: '',
-              usdValue: 0,
-            },
-            {
-              name: tokenB?.symbol || '',
-              icon: `/assets/icons/cryptoIcons/${tokenB?.symbol.toLowerCase()}.png`,
-              amount:
-                Number(poolInfo.result.pool_response.asset_b.amount) /
-                10 ** Number(tokenB?.decimals),
-              category: '',
-              usdValue: 0,
-            },
-          ],
-          tvl: formatCurrency('USD', tvl.toString(), navigator.language),
-          // maxApr: `${(apr / 2).toFixed(2)}%`,
-          maxApr: '0',
-          userLiquidity: 0,
-          poolAddress,
-        };
+      if (pool.result) {
+        const poolWithData = formatPool(pool.result);
       }
     } catch (e) {
       console.log(e);
       return undefined;
     }
   }, []);
+
+  //  // LP token stuff..
+  //       // Get user share
+  //       if (storePersist.wallet.address) {
+  //         if (result) {
+  //           // Get the total amount of LP tokens in the pool
+
+  //           const lpShareAmount = Number(result.pool_response.asset_lp_share.amount);
+  //           const lpShareAmountDec = Number(lpShareAmount) / 10 ** (_lpToken?.decimals || 7);
+
+  //           // Get the amount of LP tokens the user has as balance or staked
+  //           const totalUserLPTokens =
+  //             Number(_lpToken!.balance || 0) / 10 ** (_lpToken?.decimals || 7);
+
+  //           // Price per Unit
+  //           const pricePerUnit = tvl / lpShareAmountDec;
+
+  //           // User share
+  //           setUserShare(totalUserLPTokens * pricePerUnit);
+  //         }
+  //       }
+
+  //  const poolsExplorerData: PoolDetails = {
+  //     pairInfo: {
+  //       tokenA: {
+  //         name: 'USDC',
+  //         iconUrl: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694',
+  //       },
+  //       tokenB: { name: 'ETH', iconUrl: 'https://token-icons.s3.amazonaws.com/eth.png' },
+  //       address: '0x88e6...5640',
+  //     },
+  //     metadata: {
+  //       version: 'v3',
+  //       feeTier: '0.05%',
+  //     },
+  //     exchangeRate: {
+  //       label: '1 WETH = 2,304.28 USDC',
+  //       usdEquivalent: '$2,289.11',
+  //       tokenSymbol: 'WETH',
+  //       tokenRate: '2,304.28 USDC',
+  //       tokenUSDValue: '$2,289.11',
+  //     },
+  //     performance: {
+  //       percentageChange: 1.23,
+  //     },
+  //   };
 
   /**
    * Fetch all pools' data.
@@ -116,23 +117,14 @@ export function usePools(autoFetch: boolean): ReturnType {
 
       const pools = await PoolRouter.query_all_pools_details();
 
-      const poolWithData =
-        pools && Array.isArray(pools.result)
-          ? await Promise.all(
-              pools.result.map(
-                async (pool: PoolRouterContract.PoolInfo) => await fetchPool(pool.pool_address)
-              )
-            )
-          : [];
+      if (pools.result) {
+        const poolsWithData = pools.result.map((pool: PoolRouterContract.PoolInfo) =>
+          formatPool(pool)
+        );
 
-      const poolsFiltered = poolWithData.filter(
-        (el) =>
-          el !== undefined &&
-          el.tokens.length >= 2 &&
-          el.poolAddress !== 'CBXBKAB6QIRUGTG77OQZHC46BIIPA5WDKIKZKPA2H7Q7CPKQ555W3EVB'
-      );
+        setAllPools(poolsWithData as any[]);
+      }
 
-      setAllPools(poolsFiltered as Pool[]);
       setLoading(false);
     } catch (e) {
       console.error(e);
@@ -141,7 +133,7 @@ export function usePools(autoFetch: boolean): ReturnType {
     } finally {
       store.setLoading(false);
     }
-  }, [fetchPool]);
+  }, []);
 
   // On component mount, fetch pool
   useEffect(() => {
@@ -156,3 +148,33 @@ export function usePools(autoFetch: boolean): ReturnType {
     fetchAllPools,
   };
 }
+
+const formatPool = (pool: PoolRouterContract.PoolInfo) => {
+  const tokenAAmount = pool.pool_response.token_a.amount / 10 ** 7;
+  const tokenBAmount = pool.pool_response.token_b.amount / 10 ** 7;
+
+  // Construct and return pool object if all fetches are successful
+  return {
+    tokens: [
+      {
+        name: pool.pool_response.pool.base_asset,
+        icon: `/assets/icons/cryptoIcons/n${pool.pool_response.pool.base_asset.toLowerCase()}.svg`,
+        amount: tokenAAmount,
+
+        usdValue: 0,
+      },
+      {
+        name: pool.pool_response.pool.quote_asset,
+        icon: `/assets/icons/cryptoIcons/${pool.pool_response.pool.quote_asset.toLowerCase()}.png`,
+        amount: tokenBAmount,
+
+        usdValue: 0,
+      },
+    ],
+    tvl: '0',
+    apr: '0',
+    tokenShare: Number(pool.pool_response.token_share.amount) / 10 ** 7,
+    address: pool.pool_address,
+    poolInfo: pool.pool_response.pool,
+  };
+};

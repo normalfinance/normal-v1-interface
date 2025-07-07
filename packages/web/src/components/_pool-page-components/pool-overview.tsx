@@ -14,7 +14,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 
-import SwapCard from '../swap-card';
+import SwapCard from '../_common/swap-card';
 
 // ----------------------------------------------------------------------
 // ── Prop types ---------------------------------------------------------
@@ -46,7 +46,7 @@ export type PoolsAprProps = CardProps & {
 
 // ----------------------------------------------------------------------
 
-export function PoolsApr({ totalAprPercentage, poolBalances, stats, sx, ...other }: PoolsAprProps) {
+export function PoolOverview({ totalAprPercentage, poolBalances, stats, sx, ...other }: PoolsAprProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 

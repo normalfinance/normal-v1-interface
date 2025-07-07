@@ -17,7 +17,6 @@ import { Box, Tab, Stack, Avatar } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { Chart, useChart, ChartSelect } from '@/components/template/chart';
-import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
 
 import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
 
@@ -26,7 +25,7 @@ import type {
   TokenPairInfo,
   PerformanceInfo,
   ExchangeRateInfo,
-} from '../pools-explore/explorer-chart-data';
+} from './pool-chart-data';
 
 // Types
 export type ChartMetricKey = 'price' | 'volume' | 'liquidity';
@@ -56,7 +55,7 @@ type Props = CardProps & {
   performance?: PerformanceInfo;
 };
 
-export function PoolsExplorer({
+export function PoolChart({
   title,
   subheader,
   legendValues,
@@ -122,26 +121,7 @@ export function PoolsExplorer({
   return (
     <Card sx={sx} {...other}>
       <CardHeader title={title} subheader={subheader} sx={{ mb: 2 }} />
-      <CustomBreadcrumbs
-        activeLast
-        links={[
-          { name: 'Explore', href: '/' },
-          { name: 'Pools', href: '/pools' },
-          {
-            name: (
-              <>
-                {pairInfo?.tokenA.name}
-                {t('/')}
-                {pairInfo?.tokenB.name}{' '}
-                <Typography component="span" color="text.secondary" variant="body2">
-                  {pairInfo?.address}
-                </Typography>
-              </>
-            ),
-          },
-        ]}
-        sx={{ mb: '20px', px: 2.5 }}
-      />
+
       <Box
         sx={{
           display: 'flex',

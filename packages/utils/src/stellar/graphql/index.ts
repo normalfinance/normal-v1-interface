@@ -1,2 +1,2 @@
-export * from "./fetchHistoryMetaData";
+export * from "./fetchHistoricalPoolData";
 export * from "./fetchVolumeByTimeEpoch";

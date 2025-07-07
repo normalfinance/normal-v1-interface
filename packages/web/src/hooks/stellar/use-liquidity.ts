@@ -16,8 +16,8 @@ export type WithdrawLiquidityArgs = Parameters<Client['withdraw']>[0];
 interface ReturnType {
   error: any | null;
   loading: boolean;
-  onDepositLiquidity: (args: DepositLiquidityArgs) => Promise<void>;
-  onWithdrawLiquidity: (args: WithdrawLiquidityArgs) => Promise<void>;
+  depositLiquidity: (args: DepositLiquidityArgs) => Promise<void>;
+  withdrawLiquidity: (args: WithdrawLiquidityArgs) => Promise<void>;
 }
 
 // ----------------------------------------------------------------------
@@ -30,7 +30,7 @@ export function useLiquidity(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
 
-  const onDepositLiquidity = async (args: DepositLiquidityArgs) => {
+  const depositLiquidity = async (args: DepositLiquidityArgs) => {
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.POOL_ROUTER_ADDRESS,
@@ -46,7 +46,7 @@ export function useLiquidity(): ReturnType {
     });
   };
 
-  const onWithdrawLiquidity = async (args: WithdrawLiquidityArgs) => {
+  const withdrawLiquidity = async (args: WithdrawLiquidityArgs) => {
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.POOL_ROUTER_ADDRESS,
@@ -65,7 +65,7 @@ export function useLiquidity(): ReturnType {
   return {
     error,
     loading,
-    onDepositLiquidity,
-    onWithdrawLiquidity,
+    depositLiquidity,
+    withdrawLiquidity,
   };
 }

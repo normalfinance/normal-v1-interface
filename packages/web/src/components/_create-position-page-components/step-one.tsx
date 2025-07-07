@@ -6,8 +6,9 @@ import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { useFormContext } from 'react-hook-form';
 
-import { Stack, alpha, Avatar, Button, useTheme, Typography } from '@mui/material';
-
+import { Token } from '@/types/token';
+import PickToken from '../_common/pick-token';
+import { FormValues } from './step-content-panel';
 import { Iconify } from '@/components/template/iconify';
 
 import PickToken from '../pick-token';

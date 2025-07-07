@@ -39,7 +39,7 @@ type Props = {
 
 /* ------------------------------------------------------------------ */
 
-export function ExploreTokensTableRow({ row, selected }: Props) {
+export function ExplorePoolsTableRow({ row, selected }: Props) {
   const theme = useTheme();
   const router = useRouter();
 

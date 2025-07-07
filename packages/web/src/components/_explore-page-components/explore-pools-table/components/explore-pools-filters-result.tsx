@@ -15,7 +15,7 @@ type Props = FiltersResultProps & {
   filters: UseSetStateReturn<IMarketTableFilters>;
 };
 
-export function ExploreTokensTableFiltersResult({ filters, onResetPage, totalResults, sx }: Props) {
+export function ExplorePoolsTableFiltersResult({ filters, onResetPage, totalResults, sx }: Props) {
   const { state: currentFilters, setState: updateFilters, resetState: resetFilters } = filters;
 
   const handleRemoveKeyword = useCallback(() => {

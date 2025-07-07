@@ -4,14 +4,15 @@ import type { Token } from '@/types/token';
 import type { Activity } from '@/types/activity';
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
-import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
+import type { PoolDetails } from '@/components/_pool-page-components/pool-chart/pool-chart-data';
 
 import { useTranslate } from '@/locales';
-import * as Sentry from '@sentry/nextjs';
+import { usePools } from '@/hooks/stellar';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
+import { useUserBalances } from '@/hooks/use-user-balances';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
@@ -158,16 +159,49 @@ function WalletDisconnected({
 function WalletConnected({
   address,
   onDisconnect,
-  tokens,
-  pools,
   activity,
 }: {
   address: string;
   onDisconnect: () => void;
-  tokens?: Token[];
-  pools?: PoolDetails[];
+  // pools?: PoolDetails[];
   activity?: Activity[];
 }) {
+  const { tokens } = useUserBalances();
+
+  // Fetch LP tokens
+  const { pools } = usePools(true);
+
+  const positions: PoolDetails[] = tokens
+    .map((token) => {
+      const match = pools.find((pool) => pool.asset_lp_share.address === token.contract);
+
+      if (match) {
+        const details: PoolDetails = {
+          poolInfo: {
+            tokenA: {
+              name: '',
+              iconUrl: '',
+            },
+            tokenB: {
+              name: '',
+              iconUrl: '',
+            },
+            address: match.address,
+            feeTier: match.pool.fee_fraction,
+          },
+          metadata: {
+            version: '1',
+          },
+          performance: {
+            position: 0,
+            fees: 0,
+          },
+        };
+        return details;
+      }
+    })
+    .filter((v) => v != null);
+
   return (
     <Box
       sx={{
@@ -264,6 +298,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   console.log(CURRENT_TOS_VERSION + 'CURRENT_TOS_VERSION');
   console.log(disclaimerVersion + 'disclaimerVersion');
+
+  const { tokenBalancesResponse } = useUserBalances();
 
   const tokens: Token[] = [
     {
@@ -495,8 +531,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
           {isConnected ? (
             <WalletConnected
               address={connectedAddress!}
-              tokens={tokens}
-              pools={pools}
               activity={activity}
               onDisconnect={() => {
                 disconnect();
