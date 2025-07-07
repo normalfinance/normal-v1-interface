@@ -160,7 +160,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
             <ResultItem
               path={partsPath}
               title={partsTitle}
-              href={paths.markets.details(item.shortname)}
+              href={paths.pools.details(item.shortname)}
               labels={item.name.split('.')}
               onClick={handleClose}
             />

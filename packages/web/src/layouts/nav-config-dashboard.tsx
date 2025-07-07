@@ -11,7 +11,6 @@ const icon = (name: string) => (
   <SvgColor src={`${CONFIG.assetsDir}/assets/icons/navbar/${name}.svg`} />
 );
 
-// TODO: update icons
 const ICONS = {
   home: icon('mingcute-home'),
   trade: icon('mingcute-trade'),
@@ -35,77 +34,53 @@ export const navData: NavSectionProps['data'] = [
     subheader: '',
     items: [
       {
-        title: 'Overview',
+        title: 'Home',
         path: paths.root,
         icon: ICONS.home,
       },
       {
-        title: 'Trade',
-        path: '#',
-        icon: ICONS.trade,
-        children: [
-          {
-            title: 'Spot',
-            path: '#', // paths.markets.root,
-            icon: ICONS.synths,
-            caption: 'Trade any Top 100 asset directly on-chain',
-          },
-          {
-            title: 'Indexes',
-            path: paths.index.create,
-            icon: ICONS.indexes,
-            caption: 'Build diversified portfolios of assets to automate or hedge your investing',
-          },
-        ],
+        title: 'Explore',
+        path: paths.explore,
+        icon: ICONS.analytics,
+        caption: 'View pools and protocol analytics',
       },
       {
-        title: 'Earn',
+        title: 'Swap',
+        path: paths.swap,
+        icon: ICONS.synths,
+        caption: 'Trade any Top 100 crypto directly on-chain',
+      },
+      {
+        title: 'Liquidity',
         path: '#',
         icon: ICONS.earn,
         children: [
           {
-            title: 'Yield',
-            path: '#', // paths.markets.root,
-            icon: ICONS.yield,
-            caption: 'Mint synths by depositing collateral and earn yield from exchange fees',
-          },
-          {
-            title: 'LP',
-            path: '#', // paths.markets.root,
+            title: 'Positions',
+            path: paths.positions.root,
             icon: ICONS.lp,
-            caption: 'Provide liquidity to pools and earn yield from swaps',
+            caption: 'View your active liquidity positions',
           },
-        ],
-      },
-      {
-        title: 'Rewards',
-        path: '#',
-        icon: ICONS.rewards,
-        children: [
           {
-            title: 'Referrals',
-            path: '#', // paths.rewards,
-            icon: ICONS.referrals,
-            caption: 'Refer friends to Normal and earn a share of their trading fees',
+            title: 'Provide Liquidity',
+            path: paths.positions.create,
+            icon: ICONS.lp,
+            caption: 'Provide liquidity to pools and earn yield from swap fees',
           },
         ],
       },
       {
-        title: 'Analytics',
-        path: '#', // paths.analytics,
-        icon: ICONS.analytics,
+        title: 'Insurance',
+        path: paths.insurance,
+        icon: ICONS.yield,
+        caption: 'Help protect the protocol with backstop funds and earn yield',
       },
+
       {
         title: 'More',
         path: '#',
         icon: ICONS.more,
         children: [
-          {
-            title: 'Governance',
-            path: '#', // 'https://www.google.com/',
-            icon: ICONS.external,
-            caption: 'NORM is a governance token powering the Normal platform',
-          },
           {
             title: 'Help & Feedback',
             path: '#', // 'https://www.google.com/',

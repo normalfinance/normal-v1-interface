@@ -139,8 +139,8 @@ export default function CreatePositionView() {
       <CustomBreadcrumbs
         heading="Liquidity"
         links={[
-          { name: 'Your positions', href: paths.overview },
-          { name: 'New position', href: paths.overview },
+          { name: 'Your positions', href: paths.positions.root },
+          { name: 'New position', href: paths.positions.create },
         ]}
         sx={{
           mb: { xs: 3, md: 5 },
