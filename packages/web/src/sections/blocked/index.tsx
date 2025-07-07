@@ -50,7 +50,7 @@ export default function BlockedView() {
               underline="always"
               target="_blank"
               rel="noopener noreferrer"
-              color="secondary.light"
+              color="text.secondary"
             >
               {t('View the blend App TOS')}
             </Link>
