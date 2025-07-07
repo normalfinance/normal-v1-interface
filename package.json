@@ -12,7 +12,10 @@
     "build:contracts": "turbo run build --filter=@normalfinance/contracts",
     "build:state": "turbo run build --filter=@normalfinance/state",
     "build:utils": "turbo run build --filter=@normalfinance/utils",
-    "build:types": "turbo run build --filter=@normalfinance/types"
+    "build:types": "turbo run build --filter=@normalfinance/types",
+    "clean": "rm -rf node_modules .turbo yarn.lock && rm -rf packages/*/{node_modules,.next,.swc,dist,build,tsconfig.tsbuildinfo,.turbo}",
+    "setup": "yarn install && turbo run build",
+    "refresh": "npm run clean && npm run setup"
   },
   "repository": {
     "type": "git",
@@ -29,7 +32,6 @@
     "packages/utils",
     "packages/contracts",
     "packages/state",
-    "packages/contracts",
     "packages/*"
   ],
   "devDependencies": {
