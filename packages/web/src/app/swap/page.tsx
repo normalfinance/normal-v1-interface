@@ -16,11 +16,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Swap | Normal',
     description: 'Swap tokens quickly and securely on Normal Finance.',
-    url: 'https://normal.finance/swap', // replace with real domain
+    url: 'https://app.normalfinance.io/swap', // replace with real domain
     siteName: 'Normal Finance',
     images: [
       {
-        url: '/og/swap.png', // replace with image you want to show when sharing link on other socials than twitter
+        url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
         alt: 'Normal Swap overview',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Swap | Normal',
     description: 'Swap tokens quickly and securely on Normal Finance.',
-    images: ['/og/swap.png'], // replace with image you want to show when sharing link on Twitter
+    images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
     index: true,

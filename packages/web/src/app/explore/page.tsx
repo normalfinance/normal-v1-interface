@@ -16,11 +16,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Explore | Normal',
     description: 'Discover trending crypto indices and assets built with Normal.',
-    url: 'https://normal.finance/explore', // replace with real domain
+    url: 'https://app.normalfinance.io/explore', // replace with real domain
     siteName: 'Normal Finance',
     images: [
       {
-        url: '/og/explore.png', // replace with image you want to show when sharing link on other socials than twitter
+        url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
         alt: 'Normal Explore overview',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Explore | Normal',
     description: 'Discover trending crypto indices and assets built with Normal.',
-    images: ['/og/explore.png'], // replace with image you want to show when sharing link on Twitter
+    images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
     index: true,

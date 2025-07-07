@@ -16,11 +16,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Pool Details | Normal',
     description: 'Detailed view of a specific liquidity pool on Normal Finance.',
-    url: 'https://normal.finance/pools', // replace with real domain
+    url: 'https://app.normalfinance.io/pools', // replace with real domain
     siteName: 'Normal Finance',
     images: [
       {
-        url: '/og/pool-details.png', // replace with image you want to show when sharing link on other socials than twitter
+        url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
         alt: 'Normal Pool details',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Pool Details | Normal',
     description: 'Detailed view of a specific liquidity pool on Normal Finance.',
-    images: ['/og/pool-details.png'], // replace with image you want to show when sharing link on Twitter
+    images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
     index: true,
