@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BLOCKED_COUNTRIES = new Set(['CU', 'IR', 'KP', 'SY', 'VE', 'RU', 'BY', 'SD', /* … */ 'ZW']);
+const BLOCKED_COUNTRIES = new Set(['CU', 'IR', 'KP', 'SY', 'VE', 'RU', 'BY', 'SD', 'ZW', 'US']);
 
 async function lookup(ip: string) {
   //   Always include the scheme (https) to avoid 403s
   const endpoint = process.env.GEOIP_ENDPOINT!;
   const key = process.env.GEOIP_KEY!;
-  const url = `${endpoint}/${ip}?key=${key}`;
+  const url = `${endpoint.replace(/\/$/, '')}/${ip}?key=${key}`;
+
+  console.log('[geo] url:', url);
 
   const res = await fetch(url, { next: { revalidate: 60 * 60 * 24 } }); // 24 h edge cache
+  console.log('[geo] res:', res);
   if (!res.ok) throw new Error('Geo API failed');
 
   const data = await res.json();
@@ -25,12 +28,17 @@ async function lookup(ip: string) {
 
 export async function middleware(req: NextRequest) {
   console.log('[geo] MW hit:', req.nextUrl.pathname);
-  const ip =
+  let ip =
     req.headers.get('x-real-ip') || // many reverse proxies
     req.headers.get('X-Forwarded-For')?.split(',')[0] ||
     req.ip;
 
   console.log('[geo] incoming IP:', ip);
+
+  if (process.env.NODE_ENV === 'development' && (ip === '::1' || ip === '127.0.0.1')) {
+    ip = '8.8.8.8';
+    console.log('[geo] using test IP:', ip);
+  }
 
   if (!ip) return NextResponse.next(); // local dev
 
