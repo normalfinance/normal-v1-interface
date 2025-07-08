@@ -6,6 +6,7 @@ import { AppStore, AppStorePersist } from "@normalfinance/types";
 import { createConnectWalletActions } from "./persist/createConnectWalletActions";
 import { createLayoutActions } from "./layout/actions";
 import { createDisclaimerAction } from "./persist/createDisclaimerActions";
+import { createLoadingActions } from "./loading/actions";
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
@@ -21,11 +22,15 @@ export const useAppStore = create<AppStore>()((set, get) => {
   // Create a wallet with the given server and network passphrase.
   const wallet = createWalletActions(set, get);
 
+  // Create a loading state
+  const loading = createLoadingActions(set, get);
+
   return {
     server,
     networkPassphrase,
     ...wallet,
     ...layout,
+    ...loading,
   };
 });
 
