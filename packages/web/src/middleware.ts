@@ -1,7 +1,7 @@
-import { captureException } from '@sentry/nextjs';
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { captureException } from '@sentry/nextjs';
 
 const BLOCKED_COUNTRIES = new Set([
   'AG', // Antigua and Barbuda

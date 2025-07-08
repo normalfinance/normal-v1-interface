@@ -1,21 +1,24 @@
 'use client';
 
 import { useEffect } from 'react';
-import { SimpleLayout } from '@/layouts/simple';
-import Container from '@mui/material/Container';
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
 import * as Sentry from '@sentry/nextjs';
+import { useTranslate } from '@/locales';
+import { SimpleLayout } from '@/layouts/simple';
+
+import Button from '@mui/material/Button';
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
 
 export default function SentryTestPage() {
+  const { t } = useTranslate();
   return (
     <SimpleLayout>
       <Container>
         <Typography variant="h4" sx={{ mb: 2 }}>
-          Sentry Test Page
+          {t('Sentry Test Page')}
         </Typography>
         <Typography sx={{ mb: 2 }}>
-          Click the buttons below to test Sentry error reporting.
+          {t('Click the buttons below to test Sentry error reporting.')}
         </Typography>
 
         <Button
@@ -25,7 +28,7 @@ export default function SentryTestPage() {
           }}
           sx={{ mr: 2 }}
         >
-          Throw Client Error
+          {t('Throw Client Error')}
         </Button>
 
         <Button
@@ -37,7 +40,7 @@ export default function SentryTestPage() {
             console.log(text);
           }}
         >
-          Throw Server Error (via API route)
+          {t('Throw Server Error (via API route)')}
         </Button>
 
         <Button
@@ -48,7 +51,7 @@ export default function SentryTestPage() {
             Sentry.captureMessage('This is a test message from the client side');
           }}
         >
-          Capture Message
+          {t('Capture Message')}
         </Button>
 
         <SentryTestComponent />

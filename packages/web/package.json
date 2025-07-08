@@ -24,7 +24,7 @@
     "tsc:watch": "tsc --noEmit --watch",
     "tsc:print": "npx tsc --showConfig",
     "i18n:check": "i18n-check -s en --locales src/locales/langs -f i18next",
-    "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅',"
+    "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅'"
   },
   "engines": {
     "node": "20.x"

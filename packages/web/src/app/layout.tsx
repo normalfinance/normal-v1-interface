@@ -4,8 +4,10 @@ import type { Metadata, Viewport } from 'next';
 
 import { CONFIG } from '@/global-config';
 import { primary } from '@/theme/core/palette';
+import { ErrorBoundary } from '@sentry/nextjs';
 import { LocalizationProvider } from '@/locales';
 import { detectLanguage } from '@/locales/server';
+import { View500 } from '@/sections/error/500-view';
 import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
@@ -13,13 +15,11 @@ import { I18nProvider } from '@/locales/i18n-provider';
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
-import { ErrorBoundary } from '@sentry/nextjs';
 import { ProgressBar } from '@/components/template/progress-bar';
 import { SnackbarProvider } from '@/components/template/snackbar';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
-import { View500 } from '@/sections/error/500-view';
 
 // import { ExternalProvider } from '@/providers/ExternalProvider';
 
