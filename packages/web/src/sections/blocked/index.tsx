@@ -1,11 +1,12 @@
 'use client';
 
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Grid2 from '@mui/material/Grid2';
-import { Box, Stack, Typography, Link, Button } from '@mui/material';
-import { useRouter } from 'next/navigation';
+import { Box, Link, Stack, Button, Typography } from '@mui/material';
 
 export default function BlockedView() {
   const { t } = useTranslate();
@@ -40,26 +41,25 @@ export default function BlockedView() {
             <Typography variant="h3" fontWeight="bold">
               {t('GEO-BLOCKED')}
             </Typography>
-
             <Typography variant="body1" fontSize={16}>
-              {t('Your region is blocked. Unable to redirect to the BlendIPFS Application.')}
+              {t(
+                'Normal is not available in your region. Based on your location being a current Restricted Jurisdiction, you are prohibited from accessing or using the Normal app, platform or smart contracts due to local laws and regulations, as per our Terms of Service.'
+              )}
             </Typography>
-
             <Link
-              href="/"
+              href={`${paths.docs}/other/legal/terms-of-service`}
               underline="always"
               target="_blank"
               rel="noopener noreferrer"
               color="text.secondary"
             >
-              {t('View the blend App TOS')}
+              {t("View Normal's Terms of Service")}
             </Link>
-
             <Button
               variant="contained"
               onClick={() => router.push('https://forms.fillout.com/t/tidFgHnmWWus')}
             >
-              {t('Join the waiting list.')}
+              {t('Join the waiting list')}
             </Button>
           </Stack>
         </Grid2>
