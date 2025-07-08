@@ -13,11 +13,13 @@ import { I18nProvider } from '@/locales/i18n-provider';
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
+import { ErrorBoundary } from '@sentry/nextjs';
 import { ProgressBar } from '@/components/template/progress-bar';
 import { SnackbarProvider } from '@/components/template/snackbar';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
+import { View500 } from '@/sections/error/500-view';
 
 // import { ExternalProvider } from '@/providers/ExternalProvider';
 
@@ -117,7 +119,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                     <SnackbarProvider>
                       <ProgressBar />
                       <SettingsDrawer defaultSettings={defaultSettings} />
-                      <DashboardLayout>{children}</DashboardLayout>
+                      <ErrorBoundary fallback={<View500 />}>
+                        <DashboardLayout>{children}</DashboardLayout>
+                      </ErrorBoundary>
                     </SnackbarProvider>
                   </MotionLazy>
                   {/* </ExternalProvider> */}
