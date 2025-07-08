@@ -1,6 +1,6 @@
 {
   "name": "@normalfinance/normal-v1-interface",
-  "description": "",
+  "description": "🌈 Open source interfaces for the Normal protocol",
   "version": "0.0.1",
   "scripts": {
     "test": "turbo run test",
