@@ -228,7 +228,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     connectedAddress != '' && connectedAddress != undefined
   );
 
-  const disclaimerVersion = usePersistStore((s) => s.disclaimer.version);
+  const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
 
   /** Open drawer OR show ToS dialog, depending on acceptance */
