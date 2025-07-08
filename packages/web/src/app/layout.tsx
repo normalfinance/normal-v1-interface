@@ -30,11 +30,29 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Normal',
-  description: '',
+  metadataBase: new URL(CONFIG.siteUrl),
+  title: {
+    default: 'Normal',
+    template: '%s · Normal',
+  },
+  description: 'Invest in diversified crypto indices with Normal.',
   keywords: 'crypto, investing, crypto index, defi',
+  openGraph: {
+    siteName: 'Normal',
+    images: [
+      {
+        url: '/og/home.png', // fallback if a page doesn’t override
+        width: 1200,
+        height: 630,
+        alt: 'Normal overview',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
   twitter: {
     card: 'summary_large_image',
+    images: ['/og/home.png'], // fallback image for Twitter
   },
   manifest: '/manifest.json',
   icons: [
