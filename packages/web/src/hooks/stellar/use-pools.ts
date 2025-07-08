@@ -1,9 +1,9 @@
 'use client';
 
 import { constants } from '@normalfinance/utils';
+import { useAppStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
 
@@ -19,20 +19,11 @@ interface ReturnType {
 
 export function usePools(autoFetch: boolean): ReturnType {
   const store = useAppStore(); // Global state management
-  const storePersist = usePersistStore();
-
+ 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
   const [allPools, setAllPools] = useState<PoolRouterContract.PoolResponse[]>([]); // State to hold pool data
 
-  /**
-   * Fetch pool information by its address.
-   *
-   * @async
-   * @function fetchPool
-   * @param {string} poolAddress - The address of the liquidity pool.
-   * @returns {Promise<PoolRouterContract.PoolResponse | undefined>} A promise that resolves to the pool information or undefined in case of failure.
-   */
   const fetchPool = useCallback(async (poolAddress: string) => {
     try {
       const PoolRouter = new PoolRouterContract.Client({
@@ -98,12 +89,6 @@ export function usePools(autoFetch: boolean): ReturnType {
   //     },
   //   };
 
-  /**
-   * Fetch all pools' data.
-   *
-   * @async
-   * @function fetchPools
-   */
   const fetchAllPools = useCallback(async () => {
     try {
       setLoading(true);

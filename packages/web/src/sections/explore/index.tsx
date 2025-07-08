@@ -1,6 +1,7 @@
 'use client';
 
 import { usePoolsStats } from '@/hooks';
+import { useTranslate } from '@/locales';
 import { usePools } from '@/hooks/stellar';
 import { DashboardContent } from '@/layouts/dashboard';
 
@@ -11,6 +12,8 @@ import ExploreStats from '@/components/_explore-page-components/explore-stats/ex
 import { ExplorePoolsTable } from '@/components/_explore-page-components/explore-pools-table/explore-pools-table';
 
 export default function ExploreView() {
+  const { t } = useTranslate();
+
   const { stats } = usePoolsStats();
   const { pools } = usePools(true);
 
