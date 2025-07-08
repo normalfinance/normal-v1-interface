@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import PoolsView from '@/sections/pools';
+import { CONFIG } from '@/global-config';
 
 // ----------------------------------------------------------------------
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Pools | Normal',
     description: 'Browse liquidity pools and earning opportunities on Normal.',
-    url: 'https://app.normalfinance.io/pools', // replace with real domain
+    url: `${CONFIG.siteUrl}/pools`,
     siteName: 'Normal',
     images: [
       {

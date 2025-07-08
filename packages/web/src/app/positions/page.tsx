@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { CONFIG } from '@/global-config';
 import PositionsView from '@/sections/positions';
 
 // ----------------------------------------------------------------------
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Positions | Normal',
     description: 'Review and manage your positions on Normal.',
-    url: 'https://app.normalfinance.io/positions', // replace with real domain
+    url: `${CONFIG.siteUrl}/positions`,
     siteName: 'Normal',
     images: [
       {

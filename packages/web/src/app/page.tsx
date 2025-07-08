@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { CONFIG } from '@/global-config';
+
 export const metadata: Metadata = {
   title: {
     default: 'Home | Normal',
@@ -12,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Home | Normal',
     description: 'Normal helps you invest in diversified crypto indices and assets.',
-    url: 'https://normal.finance', // replace with real domain
+    url: CONFIG.siteUrl,
     siteName: 'Normal',
     images: [
       {

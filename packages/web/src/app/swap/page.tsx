@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import SwapView from '@/sections/swap';
+import { CONFIG } from '@/global-config';
 
 // ----------------------------------------------------------------------
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Swap | Normal',
     description: 'Swap tokens quickly and securely on Normal.',
-    url: 'https://app.normalfinance.io/swap', // replace with real domain
+    url: `${CONFIG.siteUrl}/swap`,
     siteName: 'Normal',
     images: [
       {

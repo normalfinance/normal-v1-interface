@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { CONFIG } from '@/global-config';
 import InsuranceView from '@/sections/insurance';
 
 // ----------------------------------------------------------------------
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Insurance | Normal',
     description: 'Protect your crypto assets with Normal insurance options.',
-    url: 'https://app.normalfinance.io/insurance', // replace with real domain
+    url: `${CONFIG.siteUrl}/insurance`,
     siteName: 'Normal',
     images: [
       {

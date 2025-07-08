@@ -30,7 +30,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://app.normalfinance.io'),
+  metadataBase: new URL(CONFIG.siteUrl),
   title: {
     default: 'Normal',
     template: '%s · Normal',

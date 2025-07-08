@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { CONFIG } from '@/global-config';
 import ExploreView from '@/sections/explore';
 
 // ----------------------------------------------------------------------
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Explore | Normal',
     description: 'Discover trending crypto indices and assets built with Normal.',
-    url: 'https://app.normalfinance.io/explore',
+    url: `${CONFIG.siteUrl}/explore`,
     siteName: 'Normal',
     images: [
       {
