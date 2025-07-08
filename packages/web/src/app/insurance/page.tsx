@@ -7,7 +7,7 @@ import InsuranceView from '@/sections/insurance';
 export const metadata: Metadata = {
   title: {
     default: 'Insurance | Normal',
-    template: '%s · Normal Finance',
+    template: '%s · Normal',
   },
   description: 'Protect your crypto assets with Normal insurance options.',
   alternates: {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     title: 'Insurance | Normal',
     description: 'Protect your crypto assets with Normal insurance options.',
     url: 'https://app.normalfinance.io/insurance', // replace with real domain
-    siteName: 'Normal Finance',
+    siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal Finance', 'crypto insurance', 'risk management', 'web3 security'],
+  keywords: ['Normal', 'Normal Finance', 'crypto insurance', 'risk management', 'web3 security'],
 };
 
 export default function Page() {

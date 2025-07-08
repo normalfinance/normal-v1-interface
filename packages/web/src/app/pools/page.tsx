@@ -7,17 +7,17 @@ import PoolsView from '@/sections/pools';
 export const metadata: Metadata = {
   title: {
     default: 'Pools | Normal',
-    template: '%s · Normal Finance',
+    template: '%s · Normal',
   },
-  description: 'Browse liquidity pools and earning opportunities on Normal Finance.',
+  description: 'Browse liquidity pools and earning opportunities on Normal.',
   alternates: {
     canonical: '/pools',
   },
   openGraph: {
     title: 'Pools | Normal',
-    description: 'Browse liquidity pools and earning opportunities on Normal Finance.',
+    description: 'Browse liquidity pools and earning opportunities on Normal.',
     url: 'https://app.normalfinance.io/pools', // replace with real domain
-    siteName: 'Normal Finance',
+    siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Pools | Normal',
-    description: 'Browse liquidity pools and earning opportunities on Normal Finance.',
+    description: 'Browse liquidity pools and earning opportunities on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal Finance', 'liquidity pools', 'yield farming', 'crypto liquidity'],
+  keywords: ['Normal', 'Normal Finance', 'liquidity pools', 'yield farming', 'crypto liquidity'],
 };
 
 export default function Page() {

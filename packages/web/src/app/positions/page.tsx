@@ -7,17 +7,17 @@ import PositionsView from '@/sections/positions';
 export const metadata: Metadata = {
   title: {
     default: 'Positions | Normal',
-    template: '%s · Normal Finance',
+    template: '%s · Normal',
   },
-  description: 'Review and manage your positions on Normal Finance.',
+  description: 'Review and manage your positions on Normal.',
   alternates: {
     canonical: '/positions',
   },
   openGraph: {
     title: 'Positions | Normal',
-    description: 'Review and manage your positions on Normal Finance.',
+    description: 'Review and manage your positions on Normal.',
     url: 'https://app.normalfinance.io/positions', // replace with real domain
-    siteName: 'Normal Finance',
+    siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Positions | Normal',
-    description: 'Review and manage your positions on Normal Finance.',
+    description: 'Review and manage your positions on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal Finance', 'positions', 'portfolio', 'crypto positions'],
+  keywords: ['Normal', 'Normal Finance', 'positions', 'portfolio', 'crypto positions'],
 };
 
 export default function Page() {

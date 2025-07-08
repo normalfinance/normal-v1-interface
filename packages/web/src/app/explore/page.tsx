@@ -7,7 +7,7 @@ import ExploreView from '@/sections/explore';
 export const metadata: Metadata = {
   title: {
     default: 'Explore | Normal',
-    template: '%s · Normal Finance',
+    template: '%s · Normal',
   },
   description: 'Discover trending crypto indices and assets built with Normal.',
   alternates: {
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Explore | Normal',
     description: 'Discover trending crypto indices and assets built with Normal.',
-    url: 'https://app.normalfinance.io/explore', // replace with real domain
-    siteName: 'Normal Finance',
+    url: 'https://app.normalfinance.io/explore',
+    siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal Finance', 'crypto index', 'crypto investing', 'web3 portfolio'],
+  keywords: ['Normal', 'Normal Finance', 'crypto index', 'crypto investing', 'web3 portfolio'],
 };
 
 export default function Page() {

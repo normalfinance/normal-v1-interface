@@ -7,17 +7,17 @@ import SwapView from '@/sections/swap';
 export const metadata: Metadata = {
   title: {
     default: 'Swap | Normal',
-    template: '%s · Normal Finance',
+    template: '%s · Normal',
   },
-  description: 'Swap tokens quickly and securely on Normal Finance.',
+  description: 'Swap tokens quickly and securely on Normal.',
   alternates: {
     canonical: '/swap',
   },
   openGraph: {
     title: 'Swap | Normal',
-    description: 'Swap tokens quickly and securely on Normal Finance.',
+    description: 'Swap tokens quickly and securely on Normal.',
     url: 'https://app.normalfinance.io/swap', // replace with real domain
-    siteName: 'Normal Finance',
+    siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Swap | Normal',
-    description: 'Swap tokens quickly and securely on Normal Finance.',
+    description: 'Swap tokens quickly and securely on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal Finance', 'token swap', 'crypto exchange', 'DEX'],
+  keywords: ['Normal', 'Normal Finance', 'token swap', 'crypto exchange', 'DEX'],
 };
 
 export default function Page() {
