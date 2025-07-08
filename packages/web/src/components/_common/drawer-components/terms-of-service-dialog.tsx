@@ -46,6 +46,7 @@
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
+import { AppStorePersist } from '@normalfinance/types';
 
 import {
   List,
@@ -71,7 +72,7 @@ export type TermsOfServiceDialogProps = {
 
 export default function TermsOfServiceDialog({ open, onClose }: TermsOfServiceDialogProps) {
   const { t } = useTranslate();
-  const setDisclaimerAccepted = usePersistStore((s) => s.setDisclaimerAccepted);
+  const setDisclaimerAccepted = usePersistStore((s: AppStorePersist) => s.setDisclaimerAccepted);
 
   const handleAccept = () => {
     setDisclaimerAccepted(true);
