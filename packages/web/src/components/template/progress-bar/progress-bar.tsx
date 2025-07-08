@@ -3,9 +3,9 @@
 import './styles.css';
 
 import NProgress from 'nprogress';
-import { Suspense, useEffect, useRef } from 'react';
-import { usePathname, useSearchParams } from '@/routes/hooks';
 import { useAppStore } from '@normalfinance/state';
+import { useRef, Suspense, useEffect } from 'react';
+import { usePathname, useSearchParams } from '@/routes/hooks';
 
 // ----------------------------------------------------------------------
 
