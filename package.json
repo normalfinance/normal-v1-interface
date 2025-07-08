@@ -14,8 +14,8 @@
     "build:utils": "turbo run build --filter=@normalfinance/utils",
     "build:types": "turbo run build --filter=@normalfinance/types",
     "clean": "rm -rf node_modules .turbo yarn.lock && rm -rf packages/*/{node_modules,.next,.swc,dist,build,tsconfig.tsbuildinfo,.turbo}",
-    "setup": "yarn install && turbo run build",
-    "refresh": "npm run clean && npm run setup"
+    "setup": "yarn install && yarn build",
+    "refresh": "yarn run clean && yarn run setup"
   },
   "repository": {
     "type": "git",
