@@ -1,6 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-const BLOCKED_COUNTRIES = new Set(['CU', 'IR', 'KP', 'SY', 'VE', 'RU', 'BY', 'SD', 'ZW', 'US']);
+import { NextResponse } from 'next/server';
+
+const BLOCKED_COUNTRIES = new Set([
+  'AG', // Antigua and Barbuda
+  'DZ', // Algeria
+  'BD', // Bangladesh
+  'BO', // Bolivia
+  'BY', // Belarus
+  'BI', // Burundi
+  'MM', // Burma (Myanmar)
+  'CI', // Cote D’Ivoire (Ivory Coast)
+  'UA', // Crimea and Sevastopol (part of Ukraine, used for Crimea sanction handling)
+  'CU', // Cuba
+  'CD', // Democratic Republic of Congo
+  'EC', // Ecuador
+  'IR', // Iran
+  'IQ', // Iraq
+  'LR', // Liberia
+  'LY', // Libya
+  'RU', // Russia (Magnitsky sanctions)
+  'ML', // Mali
+  'MA', // Morocco
+  'NP', // Nepal
+  'KP', // North Korea
+  'SO', // Somalia
+  'SD', // Sudan
+  'SY', // Syria
+  'VE', // Venezuela
+  'YE', // Yemen
+  'ZW', // Zimbabwe
+  // 'US', // United States (commented out for dev)
+]);
 
 async function lookup(ip: string) {
   //   Always include the scheme (https) to avoid 403s
