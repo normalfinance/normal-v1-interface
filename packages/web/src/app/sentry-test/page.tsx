@@ -48,7 +48,20 @@ export default function SentryTestPage() {
           color="error"
           sx={{ ml: 2 }}
           onClick={() => {
-            Sentry.captureMessage('This is a test message from the client side');
+            Sentry.captureMessage('This is a test message from the client side', {
+              level: 'info',
+              fingerprint: ['test-fingerprint'],
+              tags: {
+                environment: 'development',
+              },
+              extra: {
+                custom_data: 'This is a custom data',
+              },
+              user: {
+                id: '123',
+                email: 'test@test.com',
+              },
+            });
           }}
         >
           {t('Capture Message')}
