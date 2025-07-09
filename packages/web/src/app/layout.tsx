@@ -19,6 +19,8 @@ import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
 
+import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
+
 // import { ExternalProvider } from '@/providers/ExternalProvider';
 
 // ----------------------------------------------------------------------
@@ -117,7 +119,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                     <SnackbarProvider>
                       <ProgressBar />
                       <SettingsDrawer defaultSettings={defaultSettings} />
-                      <DashboardLayout>{children}</DashboardLayout>
+                      <AnnouncementProvider>
+                        <DashboardLayout>{children}</DashboardLayout>
+                      </AnnouncementProvider>
                     </SnackbarProvider>
                   </MotionLazy>
                   {/* </ExternalProvider> */}
