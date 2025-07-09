@@ -3,39 +3,35 @@ export interface BaseQueryParams {
 }
 
 export interface SwapQueryParams extends BaseQueryParams {
-  token_a?: string;
-  token_b?: string;
+  asset?: string;
+  token_in?: string;
+  token_out?: string;
   in_amount?: string;
   out_minimum?: string;
 }
 
 export interface DepositLiquidityQueryParams extends BaseQueryParams {
+  asset?: string;
   amount?: string;
-  token_a?: string;
-  token_b?: string;
-  pool_address?: string;
 }
 
 export interface WithdrawLiquidityQueryParams extends BaseQueryParams {
-  amount?: string;
-  pool_address?: string;
-  percentage?: string;
+  asset?: string;
+  share_amount?: string;
 }
 
 export interface StakeInsuranceQueryParams extends BaseQueryParams {
   token?: string;
   amount?: string;
-  duration?: string;
 }
 
 export interface UnstakeInsuranceQueryParams extends BaseQueryParams {
   amount?: string;
-  stake_id?: string;
 }
 
 export interface PoolQueryParams extends BaseQueryParams {
   pool_address?: string;
-  action?: 'deposit' | 'withdraw' | 'stake';
+  action?: 'deposit' | 'withdraw';
   amount?: string;
 }
 

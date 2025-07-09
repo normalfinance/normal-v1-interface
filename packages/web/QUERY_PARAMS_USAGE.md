@@ -34,8 +34,9 @@ import type {
 
 ```typescript
 interface SwapQueryParams {
-  token_a?: string; // Source token symbol/address
-  token_b?: string; // Destination token symbol/address
+  asset?: string; // The pool synthetic asset
+  token_in?: string; // Source token symbol/address
+  token_out?: string; // Destination token symbol/address
   in_amount?: string; // Input amount to swap
   out_minimum?: string; // Minimum output amount (optional)
 }
@@ -58,7 +59,6 @@ interface DepositLiquidityQueryParams {
 interface StakeInsuranceQueryParams {
   token?: string; // Token to stake for insurance
   amount?: string; // Amount to stake
-  duration?: string; // Staking duration (optional)
 }
 ```
 
@@ -115,8 +115,8 @@ export default function SwapPage() {
   const { params, hasParams, getParamAsNumber, updateURL } = useQueryParams<SwapQueryParams>();
 
   // Direct access to typed parameters
-  const tokenA = params.token_a;           // string | undefined
-  const tokenB = params.token_b;           // string | undefined
+  const tokenA = params.token_in;           // string | undefined
+  const tokenB = params.token_out;           // string | undefined
   const amount = getParamAsNumber('in_amount');    // number | undefined
   const minOutput = getParamAsNumber('out_minimum'); // number | undefined
 
@@ -215,13 +215,11 @@ export default function InsurancePage() {
 
   const token = params.token;                     // string | undefined
   const amount = getParamAsNumber('amount');      // number | undefined
-  const duration = getParamAsNumber('duration');  // number | undefined
 
   return (
     <StakeForm
       defaultToken={token}
       defaultAmount={amount}
-      defaultDuration={duration}
     />
   );
 }
