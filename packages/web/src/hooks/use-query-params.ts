@@ -1,7 +1,8 @@
 'use client';
 
-import { useSearchParams } from '@/routes/hooks';
 import type { BaseQueryParams } from '@/types/query-params';
+
+import { useSearchParams } from '@/routes/hooks';
 
 interface UseQueryParamsReturn<T extends BaseQueryParams> {
   params: T;
