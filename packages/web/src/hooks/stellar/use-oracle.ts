@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
 import { constants } from '@normalfinance/utils';
-import { usePersistStore } from '@normalfinance/state';
+import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
 
 // ----------------------------------------------------------------------
@@ -10,43 +9,49 @@ import { OracleRegistryContract } from '@normalfinance/contracts';
 interface ReturnType {
   error: any | null;
   loading: boolean;
-  getPrice: (asset: string, cached: boolean) => Promise<OracleRegistryContract.OraclePriceData>;
-  getLastPrice: (
-    asset: string,
-    cached: boolean
-  ) => Promise<OracleRegistryContract.HistoricalOracleData>;
-  getOracle: (asset: string) => Promise<OracleRegistryContract.OracleInfo>;
+  price: number | undefined;
+  lastPrice: number | undefined;
+  updatePrice: (cached: boolean) => void;
+  updateLastPrice: () => void;
 }
 
 // ----------------------------------------------------------------------
 
-export function useOracle(): ReturnType {
-  const storePersist = usePersistStore();
-
+export function useOracle(_asset: string): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
 
-  const getPrice = useCallback(async (asset: string, cached: boolean) => {
+  // Config
+  const [asset] = useState<string>(_asset);
+  const [oracleRegistry, setOracleRegistry] = useState<OracleRegistryContract.Client | undefined>(
+    undefined
+  );
+
+  const [price, setPrice] = useState<number | undefined>(undefined);
+  const [lastPrice, setLastPrice] = useState<number | undefined>(undefined);
+
+  const defaultAction: OracleRegistryContract.NormalAction = {
+    tag: 'UpdateTwap',
+    values: undefined,
+  };
+
+  const getPrice = useCallback(async (cached: boolean) => {
     try {
       setError(null);
       setLoading(true);
 
-      const OracleRegistry = new OracleRegistryContract.Client({
-        contractId: constants.ORALCE_REGISTY_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
-      });
+      if (!oracleRegistry) return;
 
-      const oraclePriceData = await OracleRegistry.get_price({
+      const oraclePriceData = await oracleRegistry.get_price({
         asset,
         cached,
-        action: '',
+        action: defaultAction,
       });
 
       if (oraclePriceData?.result) {
-        return;
+        setPrice(oraclePriceData?.result);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
       setError(e.toString());
     }
@@ -55,66 +60,47 @@ export function useOracle(): ReturnType {
     return;
   }, []);
 
-  const getLastPrice = useCallback(async (asset: string, cached: boolean) => {
+  const getLastPrice = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
 
-      const OracleRegistry = new OracleRegistryContract.Client({
-        contractId: constants.ORALCE_REGISTY_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
-      });
+      if (!oracleRegistry) return;
 
-      const oraclePriceData = await OracleRegistry.get_last_price({
+      const oraclePriceData = await oracleRegistry.get_last_price({
         asset,
-        cached,
       });
 
       if (oraclePriceData?.result) {
-        return oraclePriceData.result;
+        setLastPrice(oraclePriceData?.result);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
       setError(e.toString());
     }
 
     setLoading(false);
-    return undefined;
+    return;
   }, []);
 
-  const getOracle = useCallback(async (asset: string) => {
-    try {
-      setError(null);
-      setLoading(true);
+  // On component mount, fetch OracleRegistry and price
+  useEffect(() => {
+    const OracleRegistry = new OracleRegistryContract.Client({
+      contractId: constants.ORALCE_REGISTY_ADDRESS,
+      networkPassphrase: constants.NETWORK_PASSPHRASE,
+      rpcUrl: constants.RPC_URL,
+    });
+    setOracleRegistry(OracleRegistry);
 
-      const OracleRegistry = new OracleRegistryContract.Client({
-        contractId: constants.ORALCE_REGISTY_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
-      });
-
-      const oracle = await OracleRegistry.get_oracle({
-        asset,
-      });
-
-      if (oracle?.result) {
-        return oracle.result;
-      }
-    } catch (e) {
-      console.log(e);
-      setError(e.toString());
-    }
-
-    setLoading(false);
-    return undefined;
-  }, []);
+    getPrice(false);
+  }, [getPrice]);
 
   return {
     error,
     loading,
-    getPrice,
-    getLastPrice,
-    getOracle,
+    price,
+    lastPrice,
+    updatePrice: getPrice,
+    updateLastPrice: getLastPrice,
   };
 }
