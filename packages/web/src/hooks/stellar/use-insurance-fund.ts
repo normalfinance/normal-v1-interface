@@ -13,8 +13,10 @@ import { useContractTransaction } from '../use-contract-transaction';
 
 export type InsuranceFundInfo = {
   total_shares: number;
-  max_shares: number;
+  optimal_insurance: number;
   unstaking_period: number;
+  current_rate: number;
+  current_utilization: number;
 };
 export type DepositArgs = Omit<Parameters<Client['deposit']>[0], 'user'>;
 export type RequestWithdrawArgs = Omit<Parameters<Client['request_withdraw']>[0], 'user'>;
@@ -23,6 +25,7 @@ interface ReturnType {
   error: any | null;
   loading: boolean;
   insuranceFund: InsuranceFundInfo | undefined;
+  balance: number;
   stake: Stake | undefined;
   onFetchStake: () => Promise<void>;
   onDeposit: (args: DepositArgs) => Promise<void>;
@@ -42,15 +45,9 @@ export function useInsuranceFund(): ReturnType {
   const [loading, setLoading] = useState(true); // Loading state for async operations
 
   const [insuranceFund, setInsuranceFund] = useState<InsuranceFundInfo | undefined>(undefined);
+  const [balance, setBalance] = useState<number>(0);
   const [stake, setStake] = useState<Stake | undefined>(undefined);
 
-  /**
-   * Fetch Insurance Fund information
-   *
-   * @async
-   * @function fetchInsuranceFund
-   * @returns {Promise<InsuranceFund | undefined>} A promise that resolves to the pool information or undefined in case of failure.
-   */
   const fetchInsuranceFund = useCallback(async () => {
     try {
       setError(null);
@@ -63,20 +60,30 @@ export function useInsuranceFund(): ReturnType {
       });
 
       // Fetch Insurance Fund config and info from chain
-      const [total_shares, max_shares, unstaking_period] = await Promise.all([
-        InsuranceFund.get_total_shares(),
-        InsuranceFund.get_max_shares(),
-        InsuranceFund.get_unstaking_period(),
-      ]);
+      const [total_shares, optimal_insurance, unstaking_period, current_rate, current_utilization] =
+        await Promise.all([
+          InsuranceFund.get_total_shares(),
+          InsuranceFund.get_optimal_insurance(),
+          InsuranceFund.get_unstaking_period(),
+          InsuranceFund.get_rate(),
+          InsuranceFund.get_utilization(),
+        ]);
 
       if (total_shares?.result) {
         setInsuranceFund({
           total_shares,
-          max_shares,
+          optimal_insurance,
           unstaking_period,
+          current_rate,
+          current_utilization,
         });
       }
-    } catch (e) {
+
+      // Get balance
+      const _balance = 0;
+
+      setBalance(_balance);
+    } catch (e: any) {
       console.log(e);
       setError(e.toString());
     }
@@ -101,7 +108,7 @@ export function useInsuranceFund(): ReturnType {
       if (user_stake?.result) {
         setStake(user_stake.result);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
       setError(e.toString());
     }
@@ -177,6 +184,7 @@ export function useInsuranceFund(): ReturnType {
   return {
     error,
     loading,
+    balance,
     insuranceFund,
     stake,
     onFetchStake: fetchInsuranceFundStake,

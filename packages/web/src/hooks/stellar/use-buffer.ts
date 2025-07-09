@@ -64,7 +64,7 @@ export function useBuffer(): ReturnType {
           reserve,
         });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
       setError(e.toString());
     }
