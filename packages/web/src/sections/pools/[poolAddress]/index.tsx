@@ -6,6 +6,7 @@ import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { constants } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
+import { TransactionType } from '@/types/transaction';
 import { DashboardContent } from '@/layouts/dashboard';
 import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { NormalPoolContract } from '@normalfinance/contracts';
@@ -17,7 +18,6 @@ import { Box, Grid, Alert, Stack, Typography, CircularProgress } from '@mui/mate
 
 import PoolStatsTemp from '@/components/_pool-page-components/pool-stats-temp';
 import PoolLiquidityTemp from '@/components/_pool-page-components/pool-liquidity-temp';
-import { TransactionType } from '@/types/transaction';
 
 interface _Token extends Token {
   readonly decimals: number;
