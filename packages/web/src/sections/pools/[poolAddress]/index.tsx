@@ -17,6 +17,7 @@ import { Box, Grid, Alert, Stack, Typography, CircularProgress } from '@mui/mate
 
 import PoolStatsTemp from '@/components/_pool-page-components/pool-stats-temp';
 import PoolLiquidityTemp from '@/components/_pool-page-components/pool-liquidity-temp';
+import { TransactionType } from '@/types/transaction';
 
 interface _Token extends Token {
   readonly decimals: number;
@@ -65,6 +66,10 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
+      transactionDetails: {
+        type: TransactionType.DEPOSIT_LIQUIDITY,
+        token1: { name: tokenB?.name || '', amount: tokenAmount.toString() },
+      },
       transactionFunction: async (client, restore) =>
         client.deposit(
           {
@@ -88,6 +93,10 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
+      transactionDetails: {
+        type: TransactionType.REMOVE_LIQUIDITY,
+        token1: { name: lpToken?.name || '', amount: shareTokenAmount.toString() },
+      },
       transactionFunction: async (client, restore) =>
         client.withdraw(
           {
