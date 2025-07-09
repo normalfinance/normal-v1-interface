@@ -11,6 +11,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { NormalPoolRouterContract } from '@normalfinance/contracts';
 import { useContractTransaction } from '@/hooks/use-contract-transaction';
+import { TransactionType } from '@/types/transaction';
 import { constants, checkTrustline, fetchAndIssueTrustline } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -282,6 +283,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
         await executeContractTransaction({
           contractType: 'pool_router',
           contractAddress: constants.POOL_ROUTER_ADDRESS,
+          transactionDetails: {
+            type: TransactionType.SWAP,
+            token1: { name: sellToken.name, amount: amount },
+            token2: { name: buyToken.name, amount: buyAmount.toString() },
+          },
           transactionFunction: async (client, restore) =>
             client.swap(
               {

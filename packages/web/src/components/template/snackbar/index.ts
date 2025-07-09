@@ -8,12 +8,12 @@ export { default as SnackbarProvider } from './snackbar-provider';
 // Simple toast helper that mimics `toast.promise` API (like react-hot-toast)
 // using notistack underneath. Only the subset we need is implemented.
 
-import { closeSnackbar, enqueueSnackbar } from 'notistack';
+import { closeSnackbar, enqueueSnackbar, SnackbarMessage } from 'notistack';
 
 type PromiseMessages<T = any> = {
-  loading: string;
-  success: string | ((value: T) => string);
-  error: string | ((error: any) => string);
+  loading: SnackbarMessage;
+  success: SnackbarMessage | ((value: T) => SnackbarMessage);
+  error: SnackbarMessage | ((error: any) => SnackbarMessage);
 };
 
 export const toast = {
@@ -22,23 +22,26 @@ export const toast = {
    * or error message once the promise resolves.
    */
   promise<T>(promise: Promise<T>, { loading, success, error }: PromiseMessages<T>) {
-    // Show loading snackbar and keep its key so we can close/update it later.
-    const snackbarKey = enqueueSnackbar(loading, { variant: 'info', persist: true });
+    const key = enqueueSnackbar(loading, {
+      variant: 'info',
+      persist: true,
+    });
 
     return promise
       .then((value) => {
+        closeSnackbar(key);
         enqueueSnackbar(typeof success === 'function' ? success(value) : success, {
           variant: 'success',
+          persist: false,
         });
-        // Close loading snackbar
-        closeSnackbar(snackbarKey);
         return value;
       })
       .catch((err) => {
+        closeSnackbar(key);
         enqueueSnackbar(typeof error === 'function' ? error(err) : error, {
           variant: 'error',
+          persist: true, // Keep error messages until dismissed
         });
-        closeSnackbar(snackbarKey);
         throw err;
       });
   },
