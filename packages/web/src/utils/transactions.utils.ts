@@ -1,4 +1,6 @@
-import { TransactionType, TransactionDetails } from '@/types/transaction';
+import type { TransactionDetails } from '@/types/transaction';
+
+import { TransactionType } from '@/types/transaction';
 
 export const getTransactionMessages = (details: TransactionDetails) => {
   const { type, token1, token2 } = details;

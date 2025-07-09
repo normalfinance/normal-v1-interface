@@ -1,5 +1,6 @@
 'use client';
 
+import type { TransactionDetails } from '@/types/transaction';
 import type { AppStore, AppStorePersist } from '@normalfinance/types';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 
@@ -8,6 +9,7 @@ import { constants } from '@normalfinance/utils';
 import { Signer } from '@normalfinance/utils/build/stellar';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { getTransactionMessages } from '@/utils/transactions.utils';
 import {
   NormalPoolContract,
   SorobanTokenContract,
@@ -15,8 +17,6 @@ import {
 } from '@normalfinance/contracts';
 
 import { toast } from '@/components/template/snackbar';
-import { TransactionDetails } from '@/types/transaction';
-import { getTransactionMessages } from '@/utils/transactions.utils';
 
 // Define Contract Types
 type ContractType = 'pool' | 'pool_router' | 'token';

@@ -1,9 +1,11 @@
 'use client';
 
-import { useContractTransaction } from '@/hooks/use-contract-transaction';
+import { useTranslate } from '@/locales';
 import { TransactionType } from '@/types/transaction';
-import Button from '@mui/material/Button';
+import { useContractTransaction } from '@/hooks/use-contract-transaction';
+
 import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 
@@ -13,6 +15,7 @@ const MOCK_TX_HASH = '0x1234567890abcdef1234567890abcdef1234567890abcdef12345678
 
 export default function TestNotificationsPage() {
   const { executeContractTransaction } = useContractTransaction();
+  const { t } = useTranslate();
 
   const runScenario = (type: TransactionType, success: boolean) => {
     const transactionDetails = {
@@ -52,20 +55,20 @@ export default function TestNotificationsPage() {
   return (
     <Container>
       <Typography variant="h4" sx={{ mb: 5 }}>
-        Test Transaction Notifications
+        {t('testTransactionNotifications')}
       </Typography>
 
       <Stack spacing={2}>
         {Object.values(TransactionType).map((type) => (
           <Stack key={type} direction="row" spacing={2} alignItems="center">
             <Typography variant="h6" sx={{ minWidth: '200px' }}>
-              {type}
+              {t(type)}
             </Typography>
             <Button variant="contained" color="success" onClick={() => runScenario(type, true)}>
-              Test Success
+              {t('testSuccess')}
             </Button>
             <Button variant="contained" color="error" onClick={() => runScenario(type, false)}>
-              Test Failure
+              {t('testFailure')}
             </Button>
           </Stack>
         ))}
