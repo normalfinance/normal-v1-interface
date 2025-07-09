@@ -43,10 +43,11 @@
  * },
  * ------------------------------------------------------------------ */
 
+import type { AppStorePersist } from '@normalfinance/types';
+
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
-import { AppStorePersist } from '@normalfinance/types';
 
 import {
   List,
