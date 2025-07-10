@@ -6,5 +6,5 @@ import 'react-loading-skeleton/dist/skeleton.css';
 // ----------------------------------------------------------------------
 
 export default function Loading() {
-  return <Skeleton height="100vh" width="100%" />;
+  return null;
 }

@@ -4416,6 +4416,7 @@ __metadata:
     react-hook-form: ^7.54.2
     react-i18next: ^15.4.0
     react-joyride: ^2.9.3
+    react-loading-skeleton: ^3.5.0
     react-markdown: ^9.0.1
     react-phone-number-input: ^3.4.10
     rehype-highlight: ^7.0.1
@@ -14722,6 +14723,15 @@ __metadata:
     react: 15 - 18
     react-dom: 15 - 18
   checksum: c7a70e20981b73c6479104e14277f621248c6e7a1939c7b2aea77484d3797483d10ce02bf85612cd1908031c6663e0db82be18ce44bc223a5532207f5d164016
+  languageName: node
+  linkType: hard
+
+"react-loading-skeleton@npm:^3.5.0":
+  version: 3.5.0
+  resolution: "react-loading-skeleton@npm:3.5.0"
+  peerDependencies:
+    react: ">=16.8.0"
+  checksum: bc631b2513eb01e419c00e5b9cd830feeba62a6d139bc6cce6002dec5d3a2de177f5939056d5c8c094555dbedc9982d0cb0874be96812fe2ec4858a8c5e1f564
   languageName: node
   linkType: hard
 
