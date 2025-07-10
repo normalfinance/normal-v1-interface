@@ -12,7 +12,6 @@ import ListItemText from '@mui/material/ListItemText';
 export function ProfileCover({
   sx,
   name,
-  role,
   coverUrl,
   avatarUrl,
   ...other
@@ -22,10 +21,7 @@ export function ProfileCover({
       sx={[
         (theme) => ({
           ...theme.mixins.bgGradient({
-            images: [
-              `linear-gradient(0deg, ${varAlpha(theme.vars.palette.primary.darkerChannel, 0.8)}, ${varAlpha(theme.vars.palette.primary.darkerChannel, 0.8)})`,
-              `url(${coverUrl})`,
-            ],
+            images: [`url(${coverUrl})`],
           }),
           height: 1,
           color: 'common.white',
@@ -62,7 +58,6 @@ export function ProfileCover({
 
         <ListItemText
           primary={name}
-          secondary={role}
           slotProps={{
             primary: { sx: { typography: 'h4' } },
             secondary: {

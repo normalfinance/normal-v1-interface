@@ -10,7 +10,7 @@ export type IUserTableFilters = {
 
 export type IUserProfileCover = {
   name: string;
-  role: string;
+  role?: string;
   coverUrl: string;
   avatarUrl: string;
 };

@@ -17,6 +17,10 @@ import { RewardsOverview } from './rewards-overview';
 import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 
+import { usePersistStore } from '@normalfinance/state';
+import { format } from '@normalfinance/utils';
+import { Button } from '@mui/material';
+
 interface User {
   id: string;
   displayName: string;
@@ -39,7 +43,7 @@ const USER_DATA = {
 
   about: {
     role: 'Product Designer',
-    coverUrl: '/assets/cover/cover_1.jpg',
+    coverUrl: '/assets/images/normal-images/normal-gradient.webp',
   } as UserAbout,
 };
 
@@ -57,10 +61,10 @@ const TAB_PARAM = 'tab';
 
 const REWARDS_OVERVIEW = {
   referralLink: 'https://normal.finance/ref/Jane123',
-  referralsCount: 12,
+  referralsCount: 0,
   zealyUrl: 'https://zealy.io/c/normal',
-  zealyXP: 3450,
-  protocolPoints: 9800,
+  zealyXP: 0,
+  protocolPoints: 0,
   referrals: [
     { id: '1', address: '0xA1...C4', joined: '2025-06-01', points: 120 },
     { id: '2', address: '0xB2...D5', joined: '2025-06-03', points: 90 },
@@ -69,7 +73,7 @@ const REWARDS_OVERVIEW = {
 };
 
 const POINTS_DATA = {
-  totalPoints: 9800,
+  totalPoints: 0,
   history: [
     { date: '2025-07-08', points: 150, action: 'Swap' },
     { date: '2025-07-07', points: 75, action: 'Provide Liquidity' },
@@ -83,6 +87,7 @@ export function RewardsView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedTab = searchParams.get(TAB_PARAM) ?? '';
+  const walletAddress = usePersistStore((s) => s.wallet.address);
 
   const createRedirectPath = (currentPath: string, query: string) => {
     const q = new URLSearchParams({ [TAB_PARAM]: query }).toString();
@@ -91,15 +96,16 @@ export function RewardsView() {
 
   const { user, about } = USER_DATA;
 
+  const referralLink = `https://app.normalfinance.io/ref/${walletAddress}`;
+  const walletLabel =
+    walletAddress && walletAddress.length > 0
+      ? format.fTruncate(walletAddress, 12)
+      : 'Not connected';
+
   return (
     <DashboardContent>
       <Card sx={{ mb: 3, height: 290 }}>
-        <ProfileCover
-          role={about.role}
-          name={user.displayName}
-          avatarUrl={user.photoURL}
-          coverUrl={about.coverUrl}
-        />
+        <ProfileCover name={walletLabel} avatarUrl={user.photoURL} coverUrl={about.coverUrl} />
 
         <Box
           sx={{
@@ -131,7 +137,7 @@ export function RewardsView() {
       {/* ---- Tab panels ----------------------------------------------------- */}
       {selectedTab === '' && (
         <RewardsOverview
-          referralLink={REWARDS_OVERVIEW.referralLink}
+          referralLink={referralLink}
           referralsCount={REWARDS_OVERVIEW.referralsCount}
           zealyUrl={REWARDS_OVERVIEW.zealyUrl}
           zealyXP={REWARDS_OVERVIEW.zealyXP}
@@ -139,9 +145,20 @@ export function RewardsView() {
           referrals={REWARDS_OVERVIEW.referrals}
         />
       )}
-
       {selectedTab === 'zealy' && (
-        <Box sx={{ mt: 3 }}>
+        <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Button
+            variant="contained"
+            color="primary"
+            href="https://zealy.io/cw/normalfinance/questboard"
+            target="_blank"
+            rel="noopener"
+            sx={{ mb: 2 }}
+            startIcon={<Iconify icon="solar:external-link-bold" width={18} />}
+          >
+            Go to Zealy
+          </Button>
+
           <ZealyProgress community="normalfinance" />
         </Box>
       )}

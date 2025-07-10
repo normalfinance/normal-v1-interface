@@ -93,17 +93,17 @@ export function RewardsOverview({
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Wallet / User</TableCell>
-              <TableCell>Joined</TableCell>
-              <TableCell align="right">Points</TableCell>
+              <TableCell>Wallet&nbsp;/&nbsp;User</TableCell>
+
+              <TableCell align="right">Joined</TableCell>
             </TableRow>
           </TableHead>
+
           <TableBody>
             {referrals.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>{r.address}</TableCell>
-                <TableCell>{r.joined}</TableCell>
-                <TableCell align="right">{r.points}</TableCell>
+                <TableCell align="right">{r.joined}</TableCell>
               </TableRow>
             ))}
           </TableBody>
