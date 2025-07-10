@@ -1,9 +1,11 @@
 'use client';
 
-import { DashboardContent } from '@/layouts/dashboard';
-import Grid2 from '@mui/material/Grid2';
-import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+
+import Skeleton from 'react-loading-skeleton';
+import { DashboardContent } from '@/layouts/dashboard';
+
+import Grid2 from '@mui/material/Grid2';
 
 export default function Loading() {
   return (
