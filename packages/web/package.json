@@ -88,7 +88,6 @@
     "swr": "^2.3.0",
     "turndown": "^7.2.0",
     "yet-another-react-lightbox": "^3.21.7",
-    "yup": "^1.4.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
