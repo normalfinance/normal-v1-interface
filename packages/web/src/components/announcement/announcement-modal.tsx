@@ -1,14 +1,16 @@
 'use client';
 
+import { useTranslate } from '@/locales';
+import ReactMarkdown from 'react-markdown';
+
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
+import { Typography } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
-import { Typography } from '@mui/material';
-import ReactMarkdown from 'react-markdown';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
 
 // ----------------------------------------------------------------------
 
@@ -27,6 +29,7 @@ export function AnnouncementModal({
   message,
   format,
 }: AnnouncementModalProps) {
+  const { t } = useTranslate();
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle sx={{ pb: 2 }}>
@@ -57,7 +60,7 @@ export function AnnouncementModal({
 
       <DialogActions>
         <Button onClick={onClose} color="primary">
-          Close
+          {t('Close')}
         </Button>
       </DialogActions>
     </Dialog>

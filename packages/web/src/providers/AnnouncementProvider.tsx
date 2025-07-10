@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import { AnnouncementModal } from '@/components/announcement/announcement-modal';
 
 // ----------------------------------------------------------------------

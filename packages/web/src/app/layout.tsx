@@ -9,6 +9,7 @@ import { detectLanguage } from '@/locales/server';
 import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
+import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
@@ -18,8 +19,6 @@ import { SnackbarProvider } from '@/components/template/snackbar';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
-
-import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 
 // import { ExternalProvider } from '@/providers/ExternalProvider';
 
