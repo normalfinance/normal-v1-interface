@@ -3,14 +3,13 @@
 import { useTranslate } from '@/locales';
 import ReactMarkdown from 'react-markdown';
 
-import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import { Typography } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
-import CloseIcon from '@mui/icons-material/Close';
 import DialogTitle from '@mui/material/DialogTitle';
-import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+
+import { Iconify } from '../template/iconify';
 
 // ----------------------------------------------------------------------
 
@@ -44,7 +43,7 @@ export function AnnouncementModal({
             color: (theme) => theme.palette.grey[500],
           }}
         >
-          <CloseIcon />
+          <Iconify icon="mingcute:close-line" />
         </IconButton>
       </DialogTitle>
 
@@ -57,12 +56,6 @@ export function AnnouncementModal({
           <div dangerouslySetInnerHTML={{ __html: message }} />
         )}
       </DialogContent>
-
-      <DialogActions>
-        <Button onClick={onClose} color="primary">
-          {t('Close')}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }
