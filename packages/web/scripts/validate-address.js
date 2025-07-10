@@ -1,4 +1,3 @@
-
 require('ts-node/register/transpile-only');
 
 const {
@@ -23,6 +22,9 @@ function toAddressType(arg = '') {
     case 'sol':
     case 'solana':
       return AddressType.Solana;
+    case 'xlm':
+    case 'stellar':
+      return AddressType.Stellar;
     case '':
       return AddressType.Unknown;
     default:
