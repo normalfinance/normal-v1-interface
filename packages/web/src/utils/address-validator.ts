@@ -2,6 +2,7 @@ export enum AddressType {
   Bitcoin = 'BTC',
   Ethereum = 'ETH',
   Solana = 'SOL',
+  Stellar = 'XLM',
   Unknown = 'UNKNOWN',
 }
 
@@ -27,10 +28,16 @@ export function isValidSolanaAddress(address: string | undefined | null): addres
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
 }
 
+export function isValidStellarAddress(address: string | undefined | null): address is string {
+  if (!address) return false;
+  return /^G[A-Z2-7]{55}$/.test(address);
+}
+
 export function detectAddressType(address: string | undefined | null): AddressType {
   if (isValidBitcoinAddress(address)) return AddressType.Bitcoin;
   if (isValidEthereumAddress(address)) return AddressType.Ethereum;
   if (isValidSolanaAddress(address)) return AddressType.Solana;
+  if (isValidStellarAddress(address)) return AddressType.Stellar;
   return AddressType.Unknown;
 }
 
@@ -55,6 +62,9 @@ export function validateCryptoAddress(
 
     case AddressType.Solana:
       return isValidSolanaAddress(address) ? null : 'Invalid Solana address.';
+
+    case AddressType.Stellar:
+      return isValidStellarAddress(address) ? null : 'Invalid Stellar address.';
 
     default:
       return isValidCryptoAddress(address) ? null : 'Invalid crypto address format.';
