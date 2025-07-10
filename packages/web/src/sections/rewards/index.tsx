@@ -146,7 +146,7 @@ export function RewardsView() {
         </Box>
       )}
 
-      {selectedTab === 'Protocol' && (
+      {selectedTab === 'protocol' && (
         <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
       )}
     </DashboardContent>
