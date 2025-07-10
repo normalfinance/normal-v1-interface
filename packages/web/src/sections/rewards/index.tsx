@@ -47,8 +47,8 @@ const NAV_ITEMS = [
   { value: '', label: 'Overview', icon: <Iconify width={24} icon="solar:user-id-bold" /> },
   { value: 'zealy', label: 'Zealy', icon: <Iconify width={24} icon="solar:heart-bold" /> },
   {
-    value: 'points',
-    label: 'Points',
+    value: 'protocol',
+    label: 'Protocol',
     icon: <Iconify width={24} icon="eva:more-horizontal-fill" />,
   },
 ];
@@ -146,7 +146,7 @@ export function RewardsView() {
         </Box>
       )}
 
-      {selectedTab === 'points' && (
+      {selectedTab === 'Protocol' && (
         <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
       )}
     </DashboardContent>
