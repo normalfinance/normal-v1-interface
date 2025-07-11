@@ -24,8 +24,8 @@
     "i18n:check": "i18n-check -s en --locales src/locales/langs -f i18next",
     "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅',",
     "prepare": "husky",
-    "lint": "next lint --dir apps packages",
-    "lint:fix": "next lint --dir apps packages --fix"
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix ."
   },
   "engines": {
     "node": "20.x"

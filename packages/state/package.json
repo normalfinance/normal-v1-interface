@@ -11,8 +11,8 @@
     "test": "echo \"Error: no test specified\" && exit 0",
     "build": "tsc",
     "dev": "tsc --watch",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\""
   },
   "np": {
