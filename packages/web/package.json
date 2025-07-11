@@ -76,6 +76,7 @@
     "react-hook-form": "^7.54.2",
     "react-i18next": "^15.4.0",
     "react-joyride": "^2.9.3",
+    "react-loading-skeleton": "^3.5.0",
     "react-markdown": "^9.0.1",
     "react-phone-number-input": "^3.4.10",
     "rehype-highlight": "^7.0.1",
