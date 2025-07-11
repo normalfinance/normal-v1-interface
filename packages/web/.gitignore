@@ -56,9 +56,7 @@ crowdin.yml
 /public/worker-*.js.map
 
 
-# -----------------------------
-# Yarn 4 (Berry) – keep the binary, ignore caches
-# -----------------------------
+# Yarn (Berry) – keep binary & plugins; ignore cache
 .yarn/*
 !.yarn/releases
 !.yarn/plugins
