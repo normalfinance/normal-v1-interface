@@ -26,7 +26,6 @@ import { Stack, Typography } from '@mui/material';
 
 import { PoolsApr } from '@/components/_common//pools-apr/pools-apr';
 import PoolsTable from '@/components/_common/pools-table/pools-table';
-import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
 import { PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
 
 export default function PoolsView() {
