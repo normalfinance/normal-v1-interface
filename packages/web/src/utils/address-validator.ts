@@ -1,3 +1,8 @@
+import * as bitcoin from 'bitcoinjs-lib';
+import { getAddress } from 'ethers';
+import { PublicKey } from '@solana/web3.js';
+import { StrKey } from 'stellar-sdk';
+
 export enum AddressType {
   Bitcoin = 'BTC',
   Ethereum = 'ETH',
@@ -9,28 +14,58 @@ export enum AddressType {
 export function isValidBitcoinAddress(address: string | undefined | null): address is string {
   if (!address) return false;
 
-  if (/^(bc1|BC1|tb1)[0-9a-z]{25,63}$/.test(address)) return true;
-
-  if (/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(address)) return true;
-  if (/^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(address)) return true;
-
-  return false;
+  try {
+    bitcoin.address.toOutputScript(address, bitcoin.networks.bitcoin);
+    return true;
+  } catch {
+    try {
+      bitcoin.address.toOutputScript(address, bitcoin.networks.testnet);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 export function isValidEthereumAddress(address: string | undefined | null): address is string {
   if (!address) return false;
-  return /^0x[a-fA-F0-9]{40}$/.test(address);
+
+  try {
+    getAddress(address);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function isValidSolanaAddress(address: string | undefined | null): address is string {
   if (!address) return false;
 
-  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+  try {
+    const pubkey = new PublicKey(address);
+
+    return PublicKey.isOnCurve(pubkey.toBytes());
+  } catch {
+    return false;
+  }
 }
 
 export function isValidStellarAddress(address: string | undefined | null): address is string {
   if (!address) return false;
-  return /^[GC][A-Z2-7]{55}$/.test(address);
+
+  try {
+    if (address.startsWith('G')) {
+      StrKey.decodeEd25519PublicKey(address);
+      return true;
+    }
+    if (address.startsWith('C')) {
+      StrKey.decodeContract(address);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 export function detectAddressType(address: string | undefined | null): AddressType {
@@ -56,16 +91,12 @@ export function validateCryptoAddress(
   switch (expectedType) {
     case AddressType.Bitcoin:
       return isValidBitcoinAddress(address) ? null : 'Invalid Bitcoin address.';
-
     case AddressType.Ethereum:
       return isValidEthereumAddress(address) ? null : 'Invalid Ethereum address.';
-
     case AddressType.Solana:
       return isValidSolanaAddress(address) ? null : 'Invalid Solana address.';
-
     case AddressType.Stellar:
       return isValidStellarAddress(address) ? null : 'Invalid Stellar address.';
-
     default:
       return isValidCryptoAddress(address) ? null : 'Invalid crypto address format.';
   }
