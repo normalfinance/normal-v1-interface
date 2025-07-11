@@ -1,15 +1,17 @@
 'use client';
 
+import { useTranslate } from '@/locales';
+
 import Card from '@mui/material/Card';
-import { Box, Grid2 } from '@mui/material';
-import Typography from '@mui/material/Typography';
 import Table from '@mui/material/Table';
+import Alert from '@mui/material/Alert';
+import { Box, Grid2 } from '@mui/material';
+import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Alert from '@mui/material/Alert';
+import Typography from '@mui/material/Typography';
+import TableContainer from '@mui/material/TableContainer';
 
 export interface ProtocolPointsProps {
   totalPoints: number;
@@ -23,12 +25,12 @@ export function ProtocolPoints({ totalPoints, history }: ProtocolPointsProps) {
     <Grid2 container spacing={3}>
       {/* Total banner */}
       <Grid2 size={{ xs: 12 }}>
-        <Card sx={{ p: 4, textAlign: 'center' }}>
-          <Box sx={{ width: 'fit-content', mb: 2 }}>
-            <Alert severity="info" variant="outlined" sx={{ textAlign: 'center' }}>
+        <Box sx={{ width: 'fit-content', mb: 2 }}>
+          <Alert severity="info" variant="outlined" sx={{ textAlign: 'center' }}>
             {t('Protocol Points are coming soon')}
-            </Alert>
-          </Box>
+          </Alert>
+        </Box>
+        <Card sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h2">{totalPoints}</Typography>
           <Typography color="text.secondary">{t('Total Protocol Points')}</Typography>
         </Card>

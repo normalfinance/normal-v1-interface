@@ -1,8 +1,6 @@
 import type { BoxProps } from '@mui/material/Box';
 import type { IUserProfileCover } from '@/types/user';
 
-import { varAlpha } from 'minimal-shared/utils';
-
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 import ListItemText from '@mui/material/ListItemText';

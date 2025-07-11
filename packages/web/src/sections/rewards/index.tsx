@@ -1,25 +1,24 @@
 'use client';
 
+import { useTranslate } from '@/locales';
+import { format } from '@normalfinance/utils';
+import { RouterLink } from '@/routes/components';
+import { DashboardContent } from '@/layouts/dashboard';
+import { usePersistStore } from '@normalfinance/state';
+import { usePathname, useSearchParams } from '@/routes/hooks';
+
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
-
-import { RouterLink } from '@/routes/components';
-import { usePathname, useSearchParams } from '@/routes/hooks';
-
-import { DashboardContent } from '@/layouts/dashboard';
+import { Button } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 
 import { ProfileCover } from './profile-cover';
-import { RewardsOverview } from './rewards-overview';
 import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
-
-import { usePersistStore } from '@normalfinance/state';
-import { format } from '@normalfinance/utils';
-import { Button } from '@mui/material';
+import { RewardsOverview } from './rewards-overview';
 
 interface User {
   id: string;
@@ -37,7 +36,6 @@ interface UserAbout {
 const USER_DATA = {
   user: {
     id: 'u001',
-    displayName: 'Jane Normal',
     photoURL: '/assets/avatar/avatar_1.jpg',
   } as User,
 
