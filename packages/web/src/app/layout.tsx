@@ -19,6 +19,7 @@ import { SnackbarProvider } from '@/components/template/snackbar';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
+import { ExternalProvider } from '@/providers/ExternalProvider';
 
 // import { ExternalProvider } from '@/providers/ExternalProvider';
 
@@ -113,17 +114,17 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   defaultMode={themeConfig.defaultMode}
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
-                  {/* <ExternalProvider> */}
-                  <MotionLazy>
-                    <SnackbarProvider>
-                      <ProgressBar />
-                      <SettingsDrawer defaultSettings={defaultSettings} />
-                      <AnnouncementProvider>
-                        <DashboardLayout>{children}</DashboardLayout>
-                      </AnnouncementProvider>
-                    </SnackbarProvider>
-                  </MotionLazy>
-                  {/* </ExternalProvider> */}
+                  <ExternalProvider>
+                    <MotionLazy>
+                      <SnackbarProvider>
+                        <ProgressBar />
+                        <SettingsDrawer defaultSettings={defaultSettings} />
+                        <AnnouncementProvider>
+                          <DashboardLayout>{children}</DashboardLayout>
+                        </AnnouncementProvider>
+                      </SnackbarProvider>
+                    </MotionLazy>
+                  </ExternalProvider>
                 </ThemeProvider>
               </AppRouterCacheProvider>
             </LocalizationProvider>
