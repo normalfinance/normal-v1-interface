@@ -9,6 +9,7 @@ import { detectLanguage } from '@/locales/server';
 import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
+import { ExternalProvider } from '@/providers/ExternalProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
@@ -19,8 +20,6 @@ import { SnackbarProvider } from '@/components/template/snackbar';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
-
-// import { ExternalProvider } from '@/providers/ExternalProvider';
 
 // ----------------------------------------------------------------------
 
@@ -113,17 +112,17 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   defaultMode={themeConfig.defaultMode}
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
-                  {/* <ExternalProvider> */}
-                  <MotionLazy>
-                    <SnackbarProvider>
-                      <ProgressBar />
-                      <SettingsDrawer defaultSettings={defaultSettings} />
-                      <AnnouncementProvider>
-                        <DashboardLayout>{children}</DashboardLayout>
-                      </AnnouncementProvider>
-                    </SnackbarProvider>
-                  </MotionLazy>
-                  {/* </ExternalProvider> */}
+                  <ExternalProvider>
+                    <MotionLazy>
+                      <SnackbarProvider>
+                        <ProgressBar />
+                        <SettingsDrawer defaultSettings={defaultSettings} />
+                        <AnnouncementProvider>
+                          <DashboardLayout>{children}</DashboardLayout>
+                        </AnnouncementProvider>
+                      </SnackbarProvider>
+                    </MotionLazy>
+                  </ExternalProvider>
                 </ThemeProvider>
               </AppRouterCacheProvider>
             </LocalizationProvider>
