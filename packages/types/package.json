@@ -7,7 +7,10 @@
   "scripts": {
     "test": "tsc && jest",
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\""
   },
   "main": "build/index.js",
   "types": "build/index.d.ts",

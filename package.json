@@ -15,7 +15,12 @@
     "build:types": "turbo run build --filter=@normalfinance/types",
     "clean": "rm -rf node_modules .turbo yarn.lock && rm -rf packages/*/{node_modules,.next,.swc,dist,build,tsconfig.tsbuildinfo,.turbo}",
     "setup": "yarn install && yarn build",
-    "refresh": "yarn run clean && yarn run setup"
+    "refresh": "yarn run clean && yarn run setup",
+    "prepare": "husky",
+    "postinstall": "husky",
+    "lint": "yarn workspaces run lint",
+    "lint:fix": "yarn workspaces run lint:fix",
+    "format": "prettier --write ."
   },
   "repository": {
     "type": "git",
@@ -38,7 +43,12 @@
     "@tsconfig/recommended": "^1.0.2",
     "@types/jest": "^29.5.2",
     "concurrently": "^9.1.2",
+    "eslint": "^9.30.1",
+    "husky": "^9.1.7",
     "jest": "^29.5.0",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2",
+    "prettier-plugin-organize-imports": "^4.1.0",
     "turbo": "^2.5.3"
   },
   "packageManager": "yarn@3.6.4",
@@ -50,5 +60,14 @@
     "@walletconnect/sign-client": "^2.13.1",
     "@walletconnect/types": "^2.13.1",
     "next": "15.0.3"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx}": [
+      "eslint --config packages/web/eslint.config.mjs --fix",
+      "prettier --write"
+    ],
+    "**/*.{json,md,yml}": [
+      "prettier --write"
+    ]
   }
 }
