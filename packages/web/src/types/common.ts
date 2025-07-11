@@ -1,4 +1,3 @@
-
 export type IPaymentCard = {
   id: string;
   cardType: string;
