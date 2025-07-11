@@ -26,7 +26,6 @@ import { Stack, Typography } from '@mui/material';
 
 import { PoolsApr } from '@/components/_common//pools-apr/pools-apr';
 import PoolsTable from '@/components/_common/pools-table/pools-table';
-import { PoolsTemp } from '@/components/_pools-page-components/pools-temp';
 import { PoolsExplorer } from '@/components/_common/pools-explore/pools-explore';
 
 export default function PoolsView() {
@@ -313,15 +312,7 @@ export default function PoolsView() {
           {t('Pools')}
         </Typography>
       </Stack>
-      <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        <PoolsTemp
-          pools={allPools}
-          onAddLiquidityClick={() => {}}
-          onShowDetailsClick={(pool) => {
-            router.push(`/pools/${pool.poolAddress}`);
-          }}
-        />
-      </Grid2>
+
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 8 }}>
           <PoolsExplorer
