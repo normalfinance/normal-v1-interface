@@ -1,10 +1,10 @@
-import next from 'eslint-plugin-next'
+import next from 'eslint-plugin-next';
 
 export default [
   {
-    plugins: { next },
-    rules: {},
+    plugins: { next },               // enables core Next.js rules
     ignores: ['**/dist/**', '**/.next/**', '**/node_modules/**'],
-    languageOptions: { parserOptions: { ecmaVersion: 2022 } },
+    // extend or add rules here, e.g.:
+    // rules: { 'no-console': 'warn' },
   },
-]
+];
