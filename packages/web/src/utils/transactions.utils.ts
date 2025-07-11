@@ -69,10 +69,9 @@ export const getTransactionMessages = (details: TransactionDetails) => {
   }
 };
 
-export const getStellarExpertNetwork = () => 
+export const getStellarExpertNetwork = () =>
   // can be public or testnet, default to public, depends on the network passphrase
-   'public'
-;
+  'public';
 
 export const createStellarExpertUrl = (transactionId: string) => {
   const network = getStellarExpertNetwork();
