@@ -54,3 +54,14 @@ crowdin.yml
 /public/sw.js.map
 /public/workbox-*.js.map
 /public/worker-*.js.map
+
+
+# -----------------------------
+# Yarn 4 (Berry) – keep the binary, ignore caches
+# -----------------------------
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/patches
+!.yarn/sdks
+!.yarn/versions

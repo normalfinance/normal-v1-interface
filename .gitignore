@@ -39,3 +39,13 @@ next-env.d.ts
 .turbo
 
 .yarn/
+
+# -----------------------------
+# Yarn 4 (Berry) – keep the binary, ignore caches
+# -----------------------------
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/patches
+!.yarn/sdks
+!.yarn/versions
