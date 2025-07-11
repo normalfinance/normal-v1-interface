@@ -9,6 +9,7 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { Box } from '@mui/material';
 
 import { SwapSendCard } from '@/components/_common/swap-send-card';
+import TokenActionCard from '@/components/_common/token-action-card';
 
 const tokensList: Token[] = [
   {
@@ -87,6 +88,8 @@ const swapFeeInfo: SwapFeeInfo = {
   maxSlippage: 0.5,
 };
 
+const cashBalance = 1000;
+
 export default function SwapView() {
   const { t } = useTranslate();
   return (
@@ -101,7 +104,11 @@ export default function SwapView() {
       >
         <Box maxWidth={500} width={1}>
           <Box width={1}>
-            <SwapSendCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
+            <TokenActionCard
+              tokensList={tokensList}
+              swapFeeInfo={swapFeeInfo}
+              cashBalance={cashBalance}
+            />
           </Box>
         </Box>
       </Box>
