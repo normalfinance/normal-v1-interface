@@ -34,3 +34,17 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Environment Variables
+
+To configure the application, you can use a `.env.local` file in the `packages/web` directory. Create one based on `.env.example` if it exists.
+
+### Announcement Modal
+
+The application can display a global announcement modal. The content is controlled by the following environment variables:
+
+- `NEXT_PUBLIC_ANNOUNCEMENT_TITLE`: The title of the announcement. If this is empty, the modal will not be shown.
+- `NEXT_PUBLIC_ANNOUNCEMENT_MESSAGE`: The message to be displayed in the modal. This supports markdown for formatting.
+- `NEXT_PUBLIC_ANNOUNCEMENT_FORMAT`: The format of the message. Can be `markdown` (default) or `html`.
+
+When you want to show a new announcement, update these variables. Changing `NEXT_PUBLIC_ANNOUNCEMENT_TITLE` will ensure the modal reappears for all users, even if they dismissed a previous one.

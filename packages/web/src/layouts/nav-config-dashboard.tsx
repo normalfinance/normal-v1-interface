@@ -34,11 +34,6 @@ export const navData: NavSectionProps['data'] = [
     subheader: '',
     items: [
       {
-        title: 'Home',
-        path: paths.root,
-        icon: ICONS.home,
-      },
-      {
         title: 'Explore',
         path: paths.explore,
         icon: ICONS.analytics,
@@ -75,7 +70,12 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.yield,
         caption: 'Help protect the protocol with backstop funds and earn yield',
       },
-
+      {
+        title: 'Rewards',
+        path: paths.rewards,
+        icon: ICONS.rewards,
+        caption: 'Earn points, refer friends, and climb the leaderboards',
+      },
       {
         title: 'More',
         path: '#',
