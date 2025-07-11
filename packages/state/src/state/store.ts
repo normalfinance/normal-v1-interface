@@ -7,6 +7,7 @@ import { createConnectWalletActions } from "./persist/createConnectWalletActions
 import { createLayoutActions } from "./layout/actions";
 import { createDisclaimerAction } from "./persist/createDisclaimerActions";
 import { createLoadingActions } from "./loading/actions";
+import { createReferralActions } from "./persist/createReferralActions";
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
@@ -50,11 +51,15 @@ export const usePersistStore = create<AppStorePersist>()(
       //Create a store for disclaimer modal
       const disclaimer = createDisclaimerAction();
 
+      // Create referral actions
+      const referralActions = createReferralActions();
+
       return {
         server,
         networkPassphrase,
         ...walletPersist,
         ...disclaimer,
+        ...referralActions,
       };
     },
     {

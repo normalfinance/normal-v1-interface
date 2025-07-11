@@ -9,6 +9,7 @@ import { detectLanguage } from '@/locales/server';
 import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
+import { ReferralProvider } from '@/providers/ReferralProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
@@ -114,15 +115,17 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
                   {/* <ExternalProvider> */}
-                  <MotionLazy>
-                    <SnackbarProvider>
-                      <ProgressBar />
-                      <SettingsDrawer defaultSettings={defaultSettings} />
-                      <AnnouncementProvider>
-                        <DashboardLayout>{children}</DashboardLayout>
-                      </AnnouncementProvider>
-                    </SnackbarProvider>
-                  </MotionLazy>
+                  <ReferralProvider>
+                    <MotionLazy>
+                      <SnackbarProvider>
+                        <ProgressBar />
+                        <SettingsDrawer defaultSettings={defaultSettings} />
+                        <AnnouncementProvider>
+                          <DashboardLayout>{children}</DashboardLayout>
+                        </AnnouncementProvider>
+                      </SnackbarProvider>
+                    </MotionLazy>
+                  </ReferralProvider>
                   {/* </ExternalProvider> */}
                 </ThemeProvider>
               </AppRouterCacheProvider>
