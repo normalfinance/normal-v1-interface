@@ -69,9 +69,9 @@ export function RewardsOverview({
         <Grid2 size={{ xs: 12, md: 8 }}>
           <Grid2 container spacing={3}>
             {[
-              { label: 'Referrals', value: referralsCount },
-              { label: 'Zealy XP', value: zealyXP },
-              { label: 'Protocol Points', value: protocolPoints },
+              { label: t('Referrals'), value: referralsCount },
+              { label: t('Zealy XP'), value: zealyXP },
+              { label: t('Protocol Points'), value: protocolPoints },
             ].map((stat) => (
               <Grid2 size={{ xs: 12, md: 4 }} key={stat.label}>
                 <Card sx={{ p: 3, textAlign: 'center' }}>
@@ -87,15 +87,15 @@ export function RewardsOverview({
       </Grid2>
 
       <Typography variant="h3" color="text.primary">
-        {t('Your Referals')}
+        {t('Your Referrals')}
       </Typography>
       <TableContainer component={Card}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Wallet&nbsp;/&nbsp;User</TableCell>
+              <TableCell>{`${t('Wallet')} / ${t('User')}`}</TableCell>
 
-              <TableCell align="right">Joined</TableCell>
+              <TableCell align="right">{t('Joined')}</TableCell>
             </TableRow>
           </TableHead>
 

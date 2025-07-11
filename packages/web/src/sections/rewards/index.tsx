@@ -88,6 +88,7 @@ export function RewardsView() {
   const searchParams = useSearchParams();
   const selectedTab = searchParams.get(TAB_PARAM) ?? '';
   const walletAddress = usePersistStore((s) => s.wallet.address);
+  const { t } = useTranslate();
 
   const createRedirectPath = (currentPath: string, query: string) => {
     const q = new URLSearchParams({ [TAB_PARAM]: query }).toString();
@@ -100,7 +101,7 @@ export function RewardsView() {
   const walletLabel =
     walletAddress && walletAddress.length > 0
       ? format.fTruncate(walletAddress, 12)
-      : 'Not connected';
+      : t('Not connected');
 
   return (
     <DashboardContent>
@@ -156,7 +157,7 @@ export function RewardsView() {
             sx={{ mb: 2 }}
             startIcon={<Iconify icon="solar:external-link-bold" width={18} />}
           >
-            Go to Zealy
+            {t('Go to Zealy')}
           </Button>
 
           <ZealyProgress community="normalfinance" />

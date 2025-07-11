@@ -17,6 +17,8 @@ export interface ProtocolPointsProps {
 }
 
 export function ProtocolPoints({ totalPoints, history }: ProtocolPointsProps) {
+  const { t } = useTranslate();
+
   return (
     <Grid2 container spacing={3}>
       {/* Total banner */}
@@ -24,11 +26,11 @@ export function ProtocolPoints({ totalPoints, history }: ProtocolPointsProps) {
         <Card sx={{ p: 4, textAlign: 'center' }}>
           <Box sx={{ width: 'fit-content', mb: 2 }}>
             <Alert severity="info" variant="outlined" sx={{ textAlign: 'center' }}>
-              Protocol Points are coming soon
+            {t('Protocol Points are coming soon')}
             </Alert>
           </Box>
           <Typography variant="h2">{totalPoints}</Typography>
-          <Typography color="text.secondary">Total Protocol Points</Typography>
+          <Typography color="text.secondary">{t('Total Protocol Points')}</Typography>
         </Card>
       </Grid2>
 
@@ -38,9 +40,9 @@ export function ProtocolPoints({ totalPoints, history }: ProtocolPointsProps) {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Action</TableCell>
-                <TableCell align="right">Points</TableCell>
+                <TableCell>{t('Date')}</TableCell>
+                <TableCell>{t('Action')}</TableCell>
+                <TableCell align="right">{t('Points')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
