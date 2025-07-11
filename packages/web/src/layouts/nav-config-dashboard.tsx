@@ -34,11 +34,6 @@ export const navData: NavSectionProps['data'] = [
     subheader: '',
     items: [
       {
-        title: 'Home',
-        path: paths.root,
-        icon: ICONS.home,
-      },
-      {
         title: 'Explore',
         path: paths.explore,
         icon: ICONS.analytics,
