@@ -22,6 +22,7 @@ export function ZealyProgress({
     s.src = 'https://zealy.io/embed.js';
     s.async = true;
     document.body.appendChild(s);
+    // eslint-disable-next-line consistent-return
     return () => {
       document.body.removeChild(s);
     };
