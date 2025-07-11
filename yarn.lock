@@ -4390,7 +4390,6 @@ __metadata:
     axios: ^1.7.9
     dayjs: ^1.11.13
     es-toolkit: ^1.31.0
-    eslint: ^9.17.0
     eslint-import-resolver-typescript: ^3.7.0
     eslint-plugin-i18next: ^6.1.1
     eslint-plugin-import: ^2.31.0
@@ -9553,7 +9552,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint@npm:^9.17.0, eslint@npm:^9.30.1":
+"eslint@npm:^9.30.1":
   version: 9.30.1
   resolution: "eslint@npm:9.30.1"
   dependencies:
