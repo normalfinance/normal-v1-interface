@@ -4278,6 +4278,7 @@ __metadata:
     "@walletconnect/types": ^2.13.1
     concurrently: ^9.1.2
     eslint: ^9.30.1
+    eslint-plugin-next: ^0.0.0
     husky: ^9.1.7
     jest: ^29.5.0
     lint-staged: ^16.1.2
@@ -9462,6 +9463,13 @@ __metadata:
   peerDependencies:
     eslint: ^2 || ^3 || ^4 || ^5 || ^6 || ^7.2.0 || ^8 || ^9
   checksum: 8cd40595b5e4346d3698eb577014b4b6d0ba57b7b9edf975be4f052a89330ec202d0cc5c3861d37ebeafa151b6264821410243889b0c31710911a6b625bcf76b
+  languageName: node
+  linkType: hard
+
+"eslint-plugin-next@npm:^0.0.0":
+  version: 0.0.0
+  resolution: "eslint-plugin-next@npm:0.0.0"
+  checksum: c083aa1c42df347d7940b07916493c0be6f30c5df9c87200827f71c574958d3e1362e1042fd15f9164e63b673cb7ca94491ea3e8318fc1dcbe4f686e9d9166d5
   languageName: node
   linkType: hard
 
