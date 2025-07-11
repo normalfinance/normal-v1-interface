@@ -60,7 +60,7 @@
     "prettier-plugin-organize-imports": "^4.1.0",
     "turbo": "^2.5.3"
   },
-  "packageManager": "yarn@3.6.4",
+  "packageManager": "yarn@4.9.2",
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
