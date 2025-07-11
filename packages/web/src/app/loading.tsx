@@ -1,7 +1,9 @@
-import { SplashScreen } from '@/components/template/loading-screen';
+'use client';
+
+import 'react-loading-skeleton/dist/skeleton.css';
 
 // ----------------------------------------------------------------------
 
 export default function Loading() {
-  return <SplashScreen />;
+  return null;
 }
