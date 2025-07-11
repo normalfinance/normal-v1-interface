@@ -1,14 +1,13 @@
 'use client';
 
+import type { Token } from '@/types/token';
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
+
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 
-import Grid2 from '@mui/material/Grid2';
-
-import SwapCard from '@/components/_common/swap-card';
 import { Box } from '@mui/material';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
-import { Token } from '@/types/token';
+
 import { SwapSendCard } from '@/components/_common/swap-send-card';
 
 const tokensList: Token[] = [
