@@ -9,14 +9,16 @@ import { constants } from '@normalfinance/utils';
 import { Signer } from '@normalfinance/utils/build/stellar';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { getTransactionMessages } from '@/utils/transactions.utils';
+import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
   NormalPoolContract,
   SorobanTokenContract,
   NormalPoolRouterContract,
 } from '@normalfinance/contracts';
 
-import { toast } from '@/components/template/snackbar';
+import { enqueueSnackbar, closeSnackbar } from '@/components/template/snackbar';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
 
 // Define Contract Types
 type ContractType = 'pool' | 'pool_router' | 'token';
@@ -146,7 +148,64 @@ export const useContractTransaction = () => {
         }
       };
 
-      return toast.promise(run(), getTransactionMessages(transactionDetails));
+      const messages = getTransactionMessages(transactionDetails);
+
+      const loadingKey = enqueueSnackbar(messages.loading, {
+        variant: 'info',
+        persist: true,
+      });
+
+      return run()
+        .then((result) => {
+          closeSnackbar(loadingKey);
+
+          if (result.transactionId) {
+            const stellarExpertUrl = createStellarExpertUrl(result.transactionId);
+
+            enqueueSnackbar(
+              <Box component="span">
+                {messages.success}{' '}
+                <Button
+                  size="small"
+                  onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+                  sx={{
+                    textTransform: 'none',
+                    minWidth: 'auto',
+                    p: 0,
+                    textDecoration: 'underline',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                      backgroundColor: 'transparent',
+                    },
+                  }}
+                >
+                  View more
+                </Button>
+              </Box>,
+              {
+                variant: 'success',
+                persist: false,
+              }
+            );
+          } else {
+            enqueueSnackbar(messages.success, {
+              variant: 'success',
+              persist: false,
+            });
+          }
+
+          return result;
+        })
+        .catch((error) => {
+          closeSnackbar(loadingKey);
+
+          enqueueSnackbar(messages.error, {
+            variant: 'error',
+            persist: true,
+          });
+
+          throw error;
+        });
     },
     [storePersist, appStore, openRestoreModal, closeRestoreModal]
   );
