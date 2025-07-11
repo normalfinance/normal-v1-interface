@@ -30,7 +30,7 @@ export function isValidSolanaAddress(address: string | undefined | null): addres
 
 export function isValidStellarAddress(address: string | undefined | null): address is string {
   if (!address) return false;
-  return /^G[A-Z2-7]{55}$/.test(address);
+  return /^[GC][A-Z2-7]{55}$/.test(address);
 }
 
 export function detectAddressType(address: string | undefined | null): AddressType {
