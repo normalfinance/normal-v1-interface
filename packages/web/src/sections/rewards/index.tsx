@@ -66,18 +66,18 @@ const REWARDS_OVERVIEW = {
   zealyXP: 0,
   protocolPoints: 0,
   referrals: [
-    { id: '1', address: '0xA1...C4', joined: '2025-06-01', points: 120 },
-    { id: '2', address: '0xB2...D5', joined: '2025-06-03', points: 90 },
-    { id: '3', address: '0xC3...E6', joined: '2025-06-07', points: 60 },
+    // { id: '1', address: '0xA1...C4', joined: '2025-06-01', points: 120 },
+    // { id: '2', address: '0xB2...D5', joined: '2025-06-03', points: 90 },
+    // { id: '3', address: '0xC3...E6', joined: '2025-06-07', points: 60 },
   ],
 };
 
 const POINTS_DATA = {
   totalPoints: 0,
   history: [
-    { date: '2025-07-08', points: 150, action: 'Swap' },
-    { date: '2025-07-07', points: 75, action: 'Provide Liquidity' },
-    { date: '2025-07-05', points: 200, action: 'Stake LP' },
+    // { date: '2025-07-08', points: 150, action: 'Swap' },
+    // { date: '2025-07-07', points: 75, action: 'Provide Liquidity' },
+    // { date: '2025-07-05', points: 200, action: 'Stake LP' },
   ],
 };
 
