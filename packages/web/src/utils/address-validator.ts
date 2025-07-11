@@ -1,7 +1,7 @@
-import * as bitcoin from 'bitcoinjs-lib';
 import { getAddress } from 'ethers';
-import { PublicKey } from '@solana/web3.js';
 import { StrKey } from 'stellar-sdk';
+import * as bitcoin from 'bitcoinjs-lib';
+import { PublicKey } from '@solana/web3.js';
 
 export enum AddressType {
   Bitcoin = 'BTC',
