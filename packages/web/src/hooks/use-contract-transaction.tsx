@@ -5,6 +5,7 @@ import type { AppStore, AppStorePersist } from '@normalfinance/types';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 
 import { useCallback } from 'react';
+import { useTranslate } from '@/locales';
 import { constants } from '@normalfinance/utils';
 import { Signer } from '@normalfinance/utils/build/stellar';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
@@ -16,9 +17,10 @@ import {
   NormalPoolRouterContract,
 } from '@normalfinance/contracts';
 
-import { enqueueSnackbar, closeSnackbar } from '@/components/template/snackbar';
-import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+
+import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
 
 // Define Contract Types
 type ContractType = 'pool' | 'pool_router' | 'token';
@@ -86,6 +88,7 @@ const getContractClient = <T extends ContractType>(
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
   const appStore = useAppStore();
+  const { t } = useTranslate();
 
   const { openRestoreModal, closeRestoreModal } = useRestoreModal();
 
@@ -179,7 +182,7 @@ export const useContractTransaction = () => {
                     },
                   }}
                 >
-                  View more
+                  {t('View More')}
                 </Button>
               </Box>,
               {
