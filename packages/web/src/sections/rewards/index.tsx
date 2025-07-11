@@ -155,7 +155,7 @@ export function RewardsView() {
             target="_blank"
             rel="noopener"
             sx={{ mb: 2 }}
-            startIcon={<Iconify icon="solar:external-link-bold" width={18} />}
+            startIcon={<Iconify icon="eva:external-link-outline" width={18} />}
           >
             {t('Go to Zealy')}
           </Button>
