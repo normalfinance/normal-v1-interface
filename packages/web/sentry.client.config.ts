@@ -4,6 +4,7 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   tracesSampleRate: 1,
   debug: false,
+  sendDefaultPii: true,
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
   integrations: [
@@ -11,6 +12,9 @@ Sentry.init({
       maskAllText: true,
       blockAllMedia: true,
       maskAllInputs: true,
+    }),
+    Sentry.feedbackIntegration({
+      colorScheme: 'system',
     }),
   ],
 });

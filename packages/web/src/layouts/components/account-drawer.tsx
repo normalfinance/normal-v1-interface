@@ -12,6 +12,7 @@ import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
+import * as Sentry from '@sentry/nextjs';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -224,6 +225,15 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address;
+
+  useEffect(() => {
+    if (connectedAddress) {
+      Sentry.setUser({ id: connectedAddress });
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [connectedAddress]);
+
   const [isConnected, setIsConnected] = useState(
     connectedAddress != '' && connectedAddress != undefined
   );
