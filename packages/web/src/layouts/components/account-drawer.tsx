@@ -7,12 +7,12 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
 import { useTranslate } from '@/locales';
+import * as Sentry from '@sentry/nextjs';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
-import * as Sentry from '@sentry/nextjs';
 
 import { useTheme } from '@mui/material/styles';
 import {

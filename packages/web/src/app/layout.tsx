@@ -114,17 +114,19 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   defaultMode={themeConfig.defaultMode}
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
-                  {/* <ExternalProvider> */}
-                  <MotionLazy>
-                    <SnackbarProvider>
-                      <ProgressBar />
-                      <SettingsDrawer defaultSettings={defaultSettings} />
-                      <ErrorBoundary fallback={<View500 />}>
-                        <DashboardLayout>{children}</DashboardLayout>
-                      </ErrorBoundary>
-                    </SnackbarProvider>
-                  </MotionLazy>
-                  {/* </ExternalProvider> */}
+                  <AnnouncementProvider>
+                    <ExternalProvider>
+                      <MotionLazy>
+                        <SnackbarProvider>
+                          <ProgressBar />
+                          <SettingsDrawer defaultSettings={defaultSettings} />
+                          <ErrorBoundary fallback={<View500 />}>
+                            <DashboardLayout>{children}</DashboardLayout>
+                          </ErrorBoundary>
+                        </SnackbarProvider>
+                      </MotionLazy>
+                    </ExternalProvider>
+                  </AnnouncementProvider>
                 </ThemeProvider>
               </AppRouterCacheProvider>
             </LocalizationProvider>
