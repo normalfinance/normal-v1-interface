@@ -39,3 +39,4 @@ next-env.d.ts
 .turbo
 
 .yarn/
+.yarn/install-state.gz

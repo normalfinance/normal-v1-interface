@@ -101,7 +101,7 @@ export const SwapSendCard: React.FC<SwapSendCardProps> = ({
 
       {/* Conditionally render a component based on the active tab */}
       {tabs.value === 'swap' ? (
-        <SwapCard />
+        <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
       ) : (
         <SendCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
       )}

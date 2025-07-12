@@ -28,6 +28,7 @@ export const paths = {
   },
   swap: '/swap',
   insurance: '/insurance',
+  rewards: '/rewards',
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready
   },
