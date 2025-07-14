@@ -4,8 +4,10 @@ import type { Metadata, Viewport } from 'next';
 
 import { CONFIG } from '@/global-config';
 import { primary } from '@/theme/core/palette';
+import { ErrorBoundary } from '@sentry/nextjs';
 import { LocalizationProvider } from '@/locales';
 import { detectLanguage } from '@/locales/server';
+import { View500 } from '@/sections/error/500-view';
 import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
@@ -112,17 +114,19 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   defaultMode={themeConfig.defaultMode}
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
-                  <ExternalProvider>
-                    <MotionLazy>
-                      <SnackbarProvider>
-                        <ProgressBar />
-                        <SettingsDrawer defaultSettings={defaultSettings} />
-                        <AnnouncementProvider>
-                          <DashboardLayout>{children}</DashboardLayout>
-                        </AnnouncementProvider>
-                      </SnackbarProvider>
-                    </MotionLazy>
-                  </ExternalProvider>
+                  <AnnouncementProvider>
+                    <ExternalProvider>
+                      <MotionLazy>
+                        <SnackbarProvider>
+                          <ProgressBar />
+                          <SettingsDrawer defaultSettings={defaultSettings} />
+                          <ErrorBoundary fallback={<View500 />}>
+                            <DashboardLayout>{children}</DashboardLayout>
+                          </ErrorBoundary>
+                        </SnackbarProvider>
+                      </MotionLazy>
+                    </ExternalProvider>
+                  </AnnouncementProvider>
                 </ThemeProvider>
               </AppRouterCacheProvider>
             </LocalizationProvider>

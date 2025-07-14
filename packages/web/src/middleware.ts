@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { captureException } from '@sentry/nextjs';
 
 const BLOCKED_COUNTRIES = new Set([
   'AG', // Antigua and Barbuda
@@ -86,6 +87,7 @@ export async function middleware(req: NextRequest) {
   } catch (e) {
     // If the API fails, default to *allow* so legit users aren't locked out
     console.error('Geo lookup error', e);
+    captureException(e);
   }
 
   return NextResponse.next();

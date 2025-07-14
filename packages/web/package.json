@@ -24,7 +24,7 @@
     "tsc:watch": "tsc --noEmit --watch",
     "tsc:print": "npx tsc --showConfig",
     "i18n:check": "i18n-check -s en --locales src/locales/langs -f i18next",
-    "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅',",
+    "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅'",
     "validate:address": "node ./scripts/validate-address.js"
   },
   "engines": {
@@ -54,6 +54,7 @@
     "@normalfinance/types": "workspace:^",
     "@normalfinance/utils": "workspace:^",
     "@privy-io/react-auth": "^2.17.2",
+    "@sentry/nextjs": "^9.35.0",
     "@stellar/stellar-sdk": "^13.3.0",
     "apexcharts": "^4.3.0",
     "autosuggest-highlight": "^3.3.4",
