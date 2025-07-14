@@ -8,7 +8,6 @@ import { DashboardContent } from '@/layouts/dashboard';
 
 import { Box } from '@mui/material';
 
-import { SwapSendCard } from '@/components/_common/swap-send-card';
 import TokenActionCard from '@/components/_common/token-action-card';
 
 const tokensList: Token[] = [

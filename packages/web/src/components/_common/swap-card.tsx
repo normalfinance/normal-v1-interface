@@ -4,6 +4,7 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { TransactionType } from '@/types/transaction';
 import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
@@ -282,6 +283,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
         await executeContractTransaction({
           contractType: 'pool_router',
           contractAddress: constants.POOL_ROUTER_ADDRESS,
+          transactionDetails: {
+            type: TransactionType.SWAP,
+            token1: { name: sellToken.name, amount },
+            token2: { name: buyToken.name, amount: buyAmount.toString() },
+          },
           transactionFunction: async (client, restore) =>
             client.swap(
               {
