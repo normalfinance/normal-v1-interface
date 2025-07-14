@@ -24,7 +24,8 @@
     "tsc:watch": "tsc --noEmit --watch",
     "tsc:print": "npx tsc --showConfig",
     "i18n:check": "i18n-check -s en --locales src/locales/langs -f i18next",
-    "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅',"
+    "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅',",
+    "validate:address": "node ./scripts/validate-address.js"
   },
   "engines": {
     "node": "20.x"
@@ -84,7 +85,8 @@
     "remark-gfm": "^4.0.0",
     "simplebar-react": "^3.3.0",
     "sonner": "^1.7.1",
-    "stylis": "^4.3.0",
+    "stellar-sdk": "^13.3.0",
+    "stylis": "^4.3.4",
     "stylis-plugin-rtl": "^2.1.1",
     "swr": "^2.3.0",
     "turndown": "^7.2.0",
@@ -120,6 +122,7 @@
     "jest": "^29.5.0",
     "jest-environment-jsdom": "^29.5.0",
     "prettier": "^3.4.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.19.0"
   },
