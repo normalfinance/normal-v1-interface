@@ -163,7 +163,7 @@ export const useContractTransaction = () => {
           closeSnackbar(loadingKey);
 
           if (result.transactionId) {
-            const stellarExpertUrl = createStellarExpertUrl(result.transactionId);
+            const stellarExpertUrl = createStellarExpertUrl('tx', result.transactionId);
 
             enqueueSnackbar(
               <Box component="span">
