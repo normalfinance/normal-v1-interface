@@ -1,12 +1,11 @@
 'use client';
 
 import type { CardProps } from '@mui/material/Card';
-import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
 
 import Card from '@mui/material/Card';
@@ -23,19 +22,14 @@ import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
 import type {
   PoolMetadata,
   TokenPairInfo,
+  ChartMetricKey,
   PerformanceInfo,
   ExchangeRateInfo,
+  ExplorerChartData,
+  ChartTimeframeKey,
 } from './pool-chart-data';
 
 // Types
-export type ChartMetricKey = 'price' | 'volume' | 'liquidity';
-export type ChartTimeframeKey = '24h' | '7d' | '30d' | '12m';
-
-export type ExplorerChartData = {
-  [metric in ChartMetricKey]?: {
-    [timeframe in ChartTimeframeKey]?: RealtimeChartData;
-  };
-};
 
 export type LegendValue = {
   title: string;
@@ -346,7 +340,7 @@ export function PoolChart({
         </CustomTabsSwapSend>
         <div style={{ display: 'flex', gap: 8 }}>
           <ChartSelect
-            options={['price', 'volume', 'liquidity']}
+            options={['price', 'volume']}
             value={selectedMetric}
             onChange={handleChangeMetric}
           />

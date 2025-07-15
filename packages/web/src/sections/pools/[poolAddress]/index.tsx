@@ -1,72 +1,69 @@
 'use client';
 
-import type { PoolRouterContract, OracleRegistryContract } from '@normalfinance/contracts';
+import type { ExplorerChartData } from '@/components/_pool-page-components';
 
 import { useTranslate } from '@/locales';
-import { useState, useEffect } from 'react';
-import { usePools, useOracle } from '@/hooks/stellar';
+import { usePool } from '@/hooks/stellar/use-pool';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { fetchHistoricalPoolSwapsByAddress } from '@normalfinance/utils/build/stellar';
+import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fPercent, fCurrencyCompact } from '@/utils/format-number';
+import { createChartData } from '@/utils/portfolio-value-chart-series';
 
-import { Alert, Stack, Grid2, Typography, CircularProgress } from '@mui/material';
+import { Alert, Stack, Grid2, useTheme, Typography, CircularProgress } from '@mui/material';
 
 import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
 import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-transactions-table';
 
 export default function PoolView({ poolAddress }: { poolAddress: string }) {
+  const theme = useTheme();
   const { t } = useTranslate();
-  const store = useAppStore();
-  const storePersist = usePersistStore();
 
-  // Contract hooks
-  const { fetchPool, loading, error } = usePools(false);
-  const { getPrice } = useOracle();
+  const {
+    loading: loadingPool,
+    error: poolError,
+    pool,
+    recentTransactions,
+  } = usePool(poolAddress, 10);
 
-  // State
-  const [pool, setPool] = useState<PoolRouterContract.PoolInfo | undefined>(undefined);
-  const [tokenAPrice, setTokenAPrice] = useState<
-    OracleRegistryContract.OraclePriceData | undefined
-  >(undefined);
-  const [tokenBPrice, setTokenBPrice] = useState<
-    OracleRegistryContract.OraclePriceData | undefined
-  >(undefined);
-  const [transactions, setTransactions] = useState<any[] | undefined>(undefined);
+  // TODO:
+  // Price data samples
+  const priceData24h = Array.from({ length: 24 }, (_, i) => 1000 + i * 5);
+  const priceData7d = Array.from({ length: 7 }, (_, i) => 1100 + i * 20);
+  const priceData30d = Array.from({ length: 31 }, (_, i) => 1050 + i * 10);
+  const priceData12m = Array.from({ length: 12 }, (_, i) => 950 + i * 50);
 
-  useEffect(() => {
-    async function fetchData() {
-      const poolWithData = await fetchPool(poolAddress);
-      setPool(poolWithData);
+  // Volume data samples
+  const volumeData24h = Array.from({ length: 24 }, (_, i) => 5000 + i * 100);
+  const volumeData7d = Array.from({ length: 7 }, (_, i) => 10000 + i * 200);
+  const volumeData30d = Array.from({ length: 31 }, (_, i) => 15000 + i * 150);
+  const volumeData12m = Array.from({ length: 12 }, (_, i) => 20000 + i * 500);
 
-      // Historical txs
-      const swaps = await fetchHistoricalPoolSwapsByAddress(poolAddress);
-      setTransactions(swaps);
-    }
+  const poolChartData: ExplorerChartData = {
+    price: {
+      '24h': createChartData('24h', priceData24h, 8),
+      '7d': createChartData('7d', priceData7d, 7),
+      '30d': createChartData('30d', priceData30d, 8),
+      '12m': createChartData('12m', priceData12m, 12),
+    },
+    volume: {
+      '24h': createChartData('24h', volumeData24h, 8),
+      '7d': createChartData('7d', volumeData7d, 7),
+      '30d': createChartData('30d', volumeData30d, 8),
+      '12m': createChartData('12m', volumeData12m, 12),
+    },
+  };
 
-    fetchData();
-  }, [fetchPool, poolAddress]);
-
-  useEffect(() => {
-    async function fetchData(p: PoolRouterContract.PoolInfo) {
-      const price_a = await getPrice(p.pool_response.pool.base_asset, false);
-      setTokenAPrice(price_a);
-
-      const price_b = await getPrice(p.pool_response.pool.quote_asset, false);
-      setTokenBPrice(price_b);
-    }
-
-    if (pool) {
-      fetchData(pool);
-    }
-  }, [getPrice, pool]);
-
-  if (loading) {
+  if (loadingPool) {
     <CircularProgress />;
   }
 
   if (!poolAddress || pool == undefined) {
-    return <Alert severity="info">{`The pool you're looking for doesn't exist.`}</Alert>;
+    return (
+      <DashboardContent maxWidth="xl">
+        <Alert severity="info">{`The pool you're looking for doesn't exist.`}</Alert>
+      </DashboardContent>
+    );
   }
 
   return (
@@ -84,10 +81,26 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
         <Grid2 size={{ xs: 12, md: 8 }}>
           <PoolChart
             id="portfolio_value"
-            pairInfo={poolsExplorerData.pairInfo}
-            metadata={poolsExplorerData.metadata}
-            exchangeRate={poolsExplorerData.exchangeRate}
-            performance={poolsExplorerData.performance}
+            pairInfo={{
+              tokenA: {
+                name: pool.pool_response.pool.base_asset,
+                iconUrl: getCryptoIconUrl(pool.pool_response.pool.base_asset, false),
+              },
+              tokenB: {
+                name: pool.pool_response.pool.quote_asset,
+                iconUrl: getCryptoIconUrl(pool.pool_response.pool.quote_asset, false),
+              },
+              address: poolAddress,
+            }}
+            metadata={{ version: 'v1', feeTier: fPercent(pool.pool_response.pool.fee_fraction / 100) }}
+            exchangeRate={{
+              label: `1 ${pool.pool_response.pool.base_asset} = 2,304.28 ${pool.pool_response.pool.quote_asset}`,
+              usdEquivalent: '$2,289.11',
+              tokenSymbol: pool.pool_response.pool.base_asset,
+              tokenRate: `2,304.28 ${pool.pool_response.pool.quote_asset}`,
+              tokenUSDValue: '$2,289.11',
+            }}
+            performance={{ percentageChange: 0 }}
             legendValues={[{ title: 'Price', number: 7334, formatter: fCurrencyCompact }]}
             chart={poolChartData}
             color={theme.palette.primary.main}
@@ -97,32 +110,32 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
           <PoolOverview
             totalAprPercentage={0}
             poolBalances={[
-              { coinShortName: 'Token A', value: pool.pool_response.token_a.amount },
-              { coinShortName: 'Token B', value: pool.pool_response.token_b.amount },
+              {
+                coinShortName: pool.pool_response.pool.base_asset,
+                value: Number(pool.pool_response.token_a.amount) / 10 ** 7,
+              },
+              {
+                coinShortName: pool.pool_response.pool.quote_asset,
+                value: Number(pool.pool_response.token_b.amount) / 10 ** 7,
+              },
             ]}
-            stats={[{ statName: 'TVL', value: 0 }, { statName: '24h Volume', value: 0 }, { statName: '24h Fees', value: 0 }]}
+            stats={[
+              { statName: 'TVL', value: 0 },
+              { statName: '24h Volume', value: 0 },
+              { statName: '24h Fees', value: 0 },
+            ]}
           />
         </Grid2>
       </Grid2>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 12 }}>
-          <PoolTransactionsTable rows={transactions} />
+          <PoolTransactionsTable
+            baseTokenSymbol={pool.pool_response.pool.base_asset}
+            quoteTokenSymbol={pool.pool_response.pool.quote_asset}
+            rows={recentTransactions ?? []}
+          />
         </Grid2>
       </Grid2>
     </DashboardContent>
   );
 }
-
-const applyPricesToPool = (
-  pool: PoolRouterContract.PoolInfo,
-  token_a_price: number,
-  token_b_price: number
-): PoolRouterContract.PoolInfo => {
-  const token_a_usd_value = pool.pool_response.token_a.amount * token_a_price;
-  const token_b_usd_value = pool.pool_response.token_b.amount * token_b_price;
-  const tvl = token_a_usd_value + token_b_usd_value;
-
-  // formatCurrency('USD', tvl.toString(), navigator.language)
-
-  return {};
-};

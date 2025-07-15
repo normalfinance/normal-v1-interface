@@ -114,7 +114,7 @@ export function PoolOverview({ totalAprPercentage, poolBalances, stats, sx, ...o
       {/* NEED TO ADD TOKENLIST */}
       {showSwap && (
         <Box sx={{ mt: 2 }}>
-          <SwapCard />
+          <SwapCard tokensList={[]} />
         </Box>
       )}
       <Stack

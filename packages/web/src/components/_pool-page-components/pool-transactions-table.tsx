@@ -38,11 +38,15 @@ function ago(sec: number) {
 }
 
 type Order = 'asc' | 'desc' | undefined;
-type ColumnKey = 'timestamp' | 'usdValue' | 'usdcValue' | 'ethValue' | 'wallet';
+type ColumnKey = 'timestamp' | 'quoteValue' | 'baseValue' | 'wallet';
 
 // ----------------------------------------------------------------------
 
-export const PoolTransactionsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {  const theme = useTheme();
+export const PoolTransactionsTable: React.FC<{
+  baseTokenSymbol: string;
+  quoteTokenSymbol: string;
+  rows: PoolTxRow[];
+}> = ({ baseTokenSymbol, quoteTokenSymbol, rows }) => {
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -125,7 +129,7 @@ export const PoolTransactionsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows })
                     anchorEl={typeAnchor}
                     onClose={() => setTypeAnchor(null)}
                   >
-                    {(['All', 'Buy', 'Sell', 'Deposit', 'Withdraw'] as const).map((t) => (
+                    {(['All', 'Buy', 'Sell', 'Deposit', 'Withdraw'] as const).map((type) => (
                       <MenuItem
                         key={type}
                         selected={typeFilter === type}
@@ -140,7 +144,7 @@ export const PoolTransactionsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows })
                   </Menu>
                 </TableCell>
 
-                {(['usdValue', 'usdcValue', 'ethValue'] as const).map((key) => (
+                {(['baseValue', 'quoteValue'] as const).map((key) => (
                   <TableCell
                     key={key}
                     align="right"
@@ -158,7 +162,7 @@ export const PoolTransactionsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows })
                         },
                       }}
                     >
-                      {key === 'usdValue' ? 'USD' : key === 'usdcValue' ? 'USDC' : 'ETH'}
+                      {key === 'quoteValue' ? quoteTokenSymbol : baseTokenSymbol}
                     </TableSortLabel>
                   </TableCell>
                 ))}
@@ -176,20 +180,13 @@ export const PoolTransactionsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows })
             <TableBody>
               {ordered.map((row, idx) => (
                 <TableRow hover key={idx}>
-                  <TableCell>{ago(row.timestamp)}</TableCell>
                   <TableCell>
                     <Chip label={row.type} color={typeColor[row.type]} size="small" />
                   </TableCell>
-                  <TableCell align="right">
-                    {row.usdValue.toLocaleString('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                      maximumFractionDigits: 0,
-                    })}
-                  </TableCell>
-                  <TableCell align="right">{row.usdcValue.toLocaleString()}</TableCell>
-                  <TableCell align="right">{row.ethValue.toFixed(3)}</TableCell>
+                  <TableCell align="right">{row.baseValue.toLocaleString()}</TableCell>
+                  <TableCell align="right">{row.quoteValue.toFixed(3)}</TableCell>
                   <TableCell>{row.wallet}</TableCell>
+                  <TableCell>{ago(row.timestamp)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
