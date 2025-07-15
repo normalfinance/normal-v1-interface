@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
-import { usePersistStore } from '@normalfinance/state';
-import { constants, fetchInsuranceEvents } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -58,7 +56,7 @@ export type BufferEvent = {
 };
 
 export function InsuranceActionsTable() {
-  const store = usePersistStore();
+  // const store = usePersistStore();
 
   const [selectedTab, setSelectedTab] = useState('insurance'); // Default to first tab
   const [ifEvents, setIfEvents] = useState<InsuranceFundEvent[] | undefined>(undefined);
@@ -68,21 +66,22 @@ export function InsuranceActionsTable() {
     setSelectedTab(newValue);
   };
 
-  useEffect(() => {
-    async function fetchData() {
-      // Historical txs
-      const { insuranceFund, buffer } = await fetchInsuranceEvents(
-        constants.INSURANCE_FUND_ADDRESS,
-        constants.BUFFER_ADDRESS
-      );
-      setIfEvents(insuranceFund);
-      setBufferEvents(buffer);
-    }
+  // useEffect(() => {
+  //   async function fetchData() {
+  //     // Historical txs
+  //     const { insuranceFund, buffer } = await fetchInsuranceEvents(
+  //       constants.INSURANCE_FUND_ADDRESS,
+  //       constants.BUFFER_ADDRESS
+  //     );
+  //     setIfEvents(insuranceFund);
+  //     setBufferEvents(buffer);
+  //   }
 
-    fetchData();
-  }, [fetchInsuranceEvents]);
+  //   fetchData();
+  // }, [fetchInsuranceEvents]);
 
-  const userEvents = ifEvents && ifEvents.filter((e) => e.user === store.wallet.address);
+  // const userEvents = ifEvents && ifEvents.filter((e) => e.user === store.wallet.address);
+  const userEvents = undefined;
 
   return (
     <DashboardContent>
