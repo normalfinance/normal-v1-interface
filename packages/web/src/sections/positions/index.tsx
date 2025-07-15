@@ -1,35 +1,40 @@
+'use client';
+
 import { useState } from 'react';
+import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 
-import { Alert, Grid2 } from '@mui/material';
+import { Alert, Grid2, AlertTitle } from '@mui/material';
 
 import PageHeader from '@/components/page-header';
+import { PositionsTable } from '@/components/_positions-page-components/positions-table';
 
 // ----------------------------------------------------------------------
 
 export default function PositionsView() {
+  const { t } = useTranslate();
+
   const persist = usePersistStore();
-
-  // const { positions } = useLPs();
-  // const { pools } = usePools();
-
   const connectedAddress = persist.wallet.address;
-  const [isConnected,] = useState(connectedAddress != '' && connectedAddress != undefined);
+  const [isConnected] = useState(connectedAddress != '' && connectedAddress != undefined);
+
+  // const { positions } = useGetLpTokens();
+  const positions: any[] = [];
 
   return (
     <DashboardContent maxWidth="xl">
-      <PageHeader title="Your positions" subheader="Liquidity you've provided to pools" />
+      <PageHeader title={t('Your positions')} />
 
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 12 }}>
           {isConnected ? (
-            <LiquidityPositions positions={positions} />
+            <PositionsTable positions={positions} />
           ) : (
-            <Alert
-              severity="info"
-              title="To view your positions and rewards you must connect your wallet."
-            />
+            <Alert severity="info">
+              <AlertTitle>{t('Connect your wallet')}</AlertTitle>
+              {t('To view your positions and rewards you must connect your wallet')}
+            </Alert>
           )}
         </Grid2>
       </Grid2>

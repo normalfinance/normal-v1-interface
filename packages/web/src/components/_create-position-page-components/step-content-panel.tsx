@@ -1,9 +1,10 @@
 'use client';
 
-import type { Token } from '@/types/token';
+import type { StateToken } from '@normalfinance/types';
 
 import { z } from 'zod';
 import { useState } from 'react';
+import { useAppStore } from '@normalfinance/state';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, FormProvider } from 'react-hook-form';
 
@@ -21,7 +22,7 @@ export interface StepContentPanelProps {
   onBack: () => void;
   onReset: () => void;
   isLastStep: boolean;
-  tokens: Token[];
+  tokens: StateToken[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -49,6 +50,8 @@ export function StepContentPanel({
   isLastStep,
   tokens,
 }: StepContentPanelProps) {
+  const store = useAppStore();
+
   const [isLoading, setIsLoading] = useState(false);
 
   /* ---------------- RHF ---------------- */
@@ -70,7 +73,7 @@ export function StepContentPanel({
   /* ------------- helpers --------------- */
   const watchToken = methods.watch('tokenASymbol');
   const watchAmount = methods.watch('depositAmount');
-  const selectedToken = tokens.find((t) => t.shortname === watchToken) ?? null;
+  const selectedToken = store.tokens.find((t) => t.symbol === watchToken) ?? null;
 
   const getButtonLabel = () => {
     if (step === 0) return watchToken ? 'Continue' : 'Select token';

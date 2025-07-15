@@ -1,22 +1,21 @@
 'use client';
 
-import type { Token } from '@/types/token';
+import type { StateToken } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { useFormContext } from 'react-hook-form';
 
-import { Token } from '@/types/token';
-import PickToken from '../_common/pick-token';
-import { FormValues } from './step-content-panel';
+import { Stack, alpha, Avatar, Button, useTheme, Typography } from '@mui/material';
+
 import { Iconify } from '@/components/template/iconify';
 
-import PickToken from '../pick-token';
+import PickToken from '../_common/pick-token';
 
 import type { FormValues } from './step-content-panel';
 
 interface StepOneProps {
-  tokens: Token[];
+  tokens: StateToken[];
 }
 
 export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
@@ -28,14 +27,14 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
   const tokenASymbol = watch('tokenASymbol');
 
   /** user picks a token */
-  const handleSelect = (tok: Token) => {
-    setValue('tokenASymbol', tok.shortname, { shouldValidate: true });
+  const handleSelect = (tok: StateToken) => {
+    setValue('tokenASymbol', tok.symbol, { shouldValidate: true });
     clearErrors('tokenASymbol');
     setDialogOpen(false);
   };
 
-  const selected = tokens.find((tkn) => tkn.shortname === tokenASymbol);
-  const avatarSrc = selected?.logo ?? selected?.url;
+  const selected = tokens.find((tkn) => tkn.symbol === tokenASymbol);
+  const avatarSrc = selected?.icon || '';
 
   return (
     <Stack>

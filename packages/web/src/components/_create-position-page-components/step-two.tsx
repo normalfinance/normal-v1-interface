@@ -1,6 +1,6 @@
 'use client';
 
-import type { Token } from '@/types/token';
+import type { StateToken } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
@@ -16,7 +16,7 @@ import type { FormValues } from './step-content-panel';
 /* props                                                               */
 /* ------------------------------------------------------------------ */
 export interface StepTwoProps {
-  token: Token | null; // ← token chosen on step-1
+  token: StateToken | null; // ← token chosen on step-1
 }
 
 export default function StepTwo({ token }: StepTwoProps) {
@@ -31,13 +31,13 @@ export default function StepTwo({ token }: StepTwoProps) {
       shouldValidate: true,
     });
 
-  const fiatValue = token && amount !== '' ? Number(amount) * token.pricestatus : 0;
+  const fiatValue = token && amount !== '' ? Number(amount) * token.usdValue : 0;
 
   return (
     <Stack spacing={3} width={1}>
       <Typography variant="h6">
-        {t('Step 2 – Enter amount')}
-        {token ? `(${token.shortname})` : ''}
+        {t('Step 2 – Enter amount')}&nbsp;
+        {token ? `(${token.symbol})` : ''}
       </Typography>
       {/* ---- amount input ------------------------------------------- */}
       <Box
@@ -98,9 +98,9 @@ export default function StepTwo({ token }: StepTwoProps) {
             spacing={1}
             sx={{ mr: 2, borderRadius: 99, p: 1 }}
           >
-            <Avatar src={token.url} sx={{ width: 32, height: 32 }} />
+            <Avatar src={token.icon} sx={{ width: 32, height: 32 }} />
             <Typography variant="body1" fontWeight="bold">
-              {token.shortname}
+              {token.symbol}
             </Typography>
           </Stack>
         )}
