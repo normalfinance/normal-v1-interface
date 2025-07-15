@@ -46,13 +46,15 @@ jobs:
       - name: ESLint – code-quality check
         run: yarn lint
 
-      # Check for untranslated / missing keys across all locale JSON files
       - name: i18n – translation completeness check
         run: yarn i18n:check
 
+      - name: Prisma - Generate Prisma Client
+        run: yarn prisma generate
+
       - name: TypeScript – type check
         run: npx tsc --noEmit --project tsconfig.json
-
+      
       - name: Next.js – production build
         env:
           NEXT_PUBLIC_APP_ENV: ci

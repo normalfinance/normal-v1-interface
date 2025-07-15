@@ -55,6 +55,13 @@ export interface TransactionQueryParams extends BaseQueryParams {
   amount?: string;
 }
 
+export interface ReferralQueryParams extends BaseQueryParams {
+  ref?: string;
+  referral?: string;
+  referrer?: string;
+  invite?: string;
+}
+
 export type AllQueryParams =
   | SwapQueryParams
   | DepositLiquidityQueryParams
@@ -64,7 +71,8 @@ export type AllQueryParams =
   | PoolQueryParams
   | PositionQueryParams
   | ExploreQueryParams
-  | TransactionQueryParams;
+  | TransactionQueryParams
+  | ReferralQueryParams;
 
 export type QueryParamKey<T extends BaseQueryParams> = keyof T;
 export type QueryParamValue<T extends BaseQueryParams, K extends keyof T> = T[K];
