@@ -4,6 +4,7 @@ import type { Activity } from '@/types/activity';
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
 import { usePools } from '@/hooks/stellar';
 import { useState, useEffect } from 'react';
@@ -268,9 +269,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
   }, [connectedAddress]);
 
-  const [isConnected, setIsConnected] = useState(
-    connectedAddress != ''
-  );
+  const [isConnected, setIsConnected] = useState(connectedAddress != '');
   // console.log(isConnected);
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);

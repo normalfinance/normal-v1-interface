@@ -487,7 +487,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
                 sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
               >
                 <SwapSendPopupButton
-                  imgUrl={getCryptoIconUrl(sellToken.symbol)}
+                  imgUrl={getCryptoIconUrl(sellToken.symbol, false)}
                   label={sellToken.symbol}
                   onClick={() => {
                     setActiveButton('sell');
