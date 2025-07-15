@@ -2,8 +2,8 @@
 
 'use client';
 
-import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material/Card';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
@@ -20,7 +20,7 @@ interface CreatePositionProps extends CardProps {
   tokens: Token[];
 }
 
-export const CreatePosition: React.FC<CreatePositionProps> = ({ sx, tokens, ...other }) => {
+export const CreatePosition: React.FC<CreatePositionProps> = ({ tokens, sx, ...other }) => {
   const theme = useTheme();
 
   const { t } = useTranslate('auto');
