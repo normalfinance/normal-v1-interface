@@ -2,7 +2,7 @@
 
 import type { ReferralQueryParams } from '@/types/query-params';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { ReferralAPI, getReferralAPIErrorMessage } from '@/lib/referral-api';
 

@@ -1,9 +1,9 @@
+import type { User, Referral, ReferralAction } from '@prisma/client';
+import type { ReferralAction as ReferralActionEnum } from '@/utils/referral-actions';
+
+import { ReferralActionUtils } from '@/utils/referral-actions';
+
 import { prisma } from './prisma';
-import { User, Referral, ReferralAction } from '@prisma/client';
-import {
-  ReferralActionUtils,
-  ReferralAction as ReferralActionEnum,
-} from '@/utils/referral-actions';
 
 export type UserWithReferrals = User & {
   referralsGiven: (Referral & { actions: ReferralAction[] })[];

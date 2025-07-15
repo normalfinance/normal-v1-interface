@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ReferralService } from '@/lib/referral-service';
+import type { NextRequest } from 'next/server';
+
 import { z } from 'zod';
+import { NextResponse } from 'next/server';
+import { ReferralService } from '@/lib/referral-service';
 
 const RecordActionSchema = z.object({
   userWalletAddress: z.string().min(1, 'User wallet address is required'),

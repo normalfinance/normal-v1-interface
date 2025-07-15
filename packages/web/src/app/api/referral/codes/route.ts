@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ReferralService } from '@/lib/referral-service';
+import type { NextRequest } from 'next/server';
+
 import { z } from 'zod';
+import { NextResponse } from 'next/server';
+import { ReferralService } from '@/lib/referral-service';
 
 const CreateReferralSchema = z.object({
   referrerWalletAddress: z.string().min(1, 'Referrer wallet address is required'),
@@ -28,9 +30,6 @@ export async function POST(request: NextRequest) {
     const { referrerWalletAddress, customCode, source, campaign } = validation.data;
 
     const referral = await ReferralService.createReferralCode(referrerWalletAddress, customCode);
-
-    if (source || campaign) {
-    }
 
     return NextResponse.json({ referral }, { status: 201 });
   } catch (error) {
