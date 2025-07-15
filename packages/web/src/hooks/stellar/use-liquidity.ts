@@ -4,6 +4,7 @@ import type { Client } from '@normalfinance/contracts/build/pool_router';
 
 import { useState } from 'react';
 import { constants } from '@normalfinance/utils';
+import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 
 import { useContractTransaction } from './use-contract-transaction';
@@ -34,12 +35,16 @@ export function useLiquidity(): ReturnType {
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.POOL_ROUTER_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.DEPOSIT_LIQUIDITY,
+        token1: { name: 'XLM', amount: args.token_b_amount },
+      },
       transactionFunction: async (client, restore) =>
         client.deposit(
           {
             ...args,
             user: storePersist.wallet.address!,
-            desired_amount: BigInt((args.desired_amount * 10 ** constants.XLM_DECIMALS).toFixed(0)),
+            token_b_amount: BigInt((args.token_b_amount * 10 ** constants.XLM_DECIMALS).toFixed(0)),
           },
           { simulate: !restore }
         ),
@@ -50,6 +55,10 @@ export function useLiquidity(): ReturnType {
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.POOL_ROUTER_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.REMOVE_LIQUIDITY,
+        token1: { name: 'XLM', amount: args.share_amount },
+      },
       transactionFunction: async (client, restore) =>
         client.withdraw(
           {

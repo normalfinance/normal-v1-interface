@@ -6,6 +6,7 @@ import type { Client as PoolSwapFeeClient } from '@normalfinance/contracts/build
 
 import { useState } from 'react';
 import { constants } from '@normalfinance/utils';
+import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 
 import { useContractTransaction } from './use-contract-transaction';
@@ -47,6 +48,11 @@ export function useSwap(): ReturnType {
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.POOL_ROUTER_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.SWAP,
+        token1: { name: args.token_in, amount: args.in_amount },
+        token2: { name: args.token_out, amount: '' },
+      },
       transactionFunction: async (client, restore) =>
         client.estimate_swap(
           {
@@ -66,6 +72,11 @@ export function useSwap(): ReturnType {
     await executeContractTransaction({
       contractType: 'pool_swap_fee',
       contractAddress: constants.POOL_SWAP_FEE_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.SWAP,
+        token1: { name: args.token_in, amount: args.in_amount },
+        token2: { name: args.token_out, amount: args.out_min },
+      },
       transactionFunction: async (client, restore) =>
         client.swap(
           {
@@ -87,6 +98,11 @@ export function useSwap(): ReturnType {
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.POOL_ROUTER_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.SWAP,
+        token1: { name: args.token_in, amount: args.in_amount },
+        token2: { name: args.token_out, amount: args.out_min },
+      },
       transactionFunction: async (client, restore) =>
         client.swap(
           {
@@ -108,6 +124,11 @@ export function useSwap(): ReturnType {
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
+      transactionDetails: {
+        type: TransactionType.SWAP,
+        token1: { name: args.in_idx, amount: args.in_idx },
+        token2: { name: args.out_idx, amount: args.out_amount },
+      },
       transactionFunction: async (client, restore) =>
         client.swap_strict_receive(
           {

@@ -3,6 +3,7 @@
 import type { Stake, Client } from '@normalfinance/contracts/build/insurance_fund';
 
 import { constants } from '@normalfinance/utils';
+import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { InsuranceFundContract } from '@normalfinance/contracts';
@@ -42,7 +43,7 @@ export function useInsuranceFund(): ReturnType {
   const { executeContractTransaction } = useContractTransaction();
 
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true); // Loading state for async operations
+  const [loading, setLoading] = useState(true);
 
   const [insuranceFund, setInsuranceFund] = useState<InsuranceFundInfo | undefined>(undefined);
   const [balance, setBalance] = useState<number>(0);
@@ -121,6 +122,10 @@ export function useInsuranceFund(): ReturnType {
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.STAKE,
+        token1: { name: 'XLM', amount: args.amount },
+      },
       transactionFunction: async (client, restore) =>
         client.deposit(
           {
@@ -136,6 +141,10 @@ export function useInsuranceFund(): ReturnType {
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.REQUEST_UNSTAKE,
+        token1: { name: 'XLM', amount: args.amount },
+      },
       transactionFunction: async (client, restore) =>
         client.request_withdraw(
           {
@@ -151,6 +160,9 @@ export function useInsuranceFund(): ReturnType {
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.CANCEL_REQUEST_UNSTAKE,
+      },
       transactionFunction: async (client, restore) =>
         client.cancel_request_withdraw(
           {
@@ -165,6 +177,9 @@ export function useInsuranceFund(): ReturnType {
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.UNSTAKE,
+      },
       transactionFunction: async (client, restore) =>
         client.withdraw(
           {

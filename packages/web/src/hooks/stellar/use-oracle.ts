@@ -92,8 +92,8 @@ export function useOracle(_asset: string): ReturnType {
     });
     setOracleRegistry(OracleRegistry);
 
-    getPrice(false);
-  }, [getPrice]);
+    getLastPrice();
+  }, [getLastPrice]);
 
   return {
     error,
