@@ -45,7 +45,13 @@ export const CONFIG: ConfigValue = {
 };
 
 export const ZEALY_QUEST_IDS = {
-  swap: '0b875560-a567-46f1-b0a8-71b8b323c3f4',
-  addLiquidity: '<todo-uuid>',
-  stakeFund: '<todo-uuid>',
+  createWallet: 'a1a2089b-479b-49d1-a9bf-203aec1b40f1',
+  connectWallet: '4c7515c1-fd79-4188-9bcb-c84591888f31',
+  receiveFaucet: '49098c76-25aa-4278-ba9e-c409a0b8a1c5',
+  swap: '61eb5ca9-62ec-459b-8f62-9225aabf0e7',
+  addLiquidity: '513e79f5-5256-486a-81d2-866e001042ce',
+  stakeFund: '12963fdf-ba29-4b10-9a67-0dc8c91386f9',
+  createIndex: '9e81a3f3-a29f-4ede-a374-375ac66be672',
+  mintIndex: '88320ff0-7b6f-4745-b64b-bce85889f6da',
+  giveFeedback: 'adb21c28-fc92-46a5-b160-900c4bd7efe7',
 } as const;
