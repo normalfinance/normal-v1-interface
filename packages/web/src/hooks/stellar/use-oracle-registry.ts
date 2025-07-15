@@ -20,7 +20,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export function useOracle(): ReturnType {
+export function useOracleRegistry(): ReturnType {
   const [oracleRegistry, setOracleRegistry] = useState<OracleRegistryContract.Client | undefined>(
     undefined
   );

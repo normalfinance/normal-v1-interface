@@ -7,7 +7,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { InsuranceFundContract } from '@normalfinance/contracts';
 
-import { useContractTransaction } from '../use-contract-transaction';
+import { useContractTransaction } from './use-contract-transaction';
 
 // ----------------------------------------------------------------------
 

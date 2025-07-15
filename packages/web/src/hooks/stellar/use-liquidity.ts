@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { constants } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 
-import { useContractTransaction } from '../use-contract-transaction';
+import { useContractTransaction } from './use-contract-transaction';
 
 // ----------------------------------------------------------------------
 

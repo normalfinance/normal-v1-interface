@@ -1,16 +1,16 @@
-import type { TokenType } from 'interfaces';
+import type { StateToken as Token } from '@normalfinance/types';
 
-import { isAddress } from 'helpers/address';
+import { isAddress } from '@normalfinance/utils';
 
 const alwaysTrue = () => true;
 
 /** Creates a filter function that filters tokens that do not match the query. */
-export function getTokenFilter<T extends TokenType>(query: string): (token: T) => boolean {
+export function getTokenFilter<T extends Token>(query: string): (token: T) => boolean {
   const searchingAddress = isAddress(query);
 
   if (searchingAddress) {
     const address = searchingAddress.toLowerCase();
-    return (t: T) => 'address' in t && address === t.contract.toLowerCase();
+    return (t: T) => 'address' in t && address === t.id.toLowerCase();
   }
 
   const queryParts = query
@@ -24,12 +24,12 @@ export function getTokenFilter<T extends TokenType>(query: string): (token: T) =
     const parts = s
       .toLowerCase()
       .split(/\s+/)
-      .filter((s) => s.length > 0);
+      .filter((_s) => _s.length > 0);
 
     return queryParts.every(
       (p) => p.length === 0 || parts.some((sp) => sp.startsWith(p) || sp.endsWith(p))
     );
   };
 
-  return ({ name, code }: T): boolean => Boolean((code && match(code)) || (name && match(name)));
+  return ({ name, symbol }: T): boolean => Boolean((symbol && match(symbol)) || (name && match(name)));
 }

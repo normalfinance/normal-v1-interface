@@ -1,4 +1,4 @@
-import type { TokenType, TokenBalancesMap } from 'interfaces';
+import type { TokenBalancesMap, StateToken as Token } from '@normalfinance/types';
 
 import { useMemo } from 'react';
 
@@ -15,24 +15,24 @@ function balanceComparator(a?: number, b?: number) {
 }
 
 /** Sorts tokens by currency amount (descending), then safety, then symbol (ascending). */
-export function tokenComparator(balances: TokenBalancesMap, a: TokenType, b: TokenType) {
+export function tokenComparator(balances: TokenBalancesMap, a: Token, b: Token) {
   // Sorts by balances
   const balanceComparison = balanceComparator(
-    Number(balances[a.contract]?.balance),
-    Number(balances[b.contract]?.balance),
+    Number(balances[a.id]?.balance),
+    Number(balances[b.id]?.balance)
   );
   if (balanceComparison !== 0) return balanceComparison;
 
   // Sorts by symbol
-  if (a.code && b.code) {
-    return a.code.toLowerCase() < b.code.toLowerCase() ? -1 : 1;
+  if (a.symbol && b.symbol) {
+    return a.symbol.toLowerCase() < b.symbol.toLowerCase() ? -1 : 1;
   }
 
   return -1;
 }
 
 /** Sorts tokens by query, giving precedence to exact matches and partial matches. */
-export function useSortTokensByQuery<T extends TokenType>(query: string, tokens?: T[]): T[] {
+export function useSortTokensByQuery<T extends Token>(query: string, tokens?: T[]): T[] {
   return useMemo(() => {
     if (!tokens) {
       return [];
@@ -54,7 +54,7 @@ export function useSortTokensByQuery<T extends TokenType>(query: string, tokens?
     // sort tokens by exact match -> subtring on symbol match -> rest
     const trimmedQuery = query.toLowerCase().trim();
     tokens.map((token) => {
-      const symbol = token.code?.toLowerCase();
+      const symbol = token.symbol?.toLowerCase();
       if (symbol === matches[0]) {
         return exactMatches.push(token);
       } else if (symbol?.startsWith(trimmedQuery)) {

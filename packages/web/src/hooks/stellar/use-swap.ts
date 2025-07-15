@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { constants } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 
-import { useContractTransaction } from '../use-contract-transaction';
+import { useContractTransaction } from './use-contract-transaction';
 
 // ----------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ export function useSwap(): ReturnType {
     });
   };
 
-  const onSwap = async (
+  const onSwapWithFee = async (
     args: SwapArgs,
     token_in_decimals?: number,
     token_out_decimals?: number
@@ -66,6 +66,27 @@ export function useSwap(): ReturnType {
     await executeContractTransaction({
       contractType: 'pool_swap_fee',
       contractAddress: constants.POOL_SWAP_FEE_ADDRESS,
+      transactionFunction: async (client, restore) =>
+        client.swap(
+          {
+            user: storePersist.wallet.address!,
+            ...args,
+            in_amount: BigInt((args.in_amount * 10 ** (token_in_decimals || 7)).toFixed(0)),
+            out_min: BigInt((args.out_min * 10 ** (token_out_decimals || 7)).toFixed(0)),
+          },
+          { simulate: !restore }
+        ),
+    });
+  };
+
+  const onSwap = async (
+    args: SwapArgs,
+    token_in_decimals?: number,
+    token_out_decimals?: number
+  ) => {
+    await executeContractTransaction({
+      contractType: 'pool_router',
+      contractAddress: constants.POOL_ROUTER_ADDRESS,
       transactionFunction: async (client, restore) =>
         client.swap(
           {
