@@ -38,7 +38,13 @@ export default function ExploreStats({ stats, sx }: ExploreStatsProps) {
           divider={<Divider orientation="vertical" flexItem sx={{ borderStyle: 'dashed' }} />}
         >
           {stats.map((s) => (
-            <ExploreStat key={s.title} title={s.title} total={s.total} percent={s.percent} formatter={s.formatter} />
+            <ExploreStat
+              key={s.title}
+              title={s.title}
+              total={s.total}
+              percent={s.percent}
+              formatter={s.formatter}
+            />
           ))}
         </Stack>
       </Scrollbar>

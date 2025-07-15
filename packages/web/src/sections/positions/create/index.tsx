@@ -25,7 +25,7 @@ export default function CreatePositionView() {
       store.setLoading(true);
       try {
         const allTokens = await store.getAllTokens();
-        console.log(allTokens)
+        console.log(allTokens);
         store.setLoading(false);
       } catch (e) {
         console.error(e);

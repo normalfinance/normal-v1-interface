@@ -31,5 +31,6 @@ export function getTokenFilter<T extends Token>(query: string): (token: T) => bo
     );
   };
 
-  return ({ name, symbol }: T): boolean => Boolean((symbol && match(symbol)) || (name && match(name)));
+  return ({ name, symbol }: T): boolean =>
+    Boolean((symbol && match(symbol)) || (name && match(name)));
 }

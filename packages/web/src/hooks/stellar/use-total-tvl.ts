@@ -41,7 +41,7 @@ export function useTotalTVL(): ReturnType {
       // if (tvl.result) {
       //   setTotalTVl(tvl.result);
       // }
-      setTotalTVl(0)
+      setTotalTVl(0);
     } catch (e: any) {
       console.log(e);
       setError(e);

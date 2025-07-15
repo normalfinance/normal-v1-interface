@@ -56,9 +56,9 @@ export function usePools(): ReturnType {
       });
 
       const pools = await PoolRouter.query_all_pools_details();
-    
+
       if (pools.result) {
-          // console.log(pools.result)
+        // console.log(pools.result)
         setAllPools(pools.result as PoolRouterContract.PoolInfo[]);
       }
 

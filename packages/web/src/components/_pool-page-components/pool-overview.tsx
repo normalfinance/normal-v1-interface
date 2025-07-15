@@ -46,7 +46,13 @@ export type PoolsAprProps = CardProps & {
 
 // ----------------------------------------------------------------------
 
-export function PoolOverview({ totalAprPercentage, poolBalances, stats, sx, ...other }: PoolsAprProps) {
+export function PoolOverview({
+  totalAprPercentage,
+  poolBalances,
+  stats,
+  sx,
+  ...other
+}: PoolsAprProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 

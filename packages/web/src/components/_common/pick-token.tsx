@@ -44,8 +44,7 @@ const PickToken: React.FC<PickTokenProps> = ({
   const filteredTokens = tokens.filter((token) => {
     const lowerTerm = searchTerm.toLowerCase();
     return (
-      token.name.toLowerCase().includes(lowerTerm) ||
-      token.symbol.toLowerCase().includes(lowerTerm)
+      token.name.toLowerCase().includes(lowerTerm) || token.symbol.toLowerCase().includes(lowerTerm)
     );
   });
 

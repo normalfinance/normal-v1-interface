@@ -327,7 +327,9 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
               onClick={(e) => {
                 e.stopPropagation();
                 if (sendToken) {
-                  setAmount(getMaxAmount(Number(sendToken.balance), sendToken.usdValue, isFiatMode));
+                  setAmount(
+                    getMaxAmount(Number(sendToken.balance), sendToken.usdValue, isFiatMode)
+                  );
                 }
               }}
             >

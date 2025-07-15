@@ -9,7 +9,6 @@ import { Box } from '@mui/material';
 
 import TokenActionCard from '@/components/_common/token-action-card';
 
-
 const swapFeeInfo: SwapFeeInfo = {
   feePercentage: 0.25,
   networkCost: 1.0,
