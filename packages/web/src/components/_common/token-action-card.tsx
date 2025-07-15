@@ -21,6 +21,8 @@ import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
+import ZealyHighlight from './zealy/zealy-highlight';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
@@ -105,10 +107,13 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   // Helper – render the body matching the active tab -------------------
   const renderTabBody = () => {
     switch (tabs.value) {
-      case 'swap':
-        return (
+      case 'swap': {
+          <Box sx={{ position: 'relative' }}>
           <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} queryParams={queryParams} />
+            <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />
+          </Box>
         );
+      }
       case 'send':
         return <SendCard tokensList={store.tokens} networkCost={0} />;
       case 'buy':

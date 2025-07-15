@@ -43,3 +43,9 @@ export const CONFIG: ConfigValue = {
     apiKey: process.env.NEXT_PUBLIC_ONRAMPER_API_KEY ?? '',
   },
 };
+
+export const ZEALY_QUEST_IDS = {
+  swap: '0b875560-a567-46f1-b0a8-71b8b323c3f4',
+  addLiquidity: '<todo-uuid>',
+  stakeFund: '<todo-uuid>',
+} as const;
