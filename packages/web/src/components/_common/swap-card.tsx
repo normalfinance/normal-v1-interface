@@ -4,6 +4,7 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { TransactionType } from '@/types/transaction';
 import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
@@ -29,7 +30,7 @@ interface SwapCardProps extends CardProps {
   swapFeeInfo?: SwapFeeInfo;
 }
 
-const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
+const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -54,7 +55,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const [allPools, setAllPools] = useState<any[]>([]);
 
   // 1) States for tokens, default sell token is first in the list
-  const [tokens, setTokens] = useState<Token[]>([]);
+  const [tokens, setTokens] = useState(tokensList);
   const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
 
@@ -282,6 +283,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
         await executeContractTransaction({
           contractType: 'pool_router',
           contractAddress: constants.POOL_ROUTER_ADDRESS,
+          transactionDetails: {
+            type: TransactionType.SWAP,
+            token1: { name: sellToken.name, amount },
+            token2: { name: buyToken.name, amount: buyAmount.toString() },
+          },
           transactionFunction: async (client, restore) =>
             client.swap(
               {

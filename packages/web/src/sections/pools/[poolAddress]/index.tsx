@@ -6,6 +6,7 @@ import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { constants } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
+import { TransactionType } from '@/types/transaction';
 import { DashboardContent } from '@/layouts/dashboard';
 import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { NormalPoolContract } from '@normalfinance/contracts';
@@ -65,6 +66,10 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
+      transactionDetails: {
+        type: TransactionType.DEPOSIT_LIQUIDITY,
+        token1: { name: tokenB?.name || '', amount: tokenAmount.toString() },
+      },
       transactionFunction: async (client, restore) =>
         client.deposit(
           {
@@ -88,6 +93,10 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
+      transactionDetails: {
+        type: TransactionType.REMOVE_LIQUIDITY,
+        token1: { name: lpToken?.name || '', amount: shareTokenAmount.toString() },
+      },
       transactionFunction: async (client, restore) =>
         client.withdraw(
           {

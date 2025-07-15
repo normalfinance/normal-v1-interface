@@ -7,6 +7,7 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
 import { useTranslate } from '@/locales';
+import * as Sentry from '@sentry/nextjs';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -224,6 +225,15 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address;
+
+  useEffect(() => {
+    if (connectedAddress) {
+      Sentry.setUser({ id: connectedAddress });
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [connectedAddress]);
+
   const [isConnected, setIsConnected] = useState(
     connectedAddress != '' && connectedAddress != undefined
   );

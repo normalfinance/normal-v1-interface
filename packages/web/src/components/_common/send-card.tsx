@@ -143,7 +143,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1 }} width={1}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
         <Box
           sx={{
@@ -187,6 +187,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
               onKeyDown={handleAmountKeyDown}
               sx={{
                 display: 'inline-flex',
+                maxWidth: '100%',
                 width: `${inputWidth}px`,
                 border: 'none',
                 padding: 0,
