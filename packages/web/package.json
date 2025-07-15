@@ -3,9 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "i18n:upload": "crowdin upload",
-    "i18n:download": "crowdin download",
     "i18n:extract": "i18next && node ./scripts/fix-empty-i18n-values.js",
+    "i18n:upload": "crowdin upload sources",
+    "i18n:pretranslate": "bash -c 'if [ -n \"$CROWDIN_MT_ENGINE_ID\" ]; then echo \"🔄  Pre-translating with MT engine $CROWDIN_MT_ENGINE_ID\"; crowdin pre-translate --method mt --engine-id=$CROWDIN_MT_ENGINE_ID; else echo \"⚠️  CROWDIN_MT_ENGINE_ID not set, skipping primary MT\"; fi; if [ -n \"$CROWDIN_FALLBACK_MT_ENGINE_ID\" ]; then echo \"🔄  Fallback MT engine $CROWDIN_FALLBACK_MT_ENGINE_ID (untranslated only)\"; crowdin pre-translate --method mt --engine-id=$CROWDIN_FALLBACK_MT_ENGINE_ID --translate-untranslated-only; fi'",
+    "i18n:upload-translations": "crowdin upload translations",
+    "i18n:download": "crowdin download",
+    "i18n:sync": "npm run i18n:extract && npm run i18n:upload && npm run i18n:pretranslate && npm run i18n:download",
+    "i18n:status": "node ./scripts/check-translation-status.js",
+    "i18n:pre-build": "npm run i18n:download && npm run i18n:check",
     "dev": "next dev -p 8082",
     "dev:experimental": "SKIP_NODE_VERSION_CHECK=1 next dev --experimental-https",
     "start": "next start -p 8082",
@@ -95,6 +100,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@crowdin/cli": "^4.2.0",
     "@eslint/js": "^9.17.0",
     "@lingual/i18n-check": "^0.8.4",
     "@playwright/test": "^1.53.2",

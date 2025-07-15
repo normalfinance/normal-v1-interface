@@ -8,19 +8,19 @@
     "title": "Blogg",
     "caption": "Anpassade kortkommandon."
   },
-  "subheader": "Underrubrik",
+  "subheader": "Sub sidhuvud",
   "Overview": "Översikt",
   "Trade": "Handel",
-  "Spot": "Spot",
+  "Spot": "Plats",
   "Indexes": "Index",
   "Earn": "Tjäna",
-  "Yield": "Avkastning",
+  "Yield": "Skörd",
   "LP": "LP",
   "Rewards": "Belöningar",
   "Referrals": "Hänvisningar",
-  "Analytics": "Analyser",
+  "Analytics": "Analys",
   "More": "Mer",
   "Governance": "Styrning",
-  "Help & Feedback": "Hjälp & Feedback",
-  "Docs": "Dokumentation"
+  "Help & Feedback": "Hjälp och feedback",
+  "Docs": "Dokument"
 }

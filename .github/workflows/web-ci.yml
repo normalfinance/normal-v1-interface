@@ -46,6 +46,19 @@ jobs:
       - name: ESLint – code-quality check
         run: yarn lint
 
+
+      - name: i18n – download latest translations
+        env:
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
+        run: |
+          if [ -n "$CROWDIN_PROJECT_ID" ] && [ -n "$CROWDIN_API_TOKEN" ]; then
+            echo "Downloading latest translations from Crowdin..."
+            yarn i18n:download || echo "Warning: Failed to download translations, continuing with existing ones"
+          else
+            echo "Crowdin credentials not available, skipping translation download"
+          fi
+
       # Check for untranslated / missing keys across all locale JSON files
       - name: i18n – translation completeness check
         run: yarn i18n:check

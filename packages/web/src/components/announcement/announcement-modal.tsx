@@ -50,6 +50,7 @@ export function AnnouncementModal({
       <DialogContent>
         {format === 'markdown' ? (
           <Typography variant="body1" component="div">
+            <Typography>{t('Test new translation key')}</Typography>
             <ReactMarkdown>{message}</ReactMarkdown>
           </Typography>
         ) : (
