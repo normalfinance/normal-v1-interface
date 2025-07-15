@@ -3,11 +3,10 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
+import { useSwap, useTrustLine } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
-import { useSwap } from '@/hooks/stellar/use-swap';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { useTrustLine } from '@/hooks/stellar/use-trustline';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';

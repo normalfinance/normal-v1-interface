@@ -5,7 +5,7 @@ import type { StatCardData } from '@/types/stat-card-data';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
-import { useBuffer, useOracle, useInsuranceFund } from '@/hooks/stellar';
+import { useBuffer, useOracle, useInsuranceFund } from '@/hooks';
 
 import Grid2 from '@mui/material/Grid2';
 import { Stack, useTheme, Typography } from '@mui/material';

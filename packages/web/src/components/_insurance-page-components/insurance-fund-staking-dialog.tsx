@@ -3,8 +3,8 @@
 import z from 'zod';
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { useInsuranceFund } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
-import { useInsuranceFund } from '@/hooks/stellar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';

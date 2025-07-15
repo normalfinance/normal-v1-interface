@@ -2,8 +2,8 @@
 
 import type { ExplorerChartData } from '@/components/_pool-page-components';
 
+import { usePool } from '@/hooks';
 import { useTranslate } from '@/locales';
-import { usePool } from '@/hooks/stellar/use-pool';
 import { DashboardContent } from '@/layouts/dashboard';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fPercent, fCurrencyCompact } from '@/utils/format-number';

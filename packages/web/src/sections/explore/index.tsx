@@ -4,9 +4,9 @@ import type { PoolRouterContract } from '@normalfinance/contracts';
 
 import { useTranslate } from '@/locales';
 import { useMemo, useEffect } from 'react';
+import { usePools, useTotalTVL } from '@/hooks';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
-import { usePools, useTotalTVL } from '@/hooks/stellar';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Grid2 from '@mui/material/Grid2';

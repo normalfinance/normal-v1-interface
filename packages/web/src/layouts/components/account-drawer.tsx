@@ -4,14 +4,13 @@ import type { Activity } from '@/types/activity';
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import { usePools } from '@/hooks';
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
-import { usePools } from '@/hooks/stellar';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-// import { useUserBalances } from '@/hooks/stellar/use-user-balances';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
