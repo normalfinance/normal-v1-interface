@@ -27,7 +27,7 @@ export async function getOraclePrice(oracle_id: string, token_id: string): Promi
     Address.fromString(token_id).toScVal(),
   ]);
   tx_builder.addOperation(new Contract(oracle_id).call('lastprice', asset));
-  const stellar_rpc = new rpc.Server(constants.RPC_URL, network.opts);
+  const stellar_rpc = new rpc.Server(constants.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
   if (rpc.Api.isSimulationSuccess(result)) {
     const xdr_str = result.result?.retval.toXDR('base64');
@@ -59,7 +59,31 @@ export async function getOracleDecimals(
     networkPassphrase: constants.NETWORK_PASSPHRASE,
   });
   tx_builder.addOperation(new Contract(oracle_id).call('decimals'));
-  const stellar_rpc = new rpc.Server(constants.RPC_URL, network.opts);
+  const stellar_rpc = new rpc.Server(constants.RPC_URL);
+  const result = await stellar_rpc.simulateTransaction(tx_builder.build());
+  if (rpc.Api.isSimulationSuccess(result)) {
+    const val = scValToNative(result.result.retval);
+    return {
+      decimals: val,
+      latestLedger: result.latestLedger,
+    };
+  } else {
+    throw new Error(`Failed to fetch oralce decimals: ${result.error}`);
+  }
+}
+
+
+
+
+export async function getPoolsInfo(
+): Promise<{ decimals: number; latestLedger: number }> {
+  const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
+    fee: '1000',
+    timebounds: { minTime: 0, maxTime: 0 },
+    networkPassphrase: constants.NETWORK_PASSPHRASE,
+  });
+  tx_builder.addOperation(new Contract(constants.POOL_ROUTER_ADDRESS).call('query_all_pools_details'));
+  const stellar_rpc = new rpc.Server(constants.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
   if (rpc.Api.isSimulationSuccess(result)) {
     const val = scValToNative(result.result.retval);

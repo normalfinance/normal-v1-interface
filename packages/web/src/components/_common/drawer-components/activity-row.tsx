@@ -5,7 +5,7 @@
 import type { Activity } from '@/types/activity';
 
 import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';

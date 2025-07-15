@@ -1,4 +1,4 @@
-import type { Token } from '@/types/token';
+import type { StateToken as Token } from '@normalfinance/types';
 
 // fee-info-accordion.tsx
 import React from 'react';
@@ -108,7 +108,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                 }}
               >
                 {t('Not enough')}
-                {sellToken.shortname}
+                {sellToken.symbol}
                 {t('to swap')}
               </Typography>
             </Box>

@@ -1,7 +1,7 @@
 'use client';
 
-import type { Token } from '@/types/token';
 import type { Activity } from '@/types/activity';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { useTabs } from 'minimal-shared/hooks';
@@ -197,7 +197,7 @@ export default function ConnectedWallet({
 
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'tokens' && <TokensTab tokens={tokens} />}
-      {tabs.value === 'pools' && <PoolsTab pools={pools} />}
+      {tabs.value === 'pools' && <PoolsTab pools={poolPositions} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
     </Stack>
   );

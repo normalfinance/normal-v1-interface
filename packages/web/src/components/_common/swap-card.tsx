@@ -1,10 +1,11 @@
 import type { CardProps } from '@mui/material';
-import type { Token } from '@normalfinance/types';
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { useSwap } from '@/hooks/stellar/use-swap';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { useTrustLine } from '@/hooks/stellar/use-trustline';
 import { getConversionText } from '@/utils/conversion-helpers';
@@ -27,7 +28,7 @@ interface SwapCardProps extends CardProps {
   swapFeeInfo?: SwapFeeInfo;
 }
 
-const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...other }) => {
+const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -69,7 +70,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
 
   // Compute the fiat value for the user's sell input
   const sellVal = parseFloat(amount) || 0;
-  const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.pricestatus : 0;
+  const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.usdValue : 0;
 
   // 5) Example of how much buyToken the user might get
   const [buyAmount, setBuyAmount] = useState<number>(0);
@@ -99,12 +100,15 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
 
     doSimulateSwap();
 
-    const buyTokenContractID = appStore.allTokens.find(
+    // const buyTokenContractID = appStore.allTokens.find(
+    //   (token: Token) => token.name === buyToken.name
+    // )?.contractId;
+    const buyTokenContractID = appStore.tokens.find(
       (token: Token) => token.name === buyToken.name
-    )?.contractId;
+    )?.id;
 
     if (storePersist.wallet.address) {
-      handleTrustLine(buyTokenContractID);
+      if (buyTokenContractID) handleTrustLine(buyTokenContractID);
     }
 
     // Simulate an async fetch with a 1s delay
@@ -112,10 +116,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
       setIsLoading(false);
       setQuoteFetched(true);
 
-      const potentialBuyAmount = sellVal * (sellToken.pricestatus / buyToken.pricestatus);
+      const potentialBuyAmount = sellVal * (sellToken.usdValue / buyToken.usdValue);
       setBuyAmount(potentialBuyAmount);
 
-      if (sellVal > sellToken.countstatus) {
+      if (sellVal > sellToken.balance) {
         setInsufficientBalance(true);
       }
     }, 1000);
@@ -193,7 +197,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
     }
     if (quoteFetched) {
       if (insufficientBalance) {
-        return `Insufficient ${sellToken.shortname}`;
+        return `Insufficient ${sellToken.symbol}`;
       }
       if (trustlineButtonActive) {
         return 'Add trustline';
@@ -225,28 +229,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
   // Max the sell token
   const handleMaxClick = () => {
     if (sellToken) {
-      setAmount(sellToken.countstatus.toString());
+      setAmount(sellToken.balance.toString());
     }
   };
-
-  // Effect hook to fetch all tokens once the component mounts
-  useEffect(() => {
-    const getAllTokens = async (): Promise<void> => {
-      setIsLoading(true);
-      try {
-        const allTokens = await appStore.getAllTokens();
-        setTokens(allTokens.slice(2));
-        setSellToken(allTokens[0]);
-        setBuyToken(allTokens[1]);
-        setIsLoading(false);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        appStore.setLoading(false);
-      }
-    };
-    getAllTokens();
-  }, []);
 
   /**
    * Executes the swap transaction.
@@ -255,9 +240,15 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
    * @async
    */
   const doSwap = useCallback(async (): Promise<void> => {
-    if (sellToken && buyToken && sellToken.address && buyToken.address) {
+    if (sellToken && buyToken && sellToken.id && buyToken.id) {
       try {
-        onSwap();
+        const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
+        const isBuy = buyToken.symbol !== 'XLM';
+        onSwap({
+          asset,
+          is_buy: isBuy,
+          in_amount: amount,
+        });
 
         // Wait for the next block and fetch token balances
         setTimeout(async () => {
@@ -288,7 +279,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
 
       setLoadingSimulate(true);
       try {
-        onEstimateSwap();
+        const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
+        const isBuy = buyToken.symbol !== 'XLM';
+
+        onEstimateSwap({
+          asset,
+          is_buy: isBuy,
+          in_amount: amount,
+        });
 
         // TODO: will fix errors below once relocated outside this component
         // if (poolInfo.result && tx.result) {
@@ -489,8 +487,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
                 sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
               >
                 <SwapSendPopupButton
-                  imgUrl={getCryptoIconUrl(sellToken.shortname)}
-                  label={sellToken.shortname}
+                  imgUrl={getCryptoIconUrl(sellToken.symbol)}
+                  label={sellToken.symbol}
                   onClick={() => {
                     setActiveButton('sell');
                     handleOpen();
@@ -525,7 +523,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
                         fontSize: '12px',
                       }}
                     >
-                      {sellToken.countstatus}{' '}
+                      {sellToken.balance}{' '}
                       <Box
                         component="span"
                         sx={{
@@ -534,7 +532,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
                             : theme.palette.text.primary,
                         }}
                       >
-                        {sellToken?.shortname}
+                        {sellToken?.symbol}
                       </Box>
                     </Typography>
                   </Box>
@@ -631,7 +629,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
                 overflow: 'visible',
               }}
             >
-              {buyToken ? `${fCurrency(buyToken.pricestatus * buyAmount)}` : '$0'}
+              {buyToken ? `${fCurrency(buyToken.usdValue * buyAmount)}` : '$0'}
             </Typography>
           </Box>
 
@@ -648,8 +646,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           >
             {buyToken ? (
               <SwapSendPopupButton
-                imgUrl={getCryptoIconUrl(buyToken.shortname)}
-                label={buyToken.shortname}
+                imgUrl={getCryptoIconUrl(buyToken.symbol)}
+                label={buyToken.symbol}
                 onClick={() => {
                   setActiveButton('buy');
                   handleOpen();

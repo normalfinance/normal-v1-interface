@@ -1,10 +1,10 @@
 'use client';
 
-import type { Token } from '@/types/token';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -38,7 +38,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
             <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
               <Box
                 component="img"
-                src={token.logo ?? getCryptoIconUrl(token.shortname)}
+                src={token.icon ?? getCryptoIconUrl(token.symbol)}
                 sx={{
                   width: 40,
                   height: 40,
@@ -76,7 +76,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                       fontSize: '12px',
                     }}
                   >
-                    {token.countstatus.toFixed(4)}
+                    {token.balance.toFixed(4)}
                   </Typography>
                   <Typography
                     variant="body2"
@@ -86,7 +86,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                       fontSize: '12px',
                     }}
                   >
-                    {token.shortname}
+                    {token.symbol}
                   </Typography>
                 </Box>
               </Box>
@@ -104,7 +104,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                   variant="body2"
                   sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                 >
-                  {fCurrency(token.countstatus * token.pricestatus)}
+                  {fCurrency(token.balance * token.usdValue)}
                 </Typography>
                 <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                   <Box

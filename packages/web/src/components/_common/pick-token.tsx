@@ -1,10 +1,10 @@
-import type { Token } from '@/types/token';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -45,7 +45,7 @@ const PickToken: React.FC<PickTokenProps> = ({
     const lowerTerm = searchTerm.toLowerCase();
     return (
       token.name.toLowerCase().includes(lowerTerm) ||
-      token.shortname.toLowerCase().includes(lowerTerm)
+      token.symbol.toLowerCase().includes(lowerTerm)
     );
   });
 
@@ -56,8 +56,8 @@ const PickToken: React.FC<PickTokenProps> = ({
 
   const featuredTokens = tokens.filter((token) => token.featured);
 
-  const ownedTokens = tokens.filter((token) => token.owned);
-  const unownedTokens = tokens.filter((token) => !token.owned);
+  const ownedTokens = tokens.filter((token) => token.balance > 0);
+  const unownedTokens = tokens.filter((token) => token.balance == 0);
   const arrangedTokens = [...ownedTokens, ...unownedTokens];
 
   return (
@@ -153,7 +153,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
-                      src={token.logo ?? getCryptoIconUrl(token.shortname)}
+                      src={token.logo ?? getCryptoIconUrl(token.symbol)}
                       sx={{
                         width: 40,
                         height: 40,
@@ -191,7 +191,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             fontSize: '12px',
                           }}
                         >
-                          {token.shortname}
+                          {token.symbol}
                         </Typography>
                         {!token.owned && token.address && (
                           <Typography
@@ -286,7 +286,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   >
                     <Box
                       component="img"
-                      src={token.logo ?? getCryptoIconUrl(token.shortname)}
+                      src={token.logo ?? getCryptoIconUrl(token.symbol)}
                       sx={{
                         width: 20,
                         height: 20,
@@ -298,7 +298,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       variant="body2"
                       sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                     >
-                      {token.shortname}
+                      {token.symbol}
                     </Typography>
                   </Button>
                 ))}
@@ -342,7 +342,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           >
                             <Box
                               component="img"
-                              src={token.logo ?? getCryptoIconUrl(token.shortname)}
+                              src={token.logo ?? getCryptoIconUrl(token.symbol)}
                               sx={{
                                 width: 40,
                                 height: 40,
@@ -372,7 +372,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                   fontSize: '12px',
                                 }}
                               >
-                                {token.shortname}
+                                {token.symbol}
                               </Typography>
                             </Box>
                           </Box>
@@ -439,7 +439,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
-                          src={token.logo ?? getCryptoIconUrl(token.shortname)}
+                          src={token.logo ?? getCryptoIconUrl(token.symbol)}
                           sx={{
                             width: 40,
                             height: 40,
@@ -477,7 +477,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 fontSize: '12px',
                               }}
                             >
-                              {token.shortname}
+                              {token.symbol}
                             </Typography>
                             {!token.owned && token.address && (
                               <Typography

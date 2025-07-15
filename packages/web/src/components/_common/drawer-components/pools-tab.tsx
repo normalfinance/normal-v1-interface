@@ -2,15 +2,13 @@
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
-import { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
-import { Avatar, Button, Stack, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Stack, Avatar, Button, Typography } from '@mui/material';
 
-import type { PoolDetails } from '../pools-explore/explorer-chart-data';
+import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
 
 export interface PoolsTabsProps {
   pools?: PoolDetails[];

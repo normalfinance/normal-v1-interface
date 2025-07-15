@@ -1,10 +1,8 @@
 'use client';
 
-import type { Token } from '@/types/token';
 import type { Activity } from '@/types/activity';
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
-import type { PoolDetails } from '@/components/_pool-page-components/pool-chart/pool-chart-data';
 
 import { useTranslate } from '@/locales';
 import { usePools } from '@/hooks/stellar';
@@ -12,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { useUserBalances } from '@/hooks/use-user-balances';
+// import { useUserBalances } from '@/hooks/stellar/use-user-balances';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
@@ -166,41 +164,43 @@ function WalletConnected({
   // pools?: PoolDetails[];
   activity?: Activity[];
 }) {
-  const { tokens } = useUserBalances();
+  // const { tokens } = useUserBalances();
+  const tokens: any[] = [];
 
   // Fetch LP tokens
-  const { pools } = usePools(true);
+  const { pools } = usePools();
 
-  const positions: PoolDetails[] = tokens
-    .map((token) => {
-      const match = pools.find((pool) => pool.asset_lp_share.address === token.contract);
+  // const positions: PoolDetails[] = tokens
+  //   .map((token) => {
+  //     const match = pools.find((pool) => pool.pool_response.token_share.address === token.contract);
 
-      if (match) {
-        const details: PoolDetails = {
-          poolInfo: {
-            tokenA: {
-              name: '',
-              iconUrl: '',
-            },
-            tokenB: {
-              name: '',
-              iconUrl: '',
-            },
-            address: match.address,
-            feeTier: match.pool.fee_fraction,
-          },
-          metadata: {
-            version: '1',
-          },
-          performance: {
-            position: 0,
-            fees: 0,
-          },
-        };
-        return details;
-      }
-    })
-    .filter((v) => v != null);
+  //     if (match) {
+  //       const details: PoolDetails = {
+  //         poolInfo: {
+  //           tokenA: {
+  //             name: '',
+  //             iconUrl: '',
+  //           },
+  //           tokenB: {
+  //             name: '',
+  //             iconUrl: '',
+  //           },
+  //           address: match.address,
+  //           feeTier: match.pool.fee_fraction,
+  //         },
+  //         metadata: {
+  //           version: '1',
+  //           feeTier: '3'
+  //         },
+  //         performance: {
+  //           position: 0,
+  //           fees: 0,
+  //         },
+  //       };
+  //       return details;
+  //     }
+  //   })
+  //   .filter((v) => v != null);
 
   return (
     <Box
@@ -220,7 +220,7 @@ function WalletConnected({
         balance={83.42}
         percentageChange={3.56}
         tokens={tokens}
-        pools={pools}
+        poolPositions={[]}
         activity={activity}
       />
     </Box>
@@ -269,8 +269,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [connectedAddress]);
 
   const [isConnected, setIsConnected] = useState(
-    connectedAddress != '' && connectedAddress != undefined
+    connectedAddress != ''
   );
+  // console.log(isConnected);
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
@@ -295,178 +296,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
       onOpen(); // open the drawer immediately
     }
   };
-
-  console.log(CURRENT_TOS_VERSION + 'CURRENT_TOS_VERSION');
-  console.log(disclaimerVersion + 'disclaimerVersion');
-
-  const { tokenBalancesResponse } = useUserBalances();
-
-  const tokens: Token[] = [
-    {
-      id: 1,
-      url: 'https://token-icons.s3.amazonaws.com/eth.png',
-      name: 'Ethereum',
-      shortname: 'ETH',
-      countstatus: 0.02106,
-      pricestatus: 2814.25,
-      featured: true,
-      percentageChange: 3.45,
-    },
-    {
-      id: 2,
-      url: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694',
-      name: 'USDC',
-      shortname: 'USDC',
-      countstatus: 1444,
-      pricestatus: 0.9998,
-      featured: true,
-      percentageChange: 3.45,
-    },
-    {
-      id: 3,
-      url: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
-      name: 'Tether',
-      shortname: 'USDT',
-      countstatus: 1231,
-      pricestatus: 0.9999,
-      featured: true,
-      percentageChange: 3.45,
-    },
-    {
-      id: 4,
-      url: 'https://coin-images.coingecko.com/coins/images/7598/large/wrapped_bitcoin_wbtc.png?1696507857',
-      name: 'Wrapped Bitcoin',
-      shortname: 'WBTC',
-      countstatus: 0.2,
-      pricestatus: 95799.17,
-      featured: true,
-      percentageChange: 3.45,
-    },
-    {
-      id: 5,
-      url: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png',
-      name: 'Wrapped Ether',
-      shortname: 'WETH',
-      countstatus: 0.4,
-      pricestatus: 2806.75,
-      featured: true,
-      percentageChange: -3.45,
-    },
-    {
-      id: 6,
-      url: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png',
-      name: 'Wrapped Ether',
-      shortname: 'WETH',
-      countstatus: 1.2,
-      pricestatus: 2806.75,
-      featured: false,
-      percentageChange: 3.45,
-    },
-  ];
-
-  const activity: Activity[] = [
-    {
-      id: 1,
-      type: 'Sent',
-      timestamp: Date.now() - 60_000,
-      address: 'GABCDQWERTY1234567890EXAMPLEADDRESS1111',
-      asset: {
-        token: 'USDC',
-        iconUrl: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png',
-        amount: 250,
-      },
-    },
-    {
-      id: 2,
-      type: 'Received',
-      timestamp: Date.now() - 50_000,
-      address: 'GXYZASDFGH9876543210EXAMPLEADDRESS2222',
-      asset: {
-        token: 'BTC',
-        iconUrl: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png',
-        amount: 0.015,
-      },
-    },
-    {
-      id: 3,
-      type: 'Swapped',
-      timestamp: Date.now() - 40_000,
-      sell: {
-        token: 'ETH',
-        iconUrl: 'https://token-icons.s3.amazonaws.com/eth.png',
-        amount: 0.5,
-      },
-      buy: {
-        token: 'USDC',
-        iconUrl: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png',
-        amount: 1500,
-      },
-    },
-    {
-      id: 4,
-      type: 'Add Liquidity',
-      timestamp: Date.now() - 30_000,
-      lpToken: {
-        token: 'UNI-ETH/USDC-LP',
-        iconUrl: '/assets/icons/lp.svg',
-        amount: 12.34,
-      },
-    },
-    {
-      id: 5,
-      type: 'Remove Liquidity',
-      timestamp: Date.now() - 20_000,
-      lpToken: {
-        token: 'UNI-ETH/USDC-LP',
-        iconUrl: '/assets/icons/lp.svg',
-        amount: 4.56,
-      },
-    },
-    {
-      id: 6,
-      type: 'Stake',
-      timestamp: Date.now() - 10_000,
-      asset: {
-        token: 'NORMAL',
-        iconUrl: '/assets/icons/normal.svg',
-        amount: 2000,
-      },
-    },
-    {
-      id: 7,
-      type: 'Unstake',
-      timestamp: Date.now() - 5_000,
-      asset: {
-        token: 'NORMAL',
-        iconUrl: '/assets/icons/normal.svg',
-        amount: 500,
-      },
-    },
-  ];
-
-  const pools: PoolDetails[] = [
-    {
-      pairInfo: {
-        tokenA: {
-          name: 'USDC',
-          iconUrl: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694',
-        },
-        tokenB: {
-          name: 'ETH',
-          iconUrl: 'https://token-icons.s3.amazonaws.com/eth.png',
-        },
-        address: '0x88e6...5640',
-      },
-      metadata: {
-        version: 'v1',
-        feeTier: '0.30%',
-      },
-      performance: {
-        position: 220.12,
-        fees: 21.22,
-      },
-    },
-  ];
 
   return (
     <>
@@ -531,7 +360,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           {isConnected ? (
             <WalletConnected
               address={connectedAddress!}
-              activity={activity}
+              activity={[]}
               onDisconnect={() => {
                 disconnect();
                 onClose();

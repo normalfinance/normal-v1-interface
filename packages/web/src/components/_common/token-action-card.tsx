@@ -1,9 +1,10 @@
-import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { StateToken as Token } from '@normalfinance/types';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTabs } from 'minimal-shared/hooks';
+import { useAppStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -68,6 +69,8 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 }) => {
   const theme = useTheme();
 
+  const store = useAppStore();
+
   // Determine which tabs are active for this instance ------------------
   const activeTabs = React.useMemo<ActionConfig[]>(
     () => ALL_TABS.filter((tab) => !enabledTabs || enabledTabs.includes(tab.value)),
@@ -83,19 +86,41 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   // Initialise the tab hook with the first available tab --------------
   const tabs = useTabs(activeTabs[0].value as TokenActionKey);
 
+  const buyCardTokens = React.useMemo<Token[]>(
+    () => store.tokens.filter((t) => t.symbol === 'XLM' || t.symbol === 'USDC'),
+    [store.tokens]
+  );
+
   // Helper – render the body matching the active tab -------------------
   const renderTabBody = () => {
     switch (tabs.value) {
       case 'swap':
-        return <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />;
+        return <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} />;
       case 'send':
-        return <SendCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />;
+        return <SendCard tokensList={store.tokens} networkCost={0} />;
       case 'buy':
-        return <BuyCard tokensList={tokensList} cashBalance={cashBalance} />;
+        return <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} />;
       default:
         return null;
     }
   };
+
+  // Effect hook to fetch all tokens once the component mounts
+  useEffect(() => {
+    const getAllTokens = async (): Promise<void> => {
+      store.setLoading(true);
+      try {
+        const allTokens = await store.getAllTokens();
+
+        store.setLoading(false);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        store.setLoading(false);
+      }
+    };
+    getAllTokens();
+  }, []);
 
   return (
     <Card

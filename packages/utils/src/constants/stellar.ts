@@ -1,8 +1,8 @@
 import { Account } from '@stellar/stellar-sdk';
 
 export const TESTING_SOURCE: Account = new Account(
-  'GBUHRWJBXS4YAEOVDRWFW6ZC5LLF2SAOMATH4I6YOTZYHE65FQRFOKG2',
-  '1'
+  'GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO',
+  '123'
 );
 
 /**
@@ -13,14 +13,13 @@ export const NETWORK_PASSPHRASE: string = 'Public Global Stellar Network ; Septe
 /**
  * The Soroban RPC endpoint used to initialize this library.
  */
-export const RPC_URL: string =
-  'https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0';
+export const RPC_URL: string = 'https://soroban-testnet.stellar.org';
 
 /**
  * Pool Router contract address
  */
 export const POOL_ROUTER_ADDRESS: string =
-  'CCXBQN3K64UDQZL7YCAS7CFCJP3UQH6BJNNRH26PX5WI5JKKHFF5UBSZ';
+  'CC2CCFGMCEH7XJ34WXHIQ3MDRLPMF6UVELDL4MTX5X5DSZSG6DH24ZM5';
 
 /**
  * Pool Swap Fee contract address
