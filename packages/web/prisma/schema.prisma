@@ -1,0 +1,84 @@
+// Prisma schema for referral tracking system
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Can be changed to "sqlite" for local dev
+  url      = env("DATABASE_URL")
+}
+
+// User model - identified by wallet address
+model User {
+  id              String   @id @default(cuid())
+  walletAddress   String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Referral relationships
+  referralsGiven  Referral[] @relation("Referrer")
+  referralsReceived Referral[] @relation("Referee")
+  
+  // Actions performed by this user
+  actions         ReferralAction[]
+  
+  @@map("users")
+}
+
+// Referral relationship model
+model Referral {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationship
+  referrerId    String
+  referrer      User     @relation("Referrer", fields: [referrerId], references: [id])
+  
+  refereeId     String?
+  referee       User?    @relation("Referee", fields: [refereeId], references: [id])
+  
+  // Status tracking
+  isActive      Boolean  @default(true)
+  isUsed        Boolean  @default(false)
+  usedAt        DateTime?
+  
+  // Metadata
+  source        String?  // Where the referral came from (e.g., "twitter", "telegram")
+  campaign      String?  // Campaign identifier
+  
+  // Actions performed for this referral
+  actions       ReferralAction[]
+  
+  @@map("referrals")
+}
+
+// Individual referral actions/events
+model ReferralAction {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  referralId  String
+  referral    Referral @relation(fields: [referralId], references: [id])
+  
+  // Action details
+  action      String   // "signup", "first_swap", "first_liquidity", etc.
+  amount      String?  // Optional amount for financial actions
+  tokenSymbol String?  // Optional token symbol for swap/liquidity actions
+  
+  // Metadata
+  metadata    Json?    // Additional action-specific data
+  
+  @@unique([userId, referralId, action]) // Prevent duplicate actions per user per referral
+  @@map("referral_actions")
+}
+
+// Indexes for performance
+// Index on wallet address for fast user lookups
+// Index on referral code for fast referral lookups
+// Index on action type for analytics 
