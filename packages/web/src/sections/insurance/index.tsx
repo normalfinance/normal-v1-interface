@@ -4,7 +4,7 @@ import type { StatCardData } from '@/types/stat-card-data';
 
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
-import { fRawPercent, fShortenNumber } from '@/utils/format-number';
+import { fCurrency, fRawPercent } from '@/utils/format-number';
 import { useBuffer, useOracle, useInsuranceFund } from '@/hooks/stellar';
 
 import Grid2 from '@mui/material/Grid2';
@@ -28,6 +28,7 @@ export default function InsuranceView() {
   const { loading, error, buffer } = useBuffer();
 
   const { loading: loadingPrice, error: priceError, price: xlmPrice } = useOracle('XLM');
+  console.log(xlmPrice);
 
   // Stat card data array
   const statCardsData: StatCardData[] = [
@@ -35,30 +36,30 @@ export default function InsuranceView() {
       title: 'Normal Buffer',
       percent: 0,
       total: buffer?.reserve.balance || 0,
-      formatter: fShortenNumber,
+      formatter: fCurrency,
       chartType: 'bar',
       displayChart: true,
       chart: {
         colors: [theme.palette.success.light, theme.palette.success.main],
-        categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        series: [139390, 134590, 149390, 169390, 139390, 179390, 149390],
+        categories: ['Current'],
+        series: [139390],
       },
     },
     {
       title: 'Normal Insurance Fund',
       percent: 0,
       total: ifBalance || 0,
-      formatter: fShortenNumber,
+      formatter: fCurrency,
       chartType: 'bar',
       displayChart: true,
       chart: {
         colors: [theme.palette.info.light, theme.palette.info.main],
-        categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        series: [24930, 34930, 64930, 74930, 24930, 54930, 74930],
+        categories: ['Current'],
+        series: [24930],
       },
     },
     {
-      title: 'Current Insurance Fund Yield',
+      title: 'Insurance Staking Yield',
       percent: 0,
       total: insuranceFund?.current_rate || 0,
       formatter: fRawPercent,
@@ -66,8 +67,8 @@ export default function InsuranceView() {
       displayChart: true,
       chart: {
         colors: [theme.palette.warning.light, theme.palette.warning.main],
-        categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        series: [2.981, 7.981, 7.981, 10, 4.981, 3.981, 7.981],
+        categories: ['Current'],
+        series: [2.981],
       },
     },
   ];
@@ -82,7 +83,7 @@ export default function InsuranceView() {
         </Typography>
         <Typography variant="body1" color="text.secondary">
           {t(
-            'Review how insured the Normal Protocol is and earn yield by providing additional funds'
+            "Stake XLM into the Insurance Fund and earn a portion of the fees from swaps. The Insurance Fund is the protocol's backstop to maintaining the solvency of the protocol."
           )}
         </Typography>
       </Stack>
@@ -101,13 +102,6 @@ export default function InsuranceView() {
           </Grid2>
         ))}
       </Grid2>
-      <Stack sx={{ mt: 3, maxWidth: '976px', mx: 'auto', px: 2 }} textAlign="center">
-        <Typography variant="body1" color="text.secondary">
-          {t(
-            'Insurance covering protocol debt is covered first by the Normal Buffer, which receives a portion of protocol revenue, and then by the Normal Insurance Fund, which pays yield to 3rd party liquidity providers.'
-          )}
-        </Typography>
-      </Stack>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 4 }}>
           <StakeBalance
@@ -118,10 +112,9 @@ export default function InsuranceView() {
           />
         </Grid2>
 
-        <Grid2 size={{ xs: 12, md: 8 }} />
-      </Grid2>
-      <Grid2 sx={{ mt: 3 }}>
-        <InsuranceActionsTable />
+        <Grid2 size={{ xs: 12, md: 8 }}>
+          <InsuranceActionsTable />
+        </Grid2>
       </Grid2>
     </DashboardContent>
   );

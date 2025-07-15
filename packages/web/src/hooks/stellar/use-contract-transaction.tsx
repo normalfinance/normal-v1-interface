@@ -11,11 +11,7 @@ import { Signer } from '@normalfinance/utils/build/stellar';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
-import {
-  NormalPoolContract,
-  SorobanTokenContract,
-  NormalPoolRouterContract,
-} from '@normalfinance/contracts';
+import { PoolContract, PoolRouterContract, SorobanTokenContract } from '@normalfinance/contracts';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -26,15 +22,15 @@ import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
 type ContractType = 'pool' | 'pool_router' | 'token';
 
 const contractClients = {
-  pool: NormalPoolContract.Client,
-  pool_router: NormalPoolRouterContract.Client,
+  pool: PoolContract.Client,
+  pool_router: PoolRouterContract.Client,
   token: SorobanTokenContract.Client,
 };
 
 type ContractClientType<T extends ContractType> = T extends 'pool'
-  ? NormalPoolContract.Client
+  ? PoolContract.Client
   : T extends 'pool_router'
-    ? NormalPoolRouterContract.Client
+    ? PoolRouterContract.Client
     : T extends 'token'
       ? SorobanTokenContract.Client
       : never;

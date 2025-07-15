@@ -6,7 +6,6 @@ import { fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import { Divider } from '@mui/material';
 import Button from '@mui/material/Button';
 
 import InsuranceFundStakingDialog from './insurance-fund-staking-dialog';
@@ -63,8 +62,6 @@ export function StakeBalance({ sx, title, yieldPercent, staked, currentBalance, 
         {rowsToRender.map((r, i) => (
           <Box key={i}>{row(r.label, r.value, r.formatter)}</Box>
         ))}
-
-        <Divider />
 
         <Box sx={{ gap: 2, display: 'flex' }}>
           <Button fullWidth variant="contained" color="primary" onClick={manageStake.onTrue}>

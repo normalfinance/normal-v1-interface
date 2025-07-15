@@ -73,12 +73,10 @@ export default function InsuranceFundStakingDialog({
     },
   });
 
-  
-
   return (
     <FormProvider {...methods}>
       <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-        <Content  />
+        <Content />
       </Dialog>
     </FormProvider>
   );
@@ -116,11 +114,11 @@ export const Content: React.FC<ContentProps> = () => {
   const fiatValue = 0;
 
   const handleStake = () => {
-    onDeposit({ amount: 0 });
+    onDeposit({ amount });
   };
 
   const handleRequestUnstake = () => {
-    onRequestWithdraw({ amount: 0 });
+    onRequestWithdraw({ amount });
   };
 
   return (
@@ -131,7 +129,6 @@ export const Content: React.FC<ContentProps> = () => {
           sx={{
             width: 1,
             zIndex: 9,
-            px: { md: 3 },
             display: 'flex',
             bgcolor: 'background.paper',
             justifyContent: { xs: 'center', md: 'flex-start' },
@@ -146,7 +143,8 @@ export const Content: React.FC<ContentProps> = () => {
 
         {/* Content */}
         <Alert
-          severity="info"
+          sx={{ mt: 3 }}
+          severity="warning"
           title={
             selectedTab == 'stake'
               ? t(
@@ -167,6 +165,7 @@ export const Content: React.FC<ContentProps> = () => {
             flexDirection: 'column',
             alignItems: 'flex-start', // (default is fine)
             justifyContent: 'space-between',
+            mt: 3,
           }}
         >
           <Controller
