@@ -2,7 +2,8 @@ name: i18n Sync
 
 on:
   push:
-    branches: [main, develop]
+    branches: 
+      - '**'
     paths:
       - 'packages/web/src/**/*.{js,jsx,ts,tsx}'
       - 'packages/web/src/locales/langs/en/**/*.json'
