@@ -84,15 +84,18 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
             pairInfo={{
               tokenA: {
                 name: pool.pool_response.pool.base_asset,
-                iconUrl: getCryptoIconUrl(pool.pool_response.pool.base_asset, false),
+                iconUrl: getCryptoIconUrl(pool.pool_response.pool.base_asset),
               },
               tokenB: {
                 name: pool.pool_response.pool.quote_asset,
-                iconUrl: getCryptoIconUrl(pool.pool_response.pool.quote_asset, false),
+                iconUrl: getCryptoIconUrl(pool.pool_response.pool.quote_asset),
               },
               address: poolAddress,
             }}
-            metadata={{ version: 'v1', feeTier: fPercent(pool.pool_response.pool.fee_fraction / 100) }}
+            metadata={{
+              version: 'v1',
+              feeTier: fPercent(pool.pool_response.pool.fee_fraction / 100),
+            }}
             exchangeRate={{
               label: `1 ${pool.pool_response.pool.base_asset} = 2,304.28 ${pool.pool_response.pool.quote_asset}`,
               usdEquivalent: '$2,289.11',

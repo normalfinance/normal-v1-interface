@@ -32,7 +32,7 @@ export default function AssetAvatarGroup({ assets, size, max, fontSize }: Props)
       }}
     >
       {assets.map((asset) => (
-        <Avatar key={asset} alt={asset} src={getCryptoIconUrl(asset, false)} />
+        <Avatar key={asset} alt={asset} src={getCryptoIconUrl(asset)} />
       ))}
     </AvatarGroup>
   );
