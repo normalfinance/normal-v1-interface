@@ -1,6 +1,7 @@
 'use client';
 
 import type { TransactionDetails } from '@/types/transaction';
+import type { SorobanTokenContract } from '@normalfinance/contracts';
 import type { AppStore, AppStorePersist } from '@normalfinance/types';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 
@@ -11,7 +12,14 @@ import { Signer } from '@normalfinance/utils/build/stellar';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
-import { PoolContract, PoolRouterContract, SorobanTokenContract } from '@normalfinance/contracts';
+import {
+  PoolContract,
+  BufferContract,
+  PoolRouterContract,
+  PoolSwapFeeContract,
+  InsuranceFundContract,
+  OracleRegistryContract,
+} from '@normalfinance/contracts';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -19,21 +27,39 @@ import Button from '@mui/material/Button';
 import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
 
 // Define Contract Types
-type ContractType = 'pool' | 'pool_router' | 'token';
+type ContractType =
+  | 'oracle_registry'
+  | 'pool_swap_fee'
+  | 'pool'
+  | 'pool_router'
+  | 'buffer'
+  | 'insurance_fund'
+  | 'token';
 
 const contractClients = {
+  oracle_registry: OracleRegistryContract.Client,
+  pool_swap_fee: PoolSwapFeeContract.Client,
   pool: PoolContract.Client,
   pool_router: PoolRouterContract.Client,
-  token: SorobanTokenContract.Client,
+  buffer: BufferContract.Client,
+  insuranceFund: InsuranceFundContract.Client,
 };
 
-type ContractClientType<T extends ContractType> = T extends 'pool'
-  ? PoolContract.Client
-  : T extends 'pool_router'
-    ? PoolRouterContract.Client
-    : T extends 'token'
-      ? SorobanTokenContract.Client
-      : never;
+type ContractClientType<T extends ContractType> = T extends 'oracle_registry'
+  ? OracleRegistryContract.Client
+  : T extends 'pool_swap_fee'
+    ? PoolSwapFeeContract.Client
+    : T extends 'pool'
+      ? PoolContract.Client
+      : T extends 'pool_router'
+        ? PoolRouterContract.Client
+        : T extends 'buffer'
+          ? BufferContract.Client
+          : T extends 'insurance_fund'
+            ? InsuranceFundContract.Client
+            : T extends 'token'
+              ? SorobanTokenContract.Client
+              : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;
