@@ -17,6 +17,7 @@ export interface SingleStat {
   title: string;
   total: number;
   percent: number;
+  formatter: (value: number) => string;
 }
 
 export interface ExploreStatsProps {
@@ -37,7 +38,7 @@ export default function ExploreStats({ stats, sx }: ExploreStatsProps) {
           divider={<Divider orientation="vertical" flexItem sx={{ borderStyle: 'dashed' }} />}
         >
           {stats.map((s) => (
-            <ExploreStat key={s.title} title={s.title} total={s.total} percent={s.percent} />
+            <ExploreStat key={s.title} title={s.title} total={s.total} percent={s.percent} formatter={s.formatter} />
           ))}
         </Stack>
       </Scrollbar>

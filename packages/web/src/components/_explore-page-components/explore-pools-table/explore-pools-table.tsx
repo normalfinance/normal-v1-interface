@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { IMarketTableFilters } from '@/types/marketTable';
@@ -7,7 +6,7 @@ import type { TableHeadCellProps } from '@/components/template/table';
 import { useState } from 'react';
 import { useSetState } from 'minimal-shared/hooks';
 
-import { Card, Table, Divider, TableBody } from '@mui/material';
+import { Card, Table, TableBody } from '@mui/material';
 
 import { Scrollbar } from '@/components/template/scrollbar';
 import {
@@ -17,11 +16,12 @@ import {
   getComparator,
   TableEmptyRows,
   TableHeadCustom,
-  TablePaginationCustom,
 } from '@/components/template/table';
 
 import { ExplorePoolsTableRow } from './components/explore-pools-table-row';
 import { ExplorePoolsTableToolbar } from './components/explore-pools-toolbar';
+
+import type { ExplorePoolsRow } from './components/explore-pools-table-row';
 
 /* ------------------------------------------------------------------ */
 /* columns                                                             */
@@ -31,48 +31,29 @@ type HeadCell = TableHeadCellProps;
 
 const TABLE_HEAD: HeadCell[] = [
   { id: 'rank', label: '#', width: 64, align: 'left' },
-  { id: 'name', label: 'Name', width: 160 },
-  { id: 'price', label: 'Price', align: 'left' },
-  { id: 'change1h', label: '1 H', align: 'left' },
-  { id: 'change1d', label: '1 D', align: 'left' },
-  { id: 'fdv', label: 'FDV', align: 'left' },
-  { id: 'volume24h', label: 'Volume', align: 'left' },
-  { id: 'spark', label: '1 D Chart', width: 120, align: 'center' },
+  { id: 'pool', label: 'Pool', width: 160 },
+  { id: 'fee', label: 'Fee Tier', align: 'left' },
+  { id: 'tvl', label: 'TVL', align: 'left' },
+  { id: 'apr', label: 'Pool APR', align: 'left' },
+  { id: 'volume1d', label: '1D vol', align: 'left' },
+  { id: 'volume30d', label: '30D vol', align: 'left' },
+  { id: 'ratio', label: '1D vol/TVL', width: 120, align: 'center' },
 ];
-
-/* ------------------------------------------------------------------ */
-/* row model                                                           */
-/* ------------------------------------------------------------------ */
-
-export interface Market {
-  id: string;
-  rank: number;
-  name: string;
-  symbol: string;
-  iconUrl: string;
-  price: number;
-  change1h: number;
-  change1d: number;
-  fdv: number;
-  volume24h: number;
-  spark: { series: number[]; categories: string[]; colors: string[] };
-  url: string;
-}
 
 /* ------------------------------------------------------------------ */
 /* component                                                           */
 /* ------------------------------------------------------------------ */
 
 export interface ExplorePoolsTableProps {
-  pools: Market[];
+  pools: ExplorePoolsRow[];
 }
 
 export function ExplorePoolsTable({ pools }: ExplorePoolsTableProps) {
   /* ----- table helpers -------------------------------------------------- */
-  const table = useTable({ defaultRowsPerPage: 20 });
+  const table = useTable({ defaultRowsPerPage: 30 });
 
   /* ----- full dataset --------------------------------------------------- */
-  const [tableData] = useState<Market[]>(pools);
+  const [tableData, setTableData] = useState<ExplorePoolsRow[]>(pools);
 
   /* ----- search filter state ------------------------------------------- */
   const filters = useSetState<IMarketTableFilters>({
@@ -84,11 +65,12 @@ export function ExplorePoolsTable({ pools }: ExplorePoolsTableProps) {
 
   /* ----- sorting -------------------------------------------------------- */
   /** only numeric sortable keys */
-  type SortableKeys = 'rank' | 'price' | 'change1h' | 'change1d' | 'fdv' | 'volume24h';
+  // type SortableKeys = 'rank' | 'price' | 'change1h' | 'change1d' | 'fdv' | 'volume24h';
+  type SortableKeys = 'tvl' | 'apr' | 'volume1d' | 'volume30d' | 'ratio';
 
   const comparator = getComparator<SortableKeys>(table.order, table.orderBy as SortableKeys) as (
-    a: Market,
-    b: Market
+    a: ExplorePoolsRow,
+    b: ExplorePoolsRow
   ) => number;
 
   /* ----- apply search + sort ------------------------------------------- */
@@ -117,12 +99,6 @@ export function ExplorePoolsTable({ pools }: ExplorePoolsTableProps) {
             rowCount={dataFiltered.length}
             numSelected={table.selected.length}
             onSort={table.onSort}
-            onSelectAllRows={(checked) =>
-              table.onSelectAllRows(
-                checked,
-                dataFiltered.map((row) => row.id) // ids used by <TableHeadCustom>
-              )
-            }
           />
 
           {/* body ── unchanged */}
@@ -132,8 +108,8 @@ export function ExplorePoolsTable({ pools }: ExplorePoolsTableProps) {
                 table.page * table.rowsPerPage,
                 table.page * table.rowsPerPage + table.rowsPerPage
               )
-              .map((row) => (
-                <ExplorePoolsTableRow key={row.id} row={row} />
+              .map((row, index) => (
+                <ExplorePoolsTableRow key={row.address} row={row} index={index + 1} />
               ))}
 
             <TableEmptyRows
@@ -145,19 +121,6 @@ export function ExplorePoolsTable({ pools }: ExplorePoolsTableProps) {
           </TableBody>
         </Table>
       </Scrollbar>
-
-      <Divider />
-
-      {/* pagination */}
-      <TablePaginationCustom
-        count={dataFiltered.length}
-        page={table.page}
-        rowsPerPage={table.rowsPerPage}
-        onPageChange={table.onChangePage}
-        onRowsPerPageChange={table.onChangeRowsPerPage}
-        dense={table.dense}
-        onChangeDense={table.onChangeDense}
-      />
     </Card>
   );
 }
@@ -171,13 +134,17 @@ function applyFilter({
   comparator,
   nameFilter,
 }: {
-  data: Market[];
-  comparator: (a: Market, b: Market) => number;
+  data: ExplorePoolsRow[];
+  comparator: (a: ExplorePoolsRow, b: ExplorePoolsRow) => number;
   nameFilter: string;
 }) {
   // --- filter by name ----------------------------------------------------
   const out = nameFilter
-    ? data.filter((m) => m.name.toLowerCase().includes(nameFilter.toLowerCase()))
+    ? data.filter((m) =>
+        `${m.tokenAName.toLowerCase()}/${m.tokenBName.toLowerCase()}`.includes(
+          nameFilter.toLowerCase()
+        )
+      )
     : data;
 
   // --- stable-sort -------------------------------------------------------

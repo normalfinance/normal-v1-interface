@@ -2,6 +2,7 @@ import type { UseSetStateReturn } from 'minimal-shared/hooks';
 import type { IMarketTableFilters } from '@/types/marketTable';
 
 import { useCallback } from 'react';
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
+  const { t } = useTranslate();
   const { state: currentFilters, setState: updateFilters } = filters;
 
   const handleFilterName = useCallback(
@@ -51,7 +53,7 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
           fullWidth
           value={currentFilters.name}
           onChange={handleFilterName}
-          placeholder="Search..."
+          placeholder={t('Search pools...')}
           slotProps={{
             input: {
               startAdornment: (

@@ -1,6 +1,6 @@
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
-import { fPercent, fShortenNumber } from '@/utils/format-number';
+import { fPercent } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -15,9 +15,10 @@ type Props = {
   title: string;
   total: number;
   percent: number;
+  formatter: (value: number) => string;
 };
 
-export function ExploreStat({ title, total, percent }: Props) {
+export function ExploreStat({ title, total, percent, formatter }: Props) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -39,8 +40,7 @@ export function ExploreStat({ title, total, percent }: Props) {
         </Typography>
 
         <Box component="span" sx={{ color: 'text.primary', typography: 'h4' }}>
-          {t('$')}
-          {fShortenNumber(total)}
+          {formatter(total)}
         </Box>
         <Stack direction="row" spacing={0.5} alignItems="center">
           <Box
