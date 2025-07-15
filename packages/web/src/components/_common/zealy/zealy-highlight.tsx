@@ -90,9 +90,11 @@ const ZealyHighlight: React.FC<ZealyHighlightProps> = ({
     <>
       {/* Badge */}
       <Wrapper sx={{ top: offset, right: offset }}>
+        <Tooltip title="View quest">
         <PulseButton title="Earn Zealy XP" $diameter={sizePx} onClick={() => setOpen(true)}>
           <HelpOutlineIcon />
         </PulseButton>
+        </Tooltip>
       </Wrapper>
 
       {/* Dialog */}
