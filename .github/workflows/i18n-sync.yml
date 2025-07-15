@@ -4,9 +4,9 @@ on:
   push:
     branches: 
       - '**'
-    paths:
-      - 'packages/web/src/**/*.{js,jsx,ts,tsx}'
-      - 'packages/web/src/locales/langs/en/**/*.json'
+    # paths:
+    #   - 'packages/web/src/**/*.{js,jsx,ts,tsx}'
+    #   - 'packages/web/src/locales/langs/en/**/*.json'
   
 
   
