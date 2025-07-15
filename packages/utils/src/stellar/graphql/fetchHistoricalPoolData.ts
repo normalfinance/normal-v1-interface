@@ -10,6 +10,7 @@ const GET_POOL_HISTORY = gql`
       amountIn
       amountOut
       timestamp
+      txHash
     }
     liquidity_deposits(orderBy: timestamp_DESC, filter: { contractId: { equalTo: $contractId } }) {
       user
