@@ -305,7 +305,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
                 <Box component="span">{sendToken?.balance}</Box>{' '}
                 <Box component="span" sx={{ color: theme.palette.text.secondary }}>
                   {t('(')}
-                  {fCurrency((sendToken?.balance ?? 0) * (sendToken?.usdValue ?? 0))}
+                  {fCurrency(Number(sendToken?.balance ?? 0) * (sendToken?.usdValue ?? 0))}
                   {t(')')}
                 </Box>
               </Typography>
@@ -327,7 +327,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
               onClick={(e) => {
                 e.stopPropagation();
                 if (sendToken) {
-                  setAmount(getMaxAmount(sendToken.balance, sendToken.usdValue, isFiatMode));
+                  setAmount(getMaxAmount(Number(sendToken.balance), sendToken.usdValue, isFiatMode));
                 }
               }}
             >

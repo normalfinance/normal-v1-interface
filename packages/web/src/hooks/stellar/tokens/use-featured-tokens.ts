@@ -19,7 +19,7 @@ export const useFeaturedTokens = () => {
 
 export const fetchFeaturedTokens = async () => {
   const { data } = await axios.get(
-    'https://raw.githubusercontent.com/soroswap/token-list/main/tokenList.json'
+    'https://raw.githubusercontent.com/normalfinance/token-list/main/tokenList.json'
   );
 
   return data;

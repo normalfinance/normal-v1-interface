@@ -107,8 +107,8 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {t('Not enough')}
-                {sellToken.symbol}
+                {t('Not enough')}&nbsp;
+                {sellToken.symbol}&nbsp;
                 {t('to swap')}
               </Typography>
             </Box>
@@ -146,7 +146,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     fontSize: '12px',
                   }}
                 >
-                  {t('Fee')}
+                  {t('Fee')}&nbsp;
                   <Box component="span">
                     {t('(')}
                     {poolFee}

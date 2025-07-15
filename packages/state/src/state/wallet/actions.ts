@@ -132,7 +132,7 @@ export const createWalletActions = (
 
             ...token,
             name: token?.symbol === 'native' ? 'XLM' : token?.symbol,
-            icon: getCryptoIconUrl(token?.symbol === 'native' ? 'XLM' : token?.symbol, false),
+            icon: getCryptoIconUrl(token?.symbol === 'native' ? 'XLM' : token?.symbol),
             // amount: Number(token?.balance) / 10 ** token?.decimals,
             usdValue: Number(Number(price.last_oracle_price).toFixed(2)),
             featured: false,

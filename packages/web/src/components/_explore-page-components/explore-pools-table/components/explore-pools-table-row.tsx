@@ -47,11 +47,6 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       {/* Name + symbol + avatar ------------------------------------ */}
       <TableCell sx={{ minWidth: 160 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          {/* <Avatar
-            src={getCryptoIconUrl(row.symbol)}
-            alt={row.symbol}
-            sx={{ width: 24, height: 24 }}
-          /> */}
           <PoolTokensAvatarGroup tokenAName={row.tokenAName} tokenBName={row.tokenBName} />
           <Stack>
             <Typography variant="subtitle2">{`${row.tokenAName} / ${row.tokenBName}`}</Typography>
