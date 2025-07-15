@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
-import { keyframes, styled } from '@mui/system';
+import React, { useState, useEffect } from 'react';
+
+import { styled, keyframes } from '@mui/system';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { Box, Dialog, Tooltip, IconButton, DialogTitle, DialogContent } from '@mui/material';
 
 export type ZealyHighlightProps = {
   questId: string;
@@ -91,9 +92,9 @@ const ZealyHighlight: React.FC<ZealyHighlightProps> = ({
       {/* Badge */}
       <Wrapper sx={{ top: offset, right: offset }}>
         <Tooltip title="View quest">
-        <PulseButton title="Earn Zealy XP" $diameter={sizePx} onClick={() => setOpen(true)}>
-          <HelpOutlineIcon />
-        </PulseButton>
+          <PulseButton title="Earn Zealy XP" $diameter={sizePx} onClick={() => setOpen(true)}>
+            <HelpOutlineIcon />
+          </PulseButton>
         </Tooltip>
       </Wrapper>
 

@@ -9,6 +9,7 @@ import React, { useEffect } from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { useTabs } from 'minimal-shared/hooks';
 import { useAppStore } from '@normalfinance/state';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -20,9 +21,8 @@ import { alpha, useTheme } from '@mui/material/styles';
 import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
-import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 import ZealyHighlight from './zealy/zealy-highlight';
-import { ZEALY_QUEST_IDS } from '@/global-config';
+import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
