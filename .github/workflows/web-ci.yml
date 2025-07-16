@@ -14,10 +14,6 @@ jobs:
   web:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: packages/web
-
     strategy:
       matrix:
         node: [20.x]
@@ -41,13 +37,16 @@ jobs:
 
       # ---------- Quality Gates ----------
       - name: Prettier – formatting check
+        working-directory: packages/web
         run: yarn fm:check
 
       - name: ESLint – code-quality check
+        working-directory: packages/web
         run: yarn lint
 
 
       - name: i18n – download latest translations
+        working-directory: packages/web
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
@@ -61,12 +60,15 @@ jobs:
 
       # Check for untranslated / missing keys across all locale JSON files
       - name: i18n – translation completeness check
+        working-directory: packages/web
         run: yarn i18n:check
 
       - name: TypeScript – type check
+        working-directory: packages/web
         run: npx tsc --noEmit --project tsconfig.json
 
       - name: Next.js – production build
+        working-directory: packages/web
         env:
           NEXT_PUBLIC_APP_ENV: ci
         run: yarn build
