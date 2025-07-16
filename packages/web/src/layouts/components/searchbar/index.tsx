@@ -135,7 +135,8 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
         }}
       >
-        {t('⌘K')}
+        {/* eslint-disable-next-line i18next/no-missing-key */}
+        {'⌘K'}
       </Label>
     </Box>
   );
