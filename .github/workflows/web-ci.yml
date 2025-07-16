@@ -44,6 +44,10 @@ jobs:
         working-directory: packages/web
         run: yarn lint
 
+      # Extract translation keys before downloading to ensure English files are current
+      - name: i18n – extract translation keys
+        working-directory: packages/web
+        run: yarn i18n:extract
 
       - name: i18n – download latest translations
         working-directory: packages/web
