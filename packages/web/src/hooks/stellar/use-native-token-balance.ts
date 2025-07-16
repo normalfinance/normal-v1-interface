@@ -26,7 +26,7 @@ const useNativeTokenBalance = () => {
 
   const { data, isLoading, mutate, error } = useSWRImmutable(
     ['native-balance', store.wallet.address],
-    ([key, address]) => fetchBalance({ address })
+    ([key]) => fetchBalance({ address }) // TODO: add address after key
   );
 
   return {

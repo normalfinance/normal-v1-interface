@@ -25,7 +25,7 @@
 
 //   const fetchTokens = useCallback(async () => {
 //     try {
-      
+
 //       allTokens.map()
 
 //       const accountBalances = account?.balances.map((balance) => ({

@@ -22,7 +22,6 @@ export default function PositionsView() {
 
   const { positions } = useLPTokens();
 
-
   return (
     <DashboardContent maxWidth="xl">
       <PageHeader title={t('Your positions')} />
