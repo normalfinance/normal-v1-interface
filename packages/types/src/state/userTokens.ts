@@ -6,5 +6,6 @@ export interface UserAddedTokensState {
   tokensAsMap: TokenMapType;
 }
 export interface UserAddedTokensActions {
+  addUserToken: (tokenAddress: string) => void;
   userAddedTokensState: UserAddedTokensState;
 }

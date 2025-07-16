@@ -19,9 +19,6 @@ function getCurrentState(): UserAddedTokensState {
   const userAddedTokensStr = getLocalStorageValue(USER_ADDED_TOKENS_KEY);
   const userAddedTokens = userAddedTokensStr ? JSON.parse(userAddedTokensStr) : [];
 
-  // const userAddedTokensStr = localStorage.getItem(`userAddedTokens`) || '[]';
-  // const userAddedTokens = (JSON.parse(userAddedTokensStr) ?? []) as tokensResponse[];
-
   return {
     allUserAddedTokens: [],
     tokens: [],

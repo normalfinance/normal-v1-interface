@@ -28,7 +28,7 @@ interface ReturnType {
 // ----------------------------------------------------------------------
 
 export function useLPTokens(): ReturnType {
-  const { tokens: userTokens } = useUserTokens();
+  // const { tokens: userTokens } = useUserTokens();
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);

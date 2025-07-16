@@ -9,8 +9,6 @@ import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { useLPTokens } from '@/hooks/stellar/use-lp-tokens';
-import { useUserTokens } from '@/hooks/stellar/use-user-tokens';
 import useNativeTokenBalance from '@/hooks/stellar/use-native-token-balance';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
@@ -158,8 +156,8 @@ function WalletDisconnected({
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
   const { data } = useNativeTokenBalance();
-  const { tokens } = useUserTokens();
-  const { positions } = useLPTokens();
+  // const { tokens } = useUserTokens();
+  // const { positions } = useLPTokens();
 
   // TODO: Fetch user activity
   // const { activity } = useUserActivity();
@@ -181,8 +179,8 @@ function WalletConnected({ address }: { address: string }) {
       <ConnectedWallet
         balance={Number(data?.data) || 0}
         percentageChange={0}
-        tokens={tokens}
-        positions={positions}
+        tokens={[]}
+        positions={[]}
         activity={[]}
       />
     </Box>
