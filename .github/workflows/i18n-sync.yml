@@ -37,20 +37,18 @@ jobs:
           cache: 'yarn'
           
       - name: Install dependencies
-        working-directory: ./normal-v1-interface
         run: yarn install --frozen-lockfile
         
       - name: Build internal packages (required for i18n extraction)
-        working-directory: ./normal-v1-interface
         run: npx turbo build --filter="!@normalfinance/web" --cache-dir=.turbo
         
       - name: Extract new translation keys
-        working-directory: ./normal-v1-interface/packages/web
+        working-directory: packages/web
         run: yarn i18n:extract
         
       - name: Check for changes in English translations
         id: check_changes
-        working-directory: ./normal-v1-interface/packages/web
+        working-directory: packages/web
         run: |
           if git diff --quiet HEAD src/locales/langs/en/; then
             echo "changes=false" >> $GITHUB_OUTPUT
@@ -63,7 +61,7 @@ jobs:
         
       - name: Upload sources to Crowdin
         if: steps.check_changes.outputs.changes == 'true' || github.event.inputs.force_upload == 'true'
-        working-directory: ./normal-v1-interface/packages/web
+        working-directory: packages/web
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
@@ -73,7 +71,7 @@ jobs:
 
 
       - name: Machine-translate missing strings
-        working-directory: ./normal-v1-interface/packages/web
+        working-directory: packages/web
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
@@ -84,7 +82,7 @@ jobs:
           yarn i18n:pretranslate
         
       - name: Download translations from Crowdin
-        working-directory: ./normal-v1-interface/packages/web
+        working-directory: packages/web
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
@@ -93,17 +91,16 @@ jobs:
           yarn i18n:download
           
       - name: Check translation status
-        working-directory: ./normal-v1-interface/packages/web
+        working-directory: packages/web
         run: yarn i18n:status
         
       - name: Commit updated translations
-        working-directory: ./normal-v1-interface/packages/web
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Actions i18n Bot"
           
           # Add all translation files
-          git add src/locales/langs/
+          git add packages/web/src/locales/langs/
           
           # Check if there are any changes to commit
           if git diff --staged --quiet; then
@@ -124,7 +121,7 @@ jobs:
             
             try {
               // Run translation status check and capture output
-              const statusOutput = execSync('cd normal-v1-interface/packages/web && npm run i18n:status', { encoding: 'utf8' });
+              const statusOutput = execSync('npm run i18n:status', { encoding: 'utf8', cwd: 'packages/web' });
               
               const body = `## 🌍 Translation Status Update
               
