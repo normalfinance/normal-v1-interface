@@ -25,8 +25,6 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.CI_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -98,9 +96,8 @@ jobs:
 
       - name: Commit updated translations
         run: |
-          git config --local user.email \
-            "73488443+jaymalave@users.noreply.github.com"
-          git config --local user.name "jaymalave"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git add packages/web/src/locales/langs/
           if git diff --staged --quiet; then
             echo "No translation changes to commit"
