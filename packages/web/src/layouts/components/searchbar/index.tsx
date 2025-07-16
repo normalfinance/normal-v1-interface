@@ -153,14 +153,14 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
     >
       {dataFiltered.map((item) => {
         const partsTitle = parse(item.name, match(item.name, searchQuery));
-        const partsPath = parse(item.shortname, match(item.shortname, searchQuery));
+        const partsPath = parse(item.symbol, match(item.symbol, searchQuery));
 
         return (
-          <MenuItem disableRipple key={item.shortname}>
+          <MenuItem disableRipple key={item.symbol}>
             <ResultItem
               path={partsPath}
               title={partsTitle}
-              href={paths.pools.details(item.shortname)}
+              href={paths.pools.details(item.symbol)}
               labels={item.name.split('.')}
               onClick={handleClose}
             />

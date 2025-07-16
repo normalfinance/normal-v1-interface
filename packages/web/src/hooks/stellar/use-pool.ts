@@ -11,9 +11,9 @@ import { PoolContract, type PoolRouterContract } from '@normalfinance/contracts'
 interface ReturnType {
   error: any | null;
   loading: boolean;
-  pool: PoolRouterContract.PoolInfo;
+  pool: PoolRouterContract.PoolInfo | undefined;
   recentTransactions: PoolTxRow[] | undefined;
-  fetchPool: (poolAddress: string) => Promise<PoolRouterContract.PoolInfo>;
+  fetchPool: () => void;
 }
 
 // ----------------------------------------------------------------------
@@ -63,7 +63,6 @@ export function usePool(poolAddress: string, recentTxLimit: number): ReturnType 
       console.log(e);
       setError(e);
     }
-    return undefined;
   }, []);
 
   // const fetchPoolRecentTransactions = useCallback(async () => {
@@ -100,7 +99,7 @@ export function usePool(poolAddress: string, recentTxLimit: number): ReturnType 
 export function formatPoolHistory(data: any, txLimit: number): PoolTxRow[] {
   const parseAmount = (v: string | number) => parseFloat(v.toString());
 
-  const swaps: PoolTxRow[] = data.swaps.map((s) => ({
+  const swaps: PoolTxRow[] = data.swaps.map((s: any) => ({
     timestamp: s.timestamp,
     type: parseAmount(s.amountIn) > parseAmount(s.amountOut) ? 'Sell' : 'Buy',
     baseValue: parseAmount(s.amountIn),
@@ -109,7 +108,7 @@ export function formatPoolHistory(data: any, txLimit: number): PoolTxRow[] {
     txHash: s.txHash ?? '',
   }));
 
-  const deposits: PoolTxRow[] = data.liquidity_deposits.map((d) => ({
+  const deposits: PoolTxRow[] = data.liquidity_deposits.map((d: any) => ({
     timestamp: d.timestamp,
     type: 'Deposit',
     baseValue: parseAmount(d.amountIn),
@@ -118,7 +117,7 @@ export function formatPoolHistory(data: any, txLimit: number): PoolTxRow[] {
     txHash: d.txHash ?? '',
   }));
 
-  const withdrawals: PoolTxRow[] = data.liquidity_withdrawals.map((w) => ({
+  const withdrawals: PoolTxRow[] = data.liquidity_withdrawals.map((w: any) => ({
     timestamp: w.timestamp,
     type: 'Withdraw',
     baseValue: parseAmount(w.amountIn),

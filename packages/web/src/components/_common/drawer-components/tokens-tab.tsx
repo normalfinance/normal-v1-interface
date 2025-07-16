@@ -76,7 +76,8 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                       fontSize: '12px',
                     }}
                   >
-                    {token.balance.toFixed(4)}
+                    {/* toFixed(4) */}
+                    {token.balance.toString()}
                   </Typography>
                   <Typography
                     variant="body2"
@@ -104,7 +105,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                   variant="body2"
                   sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                 >
-                  {fCurrency(token.balance * token.usdValue)}
+                  {fCurrency(Number(token.balance * BigInt(token.usdValue)))}
                 </Typography>
                 <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                   <Box

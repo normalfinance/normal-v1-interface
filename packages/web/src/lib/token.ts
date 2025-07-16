@@ -121,7 +121,7 @@ export async function getTokenBalance(tokenAddress: string, address: string): Pr
     throw Error(`unable to fetch balance for token: ${tokenAddress}`);
   }
   if (rpc.Api.isSimulationSuccess(scval_result)) {
-    const val = scValToNative(scval_result.result.retval);
+    const val = scValToNative((scval_result as any).result.retval);
     return val;
   } else {
     throw Error(`unable to fetch balance for token: ${tokenAddress}`);

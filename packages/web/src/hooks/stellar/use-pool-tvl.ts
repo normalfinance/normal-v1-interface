@@ -1,7 +1,7 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { constants } from '@normalfinance/utils';
-import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
 
 // ----------------------------------------------------------------------
@@ -10,7 +10,7 @@ interface ReturnType {
   error: any | null;
   loading: boolean;
   tvl: number | undefined;
-  refresh: () => void;
+  refresh: (asset: string) => void;
 }
 
 // ----------------------------------------------------------------------
@@ -40,15 +40,10 @@ export function usePoolTVL(): ReturnType {
     return;
   }, []);
 
-  // On component mount, fetch pool
-  useEffect(() => {
-    fetchTVL();
-  }, [fetchTVL]);
-
   return {
     error,
     loading,
-    totalTVL,
-    fetchTVL,
+    tvl: totalTVL,
+    refresh: fetchTVL,
   };
 }

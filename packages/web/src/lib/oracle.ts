@@ -29,7 +29,7 @@ export async function getOraclePrice(oracle_id: string, token_id: string): Promi
   if (rpc.Api.isSimulationSuccess(result)) {
     const xdr_str = result.result?.retval.toXDR('base64');
     if (xdr_str) {
-      const price_result = xdr.ScVal.fromXDR(xdr_str, 'base64')?.value();
+      const price_result: any = xdr.ScVal.fromXDR(xdr_str, 'base64')?.value();
       if (price_result) {
         return {
           // eslint-disable-next-line
@@ -57,7 +57,7 @@ export async function getOracleDecimals(
   const stellar_rpc = new rpc.Server(constants.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
   if (rpc.Api.isSimulationSuccess(result)) {
-    const val = scValToNative(result.result.retval);
+    const val = scValToNative((result as any).result.retval);
     return {
       decimals: val,
       latestLedger: result.latestLedger,
