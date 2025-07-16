@@ -118,7 +118,7 @@ export const PoolsTable: React.FC<{ rows: PoolTxRow[] }> = ({ rows }) => {
                     sx={{ cursor: 'pointer' }}
                     onClick={(e) => setTypeAnchor(e.currentTarget)}
                   >
-                    {t('Type ▾')}
+                    {t('Type')}
                   </Typography>
                   <Menu
                     open={Boolean(typeAnchor)}
