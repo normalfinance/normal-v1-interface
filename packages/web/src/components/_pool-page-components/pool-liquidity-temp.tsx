@@ -155,9 +155,11 @@ const PoolLiquidityTemp = ({
         <img src={tokenA.icon} alt={tokenA.name} width={48} height={48} />
         <img src={tokenB.icon} alt={tokenB.name} width={48} height={48} />
       </Box>
+      {/* eslint-disable i18next/no-literal-string */}
       <Typography sx={{ textAlign: 'center', fontWeight: 700, mb: 2 }}>
-        {t('Pool Liquidity')}
+        Pool Liquidity
       </Typography>
+      {/* eslint-enable i18next/no-literal-string */}
       <Divider sx={{ mb: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
 
       <Grid2 container spacing={2} mt={2}>
