@@ -77,12 +77,12 @@ export const createWalletActions = (
       const _allLpTokens = parsedResults.map((pool) => pool.pool_response.token_share.address);
 
       // OTHER TOKENS
-      const _allApiTokens = [];
+      const _allApiTokens: any[] = [];
 
       // USER ADDED TOKENS
       const _allUserAddedTokens = usePersistStore
         .getState()
-        .userAddedTokens.tokens.map((t) => t.address);
+        .userAddedTokensState.tokens.map((t) => t.id);
 
       const allTokens = _allNormalTokens
         ? [..._allNormalTokens, ..._allLpTokens, ..._allApiTokens, ..._allUserAddedTokens].map(
