@@ -45,7 +45,7 @@ _static
 # Sentry Config File
 .sentryclirc
 
-crowdin.yml
+# crowdin.yml
 
 # PWA files
 /public/sw.js
