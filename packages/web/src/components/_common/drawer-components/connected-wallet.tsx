@@ -1,7 +1,7 @@
 'use client';
 
-import type { Token } from '@/types/token';
 import type { Activity } from '@/types/activity';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { useTabs } from 'minimal-shared/hooks';
@@ -17,19 +17,19 @@ import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 
-import PoolsTab from './pools-tab';
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
+import PositioinsTab from './positions-tab';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
-import type { PoolDetails } from '../pools-explore/explorer-chart-data';
+import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
 
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {
   balance?: number;
   percentageChange?: number;
   tokens?: Token[];
-  pools?: PoolDetails[];
+  positions?: PoolDetails[];
   activity?: Activity[];
 }
 
@@ -37,7 +37,7 @@ export default function ConnectedWallet({
   balance,
   percentageChange,
   tokens,
-  pools,
+  positions,
   activity,
 }: ConnectedWalletProps) {
   const theme = useTheme();
@@ -197,7 +197,7 @@ export default function ConnectedWallet({
 
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'tokens' && <TokensTab tokens={tokens} />}
-      {tabs.value === 'pools' && <PoolsTab pools={pools} />}
+      {tabs.value === 'pools' && <PositioinsTab positions={positions} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
     </Stack>
   );

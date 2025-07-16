@@ -1,5 +1,5 @@
-import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import React, { useRef, useState, useEffect } from 'react';
@@ -53,7 +53,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
 
   const fiatValue = parseFloat(amount) || 0;
   const buyableAmt =
-    buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.pricestatus) : 0;
+    buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.usdValue) : 0;
 
   const balance = cashBalance ?? 0;
   const insufficient = fiatValue > balance;
@@ -213,8 +213,8 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
             >
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                 <SwapSendPopupButton
-                  imgUrl={buyToken.url}
-                  label={buyToken.shortname}
+                  imgUrl={buyToken.icon}
+                  label={buyToken.symbol}
                   onClick={() => {
                     handleOpen();
                   }}
@@ -253,7 +253,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
                           color: theme.palette.text.primary,
                         }}
                       >
-                        {buyToken?.shortname}
+                        {buyToken?.symbol}
                       </Box>
                     </Typography>
                   </Box>
@@ -322,7 +322,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
         {reviewOpen && (
           <CheckoutDialog
             open={reviewOpen}
-            token={buyToken?.shortname ?? 'USDC'}
+            token={buyToken?.symbol ?? 'USDC'}
             amount={amount}
             onClose={handleReviewClose}
           />
