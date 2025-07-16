@@ -5,7 +5,7 @@
   "scripts": {
     "i18n:extract": "i18next && node ./scripts/fix-empty-i18n-values.js",
     "i18n:upload": "crowdin upload sources",
-    "i18n:pretranslate": "bash -c 'if [ -n \"$CROWDIN_MT_ENGINE_ID\" ]; then echo \"🔄  Pre-translating with MT engine $CROWDIN_MT_ENGINE_ID\"; crowdin pre-translate --method mt --engine-id=$CROWDIN_MT_ENGINE_ID; else echo \"⚠️  CROWDIN_MT_ENGINE_ID not set, skipping primary MT\"; fi; if [ -n \"$CROWDIN_FALLBACK_MT_ENGINE_ID\" ]; then echo \"🔄  Fallback MT engine $CROWDIN_FALLBACK_MT_ENGINE_ID (untranslated only)\"; crowdin pre-translate --method mt --engine-id=$CROWDIN_FALLBACK_MT_ENGINE_ID --translate-untranslated-only; fi'",
+    "i18n:pretranslate": "bash -c 'if [ -n \"$CROWDIN_MT_ENGINE_ID\" ]; then echo \"🔄  Pre-translating with MT engine $CROWDIN_MT_ENGINE_ID\"; crowdin pre-translate --method mt --engine-id=$CROWDIN_MT_ENGINE_ID; else echo \"⚠️  CROWDIN_MT_ENGINE_ID not set, skipping primary MT\"; fi; if [ -n \"$CROWDIN_FALLBACK_MT_ENGINE_ID\" ]; then echo \"🔄  Fallback MT engine $CROWDIN_FALLBACK_MT_ENGINE_ID (untranslated only)\"; crowdin pre-translate --method mt --engine-id=$CROWDIN_FALLBACK_MT_ENGINE_ID; fi'",
     "i18n:upload-translations": "crowdin upload translations",
     "i18n:download": "crowdin download",
     "i18n:sync": "npm run i18n:extract && npm run i18n:upload && npm run i18n:pretranslate && npm run i18n:download",
