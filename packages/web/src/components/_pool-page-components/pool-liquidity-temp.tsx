@@ -156,9 +156,7 @@ const PoolLiquidityTemp = ({
         <img src={tokenB.icon} alt={tokenB.name} width={48} height={48} />
       </Box>
       {/* eslint-disable i18next/no-literal-string */}
-      <Typography sx={{ textAlign: 'center', fontWeight: 700, mb: 2 }}>
-        Pool Liquidity
-      </Typography>
+      <Typography sx={{ textAlign: 'center', fontWeight: 700, mb: 2 }}>Pool Liquidity</Typography>
       {/* eslint-enable i18next/no-literal-string */}
       <Divider sx={{ mb: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
 
