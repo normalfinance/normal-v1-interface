@@ -1,17 +1,18 @@
 'use client';
 
-import type { Activity } from '@/types/activity';
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import { usePools } from '@/hooks';
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
+import { useLPTokens } from '@/hooks/stellar/use-lp-tokens';
+import { useUserTokens } from '@/hooks/stellar/use-user-tokens';
+import useNativeTokenBalance from '@/hooks/stellar/use-native-token-balance';
+import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -27,6 +28,7 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
@@ -154,53 +156,13 @@ function WalletDisconnected({
 /* ------------------------------------------------------------------ */
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
-function WalletConnected({
-  address,
-  onDisconnect,
-  activity,
-}: {
-  address: string;
-  onDisconnect: () => void;
-  // pools?: PoolDetails[];
-  activity?: Activity[];
-}) {
-  // const { tokens } = useUserBalances();
-  const tokens: any[] = [];
+function WalletConnected({ address }: { address: string }) {
+  const { data } = useNativeTokenBalance();
+  const { tokens } = useUserTokens();
+  const { positions } = useLPTokens();
 
-  // Fetch LP tokens
-  const { pools } = usePools();
-
-  // const positions: PoolDetails[] = tokens
-  //   .map((token) => {
-  //     const match = pools.find((pool) => pool.pool_response.token_share.address === token.contract);
-
-  //     if (match) {
-  //       const details: PoolDetails = {
-  //         poolInfo: {
-  //           tokenA: {
-  //             name: '',
-  //             iconUrl: '',
-  //           },
-  //           tokenB: {
-  //             name: '',
-  //             iconUrl: '',
-  //           },
-  //           address: match.address,
-  //           feeTier: match.pool.fee_fraction,
-  //         },
-  //         metadata: {
-  //           version: '1',
-  //           feeTier: '3'
-  //         },
-  //         performance: {
-  //           position: 0,
-  //           fees: 0,
-  //         },
-  //       };
-  //       return details;
-  //     }
-  //   })
-  //   .filter((v) => v != null);
+  // TODO: Fetch user activity
+  // const { activity } = useUserActivity();
 
   return (
     <Box
@@ -213,15 +175,15 @@ function WalletConnected({
       }}
     >
       <Stack direction="row" width={1} justifyContent="space-between" alignItems="center">
-        <Typography variant="subtitle1">{format.fTruncate(address, 12)}</Typography>
-        {/* <CopyIconButton value={address} alert="Address copied" /> */}
+        <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
+        <CopyIconButton value={address} alert="Address copied" />
       </Stack>
       <ConnectedWallet
-        balance={83.42}
-        percentageChange={3.56}
+        balance={Number(data?.data) || 0}
+        percentageChange={0}
         tokens={tokens}
-        poolPositions={[]}
-        activity={activity}
+        positions={positions}
+        activity={[]}
       />
     </Box>
   );
@@ -234,7 +196,6 @@ export type AccountDrawerProps = IconButtonProps;
 
 export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ stores ------------------------------------------------------ */
-  const store = useAppStore();
   const persist = usePersistStore();
 
   const { t } = useTranslate();
@@ -346,6 +307,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 onClick={() => {
                   setIsConnected(false);
                   disconnect();
+                  onClose();
                 }}
                 sx={{ ml: 'auto' }}
               >
@@ -356,20 +318,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
         </Box>
         <Scrollbar>
           {isConnected ? (
-            <WalletConnected
-              address={connectedAddress!}
-              activity={[]}
-              onDisconnect={() => {
-                disconnect();
-                onClose();
-              }}
-            />
+            <WalletConnected address={connectedAddress!} />
           ) : (
             <WalletDisconnected
               connectors={connectors}
               onSelect={async (c) => {
                 await connect(c);
-                // setIsConnected(true);
                 onClose();
               }}
             />

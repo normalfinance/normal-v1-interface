@@ -2,7 +2,6 @@ import { constants } from '@normalfinance/utils';
 import {
   rpc,
   xdr,
-  Account,
   Address,
   Contract,
   scValToNative,
@@ -15,9 +14,7 @@ export interface PriceData {
 }
 
 export async function getOraclePrice(oracle_id: string, token_id: string): Promise<PriceData> {
-  // account does not get validated during simulateTx
-  const account = new Account('GANXGJV2RNOFMOSQ2DTI3RKDBAVERXUVFC27KW3RLVQCLB3RYNO3AAI4', '123');
-  const tx_builder = new TransactionBuilder(account, {
+  const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.NETWORK_PASSPHRASE,
@@ -51,36 +48,12 @@ export async function getOraclePrice(oracle_id: string, token_id: string): Promi
 export async function getOracleDecimals(
   oracle_id: string
 ): Promise<{ decimals: number; latestLedger: number }> {
-  // account does not get validated during simulateTx
-  const account = new Account('GANXGJV2RNOFMOSQ2DTI3RKDBAVERXUVFC27KW3RLVQCLB3RYNO3AAI4', '123');
-  const tx_builder = new TransactionBuilder(account, {
-    fee: '1000',
-    timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
-  });
-  tx_builder.addOperation(new Contract(oracle_id).call('decimals'));
-  const stellar_rpc = new rpc.Server(constants.RPC_URL);
-  const result = await stellar_rpc.simulateTransaction(tx_builder.build());
-  if (rpc.Api.isSimulationSuccess(result)) {
-    const val = scValToNative(result.result.retval);
-    return {
-      decimals: val,
-      latestLedger: result.latestLedger,
-    };
-  } else {
-    throw new Error(`Failed to fetch oralce decimals: ${result.error}`);
-  }
-}
-
-export async function getPoolsInfo(): Promise<{ decimals: number; latestLedger: number }> {
   const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.NETWORK_PASSPHRASE,
   });
-  tx_builder.addOperation(
-    new Contract(constants.POOL_ROUTER_ADDRESS).call('query_all_pools_details')
-  );
+  tx_builder.addOperation(new Contract(oracle_id).call('decimals'));
   const stellar_rpc = new rpc.Server(constants.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
   if (rpc.Api.isSimulationSuccess(result)) {

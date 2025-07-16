@@ -11,17 +11,17 @@ import { Stack, Avatar, Button, Typography } from '@mui/material';
 import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
 
 export interface PoolsTabsProps {
-  pools?: PoolDetails[];
+  positions?: PoolDetails[];
 }
 
-export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
+export default function PositioinsTab({ positions = [] }: { positions?: PoolDetails[] }) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
   return (
     <Box sx={{ p: 2, pt: 0 }}>
-      {pools.length > 0 ? (
-        pools?.map((pool) => (
+      {positions.length > 0 ? (
+        positions?.map((position) => (
           <Button
             sx={{
               display: 'flex',
@@ -42,13 +42,13 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
                 }}
               >
                 <Avatar
-                  src={getCryptoIconUrl(pool.pairInfo?.tokenA.name ?? '')}
+                  src={getCryptoIconUrl(position.poolInfo?.tokenA.name ?? '')}
                   alt="Token A"
                   sx={{ width: 40, height: 40 }}
                 />
 
                 <Avatar
-                  src={getCryptoIconUrl(pool.pairInfo?.tokenB.name ?? '')}
+                  src={getCryptoIconUrl(position.poolInfo?.tokenB.name ?? '')}
                   alt="Token B"
                   sx={{
                     width: 40,
@@ -60,9 +60,9 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
               </Box>
               <Stack direction="column" width={1} alignItems="start">
                 <Typography component="span" color="text.primary" variant="h6" ml={1}>
-                  {pool.pairInfo?.tokenA.name}
+                  {position.poolInfo?.tokenA.name}
                   {t('/')}
-                  {pool.pairInfo?.tokenB.name}
+                  {position.poolInfo?.tokenB.name}
                 </Typography>
                 <Box
                   sx={{
@@ -90,7 +90,7 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
                         py: '2px',
                       }}
                     >
-                      {pool.metadata?.feeTier}
+                      {position.metadata?.feeTier}
                     </Typography>
                   </Box>
                   <Box
@@ -112,7 +112,7 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
                         py: '2px',
                       }}
                     >
-                      {pool.metadata?.version}
+                      {position.metadata?.version}
                     </Typography>
                   </Box>
                 </Box>
@@ -122,7 +122,7 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
             <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
               <Stack direction="column" alignItems="start">
                 <Typography color="text.primary" variant="body1">
-                  {fCurrency(pool.performance?.position)}
+                  {fCurrency(position.performance?.position)}
                 </Typography>
                 <Typography color="text.secondary" variant="caption">
                   {t('Position')}
@@ -131,7 +131,7 @@ export default function PoolsTab({ pools = [] }: { pools?: PoolDetails[] }) {
 
               <Stack direction="column" alignItems="start">
                 <Typography color="text.primary" variant="body1">
-                  {fCurrency(pool.performance?.fees)}
+                  {fCurrency(position.performance?.fees)}
                 </Typography>
                 <Typography color="text.secondary" variant="caption">
                   {t('Fees')}

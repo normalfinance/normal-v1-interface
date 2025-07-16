@@ -17,9 +17,9 @@ import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 
-import PoolsTab from './pools-tab';
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
+import PositioinsTab from './positions-tab';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
 import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
@@ -29,7 +29,7 @@ export interface ConnectedWalletProps {
   balance?: number;
   percentageChange?: number;
   tokens?: Token[];
-  poolPositions?: PoolDetails[];
+  positions?: PoolDetails[];
   activity?: Activity[];
 }
 
@@ -37,7 +37,7 @@ export default function ConnectedWallet({
   balance,
   percentageChange,
   tokens,
-  poolPositions,
+  positions,
   activity,
 }: ConnectedWalletProps) {
   const theme = useTheme();
@@ -197,7 +197,7 @@ export default function ConnectedWallet({
 
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'tokens' && <TokensTab tokens={tokens} />}
-      {tabs.value === 'pools' && <PoolsTab pools={poolPositions} />}
+      {tabs.value === 'pools' && <PositioinsTab positions={positions} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
     </Stack>
   );

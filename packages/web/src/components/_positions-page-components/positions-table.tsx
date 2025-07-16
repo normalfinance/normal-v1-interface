@@ -1,3 +1,5 @@
+import type { PoolPosition } from '@/hooks';
+
 import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
@@ -12,7 +14,7 @@ import PositionItem from './position-item';
 // ----------------------------------------------------------------------
 
 export type PositionsTableProps = {
-  positions: any[];
+  positions: PoolPosition[];
 };
 
 // ----------------------------------------------------------------------

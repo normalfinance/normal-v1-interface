@@ -10,22 +10,9 @@ export type ExplorerChartData = {
 };
 
 export type PoolDetails = {
-  pairInfo: {
-    tokenA: { name: string; iconUrl: string };
-    tokenB: { name: string; iconUrl: string };
-    address: string;
-  };
-  metadata: {
-    version: string;
-    feeTier: string;
-  };
-  exchangeRate?: {
-    label: string;
-    usdEquivalent: string;
-    tokenSymbol: string;
-    tokenRate: string;
-    tokenUSDValue: string;
-  };
+  poolInfo: TokenPairInfo;
+  metadata: PoolMetadata;
+  exchangeRate?: ExchangeRateInfo;
   performance: {
     percentageChange?: number;
     position?: number;

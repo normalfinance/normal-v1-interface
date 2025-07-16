@@ -1,14 +1,15 @@
-import { create } from "zustand";
-import { createWalletActions } from "./wallet/actions";
-import { persist, createJSONStorage } from "zustand/middleware";
-import { Horizon } from "@stellar/stellar-sdk";
-import { AppStore, AppStorePersist } from "@normalfinance/types";
-import { createConnectWalletActions } from "./persist/createConnectWalletActions";
-import { createLayoutActions } from "./layout/actions";
-import { createDisclaimerAction } from "./persist/createDisclaimerActions";
-import { createLoadingActions } from "./loading/actions";
-import { constants } from "@normalfinance/utils";
-import { createReferralActions } from "./persist/createReferralActions";
+import { create } from 'zustand';
+import { createWalletActions } from './wallet/actions';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { Horizon } from '@stellar/stellar-sdk';
+import { AppStore, AppStorePersist } from '@normalfinance/types';
+import { createConnectWalletActions } from './persist/createConnectWalletActions';
+import { createLayoutActions } from './layout/actions';
+import { createDisclaimerAction } from './persist/createDisclaimerActions';
+import { createLoadingActions } from './loading/actions';
+import { constants } from '@normalfinance/utils';
+import { createReferralActions } from './persist/createReferralActions';
+import { createUserAddedTokensAction } from './persist/createUserAddedTokensActions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
@@ -42,11 +43,14 @@ export const usePersistStore = create<AppStorePersist>()(
       // Create a wallet with the given server and network passphrase.
       const walletPersist = createConnectWalletActions();
 
-      //Create a store for disclaimer modal
+      // Create a store for disclaimer modal
       const disclaimer = createDisclaimerAction();
 
       // Create referral actions
       const referralActions = createReferralActions();
+
+      // Create user added token actions
+      const userAddedTokens = createUserAddedTokensAction();
 
       return {
         server,
@@ -54,10 +58,11 @@ export const usePersistStore = create<AppStorePersist>()(
         ...walletPersist,
         ...disclaimer,
         ...referralActions,
+        ...userAddedTokens,
       };
     },
     {
-      name: "app-storage", // name of the item in the storage (must be unique)
+      name: 'app-storage', // name of the item in the storage (must be unique)
     }
   )
 );

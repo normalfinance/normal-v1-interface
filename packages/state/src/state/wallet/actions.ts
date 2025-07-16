@@ -57,106 +57,87 @@ export const createWalletActions = (
         }
       }
 
-      let parsedResults: PoolRouterContract.PoolInfo[];
-      try {
-        const publicKey = address || constants.TESTING_SOURCE.accountId();
-
-        // Pool Router contract
-        const poolRouter = new PoolRouterContract.Client({
-          publicKey,
-          contractId: constants.POOL_ROUTER_ADDRESS,
-          networkPassphrase: constants.NETWORK_PASSPHRASE,
-          rpcUrl: constants.RPC_URL,
-          signTransaction: (tx: string) => new Signer().sign(tx),
-        });
-        // Fetch all available tokens from chain
-        const allPoolsDetails = await poolRouter.query_all_pools_details({ simulate: false });
-
-        const _allPoolsDetails = await allPoolsDetails.simulate({
-          restore: true,
-        });
-
-        // Parse results
-        parsedResults = allPoolsDetails.result;
-      } catch (e) {
-        const publicKey = constants.TESTING_SOURCE.accountId();
-
-        // Pool Router contract
-        const poolRouter = new PoolRouterContract.Client({
-          publicKey,
-          contractId: constants.POOL_ROUTER_ADDRESS,
-          networkPassphrase: constants.NETWORK_PASSPHRASE,
-          rpcUrl: constants.RPC_URL,
-        });
-        // Fetch all available tokens from chain
-        const allPoolsDetails = await poolRouter.query_all_pools_details();
-
-        // Parse results
-        parsedResults = allPoolsDetails.result;
-      }
-
-      // Loop through all pools and get asset_a and asset_b addresses in an array
-      const _allAssets = parsedResults
-        .map((pool) => [pool.pool_response.token_a.address, pool.pool_response.token_b.address])
-        // Flatten the array
-        .reduce((acc: string[], curr: string[]) => [...acc, ...curr], [])
-        // Remove duplicates
-        .filter((_address, index, self) => self.indexOf(_address) === index);
-
-      const allAssets = _allAssets
-        ? _allAssets.map(async (asset) => {
-            await getState().fetchTokenInfo(asset);
-          })
-        : [];
-
-      await Promise.all(allAssets);
-
-      // Get token prices from Oracle Registry
-      const publicKey = address || constants.TESTING_SOURCE.accountId();
-
-      // Oracle Registry contract
-      const oracleRegistry = new OracleRegistryContract.Client({
-        publicKey,
+      const poolRouter = new PoolRouterContract.Client({
+        // publicKey: constants.TESTING_SOURCE.accountId(),
         contractId: constants.POOL_ROUTER_ADDRESS,
         networkPassphrase: constants.NETWORK_PASSPHRASE,
         rpcUrl: constants.RPC_URL,
       });
 
-      const _tokens = getState()
-        .tokens.filter((token: Token) => token?.symbol !== 'POOL') // FIXME: what should we filter out?
-        .map(async (token: Token) => {
-          const price = await oracleRegistry.get_last_price({ asset: token?.symbol });
+      // Fetch all available tokens from chain
+      const allPoolsDetails = await poolRouter.query_all_pools_details();
 
-          return {
-            // id: token?.id,
+      // Parse results
+      let parsedResults: PoolRouterContract.PoolInfo[] = allPoolsDetails.result;
 
-            ...token,
-            name: token?.symbol === 'native' ? 'XLM' : token?.symbol,
-            icon: getCryptoIconUrl(token?.symbol === 'native' ? 'XLM' : token?.symbol),
-            // amount: Number(token?.balance) / 10 ** token?.decimals,
-            usdValue: Number(Number(price.last_oracle_price).toFixed(2)),
-            featured: false,
-            percentageChange: 0,
-          };
-        });
+      // NORMAL TOKENS
+      const _allNormalTokens = parsedResults.map((pool) => pool.pool_response.token_a.address); // _allAssets
+
+      // LP TOKENS
+      const _allLpTokens = parsedResults.map((pool) => pool.pool_response.token_share.address);
+
+      // OTHER TOKENS
+      const _allApiTokens = [];
+
+      // USER ADDED TOKENS
+      const _allUserAddedTokens = usePersistStore
+        .getState()
+        .userAddedTokens.tokens.map((t) => t.address);
+
+      const allTokens = _allNormalTokens
+        ? [..._allNormalTokens, ..._allLpTokens, ..._allApiTokens, ..._allUserAddedTokens].map(
+            async (token: string) => {
+              await getState().fetchTokenInfo(token);
+            }
+          )
+        : [];
+
+      await Promise.all(allTokens);
+
+      // =================================================================
+
+      const oracleRegistry = new OracleRegistryContract.Client({
+        // publicKey: constants.TESTING_SOURCE.accountId(),
+        contractId: constants.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        rpcUrl: constants.RPC_URL,
+      });
+
+      const _tokens = getState().tokens.map(async (token: Token) => {
+        const price = await oracleRegistry.get_last_price({ asset: token?.symbol });
+
+        return {
+          ...token,
+          name: token?.symbol === 'native' ? 'XLM' : token?.symbol,
+          icon: getCryptoIconUrl(token?.symbol === 'native' ? 'XLM' : token?.symbol),
+          usdValue: Number(Number(price.last_oracle_price).toFixed(2)),
+          featured: false,
+          percentageChange: 0,
+        };
+      });
+
       // Wait promise
       const _allTokens = await Promise.all(_tokens);
       setState((state: AppStore) => ({ tokens: _allTokens }));
+
       return _allTokens;
     },
 
     fetchTokenInfo: async (tokenAddress: string) => {
       let updatedTokenInfo: Token | undefined;
+
       // Check if account, server, and network passphrase are set
       if (!getState().server || !getState().networkPassphrase) {
         throw new Error('Missing account, server, or network passphrase');
       }
-      // Token contract
+
       const TokenContract = new SorobanTokenContract.Client({
         contractId: tokenAddress.toString(),
         networkPassphrase: constants.NETWORK_PASSPHRASE,
         rpcUrl: constants.RPC_URL,
       });
+
+      // BALANCE
       let balance: bigint;
       try {
         balance = (
@@ -167,6 +148,8 @@ export const createWalletActions = (
       } catch (e) {
         balance = BigInt(0);
       }
+
+      // SYMBOL
       let symbol: string;
       try {
         const _symbol: string =
@@ -176,6 +159,8 @@ export const createWalletActions = (
       } catch (e) {
         return;
       }
+
+      // DECIMALS
       const decimals =
         getState().tokens.find((token: Token) => token.id === tokenAddress)?.decimals ||
         Number((await TokenContract.decimals()).result);

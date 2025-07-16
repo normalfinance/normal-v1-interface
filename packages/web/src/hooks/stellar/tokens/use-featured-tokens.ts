@@ -24,3 +24,11 @@ export const fetchFeaturedTokens = async () => {
 
   return data;
 };
+
+export const fetchApiTokens = async () => {
+  const { data } = await axios.get(
+    'https://raw.githubusercontent.com/normalfinance/token-list/main/tokenList.json'
+  );
+
+  return data;
+};
