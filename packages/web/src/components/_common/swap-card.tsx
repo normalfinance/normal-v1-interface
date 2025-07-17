@@ -243,11 +243,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
       try {
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
         const isBuy = buyToken.symbol !== 'XLM';
-        onSwap({
-          asset,
-          is_buy: isBuy,
-          in_amount: amount,
-        });
+        // onSwap({
+        //   asset,
+        //   is_buy: isBuy,
+        //   in_amount: amount,
+        // });
 
         // Wait for the next block and fetch token balances
         setTimeout(async () => {
@@ -281,11 +281,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
         const isBuy = buyToken.symbol !== 'XLM';
 
-        onEstimateSwap({
-          asset,
-          is_buy: isBuy,
-          in_amount: amount,
-        });
+        // onEstimateSwap({
+        //   asset,
+        //   is_buy: isBuy,
+        //   in_amount: amount,
+        // });
 
         // TODO: will fix errors below once relocated outside this component
         // if (poolInfo.result && tx.result) {
