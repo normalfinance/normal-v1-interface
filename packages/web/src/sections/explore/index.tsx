@@ -3,10 +3,10 @@
 import type { PoolRouterContract } from '@normalfinance/contracts';
 
 import { useTranslate } from '@/locales';
-import { useMemo, useEffect } from 'react';
-import { usePools, useTotalTVL } from '@/hooks';
 import { useAppStore } from '@normalfinance/state';
+import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
+import { usePools, useTotalTVL, useSwapVolume } from '@/hooks';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Grid2 from '@mui/material/Grid2';
@@ -26,11 +26,16 @@ export default function ExploreView() {
 
   const { pools } = usePools();
   const { totalTVL } = useTotalTVL();
-  // const { totalVolume1d, getVolumeSince } = useVolumes();
-  const totalVolume1d = 0;
+  const { getSwapVolume } = useSwapVolume();
+
+  const [volume, setVolume] = useState(null);
+
+  useEffect(() => {
+    getSwapVolume({ timeframe: 'daily' }).then(setVolume);
+  }, []);
 
   const stats: SingleStat[] = [
-    { title: '1D Volume', total: totalVolume1d || 0, percent: 0, formatter: fCurrency },
+    { title: '1D Volume', total: volume || 0, percent: 0, formatter: fCurrency },
     { title: 'Total TVL', total: totalTVL || 0, percent: 0, formatter: fCurrency },
     {
       title: 'Total Pools',
