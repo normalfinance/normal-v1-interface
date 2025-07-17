@@ -36,7 +36,7 @@ module.exports = {
 
   messages: {
     type: "Select the type of change that you're committing:",
-    scope: '\\nWhat is the scope of this change (e.g. component or file name)? (optional)',
+    scope: '\\nWhat is the scope of this change? (optional)',
     customScope: 'Denote the SCOPE of this change:',
     subject: 'Write a SHORT, IMPERATIVE tense description of the change:\\n',
     body: 'Provide a LONGER description of the change (optional). Use "|" to break new line:\\n',
