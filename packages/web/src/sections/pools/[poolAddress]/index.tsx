@@ -1,226 +1,69 @@
 'use client';
 
-import type { Token } from '@normalfinance/types';
+import type { ExplorerChartData } from '@/components/_pool-page-components';
 
+import { usePool } from '@/hooks';
 import { useTranslate } from '@/locales';
-import { useState, useEffect } from 'react';
-import { constants } from '@normalfinance/utils';
-import { fPercent } from '@/utils/format-number';
-import { TransactionType } from '@/types/transaction';
 import { DashboardContent } from '@/layouts/dashboard';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
-import { NormalPoolContract } from '@normalfinance/contracts';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { formatCurrency } from '@normalfinance/utils/build/stellar';
-import { useContractTransaction } from '@/hooks/use-contract-transaction';
+import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fPercent, fCurrencyCompact } from '@/utils/format-number';
+import { createChartData } from '@/utils/portfolio-value-chart-series';
 
-import { Box, Grid, Alert, Stack, Typography, CircularProgress } from '@mui/material';
+import { Alert, Stack, Grid2, useTheme, Typography, CircularProgress } from '@mui/material';
 
-import PoolStatsTemp from '@/components/_pool-page-components/pool-stats-temp';
-import PoolLiquidityTemp from '@/components/_pool-page-components/pool-liquidity-temp';
-
-interface _Token extends Token {
-  readonly decimals: number;
-}
+import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
+import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
+import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-transactions-table';
 
 export default function PoolView({ poolAddress }: { poolAddress: string }) {
+  const theme = useTheme();
   const { t } = useTranslate();
-  // Load App Store
-  const store = useAppStore();
-  const storePersist = usePersistStore();
 
-  const { executeContractTransaction } = useContractTransaction();
+  const {
+    loading: loadingPool,
+    error: poolError,
+    pool,
+    recentTransactions,
+  } = usePool(poolAddress, 10);
 
-  // Let's have some variable to see if the pool even exists
-  const [poolNotFound, setPoolNotFound] = useState<boolean>(false);
+  // TODO:
+  // Price data samples
+  const priceData24h = Array.from({ length: 24 }, (_, i) => 1000 + i * 5);
+  const priceData7d = Array.from({ length: 7 }, (_, i) => 1100 + i * 20);
+  const priceData30d = Array.from({ length: 31 }, (_, i) => 1050 + i * 10);
+  const priceData12m = Array.from({ length: 12 }, (_, i) => 950 + i * 50);
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [tokenAmounts, setTokenAmounts] = useState<number[]>([0]);
+  // Volume data samples
+  const volumeData24h = Array.from({ length: 24 }, (_, i) => 5000 + i * 100);
+  const volumeData7d = Array.from({ length: 7 }, (_, i) => 10000 + i * 200);
+  const volumeData30d = Array.from({ length: 31 }, (_, i) => 15000 + i * 150);
+  const volumeData12m = Array.from({ length: 12 }, (_, i) => 20000 + i * 500);
 
-  // Token Balances
-  const [tokenA, setTokenA] = useState<_Token | undefined>(undefined);
-  const [tokenB, setTokenB] = useState<_Token | undefined>(undefined);
-  const [lpToken, setLpToken] = useState<_Token | undefined>(undefined);
-
-  // Rewards
-  // const [rewards, setRewards] = useState<Token[]>([]);
-
-  // Pool Liquidity
-  const [poolFee, setPoolFee] = useState<number>(0);
-  const [poolLiquidity, setPoolLiquidity] = useState<number>(0);
-  const [poolLiquidityTokenA, setPoolLiquidityTokenA] = useState<number>(0);
-  const [poolLiquidityTokenB, setPoolLiquidityTokenB] = useState<number>(0);
-  const [assetLpShare, setAssetLpShare] = useState<number>(0);
-  const [userShare, setUserShare] = useState<number>(0);
-  // const [lpTokenPrice, setLpTokenPrice] = useState<number>(0);
-
-  const PoolContract = new NormalPoolContract.Client({
-    contractId: poolAddress,
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
-    rpcUrl: constants.RPC_URL,
-  });
-  const appStore = useAppStore();
-
-  // Provide Liquidity
-  const provideLiquidity = async (tokenAmount: number, minShares: number) => {
-    await executeContractTransaction({
-      contractType: 'pool',
-      contractAddress: poolAddress,
-      transactionDetails: {
-        type: TransactionType.DEPOSIT_LIQUIDITY,
-        token1: { name: tokenB?.name || '', amount: tokenAmount.toString() },
-      },
-      transactionFunction: async (client, restore) =>
-        client.deposit(
-          {
-            user: storePersist.wallet.address!,
-            desired_amount: BigInt((tokenAmount * 10 ** (tokenB?.decimals || 7)).toFixed(0)),
-            min_shares: BigInt(minShares),
-          },
-          { simulate: !restore }
-        ),
-    });
-    // Refresh pool data
-    await getPool();
-    setTokenAmounts([0, tokenAmount]);
-    setTimeout(() => {
-      getPool();
-    }, 7000);
+  const poolChartData: ExplorerChartData = {
+    price: {
+      '24h': createChartData('24h', priceData24h, 8),
+      '7d': createChartData('7d', priceData7d, 7),
+      '30d': createChartData('30d', priceData30d, 8),
+      '12m': createChartData('12m', priceData12m, 12),
+    },
+    volume: {
+      '24h': createChartData('24h', volumeData24h, 8),
+      '7d': createChartData('7d', volumeData7d, 7),
+      '30d': createChartData('30d', volumeData30d, 8),
+      '12m': createChartData('12m', volumeData12m, 12),
+    },
   };
 
-  // Remove Liquidity
-  const removeLiquidity = async (shareTokenAmount: number, fix?: boolean) => {
-    await executeContractTransaction({
-      contractType: 'pool',
-      contractAddress: poolAddress,
-      transactionDetails: {
-        type: TransactionType.REMOVE_LIQUIDITY,
-        token1: { name: lpToken?.name || '', amount: shareTokenAmount.toString() },
-      },
-      transactionFunction: async (client, restore) =>
-        client.withdraw(
-          {
-            user: storePersist.wallet.address!,
-            share_amount: BigInt((shareTokenAmount * 10 ** (lpToken?.decimals || 7)).toFixed(0)),
-            min_amount: BigInt(0),
-          },
-          { simulate: !restore }
-        ),
-    });
-    setTokenAmounts([shareTokenAmount]);
-    // Wait 7 Seconds for the next block and fetch new balances
-    setTimeout(() => {
-      getPool();
-    }, 7000);
-  };
+  if (loadingPool) {
+    <CircularProgress />;
+  }
 
-  // Function to fetch pool info from chain
-  const getPool = async () => {
-    try {
-      // Fetch pool info from chain
-      const { result } = await PoolContract.get_info();
-
-      if (result) {
-        setPoolFee(result.total_fee_bps);
-      }
-
-      // When results ok... poolTokens.result && poolReserves.result
-      if (result) {
-        // Fetch token infos from chain and save in global appstore
-        const [_tokenA, _tokenB, _lpToken] = await Promise.all([
-          store.fetchTokenInfo(result.pool_response.asset_a.address),
-          store.fetchTokenInfo(result.pool_response.asset_b.address),
-          store.fetchTokenInfo(result.pool_response.asset_lp_share.address, true),
-        ]);
-
-        const priceA =
-          Number(result.pool_response.asset_b.amount) / Number(result.pool_response.asset_a.amount);
-        const tvl =
-          (priceA * Number(result.pool_response.asset_a.amount)) / 10 ** Number(_tokenA?.decimals) +
-          Number(result.pool_response.asset_b.amount) / 10 ** Number(_tokenB?.decimals);
-
-        setPoolLiquidity(tvl);
-        // Set token states
-        setTokenA({
-          name: _tokenA?.symbol as string,
-          icon: getCryptoIconUrl(_tokenA?.symbol as string),
-          usdValue: Number(priceA),
-          amount: Number(_tokenA?.balance) / 10 ** Number(_tokenA?.decimals),
-          category: 'none',
-          decimals: Number(_tokenA?.decimals),
-        });
-        setTokenB({
-          name: _tokenB?.symbol as string,
-          icon: getCryptoIconUrl(_tokenB?.symbol as string),
-          usdValue: 1,
-          amount: Number(_tokenB?.balance) / 10 ** Number(_tokenB?.decimals),
-          category: 'none',
-          decimals: Number(_tokenB?.decimals),
-        });
-        setLpToken({
-          name: _lpToken?.symbol as string,
-          icon: '/assets/icons/crypto-icons/poolIcon.png',
-          usdValue: 0,
-          amount: Number(_lpToken?.balance) / 10 ** Number(_lpToken?.decimals),
-          category: 'none',
-          decimals: Number(_lpToken?.decimals),
-        });
-        setAssetLpShare(
-          Number(result.pool_response.asset_lp_share.amount) / 10 ** Number(_lpToken?.decimals)
-        );
-        setPoolLiquidityTokenA(
-          Number(
-            (Number(result.pool_response.asset_a.amount) / 10 ** Number(_tokenA?.decimals)).toFixed(
-              2
-            )
-          )
-        );
-        setPoolLiquidityTokenB(
-          Number(
-            (Number(result.pool_response.asset_b.amount) / 10 ** Number(_tokenB?.decimals)).toFixed(
-              2
-            )
-          )
-        );
-
-        // LP token stuff..
-        // Get user share
-        if (storePersist.wallet.address) {
-          if (result) {
-            // Get the total amount of LP tokens in the pool
-
-            const lpShareAmount = Number(result.pool_response.asset_lp_share.amount);
-            const lpShareAmountDec = Number(lpShareAmount) / 10 ** (_lpToken?.decimals || 7);
-
-            // Get the amount of LP tokens the user has as balance or staked
-            const totalUserLPTokens =
-              Number(_lpToken!.balance || 0) / 10 ** (_lpToken?.decimals || 7);
-
-            // Price per Unit
-            const pricePerUnit = tvl / lpShareAmountDec;
-
-            // User share
-            setUserShare(totalUserLPTokens * pricePerUnit);
-          }
-        }
-      }
-    } catch (e) {
-      // If pool not found, set poolNotFound to true
-      console.log(e);
-      setPoolNotFound(true);
-      appStore.setLoading(false);
-    } finally {
-      appStore.setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    getPool();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storePersist.wallet.address]);
-
-  if (!poolAddress || poolNotFound) {
-    return <Alert severity="info">{`The pool you're looking for doesn't exist.`}</Alert>;
+  if (!poolAddress || pool == undefined) {
+    return (
+      <DashboardContent maxWidth="xl">
+        <Alert severity="info">{`The pool you're looking for doesn't exist.`}</Alert>
+      </DashboardContent>
+    );
   }
 
   return (
@@ -233,86 +76,69 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
           {poolAddress}
         </Typography>
       </Stack>
-      <Grid container spacing={3} sx={{ mt: 3 }}>
-        <Box sx={{ mt: { xs: 12, md: 0 }, maxWidth: '1440px' }}>
-          {loading && <CircularProgress />}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            {tokenA?.icon ? (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box
-                  sx={{ height: '2.5rem', width: '2.5rem' }}
-                  component="img"
-                  src={tokenA?.icon}
-                />
-                <Box
-                  sx={{ ml: -1, height: '2.5rem', width: '2.5rem' }}
-                  component="img"
-                  src={tokenB?.icon}
-                />
-              </Box>
-            ) : (
-              <CircularProgress />
-            )}
 
-            {tokenA?.name ? (
-              <Typography sx={{ fontSize: '2rem', fontWeight: 700, ml: 1 }}>
-                {tokenA?.name}
-                {t('-')}
-                {tokenB?.name}
-              </Typography>
-            ) : (
-              <CircularProgress />
-            )}
-          </Box>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={8}>
-              <Box sx={{ mb: 2 }}>
-                <PoolStatsTemp
-                  stats={[
-                    {
-                      title: 'TVL',
-                      value: formatCurrency('USD', poolLiquidity.toString(), navigator.language),
-                    },
-                    {
-                      title: 'My Share',
-                      value: storePersist.wallet.address
-                        ? formatCurrency('USD', userShare.toString(), navigator.language)
-                        : '-',
-                    },
-                    {
-                      title: 'LP tokens',
-                      value: lpToken?.amount.toString() || '0',
-                    },
-                    {
-                      title: 'Swap fee',
-                      value: fPercent(poolFee),
-                    },
-                  ]}
-                />
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              {tokenA && tokenB && lpToken ? (
-                <PoolLiquidityTemp
-                  tokenA={tokenA}
-                  tokenB={tokenB}
-                  liquidityA={Number(poolLiquidityTokenA)}
-                  liquidityB={Number(poolLiquidityTokenB)}
-                  liquidityToken={lpToken}
-                  onAddLiquidity={(tokenAmount) => {
-                    provideLiquidity(tokenAmount, 0);
-                  }}
-                  onRemoveLiquidity={(liquidityTokenAmount, fix) => {
-                    removeLiquidity(liquidityTokenAmount, fix);
-                  }}
-                />
-              ) : (
-                <CircularProgress />
-              )}
-            </Grid>
-          </Grid>
-        </Box>
-      </Grid>
+      <Grid2 container spacing={3} sx={{ mt: 3 }}>
+        <Grid2 size={{ xs: 12, md: 8 }}>
+          <PoolChart
+            id="portfolio_value"
+            pairInfo={{
+              tokenA: {
+                name: pool.pool_response.pool.base_asset,
+                iconUrl: getCryptoIconUrl(pool.pool_response.pool.base_asset),
+              },
+              tokenB: {
+                name: pool.pool_response.pool.quote_asset,
+                iconUrl: getCryptoIconUrl(pool.pool_response.pool.quote_asset),
+              },
+              address: poolAddress,
+            }}
+            metadata={{
+              version: 'v1',
+              feeTier: fPercent(pool.pool_response.pool.fee_fraction / 100),
+            }}
+            exchangeRate={{
+              label: `1 ${pool.pool_response.pool.base_asset} = 2,304.28 ${pool.pool_response.pool.quote_asset}`,
+              usdEquivalent: '$2,289.11',
+              tokenSymbol: pool.pool_response.pool.base_asset,
+              tokenRate: `2,304.28 ${pool.pool_response.pool.quote_asset}`,
+              tokenUSDValue: '$2,289.11',
+            }}
+            performance={{ percentageChange: 0 }}
+            legendValues={[{ title: 'Price', number: 7334, formatter: fCurrencyCompact }]}
+            chart={poolChartData}
+            color={theme.palette.primary.main}
+          />
+        </Grid2>
+        <Grid2 size={{ xs: 12, md: 4 }}>
+          <PoolOverview
+            totalAprPercentage={0}
+            poolBalances={[
+              {
+                coinShortName: pool.pool_response.pool.base_asset,
+                value: Number(pool.pool_response.token_a.amount) / 10 ** 7,
+              },
+              {
+                coinShortName: pool.pool_response.pool.quote_asset,
+                value: Number(pool.pool_response.token_b.amount) / 10 ** 7,
+              },
+            ]}
+            stats={[
+              { statName: 'TVL', value: 0 },
+              { statName: '24h Volume', value: 0 },
+              { statName: '24h Fees', value: 0 },
+            ]}
+          />
+        </Grid2>
+      </Grid2>
+      <Grid2 container spacing={3} sx={{ mt: 3 }}>
+        <Grid2 size={{ xs: 12, md: 12 }}>
+          <PoolTransactionsTable
+            baseTokenSymbol={pool.pool_response.pool.base_asset}
+            quoteTokenSymbol={pool.pool_response.pool.quote_asset}
+            rows={recentTransactions ?? []}
+          />
+        </Grid2>
+      </Grid2>
     </DashboardContent>
   );
 }

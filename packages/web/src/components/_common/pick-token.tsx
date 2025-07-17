@@ -1,10 +1,10 @@
-import type { Token } from '@/types/token';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -44,8 +44,7 @@ const PickToken: React.FC<PickTokenProps> = ({
   const filteredTokens = tokens.filter((token) => {
     const lowerTerm = searchTerm.toLowerCase();
     return (
-      token.name.toLowerCase().includes(lowerTerm) ||
-      token.shortname.toLowerCase().includes(lowerTerm)
+      token.name.toLowerCase().includes(lowerTerm) || token.symbol.toLowerCase().includes(lowerTerm)
     );
   });
 
@@ -56,8 +55,8 @@ const PickToken: React.FC<PickTokenProps> = ({
 
   const featuredTokens = tokens.filter((token) => token.featured);
 
-  const ownedTokens = tokens.filter((token) => token.owned);
-  const unownedTokens = tokens.filter((token) => !token.owned);
+  const ownedTokens = tokens.filter((token) => token.balance > 0);
+  const unownedTokens = tokens.filter((token) => token.balance == BigInt(0));
   const arrangedTokens = [...ownedTokens, ...unownedTokens];
 
   return (
@@ -153,7 +152,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
-                      src={token.logo ?? getCryptoIconUrl(token.shortname)}
+                      src={token.icon ?? getCryptoIconUrl(token.symbol)}
                       sx={{
                         width: 40,
                         height: 40,
@@ -191,9 +190,9 @@ const PickToken: React.FC<PickTokenProps> = ({
                             fontSize: '12px',
                           }}
                         >
-                          {token.shortname}
+                          {token.symbol}
                         </Typography>
-                        {!token.owned && token.address && (
+                        {token.balance == BigInt(0) && token.id && (
                           <Typography
                             variant="body2"
                             sx={{
@@ -202,14 +201,14 @@ const PickToken: React.FC<PickTokenProps> = ({
                               fontSize: '12px',
                             }}
                           >
-                            {token.address && shortenAddress(token.address)}
+                            {token.id && shortenAddress(token.id)}
                           </Typography>
                         )}
                       </Box>
                     </Box>
                   </Box>
                   <Box>
-                    {token.owned && (
+                    {token.balance && (
                       <Box
                         sx={{
                           display: 'flex',
@@ -222,7 +221,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           variant="body2"
                           sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                         >
-                          {fCurrency(token.countstatus * token.pricestatus)}
+                          {fCurrency(Number(token.balance * BigInt(token.usdValue)))}
                         </Typography>
                         <Typography
                           variant="body2"
@@ -232,7 +231,8 @@ const PickToken: React.FC<PickTokenProps> = ({
                             fontSize: '12px',
                           }}
                         >
-                          {token.countstatus.toFixed(4)}
+                          {/* toFixed(4) */}
+                          {token.balance.toString()}
                         </Typography>
                       </Box>
                     )}
@@ -286,7 +286,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   >
                     <Box
                       component="img"
-                      src={token.logo ?? getCryptoIconUrl(token.shortname)}
+                      src={token.icon ?? getCryptoIconUrl(token.symbol)}
                       sx={{
                         width: 20,
                         height: 20,
@@ -298,12 +298,12 @@ const PickToken: React.FC<PickTokenProps> = ({
                       variant="body2"
                       sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                     >
-                      {token.shortname}
+                      {token.symbol}
                     </Typography>
                   </Button>
                 ))}
               </Box>
-              {tokens.some((token) => token.owned) && (
+              {tokens.some((token) => token.balance) && (
                 <Box sx={{ mt: '12px' }} width="100%">
                   <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <Iconify icon="carbon:skill-level-basic" width={14} />
@@ -321,7 +321,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                     }}
                   >
                     {tokens
-                      .filter((token) => token.owned)
+                      .filter((token) => token.balance)
                       .map((token) => (
                         <Button
                           key={token.id}
@@ -342,7 +342,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           >
                             <Box
                               component="img"
-                              src={token.logo ?? getCryptoIconUrl(token.shortname)}
+                              src={token.icon ?? getCryptoIconUrl(token.symbol)}
                               sx={{
                                 width: 40,
                                 height: 40,
@@ -372,7 +372,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                   fontSize: '12px',
                                 }}
                               >
-                                {token.shortname}
+                                {token.symbol}
                               </Typography>
                             </Box>
                           </Box>
@@ -389,7 +389,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 variant="body2"
                                 sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                               >
-                                {fCurrency(token.countstatus * token.pricestatus)}
+                                {fCurrency(Number(token.balance * BigInt(token.usdValue)))}
                               </Typography>
                               <Typography
                                 variant="body2"
@@ -399,7 +399,8 @@ const PickToken: React.FC<PickTokenProps> = ({
                                   fontSize: '12px',
                                 }}
                               >
-                                {token.countstatus.toFixed(4)}
+                                {/* toFixed(4) */}
+                                {token.balance.toString()}
                               </Typography>
                             </Box>
                           </Box>
@@ -439,7 +440,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
-                          src={token.logo ?? getCryptoIconUrl(token.shortname)}
+                          src={token.icon ?? getCryptoIconUrl(token.symbol)}
                           sx={{
                             width: 40,
                             height: 40,
@@ -477,9 +478,9 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 fontSize: '12px',
                               }}
                             >
-                              {token.shortname}
+                              {token.symbol}
                             </Typography>
-                            {!token.owned && token.address && (
+                            {token.balance == BigInt(0) && token.id && (
                               <Typography
                                 variant="body2"
                                 sx={{
@@ -488,14 +489,14 @@ const PickToken: React.FC<PickTokenProps> = ({
                                   fontSize: '12px',
                                 }}
                               >
-                                {shortenAddress(token.address)}
+                                {shortenAddress(token.id)}
                               </Typography>
                             )}
                           </Box>
                         </Box>
                       </Box>
                       <Box>
-                        {token.owned && (
+                        {token.balance > 0 && (
                           <Box
                             sx={{
                               display: 'flex',
@@ -508,7 +509,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               variant="body2"
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
-                              {fCurrency(token.countstatus * token.pricestatus)}
+                              {fCurrency(Number(token.balance * BigInt(token.usdValue)))}
                             </Typography>
                             <Typography
                               variant="body2"
@@ -518,7 +519,8 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 fontSize: '12px',
                               }}
                             >
-                              {token.countstatus.toFixed(4)}
+                              {/* toFixed(4) */}
+                              {token.balance.toString()}
                             </Typography>
                           </Box>
                         )}

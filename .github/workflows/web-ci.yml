@@ -67,10 +67,13 @@ jobs:
         working-directory: packages/web
         run: yarn i18n:check
 
+      - name: Prisma - Generate Prisma Client
+        run: yarn prisma generate
+
       - name: TypeScript – type check
         working-directory: packages/web
         run: npx tsc --noEmit --project tsconfig.json
-
+      
       - name: Next.js – production build
         working-directory: packages/web
         env:

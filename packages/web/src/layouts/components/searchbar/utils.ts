@@ -1,4 +1,4 @@
-import type { Token } from '@/types/token';
+import type { StateToken as Token } from '@normalfinance/types';
 
 // ----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ const flattenNavItems = (navItems: Token[], parentGroup?: string): OutputItem[] 
 
     flattenedItems.push({
       name: navItem.name,
-      shortname: navItem.shortname,
+      shortname: navItem.symbol,
     });
 
     // if (navItem.children) {
@@ -47,7 +47,7 @@ type ApplyFilterProps = {
 export function applyFilter({ inputData, query }: ApplyFilterProps): Token[] {
   if (!query) return inputData;
 
-  return inputData.filter(({ name, shortname }) =>
-    [name, shortname].some((field) => field?.toLowerCase().includes(query.toLowerCase()))
+  return inputData.filter(({ name, symbol }) =>
+    [name, symbol].some((field) => field?.toLowerCase().includes(query.toLowerCase()))
   );
 }

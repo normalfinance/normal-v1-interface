@@ -1,5 +1,5 @@
 import { Server } from "soroban-client";
-import { PersistWalletActions } from "./persist";
+import { PersistWalletActions, AppStorePersist } from "./persist";
 import { LayoutActions } from "./layout";
 import { Horizon } from "@stellar/stellar-sdk";
 import { WalletActions } from "./wallet";
@@ -12,7 +12,7 @@ interface GeneralStore {
 
 export type AppStore = WalletActions & LayoutActions & GeneralStore & LoadingActions;
 
-export type AppStorePersist = PersistWalletActions;
+export { AppStorePersist };
 
 export type SetStateType = (
   partial:

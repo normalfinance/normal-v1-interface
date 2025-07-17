@@ -1,9 +1,9 @@
-import type { Token } from '@/types/token';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
 import { useTranslate } from '@/locales';
 import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
@@ -119,13 +119,13 @@ const SendReview: React.FC<SendReviewProps> = ({
                     minWidth: 0,
                   }}
                 >
-                  {tokenValue.toFixed(4)} {sendToken?.shortname}
+                  {tokenValue.toFixed(4)} {sendToken?.symbol}
                 </Typography>
               </Box>
 
               <Box
                 component="img"
-                src={sendToken ? getCryptoIconUrl(sendToken.shortname) : ''}
+                src={sendToken ? getCryptoIconUrl(sendToken.symbol) : ''}
                 sx={{
                   width: 40,
                   height: 40,
