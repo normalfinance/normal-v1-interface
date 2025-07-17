@@ -122,7 +122,7 @@ export const PoolTransactionsTable: React.FC<{
                     sx={{ cursor: 'pointer' }}
                     onClick={(e) => setTypeAnchor(e.currentTarget)}
                   >
-                    {t('Type ▾')}
+                    {t('Type')}
                   </Typography>
                   <Menu
                     open={Boolean(typeAnchor)}

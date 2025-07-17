@@ -1512,6 +1512,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@crowdin/cli@npm:^4.2.0":
+  version: 4.9.0
+  resolution: "@crowdin/cli@npm:4.9.0"
+  dependencies:
+    command-exists-promise: ^2.0.2
+    node-fetch: 2.7.0
+    shelljs: ^0.8.5
+    tar: ^7.4.3
+    yauzl: ^3.2.0
+  bin:
+    crowdin: jdeploy-bundle/jdeploy.js
+  checksum: 06398e91910301153ef27a90a9228d9d14f2d63abc41dd45e1b62555c2aa206f41b08651bb33cc765d558af8f8ae272f511304a29921005c43a5d11e305eb6e8
+  languageName: node
+  linkType: hard
+
 "@cspotcode/source-map-support@npm:^0.8.0":
   version: 0.8.1
   resolution: "@cspotcode/source-map-support@npm:0.8.1"
@@ -4427,6 +4442,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@normalfinance/web@workspace:packages/web"
   dependencies:
+    "@crowdin/cli": ^4.2.0
     "@emotion/cache": ^11.14.0
     "@emotion/react": ^11.14.0
     "@emotion/styled": ^11.14.0
@@ -9508,6 +9524,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"buffer-crc32@npm:~0.2.3":
+  version: 0.2.13
+  resolution: "buffer-crc32@npm:0.2.13"
+  checksum: 06252347ae6daca3453b94e4b2f1d3754a3b146a111d81c68924c22d91889a40623264e95e67955b1cb4a68cbedf317abeabb5140a9766ed248973096db5ce1c
+  languageName: node
+  linkType: hard
+
 "buffer-from@npm:^1.0.0":
   version: 1.1.2
   resolution: "buffer-from@npm:1.1.2"
@@ -10115,6 +10138,13 @@ __metadata:
   version: 2.0.3
   resolution: "comma-separated-tokens@npm:2.0.3"
   checksum: e3bf9e0332a5c45f49b90e79bcdb4a7a85f28d6a6f0876a94f1bb9b2bfbdbbb9292aac50e1e742d8c0db1e62a0229a106f57917e2d067fca951d81737651700d
+  languageName: node
+  linkType: hard
+
+"command-exists-promise@npm:^2.0.2":
+  version: 2.0.2
+  resolution: "command-exists-promise@npm:2.0.2"
+  checksum: f6674abbc7d9cc704255999adb42e8b8fe165d941de207d1df8177e1ccea2afb9ff57aad7a70f9235056dd317e45b31f9726ecb2c39826f9a1f98a50f4de1b31
   languageName: node
   linkType: hard
 
@@ -12880,7 +12910,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:7.2.3, glob@npm:^7.1.3, glob@npm:^7.1.4":
+"glob@npm:7.2.3, glob@npm:^7.0.0, glob@npm:^7.1.3, glob@npm:^7.1.4":
   version: 7.2.3
   resolution: "glob@npm:7.2.3"
   dependencies:
@@ -13857,6 +13887,13 @@ __metadata:
   version: 2.0.3
   resolution: "internmap@npm:2.0.3"
   checksum: 7ca41ec6aba8f0072fc32fa8a023450a9f44503e2d8e403583c55714b25efd6390c38a87161ec456bf42d7bc83aab62eb28f5aef34876b1ac4e60693d5e1d241
+  languageName: node
+  linkType: hard
+
+"interpret@npm:^1.0.0":
+  version: 1.4.0
+  resolution: "interpret@npm:1.4.0"
+  checksum: 2e5f51268b5941e4a17e4ef0575bc91ed0ab5f8515e3cf77486f7c14d13f3010df9c0959f37063dcc96e78d12dc6b0bb1b9e111cdfe69771f4656d2993d36155
   languageName: node
   linkType: hard
 
@@ -17135,7 +17172,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-fetch@npm:^2.6.7, node-fetch@npm:^2.7.0":
+"node-fetch@npm:2.7.0, node-fetch@npm:^2.6.7, node-fetch@npm:^2.7.0":
   version: 2.7.0
   resolution: "node-fetch@npm:2.7.0"
   dependencies:
@@ -18161,6 +18198,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pend@npm:~1.2.0":
+  version: 1.2.0
+  resolution: "pend@npm:1.2.0"
+  checksum: 6c72f5243303d9c60bd98e6446ba7d30ae29e3d56fdb6fae8767e8ba6386f33ee284c97efe3230a0d0217e2b1723b8ab490b1bbf34fcbb2180dbc8a9de47850d
+  languageName: node
+  linkType: hard
+
 "pg-int8@npm:1.0.1":
   version: 1.0.1
   resolution: "pg-int8@npm:1.0.1"
@@ -19141,6 +19185,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"rechoir@npm:^0.6.2":
+  version: 0.6.2
+  resolution: "rechoir@npm:0.6.2"
+  dependencies:
+    resolve: ^1.1.6
+  checksum: fe76bf9c21875ac16e235defedd7cbd34f333c02a92546142b7911a0f7c7059d2e16f441fe6fb9ae203f459c05a31b2bcf26202896d89e390eda7514d5d2702b
+  languageName: node
+  linkType: hard
+
 "redent@npm:^3.0.0":
   version: 3.0.0
   resolution: "redent@npm:3.0.0"
@@ -19472,7 +19525,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"resolve@npm:^1.19.0, resolve@npm:^1.20.0, resolve@npm:^1.22.10, resolve@npm:^1.22.4, resolve@npm:^1.22.8":
+"resolve@npm:^1.1.6, resolve@npm:^1.19.0, resolve@npm:^1.20.0, resolve@npm:^1.22.10, resolve@npm:^1.22.4, resolve@npm:^1.22.8":
   version: 1.22.10
   resolution: "resolve@npm:1.22.10"
   dependencies:
@@ -19511,7 +19564,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"resolve@patch:resolve@^1.19.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.20.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.10#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.4#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.8#~builtin<compat/resolve>":
+"resolve@patch:resolve@^1.1.6#~builtin<compat/resolve>, resolve@patch:resolve@^1.19.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.20.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.10#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.4#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.8#~builtin<compat/resolve>":
   version: 1.22.10
   resolution: "resolve@patch:resolve@npm%3A1.22.10#~builtin<compat/resolve>::version=1.22.10&hash=c3c19d"
   dependencies:
@@ -20072,6 +20125,19 @@ __metadata:
   version: 1.8.3
   resolution: "shell-quote@npm:1.8.3"
   checksum: 550dd84e677f8915eb013d43689c80bb114860649ec5298eb978f40b8f3d4bc4ccb072b82c094eb3548dc587144bb3965a8676f0d685c1cf4c40b5dc27166242
+  languageName: node
+  linkType: hard
+
+"shelljs@npm:^0.8.5":
+  version: 0.8.5
+  resolution: "shelljs@npm:0.8.5"
+  dependencies:
+    glob: ^7.0.0
+    interpret: ^1.0.0
+    rechoir: ^0.6.2
+  bin:
+    shjs: bin/shjs
+  checksum: 7babc46f732a98f4c054ec1f048b55b9149b98aa2da32f6cf9844c434b43c6251efebd6eec120937bd0999e13811ebd45efe17410edb3ca938f82f9381302748
   languageName: node
   linkType: hard
 
@@ -23010,6 +23076,16 @@ __metadata:
     y18n: ^5.0.5
     yargs-parser: ^21.1.1
   checksum: 73b572e863aa4a8cbef323dd911d79d193b772defd5a51aab0aca2d446655216f5002c42c5306033968193bdbf892a7a4c110b0d77954a7fdf563e653967b56a
+  languageName: node
+  linkType: hard
+
+"yauzl@npm:^3.2.0":
+  version: 3.2.0
+  resolution: "yauzl@npm:3.2.0"
+  dependencies:
+    buffer-crc32: ~0.2.3
+    pend: ~1.2.0
+  checksum: d16440447bbc4973cf60c455290d6a394c47b82d449193098b10c69a6cc8f3eb003e361a512d1885ca67c96c95351aadb46bfcc47ee2c73a5134743d99275554
   languageName: node
   linkType: hard
 

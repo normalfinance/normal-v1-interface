@@ -125,6 +125,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
         </SvgIcon>
       </Box>
       {t('Search tokens...')}
+      {/* eslint-disable i18next/no-literal-string */}
       <Label
         sx={{
           color: 'grey.800',
@@ -135,8 +136,9 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
         }}
       >
-        {t('⌘K')}
+        ⌘K
       </Label>
+      {/* eslint-enable i18next/no-literal-string */}
     </Box>
   );
 

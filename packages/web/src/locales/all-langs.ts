@@ -57,7 +57,7 @@ export const allLangs = [
     },
   },
   {
-    value: 'cn',
+    value: 'zh',
     label: 'Chinese',
     countryCode: 'CN',
     adapterLocale: 'zh-cn',

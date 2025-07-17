@@ -5,7 +5,7 @@ export const languages = [
   'en',
   'fr',
   'vi',
-  'cn',
+  'zh',
   'ar',
   // Newly added languages
   'da', // Danish
@@ -68,7 +68,7 @@ export const changeLangMessages: Partial<
     error: 'Erreur lors du changement de langue!',
     loading: 'Chargement...',
   },
-  cn: {
+  zh: {
     success: '语言已更改！',
     error: '更改语言时出错！',
     loading: '加载中...',
