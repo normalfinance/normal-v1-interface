@@ -1,7 +1,6 @@
 'use client';
 
 import type { TransactionDetails } from '@/types/transaction';
-import type { SorobanTokenContract } from '@normalfinance/contracts';
 import type { AppStore, AppStorePersist } from '@normalfinance/types';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 
@@ -17,6 +16,7 @@ import {
   BufferContract,
   PoolRouterContract,
   PoolSwapFeeContract,
+  SorobanTokenContract,
   InsuranceFundContract,
   OracleRegistryContract,
 } from '@normalfinance/contracts';
@@ -43,6 +43,7 @@ const contractClients = {
   pool_router: PoolRouterContract.Client,
   buffer: BufferContract.Client,
   insuranceFund: InsuranceFundContract.Client,
+  token: SorobanTokenContract.Client,
 };
 
 type ContractClientType<T extends ContractType> = T extends 'oracle_registry'
