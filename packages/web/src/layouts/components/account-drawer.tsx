@@ -9,7 +9,6 @@ import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import useNativeTokenBalance from '@/hooks/stellar/use-native-token-balance';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
@@ -155,7 +154,7 @@ function WalletDisconnected({
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
-  const { data } = useNativeTokenBalance();
+  // const { data } = useNativeTokenBalance();
   // const { tokens } = useUserTokens();
   // const { positions } = useLPTokens();
 
@@ -177,7 +176,8 @@ function WalletConnected({ address }: { address: string }) {
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
       <ConnectedWallet
-        balance={Number(data?.data) || 0}
+        balance={0}
+        // balance={Number(data?.data) || 0}
         percentageChange={0}
         tokens={[]}
         positions={[]}
@@ -228,7 +228,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [connectedAddress]);
 
   const [isConnected, setIsConnected] = useState(connectedAddress != '');
-  // console.log(isConnected);
+  console.log(connectedAddress)
+  console.log(isConnected);
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
