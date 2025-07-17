@@ -10,6 +10,7 @@ import { Alert, Grid2, AlertTitle } from '@mui/material';
 
 import PageHeader from '@/components/page-header';
 import { PositionsTable } from '@/components/_positions-page-components/positions-table';
+import { WalletGate } from '@/components/_common/wallet-gate';
 
 // ----------------------------------------------------------------------
 
@@ -28,14 +29,9 @@ export default function PositionsView() {
 
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 12 }}>
-          {isConnected ? (
+          <WalletGate buttonText={t('Connect Wallet to view positions')} fullWidth>
             <PositionsTable positions={positions ?? []} />
-          ) : (
-            <Alert severity="info">
-              <AlertTitle>{t('Connect your wallet')}</AlertTitle>
-              {t('To view your positions and rewards you must connect your wallet')}
-            </Alert>
-          )}
+          </WalletGate>
         </Grid2>
       </Grid2>
     </DashboardContent>

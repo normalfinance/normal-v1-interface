@@ -20,6 +20,7 @@ import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
+import { WalletGate } from '@/components/_common/wallet-gate';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
@@ -102,11 +103,23 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   const renderTabBody = () => {
     switch (tabs.value) {
       case 'swap':
-        return <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} />;
+        return (
+          <WalletGate buttonText="Connect Wallet to Swap">
+            <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} />
+          </WalletGate>
+        );
       case 'send':
-        return <SendCard tokensList={store.tokens} networkCost={0} />;
+        return (
+          <WalletGate buttonText="Connect Wallet to Send">
+            <SendCard tokensList={store.tokens} networkCost={0} />
+          </WalletGate>
+        );
       case 'buy':
-        return <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} />;
+        return (
+          <WalletGate buttonText="Connect Wallet to Buy">
+            <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} />
+          </WalletGate>
+        );
       default:
         return null;
     }

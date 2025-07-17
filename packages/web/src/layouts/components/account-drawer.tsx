@@ -223,18 +223,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address;
 
+  const isConnected = !!connectedAddress;
+
   useEffect(() => {
     if (connectedAddress) {
       Sentry.setUser({ id: connectedAddress });
     } else {
       Sentry.setUser(null);
     }
-  }, [connectedAddress]);
-
-  const [isConnected, setIsConnected] = useState(connectedAddress != '');
-
-  useEffect(() => {
-    setIsConnected(Boolean(connectedAddress));
   }, [connectedAddress]);
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
@@ -310,7 +306,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <Tooltip title="Disconnect">
               <IconButton
                 onClick={() => {
-                  setIsConnected(false);
                   disconnect();
                   onClose();
                 }}
