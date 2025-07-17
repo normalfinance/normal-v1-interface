@@ -1,3 +1,5 @@
+import 'react-loading-skeleton/dist/skeleton.css';
+
 import type { TxType, PoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
@@ -20,6 +22,8 @@ import {
   TableSortLabel,
 } from '@mui/material';
 
+import { TableSkeleton } from '@/components/template/table';
+
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Buy: 'success',
   Sell: 'error',
@@ -37,6 +41,9 @@ function ago(sec: number) {
   return `${Math.floor(diff / 86_400)}d`;
 }
 
+// ----------------------------------------------------------------
+// Types
+// ----------------------------------------------------------------
 type Order = 'asc' | 'desc' | undefined;
 type ColumnKey = 'timestamp' | 'quoteValue' | 'baseValue' | 'wallet';
 
@@ -46,7 +53,8 @@ export const PoolTransactionsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
   rows: PoolTxRow[];
-}> = ({ baseTokenSymbol, quoteTokenSymbol, rows }) => {
+  loading?: boolean;
+}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, loading }) => {
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -178,17 +186,21 @@ export const PoolTransactionsTable: React.FC<{
             </TableHead>
 
             <TableBody>
-              {ordered.map((row, idx) => (
-                <TableRow hover key={idx}>
-                  <TableCell>
-                    <Chip label={row.type} color={typeColor[row.type]} size="small" />
-                  </TableCell>
-                  <TableCell align="right">{row.baseValue.toLocaleString()}</TableCell>
-                  <TableCell align="right">{row.quoteValue.toFixed(3)}</TableCell>
-                  <TableCell>{row.wallet}</TableCell>
-                  <TableCell>{ago(row.timestamp)}</TableCell>
-                </TableRow>
-              ))}
+              {loading ? (
+                <TableSkeleton rowCount={8} cellCount={5} />
+              ) : (
+                ordered.map((row, idx) => (
+                  <TableRow hover key={idx}>
+                    <TableCell>
+                      <Chip label={row.type} color={typeColor[row.type]} size="small" />
+                    </TableCell>
+                    <TableCell align="right">{row.baseValue.toLocaleString()}</TableCell>
+                    <TableCell align="right">{row.quoteValue.toFixed(3)}</TableCell>
+                    <TableCell>{row.wallet}</TableCell>
+                    <TableCell>{ago(row.timestamp)}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
