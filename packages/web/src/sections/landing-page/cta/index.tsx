@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Button, Container, Stack, Typography, type ButtonProps } from '@mui/material';
+import { useTranslate } from '@/locales';
+
+import { Box, Stack, Button, Container, Typography, type ButtonProps } from '@mui/material';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -30,73 +32,77 @@ export const CtaImage: React.FC<CtaImageProps> = ({
   ],
   image = '/assets/images/landing-page/cta-bg.webp',
   ...sectionProps
-}) => (
-  <Box
-    component="section"
-    sx={{
-      position: 'relative',
-      overflow: 'hidden',
-      px: '5%',
+}) => {
+  const { t } = useTranslate();
+  
+  return (
+    <Box
+      component="section"
+      sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        px: '5%',
 
-      py: { xs: 6, md: 12, lg: 14 },
-      color: 'common.white',
-    }}
-    {...sectionProps}
-  >
-    <Container sx={{ position: 'relative', zIndex: 1 }}>
-      {/* ---------- Background image (inside container) ---------- */}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 3, // 24 px (theme.spacing(3) = 24)
-          overflow: 'hidden',
-          pointerEvents: 'none',
-        }}
-      >
+        py: { xs: 6, md: 12, lg: 14 },
+        color: 'common.white',
+      }}
+      {...sectionProps}
+    >
+      <Container sx={{ position: 'relative', zIndex: 1 }}>
+        {/* ---------- Background image (inside container) ---------- */}
         <Box
-          component="img"
-          src={image}
-          alt=""
           sx={{
             position: 'absolute',
             inset: 0,
-            width: 1,
-            height: 1,
-            objectFit: 'cover',
-          }}
-        />
-      </Box>
-
-      {/* ---------- Foreground content ---------- */}
-      <Stack
-        spacing={4}
-        alignItems="center"
-        textAlign="center"
-        sx={{
-          position: 'relative',
-          zIndex: 2,
-          px: { xs: '24px', md: '64px' },
-          py: { xs: '32px', md: '80px' },
-        }}
-      >
-        <Typography variant="h3" fontWeight={500} sx={{ fontSize: { xs: '24px', md: '40px' } }}>
-          {heading}
-        </Typography>
-
-        <Button
-          sx={{
-            border: '1px solid #6E4BFF',
-            backgroundColor: '#E0D9FF',
-            color: '#6E4BFF',
-            fontWeight: 500,
+            borderRadius: 3, // 24 px (theme.spacing(3) = 24)
+            overflow: 'hidden',
+            pointerEvents: 'none',
           }}
         >
-          Start swapping now
-        </Button>
-      </Stack>
-    </Container>
-  </Box>
-);
+          <Box
+            component="img"
+            src={image}
+            alt=""
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              width: 1,
+              height: 1,
+              objectFit: 'cover',
+            }}
+          />
+        </Box>
+
+        {/* ---------- Foreground content ---------- */}
+        <Stack
+          spacing={4}
+          alignItems="center"
+          textAlign="center"
+          sx={{
+            position: 'relative',
+            zIndex: 2,
+            px: { xs: '24px', md: '64px' },
+            py: { xs: '32px', md: '80px' },
+          }}
+        >
+          <Typography variant="h3" fontWeight={500} sx={{ fontSize: { xs: '24px', md: '40px' } }}>
+            {heading}
+          </Typography>
+
+          <Button
+            sx={{
+              border: '1px solid #6E4BFF',
+              backgroundColor: '#E0D9FF',
+              color: '#6E4BFF',
+              fontWeight: 500,
+            }}
+          >
+            {t('Start swapping now')}
+          </Button>
+        </Stack>
+      </Container>
+    </Box>
+  );
+};
 
 CtaImage.displayName = 'CtaImage';

@@ -1,16 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Box,
-  Button,
-  Container,
-  Grid,
-  Paper,
-  Stack,
-  Typography,
-  type ButtonProps as MuiButtonProps,
-} from '@mui/material';
+import { useTranslate } from '@/locales';
+
+import { Box, Grid, Paper, Button, Container, Typography } from '@mui/material';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -77,73 +70,77 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
   description,
   stats,
   ...sectionProps
-}) => (
-  <Box
-    component="section"
-    sx={{
-      px: '5%',
-      py: { xs: 6, md: 8, lg: 10 },
-    }}
-    {...sectionProps}
-  >
-    <Container>
-      <Grid
-        container
-        spacing={{ xs: 6, lg: 8 }}
-        alignItems="center"
-        columns={{ xs: 1, lg: 12 }}
-        height={1}
-      >
-        {/* ----- left column ----- */}
+}) => {
+  const { t } = useTranslate();
+
+  return (
+    <Box
+      component="section"
+      sx={{
+        px: '5%',
+        py: { xs: 6, md: 8, lg: 10 },
+      }}
+      {...sectionProps}
+    >
+      <Container>
         <Grid
-          item
-          xs={12}
-          lg={5}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            pt: { md: '0 !important' },
-          }}
+          container
+          spacing={{ xs: 6, lg: 8 }}
+          alignItems="center"
+          columns={{ xs: 1, lg: 12 }}
           height={1}
         >
-          {/* top */}
-          <Typography variant="h3" fontWeight={500} mb={2}>
-            {heading}
-          </Typography>
-
-          {/* bottom */}
-          <Box sx={{ mt: 'auto' }}>
-            <Typography color="text.secondary" mb={2}>
-              {description}
+          {/* ----- left column ----- */}
+          <Grid
+            item
+            xs={12}
+            lg={5}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              pt: { md: '0 !important' },
+            }}
+            height={1}
+          >
+            {/* top */}
+            <Typography variant="h3" fontWeight={500} mb={2}>
+              {heading}
             </Typography>
 
-            <Button
-              variant="contained"
-              sx={{
-                mt: 0.5,
-                borderRadius: 1,
-                bgcolor: '#6E4BFF',
-                '&:hover': { bgcolor: '#6E4BFF' },
-              }}
-            >
-              Learn more
-            </Button>
-          </Box>
-        </Grid>
+            {/* bottom */}
+            <Box sx={{ mt: 'auto' }}>
+              <Typography color="text.secondary" mb={2}>
+                {description}
+              </Typography>
 
-        <Grid item xs={1} lg={7}>
-          <Grid container spacing={4}>
-            {stats?.map((s, i) => (
-              <Grid item xs={12} md={6} key={i}>
-                <StatCard {...s} />
-              </Grid>
-            ))}
+              <Button
+                variant="contained"
+                sx={{
+                  mt: 0.5,
+                  borderRadius: 1,
+                  bgcolor: '#6E4BFF',
+                  '&:hover': { bgcolor: '#6E4BFF' },
+                }}
+              >
+                {t('Learn more')}
+              </Button>
+            </Box>
+          </Grid>
+
+          <Grid item xs={1} lg={7}>
+            <Grid container spacing={4}>
+              {stats?.map((s, i) => (
+                <Grid item xs={12} md={6} key={i}>
+                  <StatCard {...s} />
+                </Grid>
+              ))}
+            </Grid>
           </Grid>
         </Grid>
-      </Grid>
-    </Container>
-  </Box>
-);
+      </Container>
+    </Box>
+  );
+};
 
 /* ------------------------------------------------------------------ */
 /*  Defaults                                                           */

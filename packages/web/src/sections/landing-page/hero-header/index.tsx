@@ -1,21 +1,17 @@
 'use client';
 
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
+
 import * as React from 'react';
-import {
-  Box,
-  Button,
-  Container,
-  Paper,
-  Stack,
-  Typography,
-  type ButtonProps as MuiButtonProps,
-} from '@mui/material';
+import { useTranslate } from '@/locales';
+import { useAppStore } from '@normalfinance/state';
+
+import { useTheme } from '@mui/material/styles';
+import { Box, Paper, Stack, Container, Typography } from '@mui/material';
+
 import SwapCard from '@/components/_common/swap-card';
+
 import { WavyBackground } from './wavy-background';
-import { Token } from '@/types/token';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
-import { alpha, useTheme } from '@mui/material/styles';
-import { wrap } from 'module';
 
 type ImageProps = {
   src: string;
@@ -32,76 +28,6 @@ type Props = {
 
 export type HeroHeaderProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
-const tokensList: Token[] = [
-  {
-    id: 1,
-    url: 'https://token-icons.s3.amazonaws.com/eth.png',
-    name: 'Ethereum',
-    shortname: 'ETH',
-    owned: true,
-    countstatus: 0.02106,
-    pricestatus: 2814.25,
-    featured: true,
-    address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-  },
-  {
-    id: 2,
-    url: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694',
-    name: 'USDC',
-    shortname: 'USDC',
-    owned: false,
-    countstatus: 0,
-    pricestatus: 0.9998,
-    featured: true,
-    address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-  },
-  {
-    id: 3,
-    url: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
-    name: 'Tether',
-    shortname: 'USDT',
-    owned: false,
-    countstatus: 0,
-    pricestatus: 0.9999,
-    featured: true,
-    address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-  },
-
-  {
-    id: 4,
-    url: 'https://coin-images.coingecko.com/coins/images/7598/large/wrapped_bitcoin_wbtc.png?1696507857',
-    name: 'Wrapped Bitcoin',
-    shortname: 'WBTC',
-    owned: false,
-    countstatus: 0,
-    pricestatus: 95799.17,
-    featured: true,
-    address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-  },
-  {
-    id: 5,
-    url: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png',
-    name: 'Wrapped Ether',
-    shortname: 'WETH',
-    owned: false,
-    countstatus: 0,
-    pricestatus: 2806.75,
-    featured: true,
-    address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-  },
-  {
-    id: 6,
-    url: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png',
-    name: 'Wrapped Ether',
-    shortname: 'WETH',
-    owned: false,
-    countstatus: 0,
-    pricestatus: 2806.75,
-    featured: false,
-    address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-  },
-];
-
 const swapFeeInfo: SwapFeeInfo = {
   feePercentage: 0.25,
   networkCost: 1.0,
@@ -115,7 +41,10 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
     ...incomingProps,
   } as Props;
 
+  const { t } = useTranslate();
   const theme = useTheme();
+
+  const store = useAppStore();
 
   return (
     <Box
@@ -205,7 +134,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 },
               }}
             >
-              Instant crypto swaps, finally made{' '}
+              {t('Instant crypto swaps, finally made')}{' '}
               <Box
                 component="span"
                 sx={{
@@ -216,7 +145,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   color: 'transparent',
                 }}
               >
-                Normal
+                {t('Normal')}
               </Box>
             </Typography>
 
@@ -236,11 +165,11 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 justifyContent: 'center',
               }}
             >
-              <span>💸 Low fees</span>
+              <span>💸 {t('Low fees')}</span>
               <span>•</span>
-              <span>🌍 Global access</span>
+              <span>🌍 {t('Global access')}</span>
               <span>•</span>
-              <span>⚡ Built on Stellar</span>
+              <span>⚡ {t('Built on Stellar')}</span>
             </Typography>
 
             <Box
@@ -255,7 +184,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
+              <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>

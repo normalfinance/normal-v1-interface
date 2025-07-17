@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
+import LandingPage from '@/sections/landing-page';
 
 export const metadata: Metadata = {
   title: {

@@ -1,20 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Button,
-  Container,
-  Stack,
-  Typography,
-  type ButtonProps,
-} from '@mui/material';
 import { Icon } from '@iconify/react';
+
 import { styled } from '@mui/material/styles';
 import { Accordion as MuiAccordion } from '@mui/material';
+import {
+  Box,
+  Stack,
+  Container,
+  Typography,
+  AccordionDetails,
+  AccordionSummary,
+  type ButtonProps,
+} from '@mui/material';
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
 import { createNoise3D } from 'simplex-noise';
+import React, { useRef, useState, useEffect } from 'react';
+
 import { cn } from './lib/utils';
 
 /* ----------------------------------------------------------------------- */
@@ -80,6 +81,7 @@ export const WavyBackground = ({
 
     let animationId = requestAnimationFrame(render);
 
+    // eslint-disable-next-line consistent-return
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', resize);

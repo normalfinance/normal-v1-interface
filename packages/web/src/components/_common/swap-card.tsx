@@ -21,7 +21,6 @@ import SwapReview from './swap-review';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-import { SwapFeeInfo } from '@/types/swap-fee-info';
 
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];

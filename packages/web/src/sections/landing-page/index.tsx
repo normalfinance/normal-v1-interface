@@ -1,49 +1,60 @@
-import { FeatureGrid } from './features-grid';
-import { HeroHeader } from './hero-header';
-import { Token } from '@/types/token';
+import type { StateToken as Token } from '@normalfinance/types';
+
 import { Icon } from '@iconify/react';
+
+import { CtaImage } from './cta';
+import { FaqAccordion } from './faq';
+import { HeroHeader } from './hero-header';
+import { FeatureGrid } from './features-grid';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
-import { FaqAccordion } from './faq';
-import { CtaImage } from './cta';
-import { SmallCard } from './features-grid';
+
+import type { SmallCard} from './features-grid';
 
 export const tokens: Token[] = [
   {
-    id: 1,
+    id: '<insert_pool_address>',
     name: 'Bitcoin',
-    shortname: 'BTC',
+    symbol: 'BTC',
     icon: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
-    pricestatus: 67600.18,
+    usdValue: 67600.18,
     percentageChange: 2.45435,
-    url: '/pools/bitcoin',
+    decimals: 7,
+    balance: BigInt(0),
+    featured: false,
   },
   {
-    id: 2,
+    id: '<insert_pool_address>',
     name: 'Ethereum',
-    shortname: 'ETH',
+    symbol: 'ETH',
     icon: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
-    pricestatus: 3150,
+    usdValue: 3150,
     percentageChange: 1.1,
-    url: '/pools/ethereum',
+    decimals: 7,
+    balance: BigInt(0),
+    featured: false,
   },
   {
-    id: 3,
+    id: '<insert_pool_address>',
     name: 'Solana',
-    shortname: 'SOL',
+    symbol: 'SOL',
     icon: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
-    pricestatus: 141,
+    usdValue: 141,
     percentageChange: -0.8,
-    url: '/pools/solana',
+    decimals: 7,
+    balance: BigInt(0),
+    featured: false,
   },
   {
-    id: 4,
+    id: '<insert_pool_address>',
     name: 'XRP',
-    shortname: 'XRP',
+    symbol: 'XRP',
     icon: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
-    pricestatus: 0.48,
+    usdValue: 0.48,
     percentageChange: 0.5,
-    url: '/pools/xrp',
+    decimals: 7,
+    balance: BigInt(0),
+    featured: false,
   },
 ];
 

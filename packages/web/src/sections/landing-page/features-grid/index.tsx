@@ -1,20 +1,16 @@
 'use client';
 
+import type { StateToken as Token } from '@normalfinance/types';
+
 import * as React from 'react';
-import {
-  Box,
-  Button,
-  Container,
-  Paper,
-  Stack,
-  Typography,
-  type ButtonProps as MuiButtonProps,
-} from '@mui/material';
-import { ArrowRightIcon } from '@mui/x-date-pickers/icons';
-import type { Token } from '@/types/token';
-import { Iconify } from '@/components/template/iconify';
-import { fCurrency, fCurrencyCompact, fPercent } from '@/utils/format-number';
+import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
+import { fPercent, fCurrency } from '@/utils/format-number';
+
+import { Box, Paper, Stack, Container, Typography } from '@mui/material';
+
+import { Iconify } from '@/components/template/iconify';
 
 /* ––––– Types ––––– */
 
@@ -127,9 +123,9 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
           {/* token preview list */}
           {c.tokens && (
             <Stack spacing={1} mt={2}>
-              {c.tokens.map((t) => (
+              {c.tokens.map((t, index) => (
                 <Box
-                  key={t.id}
+                  key={index}
                   display="flex"
                   alignItems="center"
                   justifyContent="space-between"
@@ -137,15 +133,15 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   width={1}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (t.url) router.push(t.url);
+                    if (t.icon) router.push(paths.pools.details(t.id));
                   }}
-                  role={t.url ? 'link' : undefined}
-                  tabIndex={t.url ? 0 : undefined}
+                  role={t.icon ? 'link' : undefined}
+                  tabIndex={t.icon ? 0 : undefined}
                   sx={{
-                    cursor: t.url ? 'pointer' : 'default',
+                    cursor: t.icon ? 'pointer' : 'default',
                     transition: 'transform 0.15s ease',
                     '&:hover': {
-                      transform: t.url ? 'scale(1.03)' : 'none',
+                      transform: t.icon ? 'scale(1.03)' : 'none',
                     },
                     px: { xs: '12px', md: '16px' },
                     py: { xs: '6px', md: '12px' },
@@ -159,7 +155,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                     <Box
                       component="img"
                       src={t.icon}
-                      alt={t.shortname}
+                      alt={t.symbol}
                       sx={{ width: { xs: 24, md: 32 }, height: { xs: 24, md: 32 } }}
                     />
                     <Typography
@@ -178,7 +174,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                         color: 'text.secondary',
                       }}
                     >
-                      {t.shortname}
+                      {t.symbol}
                     </Typography>
                   </Box>
 
@@ -196,7 +192,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                       fontWeight={500}
                       sx={{ fontSize: { xs: 14, md: 20 }, color: 'text.primary' }}
                     >
-                      {fCurrency(t.pricestatus)}
+                      {fCurrency(t.usdValue)}
                     </Typography>
 
                     <Box
@@ -394,52 +390,56 @@ export const FeatureGrid: React.FC<FeatureGridProps> = ({
   cardTall,
   cardWide,
   ...sectionProps
-}) => (
-  <Box
-    component="section"
-    sx={{
-      position: 'relative',
-      overflow: 'hidden',
-      px: '5%',
-      py: { xs: 6, md: 8, lg: 10 },
-      backgroundColor: 'white',
-    }}
-    {...sectionProps}
-  >
-    <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, px: 0 }}>
-      <Stack spacing={2} maxWidth={640} textAlign="left" mb={{ xs: 3, md: 4 }}>
-        <Typography variant="h2" fontWeight={500}>
-          Crypto made normal
-        </Typography>
-      </Stack>
+}) => {
+  const { t } = useTranslate();
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: { xs: 2, md: 2 },
-          gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' },
-        }}
-      >
-        {/* small card #1 (token preview) */}
-        {cardsSmall && <SmallCardItem {...cardsSmall[0]} />}
+  return (
+    <Box
+      component="section"
+      sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        px: '5%',
+        py: { xs: 6, md: 8, lg: 10 },
+        backgroundColor: 'white',
+      }}
+      {...sectionProps}
+    >
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, px: 0 }}>
+        <Stack spacing={2} maxWidth={640} textAlign="left" mb={{ xs: 3, md: 4 }}>
+          <Typography variant="h2" fontWeight={500}>
+            {t('Crypto made normal')}
+          </Typography>
+        </Stack>
 
-        {/* tall card spans 2 rows on lg */}
-        {cardTall && (
-          <Box sx={{ gridRow: { lg: 'span 2' } }}>
-            <TallCardItem {...cardTall} />
-          </Box>
-        )}
+        <Box
+          sx={{
+            display: 'grid',
+            gap: { xs: 2, md: 2 },
+            gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' },
+          }}
+        >
+          {/* small card #1 (token preview) */}
+          {cardsSmall && <SmallCardItem {...cardsSmall[0]} />}
 
-        {/* small card #2 */}
-        {cardsSmall && <SmallCardItem {...cardsSmall[1]} />}
+          {/* tall card spans 2 rows on lg */}
+          {cardTall && (
+            <Box sx={{ gridRow: { lg: 'span 2' } }}>
+              <TallCardItem {...cardTall} />
+            </Box>
+          )}
 
-        {/* wide card spans both columns on lg */}
-        {cardWide && (
-          <Box sx={{ gridColumn: { lg: '1 / span 2' } }}>
-            <WideCardItem {...cardWide} />
-          </Box>
-        )}
-      </Box>
-    </Container>
-  </Box>
-);
+          {/* small card #2 */}
+          {cardsSmall && <SmallCardItem {...cardsSmall[1]} />}
+
+          {/* wide card spans both columns on lg */}
+          {cardWide && (
+            <Box sx={{ gridColumn: { lg: '1 / span 2' } }}>
+              <WideCardItem {...cardWide} />
+            </Box>
+          )}
+        </Box>
+      </Container>
+    </Box>
+  );
+};
