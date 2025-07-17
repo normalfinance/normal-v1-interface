@@ -1,31 +1,36 @@
-import React, { useState, useEffect } from 'react';
-
-import { styled, keyframes } from '@mui/system';
+import React, { useEffect, useState } from 'react';
+import { Box, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
+import { keyframes, styled } from '@mui/system';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { Box, Dialog, Tooltip, IconButton, DialogTitle, DialogContent } from '@mui/material';
+import { Iconify } from '@/components/template/iconify';
 
+/**
+ * ZealyHighlight – resilient render version
+ * ---------------------------------------------------------------------------
+ * Fixes: dialog shown once → closed → reopened = blank. We now re‑invoke
+ * `ZealyEmbed.parse()` each time the dialog opens (and whenever `questId`
+ * changes) so the widget re‑initialises if needed.
+ * ---------------------------------------------------------------------------
+ */
 export type ZealyHighlightProps = {
   questId: string;
   dialogTitle?: React.ReactNode;
   sizePx?: number;
-  offset?: number;
+  /** Positive or negative offsets (px) from the anchor Box sides */
+  position?: Partial<Record<'top' | 'right' | 'bottom' | 'left', number>>;
   community?: string;
   color?: string;
   theme?: 'light' | 'dark';
 };
 
-// ---------------------------------------------------------------------------
-// Animation
-// ---------------------------------------------------------------------------
+// Animation ----------------------------------------------------------------
 const pulseKeyframes = keyframes`
   0%   { transform: scale(1);   opacity: 0.9; }
   75%  { transform: scale(2.5); opacity: 0;   }
   100% { transform: scale(2.5); opacity: 0;   }
 `;
 
-// ---------------------------------------------------------------------------
-// Styled components
-// ---------------------------------------------------------------------------
+// Styled --------------------------------------------------------------------
 const Wrapper = styled(Box)({ position: 'absolute', zIndex: 10 });
 
 const PulseButton = styled(IconButton)<{ $diameter: number }>(({ theme, $diameter }) => ({
@@ -39,7 +44,6 @@ const PulseButton = styled(IconButton)<{ $diameter: number }>(({ theme, $diamete
   position: 'relative',
   backgroundColor: theme.palette.primary.main,
   color: theme.palette.common.white,
-  zIndex: 1,
   '& svg': { fontSize: $diameter * 0.6 },
   '&::after': {
     content: "''",
@@ -57,27 +61,21 @@ const PulseButton = styled(IconButton)<{ $diameter: number }>(({ theme, $diamete
   },
 }));
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+// Component -----------------------------------------------------------------
 const ZealyHighlight: React.FC<ZealyHighlightProps> = ({
   questId,
   dialogTitle,
   sizePx = 24,
-  offset = 8,
+  position = { top: 8, right: 8 },
   community = 'normalfinance',
   color = '#0954A5',
   theme = 'dark',
 }) => {
   const [open, setOpen] = useState(false);
 
-  // Ensure Zealy script exists – **after** the placeholder is in DOM.
+  // Load Zealy script once per session -------------------------------------
   useEffect(() => {
-    if (!open) return;
-
-    // Already loaded? nothing to do.
     if ((window as any).__zealyEmbedLoaded) return;
-
     const script = document.createElement('script');
     script.src = 'https://zealy.io/embed.js';
     script.async = true;
@@ -85,24 +83,48 @@ const ZealyHighlight: React.FC<ZealyHighlightProps> = ({
       (window as any).__zealyEmbedLoaded = true;
     };
     document.body.appendChild(script);
-  }, [open]);
+  }, []);
+
+  // Re‑parse on every open / quest change -----------------------------------
+  useEffect(() => {
+    if (!open) return;
+    const tryParse = () => {
+      if ((window as any).ZealyEmbed?.parse) {
+        (window as any).ZealyEmbed.parse();
+      } else {
+        // script not yet ready – wait a tick
+        setTimeout(tryParse, 150);
+      }
+    };
+    tryParse();
+  }, [open, questId]);
 
   return (
     <>
       {/* Badge */}
-      <Wrapper sx={{ top: offset, right: offset }}>
-        <Tooltip title="View quest">
-          <PulseButton title="Earn Zealy XP" $diameter={sizePx} onClick={() => setOpen(true)}>
-            <HelpOutlineIcon />
-          </PulseButton>
-        </Tooltip>
+      <Wrapper sx={position}>
+        <PulseButton title="Earn Zealy XP" $diameter={sizePx} onClick={() => setOpen(true)}>
+          <HelpOutlineIcon />
+        </PulseButton>
       </Wrapper>
-
-      {/* Dialog */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth keepMounted>
-        {dialogTitle && <DialogTitle>{dialogTitle}</DialogTitle>}
+        <DialogTitle
+          sx={{
+            m: 0,
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box component="span">{dialogTitle}</Box>
+          <IconButton onClick={() => setOpen(false)} size="small">
+            <Iconify icon="mingcute:close-line" width={20} />
+          </IconButton>
+        </DialogTitle>{' '}
         <DialogContent dividers sx={{ p: 0 }}>
           <Box
+            key={questId}
             component="div"
             data-zealy-community={community}
             data-variant="inline"

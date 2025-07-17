@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
+        url: '/og/home.png',
         width: 1200,
         height: 630,
         alt: 'Normal Create Position',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Create Position | Normal',
     description: 'Create a new position on Normal.',
-    images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
+    images: ['/og/home.png'],
   },
   robots: {
     index: true,

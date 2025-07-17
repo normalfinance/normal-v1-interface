@@ -2,15 +2,14 @@
 
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
-
+import { useTranslate } from '@/locales';
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
-
+import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 import { useTheme } from '@mui/material/styles';
 import {
   Box,
@@ -23,14 +22,14 @@ import {
   Typography,
   CircularProgress,
 } from '@mui/material';
-
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
-
 import { AccountButton } from './account-button';
+import { ZEALY_QUEST_IDS } from '@/global-config';
+import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
@@ -125,9 +124,15 @@ function WalletDisconnected({
         alignItems: 'start',
       }}
     >
-      <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
-        {t('Connect your wallet')}
-      </Typography>
+      <Box sx={{ position: 'relative' }}>
+        <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
+          {t('Connect your wallet')}
+        </Typography>
+        <ZealyHighlight
+          questId={ZEALY_QUEST_IDS.connectWallet}
+          position={{ top: -22, right: -32 }}
+        />
+      </Box>
       {loading ? (
         <CircularProgress />
       ) : (
