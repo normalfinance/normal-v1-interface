@@ -64,7 +64,7 @@ export function useTrustLine(): ReturnType {
       setTxBroadcasting(true);
       await fetchAndIssueTrustline(storePersist.wallet.address!, trustlineTokenName);
       setTrustlineButtonActive(false);
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
       setError(e);
     }
