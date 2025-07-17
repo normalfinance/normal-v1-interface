@@ -13,7 +13,7 @@ type ThemeConfig = {
   cssVariables: ThemeCssVariables;
   fontFamily: Record<'primary' | 'secondary', string>;
   palette: Record<
-    'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error',
+    'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'purple',
     PaletteColorNoChannels
   > & {
     common: Pick<CommonColors, 'black' | 'white'>;
@@ -36,8 +36,8 @@ export const themeConfig: ThemeConfig = {
    * Typography
    *************************************** */
   fontFamily: {
-    primary: 'Public Sans Variable',
-    secondary: 'Barlow',
+    primary: 'Figtree',
+    secondary: 'Figtree',
   },
   /** **************************************
    * Palette
@@ -104,6 +104,14 @@ export const themeConfig: ThemeConfig = {
       '900': '#141A21',
     },
     common: { black: '#000000', white: '#FFFFFF' },
+    purple: {
+      lighter: 'rgba(148,123,255,0.29)', // 29 % opacity
+      light: '#947BFF',
+      main: '#6E4BFF',
+      dark: '#4B29DB',
+      darker: '#30189C',
+      contrastText: '#FFFFFF',
+    },
   },
   /** **************************************
    * Css variables

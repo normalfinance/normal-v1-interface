@@ -92,7 +92,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
           },
           '&::-webkit-scrollbar-thumb': {
             backgroundColor: theme.palette.divider,
-            borderRadius: '4px',
+            borderRadius: '20px',
           },
           scrollbarWidth: 'thin',
           scrollbarColor: `${theme.palette.divider} transparent`,
@@ -514,7 +514,20 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            onClick={onSubmit}
+            sx={{
+              backgroundColor: 'rgba(148,123,255,0.29)',
+              color: '#6E4BFF',
+              '&:hover': {
+                backgroundColor: 'rgba(148,123,255,0.20)',
+              },
+              borderRadius: '20px',
+            }}
+          >
             {t('Swap')}
           </Button>
         </Box>
