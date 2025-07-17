@@ -1,5 +1,5 @@
-import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { Ratelimit } from '@upstash/ratelimit';
 
 // Create a Redis client from your .env
 const redis = new Redis({
