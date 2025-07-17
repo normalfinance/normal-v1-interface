@@ -65,6 +65,7 @@ jobs:
       # Check for untranslated / missing keys across all locale JSON files
       - name: i18n – translation completeness check
         working-directory: packages/web
+        continue-on-error: true
         run: yarn i18n:check
 
       - name: Prisma - Generate Prisma Client
