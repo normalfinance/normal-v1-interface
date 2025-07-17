@@ -4382,6 +4382,7 @@ __metadata:
     "@privy-io/react-auth": ^2.17.2
     "@sentry/nextjs": ^9.35.0
     "@stellar/stellar-sdk": ^13.3.0
+    "@supabase/supabase-js": ^2.51.0
     "@svgr/webpack": ^8.1.0
     "@testing-library/jest-dom": ^6.1.3
     "@testing-library/react": ^14.2.0
@@ -6117,6 +6118,78 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@supabase/auth-js@npm:2.71.0":
+  version: 2.71.0
+  resolution: "@supabase/auth-js@npm:2.71.0"
+  dependencies:
+    "@supabase/node-fetch": ^2.6.14
+  checksum: f0bedbc5e0c050dd31529ee06ef404889c34a6b25c3ce9cb21fa33ceab38964426faf0d70070a588bee8ccec2cad0fce945695fbf1bf48ef31807b568561bc3c
+  languageName: node
+  linkType: hard
+
+"@supabase/functions-js@npm:2.4.5":
+  version: 2.4.5
+  resolution: "@supabase/functions-js@npm:2.4.5"
+  dependencies:
+    "@supabase/node-fetch": ^2.6.14
+  checksum: be7086e83390e62291af206cc89e17d307797d9e495ff0c2185433cf22e47d0bf0b66e602c52c2f9af270a622577bd59930311bb034dd26df174e554123defa0
+  languageName: node
+  linkType: hard
+
+"@supabase/node-fetch@npm:2.6.15, @supabase/node-fetch@npm:^2.6.13, @supabase/node-fetch@npm:^2.6.14":
+  version: 2.6.15
+  resolution: "@supabase/node-fetch@npm:2.6.15"
+  dependencies:
+    whatwg-url: ^5.0.0
+  checksum: 9673b49236a56df49eb7ea5cb789cf4e8b1393069b84b4964ac052995e318a34872f428726d128f232139e17c3375a531e45e99edd3e96a25cce60d914b53879
+  languageName: node
+  linkType: hard
+
+"@supabase/postgrest-js@npm:1.19.4":
+  version: 1.19.4
+  resolution: "@supabase/postgrest-js@npm:1.19.4"
+  dependencies:
+    "@supabase/node-fetch": ^2.6.14
+  checksum: 3265d5d563eb4b54ab78f2d7a87c68948b323f520913e8309f367cbb8a714b8d5a519e05d73e96510f8d216ea55b5c21e1822f200f6db0a52cc028ac396f62cf
+  languageName: node
+  linkType: hard
+
+"@supabase/realtime-js@npm:2.11.15":
+  version: 2.11.15
+  resolution: "@supabase/realtime-js@npm:2.11.15"
+  dependencies:
+    "@supabase/node-fetch": ^2.6.13
+    "@types/phoenix": ^1.6.6
+    "@types/ws": ^8.18.1
+    isows: ^1.0.7
+    ws: ^8.18.2
+  checksum: 88b5ab8e329bf0d8843ebbdd02278690d9613e2cba5321216694307db0a3b12717cc04e296b985dea05f636566d4a92488e6679dfaf4094bc0abdd0fdbe17350
+  languageName: node
+  linkType: hard
+
+"@supabase/storage-js@npm:2.7.1":
+  version: 2.7.1
+  resolution: "@supabase/storage-js@npm:2.7.1"
+  dependencies:
+    "@supabase/node-fetch": ^2.6.14
+  checksum: ed8f3a3178856c331b36588f4fff5cbb7f2f89977fff9716ab20b1977d13816bda5a887a316638f2a05ac35fdef46e18eab8a543d6113de76d3a06b15bf9ae8e
+  languageName: node
+  linkType: hard
+
+"@supabase/supabase-js@npm:^2.51.0":
+  version: 2.51.0
+  resolution: "@supabase/supabase-js@npm:2.51.0"
+  dependencies:
+    "@supabase/auth-js": 2.71.0
+    "@supabase/functions-js": 2.4.5
+    "@supabase/node-fetch": 2.6.15
+    "@supabase/postgrest-js": 1.19.4
+    "@supabase/realtime-js": 2.11.15
+    "@supabase/storage-js": 2.7.1
+  checksum: 2ec072a41c8f84f7cf5b063d566b45ead80f19f98bb2aca6c898a193d5fd5b9f26bced8b0f3af1cc13ed13e29eda87689587d54063f86410f34a54a0d7a364f5
+  languageName: node
+  linkType: hard
+
 "@svgdotjs/svg.draggable.js@npm:^3.0.4":
   version: 3.0.6
   resolution: "@svgdotjs/svg.draggable.js@npm:3.0.6"
@@ -6858,6 +6931,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/phoenix@npm:^1.6.6":
+  version: 1.6.6
+  resolution: "@types/phoenix@npm:1.6.6"
+  checksum: 9dc897cb9a4cd62f7a0de48855e6cafded5c676e7d78c4d3a9ade4f21ec82b95eb7195caada26a9a3a5d9aba14f0fd875bc3898e086234b20da63991a033f6e8
+  languageName: node
+  linkType: hard
+
 "@types/prop-types@npm:*, @types/prop-types@npm:^15.7.13, @types/prop-types@npm:^15.7.14, @types/prop-types@npm:^15.7.15":
   version: 15.7.15
   resolution: "@types/prop-types@npm:15.7.15"
@@ -6985,6 +7065,15 @@ __metadata:
   version: 1.19.25
   resolution: "@types/urijs@npm:1.19.25"
   checksum: cce3fd2845d5e143f4130134a5f6ff7e02b4dfc05f4d13c7b28a404fd9420bb8a6483a572c0662693bb18c5b3d8f814270aa75f3fd539f32fae22d005e755b5d
+  languageName: node
+  linkType: hard
+
+"@types/ws@npm:^8.18.1":
+  version: 8.18.1
+  resolution: "@types/ws@npm:8.18.1"
+  dependencies:
+    "@types/node": "*"
+  checksum: 0331b14cde388e2805af66cad3e3f51857db8e68ed91e5b99750915e96fe7572e58296dc99999331bbcf08f0ff00a227a0bb214e991f53c2a5aca7b0e71173fa
   languageName: node
   linkType: hard
 
@@ -12502,7 +12591,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"isows@npm:1.0.7":
+"isows@npm:1.0.7, isows@npm:^1.0.7":
   version: 1.0.7
   resolution: "isows@npm:1.0.7"
   peerDependencies:
@@ -19280,7 +19369,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ws@npm:^8.11.0":
+"ws@npm:^8.11.0, ws@npm:^8.18.2":
   version: 8.18.3
   resolution: "ws@npm:8.18.3"
   peerDependencies:
