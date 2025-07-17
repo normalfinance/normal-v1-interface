@@ -9,7 +9,7 @@ import { FeatureGrid } from './features-grid';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
 
-import type { SmallCard} from './features-grid';
+import type { SmallCard } from './features-grid';
 
 export const tokens: Token[] = [
   {

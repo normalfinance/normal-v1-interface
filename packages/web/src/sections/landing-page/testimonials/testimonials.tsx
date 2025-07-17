@@ -4,15 +4,7 @@ import * as React from 'react';
 import { Icon } from '@iconify/react';
 
 import Masonry from '@mui/lab/Masonry';
-import {
-  Box,
-  Paper,
-  Stack,
-  Avatar,
-  Container,
-  Typography,
-  type ButtonProps,
-} from '@mui/material';
+import { Box, Paper, Stack, Avatar, Container, Typography, type ButtonProps } from '@mui/material';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
