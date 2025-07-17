@@ -1,7 +1,7 @@
 'use client';
 
-import type { ChartTimeframeKey } from '@/components/_pool-page-components';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
+import type { ChartTimeframeKey, ExplorerChartData } from '@/components/_pool-page-components';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
@@ -14,10 +14,10 @@ interface ReturnType {
   loading: boolean;
   chartData: Record<ChartTimeframeKey, RealtimeChartData>;
 }
-
-type PricePoint = {
-  timestamp: number;
-  price: number;
+type RebalanceRow = {
+  timestamp: string;
+  data: string | [string, string];
+  topics: string[];
 };
 
 const timeframeDurations: Record<ChartTimeframeKey, number> = {
@@ -65,17 +65,51 @@ export function usePoolPriceChartv2(poolAddress: string): ReturnType {
         return;
       }
 
-      const pricePoints: PricePoint[] = data
-        .map((row: any) => {
-          const timestamp = new Date(row.timestamp).getTime();
-          const [reserveA, reserveB] = parseReserves(row.data);
-          if (reserveA === 0 || reserveB === 0) return null;
-          return { timestamp, price: reserveB / reserveA };
-        })
-        .filter(Boolean) as PricePoint[];
+      const rows = data as RebalanceRow[];
 
-      const chartBuckets = computeChartBuckets(pricePoints, now);
-      setChartData(chartBuckets);
+      const result: ExplorerChartData = { price: {}, volume: {} };
+
+      (['24h', '7d', '30d', '12m'] as ChartTimeframeKey[]).forEach((tf) => {
+        const duration = timeframeDurations[tf];
+        const buckets = bucketCounts[tf];
+        const bucketSize = duration / buckets;
+
+        const priceBuckets: number[][] = Array.from({ length: buckets }, () => []);
+        const volumeBuckets: number[] = Array.from({ length: buckets }, () => 0);
+
+        let prevReserveA = 0;
+        let prevReserveB = 0;
+
+        for (const row of rows) {
+          const ts = new Date(row.timestamp).getTime();
+          if (now - ts > duration) continue;
+
+          const bucketIndex = Math.floor((ts - (now - duration)) / bucketSize);
+          if (bucketIndex < 0 || bucketIndex >= buckets) continue;
+
+          const [a, b] = parseReserves(row.data);
+          if (a === 0 || b === 0) continue;
+
+          const price = b / a;
+          priceBuckets[bucketIndex].push(price);
+
+          if (prevReserveA !== 0 || prevReserveB !== 0) {
+            const deltaA = Math.abs(a - prevReserveA);
+            const deltaB = Math.abs(b - prevReserveB);
+            volumeBuckets[bucketIndex] += deltaA + deltaB;
+          }
+
+          prevReserveA = a;
+          prevReserveB = b;
+        }
+
+        const averagedPrices = priceBuckets.map((p) =>
+          p.length ? p.reduce((a, b) => a + b, 0) / p.length : 0
+        );
+
+        result.price![tf] = createChartData(tf, averagedPrices, tickCount(tf));
+        result.volume![tf] = createChartData(tf, volumeBuckets, tickCount(tf));
+      });
     };
 
     fetchInitialData();
@@ -97,36 +131,6 @@ function parseReserves(data: any): [number, number] {
   }
 }
 
-function computeChartBuckets(
-  pricePoints: PricePoint[],
-  now: number
-): Record<ChartTimeframeKey, RealtimeChartData> {
-  const result: Record<ChartTimeframeKey, RealtimeChartData> = {} as any;
-
-  (['24h', '7d', '30d', '12m'] as ChartTimeframeKey[]).forEach((tf) => {
-    const duration = timeframeDurations[tf];
-    const buckets = bucketCounts[tf];
-    const bucketSize = duration / buckets;
-    const points: number[][] = Array.from({ length: buckets }, () => []);
-
-    for (const point of pricePoints) {
-      if (now - point.timestamp > duration) continue;
-      const bucketIndex = Math.floor((point.timestamp - (now - duration)) / bucketSize);
-      if (bucketIndex >= 0 && bucketIndex < buckets) {
-        points[bucketIndex].push(point.price);
-      }
-    }
-
-    const averaged = points.map((arr) =>
-      arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0
-    );
-
-    result[tf] = createChartData(
-      tf,
-      averaged,
-      tf === '24h' ? 8 : tf === '7d' ? 7 : tf === '12m' ? 12 : 8
-    );
-  });
-
-  return result;
+function tickCount(tf: ChartTimeframeKey): number {
+  return tf === '24h' ? 8 : tf === '7d' ? 7 : tf === '12m' ? 12 : 8;
 }

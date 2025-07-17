@@ -21,7 +21,7 @@ interface ParsedEvent {
 
 // ----------------------------------------------------------------------
 
-export function usePoolEvents(poolAddress: string, recentTxLimit: number): ReturnType {
+export function usePoolEvents(poolAddress: string): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +34,7 @@ export function usePoolEvents(poolAddress: string, recentTxLimit: number): Retur
       const { data, error: e } = await supabase
         .from('goldsky')
         .select('*')
-        .eq('contract_id', CONTRACT_ID)
+        .eq('contract_id', poolAddress)
         .order('id', { ascending: false });
       if (e) {
         setError(e.toString() as any);
@@ -56,7 +56,7 @@ export function usePoolEvents(poolAddress: string, recentTxLimit: number): Retur
           event: '*',
           schema: 'public',
           table: 'goldsky',
-          filter: `contract_id=eq.${CONTRACT_ID}`,
+          filter: `contract_id=eq.${poolAddress}`,
         },
         (payload) => {
           console.log('Realtime update:', payload);

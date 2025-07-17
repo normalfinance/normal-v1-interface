@@ -1,7 +1,8 @@
 'use client';
 
+import type { TimeEpoch } from '@normalfinance/types';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 
 // ----------------------------------------------------------------------
@@ -17,11 +18,11 @@ interface PricePoint {
   price: number;
 }
 
-type PriceBuckets = Record<Timeframe, PricePoint[]>;
+type PriceBuckets = Record<TimeEpoch, PricePoint[]>;
 
 // ----------------------------------------------------------------------
 
-export function usePoolPriceChart(): ReturnType {
+export function usePoolPriceChart(poolAddress: string): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,15 +34,15 @@ export function usePoolPriceChart(): ReturnType {
   });
 
   useEffect(() => {
-    if (!poolContractId) return;
+    if (!poolAddress) return;
 
     const now = Date.now();
 
     const fetchInitialData = async () => {
       const { data, error } = await supabase
-        .from(tableName)
+        .from('realtime goldsky')
         .select('*')
-        .eq('contract_id', poolContractId)
+        .eq('contract_id', poolAddress)
         .contains('topics', ['rebalance'])
         .order('timestamp', { ascending: true });
 
@@ -57,14 +58,14 @@ export function usePoolPriceChart(): ReturnType {
     fetchInitialData();
 
     const channel = supabase
-      .channel(`realtime:rebalance:${poolContractId}`)
+      .channel(`realtime:rebalance:${poolAddress}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: tableName,
-          filter: `contract_id=eq.${poolContractId}`,
+          table: 'goldsky',
+          filter: `contract_id=eq.${poolAddress}`,
         },
         (payload) => {
           if (payload.new.topics?.[0] !== 'rebalance') return;

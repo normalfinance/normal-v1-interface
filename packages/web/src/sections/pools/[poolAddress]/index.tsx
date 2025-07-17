@@ -9,7 +9,7 @@ import { usePool, usePoolEvents, useSwapVolume } from '@/hooks';
 import { fPercent, fCurrencyCompact } from '@/utils/format-number';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
 import { usePoolPriceChart } from '@/hooks/stellar/events/use-pool-price-chart';
-import { usePoolPriceChartv2 } from '@/hooks/stellar/events/use-pool-price-chart copy';
+import { usePoolPriceChartv2 } from '@/hooks/stellar/events/use-pool-price-chart-v2';
 
 import { Alert, Stack, Grid2, useTheme, Typography, CircularProgress } from '@mui/material';
 
