@@ -68,7 +68,8 @@ jobs:
         run: yarn i18n:check
 
       - name: Prisma - Generate Prisma Client
-        run: yarn prisma generate
+        working-directory: packages/web
+        run: yarn db:generate
 
       - name: TypeScript – type check
         working-directory: packages/web
