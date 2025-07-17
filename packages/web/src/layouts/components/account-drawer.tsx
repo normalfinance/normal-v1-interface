@@ -5,6 +5,7 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
+import { useUserActivity } from '@/hooks';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -159,8 +160,7 @@ function WalletConnected({ address }: { address: string }) {
   // const { tokens } = useUserTokens();
   // const { positions } = useLPTokens();
 
-  // TODO: Fetch user activity
-  // const { activity } = useUserActivity();
+  const { loading, error, recentActivity } = useUserActivity();
 
   return (
     <Box
@@ -181,7 +181,7 @@ function WalletConnected({ address }: { address: string }) {
         percentageChange={0}
         tokens={[]}
         positions={[]}
-        activity={[]}
+        activity={recentActivity}
       />
     </Box>
   );

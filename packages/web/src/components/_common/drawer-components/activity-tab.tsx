@@ -2,10 +2,7 @@
 
 import type { Activity } from '@/types/activity';
 
-import { useTranslate } from '@/locales';
-
 import Box from '@mui/material/Box';
-import { Alert } from '@mui/material';
 
 import { ActivityRow } from './activity-row';
 
@@ -13,11 +10,8 @@ export interface ActivityTabsProps {
   activity?: Activity[];
 }
 export default function ActivityTab({ activity = [] }: { activity?: Activity[] }) {
-  const { t } = useTranslate();
-
   return (
     <Box sx={{ p: 2, pt: 0 }}>
-      <Alert severity="info" title={t('Coming soon')} />
       {activity
         .sort((a, b) => b.timestamp - a.timestamp)
         .map((item) => (
