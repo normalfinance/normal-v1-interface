@@ -48,3 +48,5 @@ The application can display a global announcement modal. The content is controll
 - `NEXT_PUBLIC_ANNOUNCEMENT_FORMAT`: The format of the message. Can be `markdown` (default) or `html`.
 
 When you want to show a new announcement, update these variables. Changing `NEXT_PUBLIC_ANNOUNCEMENT_TITLE` will ensure the modal reappears for all users, even if they dismissed a previous one.
+
+test `yarn commit`
