@@ -1,4 +1,12 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageJson = readFileSync(path.join(__dirname, 'package.json'), 'utf-8');
+const { version } = JSON.parse(packageJson);
 
 /**
  * @type {import('next').NextConfig}
@@ -10,6 +18,7 @@ const nextConfig = {
   trailingSlash: true,
   env: {
     BUILD_STATIC_EXPORT: isStaticExport,
+    NEXT_PUBLIC_APP_VERSION: version,
   },
   modularizeImports: {
     '@mui/icons-material': {
