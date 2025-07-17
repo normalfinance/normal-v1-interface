@@ -191,3 +191,18 @@ declare module '@mui/material/styles/createMixins' {
     paperStyles?: PaperStylesMixin;
   }
 }
+
+declare module '@mui/material/styles/createPalette' {
+  interface Palette {
+    purple: Palette['primary'];
+  }
+  interface PaletteOptions {
+    purple?: PaletteOptions['primary'];
+  }
+}
+
+declare module '@mui/material/Button' {
+  interface ButtonPropsColorOverrides {
+    purple: true; // now <Button color="purple" …/> works
+  }
+}
