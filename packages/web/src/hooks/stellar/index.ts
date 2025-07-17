@@ -1,4 +1,6 @@
 export * from './tokens';
+export * from './events';
+
 export * from './use-swap';
 export * from './use-pool';
 export * from './use-pools';

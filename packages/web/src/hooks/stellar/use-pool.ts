@@ -18,12 +18,11 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export function usePool(poolAddress: string, recentTxLimit: number): ReturnType {
+export function usePool(poolAddress: string): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [pool, setPool] = useState<PoolRouterContract.PoolInfo | undefined>(undefined);
-  const [recentTransactions, setRecentTransactions] = useState<PoolTxRow[] | undefined>(undefined);
 
   const fetchPool = useCallback(async () => {
     try {
@@ -64,20 +63,6 @@ export function usePool(poolAddress: string, recentTxLimit: number): ReturnType 
       setError(e);
     }
   }, []);
-
-  // const fetchPoolRecentTransactions = useCallback(async () => {
-  //   try {
-  //     const txs = await fetchPoolHistory(poolAddress);
-
-  //     if (txs) {
-  //       setRecentTransactions(formatPoolHistory(txs, recentTxLimit));
-  //     }
-  //   } catch (e: any) {
-  //     console.log(e);
-  //     setError(e);
-  //   }
-  //   return undefined;
-  // }, []);
 
   // On component mount, fetch pool
   useEffect(() => {
