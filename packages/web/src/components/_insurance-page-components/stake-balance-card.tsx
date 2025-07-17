@@ -9,6 +9,7 @@ import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 
 import InsuranceFundStakingDialog from './insurance-fund-staking-dialog';
+import { WalletGate } from '@/components/_common/wallet-gate';
 
 // Define a type for each balance row
 export type BalanceRow = {
@@ -64,9 +65,11 @@ export function StakeBalance({ sx, title, yieldPercent, staked, currentBalance, 
         ))}
 
         <Box sx={{ gap: 2, display: 'flex' }}>
-          <Button fullWidth variant="contained" color="primary" onClick={manageStake.onTrue}>
-            {t('Manage stake')}
-          </Button>
+          <WalletGate buttonText={t('Connect Wallet to Manage Stake')} fullWidth>
+            <Button fullWidth variant="contained" color="primary" onClick={manageStake.onTrue}>
+              {t('Manage stake')}
+            </Button>
+          </WalletGate>
         </Box>
         <InsuranceFundStakingDialog open={manageStake.value} onClose={manageStake.onFalse} />
       </Box>
