@@ -129,7 +129,7 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
 
 export const TestimonialGridDefaults: Props = {
   heading: 'Customer testimonials',
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+  description: '',
   testimonials: [
     {
       quote:

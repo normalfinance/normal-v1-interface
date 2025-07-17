@@ -207,7 +207,8 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
 
 export const HeroHeaderDefaults: Props = {
   heading: 'Medium length hero heading goes here',
-  description: 'Largest onchain marketspace built on Stellar. Buy and sell crypto on Stellar.',
+  description:
+    'The largest on-chain catalogue of synthetic crypto and real-world assets built on Stellar.',
   image: {
     src: '/assets/images/landing-page/stellar-logo.webp',
     alt: 'Stellar Logo Long',

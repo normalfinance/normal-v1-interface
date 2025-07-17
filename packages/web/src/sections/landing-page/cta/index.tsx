@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 
 import { Box, Stack, Button, Container, Typography, type ButtonProps } from '@mui/material';
@@ -25,7 +26,7 @@ export type CtaImageProps = React.ComponentPropsWithoutRef<'section'> & Partial<
 
 export const CtaImage: React.FC<CtaImageProps> = ({
   heading = 'Ready to make crypto feel Normal? Start swapping, investing, and exploring.',
-  description = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+  description = '',
   buttons = [
     { title: 'Button', variant: 'contained', color: 'primary' },
     { title: 'Button', variant: 'outlined', color: 'primary' },
@@ -34,7 +35,7 @@ export const CtaImage: React.FC<CtaImageProps> = ({
   ...sectionProps
 }) => {
   const { t } = useTranslate();
-  
+
   return (
     <Box
       component="section"
@@ -90,6 +91,7 @@ export const CtaImage: React.FC<CtaImageProps> = ({
           </Typography>
 
           <Button
+            href={paths.swap}
             sx={{
               border: '1px solid #6E4BFF',
               backgroundColor: '#E0D9FF',

@@ -153,24 +153,24 @@ export const StatsGridDefaults: Props = {
     'Normal powers the largest catalogue of synthetic crypto and real-world assets, with thousands of dollars in weekly volume across 100+ assets and index funds.',
   stats: [
     {
-      percentage: '$2.9T',
+      percentage: '$340K',
       heading: 'All time volume',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+      description: '',
     },
     {
-      percentage: '$119.0M',
+      percentage: '2,000+',
       heading: 'All time swappers',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+      description: '',
     },
     {
-      percentage: '$4.9B',
+      percentage: 'Coming soon',
       heading: 'All time LP fees',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+      description: '',
     },
     {
-      percentage: '$892.3M',
+      percentage: 'Coming soon',
       heading: '+24H volume',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+      description: '',
     },
   ],
 };

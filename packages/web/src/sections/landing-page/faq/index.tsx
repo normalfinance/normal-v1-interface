@@ -35,8 +35,9 @@ export interface FaqAccordionProps extends React.ComponentPropsWithoutRef<'secti
 
 const DEFAULT_QUESTIONS: Question[] = [
   {
-    title: 'How does Normal Finance work?',
-    answer: 'Normal pools liquidity across multiple DEXs to give you the best rate…',
+    title: 'How does Normal work?',
+    answer:
+      'The Normal AMM mints and burns synthetic tokens to keep pool prices pegged to an oracle price.',
   },
   {
     title: 'Do I need an account to start?',
@@ -44,7 +45,7 @@ const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     title: 'Which tokens can I trade?',
-    answer: 'Any ERC-20 token supported by our connected DEXs.',
+    answer: 'You can swap XLM and USDC for any top 100 token supported by our AMM.',
   },
   {
     title: 'What are indexes?',
