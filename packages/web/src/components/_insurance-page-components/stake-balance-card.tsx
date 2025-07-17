@@ -8,8 +8,9 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 
-import InsuranceFundStakingDialog from './insurance-fund-staking-dialog';
 import { WalletGate } from '@/components/_common/wallet-gate';
+
+import InsuranceFundStakingDialog from './insurance-fund-staking-dialog';
 
 // Define a type for each balance row
 export type BalanceRow = {

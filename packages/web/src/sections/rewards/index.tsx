@@ -14,12 +14,12 @@ import Tabs from '@mui/material/Tabs';
 import { Button } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import { WalletGate } from '@/components/_common/wallet-gate';
 
 import { ProfileCover } from './profile-cover';
 import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
-import { WalletGate } from '@/components/_common/wallet-gate';
 
 interface User {
   id: string;

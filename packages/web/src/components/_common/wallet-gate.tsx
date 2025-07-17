@@ -1,23 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { usePersistStore } from '@normalfinance/state';
-import {
-  Button,
-  Drawer,
-  Box,
-  Typography,
-  Paper,
-  CircularProgress,
-  Tooltip,
-  IconButton,
-  Stack,
-} from '@mui/material';
+import type { Connector } from '@normalfinance/types';
+
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
+import React, { useState, useEffect } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import useNativeTokenBalance from '@/hooks/stellar/use-native-token-balance';
-import { hana, xbull, lobstr, freighter } from '@normalfinance/state';
-import type { Connector } from '@normalfinance/types';
+import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
+
+import {
+  Box,
+  Paper,
+  Stack,
+  Button,
+  Drawer,
+  Tooltip,
+  Typography,
+  IconButton,
+  CircularProgress,
+} from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';

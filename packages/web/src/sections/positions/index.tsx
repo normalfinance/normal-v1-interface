@@ -6,11 +6,11 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { useLPTokens } from '@/hooks/stellar/use-lp-tokens';
 
-import { Alert, Grid2, AlertTitle } from '@mui/material';
+import { Grid2 } from '@mui/material';
 
 import PageHeader from '@/components/page-header';
-import { PositionsTable } from '@/components/_positions-page-components/positions-table';
 import { WalletGate } from '@/components/_common/wallet-gate';
+import { PositionsTable } from '@/components/_positions-page-components/positions-table';
 
 // ----------------------------------------------------------------------
 

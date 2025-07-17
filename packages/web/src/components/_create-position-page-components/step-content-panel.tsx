@@ -10,9 +10,10 @@ import { useForm, FormProvider } from 'react-hook-form';
 
 import { Box, Stack, Button } from '@mui/material';
 
+import { WalletGate } from '@/components/_common/wallet-gate';
+
 import StepTwo from './step-two';
 import { StepOne } from './step-one';
-import { WalletGate } from '@/components/_common/wallet-gate';
 
 /* ------------------------------------------------------------------ */
 /* props                                                               */

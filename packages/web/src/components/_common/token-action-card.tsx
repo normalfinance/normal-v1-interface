@@ -16,11 +16,12 @@ import Stack from '@mui/material/Stack';
 import { Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
+import { WalletGate } from '@/components/_common/wallet-gate';
+
 import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
-import { WalletGate } from '@/components/_common/wallet-gate';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
