@@ -4279,7 +4279,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@noble/curves@npm:^1.6.0, @noble/curves@npm:^1.8.0, @noble/curves@npm:^1.9.1, @noble/curves@npm:~1.9.0":
+"@noble/curves@npm:^1.6.0, @noble/curves@npm:^1.8.0, @noble/curves@npm:^1.9.1, @noble/curves@npm:^1.9.2, @noble/curves@npm:~1.9.0":
   version: 1.9.4
   resolution: "@noble/curves@npm:1.9.4"
   dependencies:
@@ -4385,7 +4385,7 @@ __metadata:
     "@emotion/react": ^11.14.0
     "@emotion/styled": ^11.14.0
     "@fontsource/figtree": ^5.2.8
-    "@stellar/stellar-sdk": ^13.1.0
+    "@stellar/stellar-sdk": 14.0.0-rc.3
     "@tsconfig/recommended": ^1.0.2
     "@types/jest": ^29.5.2
     "@walletconnect/modal": ^2.6.2
@@ -4444,7 +4444,7 @@ __metadata:
     "@creit.tech/xbull-wallet-connect": 0.3.0
     "@normalfinance/types": "*"
     "@stellar/freighter-api": 3.0.0
-    "@stellar/stellar-sdk": ^13.1.0
+    "@stellar/stellar-sdk": 14.0.0-rc.3
     "@types/numeral": ^2.0.2
     big.js: ^6.2.1
     bignumber.js: ^9.1.1
@@ -4494,7 +4494,7 @@ __metadata:
     "@semantic-release/git": ^10.0.1
     "@semantic-release/npm": ^12.0.1
     "@sentry/nextjs": ^9.35.0
-    "@stellar/stellar-sdk": ^13.3.0
+    "@stellar/stellar-sdk": 14.0.0-rc.3
     "@svgr/webpack": ^8.1.0
     "@testing-library/jest-dom": ^6.1.3
     "@testing-library/react": ^14.2.0
@@ -6779,7 +6779,37 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@stellar/stellar-sdk@npm:^13.1.0, @stellar/stellar-sdk@npm:^13.3.0":
+"@stellar/stellar-base@npm:^14.0.0-rc.2":
+  version: 14.0.0-rc.2
+  resolution: "@stellar/stellar-base@npm:14.0.0-rc.2"
+  dependencies:
+    "@noble/curves": ^1.9.2
+    "@stellar/js-xdr": ^3.1.2
+    base32.js: ^0.1.0
+    bignumber.js: ^9.3.0
+    buffer: ^6.0.3
+    sha.js: ^2.3.6
+  checksum: 212d34fd5f4cab060a6ffb3ddf78be5337457a53d61a3c5649fce7e9a05d97c57e6a82687cbacb20d66400c63b382a4d28a1a6980a9f6fb255d75b6644117bf3
+  languageName: node
+  linkType: hard
+
+"@stellar/stellar-sdk@npm:14.0.0-rc.3":
+  version: 14.0.0-rc.3
+  resolution: "@stellar/stellar-sdk@npm:14.0.0-rc.3"
+  dependencies:
+    "@stellar/stellar-base": ^14.0.0-rc.2
+    axios: ^1.8.4
+    bignumber.js: ^9.3.1
+    eventsource: ^2.0.2
+    feaxios: ^0.0.23
+    randombytes: ^2.1.0
+    toml: ^3.0.0
+    urijs: ^1.19.1
+  checksum: b323a2c6c2b25aa87783fe60f8da96467766e7d920653c428d302a50e731ff0903a14157323d377749e27bce3aa53150959d5762df8ae68b30f278c8d91c1f1f
+  languageName: node
+  linkType: hard
+
+"@stellar/stellar-sdk@npm:^13.3.0":
   version: 13.3.0
   resolution: "@stellar/stellar-sdk@npm:13.3.0"
   dependencies:
@@ -9330,7 +9360,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bignumber.js@npm:^9.1.1, bignumber.js@npm:^9.1.2, bignumber.js@npm:^9.3.0":
+"bignumber.js@npm:^9.1.1, bignumber.js@npm:^9.1.2, bignumber.js@npm:^9.3.0, bignumber.js@npm:^9.3.1":
   version: 9.3.1
   resolution: "bignumber.js@npm:9.3.1"
   checksum: 6ab100271a23a75bb8b99a4b1a34a1a94967ac0b9a52a198147607bd91064e72c6f356380d7a09cd687bf50d81ad2ed1a0a8edfaa90369c9003ed8bb2440d7f0
