@@ -1,13 +1,15 @@
 'use client';
 
-import type { ExplorerChartData } from '@/components/_pool-page-components';
 
-import { usePool } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { usePool, usePoolEvents, useSwapVolume } from '@/hooks';
 import { fPercent, fCurrencyCompact } from '@/utils/format-number';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
+import { usePoolPriceChart } from '@/hooks/stellar/events/use-pool-price-chart';
+import { usePoolPriceChartv2 } from '@/hooks/stellar/events/use-pool-price-chart copy';
 
 import { Alert, Stack, Grid2, useTheme, Typography, CircularProgress } from '@mui/material';
 
@@ -19,40 +21,43 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const theme = useTheme();
   const { t } = useTranslate();
 
-  const {
-    loading: loadingPool,
-    error: poolError,
-    pool,
-    recentTransactions,
-  } = usePool(poolAddress, 10);
+  const { loading: loadingPool, error: poolError, pool, recentTransactions } = usePool(poolAddress);
+  const {} = usePoolEvents(poolAddress, 10);
+  const { getSwapVolume } = useSwapVolume();
+  const pricePoints = usePoolPriceChart(poolAddress);
+  const { chartData } = usePoolPriceChartv2(poolAddress);
 
-  // TODO:
-  // Price data samples
-  const priceData24h = Array.from({ length: 24 }, (_, i) => 1000 + i * 5);
-  const priceData7d = Array.from({ length: 7 }, (_, i) => 1100 + i * 20);
-  const priceData30d = Array.from({ length: 31 }, (_, i) => 1050 + i * 10);
-  const priceData12m = Array.from({ length: 12 }, (_, i) => 950 + i * 50);
+  const [volume, setVolume] = useState<{
+    '24h': any;
+    '7d': any;
+    '30d': any;
+    '12m': any;
+  }>({
+    '24h': null,
+    '7d': null,
+    '30d': null,
+    '12m': null,
+  });
 
-  // Volume data samples
-  const volumeData24h = Array.from({ length: 24 }, (_, i) => 5000 + i * 100);
-  const volumeData7d = Array.from({ length: 7 }, (_, i) => 10000 + i * 200);
-  const volumeData30d = Array.from({ length: 31 }, (_, i) => 15000 + i * 150);
-  const volumeData12m = Array.from({ length: 12 }, (_, i) => 20000 + i * 500);
+  useEffect(() => {
+    const fetchAllVolumes = async () => {
+      const [v24h, v7d, v30d, v12m] = await Promise.all([
+        getSwapVolume({ timeframe: '1d', poolAddress }),
+        getSwapVolume({ timeframe: '7d', poolAddress }),
+        getSwapVolume({ timeframe: '30d', poolAddress }),
+        getSwapVolume({ timeframe: '12m', poolAddress }),
+      ]);
 
-  const poolChartData: ExplorerChartData = {
-    price: {
-      '24h': createChartData('24h', priceData24h, 8),
-      '7d': createChartData('7d', priceData7d, 7),
-      '30d': createChartData('30d', priceData30d, 8),
-      '12m': createChartData('12m', priceData12m, 12),
-    },
-    volume: {
-      '24h': createChartData('24h', volumeData24h, 8),
-      '7d': createChartData('7d', volumeData7d, 7),
-      '30d': createChartData('30d', volumeData30d, 8),
-      '12m': createChartData('12m', volumeData12m, 12),
-    },
-  };
+      setVolume({
+        '24h': createChartData('24h', v24h, 8),
+        '7d': createChartData('7d', v7d, 7),
+        '30d': createChartData('30d', v30d, 8),
+        '12m': createChartData('12m', v12m, 12),
+      });
+    };
+
+    fetchAllVolumes();
+  }, []);
 
   if (loadingPool) {
     <CircularProgress />;
@@ -105,7 +110,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
             }}
             performance={{ percentageChange: 0 }}
             legendValues={[{ title: 'Price', number: 7334, formatter: fCurrencyCompact }]}
-            chart={poolChartData}
+            chart={chartData}
             color={theme.palette.primary.main}
           />
         </Grid2>
@@ -124,8 +129,8 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
             ]}
             stats={[
               { statName: 'TVL', value: 0 },
-              { statName: '24h Volume', value: 0 },
-              { statName: '24h Fees', value: 0 },
+              { statName: '24h Volume', value: volume['24h'] ?? 0 },
+              { statName: '24h Fees', value: volume['24h'] ? volume['24h'] * 0.03 : 0 },
             ]}
           />
         </Grid2>
