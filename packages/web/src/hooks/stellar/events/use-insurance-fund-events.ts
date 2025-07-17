@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
+import { constants, convertContractAddressToHex } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -20,6 +21,8 @@ interface ParsedEvent {
 }
 
 // ----------------------------------------------------------------------
+
+const CONTRACT_ID = convertContractAddressToHex(constants.INSURANCE_FUND_ADDRESS);
 
 export function useInsuranceFundEvents(): ReturnType {
   const [error, setError] = useState(null);
@@ -58,7 +61,7 @@ export function useInsuranceFundEvents(): ReturnType {
           table: 'goldsky',
           filter: `contract_id=eq.${CONTRACT_ID}`,
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Realtime update:', payload);
 
           const parsed = parseBufferEvent(payload.new);

@@ -5,6 +5,7 @@ import type { TimeEpoch } from '@normalfinance/types';
 import * as Sentry from '@sentry/nextjs';
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
+import { constants, convertContractAddressToHex } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -38,6 +39,8 @@ const timeframesInMs: Record<TimeEpoch, number> = {
 };
 
 // ----------------------------------------------------------------------
+
+const POOL_ROUTER_CONTRACT_ID = convertContractAddressToHex(constants.POOL_ROUTER_ADDRESS);
 
 export function useSwapVolume(): ReturnType {
   const [error, setError] = useState(null);

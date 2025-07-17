@@ -1,3 +1,5 @@
+import { Address } from '@stellar/stellar-sdk';
+
 export function isAddress(value: string): string | false {
   if (value?.length === 56) {
     try {
@@ -39,4 +41,11 @@ export function shortenAddress(address: string, chars = 4): string {
 
 export function isValidSymbol(code: string): boolean {
   return /^[A-Za-z0-9]{2,}$/.test(code);
+}
+
+export function convertContractAddressToHex(address: string): string {
+  const addressObj = Address.fromString(address);
+
+  // Extract raw 32-byte contract ID as hex
+  return Buffer.from(addressObj.toScAddress().contractId()).toString('hex');
 }
