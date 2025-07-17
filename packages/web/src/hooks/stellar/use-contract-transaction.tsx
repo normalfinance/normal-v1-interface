@@ -42,7 +42,7 @@ const contractClients = {
   pool: PoolContract.Client,
   pool_router: PoolRouterContract.Client,
   buffer: BufferContract.Client,
-  insuranceFund: InsuranceFundContract.Client,
+  insurance_fund: InsuranceFundContract.Client,
   token: SorobanTokenContract.Client,
 };
 
