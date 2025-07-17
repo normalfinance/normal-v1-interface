@@ -1,122 +1,79 @@
 'use client';
 
 import type { StatCardData } from '@/types/stat-card-data';
-import type { LegendValue } from '@/components/_common/area-chart-card';
-import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
-import { createChartData } from '@/utils/portfolio-value-chart-series';
-import { fRawPercent, fShortenNumber, fCurrencyTwoDecimals } from '@/utils/format-number';
+import { fCurrency, fRawPercent } from '@/utils/format-number';
+import { useBuffer, useOracle, useInsuranceFund } from '@/hooks';
 
 import Grid2 from '@mui/material/Grid2';
 import { Stack, useTheme, Typography } from '@mui/material';
 
 import { StatCard } from '@/components/_common/stat-card';
-import { TabsTable } from '@/components/_common/tabs-table-card';
-import { AreaChartCard } from '@/components/_common/area-chart-card';
-import { CurrentBalance } from '@/components/_common/current-balance-card';
+import { StakeBalance } from '@/components/_insurance-page-components/stake-balance-card';
+import { InsuranceActionsTable } from '@/components/_insurance-page-components/insurance-actions-table-card';
 
 export default function InsuranceView() {
   const theme = useTheme();
   const { t } = useTranslate();
 
+  const {
+    loading: loadingIF,
+    error: errorIF,
+    balance: ifBalance,
+    insuranceFund,
+    stake,
+  } = useInsuranceFund();
+  const { loading, error, buffer } = useBuffer();
+
+  const { loading: loadingPrice, error: priceError, price: xlmPrice } = useOracle('XLM');
+  console.log(xlmPrice);
+
   // Stat card data array
   const statCardsData: StatCardData[] = [
     {
       title: 'Normal Buffer',
-      percent: 1.2,
-      total: 139390,
-      formatter: fShortenNumber,
+      percent: 0,
+      total: buffer?.reserve.balance || 0,
+      formatter: fCurrency,
       chartType: 'bar',
       displayChart: true,
       chart: {
         colors: [theme.palette.success.light, theme.palette.success.main],
-        categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        series: [139390, 134590, 149390, 169390, 139390, 179390, 149390],
+        categories: ['Current'],
+        series: [139390],
       },
     },
     {
       title: 'Normal Insurance Fund',
-      percent: -0.8,
-      total: 74930,
-      formatter: fShortenNumber,
+      percent: 0,
+      total: ifBalance || 0,
+      formatter: fCurrency,
       chartType: 'bar',
       displayChart: true,
       chart: {
         colors: [theme.palette.info.light, theme.palette.info.main],
-        categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        series: [24930, 34930, 64930, 74930, 24930, 54930, 74930],
+        categories: ['Current'],
+        series: [24930],
       },
     },
     {
-      title: 'Current Insurance Fund Yield',
-      percent: 2.1,
-      total: 7.981,
+      title: 'Insurance Staking Yield',
+      percent: 0,
+      total: insuranceFund?.current_rate || 0,
       formatter: fRawPercent,
       chartType: 'bar',
       displayChart: true,
       chart: {
         colors: [theme.palette.warning.light, theme.palette.warning.main],
-        categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        series: [2.981, 7.981, 7.981, 10, 4.981, 3.981, 7.981],
+        categories: ['Current'],
+        series: [2.981],
       },
     },
   ];
 
-  // Current balance data array for the CurrentBalance component
-  const currentBalanceData = [
-    {
-      title: 'Current balance',
-      yieldPercent: 92.84,
-      refunded: 6.73,
-      staked: 1400,
-      currentBalance: 1492.84,
-      rows: [
-        { label: 'Staked', value: 1400, formatter: fCurrencyTwoDecimals },
-        { label: 'Earned', value: 92.84, formatter: fCurrencyTwoDecimals },
-        { label: 'Yield', value: 6.73, formatter: fRawPercent },
-      ],
-      // Cast color and variant to the specific literal types
-      actionButtons: [
-        {
-          label: 'Deposit',
-          color: 'primary' as const,
-          onClick: () => {
-            alert('Deposit');
-          },
-          variant: 'contained' as const,
-        },
-        {
-          label: 'Withdraw',
-          color: 'error' as const,
-          onClick: () => {
-            alert('Withdraw');
-          },
-          variant: 'contained' as const,
-        },
-      ],
-    },
-    // Add more items here if needed...
-  ];
-
-  // -------------------------
-  // Hardcoded chart data arrays.
-  // -------------------------
-  const data12m = [1000, 1200, 1100, 1300, 1250, 1400, 1350, 1500, 1450, 1600, 1550, 1700];
-
-  // Create chart data objects using our helper.
-
-  const chartData12m: RealtimeChartData = createChartData('12m', data12m, 6);
-
-  // Combine chart data into one object.
-  const usageBondingCurveData: { [key in '12m']: RealtimeChartData } = {
-    '12m': chartData12m,
-  };
-
-  const myLegendValues: LegendValue[] = [
-    { title: 'Utilization', number: 6.483, formatter: fRawPercent },
-  ];
+  const userStakeFiatValue = xlmPrice && stake?.if_shares ? Number(stake?.if_shares * xlmPrice) : 0;
 
   return (
     <DashboardContent maxWidth="xl">
@@ -126,7 +83,7 @@ export default function InsuranceView() {
         </Typography>
         <Typography variant="body1" color="text.secondary">
           {t(
-            'Review how insured the Normal Protocol is and earn yield by providing additional funds'
+            "Stake XLM into the Insurance Fund and earn a portion of the fees from swaps. The Insurance Fund is the protocol's backstop to maintaining the solvency of the protocol."
           )}
         </Typography>
       </Stack>
@@ -145,40 +102,19 @@ export default function InsuranceView() {
           </Grid2>
         ))}
       </Grid2>
-      <Stack sx={{ mt: 3, maxWidth: '976px', mx: 'auto', px: 2 }} textAlign="center">
-        <Typography variant="body1" color="text.secondary">
-          {t(
-            'Insurance covering protocol debt is covered first by the Normal Buffer, which receives a portion of protocol revenue, and then by the Normal Insurance Fund, which pays yield to 3rd party liquidity providers.'
-          )}
-        </Typography>
-      </Stack>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        {currentBalanceData.map((balance, index) => (
-          <Grid2 key={index} size={{ xs: 12, md: 4 }}>
-            <CurrentBalance
-              title={balance.title}
-              yieldPercent={balance.yieldPercent}
-              refunded={balance.refunded}
-              staked={balance.staked}
-              currentBalance={balance.currentBalance}
-              rows={balance.rows}
-              actionButtons={balance.actionButtons} // Optional, if provided
-            />
-          </Grid2>
-        ))}
-        <Grid2 size={{ xs: 12, md: 8 }}>
-          <AreaChartCard
-            id="portfolio_value"
-            title="Usage Bonding Curve"
-            subheader="The yield changed based on how much insurance exists"
-            chart={usageBondingCurveData}
-            legendValues={myLegendValues}
-            color={theme.palette.secondary.main} // for example, using a different color
+        <Grid2 size={{ xs: 12, md: 4 }}>
+          <StakeBalance
+            title={t('Staked balance')}
+            yieldPercent={insuranceFund?.current_rate || 0}
+            staked={stake?.if_shares}
+            currentBalance={userStakeFiatValue}
           />
         </Grid2>
-      </Grid2>
-      <Grid2 sx={{ mt: 3 }}>
-        <TabsTable />
+
+        <Grid2 size={{ xs: 12, md: 8 }}>
+          <InsuranceActionsTable />
+        </Grid2>
       </Grid2>
     </DashboardContent>
   );

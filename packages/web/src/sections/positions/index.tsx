@@ -1,41 +1,43 @@
+'use client';
+
+import { useState } from 'react';
+import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
+import { usePersistStore } from '@normalfinance/state';
+import { useLPTokens } from '@/hooks/stellar/use-lp-tokens';
+
+import { Alert, Grid2, AlertTitle } from '@mui/material';
+
+import PageHeader from '@/components/page-header';
+import { PositionsTable } from '@/components/_positions-page-components/positions-table';
 
 // ----------------------------------------------------------------------
 
 export default function PositionsView() {
-  // const { positions } = useLPs();
-  // const { pools } = usePools();
+  const { t } = useTranslate();
 
-  // const table = useTable();
+  const persist = usePersistStore();
+  const connectedAddress = persist.wallet.address;
+  const [isConnected] = useState(connectedAddress != '' && connectedAddress != undefined);
+
+  const { positions } = useLPTokens();
 
   return (
     <DashboardContent maxWidth="xl">
-      {/* <PageHeader
-        title={<Trans>Your positions</Trans>}
-        subheader={<Trans>Liquidity you've provided to pools</Trans>}
-      /> */}
+      <PageHeader title={t('Your positions')} />
 
-      {/* <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <LiquidityPositions positions={positions} />
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <TopPoolsByTVL pools={pools.slice(0, 10)} />
-        </Grid>
-
-        <Grid item xs={12} md={8}>
-          <Alert severity="info">
-            <AlertTitle sx={{ textTransform: 'capitalize' }}>
-              <Trans>Looking for your closed positions?</Trans>
-            </AlertTitle>
-
-            <Typography variant="body2">
-              <Trans>You can see them by using the filter at the top of the page.</Trans>
-            </Typography>
-          </Alert>
-        </Grid>
-      </Grid> */}
+      <Grid2 container spacing={3} sx={{ mt: 3 }}>
+        <Grid2 size={{ xs: 12, md: 12 }}>
+          {isConnected ? (
+            <PositionsTable positions={positions ?? []} />
+          ) : (
+            <Alert severity="info">
+              <AlertTitle>{t('Connect your wallet')}</AlertTitle>
+              {t('To view your positions and rewards you must connect your wallet')}
+            </Alert>
+          )}
+        </Grid2>
+      </Grid2>
     </DashboardContent>
   );
 }

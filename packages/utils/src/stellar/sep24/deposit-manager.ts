@@ -58,7 +58,7 @@ export class DepositManager {
         serverSigningKey: transferServer.signingKey,
         publicKey: this.walletAddress,
         homeDomain: transferServer.domain,
-        clientDomain: "app.phoenix-hub.io",
+        clientDomain: "app.normalfinance.io",
       });
 
       const signedChallengeTransaction = await sep10AuthSign({

@@ -1,9 +1,4 @@
-import {
-  LayoutActions,
-  AppStore,
-  GetStateType,
-  SetStateType,
-} from "@normalfinance/types";
+import { LayoutActions, AppStore, GetStateType, SetStateType } from '@normalfinance/types';
 
 export const createLayoutActions = (
   setState: SetStateType,
@@ -11,22 +6,10 @@ export const createLayoutActions = (
 ): LayoutActions => {
   return {
     walletModalOpen: false,
-    tourRunning: false,
     loading: true,
-    setTourRunning: (running: boolean) => {
-      setState((state: AppStore) => {
-        return { ...state, tourRunning: running };
-      });
-    },
     setLoading: (loading: boolean) => {
       setState((state: AppStore) => {
         return { ...state, loading };
-      });
-    },
-    tourStep: 0,
-    setTourStep: (step: number) => {
-      setState((state: AppStore) => {
-        return { ...state, tourStep: step };
       });
     },
     setWalletModalOpen: (open: boolean) => {

@@ -5,7 +5,20 @@ export type StateToken = {
   balance: bigint;
   decimals: number;
   symbol: string;
-  isStakingToken?: boolean;
+  // ===
+  name: string;
+  icon: string;
+  usdValue: number;
+  featured: boolean;
+  percentageChange?: number;
+};
+
+export type TokenMapType = {
+  [key: string]: StateToken;
+};
+
+export type TokenBalancesMap = {
+  [tokenAddress: string]: { usdValue: string; balance: string };
 };
 
 export type Wallet = {
@@ -22,11 +35,9 @@ export type Wallet = {
 };
 
 export interface WalletActions {
-  tokens: StateToken[];
-  allTokens: any;
+  tokens: StateToken[]; 
   fetchTokenInfo: (
-    tokenAddress: string,
-    isStakingToken?: boolean
+    tokenAddress: string
   ) => Promise<StateToken | undefined>;
   getAllTokens: () => Promise<any[]>;
   walletConnectInstance?: any;

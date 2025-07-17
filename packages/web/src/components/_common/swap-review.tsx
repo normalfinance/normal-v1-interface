@@ -1,8 +1,8 @@
-import type { Token } from '@/types/token';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
 import { useTranslate } from '@/locales';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { getSwapConversionText } from '@/utils/conversion-helpers';
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
@@ -110,7 +110,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {sellAmount} {sellToken?.shortname}
+                  {sellAmount} {sellToken?.symbol}
                 </Typography>
                 <Typography
                   variant="body1"
@@ -132,7 +132,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={sellToken ? getCryptoIconUrl(sellToken.shortname) : ''}
+                src={sellToken ? getCryptoIconUrl(sellToken.symbol) : ''}
                 sx={{
                   width: 40,
                   height: 40,
@@ -161,7 +161,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {buyAmount.toFixed(4)} {buyToken?.shortname}
+                  {buyAmount.toFixed(4)} {buyToken?.symbol}
                 </Typography>
                 <Typography
                   variant="body1"
@@ -177,13 +177,13 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                     minWidth: 0,
                   }}
                 >
-                  {buyToken ? fCurrencyTwoDecimals(buyToken.pricestatus * buyAmount) : ''}
+                  {buyToken ? fCurrencyTwoDecimals(buyToken.usdValue * buyAmount) : ''}
                 </Typography>
               </Box>
 
               <Box
                 component="img"
-                src={buyToken ? getCryptoIconUrl(buyToken.shortname) : ''}
+                src={buyToken ? getCryptoIconUrl(buyToken.symbol) : ''}
                 sx={{
                   width: 40,
                   height: 40,

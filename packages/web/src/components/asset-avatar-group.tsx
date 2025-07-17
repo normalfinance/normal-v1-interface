@@ -2,7 +2,7 @@
 
 import type { CardProps } from '@mui/material/Card';
 
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 
 // @mui
 import { Avatar } from '@mui/material';
