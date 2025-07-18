@@ -104,23 +104,11 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   const renderTabBody = () => {
     switch (tabs.value) {
       case 'swap':
-        return (
-          <WalletGate buttonText="Connect Wallet to Swap">
-            <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} />
-          </WalletGate>
-        );
+        return <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} />;
       case 'send':
-        return (
-          <WalletGate buttonText="Connect Wallet to Send">
-            <SendCard tokensList={store.tokens} networkCost={0} />
-          </WalletGate>
-        );
+        return <SendCard tokensList={store.tokens} networkCost={0} />;
       case 'buy':
-        return (
-          <WalletGate buttonText="Connect Wallet to Buy">
-            <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} />
-          </WalletGate>
-        );
+        return <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} />;
       default:
         return null;
     }

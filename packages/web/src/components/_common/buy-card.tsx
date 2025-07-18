@@ -13,6 +13,8 @@ import PickToken from './pick-token';
 import CheckoutDialog from './checkout-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
+import { WalletGate } from './wallet-gate';
+import { usePersistStore } from '@normalfinance/state';
 
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];
@@ -119,6 +121,10 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
   const handleTokenSelect = (token: Token) => {
     setBuyToken(token);
   };
+
+  // Main button with multiple states
+  const persist = usePersistStore();
+  const isConnected = !!persist.wallet.address;
 
   return (
     <Stack sx={{ gap: '2px' }}>
@@ -301,16 +307,22 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
           </Stack>
         </Stack>
         <Box>
-          <Button
-            fullWidth
-            variant="soft"
-            color="success"
-            size="large"
-            onClick={handleMainButtonClick}
-            disabled={getButtonLabel() !== 'Buy'}
-          >
-            {getButtonLabel()}
-          </Button>
+          {isConnected ? (
+            <Button
+              fullWidth
+              variant="soft"
+              color="success"
+              size="large"
+              onClick={handleMainButtonClick}
+              disabled={getButtonLabel() !== 'Buy'}
+            >
+              {getButtonLabel()}
+            </Button>
+          ) : (
+            <WalletGate buttonText="Connect Wallet to Buy" fullWidth variant="soft">
+              {null}
+            </WalletGate>
+          )}
         </Box>
         <PickToken
           open={open}
