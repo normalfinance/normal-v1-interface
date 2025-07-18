@@ -228,8 +228,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [connectedAddress]);
 
   const [isConnected, setIsConnected] = useState(connectedAddress != '');
-  console.log(connectedAddress);
-  console.log(isConnected);
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
