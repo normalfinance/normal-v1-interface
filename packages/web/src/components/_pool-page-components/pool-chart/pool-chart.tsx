@@ -1,9 +1,12 @@
 'use client';
 
+import 'react-loading-skeleton/dist/skeleton.css';
+
 import type { CardProps } from '@mui/material/Card';
 
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
+import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
@@ -47,6 +50,7 @@ type Props = CardProps & {
   metadata?: PoolMetadata;
   exchangeRate?: ExchangeRateInfo;
   performance?: PerformanceInfo;
+  loading?: boolean;
 };
 
 export function PoolChart({
@@ -60,6 +64,7 @@ export function PoolChart({
   exchangeRate,
   performance,
   sx,
+  loading,
   ...other
 }: Props) {
   const theme = useTheme();
@@ -100,6 +105,61 @@ export function PoolChart({
       },
     },
   });
+
+  if (loading) {
+    return (
+      <Card sx={sx} {...other}>
+        <CardHeader
+          title={<Skeleton height={24} width="40%" />}
+          subheader={<Skeleton height={16} width="60%" />}
+          sx={{ mb: 2 }}
+        />
+
+        {/* Token pair header skeleton */}
+        <Box sx={{ px: 2.5, mb: '20px' }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack direction="row">
+              <Skeleton circle width={27} height={27} />
+              <Skeleton circle width={27} height={27} style={{ marginLeft: -12 }} />
+            </Stack>
+            <Skeleton height={24} width="30%" />
+            <Skeleton height={20} width={40} />
+            <Skeleton height={20} width={20} />
+          </Stack>
+        </Box>
+
+        {/* Price and performance skeleton */}
+        <Stack sx={{ px: 2.5, mb: '20px' }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+            <Skeleton height={32} width="40%" />
+            <Skeleton height={32} width="30%" />
+          </Stack>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Skeleton circle width={24} height={24} />
+            <Skeleton height={16} width="20%" />
+          </Stack>
+        </Stack>
+
+        {/* Chart skeleton */}
+        <Box sx={{ pl: 1, py: 2.5, pr: 2.5, height: 320 }}>
+          <Skeleton height={320} width="100%" />
+        </Box>
+
+        {/* Controls skeleton */}
+        <Box sx={{ px: 2.5, pb: '20px' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack direction="row" spacing={1}>
+              <Skeleton height={32} width={40} />
+              <Skeleton height={32} width={40} />
+              <Skeleton height={32} width={40} />
+              <Skeleton height={32} width={40} />
+            </Stack>
+            <Skeleton height={32} width={80} />
+          </Stack>
+        </Box>
+      </Card>
+    );
+  }
 
   if (!realtimeData) {
     return <div>{t('No chart data available')}</div>;

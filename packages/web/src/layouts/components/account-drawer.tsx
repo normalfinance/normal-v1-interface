@@ -161,6 +161,10 @@ function WalletConnected({ address }: { address: string }) {
   // TODO: Fetch user activity
   // const { activity } = useUserActivity();
 
+  if (!address) {
+    return null;
+  }
+
   return (
     <Box
       sx={{
@@ -228,8 +232,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [connectedAddress]);
 
   const [isConnected, setIsConnected] = useState(connectedAddress != '');
-  console.log(connectedAddress);
-  console.log(isConnected);
+
+  useEffect(() => {
+    setIsConnected(Boolean(connectedAddress));
+  }, [connectedAddress]);
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
@@ -316,8 +322,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
           )}
         </Box>
         <Scrollbar>
-          {isConnected ? (
-            <WalletConnected address={connectedAddress!} />
+          {isConnected && connectedAddress ? (
+            <WalletConnected address={connectedAddress} />
           ) : (
             <WalletDisconnected
               connectors={connectors}
