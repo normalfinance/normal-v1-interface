@@ -5,9 +5,9 @@ import type { InsuranceQueryParams } from '@/types/query-params';
 
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useQueryParams } from '@/hooks/use-query-params';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 import { useBuffer, useOracle, useInsuranceFund } from '@/hooks';
-import { useQueryParams } from '@/hooks/use-query-params';
 
 import Grid2 from '@mui/material/Grid2';
 import { Stack, useTheme, Typography } from '@mui/material';

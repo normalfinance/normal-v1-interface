@@ -1,7 +1,7 @@
 import type { CardProps } from '@mui/material';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
-import type { StateToken as Token } from '@normalfinance/types';
 import type { SwapQueryParams } from '@/types/query-params';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { useSwap, useTrustLine } from '@/hooks';
@@ -83,7 +83,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     // Set tokens based on query params
     if (queryParams.token_in && tokens.length > 0) {
       const sellTokenFromQuery = tokens.find(
-        (t) => t.symbol.toLowerCase() === queryParams.token_in?.toLowerCase()
+        (tkn1) => tkn1.symbol.toLowerCase() === queryParams.token_in?.toLowerCase()
       );
       if (sellTokenFromQuery) {
         setSellToken(sellTokenFromQuery);
@@ -92,7 +92,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
     if (queryParams.token_out && tokens.length > 0) {
       const buyTokenFromQuery = tokens.find(
-        (t) => t.symbol.toLowerCase() === queryParams.token_out?.toLowerCase()
+        (tkn2) => tkn2.symbol.toLowerCase() === queryParams.token_out?.toLowerCase()
       );
       if (buyTokenFromQuery) {
         setBuyToken(buyTokenFromQuery);

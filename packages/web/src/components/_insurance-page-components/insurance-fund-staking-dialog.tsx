@@ -3,9 +3,9 @@
 import type { InsuranceQueryParams } from '@/types/query-params';
 
 import z from 'zod';
-import { useState, useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { useInsuranceFund } from '@/hooks';
+import { useState, useEffect } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
@@ -16,11 +16,11 @@ import {
   Box,
   Tabs,
   Alert,
-  AlertTitle,
   Stack,
   Dialog,
   Button,
   InputBase,
+  AlertTitle,
   Typography,
   DialogTitle,
   DialogContent,
