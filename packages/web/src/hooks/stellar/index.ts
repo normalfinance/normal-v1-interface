@@ -12,4 +12,5 @@ export * from './use-insurance-fund';
 export * from './use-oracle-registry';
 export * from './use-contract-transaction';
 export * from './use-native-token-balance';
+export * from './use-token-balance';
 export * from './tokens/use-featured-tokens';
