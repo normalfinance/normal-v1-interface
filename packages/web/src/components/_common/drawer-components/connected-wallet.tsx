@@ -17,10 +17,12 @@ import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 
-import TokensTab from './tokens-tab';
+import ReceiveModal from '../receive-modal';
+import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
+
 import ActivityTab from './activity-tab';
 import PositioinsTab from './positions-tab';
-import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
+import TokensTab from './tokens-tab';
 
 import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
 
@@ -41,18 +43,20 @@ export default function ConnectedWallet({
   activity,
 }: ConnectedWalletProps) {
   const theme = useTheme();
-  const [showSwap, setShowSwap] = useState(false);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   const actionButtons = [
     {
       label: 'Send',
       icon: 'solar:transfer-horizontal-bold-duotone',
-      onClick: () => setShowSwap((prev) => !prev),
+      onClick: () => {
+        console.log('Send clicked');
+      },
     },
     {
       label: 'Receive',
       icon: 'mingcute:add-line',
-      href: '/positions/create',
+      onClick: () => setShowReceiveModal(true),
     },
   ];
 
@@ -144,7 +148,6 @@ export default function ConnectedWallet({
               color="success"
               size="large"
               onClick={btn.onClick}
-              href={btn.href}
             >
               <Box
                 sx={{
@@ -199,6 +202,8 @@ export default function ConnectedWallet({
       {tabs.value === 'tokens' && <TokensTab tokens={tokens} />}
       {tabs.value === 'pools' && <PositioinsTab positions={positions} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
+
+      <ReceiveModal open={showReceiveModal} onClose={() => setShowReceiveModal(false)} />
     </Stack>
   );
 }
