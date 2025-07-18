@@ -4503,6 +4503,7 @@ __metadata:
     "@types/autosuggest-highlight": ^3.2.3
     "@types/node": ^22.10.3
     "@types/nprogress": ^0.2.3
+    "@types/qrcode": ^1.5.5
     "@types/react": ^18.3.18
     "@types/react-dom": ^18.3.5
     "@types/stylis": ^4.2.7
@@ -4541,6 +4542,7 @@ __metadata:
     nprogress: ^0.2.0
     prettier: ^3.4.2
     prisma: ^5.22.0
+    qrcode: ^1.5.4
     react: ^18.3.1
     react-apexcharts: ^1.7.0
     react-dom: ^18.3.1
@@ -7568,6 +7570,15 @@ __metadata:
   version: 15.7.15
   resolution: "@types/prop-types@npm:15.7.15"
   checksum: 31aa2f59b28f24da6fb4f1d70807dae2aedfce090ec63eaf9ea01727a9533ef6eaf017de5bff99fbccad7d1c9e644f52c6c2ba30869465dd22b1a7221c29f356
+  languageName: node
+  linkType: hard
+
+"@types/qrcode@npm:^1.5.5":
+  version: 1.5.5
+  resolution: "@types/qrcode@npm:1.5.5"
+  dependencies:
+    "@types/node": "*"
+  checksum: d92c1d3e77406bf13a03ec521b2ffb1ac99b2e6ea3a17cad670f2610f62e1293554c57e4074bb2fd4e9369f475f863b69e0ae8c543cb049c4a3c1b0c2d92522a
   languageName: node
   linkType: hard
 
@@ -18816,7 +18827,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qrcode@npm:^1.5.1":
+"qrcode@npm:^1.5.1, qrcode@npm:^1.5.4":
   version: 1.5.4
   resolution: "qrcode@npm:1.5.4"
   dependencies:
