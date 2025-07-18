@@ -40,7 +40,6 @@ export type LegendValue = {
 type Props = CardProps & {
   title?: string;
   subheader?: string;
-  legendValues?: LegendValue[];
   color?: string;
   chart: ExplorerChartData;
   pairInfo?: TokenPairInfo;
@@ -52,7 +51,6 @@ type Props = CardProps & {
 export function PoolChart({
   title,
   subheader,
-  legendValues,
   chart,
   color,
   pairInfo,

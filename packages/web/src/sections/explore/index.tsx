@@ -28,15 +28,15 @@ export default function ExploreView() {
   const { totalTVL } = useTotalTVL();
   const { getSwapVolume } = useSwapVolume();
 
-  const [volume, setVolume] = useState(null);
+  const [volume, setVolume] = useState<number | undefined>(undefined);
 
   useEffect(() => {
-    getSwapVolume({ timeframe: 'daily' }).then(setVolume);
+    getSwapVolume({ timeframe: '24h' }).then((res) => setVolume(res['24h'].volume));
   }, []);
 
   const stats: SingleStat[] = [
-    { title: '1D Volume', total: volume || 0, percent: 0, formatter: fCurrency },
-    { title: 'Total TVL', total: totalTVL || 0, percent: 0, formatter: fCurrency },
+    { title: '1D Volume', total: volume ?? 0, percent: 0, formatter: fCurrency },
+    { title: 'Total TVL', total: totalTVL ?? 0, percent: 0, formatter: fCurrency },
     {
       title: 'Total Pools',
       total: pools ? pools.length : 0,
@@ -53,7 +53,6 @@ export default function ExploreView() {
       store.setLoading(true);
       try {
         const allTokens = await store.getAllTokens();
-        // console.log(allTokens)
         store.setLoading(false);
       } catch (e) {
         console.error(e);

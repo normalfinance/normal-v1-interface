@@ -1,6 +1,6 @@
 'use client';
 
-import type { TimeEpoch } from '@normalfinance/types';
+import type { ChartTimeframeKey } from '@/components/_pool-page-components';
 
 import * as Sentry from '@sentry/nextjs';
 import { useState, useCallback } from 'react';
@@ -16,7 +16,7 @@ interface ReturnType {
 }
 
 type SwapVolumeStats = Record<
-  TimeEpoch,
+  ChartTimeframeKey,
   {
     volume: number;
     trades: number;
@@ -26,13 +26,13 @@ type SwapVolumeStats = Record<
 type GetSwapVolumeParams =
   | undefined
   | {
-      timeframe?: TimeEpoch;
+      timeframe?: ChartTimeframeKey;
       since?: Date;
       poolAddress?: string;
     };
 
-const timeframesInMs: Record<TimeEpoch, number> = {
-  '1d': 1 * 24 * 60 * 60 * 1000,
+const timeframesInMs: Record<ChartTimeframeKey, number> = {
+  '24h': 1 * 24 * 60 * 60 * 1000,
   '7d': 7 * 24 * 60 * 60 * 1000,
   '30d': 30 * 24 * 60 * 60 * 1000,
   '12m': 365 * 24 * 60 * 60 * 1000,
@@ -57,6 +57,8 @@ export function useSwapVolume(): ReturnType {
         .from('realtime goldsky')
         .select('*')
         .eq('contract_id', POOL_ROUTER_CONTRACT_ID)
+        .eq('type', 'contract')
+        .eq('in_successful_contract_call', true)
         .order('timestamp', { ascending: false });
 
       if (e) {
