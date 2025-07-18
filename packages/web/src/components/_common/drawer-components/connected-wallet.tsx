@@ -17,12 +17,11 @@ import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 
-import ReceiveModal from '../receive-modal';
-import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
-
-import ActivityTab from './activity-tab';
-import PositioinsTab from './positions-tab';
 import TokensTab from './tokens-tab';
+import ActivityTab from './activity-tab';
+import ReceiveModal from '../receive-modal';
+import PositioinsTab from './positions-tab';
+import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
 import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
 

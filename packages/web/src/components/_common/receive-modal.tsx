@@ -1,7 +1,10 @@
 'use client';
 
 import QRCode from 'qrcode';
+import { useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -15,11 +18,6 @@ import {
   DialogActions,
   CircularProgress,
 } from '@mui/material';
-
-import { useTranslate } from '@/locales';
-import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
-
-import { usePersistStore } from '@normalfinance/state';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
