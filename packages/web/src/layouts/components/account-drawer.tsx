@@ -233,7 +233,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   const [isConnected, setIsConnected] = useState(connectedAddress != '');
 
-
   useEffect(() => {
     setIsConnected(Boolean(connectedAddress));
   }, [connectedAddress]);
