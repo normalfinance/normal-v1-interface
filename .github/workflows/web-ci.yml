@@ -62,6 +62,11 @@ jobs:
             echo "Crowdin credentials not available, skipping translation download"
           fi
 
+      # Sync keys from 'en' to other languages to ensure no missing keys
+      - name: i18n – sync missing keys
+        working-directory: packages/web
+        run: yarn i18n:sync-keys
+
       # Check for untranslated / missing keys across all locale JSON files
       - name: i18n – translation completeness check
         working-directory: packages/web

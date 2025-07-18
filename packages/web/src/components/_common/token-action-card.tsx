@@ -182,6 +182,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
       sx={{
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
         minWidth: 200,
         maxWidth: '100%',
         minHeight: 380,
