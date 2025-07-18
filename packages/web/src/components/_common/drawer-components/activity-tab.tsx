@@ -17,7 +17,7 @@ export default function ActivityTab({ activity = [] }: { activity?: Activity[] }
 
   return (
     <Box sx={{ p: 2, pt: 0 }}>
-      <Alert severity="info" title={t('Coming soon')} />
+      <Alert severity="info">{t('Coming soon')}</Alert>
       {activity
         .sort((a, b) => b.timestamp - a.timestamp)
         .map((item) => (
