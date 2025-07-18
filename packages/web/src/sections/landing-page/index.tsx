@@ -1,6 +1,10 @@
+'use client';
+
 import type { StateToken as Token } from '@normalfinance/types';
+import type { SwapQueryParams } from '@/types/query-params';
 
 import { Icon } from '@iconify/react';
+import { useQueryParams } from '@/hooks/use-query-params';
 
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
@@ -103,9 +107,11 @@ export const featureCardWide = {
 };
 
 export default function LandingPage() {
+  const { params } = useQueryParams<SwapQueryParams>();
+
   return (
     <>
-      <HeroHeader />
+      <HeroHeader swapParams={params} />
       <FeatureGrid
         cardsSmall={featureCardsSmall}
         cardTall={featureCardTall}

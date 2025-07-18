@@ -1,6 +1,7 @@
 import type { CardProps } from '@mui/material';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { StateToken as Token } from '@normalfinance/types';
+import type { SwapQueryParams } from '@/types/query-params';
 
 import { useTranslate } from '@/locales';
 import { useSwap, useTrustLine } from '@/hooks';
@@ -25,9 +26,10 @@ import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];
   swapFeeInfo?: SwapFeeInfo;
+  queryParams?: SwapQueryParams;
 }
 
-const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
+const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -73,6 +75,35 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
 
   // 5) Example of how much buyToken the user might get
   const [buyAmount, setBuyAmount] = useState<number>(0);
+
+  // Initialize from query params
+  useEffect(() => {
+    if (!queryParams) return;
+
+    // Set tokens based on query params
+    if (queryParams.token_in && tokens.length > 0) {
+      const sellTokenFromQuery = tokens.find(
+        (t) => t.symbol.toLowerCase() === queryParams.token_in?.toLowerCase()
+      );
+      if (sellTokenFromQuery) {
+        setSellToken(sellTokenFromQuery);
+      }
+    }
+
+    if (queryParams.token_out && tokens.length > 0) {
+      const buyTokenFromQuery = tokens.find(
+        (t) => t.symbol.toLowerCase() === queryParams.token_out?.toLowerCase()
+      );
+      if (buyTokenFromQuery) {
+        setBuyToken(buyTokenFromQuery);
+      }
+    }
+
+    // Set amount
+    if (queryParams.in_amount) {
+      setAmount(queryParams.in_amount);
+    }
+  }, [queryParams, tokens]);
 
   // 6) Open/close the token picker
   const handleOpen = () => setOpen(true);

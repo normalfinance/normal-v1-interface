@@ -1,11 +1,13 @@
 'use client';
 
 import type { StatCardData } from '@/types/stat-card-data';
+import type { InsuranceQueryParams } from '@/types/query-params';
 
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 import { useBuffer, useOracle, useInsuranceFund } from '@/hooks';
+import { useQueryParams } from '@/hooks/use-query-params';
 
 import Grid2 from '@mui/material/Grid2';
 import { Stack, useTheme, Typography } from '@mui/material';
@@ -17,6 +19,9 @@ import { InsuranceActionsTable } from '@/components/_insurance-page-components/i
 export default function InsuranceView() {
   const theme = useTheme();
   const { t } = useTranslate();
+
+  // Get insurance query params
+  const { params: insuranceParams } = useQueryParams<InsuranceQueryParams>();
 
   const {
     loading: loadingIF,
@@ -109,6 +114,7 @@ export default function InsuranceView() {
             yieldPercent={insuranceFund?.current_rate || 0}
             staked={stake?.if_shares}
             currentBalance={userStakeFiatValue}
+            queryParams={insuranceParams}
           />
         </Grid2>
 

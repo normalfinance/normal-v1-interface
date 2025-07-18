@@ -3,6 +3,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { StateToken as Token } from '@normalfinance/types';
+import type { SwapQueryParams } from '@/types/query-params';
 
 import React, { useEffect } from 'react';
 import Skeleton from 'react-loading-skeleton';
@@ -58,6 +59,8 @@ export interface TokenActionCardProps extends CardProps {
   cashBalance?: number;
   /** Show skeleton loading state */
   loading?: boolean;
+  /** Query parameters for pre-populating swap form */
+  queryParams?: SwapQueryParams;
 }
 
 // ----------------------------------------------------------------------
@@ -72,6 +75,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   enabledTabs,
   cashBalance,
   loading,
+  queryParams,
   ...other
 }) => {
   const theme = useTheme();
@@ -102,7 +106,9 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   const renderTabBody = () => {
     switch (tabs.value) {
       case 'swap':
-        return <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} />;
+        return (
+          <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} queryParams={queryParams} />
+        );
       case 'send':
         return <SendCard tokensList={store.tokens} networkCost={0} />;
       case 'buy':
