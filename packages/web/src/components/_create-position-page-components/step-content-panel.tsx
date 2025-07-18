@@ -3,15 +3,15 @@
 import type { StateToken } from '@normalfinance/types';
 
 import { z } from 'zod';
-import { useState, useEffect } from 'react';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, FormProvider } from 'react-hook-form';
+import useTokenBalance from '@/hooks/stellar/use-token-balance';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box, Stack, Button } from '@mui/material';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
-import useTokenBalance from '@/hooks/stellar/use-token-balance';
 
 import StepTwo from './step-two';
 import { StepOne } from './step-one';
@@ -170,7 +170,7 @@ export function StepContentPanel({
         <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
           {step === 1 && watchAmount ? (
             <WalletGate buttonText={getButtonLabel()} fullWidth variant="soft" color="success">
-              <Button fullWidth variant="soft" color="success" size="large" disabled={true}>
+              <Button fullWidth variant="soft" color="success" size="large" disabled>
                 {getButtonLabel()}
               </Button>
             </WalletGate>
