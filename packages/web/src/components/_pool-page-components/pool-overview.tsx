@@ -1,7 +1,10 @@
+import 'react-loading-skeleton/dist/skeleton.css';
+
 import type { CardProps } from '@mui/material/Card';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
 
@@ -42,6 +45,7 @@ export type PoolsAprProps = CardProps & {
   poolBalances: [PoolBalance, PoolBalance]; // exactly two items
   stats: PoolStat[]; // any length (e.g. 3-4)
   actionButtons?: PoolActionButton[];
+  loading?: boolean;
 };
 
 // ----------------------------------------------------------------------
@@ -50,6 +54,7 @@ export function PoolOverview({
   totalAprPercentage,
   poolBalances,
   stats,
+  loading,
   sx,
   ...other
 }: PoolsAprProps) {
@@ -71,10 +76,57 @@ export function PoolOverview({
     },
   ];
 
-  const [balA, balB] = poolBalances;
+  const [balA, balB] = poolBalances || [
+    { coinShortName: '', value: 0 },
+    { coinShortName: '', value: 0 },
+  ];
   const total = balA.value + balB.value || 1;
   const pctA = balA.value / total;
   const pctB = balB.value / total;
+
+  if (loading) {
+    return (
+      <Card
+        sx={[
+          { display: 'flex', flexDirection: 'column', gap: 2, p: '8px' },
+          ...(Array.isArray(sx) ? sx : [sx]),
+        ]}
+        {...other}
+      >
+        {/* Action buttons skeleton */}
+        <Stack direction="row" spacing={1} width="100%">
+          <Skeleton height={48} width="50%" />
+          <Skeleton height={48} width="50%" />
+        </Stack>
+
+        {/* APR section skeleton */}
+        <Stack spacing={1} sx={{ textAlign: 'center', py: 2 }}>
+          <Skeleton height={20} width="40%" style={{ margin: '0 auto' }} />
+          <Skeleton height={32} width="30%" style={{ margin: '0 auto' }} />
+        </Stack>
+
+        {/* Balance chart skeleton */}
+        <Stack spacing={2}>
+          <Skeleton height={20} width="50%" />
+          <Skeleton height={8} width="100%" />
+          <Stack direction="row" justifyContent="space-between">
+            <Skeleton height={16} width="30%" />
+            <Skeleton height={16} width="30%" />
+          </Stack>
+        </Stack>
+
+        {/* Stats skeleton */}
+        <Stack spacing={2}>
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <Stack key={idx} direction="row" justifyContent="space-between">
+              <Skeleton height={16} width="40%" />
+              <Skeleton height={16} width="30%" />
+            </Stack>
+          ))}
+        </Stack>
+      </Card>
+    );
+  }
 
   return (
     <Card
