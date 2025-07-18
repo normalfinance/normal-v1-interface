@@ -1,11 +1,16 @@
 'use client';
 
 import type { Activity } from '@/types/activity';
+import type { events } from '@normalfinance/types';
+import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
+import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
+import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
+import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { getCryptoIconUrl } from '@normalfinance/utils';
+import { constants, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -16,6 +21,8 @@ interface ReturnType {
 }
 
 // ----------------------------------------------------------------------
+
+const server = new rpc.Server(constants.RPC_URL);
 
 export function useUserActivity(): ReturnType {
   const store = usePersistStore();
@@ -37,18 +44,38 @@ export function useUserActivity(): ReturnType {
       const { data, error: e } = await supabase
         .from('goldsky')
         .select('*')
-        // .filter('data->>user', 'eq', userAddress); // or data->>from/to
-        // .eq('contract_id', CONTRACT_ID)
-        .order('ledger_sequence', { ascending: true });
-      if (e) {
-        setError(e.toString() as any);
-        console.error('Initial fetch error:', e);
-      } else {
-        const parsed = (data || [])
-          .map((row) => parseRowToActivity(row as SupabaseEventRow, userAddress))
-          .filter(Boolean) as Activity[];
+        .eq('transaction_account', userAddress)
+        .eq('type', 'contract')
+        .eq('in_successful_contract_call', true)
+        .order('id', { ascending: false });
 
-        setRecentActivity(parsed);
+      if (e) {
+        captureException(e);
+        setError(e.toString() as any);
+      } else {
+        const rows = data as GoldskyTableRow[];
+
+        const parsed = rows
+          .filter((r) => r.topics !== undefined && r.data !== undefined)
+          .map(async (r) => {
+            // parseRowToActivity()?
+            const parsedEvent = parseEvent(
+              JSON.parse(r.topics!),
+              JSON.parse(r.data!),
+              r.transaction_hash
+            ) as events.BufferEvent; // FIXME:
+
+            const tx = await server.getTransaction(r.transaction_hash);
+            if (tx.status === 'SUCCESS') {
+              parsedEvent.timestamp = tx.createdAt.toString();
+            }
+
+            return parsedEvent;
+          });
+
+        const _parsed = await Promise.all(parsed);
+
+        setRecentActivity(_parsed);
       }
       setLoading(false);
     };
@@ -56,27 +83,31 @@ export function useUserActivity(): ReturnType {
     fetchInitialData();
 
     const channel = supabase
-      .channel('user-activity-channel')
+      .channel('realtime:goldsky:user_activity')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
-          table: 'events',
+          table: 'goldsky',
         },
-        (payload: any) => {
-          const row = payload.new as SupabaseEventRow;
+        async (payload: RealtimePostgresInsertPayload<GoldskyTableRow>) => {
+          const { topics, data, transaction_hash } = payload.new;
 
-          // Only process events that mention this user address in the data payload
-          if (
-            row.data?.user === userAddress ||
-            row.data?.from === userAddress ||
-            row.data?.to === userAddress
-          ) {
-            const act = parseRowToActivity(row, userAddress);
-            if (act) {
-              setRecentActivity((prev) => [...prev, act]);
+          if (topics && data) {
+            // parseRowToActivity()?
+            const parsed = parseEvent(
+              JSON.parse(topics),
+              JSON.parse(data),
+              transaction_hash
+            ) as events.BufferEvent; // FIXME:
+
+            const tx = await server.getTransaction(transaction_hash);
+            if (tx.status === 'SUCCESS') {
+              parsed.timestamp = tx.createdAt.toString();
             }
+
+            setRecentActivity((prev) => [parsed, ...prev]);
           }
         }
       )
@@ -95,95 +126,79 @@ export function useUserActivity(): ReturnType {
   };
 }
 
-function parseRowToActivity(row: SupabaseEventRow, userAddress: string): Activity | null {
-  const { id, timestamp, event_type, data } = row;
-  const ts = new Date(timestamp).getTime();
-
-  const amount = typeof data.amount === 'string' ? parseFloat(data.amount) : Number(data.amount);
-  const token = data.token || data.token_in || data.token_out;
-
-  switch (event_type) {
-    case 'deposit':
-      return {
-        id,
-        type: 'Sent',
-        timestamp: ts,
-        address: data.to,
-        asset: {
-          token,
-          iconUrl: getCryptoIconUrl(token),
-          amount,
-        },
-      };
-
-      break;
-
-    case 'trade':
-      return {
-        id,
-        type: 'Swapped',
-        timestamp: ts,
-        sell: {
-          token: data.token_in,
-          iconUrl: getCryptoIconUrl(data.token_in),
-          amount: Number(data.in_amount),
-        },
-        buy: {
-          token: data.token_out,
-          iconUrl: getCryptoIconUrl(data.token_out),
-          amount: Number(data.out_amount),
-        },
-      };
-
-    case 'add_liquidity':
-      return {
-        id,
-        type: 'Add Liquidity',
-        timestamp: ts,
-        lpToken: {
-          token,
-          iconUrl: getCryptoIconUrl(token),
-          amount,
-        },
-      };
-
-    case 'remove_liquidity':
-      return {
-        id,
-        type: 'Remove Liquidity',
-        timestamp: ts,
-        lpToken: {
-          token,
-          iconUrl: getCryptoIconUrl(token),
-          amount,
-        },
-      };
-
-    case 'stake':
-      return {
-        id,
-        type: 'Stake',
-        timestamp: ts,
-        asset: {
-          token,
-          iconUrl: getCryptoIconUrl(token),
-          amount,
-        },
-      };
-
-    case 'unstake':
-      return {
-        id,
-        type: 'Unstake',
-        timestamp: ts,
-        asset: {
-          token,
-          iconUrl: getCryptoIconUrl(token),
-          amount,
-        },
-      };
-
-    default:
-      return null;
-  }
+function parseRowToActivity(
+  event: events.NormalContractEvent,
+  userAddress: string,
+  timestamp: string
+): Activity | null {
+  // const { id, timestamp, event_type, data } = event;
+  //   // const ts = new Date(timestamp).getTime();
+  //   // const amount = typeof data.amount === 'string' ? parseFloat(data.amount) : Number(data.amount);
+  //   // const token = data.token || data.token_in || data.token_out;
+  //   switch (event.type) {
+  //     case 'deposit':
+  //       return {
+  //         id: 1,
+  //         type: 'Sent',
+  //         timestamp: ts,
+  //         address: data.to,
+  //         asset: {
+  //           token,
+  //           iconUrl: getCryptoIconUrl(token),
+  //           amount,
+  //         },
+  //       };
+  //       break;
+  //     case 'trade':
+  //       return {
+  //         id,
+  //         type: 'Swapped',
+  //         timestamp: ts,
+  //         sell: {
+  //           token: data.token_in,
+  //           iconUrl: getCryptoIconUrl(data.token_in),
+  //           amount: Number(data.in_amount),
+  //         },
+  //         buy: {
+  //           token: data.token_out,
+  //           iconUrl: getCryptoIconUrl(data.token_out),
+  //           amount: Number(data.out_amount),
+  //         },
+  //       };
+  //     case 'deposit_liquidity':
+  //       return {
+  //         id: 1,
+  //         type: 'Add Liquidity',
+  //         timestamp: ts,
+  //         lpToken: {
+  //           token: event.,
+  //           iconUrl: getCryptoIconUrl(token),
+  //           amount: event.amount,
+  //         },
+  //       };
+  //     case 'remove_liquidity':
+  //       return {
+  //         id,
+  //         type: 'Remove Liquidity',
+  //         timestamp: ts,
+  //         lpToken: {
+  //           token,
+  //           iconUrl: getCryptoIconUrl(token),
+  //           amount,
+  //         },
+  //       };
+  //     case 'if_stake_record':
+  //       return {
+  //         id: 0,
+  //         type: event.action,
+  //         timestamp: ts,
+  //         asset: {
+  //           token: 'XLM',
+  //           iconUrl: getCryptoIconUrl('XLM'),
+  //           amount: event.amount,
+  //         },
+  //       };
+  //     default:
+  //       return null;
+  //   }
 }
