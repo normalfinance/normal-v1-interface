@@ -1,34 +1,34 @@
 'use client';
 
+import type { events } from '@normalfinance/types';
+import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
+import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
+
+import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
+import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
-import { constants, convertContractAddressToHex } from '@normalfinance/utils';
+import { constants, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
 interface ReturnType {
   error: any | null;
   loading: boolean;
-  events: ParsedEvent[];
-}
-
-interface ParsedEvent {
-  eventType: string;
-  token?: string;
-  user?: string;
-  amount?: string;
-  raw: any;
+  events: events.BufferEvent[];
 }
 
 // ----------------------------------------------------------------------
 
-const CONTRACT_ID = convertContractAddressToHex(constants.BUFFER_ADDRESS);
+const server = new rpc.Server(constants.RPC_URL);
+
+const CONTRACT_ID = '75bb4470b1a4ff61ecc7295e8b8eb74419dd586eee404cdf5249915d890e0877'; // sconvertContractAddressToHex(constants.BUFFER_ADDRESS);
 
 export function useBufferEvents(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [events, setEvents] = useState<ParsedEvent[]>([]);
+  const [events, setEvents] = useState<events.BufferEvent[]>([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -39,34 +39,70 @@ export function useBufferEvents(): ReturnType {
         .from('goldsky')
         .select('*')
         .eq('contract_id', CONTRACT_ID)
+        .eq('type', 'contract')
+        .eq('in_successful_contract_call', true)
         .order('id', { ascending: false });
+
       if (e) {
+        captureException(e);
         setError(e.toString() as any);
-        console.error('Initial fetch error:', e);
       } else {
-        const parsed = data.map(parseBufferEvent);
-        setEvents(parsed);
+        const rows = data as GoldskyTableRow[];
+
+        const parsed = rows
+          .filter((r) => r.topics !== undefined && r.data !== undefined)
+          .map(async (r) => {
+            const parsedEvent = parseEvent(
+              JSON.parse(r.topics!),
+              JSON.parse(r.data!),
+              r.transaction_hash
+            ) as events.BufferEvent;
+
+            const tx = await server.getTransaction(r.transaction_hash);
+            if (tx.status === 'SUCCESS') {
+              parsedEvent.timestamp = tx.createdAt.toString();
+            }
+
+            return parsedEvent;
+          });
+
+        const _parsed = await Promise.all(parsed);
+
+        setEvents(_parsed);
       }
+
       setLoading(false);
     };
 
     fetchInitialData();
 
     const channel = supabase
-      .channel('realtime goldsky')
+      .channel('realtime:goldsky:buffer')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'goldsky',
           filter: `contract_id=eq.${CONTRACT_ID}`,
         },
-        (payload: any) => {
-          console.log('Realtime update:', payload);
+        async (payload: RealtimePostgresInsertPayload<GoldskyTableRow>) => {
+          const { topics, data, transaction_hash } = payload.new;
 
-          const parsed = parseBufferEvent(payload.new);
-          setEvents((prev) => [parsed, ...prev]);
+          if (topics && data) {
+            const parsed = parseEvent(
+              JSON.parse(topics),
+              JSON.parse(data),
+              transaction_hash
+            ) as events.BufferEvent;
+
+            const tx = await server.getTransaction(transaction_hash);
+            if (tx.status === 'SUCCESS') {
+              parsed.timestamp = tx.createdAt.toString();
+            }
+
+            setEvents((prev) => [parsed, ...prev]);
+          }
         }
       )
       .subscribe();
@@ -81,38 +117,4 @@ export function useBufferEvents(): ReturnType {
     loading,
     events,
   };
-}
-
-function parseBufferEvent(row: any): ParsedEvent {
-  const topics: string[] = row.topics || [];
-  const eventType = topics[0] || 'unknown';
-
-  const token = topics[1] || undefined;
-  const user = topics[2] || undefined;
-  const amount = parseAmount(row.data);
-
-  return {
-    eventType,
-    token,
-    user,
-    amount,
-    raw: row,
-  };
-}
-
-function parseAmount(data: any): string | undefined {
-  if (!data) return undefined;
-
-  // If numeric: u128/i128
-  if (typeof data === 'number' || typeof data === 'bigint') {
-    return data.toString();
-  }
-
-  // If data is stringified JSON (some indexers wrap it this way)
-  try {
-    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-    return parsed.toString();
-  } catch {
-    return undefined;
-  }
 }

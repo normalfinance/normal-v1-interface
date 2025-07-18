@@ -38,26 +38,6 @@ const NAV_ITEMS = [
 
 // ----------------------------------------------------------------------
 
-export type InsuranceFundEvent = {
-  ts: number;
-  user: string;
-  action: string;
-  amount: number;
-  insurance_vault_amount_before: number;
-  if_shares_before: number;
-  total_if_shares_before: number;
-  if_shares_after: number;
-  total_if_shares_after: number;
-};
-
-export type BufferEvent = {
-  ts: number;
-  user: string;
-  type: string;
-  amount: number;
-  token: string;
-};
-
 export function InsuranceActionsTable() {
   const { t } = useTranslate();
 
@@ -89,7 +69,7 @@ export function InsuranceActionsTable() {
           justifyContent: { xs: 'center', md: 'flex-start' },
         }}
       >
-        <Tabs value={selectedTab} onChange={handleChangeTab}>
+        <Tabs value={t(selectedTab)} onChange={handleChangeTab}>
           {NAV_ITEMS.map((tab) => (
             <Tab key={tab.value} value={tab.value} icon={tab.icon} label={tab.label} />
           ))}
