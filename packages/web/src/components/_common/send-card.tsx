@@ -3,6 +3,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
@@ -13,9 +14,8 @@ import { Box, Button, InputBase, Typography } from '@mui/material';
 
 import PickToken from './pick-token';
 import SendReview from './send-review';
-import { Iconify } from '../template/iconify';
 import { WalletGate } from './wallet-gate';
-import { usePersistStore } from '@normalfinance/state';
+import { Iconify } from '../template/iconify';
 
 interface SendCardProps extends CardProps {
   tokensList?: Token[];

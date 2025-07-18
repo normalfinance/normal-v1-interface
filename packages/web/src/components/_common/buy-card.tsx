@@ -2,6 +2,7 @@ import type { CardProps } from '@mui/material';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { convertFiatToCoin } from '@/utils/conversion-helpers';
@@ -10,11 +11,10 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
 
 import PickToken from './pick-token';
+import { WalletGate } from './wallet-gate';
 import CheckoutDialog from './checkout-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-import { WalletGate } from './wallet-gate';
-import { usePersistStore } from '@normalfinance/state';
 
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];

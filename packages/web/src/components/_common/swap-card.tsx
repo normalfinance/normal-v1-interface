@@ -18,10 +18,10 @@ import { Iconify } from '@/components/template/iconify';
 
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
+import { WalletGate } from './wallet-gate';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-import { WalletGate } from './wallet-gate';
 
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];
