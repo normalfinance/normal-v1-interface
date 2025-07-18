@@ -46,7 +46,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/figtree": "^5.2.8",
-    "@stellar/stellar-sdk": "^13.1.0",
+    "@stellar/stellar-sdk": "14.0.0-rc.3",
     "@upstash/ratelimit": "^2.0.5",
     "@upstash/redis": "^1.35.1",
     "@walletconnect/modal": "^2.6.2",
