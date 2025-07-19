@@ -72,6 +72,8 @@ const SendReview: React.FC<SendReviewProps> = ({
           { simulate: !restore }
         ),
     });
+
+    onClose();
   };
 
   return (
