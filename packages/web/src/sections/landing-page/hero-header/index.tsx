@@ -1,6 +1,7 @@
 'use client';
 
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
 import { useTranslate } from '@/locales';
@@ -24,9 +25,10 @@ type Props = {
   image: ImageProps;
   tagline: string;
   taglineLogo: ImageProps;
+  swapParams?: SwapQueryParams;
 };
 
-export type HeroHeaderProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
+type HeroHeaderProps = Partial<Props>;
 
 const swapFeeInfo: SwapFeeInfo = {
   feePercentage: 0.25,
@@ -36,7 +38,7 @@ const swapFeeInfo: SwapFeeInfo = {
 };
 
 export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
-  const { heading, description, image, tagline, taglineLogo, ...sectionProps } = {
+  const { heading, description, image, tagline, taglineLogo, swapParams, ...sectionProps } = {
     ...HeroHeaderDefaults,
     ...incomingProps,
   } as Props;
@@ -184,7 +186,11 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} />
+              <SwapCard
+                tokensList={store.tokens}
+                swapFeeInfo={swapFeeInfo}
+                queryParams={swapParams}
+              />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>

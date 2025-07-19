@@ -1,9 +1,11 @@
 'use client';
 
+import type { InsuranceQueryParams } from '@/types/query-params';
+
 import z from 'zod';
-import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { useInsuranceFund } from '@/hooks';
+import { useState, useEffect } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
@@ -58,11 +60,14 @@ export type InsuranceFundStakingDialogProps = {
   open: boolean;
   /** Called on cancel or after successful accept */
   onClose?: () => void;
+  /** Query parameters for pre-populating form */
+  queryParams?: InsuranceQueryParams;
 };
 
 export default function InsuranceFundStakingDialog({
   open,
   onClose,
+  queryParams,
 }: InsuranceFundStakingDialogProps) {
   const { t } = useTranslate();
 
@@ -77,18 +82,17 @@ export default function InsuranceFundStakingDialog({
   return (
     <FormProvider {...methods}>
       <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-        <Content />
+        <Content queryParams={queryParams} />
       </Dialog>
     </FormProvider>
   );
 }
 
 interface ContentProps {
-  // onDeposit: any;
-  // onRequestWithdraw: any;
+  queryParams?: InsuranceQueryParams;
 }
 
-export const Content: React.FC<ContentProps> = () => {
+export const Content: React.FC<ContentProps> = ({ queryParams }) => {
   const { t } = useTranslate();
 
   const [selectedTab, setSelectedTab] = useState('stake'); // Default to first tab
@@ -103,6 +107,18 @@ export const Content: React.FC<ContentProps> = () => {
 
   // Form stuff
   const { control, setValue, watch } = useFormContext<FormValues>();
+
+  // Initialize from query params
+  useEffect(() => {
+    if (!queryParams) return;
+
+    if (queryParams.amount) {
+      // Set tab based on action parameter, default to 'stake' if not specified
+      const tab = queryParams.action === 'unstake' ? 'unstake' : 'stake';
+      setSelectedTab(tab);
+      setValue('amount', Number(queryParams.amount), { shouldValidate: false });
+    }
+  }, [queryParams, setValue]);
 
   // -- keep field in sync with the text input ------------------------
   const amount = watch('amount') ?? '';

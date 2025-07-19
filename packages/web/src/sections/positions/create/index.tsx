@@ -1,11 +1,14 @@
 'use client';
 
+import type { PositionQueryParams } from '@/types/query-params';
+
 import { useEffect } from 'react';
 // mui
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useQueryParams } from '@/hooks/use-query-params';
 
 import { Grid2 } from '@mui/material';
 
@@ -16,8 +19,8 @@ import { CreatePosition } from '@/components/_create-position-page-components/cr
 
 export default function CreatePositionView() {
   const { t } = useTranslate();
-
   const store = useAppStore();
+  const { params } = useQueryParams<PositionQueryParams>();
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function CreatePositionView() {
       />
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 12 }}>
-          <CreatePosition tokens={store.tokens} />
+          <CreatePosition tokens={store.tokens} queryParams={params} />
         </Grid2>
       </Grid2>
     </DashboardContent>
