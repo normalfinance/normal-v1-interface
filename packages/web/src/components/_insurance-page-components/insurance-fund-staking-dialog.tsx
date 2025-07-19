@@ -69,8 +69,6 @@ export default function InsuranceFundStakingDialog({
   onClose,
   queryParams,
 }: InsuranceFundStakingDialogProps) {
-  const { t } = useTranslate();
-
   const methods = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -153,7 +151,7 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
         >
           <Tabs value={selectedTab} onChange={handleChangeTab}>
             {NAV_ITEMS.map((tab) => (
-              <Tab key={tab.value} value={tab.value} label={tab.label} />
+              <Tab key={tab.value} value={tab.value} label={t(tab.label)} />
             ))}
           </Tabs>
         </Box>
