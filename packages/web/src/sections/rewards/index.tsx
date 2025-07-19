@@ -14,6 +14,7 @@ import Tabs from '@mui/material/Tabs';
 import { Button } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import { WalletGate } from '@/components/_common/wallet-gate';
 
 import { ProfileCover } from './profile-cover';
 import { ZealyProgress } from './zealy-progress';
@@ -135,35 +136,41 @@ export function RewardsView() {
 
       {/* ---- Tab panels ----------------------------------------------------- */}
       {selectedTab === '' && (
-        <RewardsOverview
-          referralLink={referralLink}
-          referralsCount={REWARDS_OVERVIEW.referralsCount}
-          zealyUrl={REWARDS_OVERVIEW.zealyUrl}
-          zealyXP={REWARDS_OVERVIEW.zealyXP}
-          protocolPoints={REWARDS_OVERVIEW.protocolPoints}
-          referrals={REWARDS_OVERVIEW.referrals}
-        />
+        <WalletGate buttonText={t('Connect Wallet to view rewards')} fullWidth>
+          <RewardsOverview
+            referralLink={referralLink}
+            referralsCount={REWARDS_OVERVIEW.referralsCount}
+            zealyUrl={REWARDS_OVERVIEW.zealyUrl}
+            zealyXP={REWARDS_OVERVIEW.zealyXP}
+            protocolPoints={REWARDS_OVERVIEW.protocolPoints}
+            referrals={REWARDS_OVERVIEW.referrals}
+          />
+        </WalletGate>
       )}
       {selectedTab === 'zealy' && (
-        <Box sx={{ mt: 3, textAlign: 'center' }}>
-          <Button
-            variant="contained"
-            color="primary"
-            href="https://zealy.io/cw/normalfinance/questboard"
-            target="_blank"
-            rel="noopener"
-            sx={{ mb: 2 }}
-            startIcon={<Iconify icon="eva:external-link-outline" width={18} />}
-          >
-            {t('Go to Zealy')}
-          </Button>
+        <WalletGate buttonText={t('Connect Wallet to view Zealy')} fullWidth>
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Button
+              variant="contained"
+              color="primary"
+              href="https://zealy.io/cw/normalfinance/questboard"
+              target="_blank"
+              rel="noopener"
+              sx={{ mb: 2 }}
+              startIcon={<Iconify icon="eva:external-link-outline" width={18} />}
+            >
+              {t('Go to Zealy')}
+            </Button>
 
-          <ZealyProgress community="normalfinance" />
-        </Box>
+            <ZealyProgress community="normalfinance" />
+          </Box>
+        </WalletGate>
       )}
 
       {selectedTab === 'protocol' && (
-        <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
+        <WalletGate buttonText={t('Connect Wallet to view Protocol Points')} fullWidth>
+          <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
+        </WalletGate>
       )}
     </DashboardContent>
   );

@@ -11,6 +11,8 @@ import { useForm, FormProvider } from 'react-hook-form';
 
 import { Box, Stack, Button } from '@mui/material';
 
+import { WalletGate } from '@/components/_common/wallet-gate';
+
 import StepTwo from './step-two';
 import { StepOne } from './step-one';
 
@@ -139,16 +141,18 @@ export function StepContentPanel({
 
         {/* ---- navigation ---- */}
         <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
-          <Button
-            fullWidth
-            variant="soft"
-            color="success"
-            size="large"
-            onClick={handleMainButtonClick}
-            disabled={isLoading || isStepInvalid()}
-          >
-            {getButtonLabel()}
-          </Button>
+          <WalletGate buttonText={getButtonLabel()} fullWidth variant="soft" color="success">
+            <Button
+              fullWidth
+              variant="soft"
+              color="success"
+              size="large"
+              onClick={handleMainButtonClick}
+              disabled={isLoading || isStepInvalid()}
+            >
+              {getButtonLabel()}
+            </Button>
+          </WalletGate>
         </Stack>
       </Stack>
     </FormProvider>

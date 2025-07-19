@@ -29,6 +29,7 @@
     "tsc:watch": "tsc --noEmit --watch",
     "tsc:print": "npx tsc --showConfig",
     "i18n:check": "i18n-check -s en --locales src/locales/langs -f i18next",
+    "i18n:sync-keys": "node ./scripts/sync-i18n-keys.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

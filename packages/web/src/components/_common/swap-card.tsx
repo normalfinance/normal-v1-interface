@@ -19,6 +19,7 @@ import { Iconify } from '@/components/template/iconify';
 
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
+import { WalletGate } from './wallet-gate';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
@@ -356,6 +357,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setLoadingSimulate(false);
     }
   }, [sellToken?.name, buyToken, amount, buyAmount]);
+
+  // Main button with multiple states
+  const persist = usePersistStore();
+  const isConnected = !!persist.wallet.address;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -702,23 +707,29 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         </Box>
       </Box>
       {/* Main button with multiple states */}
-      <Button
-        fullWidth
-        variant="contained" // use a supported variant
-        size="large"
-        onClick={handleMainButtonClick}
-        disabled={isLoading}
-        sx={{
-          backgroundColor: 'rgba(148,123,255,0.29)',
-          color: '#6E4BFF',
-          '&:hover': {
-            backgroundColor: 'rgba(148,123,255,0.20)',
-          },
-          borderRadius: '20px',
-        }}
-      >
-        {getButtonLabel()}
-      </Button>
+      {isConnected ? (
+        <Button
+          fullWidth
+          variant="contained" // use a supported variant
+          size="large"
+          onClick={handleMainButtonClick}
+          disabled={isLoading}
+          sx={{
+            backgroundColor: 'rgba(148,123,255,0.29)',
+            color: '#6E4BFF',
+            '&:hover': {
+              backgroundColor: 'rgba(148,123,255,0.20)',
+            },
+            borderRadius: '20px',
+          }}
+        >
+          {getButtonLabel()}
+        </Button>
+      ) : (
+        <WalletGate buttonText="Connect Wallet to Swap" fullWidth variant="contained">
+          {null}
+        </WalletGate>
+      )}
 
       {/* Additional box with fee info */}
       {quoteFetched && !isLoading && (

@@ -1,26 +1,22 @@
-'use client';
-
 import type { Connector } from '@normalfinance/types';
-import type { IconButtonProps } from '@mui/material/IconButton';
 
-import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
-import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
+import React, { useState, useEffect } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
+import useNativeTokenBalance from '@/hooks/stellar/use-native-token-balance';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
-import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Paper,
   Stack,
-  Drawer,
   Button,
+  Drawer,
   Tooltip,
-  IconButton,
   Typography,
+  IconButton,
   CircularProgress,
 } from '@mui/material';
 
@@ -30,7 +26,13 @@ import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
-import { AccountButton } from './account-button';
+interface WalletGateProps {
+  children: React.ReactNode;
+  buttonText?: string;
+  fullWidth?: boolean;
+  variant?: 'contained' | 'soft' | 'outlined';
+  color?: 'info' | 'success' | 'primary' | 'secondary' | 'error' | 'warning';
+}
 
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
@@ -44,7 +46,6 @@ function WalletOption({
   allowed: boolean;
   onClick: () => void;
 }) {
-  const theme = useTheme();
   const { t } = useTranslate();
 
   return (
@@ -59,10 +60,6 @@ function WalletOption({
         cursor: allowed ? 'pointer' : 'default',
         opacity: allowed ? 1 : 0.4,
         borderRadius: '8px',
-        border: `1px solid ${theme.palette.divider}`,
-        ...(allowed && {
-          '&:hover': { boxShadow: 4 },
-        }),
         gap: 2,
         alignItems: 'center',
       }}
@@ -90,8 +87,6 @@ function WalletDisconnected({
   connectors: Connector[];
   onSelect: (c: Connector) => void;
 }) {
-  const theme = useTheme();
-
   const [allowed, setAllowed] = useState<Connector[]>([]);
   const [disallowed, setDisallowed] = useState<Connector[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,11 +126,7 @@ function WalletDisconnected({
       {loading ? (
         <CircularProgress />
       ) : (
-        <Box
-          gap={2}
-          width="100%"
-          sx={{ backgroundColor: theme.palette.grey[200], p: 1, borderRadius: 1.5 }}
-        >
+        <Box gap={2} width="100%" sx={{ backgroundColor: 'grey.200', p: 1, borderRadius: 1.5 }}>
           {[...allowed, ...disallowed].map((c) => (
             <WalletOption
               key={c.id}
@@ -154,16 +145,7 @@ function WalletDisconnected({
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
-  // const { data } = useNativeTokenBalance();
-  // const { tokens } = useUserTokens();
-  // const { positions } = useLPTokens();
-
-  // TODO: Fetch user activity
-  // const { activity } = useUserActivity();
-
-  if (!address) {
-    return null;
-  }
+  const { data } = useNativeTokenBalance();
 
   return (
     <Box
@@ -180,8 +162,7 @@ function WalletConnected({ address }: { address: string }) {
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
       <ConnectedWallet
-        balance={0}
-        // balance={Number(data?.data) || 0}
+        balance={Number(data?.data) || 0}
         percentageChange={0}
         tokens={[]}
         positions={[]}
@@ -191,47 +172,25 @@ function WalletConnected({ address }: { address: string }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Main Drawer component                                              */
-/* ------------------------------------------------------------------ */
-export type AccountDrawerProps = IconButtonProps;
-
-export function AccountDrawer(props: AccountDrawerProps) {
-  /* ↓ stores ------------------------------------------------------ */
+export const WalletGate: React.FC<WalletGateProps> = ({
+  children,
+  buttonText = 'Connect Wallet',
+  fullWidth = true,
+  variant = 'contained',
+  color = 'info',
+}) => {
   const persist = usePersistStore();
-
   const { t } = useTranslate();
-
-  /* ↓ connectors -------------------------------------------------- */
-  const connectors: Connector[] = [
-    freighter(),
-    xbull(),
-    lobstr(),
-    hana(),
-    // new WalletConnect(),
-  ];
-
-  const connect = (c: Connector) => persist.connectWallet(c.id);
-  const disconnect = () => persist.disconnectWallet();
+  const isConnected = !!persist.wallet.address;
 
   /* ↓ drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
-  /* ↓ main button uses dummy avatar ------------------------------ */
-  const avatarURL = '/assets/icons/navbar/logo.webp';
+  /* ↓ connectors -------------------------------------------------- */
+  const connectors: Connector[] = [freighter(), xbull(), lobstr(), hana()];
 
-  /* ↓ derived state ---------------------------------------------- */
-  const connectedAddress = persist.wallet.address;
-
-  const isConnected = !!connectedAddress;
-
-  useEffect(() => {
-    if (connectedAddress) {
-      Sentry.setUser({ id: connectedAddress });
-    } else {
-      Sentry.setUser(null);
-    }
-  }, [connectedAddress]);
+  const connect = (c: Connector) => persist.connectWallet(c.id);
+  const disconnect = () => persist.disconnectWallet();
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
@@ -257,20 +216,20 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
   };
 
+  if (isConnected) return <>{children}</>;
+
   return (
     <>
-      {isConnected ? (
-        <AccountButton
-          onClick={handleMainButtonClick}
-          photoURL={avatarURL}
-          displayName=" "
-          {...props}
-        />
-      ) : (
-        <Button variant="contained" color="info" onClick={handleMainButtonClick}>
-          {t('Connect Wallet')}
-        </Button>
-      )}
+      <Button
+        fullWidth={fullWidth}
+        variant={variant}
+        color={color}
+        onClick={handleMainButtonClick}
+        data-testid="wallet-gate-connect-btn"
+      >
+        {buttonText}
+      </Button>
+
       <Drawer
         open={open}
         onClose={onClose}
@@ -317,8 +276,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
           )}
         </Box>
         <Scrollbar>
-          {isConnected && connectedAddress ? (
-            <WalletConnected address={connectedAddress} />
+          {isConnected ? (
+            <WalletConnected address={persist.wallet.address!} />
           ) : (
             <WalletDisconnected
               connectors={connectors}
@@ -333,4 +292,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
       <TermsOfServiceDialog open={showTos} onClose={handleTosClose} />
     </>
   );
-}
+};
+
+export default WalletGate;

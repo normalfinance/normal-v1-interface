@@ -16,6 +16,7 @@ import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
+import { WalletGate } from '@/components/_common/wallet-gate';
 
 import SwapCard from '../_common/swap-card';
 
@@ -138,35 +139,42 @@ export function PoolOverview({
     >
       <Stack direction="row" spacing={1} width="100%">
         {actionButtons.map((btn, idx) => (
-          <Button
+          <WalletGate
             key={idx}
+            buttonText={`Connect Wallet to ${btn.label}`}
             fullWidth
             variant="soft"
             color="success"
-            size="large"
-            onClick={btn.onClick}
-            href={btn.href}
           >
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '2px',
-              }}
+            <Button
+              fullWidth
+              variant="soft"
+              color="success"
+              size="large"
+              onClick={btn.onClick}
+              href={btn.href}
             >
-              <Iconify
-                icon={btn.icon}
-                width={14}
+              <Box
                 sx={{
-                  color: theme.palette.primary.dark,
-                  cursor: 'pointer',
-                  rotate: '-90deg',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '2px',
                 }}
-              />
-              {btn.label}
-            </Box>
-          </Button>
+              >
+                <Iconify
+                  icon={btn.icon}
+                  width={14}
+                  sx={{
+                    color: theme.palette.primary.dark,
+                    cursor: 'pointer',
+                    rotate: '-90deg',
+                  }}
+                />
+                {btn.label}
+              </Box>
+            </Button>
+          </WalletGate>
         ))}
       </Stack>
       {/* NEED TO ADD TOKENLIST */}
