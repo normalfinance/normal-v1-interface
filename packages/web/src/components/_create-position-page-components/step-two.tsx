@@ -38,7 +38,7 @@ export default function StepTwo() {
     }
   };
 
-  const fiatValue = tokenPrice && amount !== '' ? Number(amount) * tokenPrice : 0;
+  const fiatValue = tokenPrice && amount !== '' ? Number(amount) * Number(tokenPrice.data) : 0;
 
   return (
     <Stack spacing={3} width={1}>
