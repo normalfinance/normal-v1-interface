@@ -4,7 +4,7 @@ import type { StateToken } from '@normalfinance/types';
 import type { PositionQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, FormProvider } from 'react-hook-form';
 import useTokenBalance from '@/hooks/stellar/use-token-balance';
