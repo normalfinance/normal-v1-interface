@@ -4,6 +4,7 @@
 
 import type { CardProps } from '@mui/material/Card';
 import type { StateToken as Token } from '@normalfinance/types';
+import type { PositionQueryParams } from '@/types/query-params';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
@@ -18,9 +19,15 @@ import { ResponsiveLinearStepper } from './responsive-linear-stepper';
 
 interface CreatePositionProps extends CardProps {
   tokens: Token[];
+  queryParams?: PositionQueryParams;
 }
 
-export const CreatePosition: React.FC<CreatePositionProps> = ({ tokens, sx, ...other }) => {
+export const CreatePosition: React.FC<CreatePositionProps> = ({
+  tokens,
+  queryParams,
+  sx,
+  ...other
+}) => {
   const theme = useTheme();
 
   const { t } = useTranslate('auto');
@@ -115,6 +122,7 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({ tokens, sx, ...o
             onReset={handleReset}
             isLastStep={activeStep === totalSteps}
             tokens={tokens}
+            queryParams={queryParams}
           />
         </Box>
       </Stack>

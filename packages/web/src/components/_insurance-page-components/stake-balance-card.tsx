@@ -1,5 +1,7 @@
 import type { CardProps } from '@mui/material/Card';
+import type { InsuranceQueryParams } from '@/types/query-params';
 
+import { useEffect } from 'react';
 import { useBoolean } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
@@ -24,12 +26,28 @@ type Props = CardProps & {
   yieldPercent: number;
   staked: number;
   currentBalance: number;
+  queryParams?: InsuranceQueryParams;
 };
 
-export function StakeBalance({ sx, title, yieldPercent, staked, currentBalance, ...other }: Props) {
+export function StakeBalance({
+  sx,
+  title,
+  yieldPercent,
+  staked,
+  currentBalance,
+  queryParams,
+  ...other
+}: Props) {
   const { t } = useTranslate();
 
   const manageStake = useBoolean();
+
+  // Automatically open dialog if query parameters are present
+  useEffect(() => {
+    if (queryParams?.amount) {
+      manageStake.onTrue();
+    }
+  }, [queryParams?.amount, manageStake]);
 
   // Helper function to render a single row.
   const row = (label: string, value: number, formatter: (value: number) => string = fCurrency) => (
@@ -72,7 +90,11 @@ export function StakeBalance({ sx, title, yieldPercent, staked, currentBalance, 
             </Button>
           </WalletGate>
         </Box>
-        <InsuranceFundStakingDialog open={manageStake.value} onClose={manageStake.onFalse} />
+        <InsuranceFundStakingDialog
+          open={manageStake.value}
+          onClose={manageStake.onFalse}
+          queryParams={queryParams}
+        />
       </Box>
     </Card>
   );

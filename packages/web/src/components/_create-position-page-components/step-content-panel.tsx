@@ -1,6 +1,7 @@
 'use client';
 
 import type { StateToken } from '@normalfinance/types';
+import type { PositionQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
 import { useState } from 'react';
@@ -26,6 +27,7 @@ export interface StepContentPanelProps {
   onReset: () => void;
   isLastStep: boolean;
   tokens: StateToken[];
+  queryParams?: PositionQueryParams;
 }
 
 /* ------------------------------------------------------------------ */
@@ -52,6 +54,7 @@ export function StepContentPanel({
   onReset,
   isLastStep,
   tokens,
+  queryParams,
 }: StepContentPanelProps) {
   const store = useAppStore();
   const persistStore = usePersistStore();
@@ -67,6 +70,20 @@ export function StepContentPanel({
       depositAmount: undefined,
     },
   });
+
+  // Initialize from query params
+  useEffect(() => {
+    if (!queryParams) return;
+
+    // If we have a pool_address, we might be able to infer tokens from it
+    // For now, we'll use the amount if provided
+    if (queryParams.amount) {
+      methods.setValue('depositAmount', Number(queryParams.amount), { shouldValidate: false });
+    }
+
+    // If action is provided, we could potentially pre-select certain flows
+    // For now, this is just amount handling
+  }, [queryParams, methods]);
 
   /* Which fields are validated per step */
   const stepFields: Record<number, (keyof FormValues)[]> = {
