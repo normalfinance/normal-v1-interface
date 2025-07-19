@@ -4,6 +4,7 @@ import type { Activity } from '@/types/activity';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
+import { useTranslate } from '@/locales';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
 import { fPercent, fCurrencyCompact } from '@/utils/format-number';
@@ -41,6 +42,7 @@ export default function ConnectedWallet({
   positions,
   activity,
 }: ConnectedWalletProps) {
+  const { t } = useTranslate();
   const theme = useTheme();
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
@@ -63,7 +65,7 @@ export default function ConnectedWallet({
 
   const TAB_ITEMS = [
     { value: 'tokens', label: 'Tokens' },
-    { value: 'pools', label: 'Pools' },
+    { value: 'positions', label: 'Positions' },
     { value: 'activity', label: 'Activity' },
   ] as const;
 
@@ -193,7 +195,7 @@ export default function ConnectedWallet({
         }}
       >
         {TAB_ITEMS.map((tab) => (
-          <Tab key={tab.value} value={tab.value} label={tab.label} />
+          <Tab key={tab.value} value={tab.value} label={t(tab.label)} />
         ))}
       </CustomTabsSwapSend>
 
