@@ -20,7 +20,6 @@ import {
   Dialog,
   Button,
   InputBase,
-  AlertTitle,
   Typography,
   DialogTitle,
   DialogContent,
@@ -158,13 +157,12 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
 
         {/* Content */}
         <Alert severity="warning" sx={{ mt: 3 }}>
-          <AlertTitle>{selectedTab === 'stake' ? t('Stake') : t('Unstake')}</AlertTitle>
           {selectedTab === 'stake'
             ? t(
-                'Staked funds cannot be used as collateral. If you decide to unstake, the amount will be subject to a 13-day cool-down period.'
+                'If you decide to unstake, the amount will be subject to a 13-day cool-down period.'
               )
             : t(
-                'Funds will be available to withdraw 13 days after making an unstake request. You can only have one pending unstake request per vault at a time. You can cancel a request at any time, noting your 13-day cool-down period will restart upon any new unstake request.'
+                'Funds will be available to withdraw 13 days after making an unstake request. You can only have one pending unstake request at a time. You can cancel a request at any time, noting your 13-day cool-down period will restart upon any new unstake request.'
               )}
         </Alert>
 
