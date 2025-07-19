@@ -83,25 +83,6 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
             />
           </Stack>
         </Button>
-
-        {/* fixed Stellar XLM button */}
-        <Button
-          disabled
-          sx={{
-            px: 2,
-            py: 1,
-            borderRadius: 2,
-            border: `1px solid ${theme.palette.divider}`,
-            backgroundColor: alpha(theme.palette.grey[500], 0.08),
-            minWidth: 140,
-            justifyContent: 'flex-start',
-            gap: 1,
-            width: 1,
-          }}
-        >
-          <Avatar src="/assets/icons/cryptoIcons/xlm.svg" sx={{ width: 24, height: 24 }} />
-          {t('XLM')}
-        </Button>
       </Stack>
       {/* token picker dialog */}
       <PickToken
