@@ -40,11 +40,9 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
     <Stack>
       {/* hidden input registers the field */}
       <input type="hidden" {...register('tokenASymbol')} />
-      <Typography variant="subtitle1">{t('Select pair')}</Typography>
+      <Typography variant="subtitle1">{t('Select Normal Token')}</Typography>
       <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>
-        {t(
-          'Choose the tokens you want to provide liquidity for. You can select tokens on all supported networks'
-        )}
+        {t('Choose the Normal Token you want to provide liquidity for.')}
       </Typography>
       <Stack direction="row" spacing={2}>
         {/* token-A button */}
