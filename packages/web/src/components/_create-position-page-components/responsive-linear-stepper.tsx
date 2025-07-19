@@ -36,20 +36,20 @@ export function ResponsiveLinearStepper({ activeStep }: ResponsiveStepperProps) 
       <Stepper
         activeStep={activeStep}
         orientation={vertical ? 'vertical' : 'horizontal'}
-        sx={(t) => ({
+        sx={(_theme) => ({
           '& .MuiStepIcon-root': {
             width: 24,
             height: 24,
             fontSize: 12,
-            color: t.palette.grey[400],
-            backgroundColor: t.palette.text.primary,
+            color: _theme.palette.grey[400],
+            backgroundColor: _theme.palette.text.primary,
             borderRadius: '50%',
           },
-          '& .Mui-active .MuiStepIcon-root': { color: t.palette.text.primary },
-          '& .Mui-active .MuiStepIcon-text': { fill: t.palette.common.white },
+          '& .Mui-active .MuiStepIcon-root': { color: _theme.palette.text.primary },
+          '& .Mui-active .MuiStepIcon-text': { fill: _theme.palette.common.white },
           '& .Mui-completed .MuiStepIcon-root': {
-            color: t.palette.grey[400],
-            backgroundColor: t.palette.text.primary,
+            color: _theme.palette.grey[400],
+            backgroundColor: _theme.palette.text.primary,
           },
         })}
       >
