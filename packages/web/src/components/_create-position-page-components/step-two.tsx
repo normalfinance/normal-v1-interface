@@ -1,44 +1,49 @@
 'use client';
 
-import type { StateToken } from '@normalfinance/types';
-
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { useTokenPrice, useTokenBalance } from '@/hooks';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
+import { constants, getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Avatar, InputBase, Typography } from '@mui/material';
 
 import type { FormValues } from './step-content-panel';
 
-/* ------------------------------------------------------------------ */
-/* props                                                               */
-/* ------------------------------------------------------------------ */
-export interface StepTwoProps {
-  token: StateToken | null; // ← token chosen on step-1
-}
-
-export default function StepTwo({ token }: StepTwoProps) {
+export default function StepTwo() {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { control, setValue, watch } = useFormContext<FormValues>();
+  const { enqueueSnackbar } = useSnackbar();
+
+  // Get token balance for XLM
+  const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(constants.XLM_ADDRESS);
+  const { data: tokenPrice, isLoading: priceLoading } = useTokenPrice(constants.XLM_ADDRESS);
 
   // -- keep field in sync with the text input ------------------------
   const amount = watch('depositAmount') ?? '';
-  const handleChange = (value: string) =>
-    setValue('depositAmount', value === '' ? undefined : Number(value), {
-      shouldValidate: true,
-    });
+  const handleChange = (value: string) => {
+    if (tokenBalance) {
+      const max = Number(tokenBalance.data);
+      if (Number(value) > max) {
+        enqueueSnackbar(t('Amount greater than wallet balance'), { variant: 'error' });
+      }
 
-  const fiatValue = token && amount !== '' ? Number(amount) * token.usdValue : 0;
+      setValue('depositAmount', value === '' ? undefined : Number(value), {
+        shouldValidate: true,
+      });
+    }
+  };
+
+  const fiatValue = tokenPrice && amount !== '' ? Number(amount) * tokenPrice : 0;
 
   return (
     <Stack spacing={3} width={1}>
-      <Typography variant="h6">
-        {t('Step 2 – Enter amount')}&nbsp;
-        {token ? `(${token.symbol})` : ''}
-      </Typography>
+      {/* eslint-disable-next-line i18next/no-literal-string */}
+      <Typography variant="h6">{t('Step 2 – Enter amount')}&nbsp;(XLM)</Typography>
       {/* ---- amount input ------------------------------------------- */}
       <Box
         sx={{
@@ -91,19 +96,17 @@ export default function StepTwo({ token }: StepTwoProps) {
         </Stack>
 
         {/* Token avatar / symbol */}
-        {token && (
-          <Stack
-            alignItems="center"
-            direction="row"
-            spacing={1}
-            sx={{ mr: 2, borderRadius: 99, p: 1 }}
-          >
-            <Avatar src={token.icon} sx={{ width: 32, height: 32 }} />
-            <Typography variant="body1" fontWeight="bold">
-              {token.symbol}
-            </Typography>
-          </Stack>
-        )}
+        <Stack
+          alignItems="center"
+          direction="row"
+          spacing={1}
+          sx={{ mr: 2, borderRadius: 99, p: 1 }}
+        >
+          <Avatar src={getCryptoIconUrl('XLM')} sx={{ width: 32, height: 32 }} />
+          <Typography variant="body1" fontWeight="bold">
+            XLM
+          </Typography>
+        </Stack>
       </Box>
     </Stack>
   );
