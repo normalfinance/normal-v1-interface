@@ -4,11 +4,11 @@ import type { StateToken } from '@normalfinance/types';
 import type { PositionQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
+import { useTokenBalance } from '@/hooks';
 import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import useTokenBalance from '@/hooks/stellar/tokens/use-token-balance';
 
 import { Box, Stack, Button } from '@mui/material';
 
