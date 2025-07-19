@@ -9,7 +9,6 @@ import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
 import { constants } from '@normalfinance/utils';
 import { createReferralActions } from './persist/createReferralActions';
-import { createUserAddedTokensAction } from './persist/createUserAddedTokensActions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
@@ -49,16 +48,12 @@ export const usePersistStore = create<AppStorePersist>()(
       // Create referral actions
       const referralActions = createReferralActions();
 
-      // Create user added token actions
-      const userAddedTokens = createUserAddedTokensAction();
-
       return {
         server,
         networkPassphrase: constants.NETWORK_PASSPHRASE,
         ...walletPersist,
         ...disclaimer,
         ...referralActions,
-        ...userAddedTokens,
       };
     },
     {

@@ -6,4 +6,3 @@ export * from './disclaimer';
 export * from './terms';
 export * from './loading';
 export * from './referral';
-export * from './userTokens';
