@@ -36,12 +36,7 @@ const ServerErrorIllustration = forwardRef<SVGSVGElement, SvgProps>((props, ref)
     >
       {!hideBackground && <BackgroundShape />}
 
-      <image
-        href='/assets/illustrations/characters/character-8.webp'
-        height="300"
-        x="340"
-        y="30"
-      />
+      <image href="/assets/illustrations/characters/character-8.webp" height="300" x="340" y="30" />
 
       <path
         fill="var(--primary-main)"
