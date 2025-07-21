@@ -10,15 +10,15 @@ import { StatsGrid } from '../landing-page/stats-grid/stats-grid';
 import { TestimonialGrid } from '../landing-page/testimonials/testimonials';
 
 const AboutUsView: React.FC = () => (
-    <>
-      <AboutHeader />
-      <CoreValues />
-      <Vision />
-      <Moments />
-      <TestimonialGrid />
-      <StatsGrid />
-      <Team />
-    </>
-  );
+  <>
+    <AboutHeader />
+    <CoreValues />
+    <Vision />
+    <Moments />
+    <TestimonialGrid />
+    <StatsGrid />
+    <Team />
+  </>
+);
 
 export default AboutUsView;
