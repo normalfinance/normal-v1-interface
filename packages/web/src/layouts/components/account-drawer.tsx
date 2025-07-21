@@ -3,7 +3,6 @@
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import axios from 'axios';
 import { useSnackbar } from 'notistack';
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
@@ -12,7 +11,6 @@ import { useBoolean } from 'minimal-shared/hooks';
 import { rateLimiter } from '@/server/rateLimiter';
 import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { isValidStellarAddress } from '@/utils/address-validator';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
@@ -169,22 +167,27 @@ function WalletConnected({ address }: { address: string }) {
   // const { activity } = useUserActivity();
 
   const handleFaucetRequest = useCallback(async () => {
-    if (isValidStellarAddress(address)) {
-      enqueueSnackbar('error', { variant: 'error' });
-      return;
-    }
+    console.log(address);
+    // if (isValidStellarAddress(address)) {
+    //   enqueueSnackbar(t('Invalid address'), { variant: 'error' });
+    //   return;
+    // }
+    const res = await fetch('/api/ip');
+    const data = await res.json();
 
-    const { success } = await rateLimiter.limit('');
+    console.log(data);
+
+    const { success } = await rateLimiter.limit(address);
     if (!success) {
-      enqueueSnackbar('error', { variant: 'error' });
+      enqueueSnackbar(t('Rate limit'), { variant: 'error' });
       return;
     }
 
-    const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
+    // const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
 
-    if (data) {
-      enqueueSnackbar('success', { variant: 'success' });
-    }
+    // if (data) {
+    //   enqueueSnackbar('success', { variant: 'success' });
+    // }
   }, [address, enqueueSnackbar]);
 
   if (!address) {
