@@ -81,11 +81,7 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
     <Container maxWidth="md">
       {/* ------ Heading block ------ */}
       <Stack spacing={2} textAlign="center" mb={{ xs: 6, md: 8 }}>
-        <Typography
-          variant="h3"
-          fontWeight={500}
-          sx={{ fontSize: { xs: '2.25rem', md: '3.5rem' } }}
-        >
+        <Typography variant="h3" fontWeight={500} sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
           {heading}
         </Typography>
       </Stack>
