@@ -1,8 +1,6 @@
 import type { TabsProps } from '@mui/material/Tabs';
 import type { Theme, SxProps } from '@mui/material/styles';
 
-import { useTranslate } from '@/locales';
-
 import NoSsr from '@mui/material/NoSsr';
 import { tabClasses } from '@mui/material/Tab';
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
@@ -21,7 +19,6 @@ export type CustomTabsProps = TabsProps & {
 };
 
 export function CustomTabsSwapSend({ children, slotProps, sx, ...other }: CustomTabsProps) {
-  const { t } = useTranslate('auto');
   return (
     <Tabs
       sx={[

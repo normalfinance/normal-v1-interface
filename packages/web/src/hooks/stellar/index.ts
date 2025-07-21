@@ -8,6 +8,7 @@ export * from './use-liquidity';
 export * from './use-total-tvl';
 export * from './use-trustline';
 export * from './use-lp-tokens';
+export * from './use-token-balance';
 export * from './use-insurance-fund';
 export * from './use-oracle-registry';
 export * from './use-contract-transaction';

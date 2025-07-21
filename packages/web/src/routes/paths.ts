@@ -6,8 +6,10 @@ export const paths = {
   page404: '/error/404',
   page500: '/error/500',
   // helper
-  website: {
+  core: {
     root: 'https://www.normalfinance.io/',
+    about: '/about',
+    contact: '/contact',
   },
   socials: {
     twitter: 'https://x.com/normalfi',
