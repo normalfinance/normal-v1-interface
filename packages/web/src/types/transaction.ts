@@ -1,4 +1,5 @@
 export enum TransactionType {
+  SEND = 'Send',
   SWAP = 'Swap',
   DEPOSIT_LIQUIDITY = 'Deposit Liquidity',
   REMOVE_LIQUIDITY = 'Remove Liquidity',

@@ -1,15 +1,12 @@
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
-import { CONFIG } from '@/global-config';
 
 import { SvgColor } from '@/components/template/svg-color';
 
 // ----------------------------------------------------------------------
 
-const icon = (name: string) => (
-  <SvgColor src={`${CONFIG.assetsDir}/assets/icons/navbar/${name}.svg`} />
-);
+const icon = (name: string) => <SvgColor src={`/assets/icons/navbar/${name}.svg`} />;
 
 const ICONS = {
   home: icon('mingcute-home'),

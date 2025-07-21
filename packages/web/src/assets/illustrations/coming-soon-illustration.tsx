@@ -1,7 +1,6 @@
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 
 import { memo, forwardRef } from 'react';
-import { CONFIG } from '@/global-config';
 
 import SvgIcon from '@mui/material/SvgIcon';
 
@@ -36,12 +35,7 @@ const ComingSoonIllustration = forwardRef<SVGSVGElement, SvgProps>((props, ref) 
     >
       {!hideBackground && <BackgroundShape />}
 
-      <image
-        href={`${CONFIG.assetsDir}/assets/illustrations/characters/character-1.webp`}
-        height="300"
-        x="320"
-        y="30"
-      />
+      <image href="/assets/illustrations/characters/character-1.webp" height="300" x="320" y="30" />
 
       <path
         fill="url(#paint0_linear_1_79)"

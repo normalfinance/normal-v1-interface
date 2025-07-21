@@ -2,7 +2,6 @@ import type { BoxProps } from '@mui/material/Box';
 import type { Theme, SxProps } from '@mui/material/styles';
 import type { TypographyProps } from '@mui/material/Typography';
 
-import { CONFIG } from '@/global-config';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
@@ -40,7 +39,7 @@ export function EmptyContent({
       <Box
         component="img"
         alt="Empty content"
-        src={imgUrl ?? `${CONFIG.assetsDir}/assets/icons/empty/ic-content.svg`}
+        src={imgUrl ?? '/assets/icons/empty/ic-content.svg'}
         {...slotProps?.img}
         sx={[
           {

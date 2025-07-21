@@ -1,7 +1,6 @@
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 
 import { memo, forwardRef } from 'react';
-import { CONFIG } from '@/global-config';
 
 import SvgIcon from '@mui/material/SvgIcon';
 
@@ -214,12 +213,7 @@ const MaintenanceIllustration = forwardRef<SVGSVGElement, SvgProps>((props, ref)
         </linearGradient>
       </defs>
 
-      <image
-        href={`${CONFIG.assetsDir}/assets/illustrations/characters/character-5.webp`}
-        height="300"
-        x="245"
-        y="30"
-      />
+      <image href="/assets/illustrations/characters/character-5.webp" height="300" x="245" y="30" />
     </SvgIcon>
   );
 });
