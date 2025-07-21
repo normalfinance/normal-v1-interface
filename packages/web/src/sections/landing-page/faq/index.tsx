@@ -13,6 +13,7 @@ import {
   AccordionDetails,
   AccordionSummary,
   type ButtonProps,
+  Button,
 } from '@mui/material';
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -113,6 +114,17 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
           ))}
         </Stack>
       </Stack>
+
+      <Box mt={{ xs: 6, md: 8 }} textAlign="center">
+        <Button
+          variant="outlined"
+          href="https://normalfinance.gitbook.io/docs/faqs"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Read more
+        </Button>
+      </Box>
     </Container>
   </Box>
 );
