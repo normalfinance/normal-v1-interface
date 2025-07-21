@@ -8,6 +8,8 @@ export const paths = {
   // helper
   website: {
     root: 'https://www.normalfinance.io/',
+    about: '/about',
+    contact: '/contact',
   },
   socials: {
     twitter: 'https://x.com/normalfi',
