@@ -182,6 +182,8 @@ export const customConfig = {
     ...importRules(),
     ...unusedImportsRules(),
     ...sortImportsRules(),
+    // i18n translation rules
+    'i18next/no-literal-string': 'error',
   },
 };
 
