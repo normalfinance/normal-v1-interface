@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -19,6 +20,7 @@ import { Iconify } from '@/components/template/iconify';
 import { WalletGate } from '@/components/_common/wallet-gate';
 
 import SwapCard from '../_common/swap-card';
+import ZealyHighlight from '../_common/zealy/zealy-highlight';
 
 // ----------------------------------------------------------------------
 // ── Prop types ---------------------------------------------------------
@@ -69,11 +71,13 @@ export function PoolOverview({
       label: 'Swap',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => setShowSwap((prev) => !prev),
+      quest: <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />,
     },
     {
       label: 'Add liquidity',
       icon: 'mingcute:add-line',
       href: '/positions/create',
+      quest: <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />,
     },
   ];
 
@@ -174,6 +178,7 @@ export function PoolOverview({
                 {btn.label}
               </Box>
             </Button>
+            {btn.quest}
           </WalletGate>
         ))}
       </Stack>
