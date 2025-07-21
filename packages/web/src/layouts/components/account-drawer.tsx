@@ -3,12 +3,16 @@
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import axios from 'axios';
+import { useSnackbar } from 'notistack';
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
-import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
+import { rateLimiter } from '@/server/rateLimiter';
+import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
+import { isValidStellarAddress } from '@/utils/address-validator';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
@@ -154,12 +158,34 @@ function WalletDisconnected({
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
+  const { t } = useTranslate();
+  const { enqueueSnackbar } = useSnackbar();
+
   // const { data } = useNativeTokenBalance();
   // const { tokens } = useUserTokens();
   // const { positions } = useLPTokens();
 
   // TODO: Fetch user activity
   // const { activity } = useUserActivity();
+
+  const handleFaucetRequest = useCallback(async () => {
+    if (isValidStellarAddress(address)) {
+      enqueueSnackbar('error', { variant: 'error' });
+      return;
+    }
+
+    const { success } = await rateLimiter.limit('');
+    if (!success) {
+      enqueueSnackbar('error', { variant: 'error' });
+      return;
+    }
+
+    const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
+
+    if (data) {
+      enqueueSnackbar('success', { variant: 'success' });
+    }
+  }, [address, enqueueSnackbar]);
 
   if (!address) {
     return null;
@@ -179,14 +205,18 @@ function WalletConnected({ address }: { address: string }) {
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
-      <ConnectedWallet
-        balance={0}
-        // balance={Number(data?.data) || 0}
-        percentageChange={0}
-        tokens={[]}
-        positions={[]}
-        activity={[]}
-      />
+      <Button
+        fullWidth
+        variant="soft"
+        color="info"
+        size="large"
+        startIcon={<Iconify icon="eva:droplet-fill" />}
+        onClick={handleFaucetRequest}
+        sx={{ mb: 2 }}
+      >
+        {t('Get testnet XLM')}
+      </Button>
+      <ConnectedWallet balance={0} percentageChange={0} tokens={[]} positions={[]} activity={[]} />
     </Box>
   );
 }
