@@ -74,21 +74,18 @@ export const Moments: React.FC<MomentsProps> = (props) => {
       sx={{ backgroundColor: '#F9FAFB' }}
     >
       <Container>
-        <Box textAlign="left" mb={{ xs: 6, md: 9, lg: 10 }} maxWidth={600} mx="center">
+        <Box textAlign="center" mb={{ xs: 6, md: 9, lg: 10 }} maxWidth={600} mx="auto">
           <Typography
             component="h2"
             sx={{
               fontWeight: 500,
-              fontSize: {
-                xs: '2rem',
-                md: '3rem',
-                lg: '3rem',
-              },
+              fontSize: { xs: '2rem', md: '3rem', lg: '3rem' },
               mb: { xs: 2, md: 3 },
             }}
           >
             {t(heading)}
           </Typography>
+
           <Typography variant="body1">{t(description)}</Typography>
         </Box>
 
