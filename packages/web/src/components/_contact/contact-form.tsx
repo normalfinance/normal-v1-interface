@@ -1,17 +1,19 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useState } from 'react';
+import { useTranslate } from '@/locales';
+
 import {
   Box,
-  Container,
-  Typography,
   Grid,
-  TextField,
-  Checkbox,
-  FormControlLabel,
   Button,
+  Checkbox,
+  Container,
+  TextField,
+  Typography,
+  FormControlLabel,
 } from '@mui/material';
-import Link from 'next/link';
 
 type CustomButtonProps = {
   title: string;
@@ -50,6 +52,8 @@ export const ContactFormDefaults: Props = {
 /* -------------------------------------------------------------------------- */
 
 export const ContactForm: React.FC<ContactFormProps> = (props) => {
+  const { t } = useTranslate();
+
   const { tagline, heading, description, email, phone, address, button, ...sectionProps } = {
     ...ContactFormDefaults,
     ...props,
@@ -133,7 +137,7 @@ export const ContactForm: React.FC<ContactFormProps> = (props) => {
                 }
                 label={
                   <Typography variant="body2">
-                    I accept the <Link href="#">Terms of Service</Link>
+                    {t('I accept the')} <Link href="#"> {t('Terms of Service')}</Link>
                   </Typography>
                 }
               />

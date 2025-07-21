@@ -1,9 +1,13 @@
 'use client';
 
+import type { MotionStyle } from 'framer-motion';
+
 import React, { useRef } from 'react';
-import { Box, Container, Typography } from '@mui/material';
+import { useTranslate } from '@/locales';
+import { m, useScroll, useTransform } from 'framer-motion';
+
 import Grid2 from '@mui/material/Grid2';
-import { m, useScroll, useTransform, MotionStyle } from 'framer-motion';
+import { Box, Container, Typography } from '@mui/material';
 
 type FeatureItem = {
   icon: {
@@ -68,6 +72,8 @@ export const CoreValuesDefaults: Props = {
 };
 
 export const CoreValues: React.FC<CoreValuesProps> = (props) => {
+  const { t } = useTranslate();
+
   const { heading, features, ...sectionProps } = {
     ...CoreValuesDefaults,
     ...props,
@@ -98,8 +104,9 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
               {heading}
             </Typography>
             <Typography variant="body1">
-              Our five guiding principles keep us focused on making crypto transparent, secure, and
-              genuinely useful. They inform every roadmap decision, code review, and community vote.
+              {t(
+                'Our five guiding principles keep us focused on making crypto transparent, secure, and genuinely useful. They inform every roadmap decision, code review, and community vote.'
+              )}
             </Typography>
           </Grid2>
 

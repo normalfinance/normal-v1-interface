@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
-import InsuranceView from '@/sections/insurance';
 import AboutUsView from '@/sections/about';
 
 // ----------------------------------------------------------------------

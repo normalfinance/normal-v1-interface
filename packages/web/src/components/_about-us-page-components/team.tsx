@@ -1,15 +1,10 @@
 'use client';
 
+import type { ButtonProps } from '@mui/material';
+
 import React from 'react';
-import {
-  Box,
-  Container,
-  Typography,
-  Grid,
-  Button,
-  ButtonProps,
-  Link as MuiLink,
-} from '@mui/material';
+
+import { Box, Grid, Container, Typography } from '@mui/material';
 
 type ImageProps = {
   src: string;
@@ -181,42 +176,40 @@ export const Team: React.FC<TeamProps> = (props) => {
   );
 };
 
-const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
-  return (
-    <Box display="flex" flexDirection="column">
-      <Box position="relative" width="100%" paddingTop="100%" mb={2} sx={{ overflow: 'hidden' }}>
-        <Box
-          component="img"
-          src={member.image.src}
-          alt={member.image.alt}
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            objectFit: 'cover',
-            borderRadius: 2,
-            border: 5,
-            borderStyle: 'solid',
-            borderColor: 'divider',
-            aspectRatio: 1 / 1,
-          }}
-        />
-      </Box>
+const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
+  <Box display="flex" flexDirection="column">
+    <Box position="relative" width="100%" paddingTop="100%" mb={2} sx={{ overflow: 'hidden' }}>
+      <Box
+        component="img"
+        src={member.image.src}
+        alt={member.image.alt}
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          objectFit: 'cover',
+          borderRadius: 2,
+          border: 5,
+          borderStyle: 'solid',
+          borderColor: 'divider',
+          aspectRatio: 1 / 1,
+        }}
+      />
+    </Box>
 
-      <Box mb={1.5}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-          {member.name}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {member.jobTitle}
-        </Typography>
-      </Box>
-      <Typography variant="body2" mb={2}>
-        {member.description}
+    <Box mb={1.5}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+        {member.name}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {member.jobTitle}
       </Typography>
     </Box>
-  );
-};
+    <Typography variant="body2" mb={2}>
+      {member.description}
+    </Typography>
+  </Box>
+);
 
 export default Team;

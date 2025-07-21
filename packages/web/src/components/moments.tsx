@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Box, Container, Typography, Link as MuiLink } from '@mui/material';
+
+import { Box, Container, Typography } from '@mui/material';
 
 type ImageProps = {
   url?: string;

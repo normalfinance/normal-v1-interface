@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Box, Container, Typography, Card, CardContent, Paper } from '@mui/material';
+
 import Grid2 from '@mui/material/Grid2';
+import { Box, Paper, Container, Typography, CardContent } from '@mui/material';
 
 /* -------------------------------------------------------------------------- */
 /*                                 Prop Types                                 */
@@ -151,32 +152,30 @@ const paperSx = {
 
 const cardPadding = { xs: 2.5, md: 4 };
 
-const StatCard: React.FC<StatCardProps> = ({ icon, description }) => {
-  return (
-    <Paper variant="outlined" sx={{ ...paperSx }}>
-      <CardContent sx={{ p: cardPadding }}>
-        <Box mb={5}>
-          <Box
-            sx={{
-              backgroundColor: 'background.paper',
-              width: 64,
-              height: 64,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              border: 1,
-              borderColor: 'divider',
-              zIndex: 10,
-            }}
-          >
-            <Box component="img" src={icon.src} alt={icon.alt} sx={{ width: 32, height: 32 }} />
-          </Box>
+const StatCard: React.FC<StatCardProps> = ({ icon, description }) => (
+  <Paper variant="outlined" sx={{ ...paperSx }}>
+    <CardContent sx={{ p: cardPadding }}>
+      <Box mb={5}>
+        <Box
+          sx={{
+            backgroundColor: 'background.paper',
+            width: 64,
+            height: 64,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            border: 1,
+            borderColor: 'divider',
+            zIndex: 10,
+          }}
+        >
+          <Box component="img" src={icon.src} alt={icon.alt} sx={{ width: 32, height: 32 }} />
         </Box>
-        <Typography variant="body2">{description}</Typography>
-      </CardContent>
-    </Paper>
-  );
-};
+      </Box>
+      <Typography variant="body2">{description}</Typography>
+    </CardContent>
+  </Paper>
+);
 
 export default Vision;

@@ -1,10 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Box, ButtonProps, Container, Typography } from '@mui/material';
+import { useTranslate } from '@/locales';
+
 import Grid2 from '@mui/material/Grid2';
+import { Box, Container, Typography } from '@mui/material';
 
 export const AboutHeader: React.FC = (props) => {
+  const { t } = useTranslate();
+
   const { ...sectionProps } = { ...props };
 
   return (
@@ -30,16 +34,14 @@ export const AboutHeader: React.FC = (props) => {
               }}
               gutterBottom
             >
-              Mission & Purpose
+              {t('Mission & Purpose')}
             </Typography>
           </Grid2>
           <Grid2 size={{ xs: 12, md: 6 }}>
             <Typography variant="body1">
-              At Normal Finance, our mission is to make crypto normal—giving everyone friction‑free
-              exposure to the entire digital‑asset ecosystem. We build fully on‑chain index tokens
-              and wrapped assets so you can diversify, swap, lend, and earn across the top 200
-              cryptocurrencies directly from your favorite DEX—no bridges, no centralized exchanges,
-              no hidden fees.
+              {t(
+                'At Normal, our mission is to make crypto normal—giving everyone friction‑free exposure to the entire digital‑asset ecosystem. We build fully on‑chain index tokens and wrapped assets so you can diversify, swap, lend, and earn across the top 200 cryptocurrencies directly from your favorite DEX—no bridges, no centralized exchanges, no hidden fees.'
+              )}
             </Typography>
           </Grid2>
         </Grid2>
