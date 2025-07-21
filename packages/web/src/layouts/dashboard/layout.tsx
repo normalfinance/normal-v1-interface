@@ -74,6 +74,10 @@ export function DashboardLayout({
   const isNavHorizontal = settings.state.navLayout === 'horizontal';
   const isNavVertical = isNavMini || settings.state.navLayout === 'vertical';
 
+  const handleGiveFeedback = () => {
+    window.open(' https://forms.fillout.com/t/cumVTceVQeus', '_blank', 'noopener');
+  };
+
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = {
       container: {
@@ -193,7 +197,7 @@ export function DashboardLayout({
             'You are using a testnet version of the Normal Protocol. All tokens are NOT real. You WILL experience bugs. Please report all bugs and feedback to our team. Thank you!'
           )}
           <br />
-          <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={() => {}}>
+          <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={handleGiveFeedback}>
             {t('Give feedback / Report bug')}
           </Button>
         </Alert>
