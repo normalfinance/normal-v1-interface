@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useLPTokens } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
-import { useLPTokens } from '@/hooks/stellar/use-lp-tokens';
 
 import { Grid2 } from '@mui/material';
 

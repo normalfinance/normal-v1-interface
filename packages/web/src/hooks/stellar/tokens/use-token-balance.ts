@@ -17,7 +17,7 @@ const fetchTokenBalance = async ({ tokenAddress, address }: FetchTokenBalancePro
   return { data: balance, validAccount: true };
 };
 
-const useTokenBalance = (tokenAddress: string | null) => {
+export const useTokenBalance = (tokenAddress: string | null) => {
   const store = usePersistStore();
   const address = store.wallet.address;
 
@@ -35,5 +35,3 @@ const useTokenBalance = (tokenAddress: string | null) => {
     isError: canFetch ? error : null,
   };
 };
-
-export default useTokenBalance;

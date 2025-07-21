@@ -101,12 +101,7 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} sx={{ mt: 3 }}>
         {/* left column – stepper */}
         <Box sx={{ flexBasis: { md: '33.333%' }, flexShrink: 0, p: 2 }}>
-          <ResponsiveLinearStepper
-            activeStep={activeStep}
-            onNext={handleNext}
-            onBack={handleBack}
-            onReset={handleReset}
-          />
+          <ResponsiveLinearStepper activeStep={activeStep} />
         </Box>
 
         {/* right column – step content */}
