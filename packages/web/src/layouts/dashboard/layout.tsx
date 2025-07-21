@@ -4,13 +4,14 @@ import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { merge } from 'es-toolkit';
-import { allLangs } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
+import { allLangs, useTranslate } from '@/locales';
 import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
+import { Alert, Button, AlertTitle } from '@mui/material';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
 import { Logo } from '@/components/template/logo';
@@ -57,6 +58,8 @@ export function DashboardLayout({
   slotProps,
   layoutQuery = 'lg',
 }: DashboardLayoutProps) {
+  const { t } = useTranslate();
+
   const theme = useTheme();
 
   const settings = useSettingsContext();
@@ -184,6 +187,17 @@ export function DashboardLayout({
           ...(Array.isArray(sx) ? sx : [sx]),
         ]}
       >
+        <Alert severity="warning" sx={{ m: 2 }}>
+          <AlertTitle>{t('Normal Testnet')}&nbsp;🎉</AlertTitle>
+          {t(
+            'You are using a testnet version of the Normal Protocol. All tokens are NOT real. You WILL experience bugs. Please report all bugs and feedback to our team. Thank you!'
+          )}
+          <br />
+          <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={() => {}}>
+            {t('Give feedback / Report bug')}
+          </Button>
+        </Alert>
+
         {renderMain()}
       </LayoutSection>
     </RestoreModalProvider>
