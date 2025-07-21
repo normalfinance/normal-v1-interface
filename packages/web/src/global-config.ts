@@ -51,7 +51,7 @@ export const ZEALY_QUEST_IDS = {
   swap: '61eb5ca9-62ec-459b-8f62-9225aabf0e7',
   addLiquidity: '513e79f5-5256-486a-81d2-866e001042ce',
   stakeFund: '12963fdf-ba29-4b10-9a67-0dc8c91386f9',
-  createIndex: '9e81a3f3-a29f-4ede-a374-375ac66be672',
-  mintIndex: '88320ff0-7b6f-4745-b64b-bce85889f6da',
+  // createIndex: '9e81a3f3-a29f-4ede-a374-375ac66be672',
+  // mintIndex: '88320ff0-7b6f-4745-b64b-bce85889f6da',
   giveFeedback: 'adb21c28-fc92-46a5-b160-900c4bd7efe7',
 } as const;
