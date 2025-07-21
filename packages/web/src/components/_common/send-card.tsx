@@ -1,12 +1,14 @@
 import type { CardProps } from '@mui/material';
 import type { StateToken as Token } from '@normalfinance/types';
 
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { isValidStellarAddress } from '@/utils/address-validator';
 import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -27,6 +29,7 @@ const DEFAULT_DESTINATION = 'Wallet address or ENS name';
 const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  const { enqueueSnackbar } = useSnackbar();
 
   // State declarations...
   const [sendToken, setSendToken] = useState<Token | null>(
@@ -139,6 +142,10 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
     const label = getButtonLabel();
 
     if (label === 'Send') {
+      if (!isValidStellarAddress(destination)) {
+        enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
+        return;
+      }
       setReviewOpen(true);
     }
   };

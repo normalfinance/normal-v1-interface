@@ -221,7 +221,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
         onClick={handleMainButtonClick}
         data-testid="wallet-gate-connect-btn"
       >
-        {buttonText}
+        {t(buttonText)}
       </Button>
 
       <Drawer

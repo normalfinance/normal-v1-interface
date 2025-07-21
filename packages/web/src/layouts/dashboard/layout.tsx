@@ -16,6 +16,7 @@ import { iconButtonClasses } from '@mui/material/IconButton';
 import { Logo } from '@/components/template/logo';
 import { useSettingsContext } from '@/components/template/settings';
 
+import { FooterSection } from '../core';
 import { NavMobile } from './nav-mobile';
 import { NavVertical } from './nav-vertical';
 import { layoutClasses } from '../core/classes';
@@ -145,7 +146,7 @@ export function DashboardLayout({
     />
   );
 
-  const renderFooter = () => null;
+  const renderFooter = () => <FooterSection />;
 
   const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
 

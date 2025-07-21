@@ -7,6 +7,12 @@ export const getTransactionMessages = (details: TransactionDetails) => {
   const { type, token1, token2 } = details;
 
   switch (type) {
+    case TransactionType.SEND:
+      return {
+        loading: `Sending ${token1?.amount} ${token1?.name}...`,
+        success: `Successfully sent ${token1?.amount} ${token1?.name}.`,
+        error: `Failed to sent ${token1?.name}.`,
+      };
     case TransactionType.SWAP:
       return {
         loading: `Swapping ${token1?.amount} ${token1?.name} for ${token2?.name}...`,
