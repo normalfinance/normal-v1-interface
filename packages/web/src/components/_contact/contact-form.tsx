@@ -1,23 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useState } from 'react';
+import * as React from 'react';
+import { Icon } from '@iconify/react';
+
 import { useTranslate } from '@/locales';
 
-import {
-  Box,
-  Grid,
-  Button,
-  Checkbox,
-  Container,
-  TextField,
-  Typography,
-  FormControlLabel,
-} from '@mui/material';
+import { Box, Grid, Container, Typography, Button, type ButtonProps } from '@mui/material';
+
+import LinkedInIcon from '@mui/icons-material/LinkedIn';
+
+/* -------------------------------------------------------------------------- */
+/*                                   Types                                    */
+/* -------------------------------------------------------------------------- */
 
 type CustomButtonProps = {
   title: string;
   variant?: 'text' | 'outlined' | 'contained';
+};
+
+type SocialLink = {
+  href: string;
+  icon: React.ReactNode;
 };
 
 type Props = {
@@ -25,9 +29,8 @@ type Props = {
   heading: string;
   description: string;
   email: string;
-  phone: string;
-  address: string;
   button: CustomButtonProps;
+  socialLinks: SocialLink[];
 };
 
 export type ContactFormProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
@@ -35,15 +38,34 @@ export type ContactFormProps = React.ComponentPropsWithoutRef<'section'> & Parti
 /* -------------------------------------------------------------------------- */
 /*                               Default Props                                */
 /* -------------------------------------------------------------------------- */
+const BRAND = {
+  x: '#000000',
+  linkedin: '#0077B5',
+  github: '#181717',
+  telegram: '#0088CC',
+  discord: '#5865F2',
+};
 
 export const ContactFormDefaults: Props = {
   tagline: 'Tagline',
   heading: 'Contact us',
   description:
     'Have a question, idea, or partnership in mind? We’d love to hear from you. Drop us a message anytime and the Normal Finance team will get back to you within one business day.',
-  email: 'hello@relume.io',
-  phone: '+1 (555) 000-0000',
-  address: '123 Sample St, Sydney NSW 2000 AU',
+  email: 'hello@normalfinance.io',
+  socialLinks: [
+    {
+      href: 'https://x.com/normalfi',
+      icon: <Icon icon="fa6-brands:x-twitter" width={28} height={28} color={BRAND.x} />,
+    },
+    {
+      href: 'https://www.linkedin.com/company/normalfi/',
+      icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} fontSize="large" />,
+    },
+    {
+      href: 'https://discord.gg/normalfinance',
+      icon: <Icon icon="mdi:discord" width={32} height={32} color={BRAND.discord} />,
+    },
+  ],
   button: { title: 'Submit', variant: 'contained' },
 };
 
@@ -54,19 +76,9 @@ export const ContactFormDefaults: Props = {
 export const ContactForm: React.FC<ContactFormProps> = (props) => {
   const { t } = useTranslate();
 
-  const { tagline, heading, description, email, phone, address, button, ...sectionProps } = {
+  const { tagline, heading, description, email, socialLinks, ...sectionProps } = {
     ...ContactFormDefaults,
     ...props,
-  };
-
-  const [nameInput, setNameInput] = useState<string>('');
-  const [emailInput, setEmailInput] = useState<string>('');
-  const [messageInput, setMessageInput] = useState<string>('');
-  const [acceptTerms, setAcceptTerms] = useState<boolean>(false);
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    console.log({ nameInput, emailInput, messageInput, acceptTerms });
   };
 
   return (
@@ -98,52 +110,39 @@ export const ContactForm: React.FC<ContactFormProps> = (props) => {
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Box component="form" onSubmit={handleSubmit} display="grid" gap={3}>
-              <TextField
-                label="Name"
-                id="name"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                fullWidth
-                sx={{ backgroundColor: '#eceff0', borderRadius: 1 }}
-              />
-              <TextField
-                label="Email"
-                id="email"
-                type="email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                fullWidth
-                sx={{ backgroundColor: '#eceff0', borderRadius: 1 }}
-              />
-              <TextField
-                label="Message"
-                id="message"
-                multiline
-                minRows={5}
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                fullWidth
-                sx={{ backgroundColor: '#eceff0', borderRadius: 1 }}
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={acceptTerms}
-                    onChange={(e) => setAcceptTerms(e.target.checked)}
-                    id="terms"
-                  />
-                }
-                label={
-                  <Typography variant="body2">
-                    {t('I accept the')} <Link href="#"> {t('Terms of Service')}</Link>
-                  </Typography>
-                }
-              />
-              <Button type="submit" variant={button.variant ?? 'contained'}>
-                {button.title}
-              </Button>
+          <Grid
+            item
+            xs={12}
+            md={6}
+            display="flex"
+            flexDirection="column"
+            gap={4}
+            alignItems={{ xs: 'flex-end', md: 'flex-end' }}
+            justifyContent="center"
+          >
+            <Button
+              component={Link}
+              href={`mailto:${email}`}
+              variant="text"
+              sx={{ alignSelf: { xs: 'auto', md: 'flex-end' }, textTransform: 'none', p: 1 }}
+            >
+              {email}
+            </Button>
+
+            <Box display="flex" flexDirection="column" gap={4} alignItems="flex-end">
+              {socialLinks.map((link, idx) => (
+                <Button
+                  key={idx}
+                  component={Link}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="text"
+                  sx={{ minWidth: 0, p: 0, justifyContent: 'flex-end' }}
+                >
+                  {link.icon}
+                </Button>
+              ))}
             </Box>
           </Grid>
         </Grid>
