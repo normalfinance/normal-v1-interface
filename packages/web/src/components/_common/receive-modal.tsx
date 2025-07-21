@@ -5,6 +5,7 @@ import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
+import { createStellarExpertUrl } from '@/utils/transactions.utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -15,7 +16,6 @@ import {
   Typography,
   DialogTitle,
   DialogContent,
-  DialogActions,
   CircularProgress,
 } from '@mui/material';
 
@@ -74,6 +74,13 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
     }
   };
 
+  const handleViewOnExplorer = () => {
+    if (walletAddress) {
+      const url = createStellarExpertUrl('account', walletAddress);
+      window.open(url, '_blank', 'noopener');
+    }
+  };
+
   if (!walletAddress) {
     return null;
   }
@@ -91,7 +98,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
         },
       }}
     >
-      <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+      <DialogTitle sx={{ textAlign: 'center', pb: 2 }}>
         <Typography variant="h6" component="div">
           {t('Receive Crypto')}
         </Typography>
@@ -157,29 +164,42 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
               </Typography>
             </Box>
 
-            <Button
-              variant="outlined"
-              startIcon={<Iconify icon="solar:copy-outline" />}
-              onClick={handleCopyAddress}
-              sx={{
-                borderColor: theme.palette.primary.main,
-                color: theme.palette.primary.main,
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                },
-              }}
-            >
-              {t('Copy Address')}
-            </Button>
+            <Stack direction="row" spacing={1}>
+              <Button
+                key="copy"
+                variant="outlined"
+                startIcon={<Iconify icon="solar:copy-outline" />}
+                onClick={handleCopyAddress}
+                sx={{
+                  borderColor: theme.palette.primary.main,
+                  color: theme.palette.primary.main,
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                  },
+                }}
+              >
+                {t('Copy Address')}
+              </Button>
+
+              <Button
+                key="view"
+                variant="outlined"
+                startIcon={<Iconify icon="eva:external-link-outline" />}
+                onClick={handleViewOnExplorer}
+                sx={{
+                  borderColor: theme.palette.secondary.main,
+                  color: theme.palette.secondary.main,
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.secondary.main, 0.08),
+                  },
+                }}
+              >
+                {t('View on Stellar Expert')}
+              </Button>
+            </Stack>
           </Stack>
         </Stack>
       </DialogContent>
-
-      <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
-        <Button onClick={onClose} variant="contained" color="primary" sx={{ minWidth: 120 }}>
-          {t('Close')}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }

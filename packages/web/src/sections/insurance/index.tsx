@@ -1,9 +1,11 @@
 'use client';
 
 import type { StatCardData } from '@/types/stat-card-data';
+import type { InsuranceQueryParams } from '@/types/query-params';
 
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useQueryParams } from '@/hooks/use-query-params';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 import { useBuffer, useOracle, useInsuranceFund } from '@/hooks';
 
@@ -17,6 +19,9 @@ import { InsuranceActionsTable } from '@/components/_insurance-page-components/i
 export default function InsuranceView() {
   const theme = useTheme();
   const { t } = useTranslate();
+
+  // Get insurance query params
+  const { params: insuranceParams } = useQueryParams<InsuranceQueryParams>();
 
   const {
     loading: loadingIF,
@@ -42,7 +47,7 @@ export default function InsuranceView() {
       chart: {
         colors: [theme.palette.success.light, theme.palette.success.main],
         categories: ['Current'],
-        series: [139390],
+        series: [0],
       },
     },
     {
@@ -55,7 +60,7 @@ export default function InsuranceView() {
       chart: {
         colors: [theme.palette.info.light, theme.palette.info.main],
         categories: ['Current'],
-        series: [24930],
+        series: [0],
       },
     },
     {
@@ -68,7 +73,7 @@ export default function InsuranceView() {
       chart: {
         colors: [theme.palette.warning.light, theme.palette.warning.main],
         categories: ['Current'],
-        series: [2.981],
+        series: [0],
       },
     },
   ];
@@ -109,6 +114,7 @@ export default function InsuranceView() {
             yieldPercent={insuranceFund?.current_rate || 0}
             staked={stake?.if_shares}
             currentBalance={userStakeFiatValue}
+            queryParams={insuranceParams}
           />
         </Grid2>
 
