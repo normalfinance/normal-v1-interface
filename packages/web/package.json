@@ -10,6 +10,7 @@
     "i18n:download": "crowdin download",
     "i18n:sync": "npm run i18n:extract && npm run i18n:upload && npm run i18n:pretranslate && npm run i18n:download",
     "i18n:status": "node ./scripts/check-translation-status.js",
+    "i18n:check-missing": "node ./scripts/check-missing-keys.js",
     "i18n:pre-build": "npm run i18n:download && npm run i18n:check",
     "dev": "next dev -p 8082",
     "dev:experimental": "SKIP_NODE_VERSION_CHECK=1 next dev --experimental-https",
