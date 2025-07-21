@@ -10,8 +10,10 @@ import { Box, Grid, Container, Typography } from '@mui/material';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import GitHubIcon from '@mui/icons-material/GitHub';
-import Link from 'next/link';
+import TelegramIcon from '@mui/icons-material/Telegram';
+import { Icon } from '@iconify/react';
 
+import Link from '@mui/material/Link';
 type ImageProps = {
   src: string;
   alt?: string;
@@ -48,6 +50,13 @@ type Props = {
 
 export type TeamProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
+const BRAND = {
+  x: '#000000',
+  linkedin: '#0077B5',
+  github: '#181717',
+  telegram: '#0088CC',
+};
+
 export const TeamDefaults: Props = {
   tagline: 'Tagline',
   heading: 'Our team',
@@ -63,9 +72,19 @@ export const TeamDefaults: Props = {
       description:
         "Joshua has over 7 years of coding experience and was employee #2 at Finotta. He's been investing in crypto for 5+ years and holds a BS in Computer Science from DePaul.",
       socialLinks: [
-        { href: '#', icon: <TwitterIcon /> },
-        { href: '#', icon: <LinkedInIcon /> },
-        { href: '#', icon: <GitHubIcon /> },
+        {
+          href: 'https://x.com/0xjblew',
+          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
+        },
+        {
+          href: 'https://www.linkedin.com/in/joshuablew/',
+          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
+        },
+        {
+          href: 'https://github.com/jblewnormal',
+          icon: <GitHubIcon sx={{ color: BRAND.github }} />,
+        },
+        { href: 'https://t.me/joshuablew', icon: <TelegramIcon sx={{ color: BRAND.telegram }} /> }, // ⬅️ new
       ],
     },
     {
@@ -78,8 +97,18 @@ export const TeamDefaults: Props = {
       description:
         'Justin formerly designed products at Bitcoin of America and CoinFlip, has invested in crypto for 7+ years, and holds a BS in Learning & Organizational Change from Northwestern.',
       socialLinks: [
-        { href: '#', icon: <TwitterIcon /> },
-        { href: '#', icon: <LinkedInIcon /> },
+        {
+          href: 'https://x.com/justinbenjaminn',
+          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
+        },
+        {
+          href: 'https://www.linkedin.com/in/justin-benjamin1/',
+          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
+        },
+        {
+          href: 'https://t.me/justinbenjamin',
+          icon: <TelegramIcon sx={{ color: BRAND.telegram }} />,
+        }, // ⬅️ new
       ],
     },
     {
@@ -92,8 +121,15 @@ export const TeamDefaults: Props = {
       description:
         'Built 10m+ impression marketing strategies at Polygon, formerly led Partnerships at Zo World.',
       socialLinks: [
-        { href: '#', icon: <TwitterIcon /> },
-        { href: '#', icon: <LinkedInIcon /> },
+        {
+          href: 'https://x.com/0xawmit',
+          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
+        },
+        {
+          href: 'https://www.linkedin.com/in/0xawmit/',
+          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
+        },
+        { href: 'https://t.me/awmitx', icon: <TelegramIcon sx={{ color: BRAND.telegram }} /> }, // ⬅️ new
       ],
     },
     {
@@ -106,8 +142,15 @@ export const TeamDefaults: Props = {
       description:
         'Jake has 3 years of crypto investing experience and holds a BS in Marketing from Aurora University.',
       socialLinks: [
-        { href: '#', icon: <TwitterIcon /> },
-        { href: '#', icon: <LinkedInIcon /> },
+        {
+          href: 'https://x.com/JakePenzato',
+          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
+        },
+        {
+          href: 'https://www.linkedin.com/in/jake-penzato-a72747245/',
+          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
+        },
+        { href: 'https://t.me/JakeTheCD', icon: <TelegramIcon sx={{ color: BRAND.telegram }} /> }, // ⬅️ new
       ],
     },
     {
@@ -118,11 +161,20 @@ export const TeamDefaults: Props = {
       name: 'Niko Gorjan',
       jobTitle: 'Front-End Developer',
       description:
-        'Niko grew up in Slovenia and holds a CS degree from FERI, University of Maribor. After freelancing internationally and building a reputation for clean, component-driven React code, he joined Relume to develop reusable UI systems. Now at Normal, he codes and invests with a focus on real-world blockchain utility.',
+        'Niko grew up in Slovenia and holds a CS degree from FERI, University of Maribor. After freelancing internationally and building a reputation for clean, component-driven React code, he joined Relume to develop reusable UI systems.',
       socialLinks: [
-        { href: '#', icon: <TwitterIcon /> },
-        { href: '#', icon: <LinkedInIcon /> },
-        { href: '#', icon: <GitHubIcon /> },
+        {
+          href: 'https://x.com/NikoGorjan',
+          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
+        },
+        {
+          href: 'https://www.linkedin.com/in/niko-gorjan-582433276/',
+          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
+        },
+        {
+          href: 'https://github.com/nikogorjan',
+          icon: <GitHubIcon sx={{ color: BRAND.github }} />,
+        },
       ],
     },
     {
@@ -135,9 +187,18 @@ export const TeamDefaults: Props = {
       description:
         'Strategy and Client Support. U.S. Navy Veteran with 2 years of experience managing commercial accounts at Ford. Licensed USVI-BVI sail boat captain.',
       socialLinks: [
-        { href: '#', icon: <TwitterIcon /> },
-        { href: '#', icon: <LinkedInIcon /> },
-        { href: '#', icon: <GitHubIcon /> },
+        {
+          href: 'https://x.com/AnthonyBenjamn',
+          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
+        },
+        {
+          href: 'https://www.linkedin.com/in/anthony-benjamin/',
+          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
+        },
+        {
+          href: 'https://t.me/anthonypreprint',
+          icon: <TelegramIcon sx={{ color: BRAND.telegram }} />,
+        },
       ],
     },
     {
@@ -150,9 +211,15 @@ export const TeamDefaults: Props = {
       description:
         'John is an aspiring crypto investor, social media content producer, and incoming freshman at DePaul University.',
       socialLinks: [
-        { href: '#', icon: <TwitterIcon /> },
-        { href: '#', icon: <LinkedInIcon /> },
-        { href: '#', icon: <GitHubIcon /> },
+        {
+          href: 'https://x.com/0xJohnReyes',
+          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
+        },
+        {
+          href: 'https://www.linkedin.com/in/johnpreyes/',
+          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
+        },
+        { href: '#', icon: <TelegramIcon sx={{ color: BRAND.telegram }} /> }, // ⬅️ new
       ],
     },
     {
@@ -165,9 +232,10 @@ export const TeamDefaults: Props = {
       description:
         'Zeal is our team mascot and crypto connoisseur. He keeps us on our toes and reviews our personal crypto investments.',
       socialLinks: [
-        { href: '#', icon: <TwitterIcon /> },
-        { href: '#', icon: <LinkedInIcon /> },
-        { href: '#', icon: <GitHubIcon /> },
+        {
+          href: 'https://x.com/NormalDoge_Zeal',
+          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
+        },
       ],
     },
   ],
@@ -247,26 +315,52 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
           }}
         />
       </Box>
-
-      <Box display="flex" gap={2} width="100%" justifyContent="flex-end">
-        {member.socialLinks.map((link, index) => (
-          <Link key={index} href={link.href} color="inherit">
-            {link.icon}
-          </Link>
-        ))}
-      </Box>
-
-      <Box mb={1.5}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-          {member.name}
+      <Box
+        mb={1.5}
+        sx={{
+          backgroundColor: 'background.paper',
+          borderRadius: 2,
+          border: 2,
+          borderColor: 'divider',
+          p: 3,
+        }}
+      >
+        <Box mb={1.5}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            {member.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {member.jobTitle}
+          </Typography>
+        </Box>
+        <Typography variant="body2" mb={2}>
+          {t(member.description)}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {member.jobTitle}
-        </Typography>
+
+        <Box
+          mb={2}
+          mt={2}
+          sx={{
+            backgroundColor: 'divider',
+            width: 1,
+            height: '1px',
+          }}
+        ></Box>
+
+        <Box display="flex" gap={2} width="100%" justifyContent="flex-end" alignItems={'center'}>
+          {member.socialLinks.map((link, index) => (
+            <Link
+              key={index}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ color: 'text.primary' }}
+            >
+              {link.icon}
+            </Link>
+          ))}
+        </Box>
       </Box>
-      <Typography variant="body2" mb={2}>
-        {t(member.description)}
-      </Typography>
     </Box>
   );
 };
