@@ -106,7 +106,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   color="text.secondary"
                   sx={{ fontWeight: 500, fontSize: 14 }}
                 >
-                  {tagline}
+                  {t(tagline)}
                 </Typography>
                 <Box
                   sx={{

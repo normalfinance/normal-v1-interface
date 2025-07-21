@@ -11,6 +11,62 @@ import i18nextPlugin from 'eslint-plugin-i18next';
 // ----------------------------------------------------------------------
 
 /**
+ * Custom rule to catch dynamic translation keys
+ */
+const dynamicTranslationKeyRule = {
+  meta: {
+    type: 'suggestion',
+    docs: {
+      description: 'Warn about dynamic translation keys that need manual management',
+      category: 'Internationalization',
+    },
+    messages: {
+      dynamicKey:
+        'Dynamic translation key detected: "{{key}}". Make sure to manually add this value to src/locales/langs/en/common.json',
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      CallExpression(node) {
+        // Check if this is a call to 't()' function
+        if (
+          node.callee &&
+          node.callee.type === 'Identifier' &&
+          node.callee.name === 't' &&
+          node.arguments.length > 0
+        ) {
+          const firstArg = node.arguments[0];
+
+          // Check if the argument is NOT a string literal
+          if (firstArg.type === 'Identifier') {
+            // It's a variable, warn about it
+            context.report({
+              node: firstArg,
+              messageId: 'dynamicKey',
+              data: {
+                key: firstArg.name,
+              },
+            });
+          } else if (firstArg.type === 'MemberExpression') {
+            // It's something like MESSAGES.WELCOME, warn about it
+            const source = context.getSourceCode();
+            const keyText = source.getText(firstArg);
+            context.report({
+              node: firstArg,
+              messageId: 'dynamicKey',
+              data: {
+                key: keyText,
+              },
+            });
+          }
+        }
+      },
+    };
+  },
+};
+
+/**
  * @rules common
  * from 'react', 'eslint-plugin-react-hooks'...
  */
@@ -158,6 +214,12 @@ export const customConfig = {
     'unused-imports': unusedImportsPlugin,
     perfectionist: perfectionistPlugin,
     import: importPlugin,
+    // Add our custom rule as a plugin
+    'custom-i18n': {
+      rules: {
+        'dynamic-translation-key': dynamicTranslationKeyRule,
+      },
+    },
   },
   settings: {
     // https://www.npmjs.com/package/eslint-import-resolver-typescript
@@ -184,6 +246,8 @@ export const customConfig = {
     ...sortImportsRules(),
     // i18n translation rules
     'i18next/no-literal-string': 'error',
+    // Custom rule to catch dynamic translation keys
+    'custom-i18n/dynamic-translation-key': 'warn',
   },
 };
 
