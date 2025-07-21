@@ -308,7 +308,7 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
             width: '100%',
             objectFit: 'cover',
             borderRadius: 2,
-            border: 5,
+            border: 2,
             borderStyle: 'solid',
             borderColor: 'divider',
             aspectRatio: 1 / 1,
