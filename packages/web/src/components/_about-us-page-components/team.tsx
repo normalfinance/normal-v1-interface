@@ -7,6 +7,11 @@ import { useTranslate } from '@/locales';
 
 import { Box, Grid, Container, Typography } from '@mui/material';
 
+import TwitterIcon from '@mui/icons-material/Twitter';
+import LinkedInIcon from '@mui/icons-material/LinkedIn';
+import GitHubIcon from '@mui/icons-material/GitHub';
+import Link from 'next/link';
+
 type ImageProps = {
   src: string;
   alt?: string;
@@ -28,6 +33,7 @@ type TeamMember = {
   name: string;
   jobTitle: string;
   description: string;
+  socialLinks: SocialLink[];
 };
 
 export type CustomButtonProps = ButtonProps & { title: string };
@@ -56,6 +62,11 @@ export const TeamDefaults: Props = {
       jobTitle: 'Co-founder & CEO',
       description:
         "Joshua has over 7 years of coding experience and was employee #2 at Finotta. He's been investing in crypto for 5+ years and holds a BS in Computer Science from DePaul.",
+      socialLinks: [
+        { href: '#', icon: <TwitterIcon /> },
+        { href: '#', icon: <LinkedInIcon /> },
+        { href: '#', icon: <GitHubIcon /> },
+      ],
     },
     {
       image: {
@@ -66,6 +77,10 @@ export const TeamDefaults: Props = {
       jobTitle: 'Co-founder & COO',
       description:
         'Justin formerly designed products at Bitcoin of America and CoinFlip, has invested in crypto for 7+ years, and holds a BS in Learning & Organizational Change from Northwestern.',
+      socialLinks: [
+        { href: '#', icon: <TwitterIcon /> },
+        { href: '#', icon: <LinkedInIcon /> },
+      ],
     },
     {
       image: {
@@ -76,6 +91,10 @@ export const TeamDefaults: Props = {
       jobTitle: 'Head of Marketing',
       description:
         'Built 10m+ impression marketing strategies at Polygon, formerly led Partnerships at Zo World.',
+      socialLinks: [
+        { href: '#', icon: <TwitterIcon /> },
+        { href: '#', icon: <LinkedInIcon /> },
+      ],
     },
     {
       image: {
@@ -86,6 +105,10 @@ export const TeamDefaults: Props = {
       jobTitle: 'Creative Director',
       description:
         'Jake has 3 years of crypto investing experience and holds a BS in Marketing from Aurora University.',
+      socialLinks: [
+        { href: '#', icon: <TwitterIcon /> },
+        { href: '#', icon: <LinkedInIcon /> },
+      ],
     },
     {
       image: {
@@ -96,6 +119,11 @@ export const TeamDefaults: Props = {
       jobTitle: 'Front-End Developer',
       description:
         'Niko grew up in Slovenia and holds a CS degree from FERI, University of Maribor. After freelancing internationally and building a reputation for clean, component-driven React code, he joined Relume to develop reusable UI systems. Now at Normal, he codes and invests with a focus on real-world blockchain utility.',
+      socialLinks: [
+        { href: '#', icon: <TwitterIcon /> },
+        { href: '#', icon: <LinkedInIcon /> },
+        { href: '#', icon: <GitHubIcon /> },
+      ],
     },
     {
       image: {
@@ -106,6 +134,11 @@ export const TeamDefaults: Props = {
       jobTitle: 'Business Development Lead',
       description:
         'Strategy and Client Support. U.S. Navy Veteran with 2 years of experience managing commercial accounts at Ford. Licensed USVI-BVI sail boat captain.',
+      socialLinks: [
+        { href: '#', icon: <TwitterIcon /> },
+        { href: '#', icon: <LinkedInIcon /> },
+        { href: '#', icon: <GitHubIcon /> },
+      ],
     },
     {
       image: {
@@ -116,6 +149,11 @@ export const TeamDefaults: Props = {
       jobTitle: 'Intern',
       description:
         'John is an aspiring crypto investor, social media content producer, and incoming freshman at DePaul University.',
+      socialLinks: [
+        { href: '#', icon: <TwitterIcon /> },
+        { href: '#', icon: <LinkedInIcon /> },
+        { href: '#', icon: <GitHubIcon /> },
+      ],
     },
     {
       image: {
@@ -126,6 +164,11 @@ export const TeamDefaults: Props = {
       jobTitle: 'Chief Doge',
       description:
         'Zeal is our team mascot and crypto connoisseur. He keeps us on our toes and reviews our personal crypto investments.',
+      socialLinks: [
+        { href: '#', icon: <TwitterIcon /> },
+        { href: '#', icon: <LinkedInIcon /> },
+        { href: '#', icon: <GitHubIcon /> },
+      ],
     },
   ],
   footerContent: {
@@ -203,6 +246,14 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
             aspectRatio: 1 / 1,
           }}
         />
+      </Box>
+
+      <Box display="flex" gap={2} width="100%" justifyContent="flex-end">
+        {member.socialLinks.map((link, index) => (
+          <Link key={index} href={link.href} color="inherit">
+            {link.icon}
+          </Link>
+        ))}
       </Box>
 
       <Box mb={1.5}>
