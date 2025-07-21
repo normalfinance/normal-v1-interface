@@ -1,7 +1,11 @@
 import type { StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
+import { useContractTransaction } from '@/hooks';
+import { TransactionType } from '@/types/transaction';
+import { usePersistStore } from '@normalfinance/state';
 import { shortenAddress } from '@/utils/format-address';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
@@ -41,6 +45,36 @@ const SendReview: React.FC<SendReviewProps> = ({
 }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  const { enqueueSnackbar } = useSnackbar();
+  const store = usePersistStore();
+  const { executeContractTransaction } = useContractTransaction();
+
+  const onSubmit = async () => {
+    if (!store.wallet.address || !sendToken) {
+      enqueueSnackbar(t('Cannot send token without wallet or token'), { variant: 'error' });
+      return;
+    }
+
+    await executeContractTransaction({
+      contractType: 'token',
+      contractAddress: sendToken.id,
+      transactionDetails: {
+        type: TransactionType.SEND,
+        token1: { name: sendToken.symbol, amount: tokenValue.toString() },
+      },
+      transactionFunction: async (client, restore) =>
+        client.transfer(
+          {
+            from: store.wallet.address!,
+            to: address,
+            amount: BigInt((tokenValue * 10 ** (sendToken?.decimals || 7)).toFixed(0)),
+          },
+          { simulate: !restore }
+        ),
+    });
+
+    onClose();
+  };
 
   return (
     <Dialog
@@ -201,7 +235,7 @@ const SendReview: React.FC<SendReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button fullWidth variant="soft" color="success" size="large">
+          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>
             {t('Send')}
           </Button>
         </Box>
