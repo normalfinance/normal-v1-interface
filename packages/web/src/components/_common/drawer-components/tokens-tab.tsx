@@ -21,8 +21,24 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
+  const handleRequestAsset = () => {
+    window.open('https://forms.fillout.com/t/tQuo1BRFJeus', '_blank', 'noopener');
+  };
+
   return (
     <Box sx={{ p: 2, pt: 0 }}>
+      <Button
+        fullWidth
+        variant="soft"
+        color="info"
+        size="large"
+        startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
+        onClick={handleRequestAsset}
+        sx={{ mb: 2 }}
+      >
+        {t("Don't see a token? Request it!")}
+      </Button>
+
       {tokens.length > 0 ? (
         tokens?.map((token) => (
           <Button
@@ -165,7 +181,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
           </Button>
         ))
       ) : (
-        <Typography>{t('No tokens match your search.')}</Typography>
+        <Typography>{t('No tokens found.')}</Typography>
       )}
     </Box>
   );
