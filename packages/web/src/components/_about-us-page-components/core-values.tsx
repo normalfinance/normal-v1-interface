@@ -34,7 +34,7 @@ export const CoreValuesDefaults: Props = {
         alt: 'Icon 1',
       },
       heading: 'Keep Crypto Human',
-      description: 'remove complexity, speak plainly, design for real people.',
+      description: 'Remove complexity, speak plainly, design for real people.',
     },
     {
       icon: {
@@ -42,7 +42,7 @@ export const CoreValuesDefaults: Props = {
         alt: 'Icon 2',
       },
       heading: 'Security First',
-      description: 'audited contracts, battle‑tested code, and 24/7 monitoring.',
+      description: 'Audited contracts, battle‑tested code, and 24/7 monitoring.',
     },
     {
       icon: {
@@ -50,7 +50,7 @@ export const CoreValuesDefaults: Props = {
         alt: 'Icon 3',
       },
       heading: 'Permissionless Innovation',
-      description: 'build composable primitives that anyone can extend.',
+      description: 'Build composable primitives that anyone can extend.',
     },
     {
       icon: {
@@ -58,7 +58,7 @@ export const CoreValuesDefaults: Props = {
         alt: 'Icon 4',
       },
       heading: 'Community Ownership',
-      description: ' NORM token holders create and vote on proposals.',
+      description: 'NORM token holders create and vote on proposals.',
     },
     {
       icon: {
@@ -66,7 +66,7 @@ export const CoreValuesDefaults: Props = {
         alt: 'Icon 5',
       },
       heading: 'Data > Hype',
-      description: 'let on‑chain metrics guide every product decision.',
+      description: 'Let on‑chain metrics guide every product decision.',
     },
   ],
 };
@@ -101,7 +101,7 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
                 mb: { xs: 2, md: 3 },
               }}
             >
-              {heading}
+              {t(heading)}
             </Typography>
             <Typography variant="body1">
               {t(
@@ -150,9 +150,9 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
                     variant="h6"
                     sx={{ mb: { xs: 1, md: 1.5 }, fontWeight: 700, lineHeight: 1.4 }}
                   >
-                    {feature.heading}
+                    {t(feature.heading)}
                   </Typography>
-                  <Typography variant="body2">{feature.description}</Typography>
+                  <Typography variant="body2">{t(feature.description)}</Typography>
                 </Box>
               </Box>
             ))}

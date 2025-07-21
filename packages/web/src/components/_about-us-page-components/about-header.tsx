@@ -40,7 +40,7 @@ export const AboutHeader: React.FC = (props) => {
           <Grid2 size={{ xs: 12, md: 6 }}>
             <Typography variant="body1">
               {t(
-                'At Normal, our mission is to make crypto normal—giving everyone friction‑free exposure to the entire digital‑asset ecosystem. We build fully on‑chain index tokens and wrapped assets so you can diversify, swap, lend, and earn across the top 200 cryptocurrencies directly from your favorite DEX—no bridges, no centralized exchanges, no hidden fees.'
+                'At Normal, our mission is to make crypto normal—giving everyone friction‑free exposure to the entire digital‑asset ecosystem. We build fully on‑chain index tokens and synthetic assets so you can diversify, swap, lend, and earn across the top 200 cryptocurrencies directly from your favorite DEX—no bridges, no centralized exchanges, no hidden fees.'
               )}
             </Typography>
           </Grid2>

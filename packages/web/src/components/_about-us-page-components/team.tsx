@@ -3,6 +3,7 @@
 import type { ButtonProps } from '@mui/material';
 
 import React from 'react';
+import { useTranslate } from '@/locales';
 
 import { Box, Grid, Container, Typography } from '@mui/material';
 
@@ -49,7 +50,7 @@ export const TeamDefaults: Props = {
     {
       image: {
         src: '/assets/images/about/josh.webp',
-        alt: 'Team member 1',
+        alt: 'Joshua Blew',
       },
       name: 'Joshua Blew',
       jobTitle: 'Co-founder & CEO',
@@ -59,7 +60,7 @@ export const TeamDefaults: Props = {
     {
       image: {
         src: '/assets/images/about/just.webp',
-        alt: 'Team member 2',
+        alt: 'Justin Benjamin',
       },
       name: 'Justin Benjamin',
       jobTitle: 'Co-founder & COO',
@@ -68,27 +69,28 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
+        src: '/assets/images/about/avm.webp',
+        alt: 'Amit Anand',
+      },
+      name: 'Amit Anand',
+      jobTitle: 'Head of Marketing',
+      description:
+        'Built 10m+ impression marketing strategies at Polygon, formerly led Partnerships at Zo World.',
+    },
+    {
+      image: {
         src: '/assets/images/about/jake.webp',
-        alt: 'Team member 3',
+        alt: 'Jake Penzato',
       },
       name: 'Jake Penzato',
       jobTitle: 'Creative Director',
       description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros elementum tristique.',
-    },
-    {
-      image: {
-        src: '/assets/images/about/avm.webp',
-        alt: 'Team member 3',
-      },
-      name: 'Amit Anand',
-      jobTitle: 'Head of Marketing',
-      description: 'Coming soon...',
+        'Jake has 3 years of crypto investing experience and holds a BS in Marketing from Aurora University.',
     },
     {
       image: {
         src: '/assets/images/about/niko.webp',
-        alt: 'Team member 3',
+        alt: 'Niko Gorjan',
       },
       name: 'Niko Gorjan',
       jobTitle: 'Front-End Developer',
@@ -98,7 +100,7 @@ export const TeamDefaults: Props = {
     {
       image: {
         src: '/assets/images/about/anth.webp',
-        alt: 'Team member 3',
+        alt: 'Anthony Benjamin',
       },
       name: 'Anthony Benjamin',
       jobTitle: 'Business Development Lead',
@@ -108,7 +110,7 @@ export const TeamDefaults: Props = {
     {
       image: {
         src: '/assets/images/about/john.webp',
-        alt: 'Team member 3',
+        alt: 'John Reyes',
       },
       name: 'John Reyes',
       jobTitle: 'Intern',
@@ -118,7 +120,7 @@ export const TeamDefaults: Props = {
     {
       image: {
         src: '/assets/images/about/zeal.webp',
-        alt: 'Team member 3',
+        alt: 'Chief Doge',
       },
       name: 'Zeal',
       jobTitle: 'Chief Doge',
@@ -134,6 +136,8 @@ export const TeamDefaults: Props = {
 };
 
 export const Team: React.FC<TeamProps> = (props) => {
+  const { t } = useTranslate();
+
   const { tagline, heading, description, teamMembers, footerContent, ...sectionProps } = {
     ...TeamDefaults,
     ...props,
@@ -160,7 +164,7 @@ export const Team: React.FC<TeamProps> = (props) => {
               mb: 2,
             }}
           >
-            {heading}
+            {t(heading)}
           </Typography>
         </Box>
 
@@ -176,40 +180,44 @@ export const Team: React.FC<TeamProps> = (props) => {
   );
 };
 
-const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
-  <Box display="flex" flexDirection="column">
-    <Box position="relative" width="100%" paddingTop="100%" mb={2} sx={{ overflow: 'hidden' }}>
-      <Box
-        component="img"
-        src={member.image.src}
-        alt={member.image.alt}
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          objectFit: 'cover',
-          borderRadius: 2,
-          border: 5,
-          borderStyle: 'solid',
-          borderColor: 'divider',
-          aspectRatio: 1 / 1,
-        }}
-      />
-    </Box>
+const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
+  const { t } = useTranslate();
 
-    <Box mb={1.5}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-        {member.name}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {member.jobTitle}
+  return (
+    <Box display="flex" flexDirection="column">
+      <Box position="relative" width="100%" paddingTop="100%" mb={2} sx={{ overflow: 'hidden' }}>
+        <Box
+          component="img"
+          src={member.image.src}
+          alt={member.image.alt}
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            objectFit: 'cover',
+            borderRadius: 2,
+            border: 5,
+            borderStyle: 'solid',
+            borderColor: 'divider',
+            aspectRatio: 1 / 1,
+          }}
+        />
+      </Box>
+
+      <Box mb={1.5}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          {member.name}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {member.jobTitle}
+        </Typography>
+      </Box>
+      <Typography variant="body2" mb={2}>
+        {t(member.description)}
       </Typography>
     </Box>
-    <Typography variant="body2" mb={2}>
-      {member.description}
-    </Typography>
-  </Box>
-);
+  );
+};
 
 export default Team;

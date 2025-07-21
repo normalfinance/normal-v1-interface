@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslate } from '@/locales';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Paper, Container, Typography, CardContent } from '@mui/material';
@@ -58,7 +59,7 @@ export const VisionDefaults: Props = {
         alt: 'Icon 2',
       },
       description:
-        'Sub‑second swaps & deep liquidity across all Normal indexes and wrapped assets.',
+        'Sub‑second swaps & deep liquidity across all Normal indexes and synthetic assets.',
     },
     {
       icon: {
@@ -76,6 +77,8 @@ export const VisionDefaults: Props = {
 /* -------------------------------------------------------------------------- */
 
 export const Vision: React.FC<VisionProps> = (props) => {
+  const { t } = useTranslate();
+
   const { heading, description, image, stats, ...sectionProps } = {
     ...VisionDefaults,
     ...props,
@@ -97,9 +100,9 @@ export const Vision: React.FC<VisionProps> = (props) => {
               mb: { xs: 2, md: 3 },
             }}
           >
-            {heading}
+            {t(heading)}
           </Typography>
-          <Typography variant="body1">{description}</Typography>
+          <Typography variant="body1">{t(description)}</Typography>
         </Box>
 
         <Grid2 container spacing={{ xs: 4, lg: 6 }} columns={{ xs: 1, lg: 12 }}>
@@ -152,30 +155,34 @@ const paperSx = {
 
 const cardPadding = { xs: 2.5, md: 4 };
 
-const StatCard: React.FC<StatCardProps> = ({ icon, description }) => (
-  <Paper variant="outlined" sx={{ ...paperSx }}>
-    <CardContent sx={{ p: cardPadding }}>
-      <Box mb={5}>
-        <Box
-          sx={{
-            backgroundColor: 'background.paper',
-            width: 64,
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '50%',
-            border: 1,
-            borderColor: 'divider',
-            zIndex: 10,
-          }}
-        >
-          <Box component="img" src={icon.src} alt={icon.alt} sx={{ width: 32, height: 32 }} />
+const StatCard: React.FC<StatCardProps> = ({ icon, description }) => {
+  const { t } = useTranslate();
+
+  return (
+    <Paper variant="outlined" sx={{ ...paperSx }}>
+      <CardContent sx={{ p: cardPadding }}>
+        <Box mb={5}>
+          <Box
+            sx={{
+              backgroundColor: 'background.paper',
+              width: 64,
+              height: 64,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              border: 1,
+              borderColor: 'divider',
+              zIndex: 10,
+            }}
+          >
+            <Box component="img" src={icon.src} alt={icon.alt} sx={{ width: 32, height: 32 }} />
+          </Box>
         </Box>
-      </Box>
-      <Typography variant="body2">{description}</Typography>
-    </CardContent>
-  </Paper>
-);
+        <Typography variant="body2">{t(description)}</Typography>
+      </CardContent>
+    </Paper>
+  );
+};
 
 export default Vision;
