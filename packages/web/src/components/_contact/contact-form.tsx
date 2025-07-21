@@ -104,9 +104,9 @@ export const ContactForm: React.FC<ContactFormProps> = (props) => {
                   mb: 2,
                 }}
               >
-                {heading}
+                {t(heading)}
               </Typography>
-              <Typography variant="body1">{description}</Typography>
+              <Typography variant="body1">{t(description)}</Typography>
             </Box>
           </Grid>
 

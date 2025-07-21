@@ -4,7 +4,17 @@ import * as React from 'react';
 import { Icon } from '@iconify/react';
 
 import Masonry from '@mui/lab/Masonry';
-import { Box, Paper, Stack, Avatar, Container, Typography, type ButtonProps } from '@mui/material';
+import {
+  Box,
+  Paper,
+  Stack,
+  Avatar,
+  Container,
+  Typography,
+  Button,
+  type ButtonProps,
+} from '@mui/material';
+import { useTranslate } from '@/locales';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -22,21 +32,21 @@ type Testimonial = {
 
 type Props = {
   heading: string;
-  description: string;
+  description?: string;
   testimonials: Testimonial[];
   cta?: ButtonProps & { title: string };
 };
 
 export type TestimonialGridProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
+/* ------------------------------------------------------------------ */
+/*  Card component                                                     */
+/* ------------------------------------------------------------------ */
+
 const paperSx = {
   bgcolor: '#F9FAFB',
   borderRadius: 2,
 };
-
-/* ------------------------------------------------------------------ */
-/*  Card component                                                     */
-/* ------------------------------------------------------------------ */
 
 const TestimonialCard: React.FC<Testimonial> = ({
   quote,
@@ -44,46 +54,47 @@ const TestimonialCard: React.FC<Testimonial> = ({
   name,
   position,
   numberOfStars,
-}) => (
-  <Paper
-    variant="outlined"
-    sx={{
-      ...paperSx,
-      p: { xs: 3, md: 4 },
-      display: 'flex',
-      flexDirection: 'column',
-    }}
-  >
-    {/* stars */}
-    <Box mb={{ xs: 2.5, md: 3 }} display="flex">
-      {Array.from({ length: numberOfStars }).map((_, i) => (
-        <Icon // ⬅︎ use Iconify
-          key={i}
-          icon="material-symbols:star-rounded"
-          width={24}
-          height={24}
-          style={{ color: '#FFAB00', marginRight: '0px' }} // 4 px ≈ .5 spacing
-        />
-      ))}
-    </Box>
+}) => {
+  const { t } = useTranslate();
 
-    {/* quote */}
-    <Typography variant="body1" mb={{ xs: 2.5, md: 3 }}>
-      {quote}
-    </Typography>
-
-    {/* author block */}
-    <Stack direction="row" spacing={2} alignItems="center" mt="auto">
-      <Avatar src={avatar.src} alt={avatar.alt} sx={{ width: 48, height: 48 }} />
-      <Box>
-        <Typography fontWeight={600}>{name}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {position}
-        </Typography>
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        ...paperSx,
+        p: { xs: 3, md: 4 },
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Box mb={{ xs: 2.5, md: 3 }} display="flex">
+        {Array.from({ length: numberOfStars }).map((_, i) => (
+          <Icon
+            key={i}
+            icon="material-symbols:star-rounded"
+            width={24}
+            height={24}
+            style={{ color: '#FFAB00' }}
+          />
+        ))}
       </Box>
-    </Stack>
-  </Paper>
-);
+
+      <Typography variant="body1" mb={{ xs: 2.5, md: 3 }}>
+        {t(quote)}
+      </Typography>
+
+      <Stack direction="row" spacing={2} alignItems="center" mt="auto">
+        <Avatar src={avatar.src} alt={avatar.alt} sx={{ width: 48, height: 48 }} />
+        <Box>
+          <Typography fontWeight={600}>{t(name)}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t(position)}
+          </Typography>
+        </Box>
+      </Stack>
+    </Paper>
+  );
+};
 
 /* ------------------------------------------------------------------ */
 /*  Main component                                                     */
@@ -95,25 +106,34 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
   testimonials,
   cta,
   ...sectionProps
-}) => (
-  <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 12, lg: 14 } }} {...sectionProps}>
-    <Container disableGutters>
-      {/* header */}
-      <Stack spacing={2} maxWidth={640} mx="auto" textAlign="center" mb={{ xs: 6, md: 8 }}>
-        <Typography variant="h2" fontWeight={500}>
-          {heading}
-        </Typography>
-      </Stack>
+}) => {
+  const { t } = useTranslate();
 
-      {/* masonry grid */}
-      <Masonry columns={{ xs: 1, md: 2, lg: 3 }} sx={{ m: 0 }} spacing={2}>
-        {(testimonials ?? []).map((t, i) => (
-          <TestimonialCard key={i} {...t} />
-        ))}
-      </Masonry>
-    </Container>
-  </Box>
-);
+  return (
+    <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 12, lg: 14 } }} {...sectionProps}>
+      <Container disableGutters>
+        <Stack spacing={2} maxWidth={640} mx="auto" textAlign="center" mb={{ xs: 6, md: 8 }}>
+          <Typography variant="h2" fontWeight={500}>
+            {t(heading ?? '')}
+          </Typography>
+          {description && <Typography color="text.secondary">{t(description)}</Typography>}
+        </Stack>
+
+        <Masonry columns={{ xs: 1, md: 2, lg: 3 }} sx={{ m: 0 }} spacing={2}>
+          {(testimonials ?? []).map((tItem, i) => (
+            <TestimonialCard key={i} {...tItem} />
+          ))}
+        </Masonry>
+
+        {cta && (
+          <Box textAlign="center" mt={{ xs: 6, md: 8 }}>
+            <Button variant={cta.variant ?? 'outlined'}>{t(cta.title)}</Button>
+          </Box>
+        )}
+      </Container>
+    </Box>
+  );
+};
 
 /* ------------------------------------------------------------------ */
 /*  Defaults                                                           */

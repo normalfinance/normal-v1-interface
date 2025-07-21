@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { Box, Container, Typography } from '@mui/material';
+import { useTranslate } from '@/locales';
 
 type ImageProps = {
   url?: string;
@@ -63,6 +64,8 @@ export const Moments: React.FC<MomentsProps> = (props) => {
     ...props,
   };
 
+  const { t } = useTranslate();
+
   return (
     <Box
       component="section"
@@ -84,9 +87,9 @@ export const Moments: React.FC<MomentsProps> = (props) => {
               mb: { xs: 2, md: 3 },
             }}
           >
-            {heading}
+            {t(heading)}
           </Typography>
-          <Typography variant="body1">{description}</Typography>
+          <Typography variant="body1">{t(description)}</Typography>
         </Box>
 
         <Box

@@ -7,7 +7,6 @@ import { useTranslate } from '@/locales';
 
 import { Box, Grid, Container, Typography } from '@mui/material';
 
-import TwitterIcon from '@mui/icons-material/Twitter';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import TelegramIcon from '@mui/icons-material/Telegram';
@@ -327,10 +326,10 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
       >
         <Box mb={1.5}>
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {member.name}
+            {t(member.name)}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {member.jobTitle}
+            {t(member.jobTitle)}
           </Typography>
         </Box>
         <Typography variant="body2" mb={2}>
