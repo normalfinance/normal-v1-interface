@@ -4,11 +4,8 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import { useAppStore } from '@normalfinance/state';
-
-import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
-
 
 import { Box } from '@mui/material';
 

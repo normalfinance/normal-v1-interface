@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
-import { keyframes, styled } from '@mui/system';
+import React, { useState, useEffect } from 'react';
+
+import { styled, keyframes } from '@mui/system';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { Box, Dialog, IconButton, DialogTitle, DialogContent } from '@mui/material';
+
 import { Iconify } from '@/components/template/iconify';
 
 /**
