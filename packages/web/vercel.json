@@ -1,5 +1,3 @@
 {
-  "build": {
-    "ignoreCommand": "bash ./scripts/ignore-vercel-build.sh"
-  }
+  "ignoreCommand": "bash ./scripts/ignore-vercel-build.sh"
 }
