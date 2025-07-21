@@ -20,10 +20,10 @@ jobs:
         with:
           node-version: "20"
       - name: Install dependencies
-        working-directory: normal-v1-interface/packages/web
+        working-directory: packages/web
         run: yarn install --frozen-lockfile
       - name: Release
-        working-directory: normal-v1-interface/packages/web
+        working-directory: packages/web
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: yarn semantic-release
