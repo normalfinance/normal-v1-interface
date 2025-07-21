@@ -3,12 +3,9 @@ import packageJson from '../package.json';
 // ----------------------------------------------------------------------
 
 export type ConfigValue = {
-  deployment: 'SOLANA' | 'STELLAR';
   appName: string;
   appVersion: string;
   siteUrl: string;
-  serverUrl: string;
-  assetsDir: string;
   isStaticExport: boolean;
   crisp: {
     websiteId: string;
@@ -25,12 +22,9 @@ export type ConfigValue = {
 // ----------------------------------------------------------------------
 
 export const CONFIG: ConfigValue = {
-  deployment: 'STELLAR',
   appName: 'Normal',
   appVersion: packageJson.version,
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://app.normalfinance.io',
-  serverUrl: process.env.NEXT_PUBLIC_SERVER_URL ?? '',
-  assetsDir: process.env.NEXT_PUBLIC_ASSETS_DIR ?? '',
   isStaticExport: JSON.parse(`${process.env.BUILD_STATIC_EXPORT}`),
   crisp: {
     websiteId: process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? '',

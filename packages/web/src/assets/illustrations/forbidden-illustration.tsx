@@ -1,7 +1,6 @@
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 
 import { memo, forwardRef } from 'react';
-import { CONFIG } from '@/global-config';
 
 import SvgIcon from '@mui/material/SvgIcon';
 
@@ -37,7 +36,7 @@ const ForbiddenIllustration = forwardRef<SVGSVGElement, SvgProps>((props, ref) =
       {!hideBackground && <BackgroundShape />}
 
       <image
-        href={`${CONFIG.assetsDir}/assets/illustrations/characters/character-4.webp`}
+        href="/assets/illustrations/characters/character-4.webp"
         height="300"
         x="220"
         y="30"

@@ -1,7 +1,6 @@
 import type { BoxProps } from '@mui/material/Box';
 import type { SliderProps } from '@mui/material/Slider';
 
-import { CONFIG } from '@/global-config';
 import { setFont } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
@@ -56,7 +55,7 @@ export function FontFamilyOptions({
             })}
           >
             <SvgColor
-              src={`${CONFIG.assetsDir}/assets/icons/settings/ic-font.svg`}
+              src="/assets/icons/settings/ic-font.svg"
               sx={{ width: 28, height: 28, color: 'currentColor' }}
             />
 

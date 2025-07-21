@@ -2,7 +2,7 @@ import React from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { CONFIG } from '@/global-config';
-import { createZKP2PURL, createOnramperURL, createCoinbasePayURL } from '@normalfinance/utils';
+import { createOnramperURL, createCoinbasePayURL } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -72,17 +72,6 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, token, amount, on
       url: createCoinbasePayURL(CONFIG.coinbase.projectId, amount),
     },
   ];
-
-  if (CONFIG.deployment === 'SOLANA') {
-    DEFAULT_CHECKOUTS.push({
-      id: 'ZKP2P',
-      avatar:
-        'https://docs.zkp2p.xyz/~gitbook/image?url=https%3A%2F%2F3629680097-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252F6e2L3XxfmJSq8oZRw1gA%252Ficon%252FbST5e9IdOO2ji6l2a9vo%252FLogo-clear-background-512px.png%3Falt%3Dmedia%26token%3Daa14d9e1-4b05-4f9d-9aeb-44d820b50d90&width=32&dpr=1&quality=100&sign=9b52fc92&sv=2',
-      heading: 'ZKP2P',
-      description: 'Trustless onramping with Venmo and more',
-      url: createZKP2PURL(amount),
-    });
-  }
 
   return (
     <Dialog
