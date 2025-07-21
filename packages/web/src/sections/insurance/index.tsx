@@ -47,7 +47,7 @@ export default function InsuranceView() {
       chart: {
         colors: [theme.palette.success.light, theme.palette.success.main],
         categories: ['Current'],
-        series: [139390],
+        series: [0],
       },
     },
     {
@@ -60,7 +60,7 @@ export default function InsuranceView() {
       chart: {
         colors: [theme.palette.info.light, theme.palette.info.main],
         categories: ['Current'],
-        series: [24930],
+        series: [0],
       },
     },
     {
@@ -73,7 +73,7 @@ export default function InsuranceView() {
       chart: {
         colors: [theme.palette.warning.light, theme.palette.warning.main],
         categories: ['Current'],
-        series: [2.981],
+        series: [0],
       },
     },
   ];
