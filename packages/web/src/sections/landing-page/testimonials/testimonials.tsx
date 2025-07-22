@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
-
 import Masonry from '@mui/lab/Masonry';
 import {
   Box,
@@ -16,10 +15,6 @@ import {
   type ButtonProps,
 } from '@mui/material';
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
-
 type ImageProps = { src: string; alt?: string };
 
 type Testimonial = {
@@ -30,18 +25,51 @@ type Testimonial = {
   numberOfStars: number;
 };
 
+type CTA = {
+  title: string;
+  variant?: 'text' | 'outlined' | 'contained';
+} & Omit<ButtonProps, 'variant'>;
+
 type Props = {
-  heading: string;
+  heading?: string;
   description?: string;
-  testimonials: Testimonial[];
-  cta?: ButtonProps & { title: string };
+  testimonials?: Testimonial[];
+  cta?: CTA;
 };
 
-export type TestimonialGridProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
+export type TestimonialGridProps = React.ComponentPropsWithoutRef<'section'> & Props;
 
-/* ------------------------------------------------------------------ */
-/*  Card component                                                     */
-/* ------------------------------------------------------------------ */
+const DEFAULT_PROPS = {
+  heading: 'Customer testimonials',
+  description: '',
+  testimonials: [
+    {
+      quote:
+        '"Normal saves me time and money - all while being as easy to use as my traditional banking apps."',
+      avatar: { src: '/assets/images/testimonials/1.webp' },
+      name: 'Devin Kopp',
+      position: 'Co-founder @ Rodeo Money',
+      numberOfStars: 5,
+    },
+    {
+      quote:
+        '"Instead of picking out each coin, Normal allows you to invest in the whole market at once. Normal makes it a no brainer."',
+      avatar: { src: '/assets/images/testimonials/2.webp' },
+      name: 'Jake Penzato',
+      position: 'Student at Aurora University',
+      numberOfStars: 5,
+    },
+    {
+      quote:
+        '"Normal is a platform that simplifies investing into crypto. The platform is very clean and easy to use."',
+      avatar: { src: '/assets/images/testimonials/3.webp' },
+      name: 'Victor Acevedo',
+      position: 'An OG normie',
+      numberOfStars: 5,
+    },
+  ],
+  cta: { title: 'Read more success stories', variant: 'outlined' as const },
+};
 
 const paperSx = {
   bgcolor: '#F9FAFB',
@@ -96,15 +124,11 @@ const TestimonialCard: React.FC<Testimonial> = ({
   );
 };
 
-/* ------------------------------------------------------------------ */
-/*  Main component                                                     */
-/* ------------------------------------------------------------------ */
-
 export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
-  heading,
-  description,
-  testimonials,
-  cta,
+  heading = DEFAULT_PROPS.heading,
+  description = DEFAULT_PROPS.description,
+  testimonials = DEFAULT_PROPS.testimonials,
+  cta = DEFAULT_PROPS.cta,
   ...sectionProps
 }) => {
   const { t } = useTranslate();
@@ -114,20 +138,22 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
       <Container disableGutters>
         <Stack spacing={2} maxWidth={640} mx="auto" textAlign="center" mb={{ xs: 6, md: 8 }}>
           <Typography variant="h2" fontWeight={500}>
-            {t(heading ?? '')}
+            {t(heading)}
           </Typography>
           {description && <Typography color="text.secondary">{t(description)}</Typography>}
         </Stack>
 
         <Masonry columns={{ xs: 1, md: 2, lg: 3 }} sx={{ m: 0 }} spacing={2}>
-          {(testimonials ?? []).map((tItem, i) => (
+          {testimonials.map((tItem, i) => (
             <TestimonialCard key={i} {...tItem} />
           ))}
         </Masonry>
 
         {cta && (
           <Box textAlign="center" mt={{ xs: 6, md: 8 }}>
-            <Button variant={cta.variant ?? 'outlined'}>{t(cta.title)}</Button>
+            <Button variant={cta.variant ?? 'outlined'} {...cta}>
+              {t(cta.title)}
+            </Button>
           </Box>
         )}
       </Container>
@@ -135,41 +161,4 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
   );
 };
 
-/* ------------------------------------------------------------------ */
-/*  Defaults                                                           */
-/* ------------------------------------------------------------------ */
-
-export const TestimonialGridDefaults: Props = {
-  heading: 'Customer testimonials',
-  description: '',
-  testimonials: [
-    {
-      quote:
-        '"Normal saves me time and money - all while being as easy to use as my traditional banking apps."',
-      avatar: { src: '/assets/images/testimonials/1.webp' },
-      name: 'Devin Kopp',
-      position: 'Co-founder @ Rodeo Money',
-      numberOfStars: 5,
-    },
-    {
-      quote:
-        '"Instead of picking out each coin, Normal allows you to invest in the whole market at once. Normal makes it a no brainer."',
-      avatar: { src: '/assets/images/testimonials/2.webp' },
-      name: 'Jake Penzato',
-      position: 'Student at Aurora University',
-      numberOfStars: 5,
-    },
-    {
-      quote:
-        '"Normal is a platform that simplifies investing into crypto. The platform is very clean and easy to use."',
-      avatar: { src: '/assets/images/testimonials/3.webp' },
-      name: 'Victor Acevedo',
-      position: 'An OG normie',
-      numberOfStars: 5,
-    },
-  ],
-  cta: { title: 'Read more success stories', variant: 'outlined' },
-};
-
-TestimonialGrid.defaultProps = TestimonialGridDefaults;
 TestimonialGrid.displayName = 'TestimonialGrid';
