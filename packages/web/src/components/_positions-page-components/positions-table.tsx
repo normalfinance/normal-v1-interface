@@ -120,8 +120,8 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
       </Stack>
       <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
 
-      {positions.map((position, idx) => (
-        <PositionItem key={idx} pool={{ name: '', fee: 3 }} position={position} />
+      {positions.map((position) => (
+        <PositionItem key={position.poolAddress} position={position} />
       ))}
     </>
   );

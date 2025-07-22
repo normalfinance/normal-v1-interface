@@ -1,20 +1,20 @@
 'use client';
 
+import type { PoolPosition } from '@/hooks';
+
 import { useTranslate } from '@/locales';
-import { fCurrency } from '@/utils/format-number';
+import { fPercent } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Stack, Avatar, Button, Typography } from '@mui/material';
 
-import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
-
 export interface PoolsTabsProps {
-  positions?: PoolDetails[];
+  positions?: PoolPosition[];
 }
 
-export default function PositioinsTab({ positions = [] }: { positions?: PoolDetails[] }) {
+export default function PositioinsTab({ positions = [] }: { positions: PoolPosition[] }) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -23,6 +23,7 @@ export default function PositioinsTab({ positions = [] }: { positions?: PoolDeta
       {positions.length > 0 ? (
         positions?.map((position) => (
           <Button
+            key={position.poolAddress}
             sx={{
               display: 'flex',
               flexDirection: 'column',
@@ -42,13 +43,13 @@ export default function PositioinsTab({ positions = [] }: { positions?: PoolDeta
                 }}
               >
                 <Avatar
-                  src={getCryptoIconUrl(position.poolInfo?.tokenA.name ?? '')}
+                  src={getCryptoIconUrl(position.tokenA.name ?? '')}
                   alt="Token A"
                   sx={{ width: 40, height: 40 }}
                 />
 
                 <Avatar
-                  src={getCryptoIconUrl(position.poolInfo?.tokenB.name ?? '')}
+                  src={getCryptoIconUrl(position.tokenB.name ?? '')}
                   alt="Token B"
                   sx={{
                     width: 40,
@@ -60,9 +61,9 @@ export default function PositioinsTab({ positions = [] }: { positions?: PoolDeta
               </Box>
               <Stack direction="column" width={1} alignItems="start">
                 <Typography component="span" color="text.primary" variant="h6" ml={1}>
-                  {position.poolInfo?.tokenA.name}
+                  {position.tokenA.name}
                   {t('/')}
-                  {position.poolInfo?.tokenB.name}
+                  {position.tokenB.name}
                 </Typography>
                 <Box
                   sx={{
@@ -90,7 +91,7 @@ export default function PositioinsTab({ positions = [] }: { positions?: PoolDeta
                         py: '2px',
                       }}
                     >
-                      {position.metadata?.feeTier}
+                      {fPercent(position.poolFee)}
                     </Typography>
                   </Box>
                   <Box
@@ -112,7 +113,7 @@ export default function PositioinsTab({ positions = [] }: { positions?: PoolDeta
                         py: '2px',
                       }}
                     >
-                      {position.metadata?.version}
+                      {position.poolVersion}
                     </Typography>
                   </Box>
                 </Box>
@@ -122,7 +123,8 @@ export default function PositioinsTab({ positions = [] }: { positions?: PoolDeta
             <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
               <Stack direction="column" alignItems="start">
                 <Typography color="text.primary" variant="body1">
-                  {fCurrency(position.performance?.position)}
+                   {/* {fCurrency(pool.performance?.position)} */}
+                  {position.balance}
                 </Typography>
                 <Typography color="text.secondary" variant="caption">
                   {t('Position')}
@@ -131,7 +133,8 @@ export default function PositioinsTab({ positions = [] }: { positions?: PoolDeta
 
               <Stack direction="column" alignItems="start">
                 <Typography color="text.primary" variant="body1">
-                  {fCurrency(position.performance?.fees)}
+                  {/* {fCurrency(position.performance?.fees)} */}
+                  {t('Coming soon')}
                 </Typography>
                 <Typography color="text.secondary" variant="caption">
                   {t('Fees')}
