@@ -123,7 +123,7 @@ export default function PositioinsTab({ positions = [] }: { positions: PoolPosit
             <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
               <Stack direction="column" alignItems="start">
                 <Typography color="text.primary" variant="body1">
-                   {/* {fCurrency(pool.performance?.position)} */}
+                  {/* {fCurrency(pool.performance?.position)} */}
                   {position.balance}
                 </Typography>
                 <Typography color="text.secondary" variant="caption">

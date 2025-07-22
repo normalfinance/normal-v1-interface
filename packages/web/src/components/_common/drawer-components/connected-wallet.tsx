@@ -25,7 +25,6 @@ import ReceiveModal from '../receive-modal';
 import PositioinsTab from './positions-tab';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
-
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {
   balance?: number;

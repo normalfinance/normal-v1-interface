@@ -18,7 +18,7 @@ export default function PositionsView() {
   const { t } = useTranslate();
 
   const { positions } = useLiquidityPositions();
- 
+
   return (
     <DashboardContent maxWidth="xl">
       <PageHeader title={t('Your positions')} />
