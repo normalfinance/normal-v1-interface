@@ -5,7 +5,6 @@ import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import React, { useState, useEffect } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import useNativeTokenBalance from '@/hooks/stellar/use-native-token-balance';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
 import {
@@ -145,7 +144,7 @@ function WalletDisconnected({
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
-  const { data } = useNativeTokenBalance();
+  // const { data: tokenBalances, isLoading: balancesLoading } = useUserTokens();
 
   return (
     <Box
@@ -161,13 +160,8 @@ function WalletConnected({ address }: { address: string }) {
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
-      <ConnectedWallet
-        balance={Number(data?.data) || 0}
-        percentageChange={0}
-        tokens={[]}
-        positions={[]}
-        activity={[]}
-      />
+      {/* TODO: replace balance with tokenBalances */}
+      <ConnectedWallet balance={0} percentageChange={0} tokens={[]} positions={[]} activity={[]} />
     </Box>
   );
 }

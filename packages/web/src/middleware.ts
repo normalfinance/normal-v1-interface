@@ -31,7 +31,6 @@ const BLOCKED_COUNTRIES = new Set([
   'VE', // Venezuela
   'YE', // Yemen
   'ZW', // Zimbabwe
-  // 'US', // United States (commented out for dev)
 ]);
 
 // Referral tracking constants
@@ -137,7 +136,7 @@ export async function middleware(req: NextRequest) {
     const { country, isVpn } = await lookup(ip);
     console.log('[geo] lookup result:', country, 'vpn?', isVpn);
 
-    if (isVpn || BLOCKED_COUNTRIES.has(country)) {
+    if (BLOCKED_COUNTRIES.has(country)) {
       const url = req.nextUrl.clone();
       url.pathname = '/blocked';
       url.search = '';

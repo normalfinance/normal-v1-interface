@@ -4,10 +4,10 @@ import type { StateToken } from '@normalfinance/types';
 import type { PositionQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
+import { useTokenBalance } from '@/hooks';
 import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, FormProvider } from 'react-hook-form';
-import useTokenBalance from '@/hooks/stellar/use-token-balance';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box, Stack, Button } from '@mui/material';
@@ -180,7 +180,7 @@ export function StepContentPanel({
         {/* ---- step body ---- */}
         <Box>
           {step === 0 && <StepOne tokens={tokens} />}
-          {step === 1 && <StepTwo token={selectedToken} />}
+          {step === 1 && <StepTwo />}
         </Box>
 
         {/* ---- navigation ---- */}
@@ -202,7 +202,7 @@ export function StepContentPanel({
             >
               {getButtonLabel()}
             </Button>
-          )}{' '}
+          )}
         </Stack>
       </Stack>
     </FormProvider>

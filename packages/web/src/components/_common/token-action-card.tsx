@@ -8,6 +8,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 import React, { useEffect } from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { useTabs } from 'minimal-shared/hooks';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useAppStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
@@ -20,6 +21,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
+import ZealyHighlight from './zealy/zealy-highlight';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
@@ -107,7 +109,14 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
     switch (tabs.value) {
       case 'swap':
         return (
-          <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} queryParams={queryParams} />
+          <Box sx={{ position: 'relative' }}>
+            <SwapCard
+              tokensList={store.tokens}
+              swapFeeInfo={swapFeeInfo}
+              queryParams={queryParams}
+            />
+            <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />
+          </Box>
         );
       case 'send':
         return <SendCard tokensList={store.tokens} networkCost={0} />;

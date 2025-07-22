@@ -1,7 +1,5 @@
 import type { BoxProps } from '@mui/material/Box';
 
-import { CONFIG } from '@/global-config';
-
 import Box from '@mui/material/Box';
 import { alpha as hexAlpha } from '@mui/material/styles';
 
@@ -53,7 +51,7 @@ export function PresetsOptions({
             }}
           >
             <SvgColor
-              src={`${CONFIG.assetsDir}/assets/icons/settings/ic-siderbar-duotone.svg`}
+              src="/assets/icons/settings/ic-siderbar-duotone.svg"
               sx={{ width: 28, height: 28, color: 'currentColor' }}
             />
           </OptionButton>

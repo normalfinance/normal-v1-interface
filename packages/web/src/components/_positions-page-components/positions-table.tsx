@@ -4,6 +4,7 @@ import type { PoolPosition } from '@/hooks';
 
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 
 import Box from '@mui/material/Box';
 import { Button } from '@mui/material';
@@ -13,6 +14,7 @@ import { useTheme } from '@mui/material/styles';
 import { Iconify } from '@/components/template/iconify';
 
 import PositionItem from './position-item';
+import ZealyHighlight from '../_common/zealy/zealy-highlight';
 
 // ----------------------------------------------------------------------
 
@@ -116,6 +118,7 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
           </Button>
         ))}
       </Stack>
+      <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
 
       {positions.map((position, idx) => (
         <PositionItem key={idx} pool={{ name: '', fee: 3 }} position={position} />
