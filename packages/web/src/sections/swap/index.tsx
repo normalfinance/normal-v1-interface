@@ -41,6 +41,7 @@ export default function SwapView() {
               swapFeeInfo={swapFeeInfo}
               cashBalance={cashBalance}
               queryParams={params}
+              loading={store.loading}
             />
           </Box>
         </Box>

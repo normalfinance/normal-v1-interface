@@ -1,20 +1,19 @@
 export function getCryptoIconUrl(symbol: string): string {
-  // Ensure symbol is provided and normalize to uppercase to match file names
   if (!symbol) return '';
 
-  // Remove non-alphanumeric characters to match file naming (e.g., strip '/', '-', spaces)
+  // Normalize to uppercase for consistency
   const sanitized = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-  // Always use plain 'XLM'
+  // Special case: always use 'XLM.webp'
   if (sanitized === 'XLM') {
     return `/assets/icons/crypto-icons/XLM.webp`;
   }
 
-  // Normal tokens are prefixed with 'n'
-  const isNormalToken = sanitized.startsWith('N') && sanitized !== 'XLM';
+  // Check if original symbol started with lowercase 'n' and was followed by an uppercase letter
+  const isNormalToken = /^n[A-Z0-9]/.test(symbol);
 
-  // Use n-prefix for Normal tokens, else raw symbol
-  const fileName = isNormalToken ? sanitized : sanitized;
+  // If Normal token, lowercase `n` prefix is preserved and attached to the uppercase remainder
+  const fileName = isNormalToken ? `n${sanitized.slice(1)}` : sanitized;
 
-  return `/assets/icons/crypto-icons/${isNormalToken ? fileName : sanitized}.webp`;
+  return `/assets/icons/crypto-icons/${fileName}.webp`;
 }

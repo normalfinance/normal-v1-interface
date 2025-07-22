@@ -3,13 +3,15 @@
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import axios from 'axios';
 import { paths } from '@/routes/paths';
-import { useTranslate } from '@/locales';
+import { useSnackbar } from 'notistack';
 import * as Sentry from '@sentry/nextjs';
-import { useState, useEffect } from 'react';
+import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
+import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
@@ -182,12 +184,40 @@ function WalletDisconnected({
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
+  const { t } = useTranslate();
+  const { enqueueSnackbar } = useSnackbar();
+
   // const { data } = useNativeTokenBalance();
   // const { tokens } = useUserTokens();
   // const { positions } = useLPTokens();
 
   // TODO: Fetch user activity
   // const { activity } = useUserActivity();
+
+  const [faucetLoading, setFaucetLoading] = useState(false);
+  const [faucetOff, setFaucetOff] = useState(false);
+
+  const handleFaucetRequest = useCallback(async () => {
+    try {
+      setFaucetLoading(true);
+      const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
+
+      if (data) {
+        enqueueSnackbar(t('Account funded!'), { variant: 'success' });
+      }
+    } catch (error) {
+      console.log(error);
+
+      if (axios.isAxiosError(error)) {
+        if (error?.response?.data.detail === 'account already funded to starting balance') {
+          setFaucetOff(true);
+          enqueueSnackbar(t('Account already funded'), { variant: 'warning' });
+        }
+      }
+    } finally {
+      setFaucetLoading(false);
+    }
+  }, [address, enqueueSnackbar, t]);
 
   if (!address) {
     return null;
@@ -207,14 +237,20 @@ function WalletConnected({ address }: { address: string }) {
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
-      <ConnectedWallet
-        balance={0}
-        // balance={Number(data?.data) || 0}
-        percentageChange={0}
-        tokens={[]}
-        positions={[]}
-        activity={[]}
-      />
+      <Button
+        fullWidth
+        variant="soft"
+        color="info"
+        size="large"
+        startIcon={<Iconify icon="eva:droplet-fill" />}
+        onClick={handleFaucetRequest}
+        sx={{ my: 1 }}
+        loading={faucetLoading}
+        disabled={faucetOff}
+      >
+        {t('Get testnet XLM')}
+      </Button>
+      <ConnectedWallet balance={0} percentageChange={0} tokens={[]} positions={[]} activity={[]} />
     </Box>
   );
 }

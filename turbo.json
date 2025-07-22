@@ -4,7 +4,14 @@
   "globalEnv": [
     "NODE_ENV",
     "NEXT_TELEMETRY_DISABLED",
-    "SKIP_NODE_VERSION_CHECK"
+    "SKIP_NODE_VERSION_CHECK",
+    "DATABASE_URL",
+    "GEOIP_ENDPOINT",
+    "GEOIPKEY",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT",
+    "UPSTASH_REDIS_REST_URL",
+    "UPSTASH_REDIS_REST_TOKEN"
   ],
   "tasks": {
     "build": {
