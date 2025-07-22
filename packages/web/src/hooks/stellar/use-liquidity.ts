@@ -10,7 +10,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { useContractTransaction } from './use-contract-transaction';
 
 export type DepositLiquidityArgs = Omit<Parameters<Client['deposit']>[0], 'user'>;
-export type WithdrawLiquidityArgs = Parameters<Client['withdraw']>[0];
+export type WithdrawLiquidityArgs = Omit<Parameters<Client['withdraw']>[0], 'user'>;
 
 interface ReturnType {
   error: any | null;

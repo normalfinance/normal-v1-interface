@@ -4,22 +4,29 @@ import type { PoolPosition } from '@/hooks';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
 import { fPercent } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Stack, Button, Typography } from '@mui/material';
+import { Stack, Button, Typography, IconButton } from '@mui/material';
 
+import { Iconify } from '../template/iconify';
 import PoolTokensAvatarGroup from '../_common/pool-tokens-avatar-group';
 
 interface PositionItemProps {
   position: PoolPosition;
+  onWithdraw: () => void;
 }
 
-export default function PositionItem({ position }: PositionItemProps) {
+export default function PositionItem({ position, onWithdraw }: PositionItemProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  const router = useRouter();
 
+  const handleCardClick = () => {
+    router.push(paths.pools.details(position.poolAddress));
+  };
   return (
     <Box sx={{ p: 2, pt: 0 }}>
       <Button
@@ -32,7 +39,8 @@ export default function PositionItem({ position }: PositionItemProps) {
           borderRadius: '16px',
           border: `1px solid ${theme.palette.divider}`,
         }}
-        href={paths.pools.details(position.poolAddress)}
+        // href={paths.pools.details(position.poolAddress)}
+        onClick={handleCardClick}
       >
         <Stack direction="row" width={1} alignItems="center">
           <PoolTokensAvatarGroup
@@ -99,6 +107,16 @@ export default function PositionItem({ position }: PositionItemProps) {
               </Box>
             </Box>
           </Stack>
+
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation(); // Prevents outer button from triggering
+              onWithdraw();
+            }}
+            sx={{ top: 8, right: 8, position: 'absolute', color: 'error.main' }}
+          >
+            <Iconify icon="solar:trash-bin-trash-bold" />
+          </IconButton>
         </Stack>
 
         <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
