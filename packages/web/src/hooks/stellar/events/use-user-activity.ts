@@ -63,7 +63,7 @@ export function useUserActivity(): ReturnType {
               JSON.parse(r.topics!),
               JSON.parse(r.data!),
               r.transaction_hash
-            ) as events.BufferEvent; // FIXME:
+            ) as any; // FIXME:
 
             const tx = await server.getTransaction(r.transaction_hash);
             if (tx.status === 'SUCCESS') {
@@ -100,7 +100,7 @@ export function useUserActivity(): ReturnType {
               JSON.parse(topics),
               JSON.parse(data),
               transaction_hash
-            ) as events.BufferEvent; // FIXME:
+            ) as any; // FIXME:
 
             const tx = await server.getTransaction(transaction_hash);
             if (tx.status === 'SUCCESS') {

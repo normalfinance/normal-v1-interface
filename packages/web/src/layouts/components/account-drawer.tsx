@@ -8,9 +8,7 @@ import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
-
 import { useUserActivity } from '@/hooks';
-import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
@@ -207,11 +205,9 @@ function WalletConnected({ address }: { address: string }) {
       if (data) {
         enqueueSnackbar(t('Account funded!'), { variant: 'success' });
       }
-    } catch (error) {
-      console.log(error);
-
-      if (axios.isAxiosError(error)) {
-        if (error?.response?.data.detail === 'account already funded to starting balance') {
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        if (e?.response?.data.detail === 'account already funded to starting balance') {
           setFaucetOff(true);
           enqueueSnackbar(t('Account already funded'), { variant: 'warning' });
         }

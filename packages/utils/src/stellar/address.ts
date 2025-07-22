@@ -47,5 +47,6 @@ export function convertContractAddressToHex(address: string): string {
   const addressObj = Address.fromString(address);
 
   // Extract raw 32-byte contract ID as hex
+  // @ts-ignores
   return Buffer.from(addressObj.toScAddress().contractId()).toString('hex');
 }

@@ -6,6 +6,6 @@ export interface PoolTxRow {
   tokenAAmount: number;
   tokenBAmount: number;
   user: string;
-  timestamp?: string;
+  timestamp: string;
   txHash: string;
 }
