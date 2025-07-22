@@ -3,12 +3,12 @@
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import axios from 'axios';
 import { useSnackbar } from 'notistack';
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
-import { rateLimiter } from '@/server/rateLimiter';
 import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
@@ -166,29 +166,30 @@ function WalletConnected({ address }: { address: string }) {
   // TODO: Fetch user activity
   // const { activity } = useUserActivity();
 
+  const [faucetLoading, setFaucetLoading] = useState(false);
+  const [faucetOff, setFaucetOff] = useState(false);
+
   const handleFaucetRequest = useCallback(async () => {
-    console.log(address);
-    // if (isValidStellarAddress(address)) {
-    //   enqueueSnackbar(t('Invalid address'), { variant: 'error' });
-    //   return;
-    // }
-    const res = await fetch('/api/ip');
-    const data = await res.json();
+    try {
+      setFaucetLoading(true);
+      const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
 
-    console.log(data);
+      if (data) {
+        enqueueSnackbar(t('Account funded!'), { variant: 'success' });
+      }
+    } catch (error) {
+      console.log(error);
 
-    const { success } = await rateLimiter.limit(address);
-    if (!success) {
-      enqueueSnackbar(t('Rate limit'), { variant: 'error' });
-      return;
+      if (axios.isAxiosError(error)) {
+        if (error?.response?.data.detail === 'account already funded to starting balance') {
+          setFaucetOff(true);
+          enqueueSnackbar(t('Account already funded'), { variant: 'warning' });
+        }
+      }
+    } finally {
+      setFaucetLoading(false);
     }
-
-    // const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
-
-    // if (data) {
-    //   enqueueSnackbar('success', { variant: 'success' });
-    // }
-  }, [address, enqueueSnackbar]);
+  }, [address, enqueueSnackbar, t]);
 
   if (!address) {
     return null;
@@ -215,7 +216,9 @@ function WalletConnected({ address }: { address: string }) {
         size="large"
         startIcon={<Iconify icon="eva:droplet-fill" />}
         onClick={handleFaucetRequest}
-        sx={{ mb: 2 }}
+        sx={{ my: 1 }}
+        loading={faucetLoading}
+        disabled={faucetOff}
       >
         {t('Get testnet XLM')}
       </Button>
