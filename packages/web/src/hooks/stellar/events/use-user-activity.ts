@@ -131,6 +131,8 @@ function parseRowToActivity(
   userAddress: string,
   timestamp: string
 ): Activity | null {
+  return null;
+  // @dev will complete this soon.
   // const { id, timestamp, event_type, data } = event;
   //   // const ts = new Date(timestamp).getTime();
   //   // const amount = typeof data.amount === 'string' ? parseFloat(data.amount) : Number(data.amount);

@@ -61,7 +61,7 @@ export function useInsuranceFundEvents(): ReturnType {
             if (tx.status === 'SUCCESS') {
               parsedEvent.timestamp = tx.createdAt.toString();
             }
-            
+
             return parsedEvent;
           });
 
