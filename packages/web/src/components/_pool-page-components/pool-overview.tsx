@@ -1,6 +1,7 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
@@ -43,12 +44,13 @@ export interface PoolActionButton {
   onClick?: () => void; // Optional click handler
 }
 
-export type PoolsAprProps = CardProps & {
+export type PoolsOverviewProps = CardProps & {
   totalAprPercentage: number;
   poolBalances: [PoolBalance, PoolBalance]; // exactly two items
   stats: PoolStat[]; // any length (e.g. 3-4)
   actionButtons?: PoolActionButton[];
   loading?: boolean;
+  tokens?: Token[];
 };
 
 // ----------------------------------------------------------------------
@@ -58,9 +60,10 @@ export function PoolOverview({
   poolBalances,
   stats,
   loading,
+  tokens,
   sx,
   ...other
-}: PoolsAprProps) {
+}: PoolsOverviewProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -182,10 +185,9 @@ export function PoolOverview({
           </WalletGate>
         ))}
       </Stack>
-      {/* NEED TO ADD TOKENLIST */}
       {showSwap && (
         <Box sx={{ mt: 2 }}>
-          <SwapCard tokensList={[]} />
+          <SwapCard tokensList={tokens} />
         </Box>
       )}
       <Stack
