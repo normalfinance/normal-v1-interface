@@ -3,16 +3,15 @@
 import type { ButtonProps } from '@mui/material';
 
 import React from 'react';
+import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
 
+import Link from '@mui/material/Link';
+import GitHubIcon from '@mui/icons-material/GitHub';
+import LinkedInIcon from '@mui/icons-material/LinkedIn';
+import TelegramIcon from '@mui/icons-material/Telegram';
 import { Box, Grid, Container, Typography } from '@mui/material';
 
-import LinkedInIcon from '@mui/icons-material/LinkedIn';
-import GitHubIcon from '@mui/icons-material/GitHub';
-import TelegramIcon from '@mui/icons-material/Telegram';
-import { Icon } from '@iconify/react';
-
-import Link from '@mui/material/Link';
 type ImageProps = {
   src: string;
   alt?: string;
@@ -344,9 +343,9 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
             width: 1,
             height: '1px',
           }}
-        ></Box>
+         />
 
-        <Box display="flex" gap={2} width="100%" justifyContent="flex-end" alignItems={'center'}>
+        <Box display="flex" gap={2} width="100%" justifyContent="flex-end" alignItems="center">
           {member.socialLinks.map((link, index) => (
             <Link
               key={index}

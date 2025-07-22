@@ -2,21 +2,20 @@
 
 import * as React from 'react';
 import { Icon } from '@iconify/react';
+import { useTranslate } from '@/locales';
 
 import { styled } from '@mui/material/styles';
 import { Accordion as MuiAccordion } from '@mui/material';
 import {
   Box,
   Stack,
+  Button,
   Container,
   Typography,
   AccordionDetails,
   AccordionSummary,
-  Button,
   type ButtonProps,
 } from '@mui/material';
-
-import { useTranslate } from '@/locales';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */

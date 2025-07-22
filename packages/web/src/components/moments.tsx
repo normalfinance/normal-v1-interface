@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
+import { useTranslate } from '@/locales';
 
 import { Box, Container, Typography } from '@mui/material';
-import { useTranslate } from '@/locales';
 
 type ImageProps = {
   url?: string;

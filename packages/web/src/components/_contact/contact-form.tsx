@@ -3,12 +3,10 @@
 import Link from 'next/link';
 import * as React from 'react';
 import { Icon } from '@iconify/react';
-
 import { useTranslate } from '@/locales';
 
-import { Box, Grid, Container, Typography, Button, type ButtonProps } from '@mui/material';
-
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
+import { Box, Grid, Button, Container, Typography } from '@mui/material';
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */

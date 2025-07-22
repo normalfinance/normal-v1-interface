@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Icon } from '@iconify/react';
+import { useTranslate } from '@/locales';
 
 import Masonry from '@mui/lab/Masonry';
 import {
@@ -9,12 +10,11 @@ import {
   Paper,
   Stack,
   Avatar,
+  Button,
   Container,
   Typography,
-  Button,
   type ButtonProps,
 } from '@mui/material';
-import { useTranslate } from '@/locales';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
