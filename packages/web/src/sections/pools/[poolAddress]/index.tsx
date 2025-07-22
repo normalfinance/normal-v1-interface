@@ -1,13 +1,15 @@
 'use client';
 
-import type { ExplorerChartData } from '@/components/_pool-page-components';
+import type { PoolTxRow } from '@/types/pools';
+import type { events } from '@normalfinance/types';
 
-import { usePool } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { fPercent } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fPercent, fCurrencyCompact } from '@/utils/format-number';
-import { createChartData } from '@/utils/portfolio-value-chart-series';
+import { usePool, usePoolEvents, usePoolPriceChart } from '@/hooks';
+// import { usePoolPriceChart } from '@/hooks/stellar/events/use-pool-price-chart';
+// import { usePoolPriceChartv2 } from '@/hooks/stellar/events/use-pool-price-chart-v2';
 
 import { Alert, Stack, Grid2, useTheme, Typography, CircularProgress } from '@mui/material';
 
@@ -15,53 +17,67 @@ import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
 import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-transactions-table';
 
+function convertToPoolTxRow(event: events.PoolEvent): PoolTxRow {
+  switch (event.type) {
+    case 'deposit_liquidity':
+      return {
+        type: 'Deposit',
+        tokenAAmount: Number(event.amount) / 1e6,
+        tokenBAmount: 0,
+        user: event.user,
+        timestamp: event.timestamp || '',
+        txHash: event.txHash,
+      };
+
+    case 'withdraw_liquidity':
+      return {
+        type: 'Withdraw',
+        tokenAAmount: Number(event.amount) / 1e6,
+        tokenBAmount: 0,
+        user: event.user,
+        timestamp: event.timestamp || '',
+        txHash: event.txHash,
+      };
+
+    case 'swap': {
+      const isBuy = event.direction === 'buy';
+      return {
+        type: isBuy ? 'Buy' : 'Sell',
+        tokenAAmount: isBuy ? Number(event.inAmount) / 1e6 : Number(event.outAmount) / 1e6,
+        tokenBAmount: isBuy ? Number(event.outAmount) / 1e6 : Number(event.inAmount) / 1e6,
+        user: event.user,
+        timestamp: event.timestamp || '',
+        txHash: event.txHash,
+      };
+    }
+
+    default:
+      throw new Error(`Unsupported pool event type: ${event.type}`);
+  }
+}
+
 export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const theme = useTheme();
   const { t } = useTranslate();
 
-  const {
-    loading: loadingPool,
-    error: poolError,
-    pool,
-    recentTransactions,
-  } = usePool(poolAddress, 10);
+  const { loading, error, pool } = usePool(poolAddress);
+  const { events } = usePoolEvents(poolAddress);
+  const { chartData } = usePoolPriceChart(poolAddress);
 
-  // TODO:
-  // Price data samples
-  const priceData24h = Array.from({ length: 24 }, (_, i) => 1000 + i * 5);
-  const priceData7d = Array.from({ length: 7 }, (_, i) => 1100 + i * 20);
-  const priceData30d = Array.from({ length: 31 }, (_, i) => 1050 + i * 10);
-  const priceData12m = Array.from({ length: 12 }, (_, i) => 950 + i * 50);
+  // const sum = chartData.volume?.['24h']?.series[0].data;
 
-  // Volume data samples
-  const volumeData24h = Array.from({ length: 24 }, (_, i) => 5000 + i * 100);
-  const volumeData7d = Array.from({ length: 7 }, (_, i) => 10000 + i * 200);
-  const volumeData30d = Array.from({ length: 31 }, (_, i) => 15000 + i * 150);
-  const volumeData12m = Array.from({ length: 12 }, (_, i) => 20000 + i * 500);
+  const rows = events
+    .map(convertToPoolTxRow)
+    .sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
 
-  const poolChartData: ExplorerChartData = {
-    price: {
-      '24h': createChartData('24h', priceData24h, 8),
-      '7d': createChartData('7d', priceData7d, 7),
-      '30d': createChartData('30d', priceData30d, 8),
-      '12m': createChartData('12m', priceData12m, 12),
-    },
-    volume: {
-      '24h': createChartData('24h', volumeData24h, 8),
-      '7d': createChartData('7d', volumeData7d, 7),
-      '30d': createChartData('30d', volumeData30d, 8),
-      '12m': createChartData('12m', volumeData12m, 12),
-    },
-  };
-
-  if (loadingPool) {
+  if (loading) {
     <CircularProgress />;
   }
 
   if (!poolAddress || pool == undefined) {
     return (
       <DashboardContent maxWidth="xl">
-        <Alert severity="info">{`The pool you're looking for doesn't exist.`}</Alert>
+        <Alert severity="info">{t("The pool you're looking for doesn't exist.")}</Alert>
       </DashboardContent>
     );
   }
@@ -80,7 +96,6 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 8 }}>
           <PoolChart
-            id="portfolio_value"
             pairInfo={{
               tokenA: {
                 name: pool.pool_response.pool.base_asset,
@@ -104,8 +119,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
               tokenUSDValue: '$2,289.11',
             }}
             performance={{ percentageChange: 0 }}
-            legendValues={[{ title: 'Price', number: 7334, formatter: fCurrencyCompact }]}
-            chart={poolChartData}
+            chart={chartData}
             color={theme.palette.primary.main}
           />
         </Grid2>
@@ -135,7 +149,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
           <PoolTransactionsTable
             baseTokenSymbol={pool.pool_response.pool.base_asset}
             quoteTokenSymbol={pool.pool_response.pool.quote_asset}
-            rows={recentTransactions ?? []}
+            rows={rows}
           />
         </Grid2>
       </Grid2>

@@ -33,7 +33,6 @@ export default function InsuranceView() {
   const { loading, error, buffer } = useBuffer();
 
   const { loading: loadingPrice, error: priceError, price: xlmPrice } = useOracle('XLM');
-  console.log(xlmPrice);
 
   // Stat card data array
   const statCardsData: StatCardData[] = [
