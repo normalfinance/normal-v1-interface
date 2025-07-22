@@ -3,6 +3,7 @@
 import type { IMarketTableFilters } from '@/types/marketTable';
 import type { TableHeadCellProps } from '@/components/template/table';
 
+import { useState } from 'react';
 import { useSetState } from 'minimal-shared/hooks';
 
 import { Card, Table, TableBody } from '@mui/material';
@@ -38,7 +39,8 @@ const TABLE_HEAD: HeadCell[] = [
   { id: 'apr', label: 'Pool APR', align: 'left' },
   { id: 'volume1d', label: '1D vol', align: 'left' },
   { id: 'volume30d', label: '30D vol', align: 'left' },
-  { id: 'ratio', label: '1D vol/TVL', width: 120, align: 'center' },
+  { id: 'ratio', label: '1D vol/TVL', width: 120, align: 'left' },
+  { id: '', label: '' },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -56,6 +58,10 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
 
   /* ----- full dataset --------------------------------------------------- */
   const tableData = pools;
+
+  useEffect(() => {
+    setTableData(pools);
+  }, [pools]);
 
   /* ----- search filter state ------------------------------------------- */
   const filters = useSetState<IMarketTableFilters>({
