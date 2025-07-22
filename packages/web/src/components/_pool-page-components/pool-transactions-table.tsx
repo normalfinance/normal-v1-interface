@@ -4,6 +4,9 @@ import type { TxType, PoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
 import React, { useMemo, useState } from 'react';
+import { fShortenNumber } from '@/utils/format-number';
+import { fTruncate } from '@normalfinance/utils/build/format';
+import { createStellarExpertUrl } from '@/utils/transactions.utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -45,7 +48,7 @@ function ago(sec: number) {
 // Types
 // ----------------------------------------------------------------
 type Order = 'asc' | 'desc' | undefined;
-type ColumnKey = 'timestamp' | 'quoteValue' | 'baseValue' | 'wallet';
+type ColumnKey = 'timestamp' | 'tokenAAmount' | 'tokenBAmount' | 'user';
 
 // ----------------------------------------------------------------------
 
@@ -80,7 +83,7 @@ export const PoolTransactionsTable: React.FC<{
       return 0;
     });
     // special case: wallet grouping (just keeps equal wallets adjacent)
-    return orderBy === 'wallet' ? sorted : sorted;
+    return orderBy === 'user' ? sorted : sorted;
   }, [filtered, order, orderBy]);
 
   // -------------------------------------------------------------------
@@ -152,7 +155,7 @@ export const PoolTransactionsTable: React.FC<{
                   </Menu>
                 </TableCell>
 
-                {(['baseValue', 'quoteValue'] as const).map((key) => (
+                {(['tokenAAmount', 'tokenBAmount'] as const).map((key) => (
                   <TableCell
                     key={key}
                     align="right"
@@ -170,14 +173,14 @@ export const PoolTransactionsTable: React.FC<{
                         },
                       }}
                     >
-                      {key === 'quoteValue' ? quoteTokenSymbol : baseTokenSymbol}
+                      {key === 'tokenBAmount' ? quoteTokenSymbol : baseTokenSymbol}
                     </TableSortLabel>
                   </TableCell>
                 ))}
 
                 <TableCell
-                  sortDirection={orderBy === 'wallet' ? order : false}
-                  onClick={() => toggleSort('wallet')}
+                  sortDirection={orderBy === 'user' ? order : false}
+                  onClick={() => toggleSort('user')}
                   sx={{ cursor: 'pointer' }}
                 >
                   <Typography variant="subtitle2">{t('Wallet')}</Typography>
@@ -189,17 +192,26 @@ export const PoolTransactionsTable: React.FC<{
               {loading ? (
                 <TableSkeleton rowCount={8} cellCount={5} />
               ) : (
-                ordered.map((row, idx) => (
-                  <TableRow hover key={idx}>
-                    <TableCell>
-                      <Chip label={row.type} color={typeColor[row.type]} size="small" />
-                    </TableCell>
-                    <TableCell align="right">{row.baseValue.toLocaleString()}</TableCell>
-                    <TableCell align="right">{row.quoteValue.toFixed(3)}</TableCell>
-                    <TableCell>{row.wallet}</TableCell>
-                    <TableCell>{ago(row.timestamp)}</TableCell>
-                  </TableRow>
-                ))
+                ordered.map((row, idx) => {
+                  const stellarExpertUrl = createStellarExpertUrl('tx', row.txHash);
+
+                  return (
+                    <TableRow
+                      hover
+                      key={idx}
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+                    >
+                      <TableCell>{row.timestamp ? ago(Number(row.timestamp)) : ''}</TableCell>
+                      <TableCell>
+                        <Chip label={row.type} color={typeColor[row.type]} size="small" />
+                      </TableCell>
+                      <TableCell align="right">{fShortenNumber(row.tokenAAmount)}</TableCell>
+                      <TableCell align="right">{fShortenNumber(row.tokenBAmount)}</TableCell>
+                      <TableCell>{fTruncate(row.user, 15)}</TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
