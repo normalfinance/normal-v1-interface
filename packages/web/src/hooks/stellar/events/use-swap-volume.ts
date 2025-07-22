@@ -19,7 +19,6 @@ type SwapVolumeStats = Record<
   ChartTimeframeKey,
   {
     volume: number;
-    trades: number;
   }
 >;
 
@@ -59,7 +58,7 @@ export function useSwapVolume(): ReturnType {
         .eq('contract_id', POOL_ROUTER_CONTRACT_ID)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
-        .order('timestamp', { ascending: false });
+        .order('id', { ascending: false });
 
       if (e) {
         Sentry.captureException(e);
@@ -84,8 +83,7 @@ export function useSwapVolume(): ReturnType {
         const [inAmount, outAmount] = parseTradeAmounts(row.data);
         if (inAmount === null || outAmount === null) continue;
 
-        result.volume += outAmount;
-        result.trades += 1;
+        result[timeframe!].volume += outAmount;
       }
 
       return result;
@@ -111,7 +109,17 @@ function parseTradeAmounts(data: any): [number | null, number | null] {
 
 function emptyStats(): SwapVolumeStats {
   return {
-    volume: 0,
-    trades: 0,
+    '24h': {
+      volume: 0,
+    },
+    '7d': {
+      volume: 0,
+    },
+    '30d': {
+      volume: 0,
+    },
+    '12m': {
+      volume: 0,
+    },
   };
 }

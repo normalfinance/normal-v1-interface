@@ -48,8 +48,8 @@ export function InsuranceFundEventsTableCard({ events }: Props) {
                 >
                   <TableCell>{event.action}</TableCell>
                   <TableCell align="right">{event.amount}</TableCell>
-                  <TableCell align="right">{event.total_if_shares_before}</TableCell>
-                  <TableCell align="right">{event.total_if_shares_after}</TableCell>
+                  <TableCell align="right">{event.totalIfSharesBefore}</TableCell>
+                  <TableCell align="right">{event.totalIfSharesAfter}</TableCell>
                   <TableCell align="right">{fTruncate(event.user, 15)}</TableCell>
                   <TableCell align="right">{event.timestamp}</TableCell>
                 </TableRow>

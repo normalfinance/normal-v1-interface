@@ -1,7 +1,5 @@
 'use client';
 
-import type { PoolTxRow } from '@/types/pools';
-
 import { constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolContract, type PoolRouterContract } from '@normalfinance/contracts';
@@ -12,7 +10,6 @@ interface ReturnType {
   error: any | null;
   loading: boolean;
   pool: PoolRouterContract.PoolInfo | undefined;
-  recentTransactions: PoolTxRow[] | undefined;
   fetchPool: () => void;
 }
 

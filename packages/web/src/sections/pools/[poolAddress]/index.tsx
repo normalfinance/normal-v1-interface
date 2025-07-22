@@ -25,7 +25,7 @@ function convertToPoolTxRow(event: events.PoolEvent): PoolTxRow {
         tokenAAmount: Number(event.amount) / 1e6,
         tokenBAmount: 0,
         user: event.user,
-        timestamp: event.timestamp,
+        timestamp: event.timestamp || '',
         txHash: event.txHash,
       };
 
@@ -35,7 +35,7 @@ function convertToPoolTxRow(event: events.PoolEvent): PoolTxRow {
         tokenAAmount: Number(event.amount) / 1e6,
         tokenBAmount: 0,
         user: event.user,
-        timestamp: event.timestamp,
+        timestamp: event.timestamp || '',
         txHash: event.txHash,
       };
 
@@ -46,7 +46,7 @@ function convertToPoolTxRow(event: events.PoolEvent): PoolTxRow {
         tokenAAmount: isBuy ? Number(event.inAmount) / 1e6 : Number(event.outAmount) / 1e6,
         tokenBAmount: isBuy ? Number(event.outAmount) / 1e6 : Number(event.inAmount) / 1e6,
         user: event.user,
-        timestamp: event.timestamp,
+        timestamp: event.timestamp || '',
         txHash: event.txHash,
       };
     }
