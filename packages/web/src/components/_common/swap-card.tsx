@@ -1,5 +1,6 @@
 import type { CardProps } from '@mui/material';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
@@ -18,6 +19,7 @@ import { Iconify } from '@/components/template/iconify';
 
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
+import { WalletGate } from './wallet-gate';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
@@ -25,9 +27,10 @@ import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];
   swapFeeInfo?: SwapFeeInfo;
+  queryParams?: SwapQueryParams;
 }
 
-const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
+const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -73,6 +76,35 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
 
   // 5) Example of how much buyToken the user might get
   const [buyAmount, setBuyAmount] = useState<number>(0);
+
+  // Initialize from query params
+  useEffect(() => {
+    if (!queryParams) return;
+
+    // Set tokens based on query params
+    if (queryParams.token_in && tokens.length > 0) {
+      const sellTokenFromQuery = tokens.find(
+        (tkn1) => tkn1.symbol.toLowerCase() === queryParams.token_in?.toLowerCase()
+      );
+      if (sellTokenFromQuery) {
+        setSellToken(sellTokenFromQuery);
+      }
+    }
+
+    if (queryParams.token_out && tokens.length > 0) {
+      const buyTokenFromQuery = tokens.find(
+        (tkn2) => tkn2.symbol.toLowerCase() === queryParams.token_out?.toLowerCase()
+      );
+      if (buyTokenFromQuery) {
+        setBuyToken(buyTokenFromQuery);
+      }
+    }
+
+    // Set amount
+    if (queryParams.in_amount) {
+      setAmount(queryParams.in_amount);
+    }
+  }, [queryParams, tokens]);
 
   // 6) Open/close the token picker
   const handleOpen = () => setOpen(true);
@@ -326,6 +358,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
     }
   }, [sellToken?.name, buyToken, amount, buyAmount]);
 
+  // Main button with multiple states
+  const persist = usePersistStore();
+  const isConnected = !!persist.wallet.address;
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
       <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -339,7 +375,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
             width: '44px',
             height: '44px',
             transform: 'translate(-50%, -50%)',
-            borderRadius: '6px',
+            borderRadius: '8px',
             overflow: 'hidden',
             zIndex: 2,
             cursor: 'pointer',
@@ -351,7 +387,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
             sx={{
               width: '100%',
               height: '100%',
-              borderRadius: 'inherit',
+              borderRadius: '8px',
               backgroundColor:
                 theme.palette.mode === 'light' ? theme.palette.grey[300] : theme.palette.grey[900],
               transition: 'background-color 0.3s',
@@ -389,7 +425,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
             padding: theme.spacing(2),
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            borderRadius: '8px',
+            borderRadius: '20px',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -402,6 +438,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
               minWidth: 0,
               alignItems: 'flex-start',
               overflow: 'hidden',
+              textAlign: 'left',
             }}
           >
             <Box
@@ -536,8 +573,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
                     </Typography>
                   </Box>
                   <Button
-                    variant="soft"
-                    color="success"
+                    variant="contained"
                     size="small"
                     onClick={handleMaxClick}
                     disabled={isLoading}
@@ -547,6 +583,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
                       p: 0,
                       height: '24px',
                       minWidth: '36px',
+                      backgroundColor: 'rgba(148,123,255,0.29)',
+                      color: '#6E4BFF',
+                      '&:hover': {
+                        backgroundColor: 'rgba(148,123,255,0.20)',
+                      },
                     }}
                   >
                     {t('Max')}
@@ -575,10 +616,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
             padding: theme.spacing(2),
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderRadius: '8px',
+            borderRadius: '20px',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: theme.palette.background.paper,
             overflow: 'hidden',
+            textAlign: 'left',
           }}
         >
           <Box
@@ -665,18 +707,30 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], ...other }) => {
         </Box>
       </Box>
       {/* Main button with multiple states */}
-      <Box>
+      {isConnected ? (
         <Button
           fullWidth
-          variant="soft"
-          color="success"
+          variant="contained" // use a supported variant
           size="large"
           onClick={handleMainButtonClick}
           disabled={isLoading}
+          sx={{
+            backgroundColor: 'rgba(148,123,255,0.29)',
+            color: '#6E4BFF',
+            '&:hover': {
+              backgroundColor: 'rgba(148,123,255,0.20)',
+            },
+            borderRadius: '20px',
+          }}
         >
           {getButtonLabel()}
         </Button>
-      </Box>
+      ) : (
+        <WalletGate buttonText="Connect Wallet to Swap" fullWidth variant="contained">
+          {null}
+        </WalletGate>
+      )}
+
       {/* Additional box with fee info */}
       {quoteFetched && !isLoading && (
         <FeeInfoAccordion

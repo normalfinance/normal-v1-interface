@@ -1,20 +1,27 @@
+import 'react-loading-skeleton/dist/skeleton.css';
+
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import React, { useEffect } from 'react';
+import Skeleton from 'react-loading-skeleton';
 import { useTabs } from 'minimal-shared/hooks';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useAppStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
 import { Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
+import ZealyHighlight from './zealy/zealy-highlight';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
@@ -52,6 +59,10 @@ export interface TokenActionCardProps extends CardProps {
   enabledTabs?: TokenActionKey[];
 
   cashBalance?: number;
+  /** Show skeleton loading state */
+  loading?: boolean;
+  /** Query parameters for pre-populating swap form */
+  queryParams?: SwapQueryParams;
 }
 
 // ----------------------------------------------------------------------
@@ -65,6 +76,8 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   swapFeeInfo,
   enabledTabs,
   cashBalance,
+  loading,
+  queryParams,
   ...other
 }) => {
   const theme = useTheme();
@@ -95,7 +108,16 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   const renderTabBody = () => {
     switch (tabs.value) {
       case 'swap':
-        return <SwapCard tokensList={store.tokens} swapFeeInfo={swapFeeInfo} />;
+        return (
+          <Box sx={{ position: 'relative' }}>
+            <SwapCard
+              tokensList={store.tokens}
+              swapFeeInfo={swapFeeInfo}
+              queryParams={queryParams}
+            />
+            <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />
+          </Box>
+        );
       case 'send':
         return <SendCard tokensList={store.tokens} networkCost={0} />;
       case 'buy':
@@ -122,11 +144,60 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
     getAllTokens();
   }, []);
 
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 200,
+          maxWidth: '100%',
+          minHeight: 380,
+          maxHeight: 800,
+          p: 1.5,
+          gap: 0.5,
+          borderRadius: 2,
+          ...sx,
+        }}
+        {...other}
+      >
+        <Stack spacing={2}>
+          {/* Header if title exists */}
+          {title && (
+            <Box sx={{ mb: 1 }}>
+              <Skeleton height={28} width="60%" />
+              {subheader && <Skeleton height={16} width="80%" />}
+            </Box>
+          )}
+
+          {/* Tabs */}
+          <Stack direction="row" spacing={1}>
+            <Skeleton height={34} width={60} />
+            <Skeleton height={34} width={60} />
+            <Skeleton height={34} width={60} />
+          </Stack>
+
+          {/* Form fields */}
+          <Stack spacing={2} sx={{ mt: 2 }}>
+            <Skeleton height={56} />
+            <Skeleton height={56} />
+            <Stack direction="row" spacing={1}>
+              <Skeleton height={20} width="30%" />
+              <Skeleton height={20} width="40%" />
+            </Stack>
+            <Skeleton height={48} />
+          </Stack>
+        </Stack>
+      </Card>
+    );
+  }
+
   return (
     <Card
       sx={{
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
         minWidth: 200,
         maxWidth: '100%',
         minHeight: 380,

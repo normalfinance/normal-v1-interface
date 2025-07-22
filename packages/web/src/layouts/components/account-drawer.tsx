@@ -3,14 +3,19 @@
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import axios from 'axios';
+import { paths } from '@/routes/paths';
+import { useSnackbar } from 'notistack';
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
+
 import { useUserActivity } from '@/hooks';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
+import { ZEALY_QUEST_IDS } from '@/global-config';
+import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import useNativeTokenBalance from '@/hooks/stellar/use-native-token-balance';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
@@ -29,6 +34,7 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
+import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
@@ -99,6 +105,10 @@ function WalletDisconnected({
   const [loading, setLoading] = useState(true);
   const { t } = useTranslate();
 
+  const handleWalletHelp = () => {
+    window.open(`${paths.docs}/getting-started/guides`, '_blank', 'noopener');
+  };
+
   useEffect(() => {
     (async () => {
       const ok: Connector[] = [];
@@ -127,26 +137,47 @@ function WalletDisconnected({
         alignItems: 'start',
       }}
     >
-      <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
-        {t('Connect your wallet')}
-      </Typography>
+      <Box sx={{ position: 'relative' }}>
+        <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
+          {t('Connect your wallet')}
+        </Typography>
+        <ZealyHighlight
+          questId={ZEALY_QUEST_IDS.connectWallet}
+          position={{ top: -22, right: -32 }}
+        />
+      </Box>
       {loading ? (
         <CircularProgress />
       ) : (
-        <Box
-          gap={2}
-          width="100%"
-          sx={{ backgroundColor: theme.palette.grey[200], p: 1, borderRadius: 1.5 }}
-        >
-          {[...allowed, ...disallowed].map((c) => (
-            <WalletOption
-              key={c.id}
-              connector={c}
-              allowed={allowed.includes(c)}
-              onClick={() => allowed.includes(c) && onSelect(c)}
-            />
-          ))}
-        </Box>
+        <>
+          {/* How to create a wallet? */}
+          <Button
+            fullWidth
+            variant="soft"
+            color="secondary"
+            size="large"
+            startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
+            onClick={handleWalletHelp}
+            sx={{ mb: 2 }}
+          >
+            {t('Need help creating a wallet?')}
+          </Button>
+          <Box
+            gap={2}
+            width="100%"
+            sx={{ backgroundColor: theme.palette.grey[200], p: 1, borderRadius: 1.5 }}
+          >
+            {/* Wallet options */}
+            {[...allowed, ...disallowed].map((c) => (
+              <WalletOption
+                key={c.id}
+                connector={c}
+                allowed={allowed.includes(c)}
+                onClick={() => allowed.includes(c) && onSelect(c)}
+              />
+            ))}
+          </Box>
+        </>
       )}
     </Box>
   );
@@ -156,11 +187,43 @@ function WalletDisconnected({
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
-  const { data } = useNativeTokenBalance();
+  const { t } = useTranslate();
+  const { enqueueSnackbar } = useSnackbar();
+
+  // const { data } = useNativeTokenBalance();
   // const { tokens } = useUserTokens();
   // const { positions } = useLPTokens();
 
   const { loading, error, recentActivity } = useUserActivity();
+
+  const [faucetLoading, setFaucetLoading] = useState(false);
+  const [faucetOff, setFaucetOff] = useState(false);
+
+  const handleFaucetRequest = useCallback(async () => {
+    try {
+      setFaucetLoading(true);
+      const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
+
+      if (data) {
+        enqueueSnackbar(t('Account funded!'), { variant: 'success' });
+      }
+    } catch (error) {
+      console.log(error);
+
+      if (axios.isAxiosError(error)) {
+        if (error?.response?.data.detail === 'account already funded to starting balance') {
+          setFaucetOff(true);
+          enqueueSnackbar(t('Account already funded'), { variant: 'warning' });
+        }
+      }
+    } finally {
+      setFaucetLoading(false);
+    }
+  }, [address, enqueueSnackbar, t]);
+
+  if (!address) {
+    return null;
+  }
 
   return (
     <Box
@@ -176,13 +239,20 @@ function WalletConnected({ address }: { address: string }) {
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
-      <ConnectedWallet
-        balance={Number(data?.data) || 0}
-        percentageChange={0}
-        tokens={[]}
-        positions={[]}
-        activity={recentActivity}
-      />
+      <Button
+        fullWidth
+        variant="soft"
+        color="info"
+        size="large"
+        startIcon={<Iconify icon="eva:droplet-fill" />}
+        onClick={handleFaucetRequest}
+        sx={{ my: 1 }}
+        loading={faucetLoading}
+        disabled={faucetOff}
+      >
+        {t('Get testnet XLM')}
+      </Button>
+      <ConnectedWallet balance={0} percentageChange={0} tokens={[]} positions={[]} activity={[]} />
     </Box>
   );
 }
@@ -219,6 +289,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address;
 
+  const isConnected = !!connectedAddress;
+
   useEffect(() => {
     if (connectedAddress) {
       Sentry.setUser({ id: connectedAddress });
@@ -226,9 +298,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
       Sentry.setUser(null);
     }
   }, [connectedAddress]);
-
-  const [isConnected, setIsConnected] = useState(connectedAddress != '');
-  // console.log(isConnected);
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
@@ -303,7 +372,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <Tooltip title="Disconnect">
               <IconButton
                 onClick={() => {
-                  setIsConnected(false);
                   disconnect();
                   onClose();
                 }}
@@ -315,8 +383,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
           )}
         </Box>
         <Scrollbar>
-          {isConnected ? (
-            <WalletConnected address={connectedAddress!} />
+          {isConnected && connectedAddress ? (
+            <WalletConnected address={connectedAddress} />
           ) : (
             <WalletDisconnected
               connectors={connectors}

@@ -24,7 +24,7 @@ export default function ExploreView() {
 
   const store = useAppStore();
 
-  const { pools } = usePools();
+  const { pools, loading: poolsLoading } = usePools();
   const { totalTVL } = useTotalTVL();
   const { getSwapVolume } = useSwapVolume();
 
@@ -74,7 +74,7 @@ export default function ExploreView() {
         <ExploreStats stats={stats} />
       </Grid2>
       <Grid2 sx={{ mt: 3 }}>
-        <ExplorePoolsTable pools={formattedPools} />
+        <ExplorePoolsTable pools={formattedPools} loading={poolsLoading} />
       </Grid2>
     </DashboardContent>
   );

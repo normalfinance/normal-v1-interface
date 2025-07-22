@@ -1,8 +1,12 @@
+import 'react-loading-skeleton/dist/skeleton.css';
+
 import type { CardProps } from '@mui/material/Card';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -13,8 +17,10 @@ import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
+import { WalletGate } from '@/components/_common/wallet-gate';
 
 import SwapCard from '../_common/swap-card';
+import ZealyHighlight from '../_common/zealy/zealy-highlight';
 
 // ----------------------------------------------------------------------
 // ── Prop types ---------------------------------------------------------
@@ -42,6 +48,7 @@ export type PoolsAprProps = CardProps & {
   poolBalances: [PoolBalance, PoolBalance]; // exactly two items
   stats: PoolStat[]; // any length (e.g. 3-4)
   actionButtons?: PoolActionButton[];
+  loading?: boolean;
 };
 
 // ----------------------------------------------------------------------
@@ -50,6 +57,7 @@ export function PoolOverview({
   totalAprPercentage,
   poolBalances,
   stats,
+  loading,
   sx,
   ...other
 }: PoolsAprProps) {
@@ -63,18 +71,67 @@ export function PoolOverview({
       label: 'Swap',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => setShowSwap((prev) => !prev),
+      quest: <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />,
     },
     {
       label: 'Add liquidity',
       icon: 'mingcute:add-line',
       href: '/positions/create',
+      quest: <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />,
     },
   ];
 
-  const [balA, balB] = poolBalances;
+  const [balA, balB] = poolBalances || [
+    { coinShortName: '', value: 0 },
+    { coinShortName: '', value: 0 },
+  ];
   const total = balA.value + balB.value || 1;
   const pctA = balA.value / total;
   const pctB = balB.value / total;
+
+  if (loading) {
+    return (
+      <Card
+        sx={[
+          { display: 'flex', flexDirection: 'column', gap: 2, p: '8px' },
+          ...(Array.isArray(sx) ? sx : [sx]),
+        ]}
+        {...other}
+      >
+        {/* Action buttons skeleton */}
+        <Stack direction="row" spacing={1} width="100%">
+          <Skeleton height={48} width="50%" />
+          <Skeleton height={48} width="50%" />
+        </Stack>
+
+        {/* APR section skeleton */}
+        <Stack spacing={1} sx={{ textAlign: 'center', py: 2 }}>
+          <Skeleton height={20} width="40%" style={{ margin: '0 auto' }} />
+          <Skeleton height={32} width="30%" style={{ margin: '0 auto' }} />
+        </Stack>
+
+        {/* Balance chart skeleton */}
+        <Stack spacing={2}>
+          <Skeleton height={20} width="50%" />
+          <Skeleton height={8} width="100%" />
+          <Stack direction="row" justifyContent="space-between">
+            <Skeleton height={16} width="30%" />
+            <Skeleton height={16} width="30%" />
+          </Stack>
+        </Stack>
+
+        {/* Stats skeleton */}
+        <Stack spacing={2}>
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <Stack key={idx} direction="row" justifyContent="space-between">
+              <Skeleton height={16} width="40%" />
+              <Skeleton height={16} width="30%" />
+            </Stack>
+          ))}
+        </Stack>
+      </Card>
+    );
+  }
 
   return (
     <Card
@@ -86,35 +143,43 @@ export function PoolOverview({
     >
       <Stack direction="row" spacing={1} width="100%">
         {actionButtons.map((btn, idx) => (
-          <Button
+          <WalletGate
             key={idx}
+            buttonText={`Connect Wallet to ${btn.label}`}
             fullWidth
             variant="soft"
             color="success"
-            size="large"
-            onClick={btn.onClick}
-            href={btn.href}
           >
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '2px',
-              }}
+            <Button
+              fullWidth
+              variant="soft"
+              color="success"
+              size="large"
+              onClick={btn.onClick}
+              href={btn.href}
             >
-              <Iconify
-                icon={btn.icon}
-                width={14}
+              <Box
                 sx={{
-                  color: theme.palette.primary.dark,
-                  cursor: 'pointer',
-                  rotate: '-90deg',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '2px',
                 }}
-              />
-              {btn.label}
-            </Box>
-          </Button>
+              >
+                <Iconify
+                  icon={btn.icon}
+                  width={14}
+                  sx={{
+                    color: theme.palette.primary.dark,
+                    cursor: 'pointer',
+                    rotate: '-90deg',
+                  }}
+                />
+                {btn.label}
+              </Box>
+            </Button>
+            {btn.quest}
+          </WalletGate>
         ))}
       </Stack>
       {/* NEED TO ADD TOKENLIST */}

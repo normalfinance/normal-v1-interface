@@ -6,21 +6,21 @@
   "invoice": "Faktura",
   "blog": {
     "title": "Blogg",
-    "caption": "Egendefinerte hurtigtaster."
+    "caption": "Custom keyboard shortcuts."
   },
-  "subheader": "Underoverskrift",
+  "subheader": "Underordnet hode",
   "Overview": "Oversikt",
-  "Trade": "Handle",
-  "Spot": "Spot",
+  "Trade": "Byttehandel",
+  "Spot": "Punkt",
   "Indexes": "Indekser",
   "Earn": "Tjen",
   "Yield": "Avkastning",
-  "LP": "LP",
+  "LP": "l.grad",
   "Rewards": "Belønninger",
-  "Referrals": "Henvisninger",
-  "Analytics": "Analyse",
+  "Referrals": "Vervinger",
+  "Analytics": "Analyser",
   "More": "Mer",
-  "Governance": "Styring",
-  "Help & Feedback": "Hjelp og tilbakemelding",
-  "Docs": "Dokumentasjon"
+  "Governance": "Styresett",
+  "Help & Feedback": "Hjelp & tilbakemelding",
+  "Docs": "Dokumenter"
 }

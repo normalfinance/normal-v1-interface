@@ -1,3 +1,5 @@
+import 'react-loading-skeleton/dist/skeleton.css';
+
 import type { TxType, PoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
@@ -23,6 +25,8 @@ import {
   TableSortLabel,
 } from '@mui/material';
 
+import { TableSkeleton } from '@/components/template/table';
+
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Buy: 'success',
   Sell: 'error',
@@ -40,6 +44,9 @@ function ago(sec: number) {
   return `${Math.floor(diff / 86_400)}d`;
 }
 
+// ----------------------------------------------------------------
+// Types
+// ----------------------------------------------------------------
 type Order = 'asc' | 'desc' | undefined;
 type ColumnKey = 'timestamp' | 'tokenAAmount' | 'tokenBAmount' | 'wallet';
 
@@ -49,7 +56,8 @@ export const PoolTransactionsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
   rows: PoolTxRow[];
-}> = ({ baseTokenSymbol, quoteTokenSymbol, rows }) => {
+  loading?: boolean;
+}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, loading }) => {
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -125,7 +133,7 @@ export const PoolTransactionsTable: React.FC<{
                     sx={{ cursor: 'pointer' }}
                     onClick={(e) => setTypeAnchor(e.currentTarget)}
                   >
-                    {t('Type ▾')}
+                    {t('Type')}
                   </Typography>
                   <Menu
                     open={Boolean(typeAnchor)}
@@ -181,7 +189,10 @@ export const PoolTransactionsTable: React.FC<{
             </TableHead>
 
             <TableBody>
-              {ordered.map((row, idx) => {
+              {loading ? (
+                <TableSkeleton rowCount={8} cellCount={5} />
+              ) : (
+                ordered.map((row, idx) => {
                 const stellarExpertUrl = createStellarExpertUrl('tx', row.txHash);
 
                 return (
@@ -200,7 +211,8 @@ export const PoolTransactionsTable: React.FC<{
                     <TableCell>{fTruncate(row.wallet, 15)}</TableCell>
                   </TableRow>
                 );
-              })}
+              })
+              )}
             </TableBody>
           </Table>
         </TableContainer>

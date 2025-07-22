@@ -1,26 +1,26 @@
 {
   "app": "앱",
-  "job": "채용",
+  "job": "직업",
   "user": "사용자",
-  "travel": "여행",
-  "invoice": "인보이스",
+  "travel": "여행하다",
+  "invoice": "송장",
   "blog": {
     "title": "블로그",
-    "caption": "사용자 지정 키보드 단축키."
+    "caption": "사용자 정의 키보드 단축키."
   },
-  "subheader": "소제목",
+  "subheader": "하위 헤더",
   "Overview": "개요",
   "Trade": "거래",
-  "Spot": "현물",
+  "Spot": "점",
   "Indexes": "인덱스",
-  "Earn": "수익 창출",
-  "Yield": "이자 농사",
-  "LP": "LP",
+  "Earn": "벌다",
+  "Yield": "생산하다",
+  "LP": "엘피",
   "Rewards": "보상",
   "Referrals": "추천",
-  "Analytics": "분석",
-  "More": "더보기",
-  "Governance": "거버넌스",
+  "Analytics": "해석학",
+  "More": "더",
+  "Governance": "통치",
   "Help & Feedback": "도움말 및 피드백",
   "Docs": "문서"
 }

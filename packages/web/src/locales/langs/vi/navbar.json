@@ -6,20 +6,20 @@
   "invoice": "Hóa đơn",
   "blog": {
     "title": "Blog",
-    "caption": "Các phím tắt đặc biệt."
+    "caption": "Phím tắt tùy chỉnh."
   },
   "subheader": "Tiêu đề phụ",
   "Overview": "Tổng quan",
-  "Trade": "Giao dịch",
-  "Spot": "Giao ngay",
+  "Trade": "Buôn bán",
+  "Spot": "Điểm",
   "Indexes": "Chỉ số",
-  "Earn": "Kiếm tiền",
-  "Yield": "Lợi suất",
+  "Earn": "Kiếm",
+  "Yield": "Năng suất",
   "LP": "LP",
   "Rewards": "Phần thưởng",
   "Referrals": "Giới thiệu",
   "Analytics": "Phân tích",
-  "More": "Thêm",
+  "More": "Hơn",
   "Governance": "Quản trị",
   "Help & Feedback": "Trợ giúp & Phản hồi",
   "Docs": "Tài liệu"

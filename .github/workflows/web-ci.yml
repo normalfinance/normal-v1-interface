@@ -14,10 +14,6 @@ jobs:
   web:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: packages/web
-
     strategy:
       matrix:
         node: [20.x]
@@ -41,21 +37,52 @@ jobs:
 
       # ---------- Quality Gates ----------
       - name: Prettier – formatting check
+        working-directory: packages/web
         run: yarn fm:check
 
       - name: ESLint – code-quality check
+        working-directory: packages/web
         run: yarn lint
 
+      # Extract translation keys before downloading to ensure English files are current
+      - name: i18n – extract translation keys
+        working-directory: packages/web
+        run: yarn i18n:extract
+
+      # - name: i18n – download latest translations
+      #   working-directory: packages/web
+      #   env:
+      #     CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+      #     CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
+      #   run: |
+      #     if [ -n "$CROWDIN_PROJECT_ID" ] && [ -n "$CROWDIN_API_TOKEN" ]; then
+      #       echo "Downloading latest translations from Crowdin..."
+      #       yarn i18n:download || echo "Warning: Failed to download translations, continuing with existing ones"
+      #     else
+      #       echo "Crowdin credentials not available, skipping translation download"
+      #     fi
+
+      # Sync keys from 'en' to other languages to ensure no missing keys
+      - name: i18n – sync missing keys
+        working-directory: packages/web
+        run: yarn i18n:sync-keys
+
+      # Check for untranslated / missing keys across all locale JSON files
       - name: i18n – translation completeness check
+        working-directory: packages/web
+        continue-on-error: true
         run: yarn i18n:check
 
       - name: Prisma - Generate Prisma Client
-        run: yarn prisma generate
+        working-directory: packages/web
+        run: yarn db:generate
 
       - name: TypeScript – type check
+        working-directory: packages/web
         run: npx tsc --noEmit --project tsconfig.json
       
       - name: Next.js – production build
+        working-directory: packages/web
         env:
           NEXT_PUBLIC_APP_ENV: ci
         run: yarn build

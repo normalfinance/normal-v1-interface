@@ -14,6 +14,7 @@ import {
   emptyRows,
   TableNoData,
   getComparator,
+  TableSkeleton,
   TableEmptyRows,
   TableHeadCustom,
 } from '@/components/template/table';
@@ -46,9 +47,10 @@ const TABLE_HEAD: HeadCell[] = [
 
 export interface ExplorePoolsTableProps {
   pools: ExplorePoolsRow[];
+  loading: boolean;
 }
 
-export function ExplorePoolsTable({ pools }: ExplorePoolsTableProps) {
+export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
   /* ----- table helpers -------------------------------------------------- */
   const table = useTable({ defaultRowsPerPage: 30 });
 
@@ -103,21 +105,27 @@ export function ExplorePoolsTable({ pools }: ExplorePoolsTableProps) {
 
           {/* body ── unchanged */}
           <TableBody>
-            {dataFiltered
-              .slice(
-                table.page * table.rowsPerPage,
-                table.page * table.rowsPerPage + table.rowsPerPage
-              )
-              .map((row, index) => (
-                <ExplorePoolsTableRow key={row.address} row={row} index={index + 1} />
-              ))}
+            {loading ? (
+              <TableSkeleton rowCount={10} cellCount={8} />
+            ) : (
+              <>
+                {dataFiltered
+                  .slice(
+                    table.page * table.rowsPerPage,
+                    table.page * table.rowsPerPage + table.rowsPerPage
+                  )
+                  .map((row, index) => (
+                    <ExplorePoolsTableRow key={row.address} row={row} index={index + 1} />
+                  ))}
 
-            <TableEmptyRows
-              height={56}
-              emptyRows={emptyRows(table.page, table.rowsPerPage, dataFiltered.length)}
-            />
+                <TableEmptyRows
+                  height={56}
+                  emptyRows={emptyRows(table.page, table.rowsPerPage, dataFiltered.length)}
+                />
 
-            <TableNoData notFound={notFound} />
+                <TableNoData notFound={notFound} />
+              </>
+            )}
           </TableBody>
         </Table>
       </Scrollbar>

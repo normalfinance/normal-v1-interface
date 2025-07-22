@@ -79,17 +79,10 @@ export const createWalletActions = (
       // OTHER TOKENS
       const _allApiTokens: any[] = [];
 
-      // USER ADDED TOKENS
-      const _allUserAddedTokens = usePersistStore
-        .getState()
-        .userAddedTokensState.tokens.map((t) => t.id);
-
       const allTokens = _allNormalTokens
-        ? [..._allNormalTokens, ..._allLpTokens, ..._allApiTokens, ..._allUserAddedTokens].map(
-            async (token: string) => {
-              await getState().fetchTokenInfo(token);
-            }
-          )
+        ? [..._allNormalTokens, ..._allLpTokens, ..._allApiTokens].map(async (token: string) => {
+            await getState().fetchTokenInfo(token);
+          })
         : [];
 
       await Promise.all(allTokens);

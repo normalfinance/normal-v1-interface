@@ -1,11 +1,14 @@
 import type { CardProps } from '@mui/material';
 import type { StateToken as Token } from '@normalfinance/types';
 
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { isValidStellarAddress } from '@/utils/address-validator';
 import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -13,6 +16,7 @@ import { Box, Button, InputBase, Typography } from '@mui/material';
 
 import PickToken from './pick-token';
 import SendReview from './send-review';
+import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
 
 interface SendCardProps extends CardProps {
@@ -25,6 +29,7 @@ const DEFAULT_DESTINATION = 'Wallet address or ENS name';
 const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  const { enqueueSnackbar } = useSnackbar();
 
   // State declarations...
   const [sendToken, setSendToken] = useState<Token | null>(
@@ -137,9 +142,17 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
     const label = getButtonLabel();
 
     if (label === 'Send') {
+      if (!isValidStellarAddress(destination)) {
+        enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
+        return;
+      }
       setReviewOpen(true);
     }
   };
+
+  // Main button with multiple states
+  const persist = usePersistStore();
+  const isConnected = !!persist.wallet.address;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1 }} width={1}>
@@ -395,15 +408,21 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
       </Box>
       {/* Main Button */}
       <Box>
-        <Button
-          fullWidth
-          variant="soft"
-          color="success"
-          size="large"
-          onClick={handleMainButtonClick}
-        >
-          {getButtonLabel()}
-        </Button>
+        {isConnected ? (
+          <Button
+            fullWidth
+            variant="soft"
+            color="success"
+            size="large"
+            onClick={handleMainButtonClick}
+          >
+            {getButtonLabel()}
+          </Button>
+        ) : (
+          <WalletGate buttonText="Connect Wallet to Send" fullWidth variant="soft">
+            {null}
+          </WalletGate>
+        )}
       </Box>
       {reviewOpen && (
         <SendReview
