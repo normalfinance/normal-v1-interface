@@ -7,6 +7,7 @@ export default defineConfig({
   expect: {
     timeout: 5000,
   },
+  
   use: {
     baseURL: process.env.PW_BASE_URL || 'http://localhost:8082',
     trace: 'on-first-retry',

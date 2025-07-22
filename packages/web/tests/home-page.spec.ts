@@ -3,29 +3,57 @@ import { test, expect } from '@playwright/test';
 test.describe('Home page', () => {
   test('renders key sections', async ({ page }) => {
     await page.goto('/');
+    await page.waitForURL('/');
+    await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible({
-      timeout: 15_000,
+    await page.getByRole('button', { name: /close/i }).click();
+
+    await expect(
+      page.getByRole('heading', { name: /Instant crypto swaps, finally made Normal/i })
+    ).toBeVisible({
+      timeout: 20000,
     });
 
-    await expect(page.getByRole('button', { name: /^24h$/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: /Customer testimonials/i })).toBeVisible();
+
+    await expect(page.getByRole('heading', { name: /Trusted by thousands/i })).toBeVisible();
+
+    await expect(page.getByRole('heading', { name: /Frequently asked questions/i })).toBeVisible();
+
+    await expect(page.getByRole('heading', { name: /Crypto made normal/i })).toBeVisible();
+
+    await expect(
+      page.getByRole('heading', {
+        name: /Ready to make crypto feel Normal\? Start swapping, investing, and exploring./i,
+      })
+    ).toBeVisible();
   });
 
-  test('allows user to switch portfolio timeframe', async ({ page }) => {
+  test('allows user to switch language', async ({ page }) => {
     await page.goto('/');
+    await page.waitForURL('/');
+    await page.waitForLoadState('networkidle');
 
-    const selectorButton = page.getByText('24h', { exact: true });
+    await page.getByRole('button', { name: /close/i }).click();
 
-    console.log('selectorButton', selectorButton);
-    await selectorButton.waitFor({ state: 'visible', timeout: 20_000 });
+    await expect(
+      page.getByRole('heading', { name: /Instant crypto swaps, finally made Normal/i })
+    ).toBeVisible({
+      timeout: 20000,
+    });
 
-    await selectorButton.click();
+    await page.getByTestId('languages-button').click({ force: true });
 
-    const menuOption = page.getByText('7d', { exact: true });
-    console.log('menuOption', menuOption);
-    await menuOption.waitFor({ state: 'visible', timeout: 10_000 });
-    await menuOption.click();
+    await page.waitForTimeout(500);
 
-    await expect(page.getByRole('button', { name: /^7d$/ })).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('menuitem', { name: /french/i }).click();
+
+    await expect(
+      page.getByRole('heading', {
+        name: /Des échanges instantanés de cryptomonnaies, enfin réalisés Normale/i,
+      })
+    ).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

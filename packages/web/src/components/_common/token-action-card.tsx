@@ -109,7 +109,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
     switch (tabs.value) {
       case 'swap':
         return (
-          <Box sx={{ position: 'relative' }}>
+          <Box data-testid="swap-card" sx={{ position: 'relative' }}>
             <SwapCard
               tokensList={store.tokens}
               swapFeeInfo={swapFeeInfo}
@@ -119,9 +119,11 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           </Box>
         );
       case 'send':
-        return <SendCard tokensList={store.tokens} networkCost={0} />;
+        return <SendCard data-testid="send-card" tokensList={store.tokens} networkCost={0} />;
       case 'buy':
-        return <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} />;
+        return (
+          <BuyCard data-testid="buy-card" tokensList={buyCardTokens} cashBalance={cashBalance} />
+        );
       default:
         return null;
     }
@@ -194,6 +196,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 
   return (
     <Card
+      data-testid="token-action-card"
       sx={{
         display: 'flex',
         flexDirection: 'column',
@@ -243,7 +246,12 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           }}
         >
           {activeTabs.map((tab) => (
-            <Tab key={tab.value} value={tab.value} label={tab.label} />
+            <Tab
+              key={tab.value}
+              value={tab.value}
+              label={tab.label}
+              data-testid={`${tab.value}-tab`}
+            />
           ))}
         </CustomTabsSwapSend>
       )}

@@ -55,3 +55,5 @@ _static
 /public/workbox-*.js.map
 /public/worker-*.js.map
 .yarn/install-state.gz
+
+test-results/
