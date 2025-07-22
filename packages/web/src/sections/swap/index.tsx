@@ -19,8 +19,6 @@ const swapFeeInfo: SwapFeeInfo = {
   maxSlippage: 0.5,
 };
 
-const cashBalance = 1000;
-
 export default function SwapView() {
   const store = useAppStore();
   const { params } = useQueryParams<TokenActionQueryParams>();
@@ -75,7 +73,7 @@ export default function SwapView() {
             <TokenActionCard
               tokensList={store.tokens}
               swapFeeInfo={swapFeeInfo}
-              cashBalance={cashBalance}
+              cashBalance={0}
               queryParams={getCardQueryParams()}
               loading={store.loading}
               enabledTabs={enabledTabs}
