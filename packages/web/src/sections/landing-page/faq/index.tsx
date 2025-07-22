@@ -2,18 +2,21 @@
 
 import * as React from 'react';
 import { Icon } from '@iconify/react';
+import { useTranslate } from '@/locales';
 
 import { styled } from '@mui/material/styles';
 import { Accordion as MuiAccordion } from '@mui/material';
 import {
   Box,
   Stack,
+  Button,
   Container,
   Typography,
   AccordionDetails,
   AccordionSummary,
   type ButtonProps,
 } from '@mui/material';
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -60,41 +63,40 @@ const DEFAULT_QUESTIONS: Question[] = [
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
-const FlatAccordion = styled(MuiAccordion)(({ theme }) => ({
-  boxShadow: 'none !important', // Paper shadow
+const FlatAccordion = styled(MuiAccordion)({
+  boxShadow: 'none !important',
   '&.Mui-expanded': {
-    margin: 0, // kill the extra margin
+    margin: 0,
     boxShadow: 'none !important',
   },
-}));
+});
 
 export const FaqAccordion: React.FC<FaqAccordionProps> = ({
   heading = 'Frequently asked questions',
   description = 'Common questions answered below.',
   questions = [],
   footerHeading = 'Still have questions?',
-  footerDescription = 'Reach out and we’ll get back to you shortly.',
+  footerDescription = 'Check out our Gitbook!',
   button,
   ...sectionProps
-}) => (
-  <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 8, lg: 10 } }} {...sectionProps}>
-    <Container maxWidth="md">
-      {/* ------ Heading block ------ */}
-      <Stack spacing={2} textAlign="center" mb={{ xs: 6, md: 8 }}>
-        <Typography
-          variant="h3"
-          fontWeight={500}
-          sx={{ fontSize: { xs: '2.25rem', md: '3.5rem' } }}
-        >
-          {heading}
-        </Typography>
-      </Stack>
+}) => {
+  const { t } = useTranslate();
 
-      {/* ------ Accordion list ------ */}
-      <Stack>
+  const list = questions.length ? questions : DEFAULT_QUESTIONS;
+
+  return (
+    <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 8, lg: 10 } }} {...sectionProps}>
+      <Container maxWidth="md">
+        <Stack spacing={2} textAlign="center" mb={{ xs: 6, md: 8 }}>
+          <Typography variant="h3" fontWeight={500} sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
+            {t(heading ?? '')}
+          </Typography>
+          {description && <Typography color="text.secondary">{t(description)}</Typography>}
+        </Stack>
+
         <Stack>
-          {DEFAULT_QUESTIONS.map((q, i) => (
-            <FlatAccordion key={i} square elevation={0} sx={{ boxShadow: 'none' }}>
+          {list.map((q, i) => (
+            <FlatAccordion key={i} square elevation={0}>
               <AccordionSummary
                 expandIcon={
                   <Box sx={{ color: 'text.primary' }}>
@@ -102,23 +104,36 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
                   </Box>
                 }
               >
-                <Typography
-                  fontWeight={500}
-                  sx={{ py: { xs: 1.5, md: 1.5 }, fontSize: { xs: 18, md: 18 } }}
-                >
-                  {q.title}
+                <Typography fontWeight={500} sx={{ py: 1.5, fontSize: 18 }}>
+                  {t(q.title)}
                 </Typography>
               </AccordionSummary>
-
               <AccordionDetails sx={{ pb: { md: 2 }, mb: 2 }}>
-                <Typography color="text.secondary">{q.answer}</Typography>
+                <Typography color="text.secondary">{t(q.answer)}</Typography>
               </AccordionDetails>
             </FlatAccordion>
           ))}
         </Stack>
-      </Stack>
-    </Container>
-  </Box>
-);
+
+        <Box mt={{ xs: 6, md: 8 }} textAlign="center">
+          <Typography variant="h5" fontWeight={500} mb={1}>
+            {t(footerHeading)}
+          </Typography>
+          <Typography color="text.secondary" mb={2}>
+            {t(footerDescription)}
+          </Typography>
+          <Button
+            variant={button?.variant ?? 'outlined'}
+            href="https://normalfinance.gitbook.io/docs/faqs"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t(button?.title ?? 'Read more')}
+          </Button>
+        </Box>
+      </Container>
+    </Box>
+  );
+};
 
 FaqAccordion.displayName = 'FaqAccordion';

@@ -163,12 +163,12 @@ export const StatsGridDefaults: Props = {
       description: '',
     },
     {
-      percentage: 'Coming soon',
+      percentage: 'Soon',
       heading: 'All time LP fees',
       description: '',
     },
     {
-      percentage: 'Coming soon',
+      percentage: 'Soon',
       heading: '+24H volume',
       description: '',
     },
