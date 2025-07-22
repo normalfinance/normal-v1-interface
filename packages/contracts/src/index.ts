@@ -5,5 +5,6 @@ import * as PoolSwapFeeContract from "./pool_swap_fee";
 import * as BufferContract from "./buffer";
 import * as InsuranceFundContract from "./insurance_fund";
 import * as OracleRegistryContract from "./oracle_registry";
+import * as LiquidityCalculatorContract from "./liquidity_calculator";
 
-export {SorobanTokenContract, PoolContract, PoolRouterContract, PoolSwapFeeContract, BufferContract, InsuranceFundContract, OracleRegistryContract};
+export {SorobanTokenContract, PoolContract, PoolRouterContract, PoolSwapFeeContract, BufferContract, InsuranceFundContract, OracleRegistryContract, LiquidityCalculatorContract};

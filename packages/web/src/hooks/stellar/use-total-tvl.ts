@@ -3,7 +3,7 @@
 import { constants } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
-import { PoolRouterContract } from '@normalfinance/contracts';
+import { PoolRouterContract, LiquidityCalculatorContract } from '@normalfinance/contracts';
 
 // ----------------------------------------------------------------------
 
@@ -22,28 +22,29 @@ export function useTotalTVL(): ReturnType {
   const [totalTVL, setTotalTVl] = useState<number | undefined>(undefined);
   const storePersist = usePersistStore();
 
-  const fetchTVL = useCallback(async (poolAddresses?: string[]) => {
+  const fetchTVL = useCallback(async () => {
     try {
-      if (!poolAddresses) {
-        const PoolRouter = new PoolRouterContract.Client({
-          contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
-          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-          rpcUrl: constants.StellarConfig.RPC_URL,
+      const PoolRouter = new PoolRouterContract.Client({
+        contractId: constants.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        rpcUrl: constants.RPC_URL,
+      });
+
+      const pools = await PoolRouter.get_pools();
+
+      if (pools.result) {
+        const LiquidityCalculator = new LiquidityCalculatorContract.Client({
+          contractId: constants.LIQUIDITY_CALCULATOR_ADDRESS,
+          networkPassphrase: constants.NETWORK_PASSPHRASE,
+          rpcUrl: constants.RPC_URL,
         });
+
+        const tvl = await LiquidityCalculator.get_liquidity({ pools: pools.result });
+
+        if (tvl.result) {
+          setTotalTVl(tvl.result);
+        }
       }
-
-      // const LiquidityCalculator = new Liquidit.Client({
-      //   contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
-      //   networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-      //   rpcUrl: constants.StellarConfig.RPC_URL,
-      // });
-
-      // const tvl = await LiquidityCalculator.get_total_tvl({ pool_addresses: poolAddresses });
-
-      // if (tvl.result) {
-      //   setTotalTVl(tvl.result);
-      // }
-      setTotalTVl(0);
     } catch (e: any) {
       console.log(e);
       setError(e);
@@ -51,7 +52,7 @@ export function useTotalTVL(): ReturnType {
     return;
   }, []);
 
-  // On component mount, fetch pool
+  // On component mount, fetch total pools TVL
   useEffect(() => {
     fetchTVL();
   }, [fetchTVL]);

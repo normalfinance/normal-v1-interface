@@ -34,7 +34,7 @@ if (typeof window !== 'undefined') {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CDP5NXYAQPLQKSO2BJBZZIRQE6QGT2HXYJCADNJVMGWV6LQQ4BLZJW45",
+    contractId: "CBAZCWNHR7XWWQQ45AHX5LIWFXDGPPY3MSMRG3ZUOCTVGJTHQCB2AVX4",
   }
 } as const
 
@@ -43,49 +43,29 @@ export const InsuranceFundError = {
    * InsuranceFundError
    */
   0: {message:"MaxIFWithdrawReached"},
-
   1: {message:"NoIFWithdrawAvailable"},
-
   2: {message:"InvalidIFUnstake"},
-
   3: {message:"InvalidIFUnstakeSize"},
-
   6: {message:"InvalidIFRebase"},
-
   7: {message:"InvalidInsuranceUnstakeSize"},
-
   9: {message:"IFWithdrawRequestInProgress"},
-
   10: {message:"NoIFWithdrawRequestInProgress"},
-
   11: {message:"IFWithdrawRequestTooSmall"},
-
   12: {message:"InvalidIFSharesDetected"},
-
   13: {message:"InsufficientIFShares"},
-
   14: {message:"TryingToRemoveLiquidityTooFast"},
-
   15: {message:"AlreadyInitialized"},
-
   16: {message:"NotAuthorized"},
-
   17: {message:"AdminNotSet"},
-
   18: {message:"InsufficientCollateral"},
-
   19: {message:"InvalidIFDetected"},
-
   20: {message:"TooMuchInsurance"},
-
   21: {message:"InvalidOptimalUtilization"},
-
   30: {message:"FundDepositKilled"},
-
   31: {message:"FundRequestWithdrawKilled"},
-
   32: {message:"FundWithdrawKilled"}
 }
+
 export type StakeAction = {tag: "Deposit", values: void} | {tag: "WithdrawRequest", values: void} | {tag: "WithdrawCancelRequest", values: void} | {tag: "Withdraw", values: void};
 
 
@@ -103,67 +83,58 @@ export const AccessControlError = {
    * AccessControlError
    */
   101: {message:"RoleNotFound"},
-
   102: {message:"Unauthorized"},
-
   103: {message:"AdminAlreadySet"},
-
   104: {message:"BadRoleUsage"},
-
   2906: {message:"AnotherActionActive"},
-
   2907: {message:"NoActionActive"},
-
   2908: {message:"ActionNotReadyYet"}
 }
+
 export const UpgradeError = {
   /**
    * UpgradeError
    */
   2906: {message:"AnotherActionActive"},
-
   2907: {message:"NoActionActive"},
-
   2908: {message:"ActionNotReadyYet"}
 }
+
 export const MathError = {
   /**
    * MathError: NumberOverflow
    */
   510: {message:"NumberOverflow"},
-
   511: {message:"MathError"}
 }
+
 export const OracleError = {
   /**
    * OracleError: OracleNonPositive
    */
   601: {message:"OracleNonPositive"},
-
   602: {message:"OracleTooVolatile"},
-
   603: {message:"OracleTooUncertain"},
-
   604: {message:"OracleStaleForMargin"},
-
   605: {message:"OracleInsufficientDataPoints"},
-
   606: {message:"OracleStaleForPool"}
 }
+
 export const StorageError = {
   /**
    * StorageError
    */
   501: {message:"ValueNotInitialized"},
-
   502: {message:"ValueMissing"}
 }
+
 export const ValidationError = {
   /**
    * ValidationError
    */
   801: {message:"InvalidToken"}
 }
+
 
 export interface PrivilegedAddresses {
   emergency_admin: string;
@@ -197,6 +168,14 @@ export interface MutableOracleInfo {
 }
 
 export type NormalAction = {tag: "AddLiquidity", values: void} | {tag: "RemoveLiquidity", values: void} | {tag: "Swap", values: void} | {tag: "UpdateTwap", values: void} | {tag: "Rebalance", values: void} | {tag: "ClaimInsurance", values: void};
+
+
+export interface HistoricalOracleData {
+  last_oracle_delay: u64;
+  last_oracle_price: u128;
+  last_oracle_price_twap: u128;
+  last_oracle_price_twap_ts: u64;
+}
 
 
 export interface Pool {
@@ -249,6 +228,7 @@ export interface InitializeParams {
   assets: readonly [string, string];
   fee_fraction: u32;
   lp_token_info: TokenInitInfo;
+  oracle_registry: string;
   privileged_addrs: PrivilegedAddresses;
   quote_max_insurance: u128;
   router: string;
@@ -263,6 +243,8 @@ export interface InitializeAllParams {
   reward_config: RewardConfig;
 }
 
+export type SwapDirection = {tag: "Buy", values: void} | {tag: "Sell", values: void};
+
 
 export interface TokenInitInfo {
   name: string;
@@ -275,7 +257,6 @@ export interface AddressAndAmount {
   address: string;
   amount: u128;
 }
-
 
 export interface Client {
   /**
@@ -1081,7 +1062,7 @@ export interface Client {
 }
 export class Client extends ContractClient {
   static async deploy<T = Client>(
-    /** Options for initalizing a Client as well as for calling a method, with extras specific to deploying. */
+    /** Options for initializing a Client as well as for calling a method, with extras specific to deploying. */
     options: MethodOptions &
       Omit<ContractClientOptions, "contractId"> & {
         /** The hash of the Wasm blob, which must already be installed on-chain. */
@@ -1150,6 +1131,7 @@ export class Client extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAACk9yYWNsZUluZm8AAAAAAAUAAAAAAAAAB2FkZHJlc3MAAAAAEwAAAAAAAAAIZGVjaW1hbHMAAAAEAAAAAAAAAAZmcm96ZW4AAAAAAAEAAAAAAAAADGxhc3RfdXBkYXRlZAAAAAYAAAAAAAAAGnNhbml0aXplX2NsYW1wX2Rlbm9taW5hdG9yAAAAAAAH",
         "AAAAAQAAAAAAAAAAAAAAEU11dGFibGVPcmFjbGVJbmZvAAAAAAAABAAAAAAAAAAHYWRkcmVzcwAAAAPoAAAAEwAAAAAAAAAIZGVjaW1hbHMAAAPoAAAABAAAAAAAAAAGZnJvemVuAAAAAAPoAAAAAQAAAAAAAAAac2FuaXRpemVfY2xhbXBfZGVub21pbmF0b3IAAAAAA+gAAAAH",
         "AAAAAgAAAAAAAAAAAAAADE5vcm1hbEFjdGlvbgAAAAYAAAAAAAAAAAAAAAxBZGRMaXF1aWRpdHkAAAAAAAAAAAAAAA9SZW1vdmVMaXF1aWRpdHkAAAAAAAAAAAAAAAAEU3dhcAAAAAAAAAAAAAAAClVwZGF0ZVR3YXAAAAAAAAAAAAAAAAAACVJlYmFsYW5jZQAAAAAAAAAAAAAAAAAADkNsYWltSW5zdXJhbmNlAAA=",
+        "AAAAAQAAAAAAAAAAAAAAFEhpc3RvcmljYWxPcmFjbGVEYXRhAAAABAAAAAAAAAARbGFzdF9vcmFjbGVfZGVsYXkAAAAAAAAGAAAAAAAAABFsYXN0X29yYWNsZV9wcmljZQAAAAAAAAoAAAAAAAAAFmxhc3Rfb3JhY2xlX3ByaWNlX3R3YXAAAAAAAAoAAAAAAAAAGWxhc3Rfb3JhY2xlX3ByaWNlX3R3YXBfdHMAAAAAAAAG",
         "AAAAAQAAAAAAAAAAAAAABFBvb2wAAAAKAAAAAAAAAApiYXNlX2Fzc2V0AAAAAAARAAAAAAAAAAxleHBpcnlfcHJpY2UAAAAKAAAAAAAAAAlleHBpcnlfdHMAAAAAAAAGAAAAAAAAAAxmZWVfZnJhY3Rpb24AAAAEAAAAAAAAAA9pbnN1cmFuY2VfY2xhaW0AAAAH0AAAAA5JbnN1cmFuY2VDbGFpbQAAAAAAAAAAABdsaXF1aWRpdHlfbWF4X2ltYmFsYW5jZQAAAAAKAAAAAAAAAAtxdW90ZV9hc3NldAAAAAARAAAAAAAAAAZzdGF0dXMAAAAAB9AAAAAKUG9vbFN0YXR1cwAAAAAAAAAAAAR0aWVyAAAH0AAAAAhQb29sVGllcgAAAAAAAAAHdG9rZW5fYgAAAAAT",
         "AAAAAgAAAAAAAAAAAAAAClBvb2xTdGF0dXMAAAAAAAYAAAAAAAAAAAAAAAtJbml0aWFsaXplZAAAAAAAAAAAAAAAAAZBY3RpdmUAAAAAAAAAAAAAAAAABkZyb3plbgAAAAAAAAAAAAAAAAAKUmVkdWNlT25seQAAAAAAAAAAAAAAAAAKU2V0dGxlbWVudAAAAAAAAAAAAAAAAAAIRGVsaXN0ZWQ=",
         "AAAAAgAAAAAAAAAAAAAACFBvb2xUaWVyAAAABgAAAAAAAAAAAAAAAUEAAAAAAAAAAAAAAAAAAAFCAAAAAAAAAAAAAAAAAAABQwAAAAAAAAAAAAAAAAAAC1NwZWN1bGF0aXZlAAAAAAAAAAAAAAAAEUhpZ2hseVNwZWN1bGF0aXZlAAAAAAAAAAAAAAAAAAAISXNvbGF0ZWQ=",
@@ -1157,8 +1139,9 @@ export class Client extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAADFBvb2xSZXNwb25zZQAAAAQAAAAAAAAABHBvb2wAAAfQAAAABFBvb2wAAAAAAAAAB3Rva2VuX2EAAAAH0AAAABBBZGRyZXNzQW5kQW1vdW50AAAAAAAAAAd0b2tlbl9iAAAAB9AAAAAQQWRkcmVzc0FuZEFtb3VudAAAAAAAAAALdG9rZW5fc2hhcmUAAAAH0AAAABBBZGRyZXNzQW5kQW1vdW50",
         "AAAAAQAAAAAAAAAAAAAACFBvb2xJbmZvAAAAAgAAAAAAAAAMcG9vbF9hZGRyZXNzAAAAEwAAAAAAAAANcG9vbF9yZXNwb25zZQAAAAAAB9AAAAAMUG9vbFJlc3BvbnNl",
         "AAAAAQAAAAAAAAAAAAAADFJld2FyZENvbmZpZwAAAAEAAAAAAAAADHJld2FyZF90b2tlbgAAABM=",
-        "AAAAAQAAAAAAAAAAAAAAEEluaXRpYWxpemVQYXJhbXMAAAAJAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAABmFzc2V0cwAAAAAD7QAAAAIAAAARAAAAEQAAAAAAAAAMZmVlX2ZyYWN0aW9uAAAABAAAAAAAAAANbHBfdG9rZW5faW5mbwAAAAAAB9AAAAANVG9rZW5Jbml0SW5mbwAAAAAAAAAAAAAQcHJpdmlsZWdlZF9hZGRycwAAB9AAAAATUHJpdmlsZWdlZEFkZHJlc3NlcwAAAAAAAAAAE3F1b3RlX21heF9pbnN1cmFuY2UAAAAACgAAAAAAAAAGcm91dGVyAAAAAAATAAAAAAAAAAR0aWVyAAAH0AAAAAhQb29sVGllcgAAAAAAAAAGdG9rZW5zAAAAAAPqAAAAEw==",
+        "AAAAAQAAAAAAAAAAAAAAEEluaXRpYWxpemVQYXJhbXMAAAAKAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAABmFzc2V0cwAAAAAD7QAAAAIAAAARAAAAEQAAAAAAAAAMZmVlX2ZyYWN0aW9uAAAABAAAAAAAAAANbHBfdG9rZW5faW5mbwAAAAAAB9AAAAANVG9rZW5Jbml0SW5mbwAAAAAAAAAAAAAPb3JhY2xlX3JlZ2lzdHJ5AAAAABMAAAAAAAAAEHByaXZpbGVnZWRfYWRkcnMAAAfQAAAAE1ByaXZpbGVnZWRBZGRyZXNzZXMAAAAAAAAAABNxdW90ZV9tYXhfaW5zdXJhbmNlAAAAAAoAAAAAAAAABnJvdXRlcgAAAAAAEwAAAAAAAAAEdGllcgAAB9AAAAAIUG9vbFRpZXIAAAAAAAAABnRva2VucwAAAAAD6gAAABM=",
         "AAAAAQAAAAAAAAAAAAAAE0luaXRpYWxpemVBbGxQYXJhbXMAAAAAAwAAAAAAAAAEYmFzZQAAB9AAAAAQSW5pdGlhbGl6ZVBhcmFtcwAAAAAAAAAFcGxhbmUAAAAAAAATAAAAAAAAAA1yZXdhcmRfY29uZmlnAAAAAAAH0AAAAAxSZXdhcmRDb25maWc=",
+        "AAAAAgAAAAAAAAAAAAAADVN3YXBEaXJlY3Rpb24AAAAAAAACAAAAAAAAAAAAAAADQnV5AAAAAAAAAAAAAAAABFNlbGw=",
         "AAAAAQAAAAAAAAAAAAAADVRva2VuSW5pdEluZm8AAAAAAAADAAAAAAAAAARuYW1lAAAAEAAAAAAAAAAGc3ltYm9sAAAAAAAQAAAAAAAAAA90b2tlbl93YXNtX2hhc2gAAAAD7gAAACA=",
         "AAAAAQAAAAAAAAAAAAAAEEFkZHJlc3NBbmRBbW91bnQAAAACAAAAAAAAAAdhZGRyZXNzAAAAABMAAAAAAAAABmFtb3VudAAAAAAACg==" ]),
       options

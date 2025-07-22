@@ -34,41 +34,12 @@ if (typeof window !== 'undefined') {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CB4HUW5IOLWEUYUQ7B3BV4HPBRWK4VNRPCMI3E7S2SF5HW4O4VD62Q32",
+    contractId: "CBG34ZA2B22PDE6F6G4KXYTDNXF3CUR5EB5HOBK42COXF2MDWDLUXQSP",
   }
 } as const
 
-export const OracleRegistryError = {
-  /**
-   * OracleRegistryError
-   */
-  15: {message:"AlreadyInitialized"},
-  17: {message:"InvalidDecimals"},
-  18: {message:"InvalidPrice"},
-  19: {message:"OracleNotRegistered"},
-  20: {message:"PriceOverrideLimitExceeded"},
-  21: {message:"OracleNotFound"},
-  22: {message:"OracleFrozen"},
-  23: {message:"OracleInvalid"},
-  24: {message:"PriceOverrideTooSoon"},
-  25: {message:"OracleAlreadyRegistered"}
-}
-
-
-export interface PriceDivergenceGuardRails {
-  oracle_twap_percent_divergence: u64;
-}
-
-
-export interface ValidityGuardRails {
-  seconds_before_stale_for_pool: u64;
-  too_volatile_ratio: i64;
-}
-
-
-export interface OracleGuardRails {
-  price_divergence: PriceDivergenceGuardRails;
-  validity: ValidityGuardRails;
+export const LiquidityPoolCalculatorError = {
+  209: {message:"MaxIterationsReached"}
 }
 
 export const AccessControlError = {
@@ -83,20 +54,6 @@ export const AccessControlError = {
   2907: {message:"NoActionActive"},
   2908: {message:"ActionNotReadyYet"}
 }
-
-
-/**
- * Price data for an asset at a specific timestamp
- */
-export interface PriceData {
-  price: i128;
-  timestamp: u64;
-}
-
-/**
- * Asset type
- */
-export type Asset = {tag: "Stellar", values: readonly [string]} | {tag: "Other", values: readonly [string]};
 
 export const UpgradeError = {
   /**
@@ -267,9 +224,9 @@ export interface AddressAndAmount {
 
 export interface Client {
   /**
-   * Construct and simulate a initialize transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a init_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  initialize: ({admin, emergency_admin}: {admin: string, emergency_admin: string}, options?: {
+  init_admin: ({account}: {account: string}, options?: {
     /**
      * The fee to pay for the transaction. Default: BASE_FEE
      */
@@ -287,9 +244,9 @@ export interface Client {
   }) => Promise<AssembledTransaction<null>>
 
   /**
-   * Construct and simulate a get_price transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a set_pools_plane transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  get_price: ({asset, cached, action}: {asset: string, cached: boolean, action: NormalAction}, options?: {
+  set_pools_plane: ({admin, plane}: {admin: string, plane: string}, options?: {
     /**
      * The fee to pay for the transaction. Default: BASE_FEE
      */
@@ -304,12 +261,12 @@ export interface Client {
      * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
      */
     simulate?: boolean;
-  }) => Promise<AssembledTransaction<OraclePriceData>>
+  }) => Promise<AssembledTransaction<null>>
 
   /**
-   * Construct and simulate a get_last_price transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a get_pools_plane transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  get_last_price: ({asset}: {asset: string}, options?: {
+  get_pools_plane: (options?: {
     /**
      * The fee to pay for the transaction. Default: BASE_FEE
      */
@@ -324,12 +281,12 @@ export interface Client {
      * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
      */
     simulate?: boolean;
-  }) => Promise<AssembledTransaction<HistoricalOracleData>>
+  }) => Promise<AssembledTransaction<string>>
 
   /**
-   * Construct and simulate a get_oracle transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a get_liquidity transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  get_oracle: ({asset}: {asset: string}, options?: {
+  get_liquidity: ({pools}: {pools: Array<string>}, options?: {
     /**
      * The fee to pay for the transaction. Default: BASE_FEE
      */
@@ -344,27 +301,7 @@ export interface Client {
      * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
      */
     simulate?: boolean;
-  }) => Promise<AssembledTransaction<OracleInfo>>
-
-  /**
-   * Construct and simulate a get_oracle_guard_rails transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  get_oracle_guard_rails: (options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number;
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number;
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean;
-  }) => Promise<AssembledTransaction<OracleGuardRails>>
+  }) => Promise<AssembledTransaction<Array<u256>>>
 
   /**
    * Construct and simulate a version transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -487,86 +424,6 @@ export interface Client {
   }) => Promise<AssembledTransaction<boolean>>
 
   /**
-   * Construct and simulate a register_oracle transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  register_oracle: ({admin, asset, oracle_addr, decimals, sanitize_clamp_denominator}: {admin: string, asset: string, oracle_addr: string, decimals: u32, sanitize_clamp_denominator: i64}, options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number;
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number;
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean;
-  }) => Promise<AssembledTransaction<OracleInfo>>
-
-  /**
-   * Construct and simulate a update_oracle transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  update_oracle: ({admin, asset, params}: {admin: string, asset: string, params: MutableOracleInfo}, options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number;
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number;
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean;
-  }) => Promise<AssembledTransaction<OracleInfo>>
-
-  /**
-   * Construct and simulate a set_oracle_price transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  set_oracle_price: ({admin, asset, price}: {admin: string, asset: string, price: u128}, options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number;
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number;
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean;
-  }) => Promise<AssembledTransaction<null>>
-
-  /**
-   * Construct and simulate a set_oracle_guard_rails transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  set_oracle_guard_rails: ({admin, oracle_guard_rails}: {admin: string, oracle_guard_rails: OracleGuardRails}, options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number;
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number;
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean;
-  }) => Promise<AssembledTransaction<null>>
-
-  /**
    * Construct and simulate a commit_transfer_ownership transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
   commit_transfer_ownership: ({admin, role_name, new_address}: {admin: string, role_name: string, new_address: string}, options?: {
@@ -664,32 +521,22 @@ export class Client extends ContractClient {
   }
   constructor(public readonly options: ContractClientOptions) {
     super(
-      new ContractSpec([ "AAAAAAAAAAAAAAAKaW5pdGlhbGl6ZQAAAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAA9lbWVyZ2VuY3lfYWRtaW4AAAAAEwAAAAA=",
-        "AAAAAAAAAAAAAAAJZ2V0X3ByaWNlAAAAAAAAAwAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAAAAAAZjYWNoZWQAAAAAAAEAAAAAAAAABmFjdGlvbgAAAAAH0AAAAAxOb3JtYWxBY3Rpb24AAAABAAAH0AAAAA9PcmFjbGVQcmljZURhdGEA",
-        "AAAAAAAAAAAAAAAOZ2V0X2xhc3RfcHJpY2UAAAAAAAEAAAAAAAAABWFzc2V0AAAAAAAAEQAAAAEAAAfQAAAAFEhpc3RvcmljYWxPcmFjbGVEYXRh",
-        "AAAAAAAAAAAAAAAKZ2V0X29yYWNsZQAAAAAAAQAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAQAAB9AAAAAKT3JhY2xlSW5mbwAA",
-        "AAAAAAAAAAAAAAAWZ2V0X29yYWNsZV9ndWFyZF9yYWlscwAAAAAAAAAAAAEAAAfQAAAAEE9yYWNsZUd1YXJkUmFpbHM=",
+      new ContractSpec([ "AAAAAAAAAAAAAAAKaW5pdF9hZG1pbgAAAAAAAQAAAAAAAAAHYWNjb3VudAAAAAATAAAAAA==",
+        "AAAAAAAAAAAAAAAPc2V0X3Bvb2xzX3BsYW5lAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAFcGxhbmUAAAAAAAATAAAAAA==",
+        "AAAAAAAAAAAAAAAPZ2V0X3Bvb2xzX3BsYW5lAAAAAAAAAAABAAAAEw==",
+        "AAAAAAAAAAAAAAANZ2V0X2xpcXVpZGl0eQAAAAAAAAEAAAAAAAAABXBvb2xzAAAAAAAD6gAAABMAAAABAAAD6gAAAAw=",
         "AAAAAAAAAAAAAAAHdmVyc2lvbgAAAAAAAAAAAQAAAAQ=",
         "AAAAAAAAAAAAAAAOY29tbWl0X3VwZ3JhZGUAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAANbmV3X3dhc21faGFzaAAAAAAAA+4AAAAgAAAAAA==",
         "AAAAAAAAAAAAAAANYXBwbHlfdXBncmFkZQAAAAAAAAEAAAAAAAAABWFkbWluAAAAAAAAEwAAAAEAAAPuAAAAIA==",
         "AAAAAAAAAAAAAAAOcmV2ZXJ0X3VwZ3JhZGUAAAAAAAEAAAAAAAAABWFkbWluAAAAAAAAEwAAAAA=",
         "AAAAAAAAAAAAAAASc2V0X2VtZXJnZW5jeV9tb2RlAAAAAAACAAAAAAAAAA9lbWVyZ2VuY3lfYWRtaW4AAAAAEwAAAAAAAAAFdmFsdWUAAAAAAAABAAAAAA==",
         "AAAAAAAAAAAAAAASZ2V0X2VtZXJnZW5jeV9tb2RlAAAAAAAAAAAAAQAAAAE=",
-        "AAAAAAAAAAAAAAAPcmVnaXN0ZXJfb3JhY2xlAAAAAAUAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAAAAAAtvcmFjbGVfYWRkcgAAAAATAAAAAAAAAAhkZWNpbWFscwAAAAQAAAAAAAAAGnNhbml0aXplX2NsYW1wX2Rlbm9taW5hdG9yAAAAAAAHAAAAAQAAB9AAAAAKT3JhY2xlSW5mbwAA",
-        "AAAAAAAAAAAAAAANdXBkYXRlX29yYWNsZQAAAAAAAAMAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAAAAAAZwYXJhbXMAAAAAB9AAAAARTXV0YWJsZU9yYWNsZUluZm8AAAAAAAABAAAH0AAAAApPcmFjbGVJbmZvAAA=",
-        "AAAAAAAAAAAAAAAQc2V0X29yYWNsZV9wcmljZQAAAAMAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAAAAAAVwcmljZQAAAAAAAAoAAAAA",
-        "AAAAAAAAAAAAAAAWc2V0X29yYWNsZV9ndWFyZF9yYWlscwAAAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAABJvcmFjbGVfZ3VhcmRfcmFpbHMAAAAAB9AAAAAQT3JhY2xlR3VhcmRSYWlscwAAAAA=",
         "AAAAAAAAAAAAAAAZY29tbWl0X3RyYW5zZmVyX293bmVyc2hpcAAAAAAAAAMAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAJcm9sZV9uYW1lAAAAAAAAEQAAAAAAAAALbmV3X2FkZHJlc3MAAAAAEwAAAAA=",
         "AAAAAAAAAAAAAAAYYXBwbHlfdHJhbnNmZXJfb3duZXJzaGlwAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAlyb2xlX25hbWUAAAAAAAARAAAAAA==",
         "AAAAAAAAAAAAAAAZcmV2ZXJ0X3RyYW5zZmVyX293bmVyc2hpcAAAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAJcm9sZV9uYW1lAAAAAAAAEQAAAAA=",
         "AAAAAAAAAAAAAAASZ2V0X2Z1dHVyZV9hZGRyZXNzAAAAAAABAAAAAAAAAAlyb2xlX25hbWUAAAAAAAARAAAAAQAAABM=",
-        "AAAABAAAAAAAAAAAAAAAE09yYWNsZVJlZ2lzdHJ5RXJyb3IAAAAACgAAABNPcmFjbGVSZWdpc3RyeUVycm9yAAAAABJBbHJlYWR5SW5pdGlhbGl6ZWQAAAAAAA8AAAAAAAAAD0ludmFsaWREZWNpbWFscwAAAAARAAAAAAAAAAxJbnZhbGlkUHJpY2UAAAASAAAAAAAAABNPcmFjbGVOb3RSZWdpc3RlcmVkAAAAABMAAAAAAAAAGlByaWNlT3ZlcnJpZGVMaW1pdEV4Y2VlZGVkAAAAAAAUAAAAAAAAAA5PcmFjbGVOb3RGb3VuZAAAAAAAFQAAAAAAAAAMT3JhY2xlRnJvemVuAAAAFgAAAAAAAAANT3JhY2xlSW52YWxpZAAAAAAAABcAAAAAAAAAFFByaWNlT3ZlcnJpZGVUb29Tb29uAAAAGAAAAAAAAAAXT3JhY2xlQWxyZWFkeVJlZ2lzdGVyZWQAAAAAGQ==",
-        "AAAAAQAAAAAAAAAAAAAAGVByaWNlRGl2ZXJnZW5jZUd1YXJkUmFpbHMAAAAAAAABAAAAAAAAAB5vcmFjbGVfdHdhcF9wZXJjZW50X2RpdmVyZ2VuY2UAAAAAAAY=",
-        "AAAAAQAAAAAAAAAAAAAAElZhbGlkaXR5R3VhcmRSYWlscwAAAAAAAgAAAAAAAAAdc2Vjb25kc19iZWZvcmVfc3RhbGVfZm9yX3Bvb2wAAAAAAAAGAAAAAAAAABJ0b29fdm9sYXRpbGVfcmF0aW8AAAAAAAc=",
-        "AAAAAQAAAAAAAAAAAAAAEE9yYWNsZUd1YXJkUmFpbHMAAAACAAAAAAAAABBwcmljZV9kaXZlcmdlbmNlAAAH0AAAABlQcmljZURpdmVyZ2VuY2VHdWFyZFJhaWxzAAAAAAAAAAAAAAh2YWxpZGl0eQAAB9AAAAASVmFsaWRpdHlHdWFyZFJhaWxzAAA=",
+        "AAAABAAAAAAAAAAAAAAAHExpcXVpZGl0eVBvb2xDYWxjdWxhdG9yRXJyb3IAAAABAAAAAAAAABRNYXhJdGVyYXRpb25zUmVhY2hlZAAAANE=",
         "AAAABAAAAAAAAAAAAAAAEkFjY2Vzc0NvbnRyb2xFcnJvcgAAAAAABwAAABJBY2Nlc3NDb250cm9sRXJyb3IAAAAAAAxSb2xlTm90Rm91bmQAAABlAAAAAAAAAAxVbmF1dGhvcml6ZWQAAABmAAAAAAAAAA9BZG1pbkFscmVhZHlTZXQAAAAAZwAAAAAAAAAMQmFkUm9sZVVzYWdlAAAAaAAAAAAAAAATQW5vdGhlckFjdGlvbkFjdGl2ZQAAAAtaAAAAAAAAAA5Ob0FjdGlvbkFjdGl2ZQAAAAALWwAAAAAAAAARQWN0aW9uTm90UmVhZHlZZXQAAAAAAAtc",
-        "AAAAAQAAAC9QcmljZSBkYXRhIGZvciBhbiBhc3NldCBhdCBhIHNwZWNpZmljIHRpbWVzdGFtcAAAAAAAAAAACVByaWNlRGF0YQAAAAAAAAIAAAAAAAAABXByaWNlAAAAAAAACwAAAAAAAAAJdGltZXN0YW1wAAAAAAAABg==",
-        "AAAAAgAAAApBc3NldCB0eXBlAAAAAAAAAAAABUFzc2V0AAAAAAAAAgAAAAEAAAAAAAAAB1N0ZWxsYXIAAAAAAQAAABMAAAABAAAAAAAAAAVPdGhlcgAAAAAAAAEAAAAR",
         "AAAABAAAAAAAAAAAAAAADFVwZ3JhZGVFcnJvcgAAAAMAAAAMVXBncmFkZUVycm9yAAAAE0Fub3RoZXJBY3Rpb25BY3RpdmUAAAALWgAAAAAAAAAOTm9BY3Rpb25BY3RpdmUAAAAAC1sAAAAAAAAAEUFjdGlvbk5vdFJlYWR5WWV0AAAAAAALXA==",
         "AAAABAAAAAAAAAAAAAAACU1hdGhFcnJvcgAAAAAAAAIAAAAZTWF0aEVycm9yOiBOdW1iZXJPdmVyZmxvdwAAAAAAAA5OdW1iZXJPdmVyZmxvdwAAAAAB/gAAAAAAAAAJTWF0aEVycm9yAAAAAAAB/w==",
         "AAAABAAAAAAAAAAAAAAAC09yYWNsZUVycm9yAAAAAAYAAAAeT3JhY2xlRXJyb3I6IE9yYWNsZU5vblBvc2l0aXZlAAAAAAART3JhY2xlTm9uUG9zaXRpdmUAAAAAAAJZAAAAAAAAABFPcmFjbGVUb29Wb2xhdGlsZQAAAAAAAloAAAAAAAAAEk9yYWNsZVRvb1VuY2VydGFpbgAAAAACWwAAAAAAAAAUT3JhY2xlU3RhbGVGb3JNYXJnaW4AAAJcAAAAAAAAABxPcmFjbGVJbnN1ZmZpY2llbnREYXRhUG9pbnRzAAACXQAAAAAAAAAST3JhY2xlU3RhbGVGb3JQb29sAAAAAAJe",
@@ -717,21 +564,16 @@ export class Client extends ContractClient {
     )
   }
   public readonly fromJSON = {
-    initialize: this.txFromJSON<null>,
-        get_price: this.txFromJSON<OraclePriceData>,
-        get_last_price: this.txFromJSON<HistoricalOracleData>,
-        get_oracle: this.txFromJSON<OracleInfo>,
-        get_oracle_guard_rails: this.txFromJSON<OracleGuardRails>,
+    init_admin: this.txFromJSON<null>,
+        set_pools_plane: this.txFromJSON<null>,
+        get_pools_plane: this.txFromJSON<string>,
+        get_liquidity: this.txFromJSON<Array<u256>>,
         version: this.txFromJSON<u32>,
         commit_upgrade: this.txFromJSON<null>,
         apply_upgrade: this.txFromJSON<Buffer>,
         revert_upgrade: this.txFromJSON<null>,
         set_emergency_mode: this.txFromJSON<null>,
         get_emergency_mode: this.txFromJSON<boolean>,
-        register_oracle: this.txFromJSON<OracleInfo>,
-        update_oracle: this.txFromJSON<OracleInfo>,
-        set_oracle_price: this.txFromJSON<null>,
-        set_oracle_guard_rails: this.txFromJSON<null>,
         commit_transfer_ownership: this.txFromJSON<null>,
         apply_transfer_ownership: this.txFromJSON<null>,
         revert_transfer_ownership: this.txFromJSON<null>,
