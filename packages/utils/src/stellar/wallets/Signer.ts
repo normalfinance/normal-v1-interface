@@ -11,10 +11,10 @@ import { NETWORK_PASSPHRASE } from "../../constants/stellar";
 const initializeWalletConnect = async () => {
   const walletConnectInstance = new WalletClient({
     projectId: "1cca500fbafdda38a70f8bf3bcb91b15",
-    name: "Phoenix DeFi Hub",
+    name: "Normal",
     description: "Serving only the tastiest DeFi",
-    url: "https://app.phoenix-hub.io",
-    icons: ["https://app.phoenix-hub.io/logoIcon.png"],
+    url: "https://app.normalfinance.io",
+    icons: ["https://app.normalfinance.io/logoIcon.png"],
     method: WalletConnectAllowedMethods.SIGN_AND_SUBMIT,
     network: NETWORK_PASSPHRASE,
   });

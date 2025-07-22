@@ -6,21 +6,21 @@
   "invoice": "Factură",
   "blog": {
     "title": "Blog",
-    "caption": "Scurtături de tastatură personalizate."
+    "caption": "Comenzi rapide personalizate."
   },
-  "subheader": "Sub-antet",
+  "subheader": "Sub antet",
   "Overview": "Prezentare generală",
-  "Trade": "Tranzacționare",
-  "Spot": "Spot",
-  "Indexes": "Indici",
+  "Trade": "Tranzacționați",
+  "Spot": "Punct",
+  "Indexes": "Indexuri",
   "Earn": "Câștigă",
   "Yield": "Randament",
   "LP": "LP",
   "Rewards": "Recompense",
-  "Referrals": "Recomandări",
+  "Referrals": "Sesizări",
   "Analytics": "Analize",
-  "More": "Mai mult",
+  "More": "Mai",
   "Governance": "Guvernanță",
   "Help & Feedback": "Ajutor & Feedback",
-  "Docs": "Documentație"
+  "Docs": "Documente"
 }

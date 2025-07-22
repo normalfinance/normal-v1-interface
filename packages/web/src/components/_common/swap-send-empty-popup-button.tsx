@@ -21,7 +21,7 @@ export const SwapSendEmptyPopupButton: React.FC<SwapSendEmptyPopupButtonProps> =
     <Button
       onClick={onClick}
       sx={{
-        backgroundColor: theme.palette.success.dark,
+        backgroundColor: '#6E4BFF',
         textTransform: 'none',
         padding: '5px 12px',
         display: 'flex',
@@ -31,7 +31,8 @@ export const SwapSendEmptyPopupButton: React.FC<SwapSendEmptyPopupButtonProps> =
         width: 'auto',
         borderRadius: '16px',
         '&:hover': {
-          backgroundColor: theme.palette.success.main,
+          backgroundColor: '#6E4BFF',
+          opacity: 0.9,
         },
       }}
     >

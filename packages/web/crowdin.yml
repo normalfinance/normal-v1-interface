@@ -1,0 +1,11 @@
+project_id_env: CROWDIN_PROJECT_ID
+api_token_env: CROWDIN_API_TOKEN
+
+files:
+  - source: src/locales/langs/en/common.json
+    translation: src/locales/langs/%two_letters_code%/common.json
+    export_approved_only: false
+
+  - source: src/locales/langs/en/navbar.json
+    translation: src/locales/langs/%two_letters_code%/navbar.json
+    export_approved_only: false

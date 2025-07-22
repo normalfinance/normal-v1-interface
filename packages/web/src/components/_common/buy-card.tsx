@@ -1,7 +1,8 @@
-import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { convertFiatToCoin } from '@/utils/conversion-helpers';
@@ -10,6 +11,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
 
 import PickToken from './pick-token';
+import { WalletGate } from './wallet-gate';
 import CheckoutDialog from './checkout-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
@@ -53,7 +55,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
 
   const fiatValue = parseFloat(amount) || 0;
   const buyableAmt =
-    buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.pricestatus) : 0;
+    buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.usdValue) : 0;
 
   const balance = cashBalance ?? 0;
   const insufficient = fiatValue > balance;
@@ -119,6 +121,10 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
   const handleTokenSelect = (token: Token) => {
     setBuyToken(token);
   };
+
+  // Main button with multiple states
+  const persist = usePersistStore();
+  const isConnected = !!persist.wallet.address;
 
   return (
     <Stack sx={{ gap: '2px' }}>
@@ -213,8 +219,8 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
             >
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                 <SwapSendPopupButton
-                  imgUrl={buyToken.url}
-                  label={buyToken.shortname}
+                  imgUrl={buyToken.icon}
+                  label={buyToken.symbol}
                   onClick={() => {
                     handleOpen();
                   }}
@@ -253,7 +259,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
                           color: theme.palette.text.primary,
                         }}
                       >
-                        {buyToken?.shortname}
+                        {buyToken?.symbol}
                       </Box>
                     </Typography>
                   </Box>
@@ -301,16 +307,22 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
           </Stack>
         </Stack>
         <Box>
-          <Button
-            fullWidth
-            variant="soft"
-            color="success"
-            size="large"
-            onClick={handleMainButtonClick}
-            disabled={getButtonLabel() !== 'Buy'}
-          >
-            {getButtonLabel()}
-          </Button>
+          {isConnected ? (
+            <Button
+              fullWidth
+              variant="soft"
+              color="success"
+              size="large"
+              onClick={handleMainButtonClick}
+              disabled={getButtonLabel() !== 'Buy'}
+            >
+              {getButtonLabel()}
+            </Button>
+          ) : (
+            <WalletGate buttonText="Connect Wallet to Buy" fullWidth variant="soft">
+              {null}
+            </WalletGate>
+          )}
         </Box>
         <PickToken
           open={open}
@@ -322,7 +334,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
         {reviewOpen && (
           <CheckoutDialog
             open={reviewOpen}
-            token={buyToken?.shortname ?? 'USDC'}
+            token={buyToken?.symbol ?? 'USDC'}
             amount={amount}
             onClose={handleReviewClose}
           />

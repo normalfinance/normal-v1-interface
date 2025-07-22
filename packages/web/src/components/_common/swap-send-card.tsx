@@ -1,6 +1,6 @@
-import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
 import { useTranslate } from '@/locales';
@@ -101,9 +101,9 @@ export const SwapSendCard: React.FC<SwapSendCardProps> = ({
 
       {/* Conditionally render a component based on the active tab */}
       {tabs.value === 'swap' ? (
-        <SwapCard />
+        <SwapCard tokensList={tokensList} />
       ) : (
-        <SendCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} />
+        <SendCard tokensList={tokensList} networkCost={0} />
       )}
     </Card>
   );

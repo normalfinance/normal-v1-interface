@@ -1,17 +1,16 @@
-import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { SwapQueryParams } from '@/types/query-params';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
+import { useSwap, useTrustLine } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { NormalPoolRouterContract } from '@normalfinance/contracts';
-import { useContractTransaction } from '@/hooks/use-contract-transaction';
-import { constants, checkTrustline, fetchAndIssueTrustline } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
@@ -20,6 +19,7 @@ import { Iconify } from '@/components/template/iconify';
 
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
+import { WalletGate } from './wallet-gate';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
@@ -27,9 +27,10 @@ import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];
   swapFeeInfo?: SwapFeeInfo;
+  queryParams?: SwapQueryParams;
 }
 
-const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
+const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -37,9 +38,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const storePersist = usePersistStore();
   const appStore = useAppStore();
 
-  const { executeContractTransaction } = useContractTransaction();
+  const { trustlineButtonActive, handleTrustLine, addTrustLine } = useTrustLine();
+  const { onEstimateSwap, onSwap } = useSwap();
 
-  const [txBroadcasting, setTxBroadcasting] = useState<boolean>(false);
   const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
 
   const [maxSlippage, setMaxSlippage] = useState<number>(10_000); // bps
@@ -48,13 +49,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const [poolFee, setPoolFee] = useState<string>('');
   const [priceImpact, setPriceImpact] = useState<number>(0); // bps
 
-  const [trustlineButtonActive, setTrustlineButtonActive] = useState<boolean>(false);
-  const [trustlineTokenName, setTrustlineTokenName] = useState<string>('');
-  const [trustlineAssetAmount, setTrustlineAssetAmount] = useState<number>(0);
-  const [allPools, setAllPools] = useState<any[]>([]);
-
   // 1) States for tokens, default sell token is first in the list
-  const [tokens, setTokens] = useState<Token[]>([]);
+  const [tokens, setTokens] = useState(tokensList);
   const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
 
@@ -76,10 +72,39 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
 
   // Compute the fiat value for the user's sell input
   const sellVal = parseFloat(amount) || 0;
-  const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.pricestatus : 0;
+  const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.usdValue : 0;
 
   // 5) Example of how much buyToken the user might get
   const [buyAmount, setBuyAmount] = useState<number>(0);
+
+  // Initialize from query params
+  useEffect(() => {
+    if (!queryParams) return;
+
+    // Set tokens based on query params
+    if (queryParams.token_in && tokens.length > 0) {
+      const sellTokenFromQuery = tokens.find(
+        (tkn1) => tkn1.symbol.toLowerCase() === queryParams.token_in?.toLowerCase()
+      );
+      if (sellTokenFromQuery) {
+        setSellToken(sellTokenFromQuery);
+      }
+    }
+
+    if (queryParams.token_out && tokens.length > 0) {
+      const buyTokenFromQuery = tokens.find(
+        (tkn2) => tkn2.symbol.toLowerCase() === queryParams.token_out?.toLowerCase()
+      );
+      if (buyTokenFromQuery) {
+        setBuyToken(buyTokenFromQuery);
+      }
+    }
+
+    // Set amount
+    if (queryParams.in_amount) {
+      setAmount(queryParams.in_amount);
+    }
+  }, [queryParams, tokens]);
 
   // 6) Open/close the token picker
   const handleOpen = () => setOpen(true);
@@ -106,12 +131,15 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
 
     doSimulateSwap();
 
-    const buyTokenContractID = appStore.allTokens.find(
+    // const buyTokenContractID = appStore.allTokens.find(
+    //   (token: Token) => token.name === buyToken.name
+    // )?.contractId;
+    const buyTokenContractID = appStore.tokens.find(
       (token: Token) => token.name === buyToken.name
-    )?.contractId;
+    )?.id;
 
     if (storePersist.wallet.address) {
-      handleTrustLine(buyTokenContractID);
+      if (buyTokenContractID) handleTrustLine(buyTokenContractID);
     }
 
     // Simulate an async fetch with a 1s delay
@@ -119,10 +147,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
       setIsLoading(false);
       setQuoteFetched(true);
 
-      const potentialBuyAmount = sellVal * (sellToken.pricestatus / buyToken.pricestatus);
+      const potentialBuyAmount = sellVal * (sellToken.usdValue / buyToken.usdValue);
       setBuyAmount(potentialBuyAmount);
 
-      if (sellVal > sellToken.countstatus) {
+      if (sellVal > sellToken.balance) {
         setInsufficientBalance(true);
       }
     }, 1000);
@@ -200,7 +228,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
     }
     if (quoteFetched) {
       if (insufficientBalance) {
-        return `Insufficient ${sellToken.shortname}`;
+        return `Insufficient ${sellToken.symbol}`;
       }
       if (trustlineButtonActive) {
         return 'Add trustline';
@@ -232,42 +260,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   // Max the sell token
   const handleMaxClick = () => {
     if (sellToken) {
-      setAmount(sellToken.countstatus.toString());
+      setAmount(sellToken.balance.toString());
     }
   };
-
-  // Effect hook to fetch all tokens once the component mounts
-  useEffect(() => {
-    const getAllTokens = async (): Promise<void> => {
-      setIsLoading(true);
-      try {
-        const allTokens = await appStore.getAllTokens();
-        setTokens(allTokens.slice(2));
-        setSellToken(allTokens[0]);
-        setBuyToken(allTokens[1]);
-        setIsLoading(false);
-
-        // Get all pools
-        const poolRouterContract = new NormalPoolRouterContract.Client({
-          contractId: constants.POOL_ROUTER_ADDRESS,
-          networkPassphrase: constants.NETWORK_PASSPHRASE,
-          rpcUrl: constants.RPC_URL,
-        });
-        const { result } = await poolRouterContract.query_all_pools_details();
-
-        const _allPools = result.map((pool: any) => ({
-          asset_a: pool.pool_response.asset_a.address,
-          asset_b: pool.pool_response.asset_b.address,
-        }));
-        setAllPools(_allPools);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        appStore.setLoading(false);
-      }
-    };
-    getAllTokens();
-  }, []);
 
   /**
    * Executes the swap transaction.
@@ -276,26 +271,15 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
    * @async
    */
   const doSwap = useCallback(async (): Promise<void> => {
-    if (sellToken && buyToken && sellToken.address && buyToken.address) {
+    if (sellToken && buyToken && sellToken.id && buyToken.id) {
       try {
-        // Execute the transaction using the hook
-        await executeContractTransaction({
-          contractType: 'pool_router',
-          contractAddress: constants.POOL_ROUTER_ADDRESS,
-          transactionFunction: async (client, restore) =>
-            client.swap(
-              {
-                user: storePersist.wallet.address!,
-                tokens: [sellToken.address!, buyToken.address!],
-                token_in: sellToken.address!,
-                token_out: buyToken.address!,
-                pool_index: Buffer.from('0'),
-                in_amount: BigInt(amount),
-                out_min: BigInt(buyAmount),
-              },
-              { simulate: !restore }
-            ),
-        });
+        const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
+        const isBuy = buyToken.symbol !== 'XLM';
+        // onSwap({
+        //   asset,
+        //   is_buy: isBuy,
+        //   in_amount: amount,
+        // });
 
         // Wait for the next block and fetch token balances
         setTimeout(async () => {
@@ -306,15 +290,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
         console.log('Error during swap transaction', error);
       }
     }
-  }, [
-    appStore,
-    sellToken?.name,
-    storePersist,
-    buyToken?.name,
-    amount,
-    buyAmount,
-    executeContractTransaction,
-  ]);
+  }, [appStore, sellToken?.name, storePersist, buyToken?.name, amount, buyAmount, onSwap]);
 
   /**
    * Simulates the swap transaction to determine the exchange rate and network fee.
@@ -334,56 +310,47 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
 
       setLoadingSimulate(true);
       try {
-        const poolRouterContract = new NormalPoolRouterContract.Client({
-          contractId: constants.POOL_ROUTER_ADDRESS,
-          networkPassphrase: constants.NETWORK_PASSPHRASE,
-          rpcUrl: constants.RPC_URL,
-        });
+        const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
+        const isBuy = buyToken.symbol !== 'XLM';
 
-        const poolInfo = await poolRouterContract.query_pool_details({
-          pool_address: '',
-        });
+        // onEstimateSwap({
+        //   asset,
+        //   is_buy: isBuy,
+        //   in_amount: amount,
+        // });
 
-        const tx = await poolRouterContract.estimate_swap({
-          tokens: [sellToken.address!, buyToken.address!],
-          token_in: sellToken.address!,
-          token_out: buyToken.address!,
-          pool_index: Buffer.from('0'),
-          in_amount: BigInt(amount),
-        });
+        // TODO: will fix errors below once relocated outside this component
+        // if (poolInfo.result && tx.result) {
+        //   const _exchangeRate = Number(tx.result) / Number(amount);
 
-        if (poolInfo.result && tx.result) {
-          const _exchangeRate = Number(tx.result) / Number(amount);
+        //   setExchangeRate(
+        //     `${(_exchangeRate / 10 ** 7).toFixed(2)} ${buyToken?.name} per ${sellToken?.name}`
+        //   );
+        //   // setNetworkFee(
+        //   //   `${Number(tx.result.commission_amounts[0][1]) / 10 ** 7} ${sellToken?.name}`
+        //   // );
+        //   setPoolFee(poolInfo.result.total_fee_bps.toString());
 
-          setExchangeRate(
-            `${(_exchangeRate / 10 ** 7).toFixed(2)} ${buyToken?.name} per ${sellToken?.name}`
-          );
-          // setNetworkFee(
-          //   `${Number(tx.result.commission_amounts[0][1]) / 10 ** 7} ${sellToken?.name}`
-          // );
-          setPoolFee(poolInfo.result.total_fee_bps.toString());
+        //   // dy = (y * dx) / (x + dx)
+        //   const dy =
+        //     (poolInfo.result.pool_response.asset_b.amount * BigInt(amount)) /
+        //     (poolInfo.result.pool_response.asset_a.amount + BigInt(amount));
 
-          // dy = (y * dx) / (x + dx)
-          const dy =
-            (poolInfo.result.pool_response.asset_b.amount * BigInt(amount)) /
-            (poolInfo.result.pool_response.asset_a.amount + BigInt(amount));
+        //   const execution_price = BigInt(amount) / dy;
+        //   const market_price =
+        //     poolInfo.result.pool_response.asset_a.amount /
+        //     poolInfo.result.pool_response.asset_b.amount;
 
-          const execution_price = BigInt(amount) / dy;
-          const market_price =
-            poolInfo.result.pool_response.asset_a.amount /
-            poolInfo.result.pool_response.asset_b.amount;
+        //   // price_impact = (execution_price - market_price) / market_price * 100
+        //   const _priceImpact =
+        //     BigInt((execution_price - market_price) / market_price) * BigInt(100);
+        //   setPriceImpact(Number(_priceImpact));
 
-          // price_impact = (execution_price - market_price) / market_price * 100
-          const executionPriceNum = Number(execution_price);
-          const marketPriceNum = Number(market_price);
-          const _priceImpact = ((executionPriceNum - marketPriceNum) / marketPriceNum) * 100;
-          setPriceImpact(Number(_priceImpact));
-
-          // setTokenAmounts((prevAmounts) => {
-          //   const newToTokenAmount = Number(tx.result.ask_amount) / 10 ** 7;
-          //   return [prevAmounts[0], newToTokenAmount];
-          // });
-        }
+        //   // setTokenAmounts((prevAmounts) => {
+        //   //   const newToTokenAmount = Number(tx.result.ask_amount) / 10 ** 7;
+        //   //   return [prevAmounts[0], newToTokenAmount];
+        //   // });
+        // }
       } catch (e) {
         console.log(e);
       }
@@ -391,42 +358,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
     }
   }, [sellToken?.name, buyToken, amount, buyAmount]);
 
-  /**
-   * Handles adding a trustline for a token.
-   *
-   * @param {string} tokenAddress - The address of the token.
-   * @async
-   */
-  const handleTrustLine = useCallback(
-    async (tokenAddress: string): Promise<void> => {
-      const trust = await checkTrustline(storePersist.wallet.address!, tokenAddress);
-      setTrustlineButtonActive(!trust.exists);
-      // setTrustlineTokenSymbol(trust.asset?.code || '');
-      const tlAsset = await appStore.fetchTokenInfo(
-        'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA'
-      );
-      // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-      setTrustlineAssetAmount(Number(tlAsset?.balance) / 10 ** tlAsset?.decimals!);
-      setTrustlineTokenName(trust.asset?.contract || '');
-    },
-    [storePersist.wallet.address]
-  );
-
-  /**
-   * Adds a trustline for the specified token.
-   *
-   * @async
-   */
-  const addTrustLine = useCallback(async (): Promise<void> => {
-    try {
-      setTxBroadcasting(true);
-      await fetchAndIssueTrustline(storePersist.wallet.address!, trustlineTokenName);
-      setTrustlineButtonActive(false);
-    } catch (e) {
-      console.log(e);
-    }
-    setTxBroadcasting(false);
-  }, [storePersist.wallet.address, trustlineTokenName]);
+  // Main button with multiple states
+  const persist = usePersistStore();
+  const isConnected = !!persist.wallet.address;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -441,7 +375,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
             width: '44px',
             height: '44px',
             transform: 'translate(-50%, -50%)',
-            borderRadius: '6px',
+            borderRadius: '8px',
             overflow: 'hidden',
             zIndex: 2,
             cursor: 'pointer',
@@ -453,7 +387,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
             sx={{
               width: '100%',
               height: '100%',
-              borderRadius: 'inherit',
+              borderRadius: '8px',
               backgroundColor:
                 theme.palette.mode === 'light' ? theme.palette.grey[300] : theme.palette.grey[900],
               transition: 'background-color 0.3s',
@@ -491,7 +425,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
             padding: theme.spacing(2),
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            borderRadius: '8px',
+            borderRadius: '20px',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -504,6 +438,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
               minWidth: 0,
               alignItems: 'flex-start',
               overflow: 'hidden',
+              textAlign: 'left',
             }}
           >
             <Box
@@ -588,8 +523,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                 sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
               >
                 <SwapSendPopupButton
-                  imgUrl={getCryptoIconUrl(sellToken.shortname)}
-                  label={sellToken.shortname}
+                  imgUrl={getCryptoIconUrl(sellToken.symbol)}
+                  label={sellToken.symbol}
                   onClick={() => {
                     setActiveButton('sell');
                     handleOpen();
@@ -624,7 +559,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                         fontSize: '12px',
                       }}
                     >
-                      {sellToken.countstatus}{' '}
+                      {sellToken.balance}{' '}
                       <Box
                         component="span"
                         sx={{
@@ -633,13 +568,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                             : theme.palette.text.primary,
                         }}
                       >
-                        {sellToken?.shortname}
+                        {sellToken?.symbol}
                       </Box>
                     </Typography>
                   </Box>
                   <Button
-                    variant="soft"
-                    color="success"
+                    variant="contained"
                     size="small"
                     onClick={handleMaxClick}
                     disabled={isLoading}
@@ -649,6 +583,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                       p: 0,
                       height: '24px',
                       minWidth: '36px',
+                      backgroundColor: 'rgba(148,123,255,0.29)',
+                      color: '#6E4BFF',
+                      '&:hover': {
+                        backgroundColor: 'rgba(148,123,255,0.20)',
+                      },
                     }}
                   >
                     {t('Max')}
@@ -677,10 +616,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
             padding: theme.spacing(2),
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderRadius: '8px',
+            borderRadius: '20px',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: theme.palette.background.paper,
             overflow: 'hidden',
+            textAlign: 'left',
           }}
         >
           <Box
@@ -730,7 +670,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                 overflow: 'visible',
               }}
             >
-              {buyToken ? `${fCurrency(buyToken.pricestatus * buyAmount)}` : '$0'}
+              {buyToken ? `${fCurrency(buyToken.usdValue * buyAmount)}` : '$0'}
             </Typography>
           </Box>
 
@@ -747,8 +687,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
           >
             {buyToken ? (
               <SwapSendPopupButton
-                imgUrl={getCryptoIconUrl(buyToken.shortname)}
-                label={buyToken.shortname}
+                imgUrl={getCryptoIconUrl(buyToken.symbol)}
+                label={buyToken.symbol}
                 onClick={() => {
                   setActiveButton('buy');
                   handleOpen();
@@ -767,18 +707,30 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
         </Box>
       </Box>
       {/* Main button with multiple states */}
-      <Box>
+      {isConnected ? (
         <Button
           fullWidth
-          variant="soft"
-          color="success"
+          variant="contained" // use a supported variant
           size="large"
           onClick={handleMainButtonClick}
           disabled={isLoading}
+          sx={{
+            backgroundColor: 'rgba(148,123,255,0.29)',
+            color: '#6E4BFF',
+            '&:hover': {
+              backgroundColor: 'rgba(148,123,255,0.20)',
+            },
+            borderRadius: '20px',
+          }}
         >
           {getButtonLabel()}
         </Button>
-      </Box>
+      ) : (
+        <WalletGate buttonText="Connect Wallet to Swap" fullWidth variant="contained">
+          {null}
+        </WalletGate>
+      )}
+
       {/* Additional box with fee info */}
       {quoteFetched && !isLoading && (
         <FeeInfoAccordion

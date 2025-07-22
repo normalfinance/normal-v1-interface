@@ -45,7 +45,7 @@ _static
 # Sentry Config File
 .sentryclirc
 
-crowdin.yml
+# crowdin.yml
 
 # PWA files
 /public/sw.js
@@ -54,3 +54,4 @@ crowdin.yml
 /public/sw.js.map
 /public/workbox-*.js.map
 /public/worker-*.js.map
+.yarn/install-state.gz

@@ -125,6 +125,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
         </SvgIcon>
       </Box>
       {t('Search tokens...')}
+      {/* eslint-disable i18next/no-literal-string */}
       <Label
         sx={{
           color: 'grey.800',
@@ -135,8 +136,9 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
         }}
       >
-        {t('⌘K')}
+        ⌘K
       </Label>
+      {/* eslint-enable i18next/no-literal-string */}
     </Box>
   );
 
@@ -153,14 +155,14 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
     >
       {dataFiltered.map((item) => {
         const partsTitle = parse(item.name, match(item.name, searchQuery));
-        const partsPath = parse(item.shortname, match(item.shortname, searchQuery));
+        const partsPath = parse(item.symbol, match(item.symbol, searchQuery));
 
         return (
-          <MenuItem disableRipple key={item.shortname}>
+          <MenuItem disableRipple key={item.symbol}>
             <ResultItem
               path={partsPath}
               title={partsTitle}
-              href={paths.markets.details(item.shortname)}
+              href={paths.pools.details(item.symbol)}
               labels={item.name.split('.')}
               onClick={handleClose}
             />

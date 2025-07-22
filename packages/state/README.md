@@ -1,6 +1,6 @@
 # State Package
 
-The State package is a collection of state management utilities for the Phoenix Frontend project. It utilizes Zustand, a powerful library for managing application state with a simple yet flexible API.
+The State package is a collection of state management utilities for the Normal project. It utilizes Zustand, a powerful library for managing application state with a simple yet flexible API.
 
 ## Features
 
@@ -8,14 +8,14 @@ The State package is a collection of state management utilities for the Phoenix 
 - Action creators for state manipulation
 - Type-safe state implementation with TypeScript
 - Optimized for performance with minimal re-renders
-- Integration with Phoenix contracts
+- Integration with Normal contracts
 
 ## Installation
 
 To install the State package, follow these steps:
 
 1. Ensure that you have Node.js and yarn installed on your machine.
-2. Navigate to the root directory of the Phoenix Frontend project.
+2. Navigate to the root directory of the Normal project.
 3. Run `yarn install` to install all project dependencies.
 
 ## Usage

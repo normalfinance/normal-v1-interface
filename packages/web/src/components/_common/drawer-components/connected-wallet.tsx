@@ -1,9 +1,10 @@
 'use client';
 
-import type { Token } from '@/types/token';
 import type { Activity } from '@/types/activity';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
+import { useTranslate } from '@/locales';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
 import { fPercent, fCurrencyCompact } from '@/utils/format-number';
@@ -17,19 +18,20 @@ import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 
-import PoolsTab from './pools-tab';
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
+import ReceiveModal from '../receive-modal';
+import PositioinsTab from './positions-tab';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
-import type { PoolDetails } from '../pools-explore/explorer-chart-data';
+import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
 
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {
   balance?: number;
   percentageChange?: number;
   tokens?: Token[];
-  pools?: PoolDetails[];
+  positions?: PoolDetails[];
   activity?: Activity[];
 }
 
@@ -37,22 +39,25 @@ export default function ConnectedWallet({
   balance,
   percentageChange,
   tokens,
-  pools,
+  positions,
   activity,
 }: ConnectedWalletProps) {
+  const { t } = useTranslate();
   const theme = useTheme();
-  const [showSwap, setShowSwap] = useState(false);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   const actionButtons = [
     {
       label: 'Send',
       icon: 'solar:transfer-horizontal-bold-duotone',
-      onClick: () => setShowSwap((prev) => !prev),
+      onClick: () => {
+        console.log('Send clicked');
+      },
     },
     {
       label: 'Receive',
       icon: 'mingcute:add-line',
-      href: '/positions/create',
+      onClick: () => setShowReceiveModal(true),
     },
   ];
 
@@ -60,7 +65,7 @@ export default function ConnectedWallet({
 
   const TAB_ITEMS = [
     { value: 'tokens', label: 'Tokens' },
-    { value: 'pools', label: 'Pools' },
+    { value: 'positions', label: 'Positions' },
     { value: 'activity', label: 'Activity' },
   ] as const;
 
@@ -144,7 +149,6 @@ export default function ConnectedWallet({
               color="success"
               size="large"
               onClick={btn.onClick}
-              href={btn.href}
             >
               <Box
                 sx={{
@@ -191,14 +195,16 @@ export default function ConnectedWallet({
         }}
       >
         {TAB_ITEMS.map((tab) => (
-          <Tab key={tab.value} value={tab.value} label={tab.label} />
+          <Tab key={tab.value} value={tab.value} label={t(tab.label)} />
         ))}
       </CustomTabsSwapSend>
 
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'tokens' && <TokensTab tokens={tokens} />}
-      {tabs.value === 'pools' && <PoolsTab pools={pools} />}
+      {tabs.value === 'pools' && <PositioinsTab positions={positions} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
+
+      <ReceiveModal open={showReceiveModal} onClose={() => setShowReceiveModal(false)} />
     </Stack>
   );
 }

@@ -34,7 +34,7 @@ if (typeof window !== 'undefined') {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CDJKWDFYPFVGXRETL5L6XVDASALECY5H7LUA4M3YUJSBDNI4QJ4JCYHB",
+    contractId: "CBUCZBSKYA5P5KMSCV52ARPM2SSK3GULHWI5BQ7646ES7Y2KSS4NMIMV",
   }
 } as const
 
@@ -46,7 +46,7 @@ export interface AllowanceValue {
 
 export const TokenError = {
   /**
-   * TokenError: AlreadyInitialized
+   * TokenError
    */
   601: {message:"AlreadyInitialized"},
 
@@ -62,7 +62,7 @@ export const TokenError = {
 }
 export const AccessControlError = {
   /**
-   * AccessControlError: RoleNotFound
+   * AccessControlError
    */
   101: {message:"RoleNotFound"},
 
@@ -85,15 +85,121 @@ export interface TokenMetadata {
   symbol: string;
 }
 
+
+export interface OraclePriceData {
+  delay: u64;
+  price: u128;
+}
+
+export type PoolStatus = {tag: "Initialized", values: void} | {tag: "Active", values: void} | {tag: "Frozen", values: void} | {tag: "ReduceOnly", values: void} | {tag: "Settlement", values: void} | {tag: "Delisted", values: void};
+
+export type PoolTier = {tag: "A", values: void} | {tag: "B", values: void} | {tag: "C", values: void} | {tag: "Speculative", values: void} | {tag: "HighlySpeculative", values: void} | {tag: "Isolated", values: void};
+
+
+export interface TokenInitInfo {
+  name: string;
+  symbol: string;
+  token_wasm_hash: Buffer;
+}
+
+
+export interface PrivilegedAddresses {
+  emergency_admin: string;
+  emergency_pause_admins: Array<string>;
+  operations_admin: string;
+  pause_admin: string;
+  rewards_admin: string;
+}
+
+
+export interface OraclePair {
+  base_oracle: string;
+  quote_oracle: string;
+}
+
+
+export interface RewardConfig {
+  reward_token: string;
+}
+
+
+export interface InitializeParams {
+  admin: string;
+  asset: string;
+  base_asset_id: string;
+  fee_fraction: u32;
+  lp_token_info: TokenInitInfo;
+  oracle_registry: string;
+  privileged_addrs: PrivilegedAddresses;
+  quote_asset_id: string;
+  quote_max_insurance: u128;
+  router: string;
+  tier: PoolTier;
+  tokens: Array<string>;
+}
+
+
+export interface InitializeAllParams {
+  base: InitializeParams;
+  reward_config: RewardConfig;
+}
+
+
+export interface AddressAndAmount {
+  address: string;
+  amount: u128;
+}
+
+
+export interface PoolResponse {
+  asset_a: AddressAndAmount;
+  asset_b: AddressAndAmount;
+  asset_lp_share: AddressAndAmount;
+}
+
+
+export interface PoolInfo {
+  pool_address: string;
+  pool_response: PoolResponse;
+  total_fee_bps: u32;
+}
+
+
+export interface OracleInfo {
+  asset: string;
+  decimals: u32;
+  frozen: boolean;
+  last_updated: u64;
+  oracle_address: string;
+}
+
 export const MathError = {
   /**
    * MathError: NumberOverflow
    */
-  510: {message:"NumberOverflow"}
+  510: {message:"NumberOverflow"},
+
+  511: {message:"MathError"}
+}
+export const OracleError = {
+  /**
+   * OracleError: OracleNonPositive
+   */
+  601: {message:"OracleNonPositive"},
+
+  602: {message:"OracleTooVolatile"},
+
+  603: {message:"OracleTooUncertain"},
+
+  604: {message:"OracleStaleForMargin"},
+
+  605: {message:"OracleInsufficientDataPoints"},
+
+  606: {message:"OracleStaleForPool"}
 }
 export const StorageError = {
   /**
-   * StorageError: NumbValueNotInitializederOverflow
+   * StorageError
    */
   501: {message:"ValueNotInitialized"},
 
@@ -475,8 +581,7 @@ export class Client extends ContractClient {
         format?: "hex" | "base64";
       }
   ): Promise<AssembledTransaction<T>> {
-    // return ContractClient.deploy(null, options)
-    return undefined as any;
+    return ContractClient.deploy(null, options)
   }
   constructor(public readonly options: ContractClientOptions) {
     super(
@@ -499,11 +604,25 @@ export class Client extends ContractClient {
         "AAAAAAAAAAAAAAAYYXBwbHlfdHJhbnNmZXJfb3duZXJzaGlwAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAlyb2xlX25hbWUAAAAAAAARAAAAAA==",
         "AAAAAAAAAAAAAAAZcmV2ZXJ0X3RyYW5zZmVyX293bmVyc2hpcAAAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAJcm9sZV9uYW1lAAAAAAAAEQAAAAA=",
         "AAAAAAAAAAAAAAASZ2V0X2Z1dHVyZV9hZGRyZXNzAAAAAAABAAAAAAAAAAlyb2xlX25hbWUAAAAAAAARAAAAAQAAABM=",
-        "AAAABAAAAAAAAAAAAAAAClRva2VuRXJyb3IAAAAAAAYAAAAeVG9rZW5FcnJvcjogQWxyZWFkeUluaXRpYWxpemVkAAAAAAASQWxyZWFkeUluaXRpYWxpemVkAAAAAAJZAAAAAAAAABNJbnN1ZmZpY2llbnRCYWxhbmNlAAAAAloAAAAAAAAAFUluc3VmZmljaWVudEFsbG93YW5jZQAAAAAAAlsAAAAAAAAAEk5lZ2F0aXZlTm90QWxsb3dlZAAAAAACXAAAAAAAAAAPRGVjaW1hbFRvb0xhcmdlAAAAAl0AAAAAAAAAElBhc3RUaW1lTm90QWxsb3dlZAAAAAACXg==",
-        "AAAABAAAAAAAAAAAAAAAEkFjY2Vzc0NvbnRyb2xFcnJvcgAAAAAABwAAACBBY2Nlc3NDb250cm9sRXJyb3I6IFJvbGVOb3RGb3VuZAAAAAxSb2xlTm90Rm91bmQAAABlAAAAAAAAAAxVbmF1dGhvcml6ZWQAAABmAAAAAAAAAA9BZG1pbkFscmVhZHlTZXQAAAAAZwAAAAAAAAAMQmFkUm9sZVVzYWdlAAAAaAAAAAAAAAATQW5vdGhlckFjdGlvbkFjdGl2ZQAAAAtaAAAAAAAAAA5Ob0FjdGlvbkFjdGl2ZQAAAAALWwAAAAAAAAARQWN0aW9uTm90UmVhZHlZZXQAAAAAAAtc",
+        "AAAABAAAAAAAAAAAAAAAClRva2VuRXJyb3IAAAAAAAYAAAAKVG9rZW5FcnJvcgAAAAAAEkFscmVhZHlJbml0aWFsaXplZAAAAAACWQAAAAAAAAATSW5zdWZmaWNpZW50QmFsYW5jZQAAAAJaAAAAAAAAABVJbnN1ZmZpY2llbnRBbGxvd2FuY2UAAAAAAAJbAAAAAAAAABJOZWdhdGl2ZU5vdEFsbG93ZWQAAAAAAlwAAAAAAAAAD0RlY2ltYWxUb29MYXJnZQAAAAJdAAAAAAAAABJQYXN0VGltZU5vdEFsbG93ZWQAAAAAAl4=",
+        "AAAABAAAAAAAAAAAAAAAEkFjY2Vzc0NvbnRyb2xFcnJvcgAAAAAABwAAABJBY2Nlc3NDb250cm9sRXJyb3IAAAAAAAxSb2xlTm90Rm91bmQAAABlAAAAAAAAAAxVbmF1dGhvcml6ZWQAAABmAAAAAAAAAA9BZG1pbkFscmVhZHlTZXQAAAAAZwAAAAAAAAAMQmFkUm9sZVVzYWdlAAAAaAAAAAAAAAATQW5vdGhlckFjdGlvbkFjdGl2ZQAAAAtaAAAAAAAAAA5Ob0FjdGlvbkFjdGl2ZQAAAAALWwAAAAAAAAARQWN0aW9uTm90UmVhZHlZZXQAAAAAAAtc",
         "AAAAAQAAAAAAAAAAAAAADVRva2VuTWV0YWRhdGEAAAAAAAADAAAAAAAAAAdkZWNpbWFsAAAAAAQAAAAAAAAABG5hbWUAAAAQAAAAAAAAAAZzeW1ib2wAAAAAABA=",
-        "AAAABAAAAAAAAAAAAAAACU1hdGhFcnJvcgAAAAAAAAEAAAAZTWF0aEVycm9yOiBOdW1iZXJPdmVyZmxvdwAAAAAAAA5OdW1iZXJPdmVyZmxvdwAAAAAB/g==",
-        "AAAABAAAAAAAAAAAAAAADFN0b3JhZ2VFcnJvcgAAAAIAAAAvU3RvcmFnZUVycm9yOiBOdW1iVmFsdWVOb3RJbml0aWFsaXplZGVyT3ZlcmZsb3cAAAAAE1ZhbHVlTm90SW5pdGlhbGl6ZWQAAAAB9QAAAAAAAAAMVmFsdWVNaXNzaW5nAAAB9g==" ]),
+        "AAAAAQAAAAAAAAAAAAAAD09yYWNsZVByaWNlRGF0YQAAAAACAAAAAAAAAAVkZWxheQAAAAAAAAYAAAAAAAAABXByaWNlAAAAAAAACg==",
+        "AAAAAgAAAAAAAAAAAAAAClBvb2xTdGF0dXMAAAAAAAYAAAAAAAAAAAAAAAtJbml0aWFsaXplZAAAAAAAAAAAAAAAAAZBY3RpdmUAAAAAAAAAAAAAAAAABkZyb3plbgAAAAAAAAAAAAAAAAAKUmVkdWNlT25seQAAAAAAAAAAAAAAAAAKU2V0dGxlbWVudAAAAAAAAAAAAAAAAAAIRGVsaXN0ZWQ=",
+        "AAAAAgAAAAAAAAAAAAAACFBvb2xUaWVyAAAABgAAAAAAAAAAAAAAAUEAAAAAAAAAAAAAAAAAAAFCAAAAAAAAAAAAAAAAAAABQwAAAAAAAAAAAAAAAAAAC1NwZWN1bGF0aXZlAAAAAAAAAAAAAAAAEUhpZ2hseVNwZWN1bGF0aXZlAAAAAAAAAAAAAAAAAAAISXNvbGF0ZWQ=",
+        "AAAAAQAAAAAAAAAAAAAADVRva2VuSW5pdEluZm8AAAAAAAADAAAAAAAAAARuYW1lAAAAEAAAAAAAAAAGc3ltYm9sAAAAAAAQAAAAAAAAAA90b2tlbl93YXNtX2hhc2gAAAAD7gAAACA=",
+        "AAAAAQAAAAAAAAAAAAAAE1ByaXZpbGVnZWRBZGRyZXNzZXMAAAAABQAAAAAAAAAPZW1lcmdlbmN5X2FkbWluAAAAABMAAAAAAAAAFmVtZXJnZW5jeV9wYXVzZV9hZG1pbnMAAAAAA+oAAAATAAAAAAAAABBvcGVyYXRpb25zX2FkbWluAAAAEwAAAAAAAAALcGF1c2VfYWRtaW4AAAAAEwAAAAAAAAANcmV3YXJkc19hZG1pbgAAAAAAABM=",
+        "AAAAAQAAAAAAAAAAAAAACk9yYWNsZVBhaXIAAAAAAAIAAAAAAAAAC2Jhc2Vfb3JhY2xlAAAAABMAAAAAAAAADHF1b3RlX29yYWNsZQAAABM=",
+        "AAAAAQAAAAAAAAAAAAAADFJld2FyZENvbmZpZwAAAAEAAAAAAAAADHJld2FyZF90b2tlbgAAABM=",
+        "AAAAAQAAAAAAAAAAAAAAEEluaXRpYWxpemVQYXJhbXMAAAAMAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAABWFzc2V0AAAAAAAAEwAAAAAAAAANYmFzZV9hc3NldF9pZAAAAAAAABEAAAAAAAAADGZlZV9mcmFjdGlvbgAAAAQAAAAAAAAADWxwX3Rva2VuX2luZm8AAAAAAAfQAAAADVRva2VuSW5pdEluZm8AAAAAAAAAAAAAD29yYWNsZV9yZWdpc3RyeQAAAAATAAAAAAAAABBwcml2aWxlZ2VkX2FkZHJzAAAH0AAAABNQcml2aWxlZ2VkQWRkcmVzc2VzAAAAAAAAAAAOcXVvdGVfYXNzZXRfaWQAAAAAABEAAAAAAAAAE3F1b3RlX21heF9pbnN1cmFuY2UAAAAACgAAAAAAAAAGcm91dGVyAAAAAAATAAAAAAAAAAR0aWVyAAAH0AAAAAhQb29sVGllcgAAAAAAAAAGdG9rZW5zAAAAAAPqAAAAEw==",
+        "AAAAAQAAAAAAAAAAAAAAE0luaXRpYWxpemVBbGxQYXJhbXMAAAAAAgAAAAAAAAAEYmFzZQAAB9AAAAAQSW5pdGlhbGl6ZVBhcmFtcwAAAAAAAAANcmV3YXJkX2NvbmZpZwAAAAAAB9AAAAAMUmV3YXJkQ29uZmln",
+        "AAAAAQAAAAAAAAAAAAAAEEFkZHJlc3NBbmRBbW91bnQAAAACAAAAAAAAAAdhZGRyZXNzAAAAABMAAAAAAAAABmFtb3VudAAAAAAACg==",
+        "AAAAAQAAAAAAAAAAAAAADFBvb2xSZXNwb25zZQAAAAMAAAAAAAAAB2Fzc2V0X2EAAAAH0AAAABBBZGRyZXNzQW5kQW1vdW50AAAAAAAAAAdhc3NldF9iAAAAB9AAAAAQQWRkcmVzc0FuZEFtb3VudAAAAAAAAAAOYXNzZXRfbHBfc2hhcmUAAAAAB9AAAAAQQWRkcmVzc0FuZEFtb3VudA==",
+        "AAAAAQAAAAAAAAAAAAAACFBvb2xJbmZvAAAAAwAAAAAAAAAMcG9vbF9hZGRyZXNzAAAAEwAAAAAAAAANcG9vbF9yZXNwb25zZQAAAAAAB9AAAAAMUG9vbFJlc3BvbnNlAAAAAAAAAA10b3RhbF9mZWVfYnBzAAAAAAAABA==",
+        "AAAAAQAAAAAAAAAAAAAACk9yYWNsZUluZm8AAAAAAAUAAAAAAAAABWFzc2V0AAAAAAAAEwAAAAAAAAAIZGVjaW1hbHMAAAAEAAAAAAAAAAZmcm96ZW4AAAAAAAEAAAAAAAAADGxhc3RfdXBkYXRlZAAAAAYAAAAAAAAADm9yYWNsZV9hZGRyZXNzAAAAAAAT",
+        "AAAABAAAAAAAAAAAAAAACU1hdGhFcnJvcgAAAAAAAAIAAAAZTWF0aEVycm9yOiBOdW1iZXJPdmVyZmxvdwAAAAAAAA5OdW1iZXJPdmVyZmxvdwAAAAAB/gAAAAAAAAAJTWF0aEVycm9yAAAAAAAB/w==",
+        "AAAABAAAAAAAAAAAAAAAC09yYWNsZUVycm9yAAAAAAYAAAAeT3JhY2xlRXJyb3I6IE9yYWNsZU5vblBvc2l0aXZlAAAAAAART3JhY2xlTm9uUG9zaXRpdmUAAAAAAAJZAAAAAAAAABFPcmFjbGVUb29Wb2xhdGlsZQAAAAAAAloAAAAAAAAAEk9yYWNsZVRvb1VuY2VydGFpbgAAAAACWwAAAAAAAAAUT3JhY2xlU3RhbGVGb3JNYXJnaW4AAAJcAAAAAAAAABxPcmFjbGVJbnN1ZmZpY2llbnREYXRhUG9pbnRzAAACXQAAAAAAAAAST3JhY2xlU3RhbGVGb3JQb29sAAAAAAJe",
+        "AAAABAAAAAAAAAAAAAAADFN0b3JhZ2VFcnJvcgAAAAIAAAAMU3RvcmFnZUVycm9yAAAAE1ZhbHVlTm90SW5pdGlhbGl6ZWQAAAAB9QAAAAAAAAAMVmFsdWVNaXNzaW5nAAAB9g==" ]),
       options
     )
   }

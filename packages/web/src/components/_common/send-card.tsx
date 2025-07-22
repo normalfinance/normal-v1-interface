@@ -1,12 +1,14 @@
-import type { Token } from '@/types/token';
 import type { CardProps } from '@mui/material';
-import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { StateToken as Token } from '@normalfinance/types';
 
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { usePersistStore } from '@normalfinance/state';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import React, { useRef, useState, useEffect } from 'react';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { isValidStellarAddress } from '@/utils/address-validator';
 import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -14,18 +16,20 @@ import { Box, Button, InputBase, Typography } from '@mui/material';
 
 import PickToken from './pick-token';
 import SendReview from './send-review';
+import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
 
 interface SendCardProps extends CardProps {
   tokensList?: Token[];
-  swapFeeInfo?: SwapFeeInfo;
+  networkCost?: number;
 }
 
 const DEFAULT_DESTINATION = 'Wallet address or ENS name';
 
-const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...other }) => {
+const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  const { enqueueSnackbar } = useSnackbar();
 
   // State declarations...
   const [sendToken, setSendToken] = useState<Token | null>(
@@ -52,8 +56,8 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
     if (sendToken) {
       const amt = parseFloat(amount) || 0;
       // When in fiat mode, the input is in dollars:
-      const _coinValue = isFiatMode ? amt / sendToken.pricestatus : amt;
-      const _fiatValue = sendToken ? _coinValue * sendToken.pricestatus : 0;
+      const _coinValue = isFiatMode ? amt / sendToken.usdValue : amt;
+      const _fiatValue = sendToken ? _coinValue * sendToken.usdValue : 0;
       setCoinValue(_coinValue);
       setFiatValue(_fiatValue);
     } else {
@@ -97,10 +101,10 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
       if (amt === 0) {
         setAmount('0');
       } else if (isFiatMode) {
-        const coinVal = convertFiatToCoin(amt, sendToken.pricestatus);
+        const coinVal = convertFiatToCoin(amt, sendToken.usdValue);
         setAmount(coinVal.toFixed(6));
       } else {
-        const fiatVal = convertCoinToFiat(amt, sendToken.pricestatus);
+        const fiatVal = convertCoinToFiat(amt, sendToken.usdValue);
         setAmount(fiatVal.toFixed(6));
       }
     }
@@ -112,10 +116,10 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
   let coinAmount = 0;
   if (sendToken) {
     const amt = parseFloat(amount) || 0;
-    coinAmount = isFiatMode ? amt / sendToken.pricestatus : amt;
+    coinAmount = isFiatMode ? amt / sendToken.usdValue : amt;
   }
 
-  const insufficientBalance = sendToken ? coinAmount > sendToken.countstatus : false;
+  const insufficientBalance = sendToken ? coinAmount > sendToken.balance : false;
 
   const getButtonLabel = (): string => {
     if (destination === DEFAULT_DESTINATION) {
@@ -129,7 +133,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
       return 'Enter an amount';
     }
     if (insufficientBalance) {
-      return `Insufficient ${sendToken.shortname}`;
+      return `Insufficient ${sendToken.symbol}`;
     }
     return 'Send';
   };
@@ -138,12 +142,20 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
     const label = getButtonLabel();
 
     if (label === 'Send') {
+      if (!isValidStellarAddress(destination)) {
+        enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
+        return;
+      }
       setReviewOpen(true);
     }
   };
 
+  // Main button with multiple states
+  const persist = usePersistStore();
+  const isConnected = !!persist.wallet.address;
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1 }} width={1}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
         <Box
           sx={{
@@ -187,6 +199,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
               onKeyDown={handleAmountKeyDown}
               sx={{
                 display: 'inline-flex',
+                maxWidth: '100%',
                 width: `${inputWidth}px`,
                 border: 'none',
                 padding: 0,
@@ -236,11 +249,11 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           >
             {sendToken && isFiatMode ? (
               <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
-                {coinAmount.toFixed(6)} {sendToken.shortname}
+                {coinAmount.toFixed(6)} {sendToken.symbol}
               </Typography>
             ) : sendToken ? (
               <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
-                {fCurrency(coinAmount * sendToken.pricestatus)}
+                {fCurrency(coinAmount * sendToken.usdValue)}
               </Typography>
             ) : null}
             <Iconify
@@ -277,7 +290,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Box
               component="img"
-              src={sendToken ? getCryptoIconUrl(sendToken.shortname) : ''}
+              src={sendToken ? getCryptoIconUrl(sendToken.symbol) : ''}
               sx={{
                 width: 36,
                 height: 36,
@@ -290,7 +303,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
                 variant="body2"
                 sx={{ fontWeight: 500, color: theme.palette.text.primary, textAlign: 'start' }}
               >
-                {sendToken?.shortname}
+                {sendToken?.symbol}
               </Typography>
               <Typography
                 variant="body2"
@@ -302,10 +315,10 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
                 }}
               >
                 {t('Balance:')}
-                <Box component="span">{sendToken?.countstatus}</Box>{' '}
+                <Box component="span">{sendToken?.balance}</Box>{' '}
                 <Box component="span" sx={{ color: theme.palette.text.secondary }}>
                   {t('(')}
-                  {fCurrency((sendToken?.countstatus ?? 0) * (sendToken?.pricestatus ?? 0))}
+                  {fCurrency(Number(sendToken?.balance ?? 0) * (sendToken?.usdValue ?? 0))}
                   {t(')')}
                 </Box>
               </Typography>
@@ -327,7 +340,9 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
               onClick={(e) => {
                 e.stopPropagation();
                 if (sendToken) {
-                  setAmount(getMaxAmount(sendToken.countstatus, sendToken.pricestatus, isFiatMode));
+                  setAmount(
+                    getMaxAmount(Number(sendToken.balance), sendToken.usdValue, isFiatMode)
+                  );
                 }
               }}
             >
@@ -393,15 +408,21 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
       </Box>
       {/* Main Button */}
       <Box>
-        <Button
-          fullWidth
-          variant="soft"
-          color="success"
-          size="large"
-          onClick={handleMainButtonClick}
-        >
-          {getButtonLabel()}
-        </Button>
+        {isConnected ? (
+          <Button
+            fullWidth
+            variant="soft"
+            color="success"
+            size="large"
+            onClick={handleMainButtonClick}
+          >
+            {getButtonLabel()}
+          </Button>
+        ) : (
+          <WalletGate buttonText="Connect Wallet to Send" fullWidth variant="soft">
+            {null}
+          </WalletGate>
+        )}
       </Box>
       {reviewOpen && (
         <SendReview
@@ -411,7 +432,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], swapFeeInfo, ...ot
           tokenValue={coinValue}
           fiatValue={fiatValue}
           address={destination}
-          networkCost={swapFeeInfo?.networkCost ?? 0}
+          networkCost={networkCost ?? 0}
         />
       )}
       {/* Token Picker Popup */}

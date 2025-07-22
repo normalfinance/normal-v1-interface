@@ -2,25 +2,25 @@
   "app": "Alkalmazás",
   "job": "Munka",
   "user": "Felhasználó",
-  "travel": "Utazás",
+  "travel": "Utazási",
   "invoice": "Számla",
   "blog": {
     "title": "Blog",
     "caption": "Egyéni billentyűparancsok."
   },
-  "subheader": "Alcím",
+  "subheader": "Alcímsor",
   "Overview": "Áttekintés",
-  "Trade": "Kereskedés",
-  "Spot": "Spot",
+  "Trade": "Kereskedelmi",
+  "Spot": "Folt",
   "Indexes": "Indexek",
-  "Earn": "Bevétel",
+  "Earn": "Pénzt keres",
   "Yield": "Hozam",
-  "LP": "LP",
+  "LP": "LP-lemez",
   "Rewards": "Jutalmak",
   "Referrals": "Ajánlások",
   "Analytics": "Analitika",
   "More": "Több",
   "Governance": "Irányítás",
-  "Help & Feedback": "Segítség és visszajelzés",
-  "Docs": "Dokumentáció"
+  "Help & Feedback": "Súgó és visszajelzés",
+  "Docs": "Dokumentumok"
 }

@@ -2,22 +2,9 @@
 
 import type { Breakpoint } from '@mui/material/styles';
 
-import { merge } from 'es-toolkit';
-import { paths } from '@/routes/paths';
-import { useTranslate } from '@/locales';
-import { RouterLink } from '@/routes/components';
-
-import Box from '@mui/material/Box';
-import Link from '@mui/material/Link';
-import Alert from '@mui/material/Alert';
-
-import { Logo } from '@/components/template/logo';
-
 import { SimpleCompactContent } from './content';
 import { MainSection } from '../core/main-section';
 import { LayoutSection } from '../core/layout-section';
-import { HeaderSection } from '../core/header-section';
-import { LightDarkModeButton } from '../components/light-dark-mode-button';
 
 import type { SimpleCompactContentProps } from './content';
 import type { MainSectionProps } from '../core/main-section';
@@ -44,48 +31,7 @@ export function SimpleLayout({
   slotProps,
   layoutQuery = 'md',
 }: SimpleLayoutProps) {
-  const renderHeader = () => {
-    const RenderHeader = () => {
-      const headerSlotProps: HeaderSectionProps['slotProps'] = { container: { maxWidth: false } };
-      const { t } = useTranslate();
-
-      const headerSlots: HeaderSectionProps['slots'] = {
-        topArea: (
-          <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>
-            {t('This is an info Alert.')}
-          </Alert>
-        ),
-        leftArea: <Logo />,
-        rightArea: (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
-            {/** @slot Help link */}
-            <Link
-              href={paths.overview}
-              component={RouterLink}
-              color="inherit"
-              sx={{ typography: 'subtitle2' }}
-            >
-              {t('Need help?')}
-            </Link>
-
-            {/** @slot Settings button */}
-            <LightDarkModeButton />
-          </Box>
-        ),
-      };
-
-      return (
-        <HeaderSection
-          layoutQuery={layoutQuery}
-          {...slotProps?.header}
-          slots={{ ...headerSlots, ...slotProps?.header?.slots }}
-          slotProps={merge(headerSlotProps, slotProps?.header?.slotProps ?? {})}
-          sx={slotProps?.header?.sx}
-        />
-      );
-    };
-    return <RenderHeader />;
-  };
+  const renderHeader = () => null;
 
   const renderFooter = () => null;
 

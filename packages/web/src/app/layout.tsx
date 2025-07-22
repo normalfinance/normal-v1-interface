@@ -9,6 +9,9 @@ import { detectLanguage } from '@/locales/server';
 import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
+import { ReferralProvider } from '@/providers/ReferralProvider';
+import { ExternalProvider } from '@/providers/ExternalProvider';
+import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
@@ -19,8 +22,6 @@ import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
 
-// import { ExternalProvider } from '@/providers/ExternalProvider';
-
 // ----------------------------------------------------------------------
 
 export const viewport: Viewport = {
@@ -30,17 +31,35 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Normal',
-  description: '',
+  metadataBase: new URL(CONFIG.siteUrl),
+  title: {
+    default: 'Normal',
+    template: '%s · Normal',
+  },
+  description: 'Invest in diversified crypto indices with Normal.',
   keywords: 'crypto, investing, crypto index, defi',
+  openGraph: {
+    siteName: 'Normal',
+    images: [
+      {
+        url: '/og/home.png',
+        width: 1200,
+        height: 630,
+        alt: 'Normal overview',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
   twitter: {
     card: 'summary_large_image',
+    images: ['/og/home.png'],
   },
   manifest: '/manifest.json',
   icons: [
     {
       rel: 'icon',
-      url: `${CONFIG.assetsDir}/favicon.ico`,
+      url: '/favicon.ico',
     },
   ],
 };
@@ -94,15 +113,19 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   defaultMode={themeConfig.defaultMode}
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
-                  {/* <ExternalProvider> */}
-                  <MotionLazy>
-                    <SnackbarProvider>
-                      <ProgressBar />
-                      <SettingsDrawer defaultSettings={defaultSettings} />
-                      <DashboardLayout>{children}</DashboardLayout>
-                    </SnackbarProvider>
-                  </MotionLazy>
-                  {/* </ExternalProvider> */}
+                  <ExternalProvider>
+                    <ReferralProvider>
+                      <MotionLazy>
+                        <SnackbarProvider>
+                          <ProgressBar />
+                          <SettingsDrawer defaultSettings={defaultSettings} />
+                          <AnnouncementProvider>
+                            <DashboardLayout>{children}</DashboardLayout>
+                          </AnnouncementProvider>
+                        </SnackbarProvider>
+                      </MotionLazy>
+                    </ReferralProvider>
+                  </ExternalProvider>
                 </ThemeProvider>
               </AppRouterCacheProvider>
             </LocalizationProvider>

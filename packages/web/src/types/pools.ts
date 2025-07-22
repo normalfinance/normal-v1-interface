@@ -1,10 +1,11 @@
-export type TxType = 'Buy' | 'Sell' | 'Mint' | 'Redeem';
+export type TxType = 'Buy' | 'Sell' | 'Deposit' | 'Withdraw';
 
 export interface PoolTxRow {
-  timestamp: number;
   type: TxType;
-  usdValue: number;
-  usdcValue: number;
-  ethValue: number;
-  wallet: string;
+  // usdValue: number; // coming soon
+  tokenAAmount: number;
+  tokenBAmount: number;
+  user: string;
+  timestamp: string;
+  txHash: string;
 }

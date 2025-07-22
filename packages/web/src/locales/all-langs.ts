@@ -29,7 +29,7 @@ export const allLangs = [
   {
     value: 'en',
     label: 'English',
-    countryCode: 'GB',
+    countryCode: 'US',
     adapterLocale: 'en',
     numberFormat: { code: 'en-US', currency: 'USD' },
     systemValue: {
@@ -57,7 +57,7 @@ export const allLangs = [
     },
   },
   {
-    value: 'cn',
+    value: 'zh',
     label: 'Chinese',
     countryCode: 'CN',
     adapterLocale: 'zh-cn',

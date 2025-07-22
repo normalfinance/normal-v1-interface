@@ -1,8 +1,8 @@
 import { Account } from '@stellar/stellar-sdk';
 
 export const TESTING_SOURCE: Account = new Account(
-  'GBUHRWJBXS4YAEOVDRWFW6ZC5LLF2SAOMATH4I6YOTZYHE65FQRFOKG2',
-  '1'
+  'GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO',
+  '123'
 );
 
 /**
@@ -13,13 +13,39 @@ export const NETWORK_PASSPHRASE: string = 'Public Global Stellar Network ; Septe
 /**
  * The Soroban RPC endpoint used to initialize this library.
  */
-export const RPC_URL: string =
-  'https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0';
+export const RPC_URL: string = 'https://soroban-testnet.stellar.org';
 
 /**
  * Pool Router contract address
  */
 export const POOL_ROUTER_ADDRESS: string =
-  'CB4SVAWJA6TSRNOJZ7W2AWFW46D5VR4ZMFZKDIKXEINZCZEGZCJZCKMI';
+  'CC2CCFGMCEH7XJ34WXHIQ3MDRLPMF6UVELDL4MTX5X5DSZSG6DH24ZM5';
 
-export const NORMAL_BASE_FEE = '100000';
+/**
+ * Pool Swap Fee contract address
+ */
+export const POOL_SWAP_FEE_ADDRESS: string =
+  'CBQASVDLRJTGYFQBXEUVZUSS7CLZDLVWS4XNZ4TLHSPOCQAYAUJ3NKW6';
+
+/**
+ * Buffer contract address
+ */
+export const BUFFER_ADDRESS: string = 'CCTEOV6E6VHBAQXVHPFR7ZRAJTIKBFNOVV7RNSLC7FMEPXSIIQJNOKGC';
+
+/**
+ * Insurance Fund contract address
+ */
+export const INSURANCE_FUND_ADDRESS: string =
+  'CBNEAYC3XYACNOXTCDKPX5R5LYBUHNCQ6TPMHTVEKWHH2JZJBXW6DIXQ';
+
+/**
+ * Oracle Registry contract address
+ */
+export const ORALCE_REGISTY_ADDRESS: string =
+  'CCDHMFVDXDKMKIQVSWJAJJHWYCAO4M6HFFSLKSSIJ6DQVH56J2GRS7UC';
+
+/**
+ * XLM token info
+ */
+export const XLM_ADDRESS: string = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
+export const XLM_DECIMALS: number = 7;

@@ -2,25 +2,25 @@
   "app": "App",
   "job": "Job",
   "user": "Benutzer",
-  "travel": "Reise",
+  "travel": "Reisen",
   "invoice": "Rechnung",
   "blog": {
     "title": "Blog",
     "caption": "Benutzerdefinierte Tastaturkürzel."
   },
-  "subheader": "Unterüberschrift",
+  "subheader": "Sub-Header",
   "Overview": "Übersicht",
-  "Trade": "Handeln",
-  "Spot": "Spot",
+  "Trade": "Handel",
+  "Spot": "Ort",
   "Indexes": "Indizes",
   "Earn": "Verdienen",
-  "Yield": "Rendite",
-  "LP": "LP",
-  "Rewards": "Belohnungen",
+  "Yield": "Ertrag",
+  "LP": "PN",
+  "Rewards": "Belohnung",
   "Referrals": "Empfehlungen",
   "Analytics": "Analytik",
   "More": "Mehr",
   "Governance": "Governance",
   "Help & Feedback": "Hilfe & Feedback",
-  "Docs": "Doks"
+  "Docs": "Texte"
 }

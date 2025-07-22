@@ -1,8 +1,8 @@
-import type { Token } from '@/types/token';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
 import { useTranslate } from '@/locales';
-import { getCryptoIconUrl } from '@/utils/get-crypto-icon';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { getSwapConversionText } from '@/utils/conversion-helpers';
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
@@ -92,7 +92,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
           },
           '&::-webkit-scrollbar-thumb': {
             backgroundColor: theme.palette.divider,
-            borderRadius: '4px',
+            borderRadius: '20px',
           },
           scrollbarWidth: 'thin',
           scrollbarColor: `${theme.palette.divider} transparent`,
@@ -110,7 +110,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {sellAmount} {sellToken?.shortname}
+                  {sellAmount} {sellToken?.symbol}
                 </Typography>
                 <Typography
                   variant="body1"
@@ -132,7 +132,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={sellToken ? getCryptoIconUrl(sellToken.shortname) : ''}
+                src={sellToken ? getCryptoIconUrl(sellToken.symbol) : ''}
                 sx={{
                   width: 40,
                   height: 40,
@@ -161,7 +161,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {buyAmount.toFixed(4)} {buyToken?.shortname}
+                  {buyAmount.toFixed(4)} {buyToken?.symbol}
                 </Typography>
                 <Typography
                   variant="body1"
@@ -177,13 +177,13 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                     minWidth: 0,
                   }}
                 >
-                  {buyToken ? fCurrencyTwoDecimals(buyToken.pricestatus * buyAmount) : ''}
+                  {buyToken ? fCurrencyTwoDecimals(buyToken.usdValue * buyAmount) : ''}
                 </Typography>
               </Box>
 
               <Box
                 component="img"
-                src={buyToken ? getCryptoIconUrl(buyToken.shortname) : ''}
+                src={buyToken ? getCryptoIconUrl(buyToken.symbol) : ''}
                 sx={{
                   width: 40,
                   height: 40,
@@ -514,7 +514,20 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            onClick={onSubmit}
+            sx={{
+              backgroundColor: 'rgba(148,123,255,0.29)',
+              color: '#6E4BFF',
+              '&:hover': {
+                backgroundColor: 'rgba(148,123,255,0.20)',
+              },
+              borderRadius: '20px',
+            }}
+          >
             {t('Swap')}
           </Button>
         </Box>

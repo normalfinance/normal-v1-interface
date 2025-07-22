@@ -2,7 +2,6 @@ import type { Theme, SxProps } from '@mui/material/styles';
 
 import { m } from 'framer-motion';
 import { forwardRef } from 'react';
-import { varAlpha } from 'minimal-shared/utils';
 
 import { styled } from '@mui/material/styles';
 
@@ -84,14 +83,20 @@ const LogoZoomPrimaryOutline = styled(m.span)(({ theme }) => ({
   position: 'absolute',
   width: 'calc(100% - 20px)',
   height: 'calc(100% - 20px)',
-  border: `solid 3px ${varAlpha(theme.vars.palette.primary.darkChannel, 0.24)}`,
+  border: `solid 3px transparent`,
+  backgroundOrigin: 'border-box',
+  backgroundClip: 'padding-box, border-box',
+  backgroundImage: `linear-gradient(to bottom, ${theme.vars.palette.background.paper}, ${theme.vars.palette.background.paper}), linear-gradient(to right, var(--palette-primary-main), var(--palette-secondary-main), var(--palette-error-main), var(--palette-warning-main), var(--palette-primary-main))`,
 }));
 
 const LogoZoomSecondaryOutline = styled(m.span)(({ theme }) => ({
   width: '100%',
   height: '100%',
   position: 'absolute',
-  border: `solid 8px ${varAlpha(theme.vars.palette.primary.darkChannel, 0.24)}`,
+  border: `solid 8px transparent`,
+  backgroundOrigin: 'border-box',
+  backgroundClip: 'padding-box, border-box',
+  backgroundImage: `linear-gradient(to bottom, ${theme.vars.palette.background.paper}, ${theme.vars.palette.background.paper}), linear-gradient(to right, var(--palette-primary-main), var(--palette-secondary-main), var(--palette-error-main), var(--palette-warning-main), var(--palette-primary-main))`,
 }));
 
 // ----------------------------------------------------------------------

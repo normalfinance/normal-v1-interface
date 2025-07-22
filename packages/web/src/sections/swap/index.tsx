@@ -1,30 +1,51 @@
 'use client';
 
-import { useTranslate } from '@/locales';
+import type { SwapFeeInfo } from '@/types/swap-fee-info';
+import type { SwapQueryParams } from '@/types/query-params';
+
+import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useQueryParams } from '@/hooks/use-query-params';
 
-import Grid2 from '@mui/material/Grid2';
-import { Stack, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 
-import SwapCard from '@/components/_common/swap-card';
+import TokenActionCard from '@/components/_common/token-action-card';
+
+const swapFeeInfo: SwapFeeInfo = {
+  feePercentage: 0.25,
+  networkCost: 1.0,
+  priceImpact: -0.3,
+  maxSlippage: 0.5,
+};
+
+const cashBalance = 1000;
 
 export default function SwapView() {
-  const { t } = useTranslate();
+  const store = useAppStore();
+  const { params } = useQueryParams<SwapQueryParams>();
+
   return (
     <DashboardContent maxWidth="xl">
-      <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">
-          {t('Welcome back 👋')}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {t('Account Overview')}
-        </Typography>
-      </Stack>
-      <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        <Grid2 size={{ xs: 12, md: 4 }}>
-          <SwapCard />
-        </Grid2>
-      </Grid2>
+      <Box
+        sx={{
+          display: 'flex',
+          minHeight: '60vh',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Box maxWidth={500} width={1}>
+          <Box width={1}>
+            <TokenActionCard
+              tokensList={store.tokens}
+              swapFeeInfo={swapFeeInfo}
+              cashBalance={cashBalance}
+              queryParams={params}
+              loading={store.loading}
+            />
+          </Box>
+        </Box>
+      </Box>
     </DashboardContent>
   );
 }

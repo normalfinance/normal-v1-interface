@@ -1,0 +1,49 @@
+'use client';
+
+import { useState, useCallback } from 'react';
+import { constants } from '@normalfinance/utils';
+import { PoolRouterContract } from '@normalfinance/contracts';
+
+// ----------------------------------------------------------------------
+
+interface ReturnType {
+  error: any | null;
+  loading: boolean;
+  tvl: number | undefined;
+  refresh: (asset: string) => void;
+}
+
+// ----------------------------------------------------------------------
+
+export function usePoolTVL(): ReturnType {
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [totalTVL, setTotalTVl] = useState<number | undefined>(undefined);
+
+  const fetchTVL = useCallback(async (asset: string) => {
+    try {
+      const PoolRouter = new PoolRouterContract.Client({
+        contractId: constants.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        rpcUrl: constants.RPC_URL,
+      });
+
+      const tvl = await PoolRouter.get_total_liquidity({ asset });
+
+      if (tvl.result) {
+        setTotalTVl(tvl.result);
+      }
+    } catch (e: any) {
+      console.log(e);
+      setError(e);
+    }
+    return;
+  }, []);
+
+  return {
+    error,
+    loading,
+    tvl: totalTVL,
+    refresh: fetchTVL,
+  };
+}

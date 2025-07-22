@@ -1,16 +1,20 @@
 'use client';
 
-import type { Token } from '@/types/token';
-import type { Activity } from '@/types/activity';
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
-import type { PoolDetails } from '@/components/_common/pools-explore/explorer-chart-data';
 
+import axios from 'axios';
+import { paths } from '@/routes/paths';
+import { useSnackbar } from 'notistack';
+import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
-import { useState, useEffect } from 'react';
+import { useUserActivity } from '@/hooks';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
-import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
+import { ZEALY_QUEST_IDS } from '@/global-config';
+import { useState, useEffect, useCallback } from 'react';
+import { CURRENT_TOS_VERSION } from '@normalfinance/types';
+import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -26,8 +30,11 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
+import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
+import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
 
@@ -96,6 +103,10 @@ function WalletDisconnected({
   const [loading, setLoading] = useState(true);
   const { t } = useTranslate();
 
+  const handleWalletHelp = () => {
+    window.open(`${paths.docs}/getting-started/guides`, '_blank', 'noopener');
+  };
+
   useEffect(() => {
     (async () => {
       const ok: Connector[] = [];
@@ -124,26 +135,47 @@ function WalletDisconnected({
         alignItems: 'start',
       }}
     >
-      <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
-        {t('Connect your wallet')}
-      </Typography>
+      <Box sx={{ position: 'relative' }}>
+        <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
+          {t('Connect your wallet')}
+        </Typography>
+        <ZealyHighlight
+          questId={ZEALY_QUEST_IDS.connectWallet}
+          position={{ top: -22, right: -32 }}
+        />
+      </Box>
       {loading ? (
         <CircularProgress />
       ) : (
-        <Box
-          gap={2}
-          width="100%"
-          sx={{ backgroundColor: theme.palette.grey[200], p: 1, borderRadius: 1.5 }}
-        >
-          {[...allowed, ...disallowed].map((c) => (
-            <WalletOption
-              key={c.id}
-              connector={c}
-              allowed={allowed.includes(c)}
-              onClick={() => allowed.includes(c) && onSelect(c)}
-            />
-          ))}
-        </Box>
+        <>
+          {/* How to create a wallet? */}
+          <Button
+            fullWidth
+            variant="soft"
+            color="secondary"
+            size="large"
+            startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
+            onClick={handleWalletHelp}
+            sx={{ mb: 2 }}
+          >
+            {t('Need help creating a wallet?')}
+          </Button>
+          <Box
+            gap={2}
+            width="100%"
+            sx={{ backgroundColor: theme.palette.grey[200], p: 1, borderRadius: 1.5 }}
+          >
+            {/* Wallet options */}
+            {[...allowed, ...disallowed].map((c) => (
+              <WalletOption
+                key={c.id}
+                connector={c}
+                allowed={allowed.includes(c)}
+                onClick={() => allowed.includes(c) && onSelect(c)}
+              />
+            ))}
+          </Box>
+        </>
       )}
     </Box>
   );
@@ -152,19 +184,43 @@ function WalletDisconnected({
 /* ------------------------------------------------------------------ */
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
-function WalletConnected({
-  address,
-  onDisconnect,
-  tokens,
-  pools,
-  activity,
-}: {
-  address: string;
-  onDisconnect: () => void;
-  tokens?: Token[];
-  pools?: PoolDetails[];
-  activity?: Activity[];
-}) {
+function WalletConnected({ address }: { address: string }) {
+  const { t } = useTranslate();
+  const { enqueueSnackbar } = useSnackbar();
+
+  // const { data } = useNativeTokenBalance();
+  // const { tokens } = useUserTokens();
+  // const { positions } = useLPTokens();
+
+  const { loading, error, recentActivity } = useUserActivity();
+
+  const [faucetLoading, setFaucetLoading] = useState(false);
+  const [faucetOff, setFaucetOff] = useState(false);
+
+  const handleFaucetRequest = useCallback(async () => {
+    try {
+      setFaucetLoading(true);
+      const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
+
+      if (data) {
+        enqueueSnackbar(t('Account funded!'), { variant: 'success' });
+      }
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        if (e?.response?.data.detail === 'account already funded to starting balance') {
+          setFaucetOff(true);
+          enqueueSnackbar(t('Account already funded'), { variant: 'warning' });
+        }
+      }
+    } finally {
+      setFaucetLoading(false);
+    }
+  }, [address, enqueueSnackbar, t]);
+
+  if (!address) {
+    return null;
+  }
+
   return (
     <Box
       sx={{
@@ -176,16 +232,23 @@ function WalletConnected({
       }}
     >
       <Stack direction="row" width={1} justifyContent="space-between" alignItems="center">
-        <Typography variant="subtitle1">{format.fTruncate(address, 12)}</Typography>
-        {/* <CopyIconButton value={address} alert="Address copied" /> */}
+        <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
+        <CopyIconButton value={address} alert="Address copied" />
       </Stack>
-      <ConnectedWallet
-        balance={83.42}
-        percentageChange={3.56}
-        tokens={tokens}
-        pools={pools}
-        activity={activity}
-      />
+      <Button
+        fullWidth
+        variant="soft"
+        color="info"
+        size="large"
+        startIcon={<Iconify icon="eva:droplet-fill" />}
+        onClick={handleFaucetRequest}
+        sx={{ my: 1 }}
+        loading={faucetLoading}
+        disabled={faucetOff}
+      >
+        {t('Get testnet XLM')}
+      </Button>
+      <ConnectedWallet balance={0} percentageChange={0} tokens={[]} positions={[]} activity={[]} />
     </Box>
   );
 }
@@ -197,7 +260,6 @@ export type AccountDrawerProps = IconButtonProps;
 
 export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ stores ------------------------------------------------------ */
-  const store = useAppStore();
   const persist = usePersistStore();
 
   const { t } = useTranslate();
@@ -222,183 +284,52 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address;
-  const [isConnected, setIsConnected] = useState(
-    connectedAddress != '' && connectedAddress != undefined
-  );
 
-  const tokens: Token[] = [
-    {
-      id: 1,
-      url: 'https://token-icons.s3.amazonaws.com/eth.png',
-      name: 'Ethereum',
-      shortname: 'ETH',
-      countstatus: 0.02106,
-      pricestatus: 2814.25,
-      featured: true,
-      percentageChange: 3.45,
-    },
-    {
-      id: 2,
-      url: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694',
-      name: 'USDC',
-      shortname: 'USDC',
-      countstatus: 1444,
-      pricestatus: 0.9998,
-      featured: true,
-      percentageChange: 3.45,
-    },
-    {
-      id: 3,
-      url: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
-      name: 'Tether',
-      shortname: 'USDT',
-      countstatus: 1231,
-      pricestatus: 0.9999,
-      featured: true,
-      percentageChange: 3.45,
-    },
-    {
-      id: 4,
-      url: 'https://coin-images.coingecko.com/coins/images/7598/large/wrapped_bitcoin_wbtc.png?1696507857',
-      name: 'Wrapped Bitcoin',
-      shortname: 'WBTC',
-      countstatus: 0.2,
-      pricestatus: 95799.17,
-      featured: true,
-      percentageChange: 3.45,
-    },
-    {
-      id: 5,
-      url: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png',
-      name: 'Wrapped Ether',
-      shortname: 'WETH',
-      countstatus: 0.4,
-      pricestatus: 2806.75,
-      featured: true,
-      percentageChange: -3.45,
-    },
-    {
-      id: 6,
-      url: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png',
-      name: 'Wrapped Ether',
-      shortname: 'WETH',
-      countstatus: 1.2,
-      pricestatus: 2806.75,
-      featured: false,
-      percentageChange: 3.45,
-    },
-  ];
+  const isConnected = !!connectedAddress;
 
-  const activity: Activity[] = [
-    {
-      id: 1,
-      type: 'Sent',
-      timestamp: Date.now() - 60_000,
-      address: 'GABCDQWERTY1234567890EXAMPLEADDRESS1111',
-      asset: {
-        token: 'USDC',
-        iconUrl: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png',
-        amount: 250,
-      },
-    },
-    {
-      id: 2,
-      type: 'Received',
-      timestamp: Date.now() - 50_000,
-      address: 'GXYZASDFGH9876543210EXAMPLEADDRESS2222',
-      asset: {
-        token: 'BTC',
-        iconUrl: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png',
-        amount: 0.015,
-      },
-    },
-    {
-      id: 3,
-      type: 'Swapped',
-      timestamp: Date.now() - 40_000,
-      sell: {
-        token: 'ETH',
-        iconUrl: 'https://token-icons.s3.amazonaws.com/eth.png',
-        amount: 0.5,
-      },
-      buy: {
-        token: 'USDC',
-        iconUrl: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png',
-        amount: 1500,
-      },
-    },
-    {
-      id: 4,
-      type: 'Add Liquidity',
-      timestamp: Date.now() - 30_000,
-      lpToken: {
-        token: 'UNI-ETH/USDC-LP',
-        iconUrl: '/assets/icons/lp.svg',
-        amount: 12.34,
-      },
-    },
-    {
-      id: 5,
-      type: 'Remove Liquidity',
-      timestamp: Date.now() - 20_000,
-      lpToken: {
-        token: 'UNI-ETH/USDC-LP',
-        iconUrl: '/assets/icons/lp.svg',
-        amount: 4.56,
-      },
-    },
-    {
-      id: 6,
-      type: 'Stake',
-      timestamp: Date.now() - 10_000,
-      asset: {
-        token: 'NORMAL',
-        iconUrl: '/assets/icons/normal.svg',
-        amount: 2000,
-      },
-    },
-    {
-      id: 7,
-      type: 'Unstake',
-      timestamp: Date.now() - 5_000,
-      asset: {
-        token: 'NORMAL',
-        iconUrl: '/assets/icons/normal.svg',
-        amount: 500,
-      },
-    },
-  ];
+  useEffect(() => {
+    if (connectedAddress) {
+      Sentry.setUser({ id: connectedAddress });
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [connectedAddress]);
 
-  const pools: PoolDetails[] = [
-    {
-      pairInfo: {
-        tokenA: {
-          name: 'USDC',
-          iconUrl: 'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694',
-        },
-        tokenB: {
-          name: 'ETH',
-          iconUrl: 'https://token-icons.s3.amazonaws.com/eth.png',
-        },
-        address: '0x88e6...5640',
-      },
-      metadata: {
-        version: 'v1',
-        feeTier: '0.30%',
-      },
-      performance: {
-        position: 220.12,
-        fees: 21.22,
-      },
-    },
-  ];
+  const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
+  const [showTos, setShowTos] = useState(false);
+
+  /** Open drawer OR show ToS dialog, depending on acceptance */
+  const handleMainButtonClick = () => {
+    if (disclaimerVersion < CURRENT_TOS_VERSION) {
+      setShowTos(true);
+    } else {
+      onOpen();
+    }
+  };
+
+  /** Called whenever the ToS modal closes (Accept or Decline).
+   *  If they accepted, open the wallet drawer right away. */
+  const handleTosClose = () => {
+    setShowTos(false);
+
+    // read the latest store value directly (no hooks inside a callback)
+    const latestVersion = usePersistStore.getState().disclaimer.version;
+    if (latestVersion >= CURRENT_TOS_VERSION) {
+      onOpen(); // open the drawer immediately
+    }
+  };
 
   return (
     <>
       {isConnected ? (
-        <AccountButton onClick={onOpen} photoURL={avatarURL} displayName=" " {...props} />
+        <AccountButton
+          onClick={handleMainButtonClick}
+          photoURL={avatarURL}
+          displayName=" "
+          {...props}
+        />
       ) : (
-        <Button variant="contained" color="info" onClick={onOpen}>
+        <Button variant="contained" color="info" onClick={handleMainButtonClick}>
           {t('Connect Wallet')}
         </Button>
       )}
@@ -437,8 +368,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <Tooltip title="Disconnect">
               <IconButton
                 onClick={() => {
-                  setIsConnected(false);
                   disconnect();
+                  onClose();
                 }}
                 sx={{ ml: 'auto' }}
               >
@@ -448,29 +379,20 @@ export function AccountDrawer(props: AccountDrawerProps) {
           )}
         </Box>
         <Scrollbar>
-          {isConnected ? (
-            <WalletConnected
-              address={connectedAddress!}
-              tokens={tokens}
-              pools={pools}
-              activity={activity}
-              onDisconnect={() => {
-                disconnect();
-                onClose();
-              }}
-            />
+          {isConnected && connectedAddress ? (
+            <WalletConnected address={connectedAddress} />
           ) : (
             <WalletDisconnected
               connectors={connectors}
               onSelect={async (c) => {
                 await connect(c);
-                // setIsConnected(true);
                 onClose();
               }}
             />
           )}
         </Scrollbar>
       </Drawer>
+      <TermsOfServiceDialog open={showTos} onClose={handleTosClose} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 {
   "name": "@normalfinance/normal-v1-interface",
-  "description": "",
+  "description": "🌈 Open source interfaces for the Normal protocol",
   "version": "0.0.1",
   "scripts": {
     "test": "turbo run test",
@@ -12,7 +12,10 @@
     "build:contracts": "turbo run build --filter=@normalfinance/contracts",
     "build:state": "turbo run build --filter=@normalfinance/state",
     "build:utils": "turbo run build --filter=@normalfinance/utils",
-    "build:types": "turbo run build --filter=@normalfinance/types"
+    "build:types": "turbo run build --filter=@normalfinance/types",
+    "clean": "rm -rf node_modules .turbo yarn.lock && rm -rf packages/*/{node_modules,.next,.swc,dist,build,tsconfig.tsbuildinfo,.turbo}",
+    "setup": "yarn install && yarn build",
+    "refresh": "yarn run clean && yarn run setup"
   },
   "repository": {
     "type": "git",
@@ -29,7 +32,6 @@
     "packages/utils",
     "packages/contracts",
     "packages/state",
-    "packages/contracts",
     "packages/*"
   ],
   "devDependencies": {
@@ -43,10 +45,18 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@stellar/stellar-sdk": "^13.1.0",
+    "@fontsource/figtree": "^5.2.8",
+    "@stellar/stellar-sdk": "14.0.0-rc.3",
+    "@upstash/ratelimit": "^2.0.5",
+    "@upstash/redis": "^1.35.1",
     "@walletconnect/modal": "^2.6.2",
     "@walletconnect/sign-client": "^2.13.1",
     "@walletconnect/types": "^2.13.1",
-    "next": "15.0.3"
+    "clsx": "^2.1.1",
+    "copy-to-clipboard": "^3.3.3",
+    "motion": "^10",
+    "next": "15.0.3",
+    "simplex-noise": "^4.0.3",
+    "tailwind-merge": "^3.3.1"
   }
 }
