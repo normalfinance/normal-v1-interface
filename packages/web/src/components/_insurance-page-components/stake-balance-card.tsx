@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useBoolean } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -12,6 +13,7 @@ import Button from '@mui/material/Button';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
 
+import ZealyHighlight from '../_common/zealy/zealy-highlight';
 import InsuranceFundStakingDialog from './insurance-fund-staking-dialog';
 
 // Define a type for each balance row
@@ -89,6 +91,7 @@ export function StakeBalance({
               {t('Manage stake')}
             </Button>
           </WalletGate>
+          <ZealyHighlight questId={ZEALY_QUEST_IDS.stakeFund} />
         </Box>
         <InsuranceFundStakingDialog
           open={manageStake.value}

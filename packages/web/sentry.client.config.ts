@@ -16,8 +16,5 @@ Sentry.init({
       blockAllMedia: true,
       maskAllInputs: true,
     }),
-    Sentry.feedbackIntegration({
-      colorScheme: 'system',
-    }),
   ],
 });

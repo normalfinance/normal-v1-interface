@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png', // fallback if a page doesn’t override
+        url: '/og/home.png',
         width: 1200,
         height: 630,
         alt: 'Normal overview',
@@ -53,13 +53,13 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    images: ['/og/home.png'], // fallback image for Twitter
+    images: ['/og/home.png'],
   },
   manifest: '/manifest.json',
   icons: [
     {
       rel: 'icon',
-      url: `${CONFIG.assetsDir}/favicon.ico`,
+      url: '/favicon.ico',
     },
   ],
 };

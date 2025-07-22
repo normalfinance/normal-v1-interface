@@ -3,6 +3,7 @@
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+
 import axios from 'axios';
 import { useSnackbar } from 'notistack';
 import * as Sentry from '@sentry/nextjs';
@@ -10,6 +11,9 @@ import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useState, useEffect, useCallback } from 'react';
+import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
@@ -29,6 +33,7 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
+import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
@@ -99,6 +104,10 @@ function WalletDisconnected({
   const [loading, setLoading] = useState(true);
   const { t } = useTranslate();
 
+  const handleWalletHelp = () => {
+    window.open(`${paths.docs}/getting-started/guides`, '_blank', 'noopener');
+  };
+
   useEffect(() => {
     (async () => {
       const ok: Connector[] = [];
@@ -127,26 +136,47 @@ function WalletDisconnected({
         alignItems: 'start',
       }}
     >
-      <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
-        {t('Connect your wallet')}
-      </Typography>
+      <Box sx={{ position: 'relative' }}>
+        <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
+          {t('Connect your wallet')}
+        </Typography>
+        <ZealyHighlight
+          questId={ZEALY_QUEST_IDS.connectWallet}
+          position={{ top: -22, right: -32 }}
+        />
+      </Box>
       {loading ? (
         <CircularProgress />
       ) : (
-        <Box
-          gap={2}
-          width="100%"
-          sx={{ backgroundColor: theme.palette.grey[200], p: 1, borderRadius: 1.5 }}
-        >
-          {[...allowed, ...disallowed].map((c) => (
-            <WalletOption
-              key={c.id}
-              connector={c}
-              allowed={allowed.includes(c)}
-              onClick={() => allowed.includes(c) && onSelect(c)}
-            />
-          ))}
-        </Box>
+        <>
+          {/* How to create a wallet? */}
+          <Button
+            fullWidth
+            variant="soft"
+            color="secondary"
+            size="large"
+            startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
+            onClick={handleWalletHelp}
+            sx={{ mb: 2 }}
+          >
+            {t('Need help creating a wallet?')}
+          </Button>
+          <Box
+            gap={2}
+            width="100%"
+            sx={{ backgroundColor: theme.palette.grey[200], p: 1, borderRadius: 1.5 }}
+          >
+            {/* Wallet options */}
+            {[...allowed, ...disallowed].map((c) => (
+              <WalletOption
+                key={c.id}
+                connector={c}
+                allowed={allowed.includes(c)}
+                onClick={() => allowed.includes(c) && onSelect(c)}
+              />
+            ))}
+          </Box>
+        </>
       )}
     </Box>
   );

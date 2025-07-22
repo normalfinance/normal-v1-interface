@@ -1,6 +1,5 @@
 import type { ButtonBaseProps } from '@mui/material/ButtonBase';
 
-import { CONFIG } from '@/global-config';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Switch from '@mui/material/Switch';
@@ -34,7 +33,7 @@ export function BaseOption({
   return (
     <ItemRoot disableRipple selected={selected} onClick={onChangeOption} sx={sx} {...other}>
       <TopContainer>
-        <SvgColor src={`${CONFIG.assetsDir}/assets/icons/settings/ic-${icon}.svg`} />
+        <SvgColor src={`/assets/icons/settings/ic-${icon}.svg`} />
         <Switch name={label} size="small" color="default" checked={selected} sx={{ mr: -0.75 }} />
       </TopContainer>
 
