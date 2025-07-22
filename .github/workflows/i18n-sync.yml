@@ -9,7 +9,6 @@ on:
     branches:
       - staging
       - master
-      - jay/translation-bug
   workflow_dispatch:
     inputs:
       force_upload:
