@@ -343,7 +343,7 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
             width: 1,
             height: '1px',
           }}
-         />
+        />
 
         <Box display="flex" gap={2} width="100%" justifyContent="flex-end" alignItems="center">
           {member.socialLinks.map((link, index) => (
