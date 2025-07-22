@@ -15,5 +15,5 @@ module.exports = {
 
   sort: true,
 
-  keepRemoved: false,
+  keepRemoved: true,
 };
