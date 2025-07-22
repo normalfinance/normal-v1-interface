@@ -59,9 +59,32 @@ jobs:
             git diff --name-only HEAD src/locales/langs/en/
           fi
 
+      - name: Check for missing translations in other languages
+        id: check_missing
+        working-directory: packages/web
+        run: |
+          echo "Checking for missing translations..."
+          
+          # Run the check script - exits with code 1 if missing translations found
+          if yarn i18n:check-missing; then
+            echo "missing=false" >> $GITHUB_OUTPUT
+            echo "No missing translations found"
+          else
+            echo "missing=true" >> $GITHUB_OUTPUT
+            echo "Missing translations detected"
+          fi
+
+      - name: Sync missing keys before upload
+        if: steps.check_missing.outputs.missing == 'true'
+        working-directory: packages/web
+        run: |
+          echo "Syncing missing keys to prepare for Crowdin upload..."
+          yarn i18n:sync-keys
+
       - name: Upload sources to Crowdin
         if: >
           steps.check_changes.outputs.changes == 'true' ||
+          steps.check_missing.outputs.missing == 'true' ||
           github.event.inputs.force_upload == 'true'
         working-directory: packages/web
         env:

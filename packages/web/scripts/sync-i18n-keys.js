@@ -54,11 +54,7 @@ function syncI18nKeys() {
       });
 
       if (hasChanges) {
-        fs.writeFileSync(
-          targetFilePath,
-          JSON.stringify(targetKeys, Object.keys(sourceKeys), 2) + '\n',
-          'utf8'
-        );
+        fs.writeFileSync(targetFilePath, JSON.stringify(targetKeys, null, 2) + '\n', 'utf8');
         console.log(`✅ Synced keys to ${path.relative(process.cwd(), targetFilePath)}`);
       }
     });
