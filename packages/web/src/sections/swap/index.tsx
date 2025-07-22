@@ -4,6 +4,9 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { TokenActionQueryParams } from '@/types/query-params';
 import type { TokenActionKey } from '@/components/_common/token-action-card';
 
+import { useEffect } from 'react';
+import { useApiTokens } from '@/hooks';
+import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
@@ -22,6 +25,8 @@ const swapFeeInfo: SwapFeeInfo = {
 export default function SwapView() {
   const store = useAppStore();
   const { params } = useQueryParams<TokenActionQueryParams>();
+  const { tokens: apiTokens } = useApiTokens();
+  const { tokens, getAllTokens, loading, setLoading } = useAppStore();
 
   // Determine which tab to show based on query params, default to 'swap'
   const activeTab: TokenActionKey = params?.tab || 'swap';
@@ -58,6 +63,23 @@ export default function SwapView() {
     }
   };
 
+  // Effect hook to fetch all tokens once the component mounts
+  useEffect(() => {
+    const refreshTokens = async (): Promise<void> => {
+      setLoading(true);
+      try {
+        await getAllTokens(apiTokens);
+        setLoading(false);
+      } catch (e) {
+        captureException(e);
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    refreshTokens();
+  }, []);
+
   return (
     <DashboardContent maxWidth="xl">
       <Box
@@ -71,7 +93,7 @@ export default function SwapView() {
         <Box maxWidth={500} width={1}>
           <Box width={1}>
             <TokenActionCard
-              tokensList={store.tokens}
+              tokensList={tokens}
               swapFeeInfo={swapFeeInfo}
               cashBalance={0}
               queryParams={getCardQueryParams()}

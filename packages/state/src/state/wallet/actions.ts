@@ -1,4 +1,5 @@
 import {
+  ApiToken,
   AppStore,
   GetStateType,
   SetStateType,
@@ -20,7 +21,7 @@ export const createWalletActions = (
   return {
     tokens: [],
 
-    getAllTokens: async () => {
+    getAllTokens: async (_allApiTokens: ApiToken[]) => {
       // If wallet is connected, use it, otherwise some demo account
       const appStorageValue = localStorage?.getItem('app-storage');
 
@@ -36,10 +37,9 @@ export const createWalletActions = (
       }
 
       const poolRouter = new PoolRouterContract.Client({
-        // publicKey: constants.StellarConfig.TESTING_SOURCE.accountId(),
-        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-        rpcUrl: constants.StellarConfig.RPC_URL,
+        contractId: constants.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        rpcUrl: constants.RPC_URL,
       });
 
       // Fetch all available tokens from chain
@@ -51,14 +51,10 @@ export const createWalletActions = (
       // NORMAL TOKENS
       const _allNormalTokens = parsedResults.map((pool) => pool.pool_response.token_a.address); // _allAssets
 
-      // LP TOKENS
-      const _allLpTokens = parsedResults.map((pool) => pool.pool_response.token_share.address);
-
-      // OTHER TOKENS
-      const _allApiTokens: any[] = [];
+      const _allApiTokenAddressses = _allApiTokens.map((token) => token.contract);
 
       const allTokens = _allNormalTokens
-        ? [..._allNormalTokens, ..._allLpTokens, ..._allApiTokens].map(async (token: string) => {
+        ? [..._allNormalTokens, ..._allApiTokenAddressses].map(async (token: string) => {
             await getState().fetchTokenInfo(token);
           })
         : [];
@@ -68,10 +64,9 @@ export const createWalletActions = (
       // =================================================================
 
       const oracleRegistry = new OracleRegistryContract.Client({
-        // publicKey: constants.StellarConfig.TESTING_SOURCE.accountId(),
-        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-        rpcUrl: constants.StellarConfig.RPC_URL,
+        contractId: constants.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        rpcUrl: constants.RPC_URL,
       });
 
       const _tokens = getState().tokens.map(async (token: Token) => {

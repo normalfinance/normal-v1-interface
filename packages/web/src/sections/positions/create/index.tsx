@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { ZEALY_QUEST_IDS } from '@/global-config';
+import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
@@ -21,24 +22,25 @@ import { CreatePosition } from '@/components/_create-position-page-components/cr
 
 export default function CreatePositionView() {
   const { t } = useTranslate();
-  const store = useAppStore();
+  // const { tokens: apiTokens }
+  const { tokens, getAllTokens, setLoading } = useAppStore();
   const { params } = useQueryParams<PositionQueryParams>();
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
-    const getAllTokens = async (): Promise<void> => {
-      store.setLoading(true);
+    const refreshTokens = async (): Promise<void> => {
+      setLoading(true);
       try {
-        const allTokens = await store.getAllTokens();
-        console.log(allTokens);
-        store.setLoading(false);
+        await getAllTokens([]);
+        setLoading(false);
       } catch (e) {
+        captureException(e);
         console.error(e);
       } finally {
-        store.setLoading(false);
+        setLoading(false);
       }
     };
-    getAllTokens();
+    refreshTokens();
   }, []);
 
   return (

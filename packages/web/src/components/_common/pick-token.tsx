@@ -389,7 +389,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 variant="body2"
                                 sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                               >
-                                {fCurrency(Number(token.balance * BigInt(token.usdValue)))}
+                                {token.usdValue ? fCurrency(Number(token.balance * BigInt(token.usdValue))) : ''}
                               </Typography>
                               <Typography
                                 variant="body2"
@@ -509,7 +509,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               variant="body2"
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
-                              {fCurrency(Number(token.balance * BigInt(token.usdValue)))}
+                             {token.usdValue ? fCurrency(Number(token.balance * BigInt(token.usdValue))) : ''}
                             </Typography>
                             <Typography
                               variant="body2"
