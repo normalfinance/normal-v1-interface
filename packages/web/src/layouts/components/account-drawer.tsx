@@ -3,17 +3,15 @@
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-
 import axios from 'axios';
+import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
-import { useState, useEffect, useCallback } from 'react';
-import { paths } from '@/routes/paths';
-import { useTranslate } from '@/locales';
 import { ZEALY_QUEST_IDS } from '@/global-config';
+import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
