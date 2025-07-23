@@ -35,9 +35,10 @@ export const themeConfig: ThemeConfig = {
   /** **************************************
    * Typography
    *************************************** */
+  //Add Figtree as secondary
   fontFamily: {
-    primary: 'Figtree',
-    secondary: 'Figtree',
+    primary: 'var(--font-circular)',
+    secondary: 'var(--font-circular)',
   },
   /** **************************************
    * Palette
