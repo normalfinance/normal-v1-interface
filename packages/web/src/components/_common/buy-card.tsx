@@ -1,6 +1,6 @@
 import type { CardProps } from '@mui/material';
-import type { StateToken as Token } from '@normalfinance/types';
 import type { BuyQueryParams } from '@/types/query-params';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';

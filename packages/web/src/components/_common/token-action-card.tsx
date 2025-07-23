@@ -2,7 +2,6 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
-import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import React, { useEffect } from 'react';

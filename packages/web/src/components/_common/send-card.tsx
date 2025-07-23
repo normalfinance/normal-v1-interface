@@ -1,6 +1,6 @@
 import type { CardProps } from '@mui/material';
-import type { StateToken as Token } from '@normalfinance/types';
 import type { SendQueryParams } from '@/types/query-params';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
@@ -59,10 +59,8 @@ const SendCard: React.FC<SendCardProps> = ({
   const [coinValue, setCoinValue] = useState<number>(0);
   const [fiatValue, setFiatValue] = useState<number>(0);
 
-
   useEffect(() => {
     if (queryParams) {
-
       if (queryParams.token) {
         const foundToken = tokensList.find(
           (token) => token.symbol.toLowerCase() === queryParams.token?.toLowerCase()
@@ -75,7 +73,6 @@ const SendCard: React.FC<SendCardProps> = ({
       if (queryParams.amount) {
         setAmount(queryParams.amount);
       }
-
 
       if (queryParams.destination) {
         setDestination(queryParams.destination);

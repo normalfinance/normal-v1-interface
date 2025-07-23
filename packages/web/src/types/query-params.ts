@@ -31,7 +31,6 @@ export interface TokenActionQueryParams extends BaseQueryParams {
   token?: string;
   amount?: string;
   destination?: string;
-  
 }
 
 export interface DepositLiquidityQueryParams extends BaseQueryParams {
