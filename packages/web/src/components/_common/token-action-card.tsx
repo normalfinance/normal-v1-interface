@@ -2,7 +2,6 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
-import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import React, { useEffect } from 'react';
@@ -61,8 +60,8 @@ export interface TokenActionCardProps extends CardProps {
   cashBalance?: number;
   /** Show skeleton loading state */
   loading?: boolean;
-  /** Query parameters for pre-populating swap form */
-  queryParams?: SwapQueryParams;
+  queryParams?: any;
+  initialTab?: TokenActionKey;
 }
 
 // ----------------------------------------------------------------------
@@ -78,6 +77,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   cashBalance,
   loading,
   queryParams,
+  initialTab,
   ...other
 }) => {
   const theme = useTheme();
@@ -95,9 +95,14 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
     console.warn('TokenActionCard: enabledTabs is empty – defaulting to all tabs.');
     activeTabs.push(...ALL_TABS);
   }
+  const getInitialTab = (): TokenActionKey => {
+    if (initialTab && activeTabs.some((tab) => tab.value === initialTab)) {
+      return initialTab;
+    }
+    return activeTabs[0].value as TokenActionKey;
+  };
 
-  // Initialise the tab hook with the first available tab --------------
-  const tabs = useTabs(activeTabs[0].value as TokenActionKey);
+  const tabs = useTabs(getInitialTab());
 
   const buyCardTokens = React.useMemo<Token[]>(
     () => store.tokens.filter((t) => t.symbol === 'XLM' || t.symbol === 'USDC'),
@@ -119,10 +124,10 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           </Box>
         );
       case 'send':
-        return <SendCard data-testid="send-card" tokensList={store.tokens} networkCost={0} />;
+        return <SendCard tokensList={store.tokens} networkCost={0} queryParams={queryParams} data-testid="send-card"/>;
       case 'buy':
         return (
-          <BuyCard data-testid="buy-card" tokensList={buyCardTokens} cashBalance={cashBalance} />
+          <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} queryParams={queryParams} data-testid="buy-card"/>
         );
       default:
         return null;

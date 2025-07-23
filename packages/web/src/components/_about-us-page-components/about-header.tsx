@@ -6,13 +6,11 @@ import { useTranslate } from '@/locales';
 import Grid2 from '@mui/material/Grid2';
 import { Box, Container, Typography } from '@mui/material';
 
-export const AboutHeader: React.FC = (props) => {
+export const AboutHeader: React.FC = () => {
   const { t } = useTranslate();
 
-  const { ...sectionProps } = { ...props };
-
   return (
-    <Box component="section" {...sectionProps} py={{ xs: 8, md: 12, lg: 14 }}>
+    <Box component="section" py={{ xs: 8, md: 12, lg: 14 }}>
       <Container>
         <Grid2
           container
