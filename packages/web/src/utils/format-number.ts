@@ -210,3 +210,28 @@ export function fTokenAmount(
 
   return result;
 }
+
+// 7) Parse a human string -> raw bigint for contract calls
+//    "10,000.5" with decimals=6   -> 10000500000n
+// ----------------------------------------------------------------------
+export function toRawTokenAmount(human: string, decimals = 18): bigint | null {
+  if (!human) return null;
+
+  // 1. Strip locale thousands separators & spaces
+  const normalized = human.replace(/[\s,]/g, '').trim();
+
+  // 2. Split integer / fraction
+  const [intPart, fracPart = ''] = normalized.split('.');
+
+  // 3. Build a plain digits string with right-padded fraction
+  const paddedFrac = (fracPart + '0'.repeat(decimals)).slice(0, decimals);
+
+  const digits = intPart + paddedFrac;
+  if (!/^\d+$/.test(digits)) return null;
+
+  try {
+    return BigInt(digits);
+  } catch {
+    return null;
+  }
+}

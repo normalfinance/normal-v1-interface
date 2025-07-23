@@ -12,7 +12,6 @@ import { useTheme } from '@mui/material/styles';
 import { Stack, Button, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
-import { useEffect } from 'react';
 
 export interface ToeknsTabsProps {
   tokens?: Token[];
