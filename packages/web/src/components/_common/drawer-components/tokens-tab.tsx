@@ -5,13 +5,14 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fPercent, fCurrency } from '@/utils/format-number';
+import { fPercent, fCurrency, fTokenAmount } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 import { Stack, Button, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import { useEffect } from 'react';
 
 export interface ToeknsTabsProps {
   tokens?: Token[];
@@ -93,7 +94,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                     }}
                   >
                     {/* toFixed(4) */}
-                    {token.balance.toString()}
+                    {fTokenAmount(token.balance, token.decimals ?? 18)}
                   </Typography>
                   <Typography
                     variant="body2"
