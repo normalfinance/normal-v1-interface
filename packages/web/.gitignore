@@ -57,3 +57,4 @@ _static
 .yarn/install-state.gz
 
 test-results/
+freighter/
