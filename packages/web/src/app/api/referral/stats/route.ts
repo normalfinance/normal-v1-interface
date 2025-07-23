@@ -4,14 +4,15 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { ReferralService } from '@/lib/referral-service';
 
+export const dynamic = 'force-dynamic';
+
 const GetStatsSchema = z.object({
   walletAddress: z.string().min(1, 'Wallet address is required'),
 });
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const walletAddress = searchParams.get('walletAddress');
+    const walletAddress = request.nextUrl.searchParams.get('walletAddress');
 
     const validation = GetStatsSchema.safeParse({ walletAddress });
     if (!validation.success) {
