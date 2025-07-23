@@ -57,7 +57,7 @@ export function InsuranceActionsTable() {
     : [];
 
   return (
-    <Card sx={{ mb: 3, height: 'auto' }}>
+    <Card sx={{ mb: 3, height: 'auto' }} data-testid="insurance-actions-table">
       <CardHeader title={t('Recent events')} sx={{ mb: 2 }} />
       <Box
         sx={{
@@ -71,7 +71,13 @@ export function InsuranceActionsTable() {
       >
         <Tabs value={t(selectedTab)} onChange={handleChangeTab}>
           {NAV_ITEMS.map((tab) => (
-            <Tab key={tab.value} value={tab.value} icon={tab.icon} label={tab.label} />
+            <Tab
+              key={tab.value}
+              value={tab.value}
+              icon={tab.icon}
+              label={tab.label}
+              data-testid={`insurance-actions-tab-${tab.value}`}
+            />
           ))}
         </Tabs>
       </Box>

@@ -130,11 +130,17 @@ export function StatCard({
     <Card
       sx={[{ p: 3, display: 'flex', alignItems: 'center' }, ...(Array.isArray(sx) ? sx : [sx])]}
       {...other}
+      data-testid={`stat-card-${title.toLowerCase().replace(/\s+/g, '-')}`}
     >
       <Box sx={{ flexGrow: 1 }}>
         <Box sx={{ typography: 'subtitle2' }}>{t(title)}</Box>
 
-        <Box sx={{ my: 1.5, typography: 'h3' }}>{formatTotal(total)}</Box>
+        <Box
+          sx={{ my: 1.5, typography: 'h3' }}
+          data-testid={`stat-card-total-${title.toLowerCase().replace(/\s+/g, '-')}`}
+        >
+          {formatTotal(total)}
+        </Box>
 
         {renderTrending()}
       </Box>
