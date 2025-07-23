@@ -124,10 +124,22 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           </Box>
         );
       case 'send':
-        return <SendCard tokensList={store.tokens} networkCost={0} queryParams={queryParams} data-testid="send-card"/>;
+        return (
+          <SendCard
+            tokensList={store.tokens}
+            networkCost={0}
+            queryParams={queryParams}
+            data-testid="send-card"
+          />
+        );
       case 'buy':
         return (
-          <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} queryParams={queryParams} data-testid="buy-card"/>
+          <BuyCard
+            tokensList={buyCardTokens}
+            cashBalance={cashBalance}
+            queryParams={queryParams}
+            data-testid="buy-card"
+          />
         );
       default:
         return null;

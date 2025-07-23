@@ -149,7 +149,13 @@ export default function TermsOfServiceDialog({ open, onClose }: TermsOfServiceDi
 
       <DialogActions>
         <Button onClick={onClose}>{t('Decline')}</Button>
-        <Button variant="contained" color="secondary" onClick={handleAccept} autoFocus data-testid="tos-dialog-accept-button">
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleAccept}
+          autoFocus
+          data-testid="tos-dialog-accept-button"
+        >
           {t('Accept')}
         </Button>
       </DialogActions>
