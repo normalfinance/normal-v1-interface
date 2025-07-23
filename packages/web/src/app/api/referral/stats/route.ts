@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { ReferralService } from '@/lib/referral-service';
 
+
 export const dynamic = "force-dynamic";
 
 const GetStatsSchema = z.object({
