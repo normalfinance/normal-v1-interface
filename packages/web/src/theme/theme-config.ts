@@ -18,7 +18,7 @@ type ThemeConfig = {
   > & {
     common: Pick<CommonColors, 'black' | 'white'>;
     grey: Record<
-      '50' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900',
+      '50' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900' | '950',
       string
     >;
   };
@@ -103,6 +103,7 @@ export const themeConfig: ThemeConfig = {
       '700': '#454F5B',
       '800': '#1C252E',
       '900': '#141A21',
+      '950': '#2B2B2B',
     },
     common: { black: '#000000', white: '#FFFFFF' },
     purple: {
