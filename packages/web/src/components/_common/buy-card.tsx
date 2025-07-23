@@ -1,5 +1,6 @@
 import type { CardProps } from '@mui/material';
 import type { StateToken as Token } from '@normalfinance/types';
+import type { BuyQueryParams } from '@/types/query-params';
 
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
@@ -19,6 +20,7 @@ import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];
   cashBalance?: number;
+  queryParams?: BuyQueryParams;
 }
 
 export interface QuickAmountButton {
@@ -37,7 +39,12 @@ const QUICK_BUTTONS: QuickAmountButton[] = [
   },
 ];
 
-const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...other }) => {
+const BuyCard: React.FC<BuyCardProps> = ({
+  tokensList = [],
+  cashBalance,
+  queryParams,
+  ...other
+}) => {
   const theme = useTheme();
   const { t } = useTranslate();
 
@@ -63,6 +70,23 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, ...othe
   // State for review dialog
   const [reviewOpen, setReviewOpen] = useState(false);
   const handleReviewClose = () => setReviewOpen(false);
+
+  useEffect(() => {
+    if (queryParams) {
+      if (queryParams.token) {
+        const foundToken = tokensList.find(
+          (token) => token.symbol.toLowerCase() === queryParams.token?.toLowerCase()
+        );
+        if (foundToken) {
+          setBuyToken(foundToken);
+        }
+      }
+
+      if (queryParams.amount) {
+        setAmount(queryParams.amount);
+      }
+    }
+  }, [queryParams, tokensList]);
 
   useEffect(() => {
     if (spanRef.current) {

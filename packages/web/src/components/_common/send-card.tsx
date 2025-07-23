@@ -1,5 +1,6 @@
 import type { CardProps } from '@mui/material';
 import type { StateToken as Token } from '@normalfinance/types';
+import type { SendQueryParams } from '@/types/query-params';
 
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
@@ -22,11 +23,17 @@ import { Iconify } from '../template/iconify';
 interface SendCardProps extends CardProps {
   tokensList?: Token[];
   networkCost?: number;
+  queryParams?: SendQueryParams;
 }
 
 const DEFAULT_DESTINATION = 'Wallet address or ENS name';
 
-const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...other }) => {
+const SendCard: React.FC<SendCardProps> = ({
+  tokensList = [],
+  networkCost,
+  queryParams,
+  ...other
+}) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
@@ -51,6 +58,30 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
 
   const [coinValue, setCoinValue] = useState<number>(0);
   const [fiatValue, setFiatValue] = useState<number>(0);
+
+
+  useEffect(() => {
+    if (queryParams) {
+
+      if (queryParams.token) {
+        const foundToken = tokensList.find(
+          (token) => token.symbol.toLowerCase() === queryParams.token?.toLowerCase()
+        );
+        if (foundToken) {
+          setSendToken(foundToken);
+        }
+      }
+
+      if (queryParams.amount) {
+        setAmount(queryParams.amount);
+      }
+
+
+      if (queryParams.destination) {
+        setDestination(queryParams.destination);
+      }
+    }
+  }, [queryParams, tokensList]);
 
   useEffect(() => {
     if (sendToken) {

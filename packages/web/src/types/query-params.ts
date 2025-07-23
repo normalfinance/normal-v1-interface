@@ -10,6 +10,30 @@ export interface SwapQueryParams extends BaseQueryParams {
   out_minimum?: string;
 }
 
+export interface SendQueryParams extends BaseQueryParams {
+  token?: string;
+  amount?: string;
+  destination?: string;
+}
+
+export interface BuyQueryParams extends BaseQueryParams {
+  token?: string;
+  amount?: string;
+}
+
+export interface TokenActionQueryParams extends BaseQueryParams {
+  tab?: 'swap' | 'send' | 'buy';
+  asset?: string;
+  token_in?: string;
+  token_out?: string;
+  in_amount?: string;
+  out_minimum?: string;
+  token?: string;
+  amount?: string;
+  destination?: string;
+  
+}
+
 export interface DepositLiquidityQueryParams extends BaseQueryParams {
   asset?: string;
   amount?: string;
@@ -60,6 +84,9 @@ export interface ReferralQueryParams extends BaseQueryParams {
 
 export type AllQueryParams =
   | SwapQueryParams
+  | SendQueryParams
+  | BuyQueryParams
+  | TokenActionQueryParams
   | DepositLiquidityQueryParams
   | WithdrawLiquidityQueryParams
   | InsuranceQueryParams

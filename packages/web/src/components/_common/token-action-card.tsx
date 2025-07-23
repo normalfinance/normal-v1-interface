@@ -61,8 +61,8 @@ export interface TokenActionCardProps extends CardProps {
   cashBalance?: number;
   /** Show skeleton loading state */
   loading?: boolean;
-  /** Query parameters for pre-populating swap form */
-  queryParams?: SwapQueryParams;
+  queryParams?: any;
+  initialTab?: TokenActionKey;
 }
 
 // ----------------------------------------------------------------------
@@ -78,6 +78,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   cashBalance,
   loading,
   queryParams,
+  initialTab,
   ...other
 }) => {
   const theme = useTheme();
@@ -95,9 +96,14 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
     console.warn('TokenActionCard: enabledTabs is empty – defaulting to all tabs.');
     activeTabs.push(...ALL_TABS);
   }
+  const getInitialTab = (): TokenActionKey => {
+    if (initialTab && activeTabs.some((tab) => tab.value === initialTab)) {
+      return initialTab;
+    }
+    return activeTabs[0].value as TokenActionKey;
+  };
 
-  // Initialise the tab hook with the first available tab --------------
-  const tabs = useTabs(activeTabs[0].value as TokenActionKey);
+  const tabs = useTabs(getInitialTab());
 
   const buyCardTokens = React.useMemo<Token[]>(
     () => store.tokens.filter((t) => t.symbol === 'XLM' || t.symbol === 'USDC'),
@@ -119,9 +125,11 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           </Box>
         );
       case 'send':
-        return <SendCard tokensList={store.tokens} networkCost={0} />;
+        return <SendCard tokensList={store.tokens} networkCost={0} queryParams={queryParams} />;
       case 'buy':
-        return <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} />;
+        return (
+          <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} queryParams={queryParams} />
+        );
       default:
         return null;
     }
