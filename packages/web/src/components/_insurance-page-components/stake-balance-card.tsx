@@ -10,6 +10,7 @@ import { ZEALY_QUEST_IDS } from '@/global-config';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
+import { alpha , useTheme } from '@mui/material/styles';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
 
@@ -41,6 +42,7 @@ export function StakeBalance({
   ...other
 }: Props) {
   const { t } = useTranslate();
+  const theme = useTheme();
 
   const manageStake = useBoolean();
 
@@ -58,6 +60,10 @@ export function StakeBalance({
         display: 'flex',
         typography: 'body2',
         justifyContent: 'space-between',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        py: 2,
+        px: 1,
       }}
     >
       <Box component="span" sx={{ color: 'text.secondary' }}>
@@ -77,11 +83,14 @@ export function StakeBalance({
 
   return (
     <Card
-      sx={[{ p: 3 }, ...(Array.isArray(sx) ? sx : [sx])]}
+      sx={[
+        { p: 4, borderRadius: 3, border: 1, borderColor: alpha(theme.palette.grey[500], 0.32) },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
       {...other}
       data-testid="stake-balance-card"
     >
-      <Box sx={{ mb: 1, typography: 'subtitle2' }}>{title}</Box>
+      <Box sx={{ mb: 1, typography: 'h5', fontSize: 20 }}>{title}</Box>
 
       <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ typography: 'h3' }}>{fCurrency(currentBalance)}</Box>
@@ -89,12 +98,12 @@ export function StakeBalance({
           <Box key={i}>{row(r.label, r.value, r.formatter)}</Box>
         ))}
 
-        <Box sx={{ gap: 2, display: 'flex' }}>
+        <Box sx={{ gap: 2, display: 'flex', mt: 2 }}>
           <WalletGate buttonText={t('Connect Wallet to Manage Stake')} fullWidth>
             <Button
               fullWidth
               variant="contained"
-              color="primary"
+              color="secondary"
               onClick={manageStake.onTrue}
               data-testid="manage-stake-button"
             >

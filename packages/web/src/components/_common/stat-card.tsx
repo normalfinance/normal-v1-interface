@@ -2,13 +2,12 @@ import type { CardProps } from '@mui/material/Card';
 import type { ChartProps, ChartOptions } from '@/components/template/chart';
 
 import { useTranslate } from '@/locales';
-import { varAlpha } from 'minimal-shared/utils';
-// Import all formatting functions
 import { fNumber, fPercent, fShortenNumber } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import { useTheme } from '@mui/material/styles';
+import { Stack } from '@mui/material';
+import { alpha , useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 import { Chart, useChart } from '@/components/template/chart';
@@ -17,6 +16,7 @@ import { Chart, useChart } from '@/components/template/chart';
 
 type Props = CardProps & {
   title: string;
+  description?: string;
   total: number;
   percent: number;
   /**
@@ -36,6 +36,7 @@ type Props = CardProps & {
 
 export function StatCard({
   title,
+  description,
   percent,
   total,
   formatter,
@@ -81,38 +82,30 @@ export function StatCard({
   });
 
   const renderTrending = () => (
-    <Box sx={{ gap: 0.5, display: 'flex', alignItems: 'center' }}>
-      <Box
-        component="span"
-        sx={{
-          width: 24,
-          height: 24,
-          display: 'flex',
-          borderRadius: '50%',
-          position: 'relative',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: varAlpha(theme.vars.palette.success.mainChannel, 0.16),
-          color: 'success.dark',
-          ...theme.applyStyles('dark', {
-            color: 'success.light',
-          }),
-          ...(percent < 0 && {
-            bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
-            color: 'error.dark',
-            ...theme.applyStyles('dark', {
-              color: 'error.light',
-            }),
-          }),
-        }}
-      >
-        <Iconify
-          width={16}
-          icon={percent < 0 ? 'eva:trending-down-fill' : 'eva:trending-up-fill'}
-        />
-      </Box>
+    <Box
+      sx={{
+        gap: 0.5,
+        display: 'inline-flex',
+        alignItems: 'center',
+        px: '12px',
+        py: '6px',
+        backgroundColor: 'grey.100',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 9999,
+      }}
+    >
+      <Iconify
+        width={16}
+        icon={
+          percent < 0
+            ? 'solar:double-alt-arrow-down-bold-duotone'
+            : 'solar:double-alt-arrow-up-bold-duotone'
+        }
+        sx={{ color: percent < 0 ? 'error.main' : 'success.main' }}
+      />
 
-      <Box component="span" sx={{ typography: 'subtitle2' }}>
+      <Box component="span" sx={{ typography: 'subtitle2', fontWeight: 700 }}>
         {percent > 0 && '+'}
         {fPercent(percent)}
       </Box>
@@ -128,31 +121,49 @@ export function StatCard({
 
   return (
     <Card
-      sx={[{ p: 3, display: 'flex', alignItems: 'center' }, ...(Array.isArray(sx) ? sx : [sx])]}
+      sx={[
+        {
+          p: 4,
+          borderRadius: 3,
+          alignItems: 'center',
+          border: 1,
+          borderColor: alpha(theme.palette.grey[500], 0.32),
+        },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
       {...other}
       data-testid={`stat-card-${title.toLowerCase().replace(/\s+/g, '-')}`}
     >
-      <Box sx={{ flexGrow: 1 }}>
-        <Box sx={{ typography: 'subtitle2' }}>{t(title)}</Box>
-
-        <Box
-          sx={{ my: 1.5, typography: 'h3' }}
-          data-testid={`stat-card-total-${title.toLowerCase().replace(/\s+/g, '-')}`}
-        >
-          {formatTotal(total)}
+      {/* TODO: @niko this needs to be fixes from merge conflict */}
+      <Box sx={{ typography: 'h5', fontSize: 20, mb: 1 }}>{t(title)}</Box>
+      {description && (
+        <Box sx={{ typography: 'body1', color: 'text.secondary', fontSize: 14 }}>
+          {t(description)}
         </Box>
-
-        {renderTrending()}
-      </Box>
-
-      {displayChart && (
-        <Chart
-          type={chartType}
-          series={[{ data: chart.series }]}
-          options={chartOptions}
-          sx={{ width: 58, height: 48 }}
-        />
       )}
+
+      <Stack direction="row" mt={8}>
+        <Box sx={{ flexGrow: 1 }}>
+          <Box sx={{ typography: 'subtitle2' }}>{t(title)}</Box>
+
+          <Box
+            sx={{ my: 1.5, typography: 'h3', fontSize: 32 }}
+            data-testid={`stat-card-total-${title.toLowerCase().replace(/\s+/g, '-')}`}
+          >
+            {formatTotal(total)}
+          </Box>
+
+          {renderTrending()}
+        </Box>
+        {displayChart && (
+          <Chart
+            type={chartType}
+            series={[{ data: chart.series }]}
+            options={chartOptions}
+            sx={{ width: 58, height: 48 }}
+          />
+        )}
+      </Stack>
     </Card>
   );
 }

@@ -54,8 +54,8 @@ export const themeConfig: ThemeConfig = {
     },
     secondary: {
       lighter: '#e1d9ff',
-      light: '#bbaafe',
-      main: '#947bff',
+      light: '#e0d9ff',
+      main: '#6E4BFF',
       dark: '#7a65d9',
       darker: '#5f4fb2',
       contrastText: '#FFFFFF',
@@ -107,7 +107,7 @@ export const themeConfig: ThemeConfig = {
     },
     common: { black: '#000000', white: '#FFFFFF' },
     purple: {
-      lighter: 'rgba(148,123,255,0.29)', // 29 % opacity
+      lighter: 'rgba(148,123,255,0.29)',
       light: '#947BFF',
       main: '#6E4BFF',
       dark: '#4B29DB',
