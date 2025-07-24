@@ -44,7 +44,24 @@ export function useSwap(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
 
+  const rateLimitCheck = async () => {
+    if (!storePersist.wallet.address) return;
+    const res = await fetch('/api/swap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+    });
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    const data = await res.json();
+    if (!data.allowed) {
+      throw new Error(data.error || 'Swap not allowed');
+    }
+  };
+
   const onEstimateSwap = async (args: EstimateSwapArgs, token_in_decimals?: number) => {
+    await rateLimitCheck();
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.POOL_ROUTER_ADDRESS,
@@ -69,6 +86,7 @@ export function useSwap(): ReturnType {
     token_in_decimals?: number,
     token_out_decimals?: number
   ) => {
+    await rateLimitCheck();
     await executeContractTransaction({
       contractType: 'pool_swap_fee',
       contractAddress: constants.POOL_SWAP_FEE_ADDRESS,
@@ -95,6 +113,7 @@ export function useSwap(): ReturnType {
     token_in_decimals?: number,
     token_out_decimals?: number
   ) => {
+    await rateLimitCheck();
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.POOL_ROUTER_ADDRESS,
@@ -121,6 +140,7 @@ export function useSwap(): ReturnType {
     args: SwapStrictReceiveArgs,
     token_out_decimals?: number
   ) => {
+    await rateLimitCheck();
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
