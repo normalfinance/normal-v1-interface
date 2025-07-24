@@ -90,7 +90,7 @@ export function StakeBalance({
       {...other}
       data-testid="stake-balance-card"
     >
-      <Box sx={{ mb: 1, typography: 'h5', fontSize: 20 }}>{title}</Box>
+      <Box sx={{ mb: 2, typography: 'h5', fontSize: 20 }}>{title}</Box>
 
       <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ typography: 'h3' }}>{fCurrency(currentBalance)}</Box>
