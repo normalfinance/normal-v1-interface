@@ -5,7 +5,7 @@ import copy from 'copy-to-clipboard';
 import { useTranslate } from '@/locales';
 
 import Card from '@mui/material/Card';
-import { Grid2 } from '@mui/material';
+import { Grid2, Paper } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import Tooltip from '@mui/material/Tooltip';
@@ -56,7 +56,17 @@ export function RewardsOverview({
       <Grid2 container columnSpacing={3} rowSpacing={3} alignItems="flex-start">
         <Grid2 size={{ xs: 12, md: 4 }}>
           <Stack spacing={2}>
-            <Card sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                backgroundColor: 'grey.100',
+                borderRadius: 3,
+              }}
+            >
               <Typography variant="subtitle2" sx={{ flexGrow: 1, wordBreak: 'break-all' }}>
                 {referralLink}
               </Typography>
@@ -65,7 +75,7 @@ export function RewardsOverview({
                   <Iconify icon="solar:copy-bold" width={24} />
                 </IconButton>
               </Tooltip>
-            </Card>
+            </Paper>
           </Stack>
         </Grid2>
         <Grid2 size={{ xs: 12, md: 8 }}>
@@ -76,12 +86,24 @@ export function RewardsOverview({
               { label: t('Protocol Points'), value: protocolPoints },
             ].map((stat) => (
               <Grid2 size={{ xs: 12, md: 4 }} key={stat.label}>
-                <Card sx={{ p: 3, textAlign: 'center' }}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 2,
+                    backgroundColor: 'grey.100',
+                    borderRadius: 3,
+                  }}
+                >
                   <Typography variant="h3">{stat.value}</Typography>
                   <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
                     {stat.label}
                   </Typography>
-                </Card>
+                </Paper>
               </Grid2>
             ))}
           </Grid2>
