@@ -118,7 +118,25 @@ export function useInsuranceFund(): ReturnType {
     return;
   }, []);
 
+  const rateLimitCheck = async () => {
+    if (!storePersist.wallet.address) return;
+    const res = await fetch('/api/staking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+    });
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    const data = await res.json();
+    if (!data.allowed) {
+      throw new Error(data.error || 'Staking not allowed');
+    }
+  };
+
   const onDeposit = async (args: DepositArgs) => {
+    await rateLimitCheck();
+
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
@@ -138,6 +156,7 @@ export function useInsuranceFund(): ReturnType {
   };
 
   const onRequestWithdraw = async (args: RequestWithdrawArgs) => {
+    await rateLimitCheck();
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
@@ -157,6 +176,7 @@ export function useInsuranceFund(): ReturnType {
   };
 
   const onCancelRequestWithdraw = async () => {
+    await rateLimitCheck();
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
@@ -174,6 +194,7 @@ export function useInsuranceFund(): ReturnType {
   };
 
   const onWithdraw = async () => {
+    await rateLimitCheck();
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,

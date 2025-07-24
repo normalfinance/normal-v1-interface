@@ -55,6 +55,27 @@ const SendReview: React.FC<SendReviewProps> = ({
       return;
     }
 
+    // Rate limit check
+    try {
+      const res = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: store.wallet.address }),
+      });
+      if (res.status === 429) {
+        enqueueSnackbar('Rate limit exceeded. Please try again later.', { variant: 'error' });
+        return;
+      }
+      const data = await res.json();
+      if (!data.allowed) {
+        enqueueSnackbar(data.error || 'Send not allowed', { variant: 'error' });
+        return;
+      }
+    } catch (error) {
+      enqueueSnackbar('Failed to validate send request', { variant: 'error' });
+      return;
+    }
+
     await executeContractTransaction({
       contractType: 'token',
       contractAddress: sendToken.id,
