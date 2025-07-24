@@ -3,9 +3,9 @@
 import type { Reserve } from '@normalfinance/contracts/build/buffer';
 
 import { constants } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { BufferContract } from '@normalfinance/contracts';
-import { usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
 

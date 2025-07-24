@@ -1,5 +1,7 @@
+import type { NextRequest} from 'next/server';
+
+import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
-import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,7 +11,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get client IP address (prioritize proxy headers like middleware)
-    let ip =
+    const ip =
       req.headers.get('x-real-ip') || // many reverse proxies
       req.headers.get('X-Forwarded-For')?.split(',')[0] ||
       req.ip;

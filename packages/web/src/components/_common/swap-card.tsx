@@ -273,7 +273,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
    */
   const checkIfSwapAllowed = async () => {
     setSwapError(null);
-    if (!sellToken || !buyToken) return;
+    if (!sellToken || !buyToken) return false;
     try {
       const swapArgs = {
         asset: buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol,

@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { constants } from '@normalfinance/utils';
-import { PoolRouterContract } from '@normalfinance/contracts';
 import { usePersistStore } from '@normalfinance/state';
+import { PoolRouterContract } from '@normalfinance/contracts';
 
 // ----------------------------------------------------------------------
 
