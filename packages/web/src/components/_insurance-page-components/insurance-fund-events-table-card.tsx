@@ -41,7 +41,6 @@ export function InsuranceFundEventsTableCard({ events }: Props) {
           headCells={TABLE_HEAD}
           sx={{
             backgroundColor: 'grey.100',
-            borderTop: 1,
             borderBottom: 1,
             borderColor: 'divider',
           }}
