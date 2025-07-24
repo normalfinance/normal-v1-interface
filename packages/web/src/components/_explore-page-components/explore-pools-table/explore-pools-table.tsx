@@ -55,7 +55,7 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
   const table = useTable({ defaultRowsPerPage: 30 });
 
   /* ----- full dataset --------------------------------------------------- */
-  const [tableData, setTableData] = useState<ExplorePoolsRow[]>(pools);
+  const tableData = pools;
 
   /* ----- search filter state ------------------------------------------- */
   const filters = useSetState<IMarketTableFilters>({
