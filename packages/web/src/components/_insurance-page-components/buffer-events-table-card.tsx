@@ -36,7 +36,7 @@ type Props = {
 export function BufferEventsTableCard({ events }: Props) {
   return (
     <Scrollbar sx={{ minHeight: 0 }}>
-      <Table sx={{ minWidth: 800 }}>
+      <Table sx={{ minWidth: 800 }} data-testid="buffer-events-table">
         <TableHeadCustom headCells={TABLE_HEAD} />
 
         <TableBody>

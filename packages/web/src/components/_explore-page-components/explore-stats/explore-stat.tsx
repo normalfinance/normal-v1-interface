@@ -33,6 +33,7 @@ export function ExploreStat({ title, total, percent, formatter }: Props) {
         justifyContent: 'start',
         p: 2.5,
       }}
+      data-testid={`explore-stat-${title.toLowerCase().replace(/\s+/g, '-')}`}
     >
       <Stack spacing={0.5}>
         <Typography variant="subtitle1" color="text.secondary">
