@@ -3,6 +3,7 @@
 import { constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
+import { usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
 
@@ -19,9 +20,28 @@ export function useTotalTVL(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [totalTVL, setTotalTVl] = useState<number | undefined>(undefined);
+  const storePersist = usePersistStore();
+
+  const rateLimitCheck = async () => {
+    if (!storePersist.wallet.address) return;
+    const res = await fetch('/api/pools', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+    });
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    const data = await res.json();
+    if (!data.allowed) {
+      throw new Error(data.error || 'Pool data access not allowed');
+    }
+  };
 
   const fetchTVL = useCallback(async (poolAddresses?: string[]) => {
     try {
+      await rateLimitCheck();
+
       if (!poolAddresses) {
         const PoolRouter = new PoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,

@@ -5,6 +5,7 @@ import type { Reserve } from '@normalfinance/contracts/build/buffer';
 import { constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { BufferContract } from '@normalfinance/contracts';
+import { usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
 
@@ -29,6 +30,23 @@ export function useBuffer(): ReturnType {
   const [loading, setLoading] = useState(true); // Loading state for async operations
 
   const [buffer, setBuffer] = useState<BufferInfo | undefined>(undefined);
+  const storePersist = usePersistStore();
+
+  const rateLimitCheck = async () => {
+    if (!storePersist.wallet.address) return;
+    const res = await fetch('/api/pools', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+    });
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    const data = await res.json();
+    if (!data.allowed) {
+      throw new Error(data.error || 'Pool data access not allowed');
+    }
+  };
 
   /**
    * Fetch Insurance Fund information
@@ -41,6 +59,8 @@ export function useBuffer(): ReturnType {
     try {
       setError(null);
       setLoading(true);
+
+      await rateLimitCheck();
 
       const Buffer = new BufferContract.Client({
         contractId: constants.INSURANCE_FUND_ADDRESS,

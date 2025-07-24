@@ -42,6 +42,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const { onEstimateSwap, onSwap } = useSwap();
 
   const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
+  const [swapError, setSwapError] = useState<string | null>(null);
 
   const [maxSlippage, setMaxSlippage] = useState<number>(10_000); // bps
   const [exchangeRate, setExchangeRate] = useState<string>('');
@@ -270,27 +271,42 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
    *
    * @async
    */
-  const doSwap = useCallback(async (): Promise<void> => {
-    if (sellToken && buyToken && sellToken.id && buyToken.id) {
-      try {
-        const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        const isBuy = buyToken.symbol !== 'XLM';
-        // onSwap({
-        //   asset,
-        //   is_buy: isBuy,
-        //   in_amount: amount,
-        // });
-
-        // Wait for the next block and fetch token balances
-        setTimeout(async () => {
-          await appStore.fetchTokenInfo(sellToken.name!);
-          await appStore.fetchTokenInfo(buyToken.name!);
-        }, 7000);
-      } catch (error) {
-        console.log('Error during swap transaction', error);
+  const checkIfSwapAllowed = async () => {
+    setSwapError(null);
+    if (!sellToken || !buyToken) return;
+    try {
+      const swapArgs = {
+        asset: buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol,
+        is_buy: buyToken.symbol !== 'XLM',
+        in_amount: Number(amount),
+        out_min: Number(buyAmount),
+        token_in: sellToken.symbol,
+        token_out: buyToken.symbol,
+      };
+      const res = await fetch('/api/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: storePersist.wallet.address,
+          swapArgs,
+        }),
+      });
+      if (res.status === 429) {
+        setSwapError('Rate limit exceeded. Please try again later.');
+        return false;
       }
+      const data = await res.json();
+      if (!data.allowed) {
+        setSwapError(data.error || 'Swap not allowed');
+        return false;
+      }
+      return true;
+    } catch (err: any) {
+      setSwapError(err?.message || 'Swap failed');
+      return false;
     }
-  }, [appStore, sellToken?.name, storePersist, buyToken?.name, amount, buyAmount, onSwap]);
+  };
+  // and then call this to check if we should let the swap happen
 
   /**
    * Simulates the swap transaction to determine the exchange rate and network fee.
@@ -357,6 +373,33 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setLoadingSimulate(false);
     }
   }, [sellToken?.name, buyToken, amount, buyAmount]);
+
+  // New: doSwap function for use in onSubmit
+  const doSwap = async (): Promise<void> => {
+    if (sellToken && buyToken && sellToken.id && buyToken.id) {
+      try {
+        const allowed = await checkIfSwapAllowed();
+        if (!allowed) return;
+        // Now call the client-side onSwap (sign and submit)
+        const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
+        await onSwap({
+          token_in: sellToken.symbol,
+          token_out: buyToken.symbol,
+          asset,
+          in_amount: Number(amount),
+          out_min: Number(buyAmount),
+          tokens: [sellToken.symbol, buyToken.symbol],
+        });
+        setTimeout(async () => {
+          await appStore.fetchTokenInfo(sellToken.name!);
+          await appStore.fetchTokenInfo(buyToken.name!);
+        }, 7000);
+      } catch (error) {
+        setSwapError('Error during swap transaction');
+        console.log('Error during swap transaction', error);
+      }
+    }
+  };
 
   // Main button with multiple states
   const persist = usePersistStore();

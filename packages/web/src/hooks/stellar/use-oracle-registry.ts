@@ -3,6 +3,7 @@
 import { constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
+import { usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
 
@@ -27,6 +28,7 @@ export function useOracleRegistry(): ReturnType {
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
+  const storePersist = usePersistStore();
 
   const defaultAction: OracleRegistryContract.NormalAction = {
     tag: 'UpdateTwap',
@@ -55,10 +57,28 @@ export function useOracleRegistry(): ReturnType {
     return;
   }, []);
 
+  const rateLimitCheck = async () => {
+    if (!storePersist.wallet.address) return;
+    const res = await fetch('/api/oracle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+    });
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    const data = await res.json();
+    if (!data.allowed) {
+      throw new Error(data.error || 'Oracle access not allowed');
+    }
+  };
+
   const getPrice = useCallback(async (asset: string, cached: boolean) => {
     try {
       setError(null);
       setLoading(true);
+
+      await rateLimitCheck();
 
       if (!oracleRegistry) {
         fetchOracleRegistry();
@@ -88,6 +108,8 @@ export function useOracleRegistry(): ReturnType {
       setError(null);
       setLoading(true);
 
+      await rateLimitCheck();
+
       if (!oracleRegistry) {
         fetchOracleRegistry();
         return undefined;
@@ -112,6 +134,8 @@ export function useOracleRegistry(): ReturnType {
     try {
       setError(null);
       setLoading(true);
+
+      await rateLimitCheck();
 
       if (!oracleRegistry) {
         fetchOracleRegistry();

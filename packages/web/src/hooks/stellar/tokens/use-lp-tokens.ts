@@ -5,6 +5,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { useState, useCallback } from 'react';
 import { constants } from '@normalfinance/utils';
 import { PoolRouterContract } from '@normalfinance/contracts';
+import { usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
 
@@ -31,8 +32,25 @@ export function useLPTokens(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [positions, setPostions] = useState<PoolPosition[] | undefined>(undefined);
+  const storePersist = usePersistStore();
 
   const fetchPositions = useCallback(async () => {
+    // Add rate limit check
+    if (storePersist.wallet.address) {
+      const res = await fetch('/api/liquidity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+      });
+      if (res.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      const data = await res.json();
+      if (!data.allowed) {
+        throw new Error(data.error || 'Liquidity management not allowed');
+      }
+    }
+
     try {
       const PoolRouter = new PoolRouterContract.Client({
         contractId: constants.POOL_ROUTER_ADDRESS,
@@ -81,7 +99,7 @@ export function useLPTokens(): ReturnType {
       setError(e);
     }
     return;
-  }, []);
+  }, [storePersist.wallet.address]);
 
   // On component mount, fetch positions
   // useEffect(() => {
