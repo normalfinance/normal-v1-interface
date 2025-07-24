@@ -18,7 +18,7 @@ type ThemeConfig = {
   > & {
     common: Pick<CommonColors, 'black' | 'white'>;
     grey: Record<
-      '50' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900' | '950',
+      '50' | '100' | '200' | '250' | '300' | '400' | '500' | '600' | '700' | '800' | '900' | '950',
       string
     >;
   };
@@ -96,6 +96,7 @@ export const themeConfig: ThemeConfig = {
       '50': '#FCFDFD',
       '100': '#F9FAFB',
       '200': '#F4F6F8',
+      '250': '#f1f3f4',
       '300': '#DFE3E8',
       '400': '#C4CDD5',
       '500': '#919EAB',

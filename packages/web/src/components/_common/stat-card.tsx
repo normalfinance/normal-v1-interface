@@ -7,7 +7,7 @@ import { fNumber, fPercent, fShortenNumber } from '@/utils/format-number';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import { Stack } from '@mui/material';
-import { alpha , useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 import { Chart, useChart } from '@/components/template/chart';
