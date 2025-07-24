@@ -1,9 +1,9 @@
 name: Web CI
 
 on:
-  pull_request:
-    paths:
-      - 'packages/web/**'
+  # pull_request:
+  #   paths:
+  #     - 'packages/web/**'
   push:
     branches: 
       - '**'

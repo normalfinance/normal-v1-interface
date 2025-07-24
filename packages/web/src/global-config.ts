@@ -25,7 +25,7 @@ export const CONFIG: ConfigValue = {
   appName: 'Normal',
   appVersion: packageJson.version,
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://app.normalfinance.io',
-  isStaticExport: JSON.parse(`${process.env.BUILD_STATIC_EXPORT}`),
+  isStaticExport: JSON.parse(process.env.BUILD_STATIC_EXPORT || 'false'),
   crisp: {
     websiteId: process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? '',
     secretKey: process.env.CRISP_SECRET_KEY ?? '',

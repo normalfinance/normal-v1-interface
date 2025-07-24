@@ -86,7 +86,7 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
 
   /* ----- render --------------------------------------------------------- */
   return (
-    <Card>
+    <Card data-testid="explore-pools-table">
       {/* — search bar — */}
       <ExplorePoolsTableToolbar filters={filters} onResetPage={table.onResetPage} />
 

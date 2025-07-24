@@ -36,7 +36,10 @@ export interface ExploreStatsProps {
 export default function ExploreStats({ stats, sx, loading }: ExploreStatsProps) {
   if (loading) {
     return (
-      <Card sx={[{ mb: { xs: 3, md: 5 } }, ...(Array.isArray(sx) ? sx : [sx])]}>
+      <Card
+        sx={[{ mb: { xs: 3, md: 5 } }, ...(Array.isArray(sx) ? sx : [sx])]}
+        data-testid="explore-stats-loading"
+      >
         <Scrollbar sx={{ minHeight: 108 }}>
           <Stack
             direction="row"
@@ -57,7 +60,10 @@ export default function ExploreStats({ stats, sx, loading }: ExploreStatsProps) 
   }
 
   return (
-    <Card sx={[{ mb: { xs: 3, md: 5 } }, ...(Array.isArray(sx) ? sx : [sx])]}>
+    <Card
+      sx={[{ mb: { xs: 3, md: 5 } }, ...(Array.isArray(sx) ? sx : [sx])]}
+      data-testid="explore-stats"
+    >
       <Scrollbar sx={{ minHeight: 108 }}>
         <Stack
           direction="row"

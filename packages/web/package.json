@@ -40,7 +40,8 @@
     "validate:address": "node ./scripts/validate-address.js",
     "convert:contract": "node ./scripts/convert-contract-address.js",
     "commit": "cz",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "test:e2e": "playwright test"
   },
   "engines": {
     "node": "20.x"
