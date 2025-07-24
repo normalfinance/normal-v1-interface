@@ -21,8 +21,8 @@ import {
   Box,
   Paper,
   Stack,
-  Drawer,
   Button,
+  Drawer,
   Tooltip,
   IconButton,
   Typography,
@@ -136,7 +136,12 @@ function WalletDisconnected({
       }}
     >
       <Box sx={{ position: 'relative' }}>
-        <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
+        <Typography
+          variant="subtitle1"
+          sx={{ mb: 3 }}
+          textAlign="left"
+          data-testid="connect-wallet-title"
+        >
           {t('Connect your wallet')}
         </Typography>
         <ZealyHighlight
@@ -223,6 +228,7 @@ function WalletConnected({ address }: { address: string }) {
 
   return (
     <Box
+      data-testid="wallet-connected"
       sx={{
         p: 2,
         pt: 10,
@@ -323,13 +329,19 @@ export function AccountDrawer(props: AccountDrawerProps) {
     <>
       {isConnected ? (
         <AccountButton
+          data-testid="account-button"
           onClick={handleMainButtonClick}
           photoURL={avatarURL}
           displayName=" "
           {...props}
         />
       ) : (
-        <Button variant="contained" color="info" onClick={handleMainButtonClick}>
+        <Button
+          variant="contained"
+          color="info"
+          onClick={handleMainButtonClick}
+          data-testid="connect-wallet-button"
+        >
           {t('Connect Wallet')}
         </Button>
       )}
@@ -359,7 +371,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
         >
           {/* ← close (X) */}
           <Tooltip title="Close">
-            <IconButton onClick={onClose}>
+            <IconButton onClick={onClose} data-testid="close-drawer-button">
               <Iconify icon="mingcute:close-line" />
             </IconButton>
           </Tooltip>
@@ -372,6 +384,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   onClose();
                 }}
                 sx={{ ml: 'auto' }}
+                data-testid="disconnect-wallet-button"
               >
                 <Iconify icon="solar:power-bold" />
               </IconButton>

@@ -40,6 +40,7 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       hover
       sx={{ cursor: 'pointer' }}
       onClick={() => router.push(paths.pools.details(row.address))}
+      data-testid={`explore-pools-table-row-${index}`}
     >
       {/* Rank (#) ---------------------------------------------------- */}
       <TableCell>{index}</TableCell>

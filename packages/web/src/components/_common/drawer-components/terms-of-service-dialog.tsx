@@ -82,7 +82,7 @@ export default function TermsOfServiceDialog({ open, onClose }: TermsOfServiceDi
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>{t('Terms of Service')}</DialogTitle>
+      <DialogTitle data-testid="tos-dialog-title">{t('Terms of Service')}</DialogTitle>
 
       <DialogContent dividers sx={{ maxHeight: 600 }}>
         <Typography variant="body2" sx={{ mb: 2 }}>
@@ -149,7 +149,13 @@ export default function TermsOfServiceDialog({ open, onClose }: TermsOfServiceDi
 
       <DialogActions>
         <Button onClick={onClose}>{t('Decline')}</Button>
-        <Button variant="contained" color="secondary" onClick={handleAccept} autoFocus>
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleAccept}
+          autoFocus
+          data-testid="tos-dialog-accept-button"
+        >
           {t('Accept')}
         </Button>
       </DialogActions>

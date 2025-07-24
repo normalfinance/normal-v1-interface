@@ -76,7 +76,11 @@ export function StakeBalance({
   const rowsToRender = defaultRows;
 
   return (
-    <Card sx={[{ p: 3 }, ...(Array.isArray(sx) ? sx : [sx])]} {...other}>
+    <Card
+      sx={[{ p: 3 }, ...(Array.isArray(sx) ? sx : [sx])]}
+      {...other}
+      data-testid="stake-balance-card"
+    >
       <Box sx={{ mb: 1, typography: 'subtitle2' }}>{title}</Box>
 
       <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
@@ -87,7 +91,13 @@ export function StakeBalance({
 
         <Box sx={{ gap: 2, display: 'flex' }}>
           <WalletGate buttonText={t('Connect Wallet to Manage Stake')} fullWidth>
-            <Button fullWidth variant="contained" color="primary" onClick={manageStake.onTrue}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              onClick={manageStake.onTrue}
+              data-testid="manage-stake-button"
+            >
               {t('Manage stake')}
             </Button>
           </WalletGate>
