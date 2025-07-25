@@ -134,7 +134,6 @@ export function StatCard({
       {...other}
       data-testid={`stat-card-${title.toLowerCase().replace(/\s+/g, '-')}`}
     >
-      {/* TODO: @niko this needs to be fixes from merge conflict */}
       <Box sx={{ typography: 'h5', fontSize: 20, mb: 1 }}>{t(title)}</Box>
       {description && (
         <Box sx={{ typography: 'body1', color: 'text.secondary', fontSize: 14 }}>
@@ -144,8 +143,6 @@ export function StatCard({
 
       <Stack direction="row" mt={8}>
         <Box sx={{ flexGrow: 1 }}>
-          <Box sx={{ typography: 'subtitle2' }}>{t(title)}</Box>
-
           <Box
             sx={{ my: 1.5, typography: 'h3', fontSize: 32 }}
             data-testid={`stat-card-total-${title.toLowerCase().replace(/\s+/g, '-')}`}
