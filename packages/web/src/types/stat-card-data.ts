@@ -1,8 +1,8 @@
-// src/types/stat-card-data.ts
 import type { ChartOptions } from '@/components/template/chart';
 
 export type StatCardData = {
   title: string;
+  description?: string;
   percent: number;
   total: number;
   formatter: (value: number) => string;

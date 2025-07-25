@@ -175,7 +175,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           maxHeight: 800,
           p: 1.5,
           gap: 0.5,
-          borderRadius: 2,
+          borderRadius: 4,
           ...sx,
         }}
         {...other}
@@ -259,6 +259,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
               boxShadow: 'none !important',
               backgroundColor: alpha(theme.palette.grey[500], 0.08),
               border: `1px solid ${theme.palette.divider}`,
+              borderRadius: 9999,
             },
           }}
         >

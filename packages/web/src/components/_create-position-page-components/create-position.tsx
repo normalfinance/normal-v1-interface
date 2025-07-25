@@ -60,7 +60,9 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
         display: 'flex',
         flexDirection: 'column',
         p: 2.5,
-        borderRadius: 2,
+        borderRadius: 4,
+        border: 1,
+        borderColor: 'divider',
         ...sx,
       }}
       {...other}

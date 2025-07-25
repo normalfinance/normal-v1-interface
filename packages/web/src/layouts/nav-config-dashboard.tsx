@@ -22,6 +22,8 @@ const ICONS = {
   lp: icon('mingcute-lp'),
   yield: icon('mingcute-yield'),
   more: icon('mingcute-more'),
+  about: icon('mingcute-info-circle'),
+  contact: icon('mingcute-mail'),
 };
 
 // ----------------------------------------------------------------------
@@ -89,6 +91,18 @@ export const navData: NavSectionProps['data'] = [
             path: paths.docs,
             icon: ICONS.external,
             caption: 'Everything you need to know about getting started with Normal',
+          },
+          {
+            title: 'About Us',
+            path: paths.core.about ?? '/about',
+            icon: ICONS.about,
+            caption: 'Learn more about Normal Finance',
+          },
+          {
+            title: 'Contact',
+            path: paths.core.contact ?? '/contact',
+            icon: ICONS.contact,
+            caption: 'Get in touch with our team',
           },
         ],
       },

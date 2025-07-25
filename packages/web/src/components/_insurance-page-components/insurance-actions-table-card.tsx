@@ -9,7 +9,8 @@ import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
-import { CardHeader } from '@mui/material';
+import { CardHeader, Typography } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
 
 export function InsuranceActionsTable() {
   const { t } = useTranslate();
+  const theme = useTheme();
 
   const { events: bufferEvents } = useBufferEvents();
   const { events: insuranceFundEvents } = useInsuranceFundEvents();
@@ -57,16 +59,32 @@ export function InsuranceActionsTable() {
     : [];
 
   return (
-    <Card sx={{ mb: 3, height: 'auto' }} data-testid="insurance-actions-table">
-      <CardHeader title={t('Recent events')} sx={{ mb: 2 }} />
+    <Card
+      sx={{
+        mb: 3,
+        height: 'auto',
+        borderRadius: 3,
+        border: 1,
+        borderColor: alpha(theme.palette.grey[500], 0.32),
+      }}
+      data-testid="insurance-actions-table"
+    >
+      <CardHeader
+        sx={{ mb: 2 }}
+        title={
+          <Typography variant="h5" sx={{ fontSize: 20 }}>
+            {t('Recent events')}
+          </Typography>
+        }
+      />
       <Box
         sx={{
           width: 1,
           zIndex: 9,
-          px: { md: 3 },
+          px: 3,
           display: 'flex',
           bgcolor: 'background.paper',
-          justifyContent: { xs: 'center', md: 'flex-start' },
+          justifyContent: 'flex-start',
         }}
       >
         <Tabs value={t(selectedTab)} onChange={handleChangeTab}>
@@ -81,7 +99,6 @@ export function InsuranceActionsTable() {
           ))}
         </Tabs>
       </Box>
-
       {/* Render the correct component based on the selected tab */}
       {selectedTab === 'insurance' && <InsuranceFundEventsTableCard events={insuranceFundEvents} />}
       {selectedTab === 'buffer' && <BufferEventsTableCard events={bufferEvents} />}

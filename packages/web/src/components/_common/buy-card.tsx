@@ -161,7 +161,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
             height: '400px',
             padding: theme.spacing(2),
             alignItems: 'flex-start',
-            borderRadius: '8px',
+            borderRadius: '20px',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -291,12 +291,14 @@ const BuyCard: React.FC<BuyCardProps> = ({
               </Box>
             </Box>
           ) : (
-            <SwapSendEmptyPopupButton
-              label="Select token"
-              onClick={() => {
-                handleOpen();
-              }}
-            />
+            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+              <SwapSendEmptyPopupButton
+                label="Select token"
+                onClick={() => {
+                  handleOpen();
+                }}
+              />
+            </Box>
           )}
 
           <Stack
@@ -335,8 +337,9 @@ const BuyCard: React.FC<BuyCardProps> = ({
             <Button
               fullWidth
               variant="soft"
-              color="success"
+              color="secondary"
               size="large"
+              sx={{ borderRadius: 2.5 }}
               onClick={handleMainButtonClick}
               disabled={getButtonLabel() !== 'Buy'}
             >
