@@ -1,18 +1,21 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
-import { Transaction, Keypair, Networks, rpc } from '@stellar/stellar-sdk';
-import { rateLimiter } from '@/server/rateLimiter';
 import { constants } from '@normalfinance/utils';
+import { rateLimiter } from '@/server/rateLimiter';
+import { rpc, Keypair, Networks, Transaction } from '@stellar/stellar-sdk';
 
 export async function POST(req: NextRequest) {
   try {
     const { walletAddress, signedTransactionXDR, transactionType } = await req.json();
-    
+
     if (!walletAddress || !signedTransactionXDR) {
-      return NextResponse.json({ 
-        error: 'Missing walletAddress or signedTransactionXDR' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'Missing walletAddress or signedTransactionXDR',
+        },
+        { status: 400 }
+      );
     }
 
     // Get client IP address (prioritize proxy headers like middleware)
@@ -37,7 +40,7 @@ export async function POST(req: NextRequest) {
     try {
       const transaction = new Transaction(signedTransactionXDR, Networks.TESTNET);
       const keypair = Keypair.fromPublicKey(walletAddress);
-      
+
       // Verify that the transaction is signed by the correct wallet
       const hasValidSignature = transaction.signatures.some((sig) => {
         try {
@@ -48,15 +51,21 @@ export async function POST(req: NextRequest) {
       });
 
       if (!hasValidSignature) {
-        return NextResponse.json({ 
-          error: 'Invalid signature for wallet address' 
-        }, { status: 403 });
+        return NextResponse.json(
+          {
+            error: 'Invalid signature for wallet address',
+          },
+          { status: 403 }
+        );
       }
     } catch (error) {
       console.error('Signature verification failed:', error);
-      return NextResponse.json({ 
-        error: 'Failed to verify signature' 
-      }, { status: 403 });
+      return NextResponse.json(
+        {
+          error: 'Failed to verify signature',
+        },
+        { status: 403 }
+      );
     }
 
     // Execute the contract transaction server-side
@@ -70,19 +79,20 @@ export async function POST(req: NextRequest) {
         new Transaction(signedTransactionXDR, Networks.TESTNET)
       );
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: true,
         transactionId: result.hash,
-        result 
+        result,
       });
-
     } catch (contractError: any) {
       console.error(`${transactionType || 'Contract'} execution failed:`, contractError);
-      return NextResponse.json({ 
-        error: contractError?.message || 'Contract execution failed' 
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: contractError?.message || 'Contract execution failed',
+        },
+        { status: 500 }
+      );
     }
-
   } catch (error: any) {
     console.error(`${transactionType || 'Transaction'} API error:`, error);
     return NextResponse.json(

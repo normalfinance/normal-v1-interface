@@ -3,7 +3,6 @@
 import type { IMarketTableFilters } from '@/types/marketTable';
 import type { TableHeadCellProps } from '@/components/template/table';
 
-import { useState } from 'react';
 import { useSetState } from 'minimal-shared/hooks';
 
 import { Card, Table, TableBody } from '@mui/material';

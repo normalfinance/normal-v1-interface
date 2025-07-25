@@ -22,10 +22,8 @@ export function useTotalTVL(): ReturnType {
   const [totalTVL, setTotalTVl] = useState<number | undefined>(undefined);
   const storePersist = usePersistStore();
 
-
   const fetchTVL = useCallback(async (poolAddresses?: string[]) => {
     try {
-
       if (!poolAddresses) {
         const PoolRouter = new PoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,

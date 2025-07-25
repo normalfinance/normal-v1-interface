@@ -112,8 +112,11 @@ export function useInsuranceFund(): ReturnType {
     return;
   }, []);
 
-  const executeInsurance = async (signedTransactionXDR: string, transactionType: string = 'Insurance Fund') => {
-    if (!storePersist.wallet.address) return;
+  const executeInsurance = async (
+    signedTransactionXDR: string,
+    transactionType: string = 'Insurance Fund'
+  ) => {
+    if (!storePersist.wallet.address) return null;
     const res = await fetch('/api/transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

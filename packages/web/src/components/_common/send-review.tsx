@@ -49,8 +49,11 @@ const SendReview: React.FC<SendReviewProps> = ({
   const store = usePersistStore();
   const { executeContractTransaction } = useContractTransaction();
 
-  const executeSend = async (signedTransactionXDR: string, transactionType: string = 'Send Token') => {
-    if (!store.wallet.address) return;
+  const executeSend = async (
+    signedTransactionXDR: string,
+    transactionType: string = 'Send Token'
+  ) => {
+    if (!store.wallet.address) return null;
     const res = await fetch('/api/transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -45,26 +45,26 @@ export function useSwap(): ReturnType {
   const [loading, setLoading] = useState(true); // Loading state for async operations
 
   const executeSwap = async (signedTransactionXDR: string, transactionType: string = 'Swap') => {
-    if (!storePersist.wallet.address) return;
+    if (!storePersist.wallet.address) return null;
     const res = await fetch('/api/transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         walletAddress: storePersist.wallet.address,
         signedTransactionXDR,
-        transactionType
+        transactionType,
       }),
     });
-    
+
     if (res.status === 429) {
       throw new Error('Rate limit exceeded. Please try again later.');
     }
-    
+
     const data = await res.json();
     if (!data.success) {
       throw new Error(data.error || 'Swap execution failed');
     }
-    
+
     return data;
   };
 
@@ -111,16 +111,16 @@ export function useSwap(): ReturnType {
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });
         if (restore) return tx;
-        
+
         // Sign the transaction
         const signedTransaction = await tx.signAndSend();
         const signedXDR = signedTransaction.built?.toXDR();
-        
+
         if (signedXDR) {
           // Send signed transaction to server
           return await executeSwap(signedXDR, 'Pool Swap with Fee');
         }
-        
+
         return signedTransaction;
       },
     });
@@ -150,16 +150,16 @@ export function useSwap(): ReturnType {
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });
         if (restore) return tx;
-        
+
         // Sign the transaction
         const signedTransaction = await tx.signAndSend();
         const signedXDR = signedTransaction.built?.toXDR();
-        
+
         if (signedXDR) {
           // Send signed transaction to server
           return await executeSwap(signedXDR, 'Pool Router Swap');
         }
-        
+
         return signedTransaction;
       },
     });
@@ -188,16 +188,16 @@ export function useSwap(): ReturnType {
       transactionFunction: async (client, restore) => {
         const tx = await client.swap_strict_receive(processedArgs, { simulate: !restore });
         if (restore) return tx;
-        
+
         // Sign the transaction
         const signedTransaction = await tx.signAndSend();
         const signedXDR = signedTransaction.built?.toXDR();
-        
+
         if (signedXDR) {
           // Send signed transaction to server
           return await executeSwap(signedXDR, 'Pool Swap Strict Receive');
         }
-        
+
         return signedTransaction;
       },
     });

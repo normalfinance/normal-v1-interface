@@ -27,8 +27,11 @@ export function useLiquidity(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const executeLiquidity = async (signedTransactionXDR: string, transactionType: string = 'Liquidity') => {
-    if (!storePersist.wallet.address) return;
+  const executeLiquidity = async (
+    signedTransactionXDR: string,
+    transactionType: string = 'Liquidity'
+  ) => {
+    if (!storePersist.wallet.address) return null;
     const res = await fetch('/api/transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

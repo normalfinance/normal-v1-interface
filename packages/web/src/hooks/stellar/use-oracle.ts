@@ -37,12 +37,10 @@ export function useOracle(_asset: string): ReturnType {
     values: undefined,
   };
 
-
   const getPrice = useCallback(async (cached: boolean) => {
     try {
       setError(null);
       setLoading(true);
-
 
       if (!oracleRegistry) return;
 
@@ -68,7 +66,6 @@ export function useOracle(_asset: string): ReturnType {
     try {
       setError(null);
       setLoading(true);
-
 
       if (!oracleRegistry) return;
 

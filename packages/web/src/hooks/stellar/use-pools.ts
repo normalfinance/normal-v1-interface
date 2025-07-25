@@ -25,10 +25,8 @@ export function usePools(): ReturnType {
   const [loading, setLoading] = useState(true); // Loading state for async operations
   const [allPools, setAllPools] = useState<PoolRouterContract.PoolInfo[]>([]); // State to hold pool data
 
-
   const fetchPool = useCallback(async (poolAddress: string) => {
     try {
-
       const PoolRouter = new PoolRouterContract.Client({
         contractId: constants.POOL_ROUTER_ADDRESS,
         networkPassphrase: constants.NETWORK_PASSPHRASE,
@@ -51,7 +49,6 @@ export function usePools(): ReturnType {
     try {
       setLoading(true);
       setError(null);
-
 
       const PoolRouter = new PoolRouterContract.Client({
         contractId: constants.POOL_ROUTER_ADDRESS,
