@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error(`${transactionType || 'Transaction'} API error:`, error);
+    console.error(`Transaction API error:`, error);
     return NextResponse.json(
       { error: error?.message || 'Transaction processing failed' },
       { status: 500 }
