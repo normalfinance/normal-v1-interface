@@ -10,8 +10,6 @@ import { InsuranceFundContract } from '@normalfinance/contracts';
 
 import { useContractTransaction } from './use-contract-transaction';
 
-// ----------------------------------------------------------------------
-
 export type InsuranceFundInfo = {
   total_shares: number;
   optimal_insurance: number;
@@ -34,8 +32,6 @@ interface ReturnType {
   onCancelRequestWithdraw: () => Promise<void>;
   onWithdraw: () => Promise<void>;
 }
-
-// ----------------------------------------------------------------------
 
 export function useInsuranceFund(): ReturnType {
   const storePersist = usePersistStore();
@@ -60,7 +56,6 @@ export function useInsuranceFund(): ReturnType {
         rpcUrl: constants.RPC_URL,
       });
 
-      // Fetch Insurance Fund config and info from chain
       const [total_shares, optimal_insurance, unstaking_period, current_rate, current_utilization] =
         await Promise.all([
           InsuranceFund.get_total_shares(),
@@ -80,7 +75,6 @@ export function useInsuranceFund(): ReturnType {
         });
       }
 
-      // Get balance
       const _balance = 0;
 
       setBalance(_balance);
@@ -118,24 +112,35 @@ export function useInsuranceFund(): ReturnType {
     return;
   }, []);
 
-  const rateLimitCheck = async () => {
+  const executeInsurance = async (signedTransactionXDR: string, transactionType: string = 'Insurance Fund') => {
     if (!storePersist.wallet.address) return;
-    const res = await fetch('/api/staking', {
+    const res = await fetch('/api/transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+      body: JSON.stringify({
+        walletAddress: storePersist.wallet.address,
+        signedTransactionXDR,
+        transactionType,
+      }),
     });
+
     if (res.status === 429) {
       throw new Error('Rate limit exceeded. Please try again later.');
     }
+
     const data = await res.json();
-    if (!data.allowed) {
-      throw new Error(data.error || 'Staking not allowed');
+    if (!data.success) {
+      throw new Error(data.error || 'Insurance fund execution failed');
     }
+
+    return data;
   };
 
   const onDeposit = async (args: DepositArgs) => {
-    await rateLimitCheck();
+    const processedArgs = {
+      user: storePersist.wallet.address!,
+      amount: BigInt((args.amount * 10 ** constants.XLM_DECIMALS).toFixed(0)),
+    };
 
     await executeContractTransaction({
       contractType: 'insurance_fund',
@@ -144,19 +149,28 @@ export function useInsuranceFund(): ReturnType {
         type: TransactionType.STAKE,
         token1: { name: 'XLM', amount: args.amount },
       },
-      transactionFunction: async (client, restore) =>
-        client.deposit(
-          {
-            user: storePersist.wallet.address!,
-            amount: BigInt((args.amount * 10 ** constants.XLM_DECIMALS).toFixed(0)), // hardcoded 7 since only XLM is supported
-          },
-          { simulate: !restore }
-        ),
+      transactionFunction: async (client, restore) => {
+        const tx = await client.deposit(processedArgs, { simulate: !restore });
+        if (restore) return tx;
+
+        const signedTransaction = await tx.signAndSend();
+        const signedXDR = signedTransaction.built?.toXDR();
+
+        if (signedXDR) {
+          return await executeInsurance(signedXDR, 'Insurance Fund Deposit');
+        }
+
+        return signedTransaction;
+      },
     });
   };
 
   const onRequestWithdraw = async (args: RequestWithdrawArgs) => {
-    await rateLimitCheck();
+    const processedArgs = {
+      user: storePersist.wallet.address!,
+      amount: BigInt((args.amount * 10 ** constants.XLM_DECIMALS).toFixed(0)),
+    };
+
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
@@ -164,54 +178,76 @@ export function useInsuranceFund(): ReturnType {
         type: TransactionType.REQUEST_UNSTAKE,
         token1: { name: 'XLM', amount: args.amount },
       },
-      transactionFunction: async (client, restore) =>
-        client.request_withdraw(
-          {
-            user: storePersist.wallet.address!,
-            amount: BigInt((args.amount * 10 ** constants.XLM_DECIMALS).toFixed(0)), // hardcoded 7 since only XLM is supported
-          },
-          { simulate: !restore }
-        ),
+      transactionFunction: async (client, restore) => {
+        const tx = await client.request_withdraw(processedArgs, { simulate: !restore });
+        if (restore) return tx;
+
+        const signedTransaction = await tx.signAndSend();
+        const signedXDR = signedTransaction.built?.toXDR();
+
+        if (signedXDR) {
+          return await executeInsurance(signedXDR, 'Insurance Fund Request Withdraw');
+        }
+
+        return signedTransaction;
+      },
     });
   };
 
   const onCancelRequestWithdraw = async () => {
-    await rateLimitCheck();
+    const processedArgs = {
+      user: storePersist.wallet.address!,
+    };
+
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
       transactionDetails: {
         type: TransactionType.CANCEL_REQUEST_UNSTAKE,
       },
-      transactionFunction: async (client, restore) =>
-        client.cancel_request_withdraw(
-          {
-            user: storePersist.wallet.address!,
-          },
-          { simulate: !restore }
-        ),
+      transactionFunction: async (client, restore) => {
+        const tx = await client.cancel_request_withdraw(processedArgs, { simulate: !restore });
+        if (restore) return tx;
+
+        const signedTransaction = await tx.signAndSend();
+        const signedXDR = signedTransaction.built?.toXDR();
+
+        if (signedXDR) {
+          return await executeInsurance(signedXDR, 'Insurance Fund Cancel Request Withdraw');
+        }
+
+        return signedTransaction;
+      },
     });
   };
 
   const onWithdraw = async () => {
-    await rateLimitCheck();
+    const processedArgs = {
+      user: storePersist.wallet.address!,
+    };
+
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.INSURANCE_FUND_ADDRESS,
       transactionDetails: {
         type: TransactionType.UNSTAKE,
       },
-      transactionFunction: async (client, restore) =>
-        client.withdraw(
-          {
-            user: storePersist.wallet.address!,
-          },
-          { simulate: !restore }
-        ),
+      transactionFunction: async (client, restore) => {
+        const tx = await client.withdraw(processedArgs, { simulate: !restore });
+        if (restore) return tx;
+
+        const signedTransaction = await tx.signAndSend();
+        const signedXDR = signedTransaction.built?.toXDR();
+
+        if (signedXDR) {
+          return await executeInsurance(signedXDR, 'Insurance Fund Withdraw');
+        }
+
+        return signedTransaction;
+      },
     });
   };
 
-  // On component mount, fetch Buffer and Insurance Fund
   useEffect(() => {
     fetchInsuranceFund();
     fetchInsuranceFundStake();
