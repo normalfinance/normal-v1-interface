@@ -10,7 +10,7 @@ import { ZEALY_QUEST_IDS } from '@/global-config';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
-import { alpha , useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
 

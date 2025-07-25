@@ -1,5 +1,4 @@
 import { useTranslate } from '@/locales';
-import { varAlpha } from 'minimal-shared/utils';
 import { fPercent } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';

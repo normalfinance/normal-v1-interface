@@ -10,7 +10,7 @@ import { fCurrency, fRawPercent } from '@/utils/format-number';
 import { useBuffer, useOracle, useInsuranceFund } from '@/hooks';
 
 import Grid2 from '@mui/material/Grid2';
-import { Stack, useTheme, Typography, Box } from '@mui/material';
+import { Box, Stack, useTheme, Typography } from '@mui/material';
 
 import { StatCard } from '@/components/_common/stat-card';
 import { StakeBalance } from '@/components/_insurance-page-components/stake-balance-card';

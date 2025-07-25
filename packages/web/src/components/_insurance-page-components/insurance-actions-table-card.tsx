@@ -10,7 +10,7 @@ import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
 import { CardHeader, Typography } from '@mui/material';
-import { alpha , useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 

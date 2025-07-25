@@ -6,7 +6,7 @@ import type { TableHeadCellProps } from '@/components/template/table';
 import { useSetState } from 'minimal-shared/hooks';
 
 import { Card, Table, TableBody } from '@mui/material';
-import { alpha , useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Scrollbar } from '@/components/template/scrollbar';
 import {

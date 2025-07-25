@@ -9,7 +9,7 @@ import Skeleton from 'react-loading-skeleton';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
-import { alpha , useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Scrollbar } from '@/components/template/scrollbar'; // ⬅ adjust the path if yours is different
 

@@ -5,10 +5,10 @@ import copy from 'copy-to-clipboard';
 import { useTranslate } from '@/locales';
 
 import Card from '@mui/material/Card';
-import { Grid2, Paper } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import Tooltip from '@mui/material/Tooltip';
+import { Grid2, Paper } from '@mui/material';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
