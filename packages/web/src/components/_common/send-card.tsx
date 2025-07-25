@@ -181,6 +181,7 @@ const SendCard: React.FC<SendCardProps> = ({
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
+  const isSendReady = getButtonLabel() === 'Send';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1 }} width={1}>
@@ -193,7 +194,7 @@ const SendCard: React.FC<SendCardProps> = ({
             height: '278px',
             padding: theme.spacing(2),
             alignItems: 'flex-start',
-            borderRadius: '8px 8px 0 0',
+            borderRadius: '20px 20px 0 0',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -309,7 +310,7 @@ const SendCard: React.FC<SendCardProps> = ({
             padding: theme.spacing(2),
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderRadius: '0 0 8px 8px',
+            borderRadius: '0 0 20px 20px',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -362,7 +363,7 @@ const SendCard: React.FC<SendCardProps> = ({
           >
             <Button
               variant="soft"
-              color="success"
+              color="secondary"
               size="small"
               sx={{ fontWeight: 500, fontSize: '12px', p: 0, height: '24px', minWidth: '36px' }}
               onClick={(e) => {
@@ -393,7 +394,7 @@ const SendCard: React.FC<SendCardProps> = ({
           px: '16px',
           justifyContent: 'center',
           alignItems: 'flex-start',
-          borderRadius: '8px',
+          borderRadius: '20px',
           border: `1px solid ${theme.palette.divider}`,
           backgroundColor: alpha(theme.palette.grey[500], 0.08),
           overflow: 'hidden',
@@ -440,9 +441,11 @@ const SendCard: React.FC<SendCardProps> = ({
           <Button
             fullWidth
             variant="soft"
-            color="success"
+            color="secondary"
             size="large"
+            disabled={!isSendReady}
             onClick={handleMainButtonClick}
+            sx={{ borderRadius: 2.5 }}
           >
             {getButtonLabel()}
           </Button>

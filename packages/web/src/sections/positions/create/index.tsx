@@ -42,25 +42,27 @@ export default function CreatePositionView() {
   }, []);
 
   return (
-    <DashboardContent maxWidth="xl">
-      <CustomBreadcrumbs
-        heading="Liquidity"
-        links={[
-          { name: t('Your positions'), href: paths.positions.root },
-          { name: t('New position'), href: paths.positions.create },
-        ]}
-        sx={{
-          mb: { xs: 3, md: 5 },
-        }}
-      />
-      <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        <Grid2 size={{ xs: 12, md: 12 }}>
-          <Box sx={{ position: 'relative' }}>
-            <CreatePosition tokens={store.tokens} queryParams={params} />
-            <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
-          </Box>
+    <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
+      <DashboardContent maxWidth="xl">
+        <CustomBreadcrumbs
+          heading="Liquidity"
+          links={[
+            { name: t('Your positions'), href: paths.positions.root },
+            { name: t('New position'), href: paths.positions.create },
+          ]}
+          sx={{
+            mb: { xs: 3, md: 5 },
+          }}
+        />
+        <Grid2 container spacing={3} sx={{ mt: 3 }}>
+          <Grid2 size={{ xs: 12, md: 12 }}>
+            <Box sx={{ position: 'relative' }}>
+              <CreatePosition tokens={store.tokens} queryParams={params} />
+              <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
+            </Box>
+          </Grid2>
         </Grid2>
-      </Grid2>
-    </DashboardContent>
+      </DashboardContent>
+    </Box>
   );
 }
