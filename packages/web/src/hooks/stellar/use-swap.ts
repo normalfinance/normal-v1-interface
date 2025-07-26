@@ -99,8 +99,7 @@ export function useSwap(): ReturnType {
       out_min: BigInt((args.out_min * 10 ** (token_out_decimals || 7)).toFixed(0)),
     };
 
-    // Build transaction to get XDR for signing
-    const transaction = await executeContractTransaction({
+    await executeContractTransaction({
       contractType: 'pool_swap_fee',
       contractAddress: constants.POOL_SWAP_FEE_ADDRESS,
       transactionDetails: {
@@ -112,12 +111,10 @@ export function useSwap(): ReturnType {
         const tx = await client.swap(processedArgs, { simulate: !restore });
         if (restore) return tx;
 
-        // Sign the transaction
         const signedTransaction = await tx.signAndSend();
         const signedXDR = signedTransaction.built?.toXDR();
 
         if (signedXDR) {
-          // Send signed transaction to server
           return await executeSwap(signedXDR, 'Pool Swap with Fee');
         }
 
@@ -138,8 +135,7 @@ export function useSwap(): ReturnType {
       out_min: BigInt((args.out_min * 10 ** (token_out_decimals || 7)).toFixed(0)),
     };
 
-    // Build transaction to get XDR for signing
-    const transaction = await executeContractTransaction({
+    await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.POOL_ROUTER_ADDRESS,
       transactionDetails: {
@@ -151,12 +147,10 @@ export function useSwap(): ReturnType {
         const tx = await client.swap(processedArgs, { simulate: !restore });
         if (restore) return tx;
 
-        // Sign the transaction
         const signedTransaction = await tx.signAndSend();
         const signedXDR = signedTransaction.built?.toXDR();
 
         if (signedXDR) {
-          // Send signed transaction to server
           return await executeSwap(signedXDR, 'Pool Router Swap');
         }
 
@@ -176,8 +170,7 @@ export function useSwap(): ReturnType {
       out_amount: BigInt((args.out_amount * 10 ** (token_out_decimals || 7)).toFixed(0)),
     };
 
-    // Build transaction to get XDR for signing
-    const transaction = await executeContractTransaction({
+    await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
       transactionDetails: {
@@ -189,12 +182,10 @@ export function useSwap(): ReturnType {
         const tx = await client.swap_strict_receive(processedArgs, { simulate: !restore });
         if (restore) return tx;
 
-        // Sign the transaction
         const signedTransaction = await tx.signAndSend();
         const signedXDR = signedTransaction.built?.toXDR();
 
         if (signedXDR) {
-          // Send signed transaction to server
           return await executeSwap(signedXDR, 'Pool Swap Strict Receive');
         }
 
