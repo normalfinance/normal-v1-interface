@@ -40,6 +40,8 @@ export function useBuffer(): ReturnType {
       setError(null);
       setLoading(true);
 
+      await rateLimitCheck();
+
       const Buffer = new BufferContract.Client({
         contractId: constants.INSURANCE_FUND_ADDRESS,
         networkPassphrase: constants.NETWORK_PASSPHRASE,

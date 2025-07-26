@@ -6,6 +6,7 @@ import type { TableHeadCellProps } from '@/components/template/table';
 import { useSetState } from 'minimal-shared/hooks';
 
 import { Card, Table, TableBody } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Scrollbar } from '@/components/template/scrollbar';
 import {
@@ -82,53 +83,57 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
   });
 
   const notFound = !dataFiltered.length;
+  const theme = useTheme();
 
   /* ----- render --------------------------------------------------------- */
   return (
-    <Card data-testid="explore-pools-table">
-      {/* — search bar — */}
+    <div data-testid="explore-pools-table">
       <ExplorePoolsTableToolbar filters={filters} onResetPage={table.onResetPage} />
 
-      {/* — scrollable table — */}
-      <Scrollbar>
-        <Table sx={{ minWidth: 960 }}>
-          {/* ✅ custom, sortable header */}
-          <TableHeadCustom
-            order={table.order}
-            orderBy={table.orderBy}
-            headCells={TABLE_HEAD}
-            rowCount={dataFiltered.length}
-            numSelected={table.selected.length}
-            onSort={table.onSort}
-          />
+      <Card sx={{ borderRadius: 3, border: 1, borderColor: alpha(theme.palette.grey[500], 0.32) }}>
+        {/* — search bar — */}
 
-          {/* body ── unchanged */}
-          <TableBody>
-            {loading ? (
-              <TableSkeleton rowCount={10} cellCount={8} />
-            ) : (
-              <>
-                {dataFiltered
-                  .slice(
-                    table.page * table.rowsPerPage,
-                    table.page * table.rowsPerPage + table.rowsPerPage
-                  )
-                  .map((row, index) => (
-                    <ExplorePoolsTableRow key={row.address} row={row} index={index + 1} />
-                  ))}
+        {/* — scrollable table — */}
+        <Scrollbar>
+          <Table sx={{ minWidth: 960 }}>
+            {/* ✅ custom, sortable header */}
+            <TableHeadCustom
+              order={table.order}
+              orderBy={table.orderBy}
+              headCells={TABLE_HEAD}
+              rowCount={dataFiltered.length}
+              numSelected={table.selected.length}
+              onSort={table.onSort}
+            />
 
-                <TableEmptyRows
-                  height={56}
-                  emptyRows={emptyRows(table.page, table.rowsPerPage, dataFiltered.length)}
-                />
+            {/* body ── unchanged */}
+            <TableBody>
+              {loading ? (
+                <TableSkeleton rowCount={10} cellCount={8} />
+              ) : (
+                <>
+                  {dataFiltered
+                    .slice(
+                      table.page * table.rowsPerPage,
+                      table.page * table.rowsPerPage + table.rowsPerPage
+                    )
+                    .map((row, index) => (
+                      <ExplorePoolsTableRow key={row.address} row={row} index={index + 1} />
+                    ))}
 
-                <TableNoData notFound={notFound} />
-              </>
-            )}
-          </TableBody>
-        </Table>
-      </Scrollbar>
-    </Card>
+                  <TableEmptyRows
+                    height={56}
+                    emptyRows={emptyRows(table.page, table.rowsPerPage, dataFiltered.length)}
+                  />
+
+                  <TableNoData notFound={notFound} />
+                </>
+              )}
+            </TableBody>
+          </Table>
+        </Scrollbar>
+      </Card>
+    </div>
   );
 }
 

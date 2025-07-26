@@ -169,10 +169,6 @@ export function useInsuranceFund(): ReturnType {
   };
 
   const onRequestWithdraw = async (args: RequestWithdrawArgs) => {
-    const processedArgs = {
-      user: storePersist.wallet.address!,
-      amount: BigInt((args.amount * 10 ** constants.XLM_DECIMALS).toFixed(0)),
-    };
 
     await executeContractTransaction({
       contractType: 'insurance_fund',
@@ -198,9 +194,11 @@ export function useInsuranceFund(): ReturnType {
   };
 
   const onCancelRequestWithdraw = async () => {
+
     const processedArgs = {
       user: storePersist.wallet.address!,
     };
+
 
     await executeContractTransaction({
       contractType: 'insurance_fund',
@@ -225,6 +223,7 @@ export function useInsuranceFund(): ReturnType {
   };
 
   const onWithdraw = async () => {
+
     const processedArgs = {
       user: storePersist.wallet.address!,
     };

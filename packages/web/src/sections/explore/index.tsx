@@ -10,7 +10,7 @@ import { usePools, useTotalTVL, useSwapVolume } from '@/hooks';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Grid2 from '@mui/material/Grid2';
-import { Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 
 import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
 import {
@@ -64,19 +64,21 @@ export default function ExploreView() {
   }, []);
 
   return (
-    <DashboardContent maxWidth="xl">
-      <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">
-          {t('Explore')}
-        </Typography>
-      </Stack>
-      <Grid2 width={1} sx={{ mt: 3 }}>
-        <ExploreStats stats={stats} />
-      </Grid2>
-      <Grid2 sx={{ mt: 3 }}>
-        <ExplorePoolsTable pools={formattedPools} loading={poolsLoading} />
-      </Grid2>
-    </DashboardContent>
+    <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
+      <DashboardContent maxWidth="xl">
+        <Stack spacing={1}>
+          <Typography variant="h4" color="text.primary">
+            {t('Explore')}
+          </Typography>
+        </Stack>
+        <Grid2 width={1} sx={{ mt: 3 }}>
+          <ExploreStats stats={stats} />
+        </Grid2>
+        <Grid2 sx={{ mt: 3 }}>
+          <ExplorePoolsTable pools={formattedPools} loading={poolsLoading} />
+        </Grid2>
+      </DashboardContent>
+    </Box>
   );
 }
 

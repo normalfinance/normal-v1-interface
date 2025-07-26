@@ -54,6 +54,22 @@ export function useLiquidity(): ReturnType {
     return data;
   };
 
+  const rateLimitCheck = async () => {
+    if (!storePersist.wallet.address) return;
+    const res = await fetch('/api/liquidity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+    });
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    const data = await res.json();
+    if (!data.allowed) {
+      throw new Error(data.error || 'Liquidity management not allowed');
+    }
+  };
+
   const depositLiquidity = async (args: DepositLiquidityArgs) => {
     const processedArgs = {
       ...args,

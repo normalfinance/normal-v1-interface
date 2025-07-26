@@ -18,7 +18,7 @@ type ThemeConfig = {
   > & {
     common: Pick<CommonColors, 'black' | 'white'>;
     grey: Record<
-      '50' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900',
+      '50' | '100' | '200' | '250' | '300' | '400' | '500' | '600' | '700' | '800' | '900' | '950',
       string
     >;
   };
@@ -35,9 +35,10 @@ export const themeConfig: ThemeConfig = {
   /** **************************************
    * Typography
    *************************************** */
+  //Add Figtree as secondary
   fontFamily: {
-    primary: 'Figtree',
-    secondary: 'Figtree',
+    primary: 'var(--font-circular)',
+    secondary: 'var(--font-circular)',
   },
   /** **************************************
    * Palette
@@ -53,8 +54,8 @@ export const themeConfig: ThemeConfig = {
     },
     secondary: {
       lighter: '#e1d9ff',
-      light: '#bbaafe',
-      main: '#947bff',
+      light: '#e0d9ff',
+      main: '#6E4BFF',
       dark: '#7a65d9',
       darker: '#5f4fb2',
       contrastText: '#FFFFFF',
@@ -95,6 +96,7 @@ export const themeConfig: ThemeConfig = {
       '50': '#FCFDFD',
       '100': '#F9FAFB',
       '200': '#F4F6F8',
+      '250': '#f1f3f4',
       '300': '#DFE3E8',
       '400': '#C4CDD5',
       '500': '#919EAB',
@@ -102,10 +104,11 @@ export const themeConfig: ThemeConfig = {
       '700': '#454F5B',
       '800': '#1C252E',
       '900': '#141A21',
+      '950': '#2B2B2B',
     },
     common: { black: '#000000', white: '#FFFFFF' },
     purple: {
-      lighter: 'rgba(148,123,255,0.29)', // 29 % opacity
+      lighter: 'rgba(148,123,255,0.29)',
       light: '#947BFF',
       main: '#6E4BFF',
       dark: '#4B29DB',

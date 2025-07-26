@@ -32,8 +32,19 @@ type Props = {
 export function InsuranceFundEventsTableCard({ events }: Props) {
   return (
     <Scrollbar sx={{ minHeight: 0 }}>
-      <Table sx={{ minWidth: 800 }}>
-        <TableHeadCustom headCells={TABLE_HEAD} />
+      <Table
+        sx={{
+          minWidth: 800,
+        }}
+      >
+        <TableHeadCustom
+          headCells={TABLE_HEAD}
+          sx={{
+            backgroundColor: 'grey.100',
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        />
 
         <TableBody>
           {events &&

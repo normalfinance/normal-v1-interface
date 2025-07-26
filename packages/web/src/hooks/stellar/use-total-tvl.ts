@@ -24,6 +24,8 @@ export function useTotalTVL(): ReturnType {
 
   const fetchTVL = useCallback(async (poolAddresses?: string[]) => {
     try {
+      await rateLimitCheck();
+
       if (!poolAddresses) {
         const PoolRouter = new PoolRouterContract.Client({
           contractId: constants.POOL_ROUTER_ADDRESS,
