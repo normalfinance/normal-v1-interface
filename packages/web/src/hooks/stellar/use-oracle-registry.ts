@@ -5,8 +5,6 @@ import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
 
-// ----------------------------------------------------------------------
-
 interface ReturnType {
   error: any | null;
   loading: boolean;
@@ -19,15 +17,13 @@ interface ReturnType {
   getOracle: (asset: string) => Promise<OracleRegistryContract.OracleInfo>;
 }
 
-// ----------------------------------------------------------------------
-
 export function useOracleRegistry(): ReturnType {
   const [oracleRegistry, setOracleRegistry] = useState<OracleRegistryContract.Client | undefined>(
     undefined
   );
 
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true); // Loading state for async operations
+  const [loading, setLoading] = useState(true);
   const storePersist = usePersistStore();
 
   const defaultAction: OracleRegistryContract.NormalAction = {
@@ -158,7 +154,6 @@ export function useOracleRegistry(): ReturnType {
     return undefined;
   }, []);
 
-  // On component mount, fetch OracleRegistry
   useEffect(() => {
     const OracleRegistry = new OracleRegistryContract.Client({
       contractId: constants.ORALCE_REGISTY_ADDRESS,

@@ -7,8 +7,6 @@ import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { BufferContract } from '@normalfinance/contracts';
 
-// ----------------------------------------------------------------------
-
 export type BufferInfo = {
   min_time_between_payouts: number;
   min_reserve_ratio: number;
@@ -23,30 +21,12 @@ interface ReturnType {
   onFetchBuffer: () => Promise<void>;
 }
 
-// ----------------------------------------------------------------------
-
 export function useBuffer(): ReturnType {
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true); // Loading state for async operations
+  const [loading, setLoading] = useState(true);
 
   const [buffer, setBuffer] = useState<BufferInfo | undefined>(undefined);
   const storePersist = usePersistStore();
-
-  const rateLimitCheck = async () => {
-    if (!storePersist.wallet.address) return;
-    const res = await fetch('/api/pools', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
-    });
-    if (res.status === 429) {
-      throw new Error('Rate limit exceeded. Please try again later.');
-    }
-    const data = await res.json();
-    if (!data.allowed) {
-      throw new Error(data.error || 'Pool data access not allowed');
-    }
-  };
 
   /**
    * Fetch Insurance Fund information
@@ -73,7 +53,7 @@ export function useBuffer(): ReturnType {
           Buffer.get_min_time_between_payouts(),
           Buffer.get_min_reserve_ratio(),
           Buffer.get_last_payout_timestamp(),
-          Buffer.get_reserve({ token: constants.XLM_ADDRESS }), // hardcoded since only XLM is supported
+          Buffer.get_reserve({ token: constants.XLM_ADDRESS }),
         ]);
 
       if (min_time_between_payouts?.result) {
@@ -93,7 +73,6 @@ export function useBuffer(): ReturnType {
     return;
   }, []);
 
-  // On component mount, fetch Buffer
   useEffect(() => {
     fetchBuffer();
   }, [fetchBuffer]);

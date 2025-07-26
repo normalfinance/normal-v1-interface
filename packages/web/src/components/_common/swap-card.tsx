@@ -274,39 +274,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const checkIfSwapAllowed = async () => {
     setSwapError(null);
     if (!sellToken || !buyToken) return false;
-    try {
-      const swapArgs = {
-        asset: buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol,
-        is_buy: buyToken.symbol !== 'XLM',
-        in_amount: Number(amount),
-        out_min: Number(buyAmount),
-        token_in: sellToken.symbol,
-        token_out: buyToken.symbol,
-      };
-      const res = await fetch('/api/swap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress: storePersist.wallet.address,
-          swapArgs,
-        }),
-      });
-      if (res.status === 429) {
-        setSwapError('Rate limit exceeded. Please try again later.');
-        return false;
-      }
-      const data = await res.json();
-      if (!data.allowed) {
-        setSwapError(data.error || 'Swap not allowed');
-        return false;
-      }
-      return true;
-    } catch (err: any) {
-      setSwapError(err?.message || 'Swap failed');
-      return false;
-    }
+    return true;
   };
-  // and then call this to check if we should let the swap happen
 
   /**
    * Simulates the swap transaction to determine the exchange rate and network fee.
