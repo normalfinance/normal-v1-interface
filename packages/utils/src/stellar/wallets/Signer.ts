@@ -1,29 +1,26 @@
-import { lobstr } from "./lobstr";
-import { Wallet } from "./types";
-import { xBull } from "./xbull";
-import { hana } from "./hana";
-import {
-  WalletConnect as WalletClient,
-  WalletConnectAllowedMethods,
-} from "./wallet-connect";
-import { NETWORK_PASSPHRASE } from "../../constants/stellar";
+import { lobstr } from './lobstr';
+import { Wallet } from './types';
+import { xBull } from './xbull';
+import { hana } from './hana';
+import { WalletConnect as WalletClient, WalletConnectAllowedMethods } from './wallet-connect';
+import { constants } from '../..';
 
 const initializeWalletConnect = async () => {
   const walletConnectInstance = new WalletClient({
-    projectId: "1cca500fbafdda38a70f8bf3bcb91b15",
-    name: "Normal",
-    description: "Serving only the tastiest DeFi",
-    url: "https://app.normalfinance.io",
-    icons: ["https://app.normalfinance.io/logoIcon.png"],
+    projectId: '1cca500fbafdda38a70f8bf3bcb91b15',
+    name: 'Normal',
+    description: 'Serving only the tastiest DeFi',
+    url: 'https://app.normalfinance.io',
+    icons: ['https://app.normalfinance.io/logoIcon.png'],
     method: WalletConnectAllowedMethods.SIGN_AND_SUBMIT,
-    network: NETWORK_PASSPHRASE,
+    network: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
-  console.log("Initialized Wallet Connect");
+  console.log('Initialized Wallet Connect');
 
   while (!(await walletConnectInstance.isConnected())) {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  console.log("Wallet connected", walletConnectInstance);
+  console.log('Wallet connected', walletConnectInstance);
 
   return walletConnectInstance;
 };
@@ -55,38 +52,38 @@ export default class Signer {
    * @returns the wallet type from the local storage
    */
   getWalletType() {
-    const appStorageValue = localStorage?.getItem("app-storage");
+    const appStorageValue = localStorage?.getItem('app-storage');
     if (appStorageValue !== null) {
       try {
         const parsedValue = JSON.parse(appStorageValue);
         const walletType = parsedValue?.state?.wallet?.walletType;
         return walletType;
       } catch (error) {
-        console.log("Error parsing app-storage value:", error);
+        console.log('Error parsing app-storage value:', error);
       }
     } else {
-      console.log("app-storage key not found in localStorage.");
+      console.log('app-storage key not found in localStorage.');
     }
-    return "";
+    return '';
   }
 
   /**
    * Fetch the wallet based on the wallet type
    */
   async getWallet() {
-    if (this.walletType === "freighter") {
-      const freighter = await import("@stellar/freighter-api");
+    if (this.walletType === 'freighter') {
+      const freighter = await import('@stellar/freighter-api');
       this.wallet = freighter;
-    } else if (this.walletType === "xbull") {
+    } else if (this.walletType === 'xbull') {
       this.wallet = new xBull();
-    } else if (this.walletType === "lobstr") {
+    } else if (this.walletType === 'lobstr') {
       this.wallet = new lobstr();
-    } else if (this.walletType === "hana") {
+    } else if (this.walletType === 'hana') {
       this.wallet = new hana();
-    } else if (this.walletType === "wallet-connect") {
+    } else if (this.walletType === 'wallet-connect') {
       this.wallet = await initializeWalletConnect();
     } else {
-      console.log("Wallet type not supported.");
+      console.log('Wallet type not supported.');
     }
   }
 
@@ -100,7 +97,7 @@ export default class Signer {
       await this.getWallet();
     }
     if (this.wallet === undefined) {
-      throw new Error("Wallet not found or not connected.");
+      throw new Error('Wallet not found or not connected.');
     }
     return this.wallet.signTransaction(message);
   }

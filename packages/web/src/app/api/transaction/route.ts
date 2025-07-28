@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
 
     // Verify signature
     try {
-      const transaction = new Transaction(signedTransactionXDR, constants.StellarConfig.NETWORK_PASSPHRASE);
+      const transaction = new Transaction(
+        signedTransactionXDR,
+        constants.StellarConfig.NETWORK_PASSPHRASE
+      );
       const keypair = Keypair.fromPublicKey(walletAddress);
 
       // Verify that the transaction is signed by the correct wallet
