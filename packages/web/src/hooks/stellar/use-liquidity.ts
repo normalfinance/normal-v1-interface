@@ -74,7 +74,9 @@ export function useLiquidity(): ReturnType {
     const processedArgs = {
       ...args,
       user: storePersist.wallet.address!,
-      token_b_amount: BigInt((args.token_b_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
+      token_b_amount: BigInt(
+        (args.token_b_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)
+      ),
     };
 
     await executeContractTransaction({
@@ -104,7 +106,9 @@ export function useLiquidity(): ReturnType {
     const processedArgs = {
       ...args,
       user: storePersist.wallet.address!,
-      share_amount: BigInt((args.share_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
+      share_amount: BigInt(
+        (args.share_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)
+      ),
     };
 
     await executeContractTransaction({
