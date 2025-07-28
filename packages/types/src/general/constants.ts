@@ -4,7 +4,6 @@ export interface NetworkConfig {
   // network
   TESTING_SOURCE: Account;
   NETWORK_PASSPHRASE: string;
-  SERVER_URL: string;
   RPC_URL: string;
   // contracts
   POOL_ROUTER_ADDRESS: string;
