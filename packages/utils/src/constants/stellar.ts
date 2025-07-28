@@ -1,12 +1,12 @@
 import { NetworkConfig } from '@normalfinance/types';
 import { Account, Networks } from '@stellar/stellar-sdk';
 
-const RPC_API_KEY = process.env.RPC_API_KEY || '';
+// const RPC_API_KEY = process.env.RPC_API_KEY || '';
 
 const TESTNET: NetworkConfig = {
   TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
   NETWORK_PASSPHRASE: Networks.TESTNET,
-  RPC_URL: RPC_API_KEY ? `https://testnet.stellar.validationcloud.io/v1/${RPC_API_KEY}` : '',
+  RPC_URL: 'https://testnet.stellar.validationcloud.io/v1/Lg69Tyu_u8qCoanMj1gk0en_DZj-WVCHgNi7p5mYZs0', // RPC_API_KEY ? `https://testnet.stellar.validationcloud.io/v1/${RPC_API_KEY}` : '',
   POOL_ROUTER_ADDRESS: 'CC2DR3EEAYQUFZ7SG3XULDC424OWSXM4N2MFVO4BUZTUIKNOMFPJRTWT',
   POOL_SWAP_FEE_ADDRESS: 'CBQASVDLRJTGYFQBXEUVZUSS7CLZDLVWS4XNZ4TLHSPOCQAYAUJ3NKW6',
   BUFFER_ADDRESS: 'CCSYBWWBJ3UCUFPJXQ42LZJYKYNDFJQQ64BA26EOTVCYAAYQID4W6NHZ',
@@ -18,10 +18,7 @@ const TESTNET: NetworkConfig = {
 };
 
 const MAINNET: NetworkConfig = {
-  TESTING_SOURCE: new Account(
-    'GA...MAINNET...',
-    '0' // likely "0" if unused
-  ),
+  TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '0'),
   NETWORK_PASSPHRASE: Networks.PUBLIC,
   RPC_URL: 'https://mainnet.stellar.validationcloud.io/v1/yyyy',
   POOL_ROUTER_ADDRESS: '...',
@@ -35,5 +32,5 @@ const MAINNET: NetworkConfig = {
 };
 
 // Decide based on env
-const NETWORK = process.env.NETWORK || 'TESTNET'; // or use NEXT_PUBLIC_NETWORK for Next.js
+const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'TESTNET'; // or use NEXT_PUBLIC_NETWORK for Next.js
 export const StellarConfig: NetworkConfig = NETWORK === 'MAINNET' ? MAINNET : TESTNET;
