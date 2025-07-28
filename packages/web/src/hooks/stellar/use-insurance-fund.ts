@@ -169,6 +169,11 @@ export function useInsuranceFund(): ReturnType {
   };
 
   const onRequestWithdraw = async (args: RequestWithdrawArgs) => {
+    const processedArgs = {
+      user: storePersist.wallet.address!,
+      amount: BigInt((args.amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
+    };
+
     await executeContractTransaction({
       contractType: 'insurance_fund',
       contractAddress: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
