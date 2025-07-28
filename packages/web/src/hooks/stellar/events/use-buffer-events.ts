@@ -20,9 +20,9 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-const server = new rpc.Server(constants.RPC_URL);
+const server = new rpc.Server(constants.StellarConfig.RPC_URL);
 
-const CONTRACT_ID = '75bb4470b1a4ff61ecc7295e8b8eb74419dd586eee404cdf5249915d890e0877'; // sconvertContractAddressToHex(constants.BUFFER_ADDRESS);
+const CONTRACT_ID = '75bb4470b1a4ff61ecc7295e8b8eb74419dd586eee404cdf5249915d890e0877'; // sconvertContractAddressToHex(constants.StellarConfig.BUFFER_ADDRESS);
 
 export function useBufferEvents(): ReturnType {
   const [error, setError] = useState(null);

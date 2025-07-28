@@ -38,9 +38,9 @@ export function useOracleRegistry(): ReturnType {
 
       if (!oracleRegistry) {
         const OracleRegistry = new OracleRegistryContract.Client({
-          contractId: constants.ORACLE_REGISTRY_ADDRESS,
-          networkPassphrase: constants.NETWORK_PASSPHRASE,
-          rpcUrl: constants.RPC_URL,
+          contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
+          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+          rpcUrl: constants.StellarConfig.RPC_URL,
         });
         setOracleRegistry(OracleRegistry);
       }
@@ -156,9 +156,9 @@ export function useOracleRegistry(): ReturnType {
 
   useEffect(() => {
     const OracleRegistry = new OracleRegistryContract.Client({
-      contractId: constants.ORACLE_REGISTRY_ADDRESS,
-      networkPassphrase: constants.NETWORK_PASSPHRASE,
-      rpcUrl: constants.RPC_URL,
+      contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
+      networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+      rpcUrl: constants.StellarConfig.RPC_URL,
     });
     setOracleRegistry(OracleRegistry);
   }, []);

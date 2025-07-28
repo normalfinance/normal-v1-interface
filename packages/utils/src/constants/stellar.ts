@@ -1,51 +1,37 @@
-import { Account } from '@stellar/stellar-sdk';
+import { NetworkConfig } from '@normalfinance/types';
+import { Account, Networks } from '@stellar/stellar-sdk';
 
-export const TESTING_SOURCE: Account = new Account(
-  'GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO',
-  '123'
-);
+const RPC_API_KEY = process.env.RPC_API_KEY || '';
 
-/**
- * The Soroban network passphrase used to initialize this library.
- */
-export const NETWORK_PASSPHRASE: string = 'Public Global Stellar Network ; September 2015';
+const TESTNET: NetworkConfig = {
+  TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
+  NETWORK_PASSPHRASE: Networks.TESTNET,
+  RPC_URL: RPC_API_KEY ? `https://testnet.stellar.validationcloud.io/v1/${RPC_API_KEY}` : '',
+  POOL_ROUTER_ADDRESS: 'CC2DR3EEAYQUFZ7SG3XULDC424OWSXM4N2MFVO4BUZTUIKNOMFPJRTWT',
+  POOL_SWAP_FEE_ADDRESS: 'CBQASVDLRJTGYFQBXEUVZUSS7CLZDLVWS4XNZ4TLHSPOCQAYAUJ3NKW6',
+  BUFFER_ADDRESS: 'CCSYBWWBJ3UCUFPJXQ42LZJYKYNDFJQQ64BA26EOTVCYAAYQID4W6NHZ',
+  INSURANCE_FUND_ADDRESS: 'CC26PBGF2XXJH7B7JIBO2RA3QTV57UAGZL7EL6TNNYDTVJ5OAICHO46O',
+  ORACLE_REGISTRY_ADDRESS: 'CAFGEJO2MQQC2NU3O5BCEAPMVWYSQJTVY56HVFAJUXVLCXEIX4YIUOOC',
+  XLM_ADDRESS: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
+  XLM_DECIMALS: 7,
+};
 
-/**
- * The Soroban RPC endpoint used to initialize this library.
- */
-export const RPC_URL: string = 'https://soroban-testnet.stellar.org';
+const MAINNET: NetworkConfig = {
+  TESTING_SOURCE: new Account(
+    'GA...MAINNET...',
+    '0' // likely "0" if unused
+  ),
+  NETWORK_PASSPHRASE: Networks.PUBLIC,
+  RPC_URL: 'https://mainnet.stellar.validationcloud.io/v1/yyyy',
+  POOL_ROUTER_ADDRESS: '...',
+  POOL_SWAP_FEE_ADDRESS: '...',
+  BUFFER_ADDRESS: '...',
+  INSURANCE_FUND_ADDRESS: '...',
+  ORACLE_REGISTRY_ADDRESS: '...',
+  XLM_ADDRESS: '...',
+  XLM_DECIMALS: 7,
+};
 
-/**
- * Pool Router contract address
- */
-export const POOL_ROUTER_ADDRESS: string =
-  'CC2CCFGMCEH7XJ34WXHIQ3MDRLPMF6UVELDL4MTX5X5DSZSG6DH24ZM5';
-
-/**
- * Pool Swap Fee contract address
- */
-export const POOL_SWAP_FEE_ADDRESS: string =
-  'CBQASVDLRJTGYFQBXEUVZUSS7CLZDLVWS4XNZ4TLHSPOCQAYAUJ3NKW6';
-
-/**
- * Buffer contract address
- */
-export const BUFFER_ADDRESS: string = 'CCTEOV6E6VHBAQXVHPFR7ZRAJTIKBFNOVV7RNSLC7FMEPXSIIQJNOKGC';
-
-/**
- * Insurance Fund contract address
- */
-export const INSURANCE_FUND_ADDRESS: string =
-  'CBNEAYC3XYACNOXTCDKPX5R5LYBUHNCQ6TPMHTVEKWHH2JZJBXW6DIXQ';
-
-/**
- * Oracle Registry contract address
- */
-export const ORACLE_REGISTRY_ADDRESS: string =
-  'CCDHMFVDXDKMKIQVSWJAJJHWYCAO4M6HFFSLKSSIJ6DQVH56J2GRS7UC';
-
-/**
- * XLM token info
- */
-export const XLM_ADDRESS: string = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
-export const XLM_DECIMALS: number = 7;
+// Decide based on env
+const NETWORK = process.env.NETWORK || 'TESTNET'; // or use NEXT_PUBLIC_NETWORK for Next.js
+export const StellarConfig: NetworkConfig = NETWORK === 'MAINNET' ? MAINNET : TESTNET;

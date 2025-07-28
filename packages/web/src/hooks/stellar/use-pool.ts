@@ -25,8 +25,8 @@ export function usePool(poolAddress: string): ReturnType {
     try {
       const Pool = new PoolContract.Client({
         contractId: poolAddress,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const res = await Pool.get_info();

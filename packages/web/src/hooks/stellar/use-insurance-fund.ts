@@ -51,9 +51,9 @@ export function useInsuranceFund(): ReturnType {
       setLoading(true);
 
       const InsuranceFund = new InsuranceFundContract.Client({
-        contractId: constants.INSURANCE_FUND_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const [total_shares, optimal_insurance, unstaking_period, current_rate, current_utilization] =
@@ -93,9 +93,9 @@ export function useInsuranceFund(): ReturnType {
       setLoading(true);
 
       const InsuranceFund = new InsuranceFundContract.Client({
-        contractId: constants.INSURANCE_FUND_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const user_stake = await InsuranceFund.get_stake({ user: storePersist.wallet.address! });
@@ -142,12 +142,12 @@ export function useInsuranceFund(): ReturnType {
   const onDeposit = async (args: DepositArgs) => {
     const processedArgs = {
       user: storePersist.wallet.address!,
-      amount: BigInt((args.amount * 10 ** constants.XLM_DECIMALS).toFixed(0)),
+      amount: BigInt((args.amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
     };
 
     await executeContractTransaction({
       contractType: 'insurance_fund',
-      contractAddress: constants.INSURANCE_FUND_ADDRESS,
+      contractAddress: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
       transactionDetails: {
         type: TransactionType.STAKE,
         token1: { name: 'XLM', amount: args.amount },
@@ -171,7 +171,7 @@ export function useInsuranceFund(): ReturnType {
   const onRequestWithdraw = async (args: RequestWithdrawArgs) => {
     await executeContractTransaction({
       contractType: 'insurance_fund',
-      contractAddress: constants.INSURANCE_FUND_ADDRESS,
+      contractAddress: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
       transactionDetails: {
         type: TransactionType.REQUEST_UNSTAKE,
         token1: { name: 'XLM', amount: args.amount },
@@ -199,7 +199,7 @@ export function useInsuranceFund(): ReturnType {
 
     await executeContractTransaction({
       contractType: 'insurance_fund',
-      contractAddress: constants.INSURANCE_FUND_ADDRESS,
+      contractAddress: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
       transactionDetails: {
         type: TransactionType.CANCEL_REQUEST_UNSTAKE,
       },
@@ -226,7 +226,7 @@ export function useInsuranceFund(): ReturnType {
 
     await executeContractTransaction({
       contractType: 'insurance_fund',
-      contractAddress: constants.INSURANCE_FUND_ADDRESS,
+      contractAddress: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
       transactionDetails: {
         type: TransactionType.UNSTAKE,
       },

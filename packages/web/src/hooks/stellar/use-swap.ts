@@ -76,7 +76,7 @@ export function useSwap(): ReturnType {
 
     const transaction = await executeContractTransaction({
       contractType: 'pool_router',
-      contractAddress: constants.POOL_ROUTER_ADDRESS,
+      contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
         token1: { name: args.token_in, amount: args.in_amount },
@@ -101,7 +101,7 @@ export function useSwap(): ReturnType {
 
     await executeContractTransaction({
       contractType: 'pool_swap_fee',
-      contractAddress: constants.POOL_SWAP_FEE_ADDRESS,
+      contractAddress: constants.StellarConfig.POOL_SWAP_FEE_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
         token1: { name: args.token_in, amount: args.in_amount },
@@ -137,7 +137,7 @@ export function useSwap(): ReturnType {
 
     await executeContractTransaction({
       contractType: 'pool_router',
-      contractAddress: constants.POOL_ROUTER_ADDRESS,
+      contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
         token1: { name: args.token_in, amount: args.in_amount },

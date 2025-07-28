@@ -13,7 +13,7 @@ import { createReferralActions } from './persist/createReferralActions';
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
   // Create a new server instance.
-  const server = new Horizon.Server(constants.RPC_URL);
+  const server = new Horizon.Server(constants.StellarConfig.RPC_URL);
 
   // Create some states for the app and layouting
   const layout = createLayoutActions(set, get);
@@ -26,7 +26,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
 
   return {
     server,
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
     ...wallet,
     ...layout,
     ...loading,
@@ -37,7 +37,7 @@ export const usePersistStore = create<AppStorePersist>()(
   persist(
     (set, get) => {
       // Create a new server instance.
-      const server = new Horizon.Server(constants.RPC_URL);
+      const server = new Horizon.Server(constants.StellarConfig.RPC_URL);
 
       // Create a wallet with the given server and network passphrase.
       const walletPersist = createConnectWalletActions();
@@ -50,7 +50,7 @@ export const usePersistStore = create<AppStorePersist>()(
 
       return {
         server,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         ...walletPersist,
         ...disclaimer,
         ...referralActions,

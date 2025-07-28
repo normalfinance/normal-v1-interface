@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { constants } from '@normalfinance/utils';
 import { rateLimiter } from '@/server/rateLimiter';
-import { rpc, Keypair, Networks, Transaction } from '@stellar/stellar-sdk';
+import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     // Verify signature
     try {
-      const transaction = new Transaction(signedTransactionXDR, Networks.TESTNET);
+      const transaction = new Transaction(signedTransactionXDR, constants.StellarConfig.NETWORK_PASSPHRASE);
       const keypair = Keypair.fromPublicKey(walletAddress);
 
       // Verify that the transaction is signed by the correct wallet
@@ -70,13 +70,13 @@ export async function POST(req: NextRequest) {
 
     // Execute the contract transaction server-side
     try {
-      const server = new rpc.Server(constants.RPC_URL, {
+      const server = new rpc.Server(constants.StellarConfig.RPC_URL, {
         allowHttp: process.env.NODE_ENV === 'development',
       });
 
       // Submit the signed transaction
       const result = await server.sendTransaction(
-        new Transaction(signedTransactionXDR, Networks.TESTNET)
+        new Transaction(signedTransactionXDR, constants.StellarConfig.NETWORK_PASSPHRASE)
       );
 
       return NextResponse.json({

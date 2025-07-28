@@ -12,6 +12,7 @@ import { xBull } from "./wallets/xbull";
 import { lobstr } from "./wallets/lobstr";
 import { hana } from "./wallets/hana";
 import { Wallet } from "./wallets/types";
+import { StellarConfig } from "../constants";
 
 const horizonUrl = "https://horizon.stellar.org";
 const server = new Horizon.Server(horizonUrl);
@@ -132,7 +133,7 @@ export async function fetchAndIssueTrustline(
 
   // If trustline does not exist, issue trustline
   if (!trustlineExists) {
-    const server = new SorobanRpc.Server(constants.RPC_URL);
+    const server = new SorobanRpc.Server(StellarConfig.RPC_URL);
 
     // Find asset name and issuer
 
@@ -144,7 +145,7 @@ export async function fetchAndIssueTrustline(
       await server.getAccount(publicKey),
       {
         fee: "100000",
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
+        networkPassphrase: StellarConfig.NETWORK_PASSPHRASE,
       }
     )
       .addOperation(
@@ -179,7 +180,7 @@ export async function fetchAndIssueTrustline(
 
     const signed = TransactionBuilder.fromXDR(
       signature.signedTxXdr.toString(),
-      constants.NETWORK_PASSPHRASE
+      StellarConfig.NETWORK_PASSPHRASE
     );
 
     await server.sendTransaction(signed);

@@ -28,16 +28,16 @@ export function useTotalTVL(): ReturnType {
 
       if (!poolAddresses) {
         const PoolRouter = new PoolRouterContract.Client({
-          contractId: constants.POOL_ROUTER_ADDRESS,
-          networkPassphrase: constants.NETWORK_PASSPHRASE,
-          rpcUrl: constants.RPC_URL,
+          contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+          rpcUrl: constants.StellarConfig.RPC_URL,
         });
       }
 
       // const LiquidityCalculator = new Liquidit.Client({
-      //   contractId: constants.POOL_ROUTER_ADDRESS,
-      //   networkPassphrase: constants.NETWORK_PASSPHRASE,
-      //   rpcUrl: constants.RPC_URL,
+      //   contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+      //   networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+      //   rpcUrl: constants.StellarConfig.RPC_URL,
       // });
 
       // const tvl = await LiquidityCalculator.get_total_tvl({ pool_addresses: poolAddresses });

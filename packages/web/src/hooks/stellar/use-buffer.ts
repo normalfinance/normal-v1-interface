@@ -43,9 +43,9 @@ export function useBuffer(): ReturnType {
       await rateLimitCheck();
 
       const Buffer = new BufferContract.Client({
-        contractId: constants.INSURANCE_FUND_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const [min_time_between_payouts, min_reserve_ratio, last_payout_timestamp, reserve] =
@@ -53,7 +53,7 @@ export function useBuffer(): ReturnType {
           Buffer.get_min_time_between_payouts(),
           Buffer.get_min_reserve_ratio(),
           Buffer.get_last_payout_timestamp(),
-          Buffer.get_reserve({ token: constants.XLM_ADDRESS }),
+          Buffer.get_reserve({ token: constants.StellarConfig.XLM_ADDRESS }),
         ]);
 
       if (min_time_between_payouts?.result) {
