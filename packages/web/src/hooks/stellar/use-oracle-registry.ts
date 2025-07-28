@@ -38,7 +38,7 @@ export function useOracleRegistry(): ReturnType {
 
       if (!oracleRegistry) {
         const OracleRegistry = new OracleRegistryContract.Client({
-          contractId: constants.ORALCE_REGISTY_ADDRESS,
+          contractId: constants.ORACLE_REGISTRY_ADDRESS,
           networkPassphrase: constants.NETWORK_PASSPHRASE,
           rpcUrl: constants.RPC_URL,
         });
@@ -156,7 +156,7 @@ export function useOracleRegistry(): ReturnType {
 
   useEffect(() => {
     const OracleRegistry = new OracleRegistryContract.Client({
-      contractId: constants.ORALCE_REGISTY_ADDRESS,
+      contractId: constants.ORACLE_REGISTRY_ADDRESS,
       networkPassphrase: constants.NETWORK_PASSPHRASE,
       rpcUrl: constants.RPC_URL,
     });

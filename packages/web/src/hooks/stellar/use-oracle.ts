@@ -108,7 +108,7 @@ export function useOracle(_asset: string): ReturnType {
   // On component mount, fetch OracleRegistry and price
   useEffect(() => {
     const OracleRegistry = new OracleRegistryContract.Client({
-      contractId: constants.ORALCE_REGISTY_ADDRESS,
+      contractId: constants.ORACLE_REGISTRY_ADDRESS,
       networkPassphrase: constants.NETWORK_PASSPHRASE,
       rpcUrl: constants.RPC_URL,
     });

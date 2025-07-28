@@ -41,7 +41,7 @@ export const INSURANCE_FUND_ADDRESS: string =
 /**
  * Oracle Registry contract address
  */
-export const ORALCE_REGISTY_ADDRESS: string =
+export const ORACLE_REGISTRY_ADDRESS: string =
   'CCDHMFVDXDKMKIQVSWJAJJHWYCAO4M6HFFSLKSSIJ6DQVH56J2GRS7UC';
 
 /**
