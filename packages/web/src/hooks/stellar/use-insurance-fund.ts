@@ -3,6 +3,7 @@
 import type { Stake, Client } from '@normalfinance/contracts/build/insurance_fund';
 
 import { constants } from '@normalfinance/utils';
+import { captureException } from '@sentry/nextjs';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
@@ -79,6 +80,7 @@ export function useInsuranceFund(): ReturnType {
 
       setBalance(_balance);
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -104,6 +106,7 @@ export function useInsuranceFund(): ReturnType {
         setStake(user_stake.result);
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }

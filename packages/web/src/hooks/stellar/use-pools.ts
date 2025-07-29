@@ -1,6 +1,7 @@
 'use client';
 
 import { constants } from '@normalfinance/utils';
+import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -57,6 +58,7 @@ export function usePools(): ReturnType {
         return pool.result;
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e);
     }
@@ -79,12 +81,12 @@ export function usePools(): ReturnType {
       const pools = await PoolRouter.query_all_pools_details();
 
       if (pools.result) {
-        // console.log(pools.result)
         setAllPools(pools.result as PoolRouterContract.PoolInfo[]);
       }
 
       setLoading(false);
     } catch (e) {
+      captureException(e);
       console.error(e);
       setError(e as any);
       store.setLoading(false);
@@ -106,24 +108,3 @@ export function usePools(): ReturnType {
     fetchAllPools,
   };
 }
-
-//  // LP token stuff..
-//       // Get user share
-//       if (storePersist.wallet.address) {
-//         if (result) {
-//           // Get the total amount of LP tokens in the pool
-
-//           const lpShareAmount = Number(result.pool_response.asset_lp_share.amount);
-//           const lpShareAmountDec = Number(lpShareAmount) / 10 ** (_lpToken?.decimals || 7);
-
-//           // Get the amount of LP tokens the user has as balance or staked
-//           const totalUserLPTokens =
-//             Number(_lpToken!.balance || 0) / 10 ** (_lpToken?.decimals || 7);
-
-//           // Price per Unit
-//           const pricePerUnit = tvl / lpShareAmountDec;
-
-//           // User share
-//           setUserShare(totalUserLPTokens * pricePerUnit);
-//         }
-//       }

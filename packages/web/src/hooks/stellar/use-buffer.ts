@@ -3,6 +3,7 @@
 import type { Reserve } from '@normalfinance/contracts/build/buffer';
 
 import { constants } from '@normalfinance/utils';
+import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { BufferContract } from '@normalfinance/contracts';
@@ -63,6 +64,7 @@ export function useBuffer(): ReturnType {
         });
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
