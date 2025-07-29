@@ -2,7 +2,10 @@ import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
+import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
+import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const CreateReferralSchema = z.object({
   referrerWalletAddress: z.string().min(1, 'Referrer wallet address is required'),
@@ -15,12 +18,13 @@ const GetReferralSchema = z.object({
   code: z.string().min(1, 'Referral code is required'),
 });
 
-export async function POST(request: NextRequest) {
+async function createReferralHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const validation = CreateReferralSchema.safeParse(body);
 
     if (!validation.success) {
+      await logWithConfig('warn', 'Referral codes POST API called with invalid request body', { errors: validation.error.errors });
       return NextResponse.json(
         { error: 'Invalid request body', details: validation.error.errors },
         { status: 400 }
@@ -29,11 +33,55 @@ export async function POST(request: NextRequest) {
 
     const { referrerWalletAddress, customCode, source, campaign } = validation.data;
 
+    // Get Edge Config for rate limiting
+    const rateLimitConfig = await getRateLimitConfig('referral-codes');
+    const apiConfig = await getApiConfig('referral-codes');
+
+    // Get client IP address
+    const ip =
+      request.headers.get('x-real-ip') ||
+      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
+      request.ip;
+
+    // Use Edge Config rate limit override if available
+    const effectiveLimit = apiConfig.rateLimitOverride || {
+      requests: rateLimitConfig.requests,
+      windowMs: rateLimitConfig.windowMs,
+    };
+
+    const { success, limit, remaining, reset } = await rateLimiter.limit(referrerWalletAddress, ip);
+    
+    await logWithConfig('info', 'Referral codes create rate limit check', {
+      success,
+      limit,
+      remaining,
+      reset,
+      walletAddress: referrerWalletAddress.substring(0, 8) + '...',
+      effectiveLimit,
+      customCode,
+    });
+
+    if (!success) {
+      await logWithConfig('warn', 'Rate limit exceeded for referral codes create API', { referrerWalletAddress, customCode });
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
     const referral = await ReferralService.createReferralCode(referrerWalletAddress, customCode);
 
-    return NextResponse.json({ referral }, { status: 201 });
+    await logWithConfig('info', 'Referral code created successfully', {
+      referrerWalletAddress: referrerWalletAddress.substring(0, 8) + '...',
+      customCode
+    });
+
+    return NextResponse.json({ 
+      referral,
+      config: {
+        timeout: apiConfig.timeout,
+        rateLimitRemaining: remaining,
+      }
+    }, { status: 201 });
   } catch (error) {
-    console.error('Error creating referral:', error);
+    await logWithConfig('error', 'Error creating referral code', { error });
 
     if (error instanceof Error && error.message === 'Referral code already exists') {
       return NextResponse.json({ error: error.message }, { status: 409 });
@@ -43,28 +91,68 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function getReferralHandler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
 
     const validation = GetReferralSchema.safeParse({ code });
     if (!validation.success) {
+      await logWithConfig('warn', 'Referral codes GET API called with invalid parameters', { errors: validation.error.errors });
       return NextResponse.json(
         { error: 'Invalid parameters', details: validation.error.errors },
         { status: 400 }
       );
     }
 
+    // Get Edge Config for rate limiting
+    const rateLimitConfig = await getRateLimitConfig('referral-codes');
+    const apiConfig = await getApiConfig('referral-codes');
+
+    // Get client IP address
+    const ip =
+      request.headers.get('x-real-ip') ||
+      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
+      request.ip;
+
+    const { success, limit, remaining, reset } = await rateLimiter.limit(`referral-lookup-${code}`, ip);
+    
+    await logWithConfig('info', 'Referral codes GET rate limit check', {
+      success,
+      limit,
+      remaining,
+      reset,
+      code,
+    });
+
+    if (!success) {
+      await logWithConfig('warn', 'Rate limit exceeded for referral codes GET API', { code });
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
     const referral = await ReferralService.getReferralByCode(validation.data.code);
 
     if (!referral) {
+      await logWithConfig('warn', 'Referral code not found', { code: validation.data.code });
       return NextResponse.json({ error: 'Referral not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ referral });
+    await logWithConfig('info', 'Referral code retrieved successfully', {
+      code: validation.data.code
+    });
+
+    return NextResponse.json({ 
+      referral,
+      config: {
+        timeout: apiConfig.timeout,
+        rateLimitRemaining: remaining,
+      }
+    });
   } catch (error) {
-    console.error('Error fetching referral:', error);
+    await logWithConfig('error', 'Error fetching referral code', { error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = createEdgeConfigHandler(createReferralHandler, 'referral-codes');
+export const GET = createEdgeConfigHandler(getReferralHandler, 'referral-codes');

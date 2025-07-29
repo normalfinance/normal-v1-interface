@@ -4726,6 +4726,7 @@ __metadata:
     "@types/stylis": ^4.2.7
     "@types/turndown": ^5.0.5
     "@typescript-eslint/parser": ^8.19.0
+    "@vercel/edge-config": ^1.4.0
     apexcharts: ^4.3.0
     autosuggest-highlight: ^3.3.4
     axios: ^1.7.9
@@ -8506,6 +8507,27 @@ __metadata:
   dependencies:
     uncrypto: ^0.1.3
   checksum: 1d54217589418873702f08bdc27d9455ea44df0fce30ace612b5637a1c4c261b762a80fb85d7b3c72d3213e82b8938bb57c413ae44f9f1e713eeab3f31d5539a
+  languageName: node
+  linkType: hard
+
+"@vercel/edge-config-fs@npm:0.1.0":
+  version: 0.1.0
+  resolution: "@vercel/edge-config-fs@npm:0.1.0"
+  checksum: 4eb27927a1c6a9d77cee4457424e208c3ff7f01e1cd0249b133804d12fd7099bd1aed6a9d9574b122d3bd59289b294a913b4df05bb69aca6091c8a020cbc2121
+  languageName: node
+  linkType: hard
+
+"@vercel/edge-config@npm:^1.4.0":
+  version: 1.4.0
+  resolution: "@vercel/edge-config@npm:1.4.0"
+  dependencies:
+    "@vercel/edge-config-fs": 0.1.0
+  peerDependencies:
+    "@opentelemetry/api": ^1.7.0
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+  checksum: 8620c61b38a299ad7406f1242f869ed6448c1d4026d71e7e574fcb655895ea9c402d82b603e139ebaacf20cb2b9415c98fbcf49ffc551230c8c471d6cbf60aaf
   languageName: node
   linkType: hard
 

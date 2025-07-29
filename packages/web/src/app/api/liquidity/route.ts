@@ -2,13 +2,20 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
-export async function POST(req: NextRequest) {
+async function liquidityHandler(req: NextRequest) {
   try {
     const { walletAddress } = await req.json();
     if (!walletAddress) {
+      await logWithConfig('warn', 'Liquidity API called without wallet address');
       return NextResponse.json({ error: 'Missing walletAddress' }, { status: 400 });
     }
+
+    // Get Edge Config for rate limiting
+    const rateLimitConfig = await getRateLimitConfig('liquidity');
+    const apiConfig = await getApiConfig('liquidity');
 
     // Get client IP address (prioritize proxy headers like middleware)
     const ip =
@@ -16,23 +23,43 @@ export async function POST(req: NextRequest) {
       req.headers.get('X-Forwarded-For')?.split(',')[0] ||
       req.ip;
 
+    // Use Edge Config rate limit override if available
+    const effectiveLimit = apiConfig.rateLimitOverride || {
+      requests: rateLimitConfig.requests,
+      windowMs: rateLimitConfig.windowMs,
+    };
+
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
-    console.log('Liquidity rate limit check:', {
+    
+    await logWithConfig('info', 'Liquidity rate limit check', {
       success,
       limit,
       remaining,
       reset,
+      walletAddress: walletAddress.substring(0, 8) + '...',
+      effectiveLimit,
     });
 
     if (!success) {
+      await logWithConfig('warn', 'Rate limit exceeded for liquidity API', { walletAddress });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    return NextResponse.json({ allowed: true });
+    await logWithConfig('info', 'Liquidity API access granted', { walletAddress: walletAddress.substring(0, 8) + '...' });
+    return NextResponse.json({ 
+      allowed: true,
+      config: {
+        timeout: apiConfig.timeout,
+        rateLimitRemaining: remaining,
+      }
+    });
   } catch (error: any) {
+    await logWithConfig('error', 'Liquidity management validation failed', { error: error?.message });
     return NextResponse.json(
       { error: error?.message || 'Liquidity management validation failed' },
       { status: 500 }
     );
   }
 }
+
+export const POST = createEdgeConfigHandler(liquidityHandler, 'liquidity');
