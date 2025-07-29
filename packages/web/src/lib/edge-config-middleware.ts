@@ -79,10 +79,13 @@ export function createEdgeConfigHandler(
   endpoint: string,
   requireFeatureFlag?: string
 ) {
-  return withEdgeConfig(handler, {
-    endpoint,
-    requireFeatureFlag,
-  });
+  return async (req: NextRequest): Promise<NextResponse> => {
+    const wrappedHandler = await withEdgeConfig(handler, {
+      endpoint,
+      requireFeatureFlag,
+    });
+    return wrappedHandler(req);
+  };
 }
 
 export async function checkRateLimit(
