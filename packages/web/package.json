@@ -78,6 +78,7 @@
     "apexcharts": "^4.3.0",
     "autosuggest-highlight": "^3.3.4",
     "axios": "^1.7.9",
+    "bignumber.js": "^9.3.1",
     "dayjs": "^1.11.13",
     "es-toolkit": "^1.31.0",
     "framer-motion": "^11.15.0",

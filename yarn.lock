@@ -4534,6 +4534,7 @@ __metadata:
     apexcharts: ^4.3.0
     autosuggest-highlight: ^3.3.4
     axios: ^1.7.9
+    bignumber.js: ^9.3.1
     commitizen: ^4.3.0
     cz-conventional-changelog: ^3.3.0
     cz-customizable: ^7.4.0
