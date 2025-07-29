@@ -71,6 +71,8 @@ export function useLiquidity(): ReturnType {
   };
 
   const depositLiquidity = async (args: DepositLiquidityArgs) => {
+    await rateLimitCheck();
+
     const processedArgs = {
       ...args,
       user: storePersist.wallet.address!,
@@ -103,6 +105,8 @@ export function useLiquidity(): ReturnType {
   };
 
   const withdrawLiquidity = async (args: WithdrawLiquidityArgs) => {
+    await rateLimitCheck();
+
     const processedArgs = {
       ...args,
       user: storePersist.wallet.address!,
