@@ -30,7 +30,7 @@ async function tokensHandler(req: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
-    
+
     await logWithConfig('info', 'Tokens rate limit check', {
       success,
       limit,
@@ -45,14 +45,16 @@ async function tokensHandler(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    await logWithConfig('info', 'Tokens API access granted', { walletAddress: walletAddress.substring(0, 8) + '...' });
-    return NextResponse.json({ 
+    await logWithConfig('info', 'Tokens API access granted', {
+      walletAddress: walletAddress.substring(0, 8) + '...',
+    });
+    return NextResponse.json({
       allowed: true,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
         priceRefreshInterval: (apiConfig as any).priceRefreshInterval || 30000,
-      }
+      },
     });
   } catch (error: any) {
     await logWithConfig('error', 'Token/price fetch validation failed', { error: error?.message });

@@ -30,7 +30,7 @@ async function liquidityHandler(req: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
-    
+
     await logWithConfig('info', 'Liquidity rate limit check', {
       success,
       limit,
@@ -45,16 +45,20 @@ async function liquidityHandler(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    await logWithConfig('info', 'Liquidity API access granted', { walletAddress: walletAddress.substring(0, 8) + '...' });
-    return NextResponse.json({ 
+    await logWithConfig('info', 'Liquidity API access granted', {
+      walletAddress: walletAddress.substring(0, 8) + '...',
+    });
+    return NextResponse.json({
       allowed: true,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
-      }
+      },
     });
   } catch (error: any) {
-    await logWithConfig('error', 'Liquidity management validation failed', { error: error?.message });
+    await logWithConfig('error', 'Liquidity management validation failed', {
+      error: error?.message,
+    });
     return NextResponse.json(
       { error: error?.message || 'Liquidity management validation failed' },
       { status: 500 }

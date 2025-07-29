@@ -18,7 +18,9 @@ async function activateReferralHandler(request: NextRequest) {
     const validation = ActivateReferralSchema.safeParse(body);
 
     if (!validation.success) {
-      await logWithConfig('warn', 'Referral activate API called with invalid request body', { errors: validation.error.errors });
+      await logWithConfig('warn', 'Referral activate API called with invalid request body', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid request body', details: validation.error.errors },
         { status: 400 }
@@ -44,7 +46,7 @@ async function activateReferralHandler(request: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(refereeWalletAddress, ip);
-    
+
     await logWithConfig('info', 'Referral activate rate limit check', {
       success,
       limit,
@@ -56,7 +58,10 @@ async function activateReferralHandler(request: NextRequest) {
     });
 
     if (!success) {
-      await logWithConfig('warn', 'Rate limit exceeded for referral activate API', { refereeWalletAddress, code });
+      await logWithConfig('warn', 'Rate limit exceeded for referral activate API', {
+        refereeWalletAddress,
+        code,
+      });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
@@ -64,7 +69,7 @@ async function activateReferralHandler(request: NextRequest) {
 
     await logWithConfig('info', 'Referral activated successfully', {
       refereeWalletAddress: refereeWalletAddress.substring(0, 8) + '...',
-      code
+      code,
     });
 
     return NextResponse.json({
@@ -73,7 +78,7 @@ async function activateReferralHandler(request: NextRequest) {
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
-      }
+      },
     });
   } catch (error) {
     await logWithConfig('error', 'Error activating referral', { error });

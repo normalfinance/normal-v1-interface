@@ -19,7 +19,9 @@ async function getReferralStatsHandler(request: NextRequest) {
 
     const validation = GetStatsSchema.safeParse({ walletAddress });
     if (!validation.success) {
-      await logWithConfig('warn', 'Referral stats API called with invalid parameters', { errors: validation.error.errors });
+      await logWithConfig('warn', 'Referral stats API called with invalid parameters', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid parameters', details: validation.error.errors },
         { status: 400 }
@@ -42,8 +44,11 @@ async function getReferralStatsHandler(request: NextRequest) {
       windowMs: rateLimitConfig.windowMs,
     };
 
-    const { success, limit, remaining, reset } = await rateLimiter.limit(validation.data.walletAddress, ip);
-    
+    const { success, limit, remaining, reset } = await rateLimiter.limit(
+      validation.data.walletAddress,
+      ip
+    );
+
     await logWithConfig('info', 'Referral stats rate limit check', {
       success,
       limit,
@@ -54,7 +59,9 @@ async function getReferralStatsHandler(request: NextRequest) {
     });
 
     if (!success) {
-      await logWithConfig('warn', 'Rate limit exceeded for referral stats API', { walletAddress: validation.data.walletAddress });
+      await logWithConfig('warn', 'Rate limit exceeded for referral stats API', {
+        walletAddress: validation.data.walletAddress,
+      });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
@@ -62,16 +69,16 @@ async function getReferralStatsHandler(request: NextRequest) {
 
     await logWithConfig('info', 'Referral stats retrieved successfully', {
       walletAddress: validation.data.walletAddress.substring(0, 8) + '...',
-      statsKeys: Object.keys(stats)
+      statsKeys: Object.keys(stats),
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       stats,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
         refreshInterval: (apiConfig as any).refreshInterval || 300000,
-      }
+      },
     });
   } catch (error) {
     await logWithConfig('error', 'Error fetching referral stats', { error });

@@ -30,7 +30,7 @@ async function sendHandler(req: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
-    
+
     await logWithConfig('info', 'Send rate limit check', {
       success,
       limit,
@@ -45,13 +45,15 @@ async function sendHandler(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    await logWithConfig('info', 'Send API access granted', { walletAddress: walletAddress.substring(0, 8) + '...' });
-    return NextResponse.json({ 
+    await logWithConfig('info', 'Send API access granted', {
+      walletAddress: walletAddress.substring(0, 8) + '...',
+    });
+    return NextResponse.json({
       allowed: true,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
-      }
+      },
     });
   } catch (error: any) {
     await logWithConfig('error', 'Send validation failed', { error: error?.message });

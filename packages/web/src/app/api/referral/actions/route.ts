@@ -30,7 +30,9 @@ async function recordActionHandler(request: NextRequest) {
     const validation = RecordActionSchema.safeParse(body);
 
     if (!validation.success) {
-      await logWithConfig('warn', 'Referral actions API called with invalid request body', { errors: validation.error.errors });
+      await logWithConfig('warn', 'Referral actions API called with invalid request body', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid request body', details: validation.error.errors },
         { status: 400 }
@@ -56,7 +58,7 @@ async function recordActionHandler(request: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(userWalletAddress, ip);
-    
+
     await logWithConfig('info', 'Referral actions rate limit check', {
       success,
       limit,
@@ -68,7 +70,10 @@ async function recordActionHandler(request: NextRequest) {
     });
 
     if (!success) {
-      await logWithConfig('warn', 'Rate limit exceeded for referral actions API', { userWalletAddress, action });
+      await logWithConfig('warn', 'Rate limit exceeded for referral actions API', {
+        userWalletAddress,
+        action,
+      });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
@@ -103,7 +108,7 @@ async function recordActionHandler(request: NextRequest) {
     await logWithConfig('info', 'Referral action recorded successfully', {
       walletAddress: userWalletAddress.substring(0, 8) + '...',
       action,
-      referralCode
+      referralCode,
     });
 
     return NextResponse.json(
@@ -113,7 +118,7 @@ async function recordActionHandler(request: NextRequest) {
         config: {
           timeout: apiConfig.timeout,
           rateLimitRemaining: remaining,
-        }
+        },
       },
       { status: 201 }
     );
@@ -157,7 +162,9 @@ async function getActionsHandler(request: NextRequest) {
     });
 
     if (!validation.success) {
-      await logWithConfig('warn', 'Referral actions GET API called with invalid parameters', { errors: validation.error.errors });
+      await logWithConfig('warn', 'Referral actions GET API called with invalid parameters', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid parameters', details: validation.error.errors },
         { status: 400 }
@@ -174,8 +181,11 @@ async function getActionsHandler(request: NextRequest) {
       request.headers.get('X-Forwarded-For')?.split(',')[0] ||
       request.ip;
 
-    const { success, limit, remaining, reset } = await rateLimiter.limit(validation.data.userWalletAddress, ip);
-    
+    const { success, limit, remaining, reset } = await rateLimiter.limit(
+      validation.data.userWalletAddress,
+      ip
+    );
+
     await logWithConfig('info', 'Referral actions GET rate limit check', {
       success,
       limit,
@@ -185,7 +195,9 @@ async function getActionsHandler(request: NextRequest) {
     });
 
     if (!success) {
-      await logWithConfig('warn', 'Rate limit exceeded for referral actions GET API', { userWalletAddress: validation.data.userWalletAddress });
+      await logWithConfig('warn', 'Rate limit exceeded for referral actions GET API', {
+        userWalletAddress: validation.data.userWalletAddress,
+      });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
@@ -196,15 +208,15 @@ async function getActionsHandler(request: NextRequest) {
 
     await logWithConfig('info', 'Referral actions retrieved successfully', {
       walletAddress: validation.data.userWalletAddress.substring(0, 8) + '...',
-      actionsCount: actions.length
+      actionsCount: actions.length,
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       actions,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
-      }
+      },
     });
   } catch (error) {
     await logWithConfig('error', 'Error fetching referral actions', { error });

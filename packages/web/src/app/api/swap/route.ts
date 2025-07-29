@@ -30,7 +30,7 @@ async function swapHandler(req: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
-    
+
     await logWithConfig('info', 'Swap rate limit check', {
       success,
       limit,
@@ -45,14 +45,16 @@ async function swapHandler(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    await logWithConfig('info', 'Swap API access granted', { walletAddress: walletAddress.substring(0, 8) + '...' });
-    return NextResponse.json({ 
+    await logWithConfig('info', 'Swap API access granted', {
+      walletAddress: walletAddress.substring(0, 8) + '...',
+    });
+    return NextResponse.json({
       allowed: true,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
         slippageTolerance: (apiConfig as any).slippageTolerance || 0.01,
-      }
+      },
     });
   } catch (error: any) {
     await logWithConfig('error', 'Swap validation failed', { error: error?.message });

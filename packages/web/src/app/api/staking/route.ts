@@ -30,7 +30,7 @@ async function stakingHandler(req: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
-    
+
     await logWithConfig('info', 'Staking rate limit check', {
       success,
       limit,
@@ -45,14 +45,16 @@ async function stakingHandler(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    await logWithConfig('info', 'Staking API access granted', { walletAddress: walletAddress.substring(0, 8) + '...' });
-    return NextResponse.json({ 
+    await logWithConfig('info', 'Staking API access granted', {
+      walletAddress: walletAddress.substring(0, 8) + '...',
+    });
+    return NextResponse.json({
       allowed: true,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
         rewardsRefreshInterval: (apiConfig as any).rewardsRefreshInterval || 300000,
-      }
+      },
     });
   } catch (error: any) {
     await logWithConfig('error', 'Staking validation failed', { error: error?.message });

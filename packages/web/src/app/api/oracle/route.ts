@@ -30,7 +30,7 @@ async function oracleHandler(req: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
-    
+
     await logWithConfig('info', 'Oracle rate limit check', {
       success,
       limit,
@@ -45,14 +45,16 @@ async function oracleHandler(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    await logWithConfig('info', 'Oracle API access granted', { walletAddress: walletAddress.substring(0, 8) + '...' });
-    return NextResponse.json({ 
+    await logWithConfig('info', 'Oracle API access granted', {
+      walletAddress: walletAddress.substring(0, 8) + '...',
+    });
+    return NextResponse.json({
       allowed: true,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
         refreshInterval: (apiConfig as any).refreshInterval || 60000,
-      }
+      },
     });
   } catch (error: any) {
     await logWithConfig('error', 'Oracle validation failed', { error: error?.message });

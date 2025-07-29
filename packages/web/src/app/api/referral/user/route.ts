@@ -22,7 +22,9 @@ async function getUserHandler(request: NextRequest) {
 
     const validation = GetUserSchema.safeParse({ walletAddress });
     if (!validation.success) {
-      await logWithConfig('warn', 'Referral user GET API called with invalid parameters', { errors: validation.error.errors });
+      await logWithConfig('warn', 'Referral user GET API called with invalid parameters', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid parameters', details: validation.error.errors },
         { status: 400 }
@@ -45,8 +47,11 @@ async function getUserHandler(request: NextRequest) {
       windowMs: rateLimitConfig.windowMs,
     };
 
-    const { success, limit, remaining, reset } = await rateLimiter.limit(validation.data.walletAddress, ip);
-    
+    const { success, limit, remaining, reset } = await rateLimiter.limit(
+      validation.data.walletAddress,
+      ip
+    );
+
     await logWithConfig('info', 'Referral user GET rate limit check', {
       success,
       limit,
@@ -57,27 +62,31 @@ async function getUserHandler(request: NextRequest) {
     });
 
     if (!success) {
-      await logWithConfig('warn', 'Rate limit exceeded for referral user GET API', { walletAddress: validation.data.walletAddress });
+      await logWithConfig('warn', 'Rate limit exceeded for referral user GET API', {
+        walletAddress: validation.data.walletAddress,
+      });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
     const user = await ReferralService.getUserByWallet(validation.data.walletAddress);
 
     if (!user) {
-      await logWithConfig('warn', 'Referral user not found', { walletAddress: validation.data.walletAddress.substring(0, 8) + '...' });
+      await logWithConfig('warn', 'Referral user not found', {
+        walletAddress: validation.data.walletAddress.substring(0, 8) + '...',
+      });
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     await logWithConfig('info', 'Referral user retrieved successfully', {
-      walletAddress: validation.data.walletAddress.substring(0, 8) + '...'
+      walletAddress: validation.data.walletAddress.substring(0, 8) + '...',
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       user,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
-      }
+      },
     });
   } catch (error) {
     await logWithConfig('error', 'Error fetching referral user', { error });
@@ -91,7 +100,9 @@ async function createUserHandler(request: NextRequest) {
     const validation = CreateUserSchema.safeParse(body);
 
     if (!validation.success) {
-      await logWithConfig('warn', 'Referral user POST API called with invalid request body', { errors: validation.error.errors });
+      await logWithConfig('warn', 'Referral user POST API called with invalid request body', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid request body', details: validation.error.errors },
         { status: 400 }
@@ -114,8 +125,11 @@ async function createUserHandler(request: NextRequest) {
       windowMs: rateLimitConfig.windowMs,
     };
 
-    const { success, limit, remaining, reset } = await rateLimiter.limit(validation.data.walletAddress, ip);
-    
+    const { success, limit, remaining, reset } = await rateLimiter.limit(
+      validation.data.walletAddress,
+      ip
+    );
+
     await logWithConfig('info', 'Referral user POST rate limit check', {
       success,
       limit,
@@ -126,23 +140,28 @@ async function createUserHandler(request: NextRequest) {
     });
 
     if (!success) {
-      await logWithConfig('warn', 'Rate limit exceeded for referral user POST API', { walletAddress: validation.data.walletAddress });
+      await logWithConfig('warn', 'Rate limit exceeded for referral user POST API', {
+        walletAddress: validation.data.walletAddress,
+      });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
     const user = await ReferralService.findOrCreateUser(validation.data.walletAddress);
 
     await logWithConfig('info', 'Referral user created/found successfully', {
-      walletAddress: validation.data.walletAddress.substring(0, 8) + '...'
+      walletAddress: validation.data.walletAddress.substring(0, 8) + '...',
     });
 
-    return NextResponse.json({ 
-      user,
-      config: {
-        timeout: apiConfig.timeout,
-        rateLimitRemaining: remaining,
-      }
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        user,
+        config: {
+          timeout: apiConfig.timeout,
+          rateLimitRemaining: remaining,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     await logWithConfig('error', 'Error creating referral user', { error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

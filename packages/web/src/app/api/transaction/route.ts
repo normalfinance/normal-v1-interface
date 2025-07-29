@@ -38,7 +38,7 @@ async function transactionHandler(req: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
-    
+
     await logWithConfig('info', `${transactionType || 'Transaction'} rate limit check`, {
       success,
       limit,
@@ -50,7 +50,10 @@ async function transactionHandler(req: NextRequest) {
     });
 
     if (!success) {
-      await logWithConfig('warn', 'Rate limit exceeded for transaction API', { walletAddress, transactionType });
+      await logWithConfig('warn', 'Rate limit exceeded for transaction API', {
+        walletAddress,
+        transactionType,
+      });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
@@ -72,7 +75,10 @@ async function transactionHandler(req: NextRequest) {
       });
 
       if (!hasValidSignature) {
-        await logWithConfig('warn', 'Invalid signature for wallet address', { walletAddress, transactionType });
+        await logWithConfig('warn', 'Invalid signature for wallet address', {
+          walletAddress,
+          transactionType,
+        });
         return NextResponse.json(
           {
             error: 'Invalid signature for wallet address',
@@ -81,7 +87,11 @@ async function transactionHandler(req: NextRequest) {
         );
       }
     } catch (error) {
-      await logWithConfig('error', 'Signature verification failed', { error, walletAddress, transactionType });
+      await logWithConfig('error', 'Signature verification failed', {
+        error,
+        walletAddress,
+        transactionType,
+      });
       return NextResponse.json(
         {
           error: 'Failed to verify signature',
@@ -112,12 +122,12 @@ async function transactionHandler(req: NextRequest) {
         config: {
           timeout: apiConfig.timeout,
           rateLimitRemaining: remaining,
-        }
+        },
       });
     } catch (contractError: any) {
-      await logWithConfig('error', `${transactionType || 'Contract'} execution failed`, { 
-        error: contractError?.message, 
-        walletAddress
+      await logWithConfig('error', `${transactionType || 'Contract'} execution failed`, {
+        error: contractError?.message,
+        walletAddress,
       });
       return NextResponse.json(
         {
@@ -127,7 +137,10 @@ async function transactionHandler(req: NextRequest) {
       );
     }
   } catch (error: any) {
-    await logWithConfig('error', 'Transaction API error', { error: error?.message, transactionType: req.method });
+    await logWithConfig('error', 'Transaction API error', {
+      error: error?.message,
+      transactionType: req.method,
+    });
     return NextResponse.json(
       { error: error?.message || 'Transaction processing failed' },
       { status: 500 }

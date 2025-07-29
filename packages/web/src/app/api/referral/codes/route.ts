@@ -24,7 +24,9 @@ async function createReferralHandler(request: NextRequest) {
     const validation = CreateReferralSchema.safeParse(body);
 
     if (!validation.success) {
-      await logWithConfig('warn', 'Referral codes POST API called with invalid request body', { errors: validation.error.errors });
+      await logWithConfig('warn', 'Referral codes POST API called with invalid request body', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid request body', details: validation.error.errors },
         { status: 400 }
@@ -50,7 +52,7 @@ async function createReferralHandler(request: NextRequest) {
     };
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(referrerWalletAddress, ip);
-    
+
     await logWithConfig('info', 'Referral codes create rate limit check', {
       success,
       limit,
@@ -62,7 +64,10 @@ async function createReferralHandler(request: NextRequest) {
     });
 
     if (!success) {
-      await logWithConfig('warn', 'Rate limit exceeded for referral codes create API', { referrerWalletAddress, customCode });
+      await logWithConfig('warn', 'Rate limit exceeded for referral codes create API', {
+        referrerWalletAddress,
+        customCode,
+      });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
@@ -70,16 +75,19 @@ async function createReferralHandler(request: NextRequest) {
 
     await logWithConfig('info', 'Referral code created successfully', {
       referrerWalletAddress: referrerWalletAddress.substring(0, 8) + '...',
-      customCode
+      customCode,
     });
 
-    return NextResponse.json({ 
-      referral,
-      config: {
-        timeout: apiConfig.timeout,
-        rateLimitRemaining: remaining,
-      }
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        referral,
+        config: {
+          timeout: apiConfig.timeout,
+          rateLimitRemaining: remaining,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     await logWithConfig('error', 'Error creating referral code', { error });
 
@@ -98,7 +106,9 @@ async function getReferralHandler(request: NextRequest) {
 
     const validation = GetReferralSchema.safeParse({ code });
     if (!validation.success) {
-      await logWithConfig('warn', 'Referral codes GET API called with invalid parameters', { errors: validation.error.errors });
+      await logWithConfig('warn', 'Referral codes GET API called with invalid parameters', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid parameters', details: validation.error.errors },
         { status: 400 }
@@ -115,8 +125,11 @@ async function getReferralHandler(request: NextRequest) {
       request.headers.get('X-Forwarded-For')?.split(',')[0] ||
       request.ip;
 
-    const { success, limit, remaining, reset } = await rateLimiter.limit(`referral-lookup-${code}`, ip);
-    
+    const { success, limit, remaining, reset } = await rateLimiter.limit(
+      `referral-lookup-${code}`,
+      ip
+    );
+
     await logWithConfig('info', 'Referral codes GET rate limit check', {
       success,
       limit,
@@ -138,15 +151,15 @@ async function getReferralHandler(request: NextRequest) {
     }
 
     await logWithConfig('info', 'Referral code retrieved successfully', {
-      code: validation.data.code
+      code: validation.data.code,
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       referral,
       config: {
         timeout: apiConfig.timeout,
         rateLimitRemaining: remaining,
-      }
+      },
     });
   } catch (error) {
     await logWithConfig('error', 'Error fetching referral code', { error });
