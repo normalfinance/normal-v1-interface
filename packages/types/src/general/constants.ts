@@ -15,4 +15,6 @@ export interface NetworkConfig {
   // XLM
   XLM_ADDRESS: string;
   XLM_DECIMALS: number;
+  // oracles
+  REFLECTOR_ORACLE_ADDRESS: string;
 }
