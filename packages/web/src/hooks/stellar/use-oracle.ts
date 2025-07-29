@@ -67,12 +67,14 @@ export function useOracle(_asset: string): ReturnType {
         asset,
         cached,
         action: defaultAction,
+        skip_validation: true,
       });
 
       if (oraclePriceData?.result) {
         setPrice(oraclePriceData?.result);
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
