@@ -2,14 +2,12 @@
 
 import { useTranslate } from '@/locales';
 import { useLiquidityPositions } from '@/hooks';
-import { ZEALY_QUEST_IDS } from '@/global-config';
 import { DashboardContent } from '@/layouts/dashboard';
 
-import { Box, Grid2 } from '@mui/material';
+import { Box } from '@mui/material';
 
 import PageHeader from '@/components/page-header';
 import { WalletGate } from '@/components/_common/wallet-gate';
-import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import { PositionsTable } from '@/components/_positions-page-components/positions-table';
 
 // ----------------------------------------------------------------------
