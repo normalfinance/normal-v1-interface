@@ -105,7 +105,9 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
     setSelectedTab(newValue);
   };
 
-  const { data: xlmPrice, isLoading: tokenPriceLoading } = useTokenPrice(constants.XLM_ADDRESS);
+  const { data: xlmPrice, isLoading: tokenPriceLoading } = useTokenPrice(
+    constants.StellarConfig.XLM_ADDRESS
+  );
 
   const {
     insuranceFund,

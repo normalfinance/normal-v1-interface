@@ -24,8 +24,6 @@ export function usePoolTVL(): ReturnType {
 
   const fetchTVL = useCallback(async (asset: string) => {
     try {
-      await rateLimitCheck();
-
       const PoolRouter = new PoolRouterContract.Client({
         contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,

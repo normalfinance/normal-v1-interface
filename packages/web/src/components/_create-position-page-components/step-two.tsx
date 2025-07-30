@@ -20,8 +20,12 @@ export default function StepTwo() {
   const { enqueueSnackbar } = useSnackbar();
 
   // Get token balance for XLM
-  const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(constants.XLM_ADDRESS);
-  const { data: tokenPrice, isLoading: priceLoading } = useTokenPrice(constants.XLM_ADDRESS);
+  const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
+    constants.StellarConfig.XLM_ADDRESS
+  );
+  const { data: tokenPrice, isLoading: priceLoading } = useTokenPrice(
+    constants.StellarConfig.XLM_ADDRESS
+  );
 
   // -- keep field in sync with the text input ------------------------
   const amount = watch('depositAmount') ?? '';

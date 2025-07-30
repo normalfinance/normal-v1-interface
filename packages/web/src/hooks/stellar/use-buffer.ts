@@ -40,8 +40,6 @@ export function useBuffer(): ReturnType {
       setError(null);
       setLoading(true);
 
-      await rateLimitCheck();
-
       const Buffer = new BufferContract.Client({
         contractId: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
