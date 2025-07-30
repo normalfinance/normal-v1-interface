@@ -74,12 +74,14 @@ export function useLiquidity(): ReturnType {
     const processedArgs = {
       ...args,
       user: storePersist.wallet.address!,
-      token_b_amount: BigInt((args.token_b_amount * 10 ** constants.XLM_DECIMALS).toFixed(0)),
+      token_b_amount: BigInt(
+        (args.token_b_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)
+      ),
     };
 
     await executeContractTransaction({
       contractType: 'pool_router',
-      contractAddress: constants.POOL_ROUTER_ADDRESS,
+      contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.DEPOSIT_LIQUIDITY,
         token1: { name: 'XLM', amount: args.token_b_amount },
@@ -104,12 +106,14 @@ export function useLiquidity(): ReturnType {
     const processedArgs = {
       ...args,
       user: storePersist.wallet.address!,
-      share_amount: BigInt((args.share_amount * 10 ** constants.XLM_DECIMALS).toFixed(0)),
+      share_amount: BigInt(
+        (args.share_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)
+      ),
     };
 
     await executeContractTransaction({
       contractType: 'pool_router',
-      contractAddress: constants.POOL_ROUTER_ADDRESS,
+      contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.REMOVE_LIQUIDITY,
         token1: { name: 'XLM', amount: args.share_amount },

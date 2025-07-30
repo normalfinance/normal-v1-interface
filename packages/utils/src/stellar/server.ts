@@ -1,10 +1,10 @@
-import { Horizon } from "@stellar/stellar-sdk";
-import { constants } from "..";
+import { Horizon } from '@stellar/stellar-sdk';
+import { StellarConfig } from '../constants';
 
 /**
  * SorobanClient.Server instance, initialized using {@link RPC_URL} used to
  * initialize this library.
  */
-export const Server = new Horizon.Server(constants.RPC_URL, {
-  allowHttp: constants.RPC_URL.startsWith("http://"),
+export const Server = new Horizon.Server(StellarConfig.RPC_URL, {
+  allowHttp: StellarConfig.RPC_URL.startsWith('http://'),
 });

@@ -20,9 +20,9 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-const server = new rpc.Server(constants.RPC_URL);
+const server = new rpc.Server(constants.StellarConfig.RPC_URL);
 
-const CONTRACT_ID = convertContractAddressToHex(constants.INSURANCE_FUND_ADDRESS);
+const CONTRACT_ID = convertContractAddressToHex(constants.StellarConfig.INSURANCE_FUND_ADDRESS);
 
 export function useInsuranceFundEvents(): ReturnType {
   const [error, setError] = useState(null);

@@ -39,7 +39,9 @@ const timeframesInMs: Record<ChartTimeframeKey, number> = {
 
 // ----------------------------------------------------------------------
 
-const POOL_ROUTER_CONTRACT_ID = convertContractAddressToHex(constants.POOL_ROUTER_ADDRESS);
+const POOL_ROUTER_CONTRACT_ID = convertContractAddressToHex(
+  constants.StellarConfig.POOL_ROUTER_ADDRESS
+);
 
 export function useSwapVolume(): ReturnType {
   const [error, setError] = useState(null);
