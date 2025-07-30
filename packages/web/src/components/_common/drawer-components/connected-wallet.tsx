@@ -5,7 +5,9 @@ import type { Activity } from '@/types/activity';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
 import { fPercent, fCurrencyCompact } from '@/utils/format-number';
@@ -43,6 +45,7 @@ export default function ConnectedWallet({
 }: ConnectedWalletProps) {
   const { t } = useTranslate();
   const theme = useTheme();
+  const router = useRouter();
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   const actionButtons = [
@@ -50,7 +53,7 @@ export default function ConnectedWallet({
       label: 'Send',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => {
-        console.log('Send clicked');
+        router.push(`${paths.swap}?tab=send`);
       },
     },
     {
