@@ -1,10 +1,12 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
-import type { PoolPosition } from '@/hooks';
+import type { PoolQueryParams } from '@/types/query-params';
 
 import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { ZEALY_QUEST_IDS } from '@/global-config';
+import { useBoolean, type PoolPosition } from '@/hooks';
 
 import Box from '@mui/material/Box';
 import { Button } from '@mui/material';
@@ -15,19 +17,25 @@ import { Iconify } from '@/components/template/iconify';
 
 import PositionItem from './position-item';
 import ZealyHighlight from '../_common/zealy/zealy-highlight';
+import WithdrawLiquidityDialog from './withdraw-liquidity-dialog';
 
 // ----------------------------------------------------------------------
 
 export type PositionsTableProps = {
   positions: PoolPosition[];
   loading?: boolean;
+  queryParams?: PoolQueryParams;
 };
 
 // ----------------------------------------------------------------------
 
-export function PositionsTable({ positions, loading }: PositionsTableProps) {
+export function PositionsTable({ positions, loading, queryParams }: PositionsTableProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+
+  const withdraw = useBoolean();
+
+  const [selectedPosition, setSelectedPosition] = useState<PoolPosition | undefined>(undefined);
 
   const actionButtons = [
     {
@@ -36,6 +44,13 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
       href: '/positions/create',
     },
   ];
+
+  // Automatically open dialog if query parameters are present
+  useEffect(() => {
+    if (queryParams?.amount) {
+      withdraw.onTrue();
+    }
+  }, [queryParams?.amount, withdraw]);
 
   if (loading) {
     return (
@@ -120,9 +135,28 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
       </Stack>
       <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
 
-      {positions.map((position, idx) => (
-        <PositionItem key={idx} pool={{ name: '', fee: 3 }} position={position} />
+      {positions.map((position) => (
+        <PositionItem
+          key={position.poolAddress}
+          position={position}
+          onWithdraw={() => {
+            setSelectedPosition(position);
+            withdraw.onTrue();
+          }}
+        />
       ))}
+
+      {selectedPosition && (
+        <WithdrawLiquidityDialog
+          open={withdraw.value}
+          position={selectedPosition}
+          onClose={() => {
+            setSelectedPosition(undefined);
+            withdraw.onFalse();
+          }}
+          queryParams={queryParams}
+        />
+      )}
     </>
   );
 }

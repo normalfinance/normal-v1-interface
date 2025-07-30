@@ -26,7 +26,7 @@ interface SendCardProps extends CardProps {
   queryParams?: SendQueryParams;
 }
 
-const DEFAULT_DESTINATION = 'Wallet address or ENS name';
+const DEFAULT_DESTINATION = 'Wallet address';
 
 const SendCard: React.FC<SendCardProps> = ({
   tokensList = [],

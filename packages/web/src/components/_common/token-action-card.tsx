@@ -4,11 +4,10 @@ import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { StateToken as Token } from '@normalfinance/types';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { useTabs } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useAppStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -82,8 +81,6 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 }) => {
   const theme = useTheme();
 
-  const store = useAppStore();
-
   // Determine which tabs are active for this instance ------------------
   const activeTabs = React.useMemo<ActionConfig[]>(
     () => ALL_TABS.filter((tab) => !enabledTabs || enabledTabs.includes(tab.value)),
@@ -105,8 +102,8 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   const tabs = useTabs(getInitialTab());
 
   const buyCardTokens = React.useMemo<Token[]>(
-    () => store.tokens.filter((t) => t.symbol === 'XLM' || t.symbol === 'USDC'),
-    [store.tokens]
+    () => tokensList!.filter((t) => t.symbol === 'XLM' || t.symbol === 'USDC'),
+    [tokensList]
   );
 
   // Helper – render the body matching the active tab -------------------
@@ -115,18 +112,14 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
       case 'swap':
         return (
           <Box data-testid="swap-card" sx={{ position: 'relative' }}>
-            <SwapCard
-              tokensList={store.tokens}
-              swapFeeInfo={swapFeeInfo}
-              queryParams={queryParams}
-            />
+            <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} queryParams={queryParams} />
             <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />
           </Box>
         );
       case 'send':
         return (
           <SendCard
-            tokensList={store.tokens}
+            tokensList={tokensList}
             networkCost={0}
             queryParams={queryParams}
             data-testid="send-card"
@@ -145,23 +138,6 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
         return null;
     }
   };
-
-  // Effect hook to fetch all tokens once the component mounts
-  useEffect(() => {
-    const getAllTokens = async (): Promise<void> => {
-      store.setLoading(true);
-      try {
-        const allTokens = await store.getAllTokens();
-
-        store.setLoading(false);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        store.setLoading(false);
-      }
-    };
-    getAllTokens();
-  }, []);
 
   if (loading) {
     return (

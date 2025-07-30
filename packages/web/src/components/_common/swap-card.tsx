@@ -351,14 +351,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         if (!allowed) return;
         // Now call the client-side onSwap (sign and submit)
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        await onSwap({
-          token_in: sellToken.symbol,
-          token_out: buyToken.symbol,
-          asset,
-          in_amount: Number(amount),
-          out_min: Number(buyAmount),
-          tokens: [sellToken.symbol, buyToken.symbol],
-        });
+        // await onSwap({
+        //   token_in: sellToken.symbol,
+        //   token_out: buyToken.symbol,
+        //   asset,
+        //   in_amount: Number(amount),
+        //   out_min: Number(buyAmount),
+        //   tokens: [sellToken.symbol, buyToken.symbol],
+        // });
         setTimeout(async () => {
           await appStore.fetchTokenInfo(sellToken.name!);
           await appStore.fetchTokenInfo(buyToken.name!);

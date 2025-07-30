@@ -11,6 +11,7 @@ export interface NetworkConfig {
   BUFFER_ADDRESS: string;
   INSURANCE_FUND_ADDRESS: string;
   ORACLE_REGISTRY_ADDRESS: string;
+  LIQUIDITY_CALCULATOR_ADDRESS: string;
   // XLM
   XLM_ADDRESS: string;
   XLM_DECIMALS: number;

@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useLPTokens } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { useLiquidityPositions } from '@/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { DashboardContent } from '@/layouts/dashboard';
-import { usePersistStore } from '@normalfinance/state';
 
 import { Grid2 } from '@mui/material';
 
@@ -19,11 +17,7 @@ import { PositionsTable } from '@/components/_positions-page-components/position
 export default function PositionsView() {
   const { t } = useTranslate();
 
-  const persist = usePersistStore();
-  const connectedAddress = persist.wallet.address;
-  const [isConnected] = useState(connectedAddress != '' && connectedAddress != undefined);
-
-  const { positions } = useLPTokens();
+  const { positions } = useLiquidityPositions();
 
   return (
     <DashboardContent maxWidth="xl">
