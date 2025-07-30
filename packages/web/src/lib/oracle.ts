@@ -1,31 +1,25 @@
 import { constants } from '@normalfinance/utils';
-import {
-  rpc,
-  xdr,
-  Address,
-  Contract,
-  scValToNative,
-  TransactionBuilder,
-} from '@stellar/stellar-sdk';
+import { rpc, xdr, Contract, scValToNative, TransactionBuilder } from '@stellar/stellar-sdk';
 
 export interface PriceData {
   price: bigint;
   timestamp: number;
 }
 
-export async function getOraclePrice(oracle_id: string, token_id: string): Promise<PriceData> {
+export async function getOraclePrice(oracle_address: string, _asset: string): Promise<PriceData> {
   const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
-  const asset = xdr.ScVal.scvVec([
-    xdr.ScVal.scvSymbol('Stellar'),
-    Address.fromString(token_id).toScVal(),
-  ]);
-  tx_builder.addOperation(new Contract(oracle_id).call('lastprice', asset));
+
+  const asset = xdr.ScVal.scvVec([xdr.ScVal.scvSymbol('Other'), xdr.ScVal.scvString(_asset)]);
+
+  tx_builder.addOperation(new Contract(oracle_address).call('lastprice', asset));
+
   const stellar_rpc = new rpc.Server(constants.StellarConfig.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
+
   if (rpc.Api.isSimulationSuccess(result)) {
     const xdr_str = result.result?.retval.toXDR('base64');
     if (xdr_str) {
@@ -54,8 +48,10 @@ export async function getOracleDecimals(
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
   tx_builder.addOperation(new Contract(oracle_id).call('decimals'));
+
   const stellar_rpc = new rpc.Server(constants.StellarConfig.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
+
   if (rpc.Api.isSimulationSuccess(result)) {
     const val = scValToNative((result as any).result.retval);
     return {
