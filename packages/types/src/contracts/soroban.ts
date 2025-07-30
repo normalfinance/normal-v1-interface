@@ -3,4 +3,5 @@ export type SorobanPrimitive =
   | { u128: string }
   | { address: string }
   | { symbol: string }
-  | { string: string };
+  | { string: string }
+  | { vec: Array<SorobanPrimitive> };

@@ -1,17 +1,18 @@
-import freighterApi from "@stellar/freighter-api";
-import { Connector, NetworkDetails } from "@normalfinance/types";
-import { xBullWalletConnect } from "@creit.tech/xbull-wallet-connect";
+import freighterApi from '@stellar/freighter-api';
+import { Connector, NetworkDetails } from '@normalfinance/types';
+import { xBullWalletConnect } from '@creit.tech/xbull-wallet-connect';
+import { constants } from '@normalfinance/utils';
 
 export function xbull(): Connector {
   return {
-    id: "xbull",
-    name: "xBull",
-    iconUrl: "http://i.epvpimg.com/wYBJfab.png",
-    iconBackground: "#fff",
+    id: 'xbull',
+    name: 'xBull',
+    iconUrl: 'http://i.epvpimg.com/wYBJfab.png',
+    iconBackground: '#fff',
     installed: true,
     downloadUrls: {
       browserExtension:
-        "https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en",
+        'https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en',
     },
     async isConnected(): Promise<boolean> {
       const bridge: xBullWalletConnect = new xBullWalletConnect();
@@ -20,9 +21,9 @@ export function xbull(): Connector {
     async getNetworkDetails(): Promise<NetworkDetails> {
       // !TODO - find a better solution here
       return {
-        ...(await freighterApi.getNetworkDetails()),
-        networkUrl:
-          "https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0",
+        network: 'Testnet',
+        networkUrl: 'https://horizon-testnet.stellar.org', // constants.StellarConfig.RPC_URL,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
       };
     },
     async isAvailable(): Promise<boolean> {

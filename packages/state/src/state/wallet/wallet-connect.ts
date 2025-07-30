@@ -47,10 +47,10 @@ export class WalletConnect implements Connector {
   }
   async getNetworkDetails(): Promise<NetworkDetails> {
     return {
-      network: 'public',
+      network:
+        (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET' ? 'testnet' : 'public',
+      networkUrl: constants.StellarConfig.HORIZON_URL,
       networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-      networkUrl:
-        'https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0',
     };
   }
 

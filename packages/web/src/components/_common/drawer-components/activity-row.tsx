@@ -4,8 +4,11 @@
 
 import type { Activity } from '@/types/activity';
 
+import { useTranslate } from '@/locales';
+import { ago } from '@/utils/format-time';
 import { shortenAddress } from '@/utils/format-address';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fTruncate } from '@normalfinance/utils/build/format';
 import { fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -36,7 +39,10 @@ function SplitAvatar({ left, right }: { left: string; right: string }) {
 /* Row component                                                      */
 /* ------------------------------------------------------------------ */
 export function ActivityRow({ activity }: { activity: Activity }) {
-  const time = new Date(activity.timestamp).toLocaleTimeString();
+  const { t } = useTranslate();
+
+  const time = ago(activity.timestamp / 1000);
+  // new Date(activity.timestamp).toLocaleTimeString();
 
   /* ---------- derive icon + sentence ---------------------------- */
   let icon: React.ReactNode;
@@ -46,12 +52,12 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     case 'Sent':
     case 'Received': {
       const {
-        asset: { token, amount },
+        asset: { token, amount, iconUrl },
         address, // <— comes from the activity, not asset
         type,
       } = activity;
 
-      icon = <Avatar src={getCryptoIconUrl(token)} sx={{ width: 32, height: 32 }} />;
+      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
 
       // Sent  ➜ "…to …",  Received ➜ "…from …"
       const preposition = type === 'Sent' ? 'to' : 'from';
@@ -63,16 +69,16 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     }
     case 'Stake':
     case 'Unstake': {
-      const { token, amount } = activity.asset;
-      icon = <Avatar src={getCryptoIconUrl(token)} sx={{ width: 32, height: 32 }} />;
+      const { token, amount, iconUrl } = activity.asset;
+      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
       sentence = `${fCurrencyCompact(amount)} ${token}`;
       break;
     }
     case 'Add Liquidity':
     case 'Remove Liquidity': {
-      const { token, amount } = activity.lpToken;
-      icon = <Avatar src={getCryptoIconUrl(token)} sx={{ width: 32, height: 32 }} />;
-      sentence = `${fCurrencyCompact(amount)} ${token}`;
+      const { token, amount, iconUrl } = activity.tokenB;
+      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${fCurrencyCompact(amount)} ${fTruncate(token, 15)}`;
       break;
     }
     case 'Swapped': {
@@ -99,7 +105,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
         <Stack direction="row" justifyContent="space-between">
           <Typography variant="subtitle2">{activity.type}</Typography>
           <Typography variant="caption" color={grey[500]}>
-            {time}
+            {time} {t('ago')}
           </Typography>
         </Stack>
 

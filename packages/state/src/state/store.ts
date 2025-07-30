@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { createWalletActions } from './wallet/actions';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 import { Horizon } from '@stellar/stellar-sdk';
 import { AppStore, AppStorePersist } from '@normalfinance/types';
 import { createConnectWalletActions } from './persist/createConnectWalletActions';
-import { createLayoutActions } from './layout/actions';
 import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
 import { constants } from '@normalfinance/utils';
@@ -14,9 +13,6 @@ import { createReferralActions } from './persist/createReferralActions';
 export const useAppStore = create<AppStore>()((set, get) => {
   // Create a new server instance.
   const server = new Horizon.Server(constants.StellarConfig.RPC_URL);
-
-  // Create some states for the app and layouting
-  const layout = createLayoutActions(set, get);
 
   // Create a wallet with the given server and network passphrase.
   const wallet = createWalletActions(set, get);
@@ -28,7 +24,6 @@ export const useAppStore = create<AppStore>()((set, get) => {
     server,
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
     ...wallet,
-    ...layout,
     ...loading,
   };
 });

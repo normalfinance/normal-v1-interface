@@ -7,9 +7,9 @@ import { z } from 'zod';
 import { useState, useEffect } from 'react';
 import { constants } from '@normalfinance/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { usePersistStore } from '@normalfinance/state';
 import { useLiquidity, useTokenBalance } from '@/hooks';
 import { useForm, FormProvider } from 'react-hook-form';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box, Stack, Button } from '@mui/material';
 
@@ -57,7 +57,6 @@ export function StepContentPanel({
   tokens,
   queryParams,
 }: StepContentPanelProps) {
-  const store = useAppStore();
   const persistStore = usePersistStore();
 
   const { depositLiquidity } = useLiquidity();
@@ -97,7 +96,6 @@ export function StepContentPanel({
   /* ------------- helpers --------------- */
   const watchToken = methods.watch('tokenASymbol');
   const watchAmount = methods.watch('depositAmount');
-  const selectedToken = store.tokens.find((t) => t.symbol === watchToken) ?? null;
 
   // Check if wallet is connected
   const isWalletConnected = !!persistStore.wallet.address;
@@ -109,7 +107,7 @@ export function StepContentPanel({
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
-    if (!isWalletConnected || !selectedToken || !watchAmount || !tokenBalance) {
+    if (!isWalletConnected || !watchAmount || !tokenBalance) {
       return false;
     }
 
@@ -145,12 +143,6 @@ export function StepContentPanel({
   const isButtonDisabled = () => {
     if (isLoading) return true;
     if (step === 0) return !watchToken;
-    if (step === 1) {
-      if (!watchAmount) return true;
-      if (!isWalletConnected) return false; // Allow wallet connection
-      if (hasInsufficientBalance()) return true; // Disable if insufficient balance
-      return false;
-    }
     return false;
   };
 
@@ -168,6 +160,12 @@ export function StepContentPanel({
         // Button is disabled for insufficient balance
         return;
       }
+
+      await depositLiquidity({
+        asset: watchToken.startsWith('n') ? watchToken.slice(1) : watchToken,
+        token_b_amount: watchAmount,
+      });
+      return;
     }
 
     if (step == 2 && watchAmount !== undefined) {
@@ -204,8 +202,8 @@ export function StepContentPanel({
                 variant="soft"
                 color="success"
                 size="large"
-                disabled={isButtonDisabled()}
                 onClick={handleMainButtonClick}
+                disabled={isButtonDisabled()}
               >
                 {getButtonLabel()}
               </Button>

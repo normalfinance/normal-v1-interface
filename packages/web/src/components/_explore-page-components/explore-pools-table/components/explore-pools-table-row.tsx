@@ -37,6 +37,7 @@ type Props = {
 
 export function ExplorePoolsTableRow({ row, index }: Props) {
   const { t } = useTranslate();
+
   const router = useRouter();
 
   const onClickRow = () => router.push(paths.pools.details(row.address));

@@ -23,21 +23,21 @@ import { CreatePosition } from '@/components/_create-position-page-components/cr
 export default function CreatePositionView() {
   const { t } = useTranslate();
   // const { tokens: apiTokens }
-  const { tokens, getAllTokens, setLoading } = useAppStore();
+  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
   const { params } = useQueryParams<PositionQueryParams>();
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
-      setLoading(true);
+      setGlobalIsLoading(true);
       try {
         await getAllTokens([]);
-        setLoading(false);
+        setGlobalIsLoading(false);
       } catch (e) {
         captureException(e);
         console.error(e);
       } finally {
-        setLoading(false);
+        setGlobalIsLoading(false);
       }
     };
     refreshTokens();

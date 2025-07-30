@@ -49,20 +49,20 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   const theme = useTheme();
 
   const { tokens: apiTokens } = useApiTokens();
-  const { tokens, getAllTokens, setLoading } = useAppStore();
+  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
 
   // Effect hook to fetch all tokens once the component mounts
   React.useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
-      setLoading(true);
+      setGlobalIsLoading(true);
       try {
         await getAllTokens(apiTokens);
-        setLoading(false);
+        setGlobalIsLoading(false);
       } catch (e) {
         captureException(e);
         console.error(e);
       } finally {
-        setLoading(false);
+        setGlobalIsLoading(false);
       }
     };
     refreshTokens();

@@ -23,10 +23,9 @@ const swapFeeInfo: SwapFeeInfo = {
 };
 
 export default function SwapView() {
-  const store = useAppStore();
   const { params } = useQueryParams<TokenActionQueryParams>();
   const { tokens: apiTokens } = useApiTokens();
-  const { tokens, getAllTokens, loading, setLoading } = useAppStore();
+  const { tokens, getAllTokens, globalIsLoading, setGlobalIsLoading } = useAppStore();
 
   // Determine which tab to show based on query params, default to 'swap'
   const activeTab: TokenActionKey = params?.tab || 'swap';
@@ -66,15 +65,15 @@ export default function SwapView() {
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
-      setLoading(true);
+      setGlobalIsLoading(true);
       try {
         await getAllTokens(apiTokens);
-        setLoading(false);
+        setGlobalIsLoading(false);
       } catch (e) {
         captureException(e);
         console.error(e);
       } finally {
-        setLoading(false);
+        setGlobalIsLoading(false);
       }
     };
     refreshTokens();
@@ -97,7 +96,7 @@ export default function SwapView() {
               swapFeeInfo={swapFeeInfo}
               cashBalance={0}
               queryParams={getCardQueryParams()}
-              loading={store.loading}
+              loading={globalIsLoading}
               enabledTabs={enabledTabs}
               initialTab={activeTab}
             />
