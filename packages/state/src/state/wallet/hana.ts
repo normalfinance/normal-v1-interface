@@ -1,5 +1,5 @@
-import freighterApi from "@stellar/freighter-api";
-import { Connector, NetworkDetails } from "@normalfinance/types";
+import { Connector, NetworkDetails } from '@normalfinance/types';
+import { constants } from '@normalfinance/utils';
 
 interface SignTransactionProps {
   xdr: string;
@@ -32,43 +32,36 @@ declare const window: Window & {
         networkPassphrase,
       }: SignTransactionProps): Promise<string>;
       signBlob({ blob, accountToSign }: SignBlobProps): Promise<string>;
-      signAuthEntry({
-        xdr,
-        accountToSign,
-      }: SignAuthEntryProps): Promise<string>;
-      signMessage({
-        message,
-        accountToSign,
-      }: SignMessageProps): Promise<string>;
+      signAuthEntry({ xdr, accountToSign }: SignAuthEntryProps): Promise<string>;
+      signMessage({ message, accountToSign }: SignMessageProps): Promise<string>;
     };
   };
 };
 
 export function hana(): Connector {
   return {
-    id: "hana",
-    name: "Hana Wallet",
-    iconUrl: "/assets/icons/wallets/hana.png",
-    iconBackground: "#fff",
+    id: 'hana',
+    name: 'Hana Wallet',
+    iconUrl: '/assets/icons/wallets/hana.png',
+    iconBackground: '#fff',
     installed: true,
     downloadUrls: {
       browserExtension:
-        "https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en",
+        'https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en',
     },
     async isConnected(): Promise<boolean> {
       // Check if window has hanaWallet
       return !!window.hanaWallet;
     },
     async getNetworkDetails(): Promise<NetworkDetails> {
-      // !TODO - find a better solution here
       return {
-        ...(await freighterApi.getNetworkDetails()),
-        networkUrl:
-          "https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0",
+        network: constants.StellarConfig.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'public',
+        networkUrl: constants.StellarConfig.HORIZON_URL,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
       };
     },
     async isAvailable(): Promise<boolean> {
-      return typeof window !== "undefined" && !!window.hanaWallet?.stellar;
+      return typeof window !== 'undefined' && !!window.hanaWallet?.stellar;
     },
     async getPublicKey(): Promise<string> {
       return await window.hanaWallet!.stellar!.getPublicKey();
