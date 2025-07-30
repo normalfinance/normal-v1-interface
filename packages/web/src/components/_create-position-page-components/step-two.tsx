@@ -1,9 +1,12 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useSnackbar } from 'notistack';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { useTokenPrice, useTokenBalance } from '@/hooks';
+import { formatTokenAmount } from '@/utils/format-stellar';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
 import { constants, getCryptoIconUrl } from '@normalfinance/utils';
@@ -23,9 +26,7 @@ export default function StepTwo() {
   const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
     constants.StellarConfig.XLM_ADDRESS
   );
-  const { data: tokenPrice, isLoading: priceLoading } = useTokenPrice(
-    constants.StellarConfig.XLM_ADDRESS
-  );
+  const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
 
   // -- keep field in sync with the text input ------------------------
   const amount = watch('depositAmount') ?? '';
@@ -42,7 +43,13 @@ export default function StepTwo() {
     }
   };
 
-  const fiatValue = tokenPrice && amount !== '' ? Number(amount) * Number(tokenPrice.data) : 0;
+  const fiatValue = useMemo(() => {
+    if (xlmPrice && amount) {
+      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      return xlm_price.multipliedBy(amount);
+    }
+    return BigNumber(0);
+  }, [xlmPrice, amount]);
 
   return (
     <Stack spacing={3} width={1}>
@@ -95,7 +102,7 @@ export default function StepTwo() {
           />
 
           <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-            {fiatValue > 0 ? fCurrency(fiatValue) : '$0'}
+            {fCurrency(fiatValue.toFixed(2))}
           </Typography>
         </Stack>
 
