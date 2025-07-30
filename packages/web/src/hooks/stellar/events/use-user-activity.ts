@@ -42,7 +42,7 @@ export function useUserActivity(): ReturnType {
       setLoading(true);
 
       const { data, error: e } = await supabase
-        .from('goldsky')
+        .from(constants.StellarConfig.EVENTS_TABLENAME)
         .select('*')
         .eq('transaction_account', userAddress)
         .eq('type', 'contract')
@@ -67,7 +67,7 @@ export function useUserActivity(): ReturnType {
 
             const tx = await server.getTransaction(r.transaction_hash);
             if (tx.status === 'SUCCESS') {
-              parsedEvent.timestamp = tx.createdAt.toString();
+              parsedEvent.timestamp = tx.createdAt * 1000;
             }
 
             return parsedEvent;
@@ -89,7 +89,7 @@ export function useUserActivity(): ReturnType {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'goldsky',
+          table: constants.StellarConfig.EVENTS_TABLENAME,
         },
         async (payload: RealtimePostgresInsertPayload<GoldskyTableRow>) => {
           const { topics, data, transaction_hash } = payload.new;

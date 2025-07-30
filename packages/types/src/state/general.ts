@@ -1,5 +1,4 @@
-import { Server } from "soroban-client";
-import { PersistWalletActions, AppStorePersist } from "./persist";
+import { AppStorePersist } from "./persist";
 import { LayoutActions } from "./layout";
 import { Horizon } from "@stellar/stellar-sdk";
 import { WalletActions } from "./wallet";

@@ -87,7 +87,7 @@ export function useOracleRegistry(): ReturnType {
         asset,
         cached,
         action: defaultAction,
-        skip_validation: true
+        skip_validation: true,
       });
 
       if (oraclePriceData?.result) {
@@ -122,7 +122,7 @@ export function useOracleRegistry(): ReturnType {
         return oraclePriceData.result;
       }
     } catch (e: any) {
-       captureException(e);
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -151,7 +151,7 @@ export function useOracleRegistry(): ReturnType {
         return oracle.result;
       }
     } catch (e: any) {
-       captureException(e);
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }

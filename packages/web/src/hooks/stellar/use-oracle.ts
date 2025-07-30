@@ -100,7 +100,7 @@ export function useOracle(_asset: string): ReturnType {
         setLastPrice(oraclePriceData?.result);
       }
     } catch (e: any) {
-       captureException(e);
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
