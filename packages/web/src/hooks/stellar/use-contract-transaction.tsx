@@ -216,12 +216,14 @@ export const useContractTransaction = () => {
               {
                 variant: 'success',
                 persist: false,
+                autoHideDuration: 7500,
               }
             );
           } else {
             enqueueSnackbar(messages.success, {
               variant: 'success',
               persist: false,
+              autoHideDuration: 7500,
             });
           }
 
@@ -233,6 +235,7 @@ export const useContractTransaction = () => {
           enqueueSnackbar(messages.error, {
             variant: 'error',
             persist: true,
+            autoHideDuration: 7500,
           });
 
           throw error;
