@@ -6,6 +6,7 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { fPercent } from '@/utils/format-number';
+import { formatTokenAmount } from '@/utils/format-stellar';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -124,7 +125,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
             {/* {fCurrency(pool.performance?.position)} */}
-            {position.balance}
+            {formatTokenAmount(position.balance)} XLM
           </Typography>
           <Typography color="text.secondary" variant="caption">
             {t('Position')}

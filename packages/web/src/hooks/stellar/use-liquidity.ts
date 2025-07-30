@@ -25,7 +25,7 @@ export function useLiquidity(): ReturnType {
   const { executeContractTransaction } = useContractTransaction();
 
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const executeLiquidity = async (
     signedTransactionXDR: string,
@@ -71,6 +71,8 @@ export function useLiquidity(): ReturnType {
   };
 
   const depositLiquidity = async (args: DepositLiquidityArgs) => {
+    setLoading(true);
+
     await rateLimitCheck();
 
     const processedArgs = {
@@ -88,23 +90,26 @@ export function useLiquidity(): ReturnType {
         type: TransactionType.DEPOSIT_LIQUIDITY,
         token1: { name: 'XLM', amount: args.token_b_amount },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.deposit(processedArgs, { simulate: !restore });
-        if (restore) return tx;
+      transactionFunction: async (client, restore) =>
+        await client.deposit(processedArgs, { simulate: !restore }),
+      // if (restore) return tx;
 
-        const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+      // const signedTransaction = await tx.signAndSend();
+      // const signedXDR = signedTransaction.assembled?.toXDR();
 
-        if (signedXDR) {
-          return await executeLiquidity(signedXDR, 'Deposit Liquidity');
-        }
+      // if (signedXDR) {
+      //   return await executeLiquidity(signedXDR, 'Deposit Liquidity');
+      // }
 
-        return signedTransaction;
-      },
+      // return signedTransaction;
     });
+
+    setLoading(false);
   };
 
   const withdrawLiquidity = async (args: WithdrawLiquidityArgs) => {
+    setLoading(true);
+
     await rateLimitCheck();
 
     const processedArgs = {
@@ -122,20 +127,21 @@ export function useLiquidity(): ReturnType {
         type: TransactionType.REMOVE_LIQUIDITY,
         token1: { name: 'XLM', amount: args.share_amount },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.withdraw(processedArgs, { simulate: !restore });
-        if (restore) return tx;
+      transactionFunction: async (client, restore) =>
+        await client.withdraw(processedArgs, { simulate: !restore }),
+      // if (restore) return tx;
 
-        const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+      // const signedTransaction = await tx.signAndSend();
+      // const signedXDR = signedTransaction.assembled?.toXDR();
 
-        if (signedXDR) {
-          return await executeLiquidity(signedXDR, 'Withdraw Liquidity');
-        }
+      // if (signedXDR) {
+      //   return await executeLiquidity(signedXDR, 'Withdraw Liquidity');
+      // }
 
-        return signedTransaction;
-      },
+      // return signedTransaction;
     });
+
+    setLoading(false);
   };
 
   return {
