@@ -6,6 +6,7 @@ import { useBoolean } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { ZEALY_QUEST_IDS } from '@/global-config';
+import { formatTokenAmount } from '@/utils/format-stellar';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -27,9 +28,10 @@ export type BalanceRow = {
 type Props = CardProps & {
   title: string;
   yieldPercent: number;
-  staked: number;
+  staked: BigNumber;
   currentBalance: number;
   queryParams?: InsuranceQueryParams;
+  unstakingPeriod: number;
 };
 
 export function StakeBalance({
@@ -39,6 +41,7 @@ export function StakeBalance({
   staked,
   currentBalance,
   queryParams,
+  unstakingPeriod,
   ...other
 }: Props) {
   const { t } = useTranslate();
@@ -67,15 +70,17 @@ export function StakeBalance({
       }}
     >
       <Box component="span" sx={{ color: 'text.secondary' }}>
-        {label}
+        {t(label)}
       </Box>
-      <Box component="span">{formatter(value)}</Box>
+      <Box component="span">
+        {formatter(value)} {label === 'Staked' && 'XLM'}
+      </Box>
     </Box>
   );
 
   // Define default rows if none are provided via props.
   const defaultRows: BalanceRow[] = [
-    { label: 'Staked', value: staked, formatter: fCurrency },
+    { label: 'Staked', value: staked.toNumber(), formatter: formatTokenAmount },
     { label: 'Earned', value: yieldPercent, formatter: fCurrency },
   ];
 
@@ -116,6 +121,7 @@ export function StakeBalance({
           open={manageStake.value}
           onClose={manageStake.onFalse}
           queryParams={queryParams}
+          unstakingPeriod={unstakingPeriod}
         />
       </Box>
     </Card>

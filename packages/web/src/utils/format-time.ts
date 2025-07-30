@@ -288,3 +288,17 @@ export function fSub({
 
   return result;
 }
+
+export function formatDuration(seconds: number): string {
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+
+  if (days > 0) {
+    return `${days} day`;
+  } else if (hours > 0) {
+    return `${hours} hour`;
+  } else {
+    return `${minutes} minute`;
+  }
+}

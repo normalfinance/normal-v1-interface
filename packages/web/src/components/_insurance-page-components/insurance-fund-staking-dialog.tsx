@@ -4,13 +4,16 @@ import type { InsuranceQueryParams } from '@/types/query-params';
 
 import z from 'zod';
 import { paths } from '@/routes/paths';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useState, useEffect } from 'react';
+import { fCurrency } from '@/utils/format-number';
+import { useMemo, useState, useEffect } from 'react';
+import { formatDuration } from '@/utils/format-time';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useTokenPrice, useInsuranceFund } from '@/hooks';
+import { formatTokenAmount } from '@/utils/format-stellar';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { fCurrency, fShortenNumber } from '@/utils/format-number';
-import { constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
@@ -26,11 +29,14 @@ import {
   useTheme,
   InputBase,
   Typography,
+  IconButton,
   DialogTitle,
   DialogContent,
   DialogActions,
   Link as MuiLink,
 } from '@mui/material';
+
+import { Iconify } from '../template/iconify';
 
 // ----------------------------------------------------------------------
 
@@ -67,12 +73,14 @@ export type InsuranceFundStakingDialogProps = {
   onClose?: () => void;
   /** Query parameters for pre-populating form */
   queryParams?: InsuranceQueryParams;
+  unstakingPeriod: number;
 };
 
 export default function InsuranceFundStakingDialog({
   open,
   onClose,
   queryParams,
+  unstakingPeriod,
 }: InsuranceFundStakingDialogProps) {
   const methods = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -85,17 +93,19 @@ export default function InsuranceFundStakingDialog({
   return (
     <FormProvider {...methods}>
       <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-        <Content queryParams={queryParams} />
+        <Content onClose={onClose} queryParams={queryParams} unstakingPeriod={unstakingPeriod} />
       </Dialog>
     </FormProvider>
   );
 }
 
 interface ContentProps {
+  onClose?: () => void;
   queryParams?: InsuranceQueryParams;
+  unstakingPeriod: number;
 }
 
-export const Content: React.FC<ContentProps> = ({ queryParams }) => {
+export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakingPeriod }) => {
   const theme = useTheme();
   const { t } = useTranslate();
 
@@ -105,12 +115,10 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
     setSelectedTab(newValue);
   };
 
-  const { data: xlmPrice, isLoading: tokenPriceLoading } = useTokenPrice(
-    constants.StellarConfig.XLM_ADDRESS
-  );
+  const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
 
   const {
-    insuranceFund,
+    loading: insuranceFundLoading,
     stake,
     onDeposit,
     onRequestWithdraw,
@@ -118,7 +126,15 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
     onWithdraw,
   } = useInsuranceFund();
 
-  const pendingUnstake = stake?.last_withdraw_request_value !== 0;
+  const unstakingPeriodText = formatDuration(unstakingPeriod) ?? '13 days';
+  const unstakingPeriodElapsed = useMemo(
+    () => stake && Date.now() - Number(stake.last_withdraw_request_ts) < unstakingPeriod,
+    [stake, unstakingPeriod]
+  );
+
+  const pendingUnstake = stake
+    ? BigNumber(stake.last_withdraw_request_value).isGreaterThan(0)
+    : true;
 
   // Form stuff
   const { control, setValue, watch } = useFormContext<FormValues>();
@@ -142,7 +158,14 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
       shouldValidate: true,
     });
 
-  const fiatValue = xlmPrice && amount !== '' ? Number(amount) * Number(xlmPrice.data) : 0;
+  const fiatValue = useMemo(() => {
+    if (xlmPrice && amount) {
+      // const shares = formatTokenAmount(stake.if_shares);
+      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      return xlm_price.multipliedBy(amount);
+    }
+    return BigNumber(0);
+  }, [xlmPrice, amount]);
 
   const handleStake = () => {
     onDeposit({ amount });
@@ -161,17 +184,13 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
   };
 
   const getButtonLabel = (): string => {
-    if (!stake || !insuranceFund) return 'Failed to load data';
+    if (stake === undefined) return 'Failed to load stake';
 
-    if (!stake.if_shares) {
+    if (BigNumber(stake.if_shares).isEqualTo(0)) {
       return 'No funds to unstake';
     }
 
-    if (stake.last_withdraw_request_shares > 0) {
-      const now = Date.now();
-      if (now - stake.last_withdraw_request_ts < insuranceFund.unstaking_period) {
-        return 'Cancel unstake request';
-      }
+    if (BigNumber(stake.last_withdraw_request_shares).isGreaterThan(0) && unstakingPeriodElapsed) {
       return 'Unstake';
     }
 
@@ -180,7 +199,14 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
 
   return (
     <>
-      <DialogTitle>{selectedTab === 'stake' ? t('Stake') : t('Unstake')}</DialogTitle>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {selectedTab === 'stake' ? t('Stake') : t('Unstake')}{' '}
+          <IconButton onClick={onClose}>
+            <Iconify icon="mingcute:close-line" width={24} />
+          </IconButton>
+        </Box>
+      </DialogTitle>
       <DialogContent dividers sx={{ maxHeight: 600 }}>
         <Box
           sx={{
@@ -201,11 +227,13 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
         {/* Content */}
         <Alert severity="warning" sx={{ mt: 3 }}>
           {selectedTab === 'stake' ? (
-            t('If you decide to unstake, the amount will be subject to a 13-day cool-down period.')
+            t(
+              `If you decide to unstake, the amount will be subject to a ${unstakingPeriodText} cool-down period.`
+            )
           ) : (
             <>
               {t(
-                'Funds will be available to withdraw 13 days after making an unstake request. You can only have one pending unstake request at a time. You can cancel a request at any time, noting your 13-day cool-down period will restart upon any new unstake request.'
+                `Funds will be available to withdraw ${unstakingPeriodText}s after making an unstake request. You can only have one pending unstake request at a time. You can cancel a request at any time, noting your ${unstakingPeriodText} cool-down period will restart upon any new unstake request.`
               )}{' '}
               <MuiLink
                 href={`${paths.docs}/developers/insurance-fund`}
@@ -260,7 +288,7 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
             />
 
             <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-              {fiatValue > 0 ? fCurrency(fiatValue) : '$0'}
+              {fCurrency(fiatValue.toFixed(2))}
             </Typography>
           </Stack>
 
@@ -337,7 +365,7 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
                       fontSize: '12px',
                     }}
                   >
-                    {fShortenNumber(stake?.if_shares ?? 0)}
+                    {formatTokenAmount(stake ? stake.if_shares : 0)} XLM
                   </Typography>
                 </Box>
 
@@ -377,7 +405,7 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
                       fontSize: '12px',
                     }}
                   >
-                    {fShortenNumber(stake?.last_withdraw_request_shares ?? 0)}
+                    {formatTokenAmount(stake ? stake.last_withdraw_request_shares : 0)} XLM
                   </Typography>
                 </Box>
               </Box>
@@ -388,20 +416,41 @@ export const Content: React.FC<ContentProps> = ({ queryParams }) => {
 
       <DialogActions>
         {selectedTab === 'stake' && (
-          <Button variant="contained" color="secondary" onClick={handleStake} autoFocus>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={handleStake}
+            loading={insuranceFundLoading}
+            autoFocus
+          >
             {t('Stake')}
           </Button>
         )}
         {selectedTab === 'unstake' && (
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={handleUnstakeButtonClick}
-            autoFocus
-            disabled={pendingUnstake}
-          >
-            {getButtonLabel()}
-          </Button>
+          <>
+            {pendingUnstake && (
+              <Button
+                variant="contained"
+                color="error"
+                onClick={onCancelRequestWithdraw}
+                loading={insuranceFundLoading}
+                autoFocus
+              >
+                {t('Cancel unstake')}
+              </Button>
+            )}
+
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={handleUnstakeButtonClick}
+              loading={insuranceFundLoading}
+              autoFocus
+              disabled={pendingUnstake}
+            >
+              {getButtonLabel()}
+            </Button>
+          </>
         )}
       </DialogActions>
     </>

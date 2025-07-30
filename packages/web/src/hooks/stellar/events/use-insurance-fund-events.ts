@@ -4,11 +4,10 @@ import type { events } from '@normalfinance/types';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
-import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
-import { constants, parseEvent, convertContractAddressToHex } from '@normalfinance/utils';
+import { constants, rpcServer, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -19,10 +18,6 @@ interface ReturnType {
 }
 
 // ----------------------------------------------------------------------
-
-const server = new rpc.Server(constants.StellarConfig.RPC_URL);
-
-const CONTRACT_ID = convertContractAddressToHex(constants.StellarConfig.INSURANCE_FUND_ADDRESS);
 
 export function useInsuranceFundEvents(): ReturnType {
   const [error, setError] = useState(null);
@@ -35,9 +30,9 @@ export function useInsuranceFundEvents(): ReturnType {
       setError(null);
       setLoading(true);
       const { data, error: e } = await supabase
-        .from('goldsky')
+        .from(constants.StellarConfig.EVENTS_TABLENAME)
         .select('*')
-        .eq('contract_id', CONTRACT_ID)
+        .eq('contract_id', constants.StellarConfig.INSURANCE_FUND_ADDRESS)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
         .order('id', { ascending: false });
@@ -57,9 +52,9 @@ export function useInsuranceFundEvents(): ReturnType {
               r.transaction_hash
             ) as events.InsuranceFundEvent;
 
-            const tx = await server.getTransaction(r.transaction_hash);
+            const tx = await rpcServer.getTransaction(r.transaction_hash);
             if (tx.status === 'SUCCESS') {
-              parsedEvent.timestamp = tx.createdAt.toString();
+              parsedEvent.timestamp = tx.createdAt * 1000;
             }
 
             return parsedEvent;
@@ -82,8 +77,8 @@ export function useInsuranceFundEvents(): ReturnType {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'goldsky',
-          filter: `contract_id=eq.${CONTRACT_ID}`,
+          table: constants.StellarConfig.EVENTS_TABLENAME,
+          filter: `contract_id=eq.${constants.StellarConfig.INSURANCE_FUND_ADDRESS}`,
         },
         async (payload: RealtimePostgresInsertPayload<GoldskyTableRow>) => {
           const { topics, data, transaction_hash } = payload.new;
@@ -94,9 +89,9 @@ export function useInsuranceFundEvents(): ReturnType {
               transaction_hash
             ) as events.InsuranceFundEvent;
 
-            const tx = await server.getTransaction(transaction_hash);
+            const tx = await rpcServer.getTransaction(transaction_hash);
             if (tx.status === 'SUCCESS') {
-              parsed.timestamp = tx.createdAt.toString();
+              parsed.timestamp = tx.createdAt * 1000;
             }
 
             setEvents((prev) => [parsed, ...prev]);
