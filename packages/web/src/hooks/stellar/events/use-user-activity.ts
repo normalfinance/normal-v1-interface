@@ -22,7 +22,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-const server = new rpc.Server(constants.RPC_URL);
+const server = new rpc.Server(constants.StellarConfig.RPC_URL);
 
 export function useUserActivity(): ReturnType {
   const store = usePersistStore();

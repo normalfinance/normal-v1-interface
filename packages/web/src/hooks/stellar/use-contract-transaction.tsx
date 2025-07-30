@@ -123,8 +123,8 @@ export const useContractTransaction = () => {
       transactionDetails,
     }: ExecuteContractTransactionParams<T>) => {
       const signer = getSigner(storePersist, appStore);
-      const networkPassphrase = constants.NETWORK_PASSPHRASE;
-      const rpcUrl = constants.RPC_URL;
+      const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
+      const rpcUrl = constants.StellarConfig.RPC_URL;
       const publicKey = storePersist.wallet.address!;
 
       const run = async (restore: boolean = false): Promise<{ transactionId?: string }> => {

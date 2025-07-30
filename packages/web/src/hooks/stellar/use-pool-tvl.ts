@@ -24,12 +24,10 @@ export function usePoolTVL(): ReturnType {
 
   const fetchTVL = useCallback(async (asset: string) => {
     try {
-      await rateLimitCheck();
-
       const PoolRouter = new PoolRouterContract.Client({
-        contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const tvl = await PoolRouter.get_total_liquidity({ asset });

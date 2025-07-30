@@ -34,7 +34,7 @@ const bucketCounts: Record<ChartTimeframeKey, number> = {
 };
 
 // ----------------------------------------------------------------------
-const server = new rpc.Server(constants.RPC_URL);
+const server = new rpc.Server(constants.StellarConfig.RPC_URL);
 
 const twelveMonthsAgo = new Date();
 twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);

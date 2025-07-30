@@ -15,13 +15,13 @@ import { constants, getCryptoIconUrl, Signer } from '@normalfinance/utils';
 import { Contract, TransactionBuilder, rpc, scValToNative } from '@stellar/stellar-sdk';
 
 export async function getPoolsInfo(): Promise<{ pools: any; latestLedger: number }> {
-  const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
-  tx_builder.addOperation(new Contract(constants.POOL_ROUTER_ADDRESS).call('get_pools'));
-  const stellar_rpc = new rpc.Server(constants.RPC_URL);
+  tx_builder.addOperation(new Contract(constants.StellarConfig.POOL_ROUTER_ADDRESS).call('get_pools'));
+  const stellar_rpc = new rpc.Server(constants.StellarConfig.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
   console.log(result);
   if (rpc.Api.isSimulationSuccess(result) && result.result) {
@@ -58,10 +58,10 @@ export const createWalletActions = (
       }
 
       const poolRouter = new PoolRouterContract.Client({
-        // publicKey: constants.TESTING_SOURCE.accountId(),
-        contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        // publicKey: constants.StellarConfig.TESTING_SOURCE.accountId(),
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       // Fetch all available tokens from chain
@@ -90,10 +90,10 @@ export const createWalletActions = (
       // =================================================================
 
       const oracleRegistry = new OracleRegistryContract.Client({
-        // publicKey: constants.TESTING_SOURCE.accountId(),
-        contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        // publicKey: constants.StellarConfig.TESTING_SOURCE.accountId(),
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const _tokens = getState().tokens.map(async (token: Token) => {
@@ -126,8 +126,8 @@ export const createWalletActions = (
 
       const TokenContract = new SorobanTokenContract.Client({
         contractId: tokenAddress.toString(),
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       // BALANCE

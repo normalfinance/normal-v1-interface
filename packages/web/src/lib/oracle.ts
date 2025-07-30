@@ -14,17 +14,17 @@ export interface PriceData {
 }
 
 export async function getOraclePrice(oracle_id: string, token_id: string): Promise<PriceData> {
-  const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
   const asset = xdr.ScVal.scvVec([
     xdr.ScVal.scvSymbol('Stellar'),
     Address.fromString(token_id).toScVal(),
   ]);
   tx_builder.addOperation(new Contract(oracle_id).call('lastprice', asset));
-  const stellar_rpc = new rpc.Server(constants.RPC_URL);
+  const stellar_rpc = new rpc.Server(constants.StellarConfig.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
   if (rpc.Api.isSimulationSuccess(result)) {
     const xdr_str = result.result?.retval.toXDR('base64');
@@ -48,13 +48,13 @@ export async function getOraclePrice(oracle_id: string, token_id: string): Promi
 export async function getOracleDecimals(
   oracle_id: string
 ): Promise<{ decimals: number; latestLedger: number }> {
-  const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
   tx_builder.addOperation(new Contract(oracle_id).call('decimals'));
-  const stellar_rpc = new rpc.Server(constants.RPC_URL);
+  const stellar_rpc = new rpc.Server(constants.StellarConfig.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
   if (rpc.Api.isSimulationSuccess(result)) {
     const val = scValToNative((result as any).result.retval);
