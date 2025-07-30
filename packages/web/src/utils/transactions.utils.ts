@@ -1,6 +1,7 @@
 import type { TransactionDetails } from '@/types/transaction';
 import type { StellarExpertResourceType } from '@normalfinance/types';
 
+import { constants } from '@normalfinance/utils';
 import { TransactionType } from '@/types/transaction';
 
 export const getTransactionMessages = (details: TransactionDetails) => {
@@ -75,11 +76,10 @@ export const getTransactionMessages = (details: TransactionDetails) => {
       };
   }
 };
-export const getStellarExpertNetwork = () =>
-  // can be public or testnet, default to public, depends on the network passphrase
-  'public';
 
 export const createStellarExpertUrl = (type: StellarExpertResourceType, id: string) => {
-  const network = getStellarExpertNetwork();
+  const network = constants.StellarConfig.NETWORK_PASSPHRASE.includes('Test')
+    ? 'testnet'
+    : 'public';
   return `https://stellar.expert/explorer/${network}/${type}/${id}`;
 };
