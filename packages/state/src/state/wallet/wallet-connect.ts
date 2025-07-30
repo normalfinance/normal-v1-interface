@@ -47,7 +47,8 @@ export class WalletConnect implements Connector {
   }
   async getNetworkDetails(): Promise<NetworkDetails> {
     return {
-      network: constants.StellarConfig.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'public',
+      network:
+        (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET' ? 'testnet' : 'public',
       networkUrl: constants.StellarConfig.HORIZON_URL,
       networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
     };

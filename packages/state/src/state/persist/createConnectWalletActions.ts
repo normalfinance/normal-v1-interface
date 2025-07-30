@@ -55,7 +55,10 @@ export const createConnectWalletActions = () => {
     connectWallet: async (wallet: string) => {
       // Get the network details from the user's wallet.
       const networkDetails = {
-        network: constants.StellarConfig.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'public', // 'Testnet',
+        network:
+          (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET'
+            ? 'testnet'
+            : 'public',
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         networkUrl: constants.StellarConfig.HORIZON_URL, // "https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0",
         sorobanRpcUrl: constants.StellarConfig.RPC_URL, // "https://bitter-alpha-layer.stellar-mainnet.quiknode.pro/54b50c548864e1470fd52dbd629b647d556b983e",
