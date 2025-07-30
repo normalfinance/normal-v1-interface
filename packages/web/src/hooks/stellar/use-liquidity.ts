@@ -25,7 +25,7 @@ export function useLiquidity(): ReturnType {
   const { executeContractTransaction } = useContractTransaction();
 
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const executeLiquidity = async (
     signedTransactionXDR: string,
@@ -71,6 +71,8 @@ export function useLiquidity(): ReturnType {
   };
 
   const depositLiquidity = async (args: DepositLiquidityArgs) => {
+    setLoading(true);
+
     await rateLimitCheck();
 
     const processedArgs = {
@@ -102,9 +104,13 @@ export function useLiquidity(): ReturnType {
         return signedTransaction;
       },
     });
+
+    setLoading(false);
   };
 
   const withdrawLiquidity = async (args: WithdrawLiquidityArgs) => {
+    setLoading(true);
+
     await rateLimitCheck();
 
     const processedArgs = {
@@ -136,6 +142,8 @@ export function useLiquidity(): ReturnType {
         return signedTransaction;
       },
     });
+
+    setLoading(false);
   };
 
   return {

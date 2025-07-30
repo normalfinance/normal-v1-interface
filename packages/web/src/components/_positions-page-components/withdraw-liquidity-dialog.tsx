@@ -4,6 +4,7 @@ import type { PoolPosition } from '@/hooks';
 import type { PoolQueryParams } from '@/types/query-params';
 
 import z from 'zod';
+import BigNumber from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useMemo, useEffect } from 'react';
 import { fCurrency } from '@/utils/format-number';
@@ -30,8 +31,6 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-
-import BigNumber from 'bignumber.js';
 
 /* ------------------------------------------------------------------ */
 /* Zod schema                                                          */
@@ -89,7 +88,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
   const { t } = useTranslate();
   const store = usePersistStore();
 
-  const { withdrawLiquidity } = useLiquidity();
+  const { loading: txLoading, withdrawLiquidity } = useLiquidity();
 
   // Get token balance for the LP token
   const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(position.tokenAddress);
@@ -287,7 +286,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                     fontSize: '12px',
                   }}
                 >
-                  {position.balance}
+                  {formatTokenAmount(position.balance)} XLM
                 </Typography>
               </Box>
             </Box>
@@ -296,7 +295,14 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       </DialogContent>
 
       <DialogActions>
-        <Button variant="contained" color="secondary" onClick={handleWithdrawButtonClick} autoFocus>
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleWithdrawButtonClick}
+          disabled={getButtonLabel() !== 'Withdraw'}
+          loading={txLoading}
+          autoFocus
+        >
           {getButtonLabel()}
         </Button>
       </DialogActions>
