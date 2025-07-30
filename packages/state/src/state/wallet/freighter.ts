@@ -1,26 +1,30 @@
-import freighterApi from "@stellar/freighter-api";
-import { Connector, NetworkDetails } from "@normalfinance/types";
+import freighterApi from '@stellar/freighter-api';
+import { Connector, NetworkDetails } from '@normalfinance/types';
+import { constants } from '@normalfinance/utils';
 
 export function freighter(): Connector {
   return {
-    id: "freighter",
-    name: "Freighter",
-    iconUrl: "/assets/icons/wallets/freighter.svg",
-    iconBackground: "#fff",
+    id: 'freighter',
+    name: 'Freighter',
+    iconUrl: '/assets/icons/wallets/freighter.svg',
+    iconBackground: '#fff',
     installed: true,
     downloadUrls: {
       browserExtension:
-        "https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en",
+        'https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en',
     },
     async isConnected(): Promise<boolean> {
       return !!freighterApi?.isConnected();
     },
     async getNetworkDetails(): Promise<NetworkDetails> {
-      // !TODO - find a better solution here
       return {
-        ...(await freighterApi.getNetworkDetails()),
-        networkUrl:
-          "https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0",
+        // ...(await freighterApi.getNetworkDetails()),
+        network:
+          (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET'
+            ? 'testnet'
+            : 'public',
+        networkUrl: constants.StellarConfig.HORIZON_URL,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
       };
     },
     async getPublicKey(): Promise<string> {

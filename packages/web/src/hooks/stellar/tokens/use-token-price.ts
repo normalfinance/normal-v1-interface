@@ -1,37 +1,69 @@
-import useSWRImmutable from 'swr/immutable';
-import { getOraclePrice } from '@/lib/oracle';
-import { usePersistStore } from '@normalfinance/state';
+import { constants } from '@normalfinance/utils';
+import { captureException } from '@sentry/nextjs';
+import { useState, useEffect, useCallback } from 'react';
+import { OracleRegistryContract } from '@normalfinance/contracts';
 
-interface FetchTokenBalanceProps {
-  oracleAddress: string;
-  tokenAddress: string;
+// ----------------------------------------------------------------------
+
+interface ReturnType {
+  error: any | null;
+  loading: boolean;
+  price: number | undefined;
 }
 
-const fetchOraclePrice = async ({ oracleAddress, tokenAddress }: FetchTokenBalanceProps) => {
-  const { price, timestamp } = await getOraclePrice(oracleAddress, tokenAddress);
+// ----------------------------------------------------------------------
 
-  if (price === null) {
-    throw new Error('Failed to fetch price');
-  }
-
-  return { data: price, validAccount: true };
+const defaultAction: OracleRegistryContract.NormalAction = {
+  tag: 'UpdateTwap',
+  values: undefined,
 };
 
-export const useTokenPrice = (tokenAddress: string | null) => {
-  const store = usePersistStore();
-  const address = store.wallet.address;
+export const useTokenPrice = (asset: string): ReturnType => {
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [price, setPrice] = useState<number | undefined>(undefined);
 
-  const canFetch = !!(address && tokenAddress);
+  const getPrice = useCallback(async () => {
+    try {
+      setError(null);
+      setLoading(true);
 
-  const { data, isLoading, mutate, error } = useSWRImmutable(
-    canFetch ? ['token-price', tokenAddress, address] : null,
-    ([, tokenAddr, addr]) => fetchOraclePrice({ oracleAddress: '', tokenAddress: tokenAddr })
-  );
+      // await rateLimitCheck();
+
+      const OracleRegistry = new OracleRegistryContract.Client({
+        contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
+      });
+
+      const oraclePriceData = await OracleRegistry.get_price({
+        asset,
+        cached: false,
+        action: defaultAction,
+        skip_validation: true,
+      });
+
+      if (oraclePriceData.result) {
+        setPrice(oraclePriceData.result.price);
+      }
+    } catch (e: any) {
+      captureException(e);
+      console.log(e);
+      setError(e.toString());
+    }
+
+    setLoading(false);
+    return;
+  }, []);
+
+  // On component mount, fetch OracleRegistry and price
+  useEffect(() => {
+    getPrice();
+  }, [getPrice]);
 
   return {
-    data: canFetch ? data : null,
-    isLoading: canFetch ? isLoading : false,
-    mutate,
-    isError: canFetch ? error : null,
+    error,
+    loading,
+    price,
   };
 };

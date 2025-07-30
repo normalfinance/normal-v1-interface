@@ -1,7 +1,7 @@
 'use client';
 
 import { constants } from '@normalfinance/utils';
-import { usePersistStore } from '@normalfinance/state';
+import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract, LiquidityCalculatorContract } from '@normalfinance/contracts';
 
@@ -20,7 +20,6 @@ export function useTotalTVL(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [totalTVL, setTotalTVl] = useState<number | undefined>(undefined);
-  const storePersist = usePersistStore();
 
   const fetchTVL = useCallback(async () => {
     try {
@@ -46,6 +45,7 @@ export function useTotalTVL(): ReturnType {
         }
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e);
     }

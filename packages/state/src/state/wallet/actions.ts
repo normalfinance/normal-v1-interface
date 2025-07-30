@@ -64,7 +64,7 @@ export const createWalletActions = (
       // =================================================================
 
       const oracleRegistry = new OracleRegistryContract.Client({
-        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         rpcUrl: constants.StellarConfig.RPC_URL,
       });

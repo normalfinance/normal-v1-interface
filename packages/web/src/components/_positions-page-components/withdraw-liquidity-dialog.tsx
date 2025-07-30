@@ -4,11 +4,13 @@ import type { PoolPosition } from '@/hooks';
 import type { PoolQueryParams } from '@/types/query-params';
 
 import z from 'zod';
-import { useEffect } from 'react';
+import BigNumber from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useMemo, useEffect } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
+import { formatTokenAmount } from '@/utils/format-stellar';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useLiquidity, useTokenPrice, useTokenBalance } from '@/hooks';
@@ -86,13 +88,13 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
   const { t } = useTranslate();
   const store = usePersistStore();
 
-  const { withdrawLiquidity } = useLiquidity();
+  const { loading: txLoading, withdrawLiquidity } = useLiquidity();
 
   // Get token balance for the LP token
   const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(position.tokenAddress);
 
   // Get the price for XLM
-  const { data: xlmPrice, isLoading: tokenPriceLoading } = useTokenPrice(
+  const { loading: priceLoading, price: xlmPrice } = useTokenPrice(
     constants.StellarConfig.XLM_ADDRESS
   );
 
@@ -120,7 +122,13 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       shouldValidate: true,
     });
 
-  const fiatValue = xlmPrice && amount !== '' ? Number(amount) * Number(xlmPrice.data) : 0;
+  const fiatValue = useMemo(() => {
+    if (xlmPrice && amount) {
+      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      return xlm_price.multipliedBy(amount);
+    }
+    return new BigNumber(0);
+  }, [xlmPrice, amount]);
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
@@ -202,7 +210,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
             />
 
             <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-              {fiatValue > 0 ? fCurrency(fiatValue) : '$0'}
+              {fCurrency(fiatValue.toFixed(2))}
             </Typography>
           </Stack>
 
@@ -278,7 +286,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                     fontSize: '12px',
                   }}
                 >
-                  {position.balance}
+                  {formatTokenAmount(position.balance)} XLM
                 </Typography>
               </Box>
             </Box>
@@ -287,7 +295,14 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       </DialogContent>
 
       <DialogActions>
-        <Button variant="contained" color="secondary" onClick={handleWithdrawButtonClick} autoFocus>
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleWithdrawButtonClick}
+          disabled={getButtonLabel() !== 'Withdraw'}
+          loading={txLoading}
+          autoFocus
+        >
           {getButtonLabel()}
         </Button>
       </DialogActions>

@@ -193,7 +193,7 @@ function WalletConnected({ address }: { address: string }) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
 
-  const { tokens, getAllTokens, setLoading } = useAppStore();
+  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
   const { tokens: apiTokens } = useApiTokens();
 
   const { positions } = useLiquidityPositions();
@@ -227,15 +227,15 @@ function WalletConnected({ address }: { address: string }) {
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
-      setLoading(true);
+      setGlobalIsLoading(true);
       try {
         await getAllTokens(apiTokens);
-        setLoading(false);
+        setGlobalIsLoading(false);
       } catch (e) {
         Sentry.captureException(e);
         console.error(e);
       } finally {
-        setLoading(false);
+        setGlobalIsLoading(false);
       }
     };
     refreshTokens();
@@ -276,9 +276,9 @@ function WalletConnected({ address }: { address: string }) {
       <ConnectedWallet
         balance={0}
         percentageChange={0}
-        tokens={tokens}
-        positions={positions ?? []}
-        activity={[]}
+        tokens={[]}
+        positions={[]}
+        activity={recentActivity}
       />
     </Box>
   );

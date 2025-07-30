@@ -4,12 +4,11 @@ import type { events } from '@normalfinance/types';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 import type { ChartTimeframeKey, ExplorerChartData } from '@/components/_pool-page-components';
 
-import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
-import { constants, parseEvent } from '@normalfinance/utils';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
+import { constants, rpcServer, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -34,10 +33,6 @@ const bucketCounts: Record<ChartTimeframeKey, number> = {
 };
 
 // ----------------------------------------------------------------------
-const server = new rpc.Server(constants.StellarConfig.RPC_URL);
-
-const twelveMonthsAgo = new Date();
-twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
 
 export function usePoolPriceChart(poolAddress: string): ReturnType {
   const [error, setError] = useState(null);
@@ -70,14 +65,18 @@ export function usePoolPriceChart(poolAddress: string): ReturnType {
     const now = Date.now();
 
     const fetchPriceData = async () => {
+      const blocksPerYear = (365 * 24 * 60 * 60) / 5;
+      const ledger = await rpcServer.getLatestLedger();
+      const ledgerOneYearAgo = ledger.sequence - blocksPerYear;
+
       const { data, error: e } = await supabase
-        .from('realtime goldsky')
+        .from(constants.StellarConfig.EVENTS_TABLENAME)
         .select('*')
         .eq('contract_id', poolAddress)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
-        .contains('topics', ['rebalance'])
-        .gte('timestamp', twelveMonthsAgo.toISOString())
+        .ilike('topics', `%rebalance%`)
+        .gte('ledger_sequence', ledgerOneYearAgo)
         .order('id', { ascending: true });
 
       if (e) {
@@ -98,7 +97,7 @@ export function usePoolPriceChart(poolAddress: string): ReturnType {
         const priceBuckets: number[][] = Array.from({ length: buckets }, () => []);
 
         for (const row of rows) {
-          const tx = await server.getTransaction(row.transaction_hash);
+          const tx = await rpcServer.getTransaction(row.transaction_hash);
 
           if (tx.status == 'SUCCESS') {
             const ts = new Date(tx.createdAt).getTime();
@@ -131,14 +130,18 @@ export function usePoolPriceChart(poolAddress: string): ReturnType {
     };
 
     const fetchVolumeData = async () => {
+      const blocksPerYear = (365 * 24 * 60 * 60) / 5;
+      const ledger = await rpcServer.getLatestLedger();
+      const ledgerOneYearAgo = ledger.sequence - blocksPerYear;
+
       const { data, error: e } = await supabase
-        .from('goldsky')
+        .from(constants.StellarConfig.EVENTS_TABLENAME)
         .select('*')
         .eq('contract_id', poolAddress)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
-        .contains('topics', ['swap'])
-        .gte('timestamp', twelveMonthsAgo.toISOString())
+        .ilike('topics', `%swap%`)
+        .gte('ledger_sequence', ledgerOneYearAgo)
         .order('id', { ascending: true });
 
       if (e) {
@@ -160,7 +163,7 @@ export function usePoolPriceChart(poolAddress: string): ReturnType {
         const volumeBuckets: number[][] = Array.from({ length: buckets }, () => []);
 
         for (const row of rows) {
-          const tx = await server.getTransaction(row.transaction_hash);
+          const tx = await rpcServer.getTransaction(row.transaction_hash);
 
           if (tx.status == 'SUCCESS') {
             const ts = new Date(tx.createdAt).getTime();
@@ -195,7 +198,7 @@ export function usePoolPriceChart(poolAddress: string): ReturnType {
 
     fetchPriceData();
     fetchVolumeData();
-  }, [chartData, poolAddress]);
+  }, [poolAddress]);
 
   return {
     error,

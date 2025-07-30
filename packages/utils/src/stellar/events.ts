@@ -16,87 +16,126 @@ export function parseSymbol(value: SorobanPrimitive): string {
   throw new Error(`Expected symbol but got ${JSON.stringify(value)}`);
 }
 
+export function parseVec(value: SorobanPrimitive): SorobanPrimitive[] {
+  if ('vec' in value) return value.vec;
+  throw new Error(`Expected vec but got ${JSON.stringify(value)}`);
+}
+
 export function parseEvent(
   topics: SorobanPrimitive[],
-  data: SorobanPrimitive[],
+  data: SorobanPrimitive,
   txHash: string
 ): events.NormalContractEvent {
   const type = parseSymbol(topics[0]);
 
+  const parsedData = parseVec(data);
+
   switch (type) {
-    // ─── Pool Events ──────────────────────────────────
+    // ─── Pool and Pool Router Events ──────────────────────────────────
 
-    case 'deposit_liquidity':
-      return {
-        type,
-        token: parseAddress(topics[1]),
-        user: parseAddress(topics[2]),
-        amount: parseBigInt(data[0]),
-        shareAmount: parseBigInt(data[1]),
-        txHash,
-        timestamp: '',
-      };
+    case 'deposit_liquidity': {
+      if (topics.length === 4 && parsedData.length === 2) {
+        // PoolRouter
+        return {
+          type,
+          asset: parseSymbol(topics[1]),
+          pool: parseAddress(topics[2]),
+          user: parseAddress(topics[3]),
+          amount: parseBigInt(parsedData[0]),
+          shareAmount: parseBigInt(parsedData[1]),
+          txHash,
+          timestamp: undefined,
+        };
+      } else {
+        // Pool
+        return {
+          type,
+          token: parseAddress(topics[1]),
+          user: parseAddress(topics[2]),
+          amount: parseBigInt(parsedData[0]),
+          shareAmount: parseBigInt(parsedData[1]),
+          txHash,
+          timestamp: undefined,
+        };
+      }
+    }
 
-    case 'withdraw_liquidity':
-      return {
-        type,
-        token: parseAddress(topics[1]),
-        user: parseAddress(topics[2]),
-        shareAmount: parseBigInt(data[0]),
-        amount: parseBigInt(data[1]),
-        txHash,
-        timestamp: '',
-      };
+    case 'withdraw_liquidity': {
+      if (topics.length === 4 && parsedData.length === 2) {
+        // PoolRouter
+        return {
+          type,
+          asset: parseSymbol(topics[1]),
+          pool: parseAddress(topics[2]),
+          user: parseAddress(topics[3]),
+          shareAmount: parseBigInt(parsedData[0]),
+          amount: parseBigInt(parsedData[1]),
+          txHash,
+          timestamp: undefined,
+        };
+      } else {
+        // Pool
+        return {
+          type,
+          token: parseAddress(topics[1]),
+          user: parseAddress(topics[2]),
+          shareAmount: parseBigInt(parsedData[0]),
+          amount: parseBigInt(parsedData[1]),
+          txHash,
+          timestamp: undefined,
+        };
+      }
+    }
 
     case 'swap': {
-      if (topics.length === 4 && data.length === 8) {
+      if (topics.length === 4 && parsedData.length === 8) {
         // FeeSwapEvent (PoolSwapFee)
         return {
           type,
           asset: parseSymbol(topics[1]),
           pool: parseAddress(topics[2]),
           user: parseAddress(topics[3]),
-          direction: parseSymbol(data[0]),
-          inAmount: parseBigInt(data[1]),
-          outAmount: parseBigInt(data[2]),
-          feeAmount: parseBigInt(data[3]),
-          lpFee: parseBigInt(data[4]),
-          bufferFee: parseBigInt(data[5]),
-          ifPremium: parseBigInt(data[6]),
-          revenueFee: parseBigInt(data[7]),
+          direction: parseSymbol(parsedData[0]),
+          inAmount: parseBigInt(parsedData[1]),
+          outAmount: parseBigInt(parsedData[2]),
+          feeAmount: parseBigInt(parsedData[3]),
+          lpFee: parseBigInt(parsedData[4]),
+          bufferFee: parseBigInt(parsedData[5]),
+          ifPremium: parseBigInt(parsedData[6]),
+          revenueFee: parseBigInt(parsedData[7]),
           txHash,
-          timestamp: '',
+          timestamp: undefined,
         };
-      } else if (topics.length === 4 && data.length === 3) {
-        // RouterSwapEvent (PoolRouter)
+      } else if (topics.length === 4 && parsedData.length === 3) {
+        // PoolRouterSwapEvent (PoolRouter)
         return {
           type,
           asset: parseSymbol(topics[1]),
           pool: parseAddress(topics[2]),
           user: parseAddress(topics[3]),
-          direction: parseSymbol(data[0]),
-          inAmount: parseBigInt(data[1]),
-          outAmount: parseBigInt(data[2]),
+          direction: parseSymbol(parsedData[0]),
+          inAmount: parseBigInt(parsedData[1]),
+          outAmount: parseBigInt(parsedData[2]),
           txHash,
-          timestamp: '',
+          timestamp: undefined,
         };
       }
 
       throw new Error(
-        `Malformed swap event: topics.length = ${topics.length}, data.length = ${data.length}`
+        `Malformed swap event: topics.length = ${topics.length}, parsedData.length = ${parsedData.length}`
       );
     }
 
     case 'rebalance':
       return {
         type,
-        reserveA: parseBigInt(data[0]),
-        reserveB: parseBigInt(data[1]),
-        newReserveA: parseBigInt(data[2]),
-        newReserveB: parseBigInt(data[3]),
-        deltaA: parseBigInt(data[4]),
+        reserveA: parseBigInt(parsedData[0]),
+        reserveB: parseBigInt(parsedData[1]),
+        newReserveA: parseBigInt(parsedData[2]),
+        newReserveB: parseBigInt(parsedData[3]),
+        deltaA: parseBigInt(parsedData[4]),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     // ─── Buffer Events ───────────────────────────────────────────
@@ -105,10 +144,10 @@ export function parseEvent(
       return {
         type,
         token: parseAddress(topics[1]),
-        user: parseAddress(data[0]),
-        amount: parseBigInt(data[1]),
+        user: parseAddress(parsedData[0]),
+        amount: parseBigInt(parsedData[1]),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     case 'resolve_liquidity_deficit':
@@ -116,31 +155,31 @@ export function parseEvent(
         type,
         pool: parseAddress(topics[1]),
         token: parseAddress(topics[2]),
-        user: parseAddress(data[0]),
-        amount: parseBigInt(data[1]),
-        paid: parseBigInt(data[2]),
+        user: parseAddress(parsedData[0]),
+        amount: parseBigInt(parsedData[1]),
+        paid: parseBigInt(parsedData[2]),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     case 'withdraw_surplus':
       return {
         type,
         token: parseAddress(topics[1]),
-        user: parseAddress(data[0]),
-        amount: parseBigInt(data[1]),
+        user: parseAddress(parsedData[0]),
+        amount: parseBigInt(parsedData[1]),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     case 'skim':
       return {
         type,
         token: parseAddress(topics[1]),
-        user: parseAddress(data[0]),
-        amount: parseBigInt(data[1]),
+        user: parseAddress(parsedData[0]),
+        amount: parseBigInt(parsedData[1]),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     // ─── Insurance Fund Events ──────────────────────────────────
@@ -149,24 +188,24 @@ export function parseEvent(
       return {
         type,
         user: parseAddress(topics[1]),
-        action: parseSymbol(topics[2]),
-        amount: parseBigInt(data[0]),
-        insuranceVaultAmountBefore: parseBigInt(data[1]),
-        ifSharesBefore: parseBigInt(data[2]),
-        totalIfSharesBefore: parseBigInt(data[3]),
-        ifSharesAfter: parseBigInt(data[4]),
-        totalIfSharesAfter: parseBigInt(data[5]),
+        action: parseSymbol(parseVec(topics[2])[0]),
+        amount: parseBigInt(parsedData[0]),
+        insuranceVaultAmountBefore: parseBigInt(parsedData[1]),
+        ifSharesBefore: parseBigInt(parsedData[2]),
+        totalIfSharesBefore: parseBigInt(parsedData[3]),
+        ifSharesAfter: parseBigInt(parsedData[4]),
+        totalIfSharesAfter: parseBigInt(parsedData[5]),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     case 'collect_premium':
       return {
         type,
         sender: parseAddress(topics[1]),
-        amount: parseBigInt(data[0]),
+        amount: parseBigInt(parsedData[0]),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     // ─── Pool Swap Fee Events ──────────────────────────────────
@@ -174,11 +213,11 @@ export function parseEvent(
     case 'claim_fees':
       return {
         type,
-        token: parseAddress(data[0]),
-        sender: parseAddress(data[1]),
-        amount: parseBigInt(data[2]),
+        token: parseAddress(parsedData[0]),
+        sender: parseAddress(parsedData[1]),
+        amount: parseBigInt(parsedData[2]),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     // ─── Pool Router Events ──────────────────────────────────
@@ -187,11 +226,11 @@ export function parseEvent(
       return {
         type,
         asset: parseSymbol(topics[1]),
-        pool: parseAddress(data[0]),
-        tokens: (data[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
-        initArgs: (data[2] as unknown as { vec: unknown[] }).vec,
+        pool: parseAddress(parsedData[0]),
+        tokens: (parsedData[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
+        initArgs: (parsedData[2] as unknown as { vec: unknown[] }).vec,
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     case 'config_rewards':
@@ -199,10 +238,10 @@ export function parseEvent(
         type,
         asset: parseSymbol(topics[1]),
         pool: parseAddress(topics[2]),
-        poolTps: parseBigInt(data[0]),
-        expiredAt: BigInt((data[1] as unknown as { u64: string }).u64),
+        poolTps: parseBigInt(parsedData[0]),
+        expiredAt: BigInt((parsedData[1] as unknown as { u64: string }).u64),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     case 'claim':
@@ -211,10 +250,10 @@ export function parseEvent(
         asset: parseSymbol(topics[1]),
         pool: parseAddress(topics[2]),
         user: parseAddress(topics[3]),
-        rewardToken: parseAddress(data[0]),
-        rewardAmount: parseBigInt(data[1]),
+        rewardToken: parseAddress(parsedData[0]),
+        rewardAmount: parseBigInt(parsedData[1]),
         txHash,
-        timestamp: '',
+        timestamp: undefined,
       };
 
     default:

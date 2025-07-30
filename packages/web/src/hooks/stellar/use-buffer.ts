@@ -3,7 +3,7 @@
 import type { Reserve } from '@normalfinance/contracts/build/buffer';
 
 import { constants } from '@normalfinance/utils';
-import { usePersistStore } from '@normalfinance/state';
+import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import { BufferContract } from '@normalfinance/contracts';
 
@@ -26,22 +26,14 @@ export function useBuffer(): ReturnType {
   const [loading, setLoading] = useState(true);
 
   const [buffer, setBuffer] = useState<BufferInfo | undefined>(undefined);
-  const storePersist = usePersistStore();
 
-  /**
-   * Fetch Insurance Fund information
-   *
-   * @async
-   * @function fetchBuffer
-   * @returns {Promise<Buffer | undefined>} A promise that resolves to the pool information or undefined in case of failure.
-   */
   const fetchBuffer = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
 
       const Buffer = new BufferContract.Client({
-        contractId: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
+        contractId: constants.StellarConfig.BUFFER_ADDRESS,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         rpcUrl: constants.StellarConfig.RPC_URL,
       });
@@ -54,15 +46,16 @@ export function useBuffer(): ReturnType {
           Buffer.get_reserve({ token: constants.StellarConfig.XLM_ADDRESS }),
         ]);
 
-      if (min_time_between_payouts?.result) {
-        setBuffer({
-          min_time_between_payouts,
-          min_reserve_ratio,
-          last_payout_timestamp,
-          reserve,
-        });
-      }
+      // if (min_time_between_payouts?.result) {
+      setBuffer({
+        min_time_between_payouts: min_time_between_payouts.result,
+        min_reserve_ratio: min_reserve_ratio.result,
+        last_payout_timestamp: last_payout_timestamp.result,
+        reserve: reserve.result,
+      });
+      // }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }

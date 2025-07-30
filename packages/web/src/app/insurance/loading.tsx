@@ -31,7 +31,7 @@ export default function Loading() {
         <Skeleton count={3} height={20} width="100%" />
       </Stack>
 
-      {/* CurrentBalance + AreaChartCard */}
+      {/* CurrentBalance + TabsTable */}
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 4 }}>
           <Skeleton height={300} width="100%" />
@@ -39,11 +39,6 @@ export default function Loading() {
         <Grid2 size={{ xs: 12, md: 8 }}>
           <Skeleton height={400} width="100%" />
         </Grid2>
-      </Grid2>
-
-      {/* TabsTable */}
-      <Grid2 sx={{ mt: 3 }}>
-        <Skeleton height={720} width="100%" />
       </Grid2>
     </DashboardContent>
   );

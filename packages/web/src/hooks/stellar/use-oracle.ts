@@ -1,6 +1,7 @@
 'use client';
 
 import { constants } from '@normalfinance/utils';
+import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
@@ -66,12 +67,14 @@ export function useOracle(_asset: string): ReturnType {
         asset,
         cached,
         action: defaultAction,
+        skip_validation: true,
       });
 
       if (oraclePriceData?.result) {
         setPrice(oraclePriceData?.result);
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -97,6 +100,7 @@ export function useOracle(_asset: string): ReturnType {
         setLastPrice(oraclePriceData?.result);
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }

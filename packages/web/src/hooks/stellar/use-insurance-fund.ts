@@ -2,7 +2,10 @@
 
 import type { Stake, Client } from '@normalfinance/contracts/build/insurance_fund';
 
+import { BigNumber } from 'bignumber.js';
+import { getTokenBalance } from '@/lib/token';
 import { constants } from '@normalfinance/utils';
+import { captureException } from '@sentry/nextjs';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
@@ -11,11 +14,11 @@ import { InsuranceFundContract } from '@normalfinance/contracts';
 import { useContractTransaction } from './use-contract-transaction';
 
 export type InsuranceFundInfo = {
-  total_shares: number;
-  optimal_insurance: number;
-  unstaking_period: number;
-  current_rate: number;
-  current_utilization: number;
+  total_shares: BigNumber;
+  optimal_insurance: BigNumber;
+  unstaking_period: BigNumber;
+  current_rate: BigNumber;
+  current_utilization: BigNumber;
 };
 export type DepositArgs = Omit<Parameters<Client['deposit']>[0], 'user'>;
 export type RequestWithdrawArgs = Omit<Parameters<Client['request_withdraw']>[0], 'user'>;
@@ -24,7 +27,7 @@ interface ReturnType {
   error: any | null;
   loading: boolean;
   insuranceFund: InsuranceFundInfo | undefined;
-  balance: number;
+  balance: BigNumber | undefined;
   stake: Stake | undefined;
   onFetchStake: () => Promise<void>;
   onDeposit: (args: DepositArgs) => Promise<void>;
@@ -42,8 +45,29 @@ export function useInsuranceFund(): ReturnType {
   const [loading, setLoading] = useState(true);
 
   const [insuranceFund, setInsuranceFund] = useState<InsuranceFundInfo | undefined>(undefined);
-  const [balance, setBalance] = useState<number>(0);
+  const [balance, setBalance] = useState<BigNumber | undefined>(undefined);
   const [stake, setStake] = useState<Stake | undefined>(undefined);
+
+  const fetchInsuranceFundBalance = useCallback(async () => {
+    try {
+      setError(null);
+      setLoading(true);
+
+      const xlmBalance = await getTokenBalance(
+        constants.StellarConfig.XLM_ADDRESS,
+        constants.StellarConfig.INSURANCE_FUND_ADDRESS
+      );
+
+      if (xlmBalance) setBalance(BigNumber(xlmBalance));
+    } catch (e: any) {
+      captureException(e);
+      console.log(e);
+      setError(e.toString());
+    }
+
+    setLoading(false);
+    return;
+  }, []);
 
   const fetchInsuranceFund = useCallback(async () => {
     try {
@@ -65,20 +89,17 @@ export function useInsuranceFund(): ReturnType {
           InsuranceFund.get_utilization(),
         ]);
 
-      if (total_shares?.result) {
-        setInsuranceFund({
-          total_shares,
-          optimal_insurance,
-          unstaking_period,
-          current_rate,
-          current_utilization,
-        });
-      }
-
-      const _balance = 0;
-
-      setBalance(_balance);
+      // if (total_shares.result) {
+      setInsuranceFund({
+        total_shares: BigNumber(total_shares.result),
+        optimal_insurance: BigNumber(optimal_insurance.result),
+        unstaking_period: BigNumber(unstaking_period.result),
+        current_rate: BigNumber(current_rate.result),
+        current_utilization: BigNumber(current_utilization.result),
+      });
+      // }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -88,29 +109,31 @@ export function useInsuranceFund(): ReturnType {
   }, []);
 
   const fetchInsuranceFundStake = useCallback(async () => {
-    try {
-      setError(null);
-      setLoading(true);
+    if (storePersist.wallet.address) {
+      try {
+        setError(null);
+        setLoading(true);
 
-      const InsuranceFund = new InsuranceFundContract.Client({
-        contractId: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-        rpcUrl: constants.StellarConfig.RPC_URL,
-      });
+        const InsuranceFund = new InsuranceFundContract.Client({
+          contractId: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
+          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+          rpcUrl: constants.StellarConfig.RPC_URL,
+        });
 
-      const user_stake = await InsuranceFund.get_stake({ user: storePersist.wallet.address! });
+        const user_stake = await InsuranceFund.get_stake({ user: storePersist.wallet.address });
 
-      if (user_stake?.result) {
-        setStake(user_stake.result);
+        if (user_stake?.result) {
+          setStake(user_stake.result as Stake);
+        }
+      } catch (e: any) {
+        captureException(e);
+        console.log(e);
+        setError(e.toString());
+      } finally {
+        setLoading(false);
       }
-    } catch (e: any) {
-      console.log(e);
-      setError(e.toString());
     }
-
-    setLoading(false);
-    return;
-  }, []);
+  }, [storePersist.wallet.address]);
 
   const executeInsurance = async (
     signedTransactionXDR: string,
@@ -152,19 +175,22 @@ export function useInsuranceFund(): ReturnType {
         type: TransactionType.STAKE,
         token1: { name: 'XLM', amount: args.amount },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.deposit(processedArgs, { simulate: !restore });
-        if (restore) return tx;
+      transactionFunction: async (client, restore) =>
+        await client.deposit(processedArgs, { simulate: !restore }),
+      // if (restore) {
+      //   await tx.simulate({ restore: true });
+      //   return tx;
+      // } else {
+      //   const signedTransaction = await tx.signAndSend();
 
-        const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+      //   const signedXDR = signedTransaction.assembled?.toXDR();
 
-        if (signedXDR) {
-          return await executeInsurance(signedXDR, 'Insurance Fund Deposit');
-        }
+      //   if (signedXDR) {
+      //     return await executeInsurance(signedXDR, 'Insurance Fund Deposit');
+      //   }
 
-        return signedTransaction;
-      },
+      //   return signedTransaction;
+      // }
     });
   };
 
@@ -181,19 +207,18 @@ export function useInsuranceFund(): ReturnType {
         type: TransactionType.REQUEST_UNSTAKE,
         token1: { name: 'XLM', amount: args.amount },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.request_withdraw(processedArgs, { simulate: !restore });
-        if (restore) return tx;
+      transactionFunction: async (client, restore) =>
+        await client.request_withdraw(processedArgs, { simulate: !restore }),
+      // if (restore) return tx;
 
-        const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+      // const signedTransaction = await tx.signAndSend();
+      // const signedXDR = signedTransaction.assembled?.toXDR();
 
-        if (signedXDR) {
-          return await executeInsurance(signedXDR, 'Insurance Fund Request Withdraw');
-        }
+      // if (signedXDR) {
+      //   return await executeInsurance(signedXDR, 'Insurance Fund Request Withdraw');
+      // }
 
-        return signedTransaction;
-      },
+      // return signedTransaction;
     });
   };
 
@@ -208,19 +233,18 @@ export function useInsuranceFund(): ReturnType {
       transactionDetails: {
         type: TransactionType.CANCEL_REQUEST_UNSTAKE,
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.cancel_request_withdraw(processedArgs, { simulate: !restore });
-        if (restore) return tx;
+      transactionFunction: async (client, restore) =>
+        await client.cancel_request_withdraw(processedArgs, { simulate: !restore }),
+      // if (restore) return tx;
 
-        const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+      // const signedTransaction = await tx.signAndSend();
+      // const signedXDR = signedTransaction.assembled?.toXDR();
 
-        if (signedXDR) {
-          return await executeInsurance(signedXDR, 'Insurance Fund Cancel Request Withdraw');
-        }
+      // if (signedXDR) {
+      //   return await executeInsurance(signedXDR, 'Insurance Fund Cancel Request Withdraw');
+      // }
 
-        return signedTransaction;
-      },
+      // return signedTransaction;
     });
   };
 
@@ -235,26 +259,26 @@ export function useInsuranceFund(): ReturnType {
       transactionDetails: {
         type: TransactionType.UNSTAKE,
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.withdraw(processedArgs, { simulate: !restore });
-        if (restore) return tx;
+      transactionFunction: async (client, restore) =>
+        await client.withdraw(processedArgs, { simulate: !restore }),
+      // if (restore) return tx;
 
-        const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+      // const signedTransaction = await tx.signAndSend();
+      // const signedXDR = signedTransaction.assembled?.toXDR();
 
-        if (signedXDR) {
-          return await executeInsurance(signedXDR, 'Insurance Fund Withdraw');
-        }
+      // if (signedXDR) {
+      //   return await executeInsurance(signedXDR, 'Insurance Fund Withdraw');
+      // }
 
-        return signedTransaction;
-      },
+      // return signedTransaction;
     });
   };
 
   useEffect(() => {
     fetchInsuranceFund();
     fetchInsuranceFundStake();
-  }, [fetchInsuranceFund, fetchInsuranceFundStake]);
+    fetchInsuranceFundBalance();
+  }, [fetchInsuranceFund, fetchInsuranceFundStake, fetchInsuranceFundBalance]);
 
   return {
     error,

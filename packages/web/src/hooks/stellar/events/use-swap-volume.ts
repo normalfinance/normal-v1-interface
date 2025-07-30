@@ -55,7 +55,7 @@ export function useSwapVolume(): ReturnType {
       setLoading(true);
 
       const { data, error: e } = await supabase
-        .from('goldsky')
+        .from(constants.StellarConfig.EVENTS_TABLENAME)
         .select('*')
         .eq('contract_id', POOL_ROUTER_CONTRACT_ID)
         .eq('type', 'contract')

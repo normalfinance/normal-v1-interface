@@ -34,7 +34,7 @@ if (typeof window !== 'undefined') {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CB4HUW5IOLWEUYUQ7B3BV4HPBRWK4VNRPCMI3E7S2SF5HW4O4VD62Q32",
+    contractId: "CDB6MTYST4WQMQZB2ES4UVS6KMIHE2TAHWCONOIJQZ2HMH6NT2C77H3X",
   }
 } as const
 
@@ -289,7 +289,7 @@ export interface Client {
   /**
    * Construct and simulate a get_price transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  get_price: ({asset, cached, action}: {asset: string, cached: boolean, action: NormalAction}, options?: {
+  get_price: ({asset, cached, action, skip_validation}: {asset: string, cached: boolean, action: NormalAction, skip_validation: boolean}, options?: {
     /**
      * The fee to pay for the transaction. Default: BASE_FEE
      */
@@ -665,7 +665,7 @@ export class Client extends ContractClient {
   constructor(public readonly options: ContractClientOptions) {
     super(
       new ContractSpec([ "AAAAAAAAAAAAAAAKaW5pdGlhbGl6ZQAAAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAA9lbWVyZ2VuY3lfYWRtaW4AAAAAEwAAAAA=",
-        "AAAAAAAAAAAAAAAJZ2V0X3ByaWNlAAAAAAAAAwAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAAAAAAZjYWNoZWQAAAAAAAEAAAAAAAAABmFjdGlvbgAAAAAH0AAAAAxOb3JtYWxBY3Rpb24AAAABAAAH0AAAAA9PcmFjbGVQcmljZURhdGEA",
+        "AAAAAAAAAAAAAAAJZ2V0X3ByaWNlAAAAAAAABAAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAAAAAAZjYWNoZWQAAAAAAAEAAAAAAAAABmFjdGlvbgAAAAAH0AAAAAxOb3JtYWxBY3Rpb24AAAAAAAAAD3NraXBfdmFsaWRhdGlvbgAAAAABAAAAAQAAB9AAAAAPT3JhY2xlUHJpY2VEYXRhAA==",
         "AAAAAAAAAAAAAAAOZ2V0X2xhc3RfcHJpY2UAAAAAAAEAAAAAAAAABWFzc2V0AAAAAAAAEQAAAAEAAAfQAAAAFEhpc3RvcmljYWxPcmFjbGVEYXRh",
         "AAAAAAAAAAAAAAAKZ2V0X29yYWNsZQAAAAAAAQAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAQAAB9AAAAAKT3JhY2xlSW5mbwAA",
         "AAAAAAAAAAAAAAAWZ2V0X29yYWNsZV9ndWFyZF9yYWlscwAAAAAAAAAAAAEAAAfQAAAAEE9yYWNsZUd1YXJkUmFpbHM=",
