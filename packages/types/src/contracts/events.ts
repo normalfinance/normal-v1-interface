@@ -211,6 +211,16 @@ export type PoolRouterEvent = (
   txHash: string;
 };
 
+export type UserActivityEvent = (
+  | RouterDepositLiquidityEvent
+  | RouterSwapEvent
+  | RouterWithdrawLiquidityEvent
+  | IfStakeRecordEvent
+) & {
+  timestamp?: number;
+  txHash: string;
+};
+
 export type NormalContractEvent =
   | PoolEvent
   | BufferEvent

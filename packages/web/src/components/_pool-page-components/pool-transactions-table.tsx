@@ -3,6 +3,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import type { TxType, PoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
+import { ago } from '@/utils/format-time';
 import React, { useMemo, useState } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { fTruncate } from '@normalfinance/utils/build/format';
@@ -34,16 +35,6 @@ const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Deposit: 'info',
   Withdraw: 'warning',
 };
-
-function ago(sec: number) {
-  // floor the entire subtraction so we get an integer second count
-  const diff = Math.max(1, Math.floor(Date.now() / 1000 - sec));
-
-  if (diff < 60) return `${diff}s`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-  if (diff < 86_400) return `${Math.floor(diff / 3600)}h`;
-  return `${Math.floor(diff / 86_400)}d`;
-}
 
 // ----------------------------------------------------------------
 // Types

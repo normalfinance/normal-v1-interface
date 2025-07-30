@@ -10,7 +10,8 @@ import { useState, useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { constants, parseEvent } from '@normalfinance/utils';
+import { formatTokenAmount } from '@/utils/format-stellar';
+import { constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -55,27 +56,31 @@ export function useUserActivity(): ReturnType {
       } else {
         const rows = data as GoldskyTableRow[];
 
-        const parsed = rows
-          .filter((r) => r.topics !== undefined && r.data !== undefined)
-          .map(async (r) => {
-            // parseRowToActivity()?
-            const parsedEvent = parseEvent(
-              JSON.parse(r.topics!),
-              JSON.parse(r.data!),
-              r.transaction_hash
-            ) as any; // FIXME:
+        const compact = <T>(arr: (T | null | undefined)[]): T[] =>
+          arr.filter((x): x is T => x != null);
 
-            const tx = await server.getTransaction(r.transaction_hash);
-            if (tx.status === 'SUCCESS') {
-              parsedEvent.timestamp = tx.createdAt * 1000;
-            }
+        const parsed = compact(
+          await Promise.all(
+            rows
+              .filter((r) => r.topics && r.data)
+              .map(async (r) => {
+                const parsedEvent = parseEvent(
+                  JSON.parse(r.topics!),
+                  JSON.parse(r.data!),
+                  r.transaction_hash
+                ) as events.UserActivityEvent;
 
-            return parsedEvent;
-          });
+                const tx = await server.getTransaction(r.transaction_hash);
+                if (tx.status === 'SUCCESS') {
+                  parsedEvent.timestamp = tx.createdAt * 1000;
+                }
 
-        const _parsed = await Promise.all(parsed);
+                return parseEventToActivity(r.id, parsedEvent);
+              })
+          )
+        );
 
-        setRecentActivity(_parsed);
+        setRecentActivity(parsed);
       }
       setLoading(false);
     };
@@ -95,19 +100,20 @@ export function useUserActivity(): ReturnType {
           const { topics, data, transaction_hash } = payload.new;
 
           if (topics && data) {
-            // parseRowToActivity()?
             const parsed = parseEvent(
               JSON.parse(topics),
               JSON.parse(data),
               transaction_hash
-            ) as any; // FIXME:
+            ) as events.UserActivityEvent;
 
             const tx = await server.getTransaction(transaction_hash);
             if (tx.status === 'SUCCESS') {
-              parsed.timestamp = tx.createdAt.toString();
+              parsed.timestamp = tx.createdAt * 1000;
             }
 
-            setRecentActivity((prev) => [parsed, ...prev]);
+            const activityParsed = parseEventToActivity(payload.new.id, parsed);
+
+            if (activityParsed) setRecentActivity((prev) => [activityParsed, ...prev]);
           }
         }
       )
@@ -126,81 +132,64 @@ export function useUserActivity(): ReturnType {
   };
 }
 
-function parseRowToActivity(
-  event: events.NormalContractEvent,
-  userAddress: string,
-  timestamp: string
-): Activity | null {
-  return null;
-  // @dev will complete this soon.
-  // const { id, timestamp, event_type, data } = event;
-  //   // const ts = new Date(timestamp).getTime();
-  //   // const amount = typeof data.amount === 'string' ? parseFloat(data.amount) : Number(data.amount);
-  //   // const token = data.token || data.token_in || data.token_out;
-  //   switch (event.type) {
-  //     case 'deposit':
-  //       return {
-  //         id: 1,
-  //         type: 'Sent',
-  //         timestamp: ts,
-  //         address: data.to,
-  //         asset: {
-  //           token,
-  //           iconUrl: getCryptoIconUrl(token),
-  //           amount,
-  //         },
-  //       };
-  //       break;
-  //     case 'trade':
-  //       return {
-  //         id,
-  //         type: 'Swapped',
-  //         timestamp: ts,
-  //         sell: {
-  //           token: data.token_in,
-  //           iconUrl: getCryptoIconUrl(data.token_in),
-  //           amount: Number(data.in_amount),
-  //         },
-  //         buy: {
-  //           token: data.token_out,
-  //           iconUrl: getCryptoIconUrl(data.token_out),
-  //           amount: Number(data.out_amount),
-  //         },
-  //       };
-  //     case 'deposit_liquidity':
-  //       return {
-  //         id: 1,
-  //         type: 'Add Liquidity',
-  //         timestamp: ts,
-  //         lpToken: {
-  //           token: event.,
-  //           iconUrl: getCryptoIconUrl(token),
-  //           amount: event.amount,
-  //         },
-  //       };
-  //     case 'remove_liquidity':
-  //       return {
-  //         id,
-  //         type: 'Remove Liquidity',
-  //         timestamp: ts,
-  //         lpToken: {
-  //           token,
-  //           iconUrl: getCryptoIconUrl(token),
-  //           amount,
-  //         },
-  //       };
-  //     case 'if_stake_record':
-  //       return {
-  //         id: 0,
-  //         type: event.action,
-  //         timestamp: ts,
-  //         asset: {
-  //           token: 'XLM',
-  //           iconUrl: getCryptoIconUrl('XLM'),
-  //           amount: event.amount,
-  //         },
-  //       };
-  //     default:
-  //       return null;
-  //   }
+function parseEventToActivity(id: string, event: events.UserActivityEvent): Activity | null {
+  switch (event.type) {
+    case 'swap': {
+      const buy = event.direction == 'Buy';
+      return {
+        id,
+        type: 'Swapped',
+        timestamp: event.timestamp ?? 0,
+        sell: {
+          token: buy ? constants.StellarConfig.XLM_ADDRESS : event.pool,
+          iconUrl: getCryptoIconUrl(buy ? 'XLM' : `n${event.asset}`),
+          amount: Number(formatTokenAmount(event.inAmount.toString())),
+        },
+        buy: {
+          token: buy ? event.pool : constants.StellarConfig.XLM_ADDRESS,
+          iconUrl: getCryptoIconUrl(buy ? `n${event.asset}` : 'XLM'),
+          amount: Number(formatTokenAmount(event.outAmount.toString())),
+        },
+      };
+    }
+    case 'deposit_liquidity':
+      return {
+        id,
+        type: 'Add Liquidity',
+        timestamp: event.timestamp ?? 0,
+        tokenB: {
+          token: constants.StellarConfig.XLM_ADDRESS,
+          iconUrl: getCryptoIconUrl('XLM'),
+          amount: Number(formatTokenAmount(event.amount.toString())),
+        },
+      };
+    case 'withdraw_liquidity':
+      return {
+        id,
+        type: 'Remove Liquidity',
+        timestamp: event.timestamp ?? 0,
+        tokenB: {
+          token: constants.StellarConfig.XLM_ADDRESS,
+          iconUrl: getCryptoIconUrl('XLM'),
+          amount: Number(formatTokenAmount(event.amount.toString())),
+        },
+      };
+    case 'if_stake_record': {
+      if (event.action == 'stake' || event.action == 'unstake') {
+        return {
+          id,
+          type: event.action == 'stake' ? 'Stake' : 'Unstake',
+          timestamp: event.timestamp ?? 0,
+          asset: {
+            token: constants.StellarConfig.XLM_ADDRESS,
+            iconUrl: getCryptoIconUrl('XLM'),
+            amount: Number(formatTokenAmount(event.amount.toString())),
+          },
+        };
+      }
+      return null;
+    }
+    default:
+      return null;
+  }
 }
