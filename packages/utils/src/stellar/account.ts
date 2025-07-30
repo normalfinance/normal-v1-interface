@@ -1,6 +1,6 @@
 import freighter from "@stellar/freighter-api";
 import { Account } from "@stellar/stellar-sdk";
-import { Server } from "./server";
+import { horizonServer } from "./server";
 // working around ESM compatibility issues
 const { isConnected, isAllowed, getAddress } = freighter;
 
@@ -19,7 +19,7 @@ export async function getAccount(): Promise<Account | null> {
   try {
     const account = new Account(
       publicKey,
-      (await Server.accounts().accountId(publicKey).call()).sequence
+      (await horizonServer.accounts().accountId(publicKey).call()).sequence
     );
     return account || null;
   } catch (e) {

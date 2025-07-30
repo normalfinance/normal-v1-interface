@@ -6,7 +6,9 @@ import { Account, Networks } from '@stellar/stellar-sdk';
 const TESTNET: NetworkConfig = {
   TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
   NETWORK_PASSPHRASE: Networks.TESTNET,
-  RPC_URL: 'https://testnet.stellar.validationcloud.io/v1/Lg69Tyu_u8qCoanMj1gk0en_DZj-WVCHgNi7p5mYZs0', // RPC_API_KEY ? `https://testnet.stellar.validationcloud.io/v1/${RPC_API_KEY}` : '',
+  HORIZON_URL: 'https://horizon-testnet.stellar.org',
+  RPC_URL:
+    'https://testnet.stellar.validationcloud.io/v1/Lg69Tyu_u8qCoanMj1gk0en_DZj-WVCHgNi7p5mYZs0', // RPC_API_KEY ? `https://testnet.stellar.validationcloud.io/v1/${RPC_API_KEY}` : '',
   POOL_ROUTER_ADDRESS: 'CC7BAPX2HYU76CDGCWLLVZT5O7CTTT5VHRC4H6VZUXLJ7PKHPKDT3PS3',
   POOL_SWAP_FEE_ADDRESS: 'CBY6HH7FFNBLARQYSKJAK6O2AGPTM5VYGOYHTQQPTFLUTS2DNOXPT5QD',
   BUFFER_ADDRESS: 'CAKRRRDCBT4K3TRIW4GTTIOUEEOCHOPEXO4WFQURP7W44KOCKHWNTLQM',
@@ -20,6 +22,7 @@ const TESTNET: NetworkConfig = {
 const MAINNET: NetworkConfig = {
   TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '0'),
   NETWORK_PASSPHRASE: Networks.PUBLIC,
+  HORIZON_URL: 'https://horizon.stellar.org',
   RPC_URL: 'https://mainnet.stellar.validationcloud.io/v1/yyyy',
   POOL_ROUTER_ADDRESS: '...',
   POOL_SWAP_FEE_ADDRESS: '...',
