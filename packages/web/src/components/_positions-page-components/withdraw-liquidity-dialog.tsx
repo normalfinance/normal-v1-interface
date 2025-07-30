@@ -31,6 +31,8 @@ import {
   DialogActions,
 } from '@mui/material';
 
+import BigNumber from 'bignumber.js';
+
 /* ------------------------------------------------------------------ */
 /* Zod schema                                                          */
 /* ------------------------------------------------------------------ */
@@ -126,7 +128,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
       return xlm_price.multipliedBy(amount);
     }
-    return BigNumber(0);
+    return new BigNumber(0);
   }, [xlmPrice, amount]);
 
   // Check if user has insufficient balance
