@@ -4,7 +4,6 @@ import type { events } from '@normalfinance/types';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 import type { ChartTimeframeKey, ExplorerChartData } from '@/components/_pool-page-components';
 
-import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
@@ -34,10 +33,6 @@ const bucketCounts: Record<ChartTimeframeKey, number> = {
 };
 
 // ----------------------------------------------------------------------
-const server = new rpc.Server(constants.StellarConfig.RPC_URL);
-
-const twelveMonthsAgo = new Date();
-twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
 
 export function usePoolPriceChart(poolAddress: string): ReturnType {
   const [error, setError] = useState(null);
@@ -102,7 +97,7 @@ export function usePoolPriceChart(poolAddress: string): ReturnType {
         const priceBuckets: number[][] = Array.from({ length: buckets }, () => []);
 
         for (const row of rows) {
-          const tx = await server.getTransaction(row.transaction_hash);
+          const tx = await rpcServer.getTransaction(row.transaction_hash);
 
           if (tx.status == 'SUCCESS') {
             const ts = new Date(tx.createdAt).getTime();
@@ -168,7 +163,7 @@ export function usePoolPriceChart(poolAddress: string): ReturnType {
         const volumeBuckets: number[][] = Array.from({ length: buckets }, () => []);
 
         for (const row of rows) {
-          const tx = await server.getTransaction(row.transaction_hash);
+          const tx = await rpcServer.getTransaction(row.transaction_hash);
 
           if (tx.status == 'SUCCESS') {
             const ts = new Date(tx.createdAt).getTime();

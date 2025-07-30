@@ -6,6 +6,7 @@ export interface NetworkConfig {
   NETWORK_PASSPHRASE: string;
   HORIZON_URL: string;
   RPC_URL: string;
+
   // contracts
   POOL_ROUTER_ADDRESS: string;
   POOL_SWAP_FEE_ADDRESS: string;
@@ -13,11 +14,14 @@ export interface NetworkConfig {
   INSURANCE_FUND_ADDRESS: string;
   ORACLE_REGISTRY_ADDRESS: string;
   LIQUIDITY_CALCULATOR_ADDRESS: string;
-  // XLM
+
+  // stellar
   XLM_ADDRESS: string;
   XLM_DECIMALS: number;
-  // oracles
+
+  // oracle
   REFLECTOR_ORACLE_ADDRESS: string;
+
   // supabase
   EVENTS_TABLENAME: string;
 }
