@@ -27,6 +27,18 @@ import Button from '@mui/material/Button';
 
 import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
 
+const logToFile = async (message: string) => {
+  try {
+    await fetch('/api/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+  } catch (error) {
+    console.error('Failed to log to file:', error);
+  }
+};
+
 // Define Contract Types
 type ContractType =
   | 'oracle_registry'
@@ -145,7 +157,7 @@ export const useContractTransaction = () => {
 
         const transaction = await transactionFunction(contractClient, restore);
 
-        console.log('Attempting to sign and send transaction...');
+        console.log('Transaction hash: ', (transaction as any).getTransactionResponse.txHash);
 
         try {
           if (restore) {
@@ -153,12 +165,21 @@ export const useContractTransaction = () => {
             await transaction.simulate({ restore: true });
             return {};
           }
-          const sentTransaction = await transaction.signAndSend();
+          // const sentTransaction = await transaction.signAndSend();
+          const txHash = (transaction as any).getTransactionResponse.txHash || 'unknown';
+
+          // Log transaction to file
+          const timestamp = new Date().toISOString();
+          const transactionType = transactionDetails.type || 'unknown';
+          const walletAddress = publicKey || 'unknown';
+          const logMessage = `[${timestamp}], ${transactionType}, ${txHash}, ${walletAddress}`;
+          await logToFile(logMessage);
+
           return {
-            transactionId: sentTransaction.sendTransactionResponse?.hash,
+            transactionId: txHash,
           };
         } catch (error) {
-          console.error('Error during signing and sending:', error);
+          console.error('Error during returning transaction hash: ', error);
 
           if (error instanceof Error && error.message.includes('restore some contract state')) {
             return new Promise((resolve, reject) => {
