@@ -103,7 +103,9 @@ export function StepContentPanel({
   const isWalletConnected = !!persistStore.wallet.address;
 
   // Get token balance for the selected token
-  const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(constants.XLM_ADDRESS);
+  const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
+    constants.StellarConfig.XLM_ADDRESS
+  );
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
@@ -112,7 +114,9 @@ export function StepContentPanel({
     }
 
     // Convert the user input amount to the token's smallest unit (considering decimals)
-    const requiredAmount = BigInt(Math.floor(watchAmount * Math.pow(10, constants.XLM_DECIMALS)));
+    const requiredAmount = BigInt(
+      Math.floor(watchAmount * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
+    );
     return tokenBalance.data < requiredAmount;
   };
 

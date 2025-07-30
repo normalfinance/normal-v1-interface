@@ -25,18 +25,18 @@ export function useTotalTVL(): ReturnType {
   const fetchTVL = useCallback(async () => {
     try {
       const PoolRouter = new PoolRouterContract.Client({
-        contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const pools = await PoolRouter.get_pools();
 
       if (pools.result) {
         const LiquidityCalculator = new LiquidityCalculatorContract.Client({
-          contractId: constants.LIQUIDITY_CALCULATOR_ADDRESS,
-          networkPassphrase: constants.NETWORK_PASSPHRASE,
-          rpcUrl: constants.RPC_URL,
+          contractId: constants.StellarConfig.LIQUIDITY_CALCULATOR_ADDRESS,
+          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+          rpcUrl: constants.StellarConfig.RPC_URL,
         });
 
         const tvl = await LiquidityCalculator.get_liquidity({ pools: pools.result });

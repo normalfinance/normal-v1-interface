@@ -37,9 +37,9 @@ export const createWalletActions = (
       }
 
       const poolRouter = new PoolRouterContract.Client({
-        contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       // Fetch all available tokens from chain
@@ -64,9 +64,9 @@ export const createWalletActions = (
       // =================================================================
 
       const oracleRegistry = new OracleRegistryContract.Client({
-        contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const _tokens = getState().tokens.map(async (token: Token) => {

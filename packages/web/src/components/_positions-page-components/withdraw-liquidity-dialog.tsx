@@ -92,7 +92,9 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
   const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(position.tokenAddress);
 
   // Get the price for XLM
-  const { data: xlmPrice, isLoading: tokenPriceLoading } = useTokenPrice(constants.XLM_ADDRESS);
+  const { data: xlmPrice, isLoading: tokenPriceLoading } = useTokenPrice(
+    constants.StellarConfig.XLM_ADDRESS
+  );
 
   // Check if wallet is connected
   const isWalletConnected = !!store.wallet.address;
@@ -127,7 +129,9 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
     }
 
     // Convert the user input amount to the token's smallest unit (considering decimals)
-    const requiredAmount = BigInt(Math.floor(amount * Math.pow(10, constants.XLM_DECIMALS)));
+    const requiredAmount = BigInt(
+      Math.floor(amount * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
+    );
     return tokenBalance.data < requiredAmount;
   };
 
