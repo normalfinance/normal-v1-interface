@@ -38,7 +38,8 @@ const TABLE_HEAD: HeadCell[] = [
   { id: 'apr', label: 'Pool APR', align: 'left' },
   { id: 'volume1d', label: '1D vol', align: 'left' },
   { id: 'volume30d', label: '30D vol', align: 'left' },
-  { id: 'ratio', label: '1D vol/TVL', width: 120, align: 'center' },
+  { id: 'ratio', label: '1D vol/TVL', width: 120, align: 'left' },
+  { id: '', label: '' },
 ];
 
 /* ------------------------------------------------------------------ */

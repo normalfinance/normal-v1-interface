@@ -52,7 +52,7 @@ export default function ExploreView() {
     const getAllTokens = async (): Promise<void> => {
       store.setLoading(true);
       try {
-        const allTokens = await store.getAllTokens();
+        await store.getAllTokens([]);
         store.setLoading(false);
       } catch (e) {
         console.error(e);
@@ -89,7 +89,7 @@ const formatPool = (pool_info: PoolRouterContract.PoolInfo): ExplorePoolsRow => 
   } = pool_info;
 
   return {
-    tokenAName: pool.base_asset,
+    tokenAName: `n${pool.base_asset}`,
     tokenBName: pool.quote_asset,
     address,
     fee: pool.fee_fraction,

@@ -4,7 +4,9 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
+import { useApiTokens } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
@@ -46,7 +48,25 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   const { t } = useTranslate();
   const theme = useTheme();
 
-  const store = useAppStore();
+  const { tokens: apiTokens } = useApiTokens();
+  const { tokens, getAllTokens, setLoading } = useAppStore();
+
+  // Effect hook to fetch all tokens once the component mounts
+  React.useEffect(() => {
+    const refreshTokens = async (): Promise<void> => {
+      setLoading(true);
+      try {
+        await getAllTokens(apiTokens);
+        setLoading(false);
+      } catch (e) {
+        captureException(e);
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    refreshTokens();
+  }, []);
 
   return (
     <Box
@@ -193,11 +213,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard
-                tokensList={store.tokens}
-                swapFeeInfo={swapFeeInfo}
-                queryParams={swapParams}
-              />
+              <SwapCard tokensList={tokens} swapFeeInfo={swapFeeInfo} queryParams={swapParams} />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>

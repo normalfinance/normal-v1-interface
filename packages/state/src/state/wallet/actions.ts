@@ -1,4 +1,5 @@
 import {
+  ApiToken,
   AppStore,
   GetStateType,
   SetStateType,
@@ -11,29 +12,7 @@ import {
   SorobanTokenContract,
 } from '@normalfinance/contracts';
 import { usePersistStore } from '../store';
-import { constants, getCryptoIconUrl, Signer } from '@normalfinance/utils';
-import { Contract, TransactionBuilder, rpc, scValToNative } from '@stellar/stellar-sdk';
-
-export async function getPoolsInfo(): Promise<{ pools: any; latestLedger: number }> {
-  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
-    fee: '1000',
-    timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-  });
-  tx_builder.addOperation(new Contract(constants.StellarConfig.POOL_ROUTER_ADDRESS).call('get_pools'));
-  const stellar_rpc = new rpc.Server(constants.StellarConfig.RPC_URL);
-  const result = await stellar_rpc.simulateTransaction(tx_builder.build());
-  console.log(result);
-  if (rpc.Api.isSimulationSuccess(result) && result.result) {
-    const val = scValToNative(result.result.retval);
-    return {
-      pools: val,
-      latestLedger: result.latestLedger,
-    };
-  } else {
-    throw new Error(`Failed to fetch oralce decimals: `);
-  }
-}
+import { constants, getCryptoIconUrl } from '@normalfinance/utils';
 
 export const createWalletActions = (
   setState: SetStateType,
@@ -42,7 +21,7 @@ export const createWalletActions = (
   return {
     tokens: [],
 
-    getAllTokens: async () => {
+    getAllTokens: async (_allApiTokens: ApiToken[]) => {
       // If wallet is connected, use it, otherwise some demo account
       const appStorageValue = localStorage?.getItem('app-storage');
 
@@ -58,7 +37,6 @@ export const createWalletActions = (
       }
 
       const poolRouter = new PoolRouterContract.Client({
-        // publicKey: constants.StellarConfig.TESTING_SOURCE.accountId(),
         contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         rpcUrl: constants.StellarConfig.RPC_URL,
@@ -73,14 +51,10 @@ export const createWalletActions = (
       // NORMAL TOKENS
       const _allNormalTokens = parsedResults.map((pool) => pool.pool_response.token_a.address); // _allAssets
 
-      // LP TOKENS
-      const _allLpTokens = parsedResults.map((pool) => pool.pool_response.token_share.address);
-
-      // OTHER TOKENS
-      const _allApiTokens: any[] = [];
+      const _allApiTokenAddressses = _allApiTokens.map((token) => token.contract);
 
       const allTokens = _allNormalTokens
-        ? [..._allNormalTokens, ..._allLpTokens, ..._allApiTokens].map(async (token: string) => {
+        ? [..._allNormalTokens, ..._allApiTokenAddressses].map(async (token: string) => {
             await getState().fetchTokenInfo(token);
           })
         : [];
@@ -90,7 +64,6 @@ export const createWalletActions = (
       // =================================================================
 
       const oracleRegistry = new OracleRegistryContract.Client({
-        // publicKey: constants.StellarConfig.TESTING_SOURCE.accountId(),
         contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         rpcUrl: constants.StellarConfig.RPC_URL,

@@ -1,26 +1,32 @@
 'use client';
 
+import type { PoolPosition } from '@/hooks';
+
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
 import { fPercent } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Stack, Button, Typography } from '@mui/material';
+import { Stack, Button, Typography, IconButton } from '@mui/material';
 
+import { Iconify } from '../template/iconify';
 import PoolTokensAvatarGroup from '../_common/pool-tokens-avatar-group';
 
-export interface PositionItemProps {
-  pool: {
-    fee: number;
-    name: string;
-  };
-  position: any;
+interface PositionItemProps {
+  position: PoolPosition;
+  onWithdraw: () => void;
 }
 
-export default function PositionItem({ position, pool }: PositionItemProps) {
+export default function PositionItem({ position, onWithdraw }: PositionItemProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  const router = useRouter();
 
+  const handleCardClick = () => {
+    router.push(paths.pools.details(position.poolAddress));
+  };
   return (
     <Box sx={{ p: 2, pt: 0 }}>
       <Button
@@ -33,15 +39,20 @@ export default function PositionItem({ position, pool }: PositionItemProps) {
           borderRadius: '16px',
           border: `1px solid ${theme.palette.divider}`,
         }}
+        // href={paths.pools.details(position.poolAddress)}
+        onClick={handleCardClick}
       >
         <Stack direction="row" width={1} alignItems="center">
-          <PoolTokensAvatarGroup tokenAName="" tokenBName="" />
+          <PoolTokensAvatarGroup
+            tokenAName={position.tokenA.name}
+            tokenBName={position.tokenB.name}
+          />
 
           <Stack direction="column" width={1} alignItems="start">
             <Typography component="span" color="text.primary" variant="h6" ml={1}>
-              {/* {pool.pairInfo?.tokenA.name}
+              {position.tokenA.name}
               {t('/')}
-              {pool.pairInfo?.tokenB.name} */}
+              {position.tokenB.name}
             </Typography>
             <Box
               sx={{
@@ -69,7 +80,7 @@ export default function PositionItem({ position, pool }: PositionItemProps) {
                     py: '2px',
                   }}
                 >
-                  {fPercent(pool.fee)}
+                  {fPercent(position.poolFee)}
                 </Typography>
               </Box>
               <Box
@@ -90,19 +101,29 @@ export default function PositionItem({ position, pool }: PositionItemProps) {
                     px: '6px',
                     py: '2px',
                   }}
-                  // eslint-disable-next-line i18next/no-literal-string
                 >
-                  v1
+                  {position.poolVersion}
                 </Typography>
               </Box>
             </Box>
           </Stack>
+
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation(); // Prevents outer button from triggering
+              onWithdraw();
+            }}
+            sx={{ top: 8, right: 8, position: 'absolute', color: 'error.main' }}
+          >
+            <Iconify icon="solar:trash-bin-trash-bold" />
+          </IconButton>
         </Stack>
 
-        {/* <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
+        <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
           <Stack direction="column" alignItems="start">
             <Typography color="text.primary" variant="body1">
-              {fCurrency(pool.performance?.position)}
+              {/* {fCurrency(pool.performance?.position)} */}
+              {position.balance}
             </Typography>
             <Typography color="text.secondary" variant="caption">
               {t('Position')}
@@ -111,13 +132,14 @@ export default function PositionItem({ position, pool }: PositionItemProps) {
 
           <Stack direction="column" alignItems="start">
             <Typography color="text.primary" variant="body1">
-              {fCurrency(pool.performance?.fees)}
+              {/* {fCurrency(pool.performance?.fees)} */}
+              {t('Coming soon')}
             </Typography>
             <Typography color="text.secondary" variant="caption">
               {t('Fees')}
             </Typography>
           </Stack>
-        </Stack> */}
+        </Stack>
       </Button>
     </Box>
   );

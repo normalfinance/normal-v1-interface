@@ -132,7 +132,7 @@ export function usePoolPriceChart(poolAddress: string): ReturnType {
 
     const fetchVolumeData = async () => {
       const { data, error: e } = await supabase
-        .from('realtime goldsky')
+        .from('goldsky')
         .select('*')
         .eq('contract_id', poolAddress)
         .eq('type', 'contract')

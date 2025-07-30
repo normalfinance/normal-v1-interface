@@ -34,7 +34,7 @@ if (typeof window !== 'undefined') {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CCSDXS6FGH3OCLSO5EM54LMTSS52I4BLAGYAUFVOTMHB34LR6QUPCWPR",
+    contractId: "CDGPFXQZGOQRSHSSK7BII5CAKYKHKWYZU73R7CY4R7VYDHQ7Y3TK7WNQ",
   }
 } as const
 
@@ -44,32 +44,28 @@ export const PoolProviderSwapFeeError = {
    */
   2006: {message:"OutMinNotSatisfied"}
 }
+
 export const AccessControlError = {
   /**
    * AccessControlError
    */
   101: {message:"RoleNotFound"},
-
   102: {message:"Unauthorized"},
-
   103: {message:"AdminAlreadySet"},
-
   104: {message:"BadRoleUsage"},
-
   2906: {message:"AnotherActionActive"},
-
   2907: {message:"NoActionActive"},
-
   2908: {message:"ActionNotReadyYet"}
 }
+
 export const RewardsError = {
   /**
    * RewardsError
    */
   701: {message:"PastTimeNotAllowed"},
-
   702: {message:"SameIncentivesConfig"}
 }
+
 
 export interface PoolIncentiveConfig {
   reward_expired_at: u64;
@@ -98,49 +94,45 @@ export const UpgradeError = {
    * UpgradeError
    */
   2906: {message:"AnotherActionActive"},
-
   2907: {message:"NoActionActive"},
-
   2908: {message:"ActionNotReadyYet"}
 }
+
 export const MathError = {
   /**
    * MathError: NumberOverflow
    */
   510: {message:"NumberOverflow"},
-
   511: {message:"MathError"}
 }
+
 export const OracleError = {
   /**
    * OracleError: OracleNonPositive
    */
   601: {message:"OracleNonPositive"},
-
   602: {message:"OracleTooVolatile"},
-
   603: {message:"OracleTooUncertain"},
-
   604: {message:"OracleStaleForMargin"},
-
   605: {message:"OracleInsufficientDataPoints"},
-
   606: {message:"OracleStaleForPool"}
 }
+
 export const StorageError = {
   /**
    * StorageError
    */
   501: {message:"ValueNotInitialized"},
-
   502: {message:"ValueMissing"}
 }
+
 export const ValidationError = {
   /**
    * ValidationError
    */
   801: {message:"InvalidToken"}
 }
+
 
 export interface PrivilegedAddresses {
   emergency_admin: string;
@@ -174,6 +166,14 @@ export interface MutableOracleInfo {
 }
 
 export type NormalAction = {tag: "AddLiquidity", values: void} | {tag: "RemoveLiquidity", values: void} | {tag: "Swap", values: void} | {tag: "UpdateTwap", values: void} | {tag: "Rebalance", values: void} | {tag: "ClaimInsurance", values: void};
+
+
+export interface HistoricalOracleData {
+  last_oracle_delay: u64;
+  last_oracle_price: u128;
+  last_oracle_price_twap: u128;
+  last_oracle_price_twap_ts: u64;
+}
 
 
 export interface Pool {
@@ -226,6 +226,7 @@ export interface InitializeParams {
   assets: readonly [string, string];
   fee_fraction: u32;
   lp_token_info: TokenInitInfo;
+  oracle_registry: string;
   privileged_addrs: PrivilegedAddresses;
   quote_max_insurance: u128;
   router: string;
@@ -240,6 +241,8 @@ export interface InitializeAllParams {
   reward_config: RewardConfig;
 }
 
+export type SwapDirection = {tag: "Buy", values: void} | {tag: "Sell", values: void};
+
 
 export interface TokenInitInfo {
   name: string;
@@ -252,7 +255,6 @@ export interface AddressAndAmount {
   address: string;
   amount: u128;
 }
-
 
 export interface Client {
   /**
@@ -280,7 +282,7 @@ export interface Client {
    * # Returns
    * * `u128`
    */
-  swap: ({user, tokens, token_in, token_out, asset, in_amount, out_min}: {user: string, tokens: Array<string>, token_in: string, token_out: string, asset: string, in_amount: u128, out_min: u128}, options?: {
+  swap: ({user, asset, direction, in_amount, out_min}: {user: string, asset: string, direction: SwapDirection, in_amount: u128, out_min: u128}, options?: {
     /**
      * The fee to pay for the transaction. Default: BASE_FEE
      */
@@ -779,7 +781,7 @@ export interface Client {
 }
 export class Client extends ContractClient {
   static async deploy<T = Client>(
-    /** Options for initalizing a Client as well as for calling a method, with extras specific to deploying. */
+    /** Options for initializing a Client as well as for calling a method, with extras specific to deploying. */
     options: MethodOptions &
       Omit<ContractClientOptions, "contractId"> & {
         /** The hash of the Wasm blob, which must already be installed on-chain. */
@@ -794,7 +796,7 @@ export class Client extends ContractClient {
   }
   constructor(public readonly options: ContractClientOptions) {
     super(
-      new ContractSpec([ "AAAAAAAABABFeGVjdXRlcyBhIHRva2VuIHN3YXAgdGhyb3VnaCBhIGRlbGVnYXRlZCBwb29sIGNvbnRyYWN0IHdpdGggaW50ZWdyYXRlZCBmZWUgcm91dGluZywgcmV3YXJkcywgYW5kIGFjY291bnRpbmcuCgpUaGlzIGZ1bmN0aW9uIGZhY2lsaXRhdGVzIHRoZSB1c2VyIHN3YXBwaW5nIG9uZSB0b2tlbiBmb3IgYW5vdGhlciB1c2luZyB0aGUgYXBwcm9wcmlhdGUgcG9vbApsaW5rZWQgdG8gYSBzeW50aGV0aWMgYXNzZXQgc3ltYm9sLiBJdCBoYW5kbGVzOgotIFRva2VuIHRyYW5zZmVyIGZyb20gdXNlciB0byByb3V0ZXIKLSBSb3V0aW5nIHRoZSBzd2FwIHRvIHRoZSBwb29sIHZpYSB0aGUgcm91dGVyIGNvbnRyYWN0Ci0gQXBwbHlpbmcgcHJvdG9jb2wtbGV2ZWwgZmVlcwotIERpc3RyaWJ1dGluZyBMUCByZXZlbnVlLCBidWZmZXIgcmVzZXJ2ZXMsIGFuZCBpbnN1cmFuY2UgZnVuZCBwcmVtaXVtcwotIFRyYWNraW5nIGxvbmctdGVybSBtZXRyaWNzIGxpa2Ugdm9sdW1lIGFuZCBpbmNlbnRpdmVzCgojIEFyZ3VtZW50cwoqIGBlYCAtIFRoZSBTb3JvYmFuIGVudmlyb25tZW50LgoqIGB1c2VyYCAtIFRoZSBhZGRyZXNzIG9mIHRoZSB1c2VyIHBlcmZvcm1pbmcgdGhlIHN3YXAuCiogYHRva2Vuc2AgLSBBIHZlY3RvciBvZiB0b2tlbiBhZGRyZXNzZXMsIHR5cGljYWxseSBbVG9rZW4gQSwgVG9rZW4gQl0uCiogYHRva2VuX2luYCAtIFRoZSBhZGRyZXNzIG9mIHRoZSBpbnB1dCB0b2tlbiAoc29sZCBieSB0aGUgdXNlcikuCiogYHRva2VuX291dGAgLSBUaGUgYWRkcmVzcyBvZiB0aGUgb3V0cHV0IHRva2VuIChyZWNlaXZlZCBieSB0aGUgdXNlcikuCiogYGFzc2V0YCAtIFRoZSBzeW50aGV0aWMgYXNzZXQgc3ltYm9sIHRpZWQgdG8gdGhlIHBvb2wuCiogYGluX2Ftb3VudGAgLSBBbW91bnQgb2YgdGhlIGlucHV0IHRva2VuIGJlaW5nIHN3YXBwZWQuCiogYG91dF9taW5gIC0gTWluaW11bSBhY2NlcHRhYmxlIG91dHB1dCB0b2tlbiBhbW91bnQgKHNsaXBwYWdlIHByb3RlY3Rpb24pLgoKIyBSZXR1cm5zCiogYHUxMjhgAAAABHN3YXAAAAAHAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAGdG9rZW5zAAAAAAPqAAAAEwAAAAAAAAAIdG9rZW5faW4AAAATAAAAAAAAAAl0b2tlbl9vdXQAAAAAAAATAAAAAAAAAAVhc3NldAAAAAAAABEAAAAAAAAACWluX2Ftb3VudAAAAAAAAAoAAAAAAAAAB291dF9taW4AAAAACgAAAAEAAAAK",
+      new ContractSpec([ "AAAAAAAABABFeGVjdXRlcyBhIHRva2VuIHN3YXAgdGhyb3VnaCBhIGRlbGVnYXRlZCBwb29sIGNvbnRyYWN0IHdpdGggaW50ZWdyYXRlZCBmZWUgcm91dGluZywgcmV3YXJkcywgYW5kIGFjY291bnRpbmcuCgpUaGlzIGZ1bmN0aW9uIGZhY2lsaXRhdGVzIHRoZSB1c2VyIHN3YXBwaW5nIG9uZSB0b2tlbiBmb3IgYW5vdGhlciB1c2luZyB0aGUgYXBwcm9wcmlhdGUgcG9vbApsaW5rZWQgdG8gYSBzeW50aGV0aWMgYXNzZXQgc3ltYm9sLiBJdCBoYW5kbGVzOgotIFRva2VuIHRyYW5zZmVyIGZyb20gdXNlciB0byByb3V0ZXIKLSBSb3V0aW5nIHRoZSBzd2FwIHRvIHRoZSBwb29sIHZpYSB0aGUgcm91dGVyIGNvbnRyYWN0Ci0gQXBwbHlpbmcgcHJvdG9jb2wtbGV2ZWwgZmVlcwotIERpc3RyaWJ1dGluZyBMUCByZXZlbnVlLCBidWZmZXIgcmVzZXJ2ZXMsIGFuZCBpbnN1cmFuY2UgZnVuZCBwcmVtaXVtcwotIFRyYWNraW5nIGxvbmctdGVybSBtZXRyaWNzIGxpa2Ugdm9sdW1lIGFuZCBpbmNlbnRpdmVzCgojIEFyZ3VtZW50cwoqIGBlYCAtIFRoZSBTb3JvYmFuIGVudmlyb25tZW50LgoqIGB1c2VyYCAtIFRoZSBhZGRyZXNzIG9mIHRoZSB1c2VyIHBlcmZvcm1pbmcgdGhlIHN3YXAuCiogYHRva2Vuc2AgLSBBIHZlY3RvciBvZiB0b2tlbiBhZGRyZXNzZXMsIHR5cGljYWxseSBbVG9rZW4gQSwgVG9rZW4gQl0uCiogYHRva2VuX2luYCAtIFRoZSBhZGRyZXNzIG9mIHRoZSBpbnB1dCB0b2tlbiAoc29sZCBieSB0aGUgdXNlcikuCiogYHRva2VuX291dGAgLSBUaGUgYWRkcmVzcyBvZiB0aGUgb3V0cHV0IHRva2VuIChyZWNlaXZlZCBieSB0aGUgdXNlcikuCiogYGFzc2V0YCAtIFRoZSBzeW50aGV0aWMgYXNzZXQgc3ltYm9sIHRpZWQgdG8gdGhlIHBvb2wuCiogYGluX2Ftb3VudGAgLSBBbW91bnQgb2YgdGhlIGlucHV0IHRva2VuIGJlaW5nIHN3YXBwZWQuCiogYG91dF9taW5gIC0gTWluaW11bSBhY2NlcHRhYmxlIG91dHB1dCB0b2tlbiBhbW91bnQgKHNsaXBwYWdlIHByb3RlY3Rpb24pLgoKIyBSZXR1cm5zCiogYHUxMjhgAAAABHN3YXAAAAAFAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAAAAAAlkaXJlY3Rpb24AAAAAAAfQAAAADVN3YXBEaXJlY3Rpb24AAAAAAAAAAAAACWluX2Ftb3VudAAAAAAAAAoAAAAAAAAAB291dF9taW4AAAAACgAAAAEAAAAK",
         "AAAAAAAAAAAAAAAKZ2V0X3JvdXRlcgAAAAAAAAAAAAEAAAAT",
         "AAAAAAAAAAAAAAAKZ2V0X2J1ZmZlcgAAAAAAAAAAAAEAAAAT",
         "AAAAAAAAAAAAAAATZ2V0X2ZlZV9kZXN0aW5hdGlvbgAAAAAAAAAAAQAAABM=",
@@ -834,6 +836,7 @@ export class Client extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAACk9yYWNsZUluZm8AAAAAAAUAAAAAAAAAB2FkZHJlc3MAAAAAEwAAAAAAAAAIZGVjaW1hbHMAAAAEAAAAAAAAAAZmcm96ZW4AAAAAAAEAAAAAAAAADGxhc3RfdXBkYXRlZAAAAAYAAAAAAAAAGnNhbml0aXplX2NsYW1wX2Rlbm9taW5hdG9yAAAAAAAH",
         "AAAAAQAAAAAAAAAAAAAAEU11dGFibGVPcmFjbGVJbmZvAAAAAAAABAAAAAAAAAAHYWRkcmVzcwAAAAPoAAAAEwAAAAAAAAAIZGVjaW1hbHMAAAPoAAAABAAAAAAAAAAGZnJvemVuAAAAAAPoAAAAAQAAAAAAAAAac2FuaXRpemVfY2xhbXBfZGVub21pbmF0b3IAAAAAA+gAAAAH",
         "AAAAAgAAAAAAAAAAAAAADE5vcm1hbEFjdGlvbgAAAAYAAAAAAAAAAAAAAAxBZGRMaXF1aWRpdHkAAAAAAAAAAAAAAA9SZW1vdmVMaXF1aWRpdHkAAAAAAAAAAAAAAAAEU3dhcAAAAAAAAAAAAAAAClVwZGF0ZVR3YXAAAAAAAAAAAAAAAAAACVJlYmFsYW5jZQAAAAAAAAAAAAAAAAAADkNsYWltSW5zdXJhbmNlAAA=",
+        "AAAAAQAAAAAAAAAAAAAAFEhpc3RvcmljYWxPcmFjbGVEYXRhAAAABAAAAAAAAAARbGFzdF9vcmFjbGVfZGVsYXkAAAAAAAAGAAAAAAAAABFsYXN0X29yYWNsZV9wcmljZQAAAAAAAAoAAAAAAAAAFmxhc3Rfb3JhY2xlX3ByaWNlX3R3YXAAAAAAAAoAAAAAAAAAGWxhc3Rfb3JhY2xlX3ByaWNlX3R3YXBfdHMAAAAAAAAG",
         "AAAAAQAAAAAAAAAAAAAABFBvb2wAAAAKAAAAAAAAAApiYXNlX2Fzc2V0AAAAAAARAAAAAAAAAAxleHBpcnlfcHJpY2UAAAAKAAAAAAAAAAlleHBpcnlfdHMAAAAAAAAGAAAAAAAAAAxmZWVfZnJhY3Rpb24AAAAEAAAAAAAAAA9pbnN1cmFuY2VfY2xhaW0AAAAH0AAAAA5JbnN1cmFuY2VDbGFpbQAAAAAAAAAAABdsaXF1aWRpdHlfbWF4X2ltYmFsYW5jZQAAAAAKAAAAAAAAAAtxdW90ZV9hc3NldAAAAAARAAAAAAAAAAZzdGF0dXMAAAAAB9AAAAAKUG9vbFN0YXR1cwAAAAAAAAAAAAR0aWVyAAAH0AAAAAhQb29sVGllcgAAAAAAAAAHdG9rZW5fYgAAAAAT",
         "AAAAAgAAAAAAAAAAAAAAClBvb2xTdGF0dXMAAAAAAAYAAAAAAAAAAAAAAAtJbml0aWFsaXplZAAAAAAAAAAAAAAAAAZBY3RpdmUAAAAAAAAAAAAAAAAABkZyb3plbgAAAAAAAAAAAAAAAAAKUmVkdWNlT25seQAAAAAAAAAAAAAAAAAKU2V0dGxlbWVudAAAAAAAAAAAAAAAAAAIRGVsaXN0ZWQ=",
         "AAAAAgAAAAAAAAAAAAAACFBvb2xUaWVyAAAABgAAAAAAAAAAAAAAAUEAAAAAAAAAAAAAAAAAAAFCAAAAAAAAAAAAAAAAAAABQwAAAAAAAAAAAAAAAAAAC1NwZWN1bGF0aXZlAAAAAAAAAAAAAAAAEUhpZ2hseVNwZWN1bGF0aXZlAAAAAAAAAAAAAAAAAAAISXNvbGF0ZWQ=",
@@ -841,8 +844,9 @@ export class Client extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAADFBvb2xSZXNwb25zZQAAAAQAAAAAAAAABHBvb2wAAAfQAAAABFBvb2wAAAAAAAAAB3Rva2VuX2EAAAAH0AAAABBBZGRyZXNzQW5kQW1vdW50AAAAAAAAAAd0b2tlbl9iAAAAB9AAAAAQQWRkcmVzc0FuZEFtb3VudAAAAAAAAAALdG9rZW5fc2hhcmUAAAAH0AAAABBBZGRyZXNzQW5kQW1vdW50",
         "AAAAAQAAAAAAAAAAAAAACFBvb2xJbmZvAAAAAgAAAAAAAAAMcG9vbF9hZGRyZXNzAAAAEwAAAAAAAAANcG9vbF9yZXNwb25zZQAAAAAAB9AAAAAMUG9vbFJlc3BvbnNl",
         "AAAAAQAAAAAAAAAAAAAADFJld2FyZENvbmZpZwAAAAEAAAAAAAAADHJld2FyZF90b2tlbgAAABM=",
-        "AAAAAQAAAAAAAAAAAAAAEEluaXRpYWxpemVQYXJhbXMAAAAJAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAABmFzc2V0cwAAAAAD7QAAAAIAAAARAAAAEQAAAAAAAAAMZmVlX2ZyYWN0aW9uAAAABAAAAAAAAAANbHBfdG9rZW5faW5mbwAAAAAAB9AAAAANVG9rZW5Jbml0SW5mbwAAAAAAAAAAAAAQcHJpdmlsZWdlZF9hZGRycwAAB9AAAAATUHJpdmlsZWdlZEFkZHJlc3NlcwAAAAAAAAAAE3F1b3RlX21heF9pbnN1cmFuY2UAAAAACgAAAAAAAAAGcm91dGVyAAAAAAATAAAAAAAAAAR0aWVyAAAH0AAAAAhQb29sVGllcgAAAAAAAAAGdG9rZW5zAAAAAAPqAAAAEw==",
+        "AAAAAQAAAAAAAAAAAAAAEEluaXRpYWxpemVQYXJhbXMAAAAKAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAABmFzc2V0cwAAAAAD7QAAAAIAAAARAAAAEQAAAAAAAAAMZmVlX2ZyYWN0aW9uAAAABAAAAAAAAAANbHBfdG9rZW5faW5mbwAAAAAAB9AAAAANVG9rZW5Jbml0SW5mbwAAAAAAAAAAAAAPb3JhY2xlX3JlZ2lzdHJ5AAAAABMAAAAAAAAAEHByaXZpbGVnZWRfYWRkcnMAAAfQAAAAE1ByaXZpbGVnZWRBZGRyZXNzZXMAAAAAAAAAABNxdW90ZV9tYXhfaW5zdXJhbmNlAAAAAAoAAAAAAAAABnJvdXRlcgAAAAAAEwAAAAAAAAAEdGllcgAAB9AAAAAIUG9vbFRpZXIAAAAAAAAABnRva2VucwAAAAAD6gAAABM=",
         "AAAAAQAAAAAAAAAAAAAAE0luaXRpYWxpemVBbGxQYXJhbXMAAAAAAwAAAAAAAAAEYmFzZQAAB9AAAAAQSW5pdGlhbGl6ZVBhcmFtcwAAAAAAAAAFcGxhbmUAAAAAAAATAAAAAAAAAA1yZXdhcmRfY29uZmlnAAAAAAAH0AAAAAxSZXdhcmRDb25maWc=",
+        "AAAAAgAAAAAAAAAAAAAADVN3YXBEaXJlY3Rpb24AAAAAAAACAAAAAAAAAAAAAAADQnV5AAAAAAAAAAAAAAAABFNlbGw=",
         "AAAAAQAAAAAAAAAAAAAADVRva2VuSW5pdEluZm8AAAAAAAADAAAAAAAAAARuYW1lAAAAEAAAAAAAAAAGc3ltYm9sAAAAAAAQAAAAAAAAAA90b2tlbl93YXNtX2hhc2gAAAAD7gAAACA=",
         "AAAAAQAAAAAAAAAAAAAAEEFkZHJlc3NBbmRBbW91bnQAAAACAAAAAAAAAAdhZGRyZXNzAAAAABMAAAAAAAAABmFtb3VudAAAAAAACg==" ]),
       options

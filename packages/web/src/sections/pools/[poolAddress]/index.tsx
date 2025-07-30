@@ -5,11 +5,11 @@ import type { events } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { fPercent } from '@/utils/format-number';
+import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { usePool, usePoolEvents, usePoolPriceChart } from '@/hooks';
 // import { usePoolPriceChart } from '@/hooks/stellar/events/use-pool-price-chart';
-// import { usePoolPriceChartv2 } from '@/hooks/stellar/events/use-pool-price-chart-v2';
+import { usePool, usePoolEvents, usePoolPriceChart } from '@/hooks';
 
 import { Alert, Stack, Grid2, useTheme, Typography, CircularProgress } from '@mui/material';
 
@@ -59,6 +59,7 @@ function convertToPoolTxRow(event: events.PoolEvent): PoolTxRow {
 export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const theme = useTheme();
   const { t } = useTranslate();
+  const { tokens } = useAppStore();
 
   const { loading, error, pool } = usePool(poolAddress);
   const { events } = usePoolEvents(poolAddress);
@@ -141,6 +142,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
               { statName: '24h Volume', value: 0 },
               { statName: '24h Fees', value: 0 },
             ]}
+            tokens={tokens}
           />
         </Grid2>
       </Grid2>

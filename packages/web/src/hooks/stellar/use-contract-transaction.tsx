@@ -19,6 +19,7 @@ import {
   SorobanTokenContract,
   InsuranceFundContract,
   OracleRegistryContract,
+  LiquidityCalculatorContract,
 } from '@normalfinance/contracts';
 
 import Box from '@mui/material/Box';
@@ -34,6 +35,7 @@ type ContractType =
   | 'pool_router'
   | 'buffer'
   | 'insurance_fund'
+  | 'liquidity_calculator'
   | 'token';
 
 const contractClients = {
@@ -43,6 +45,7 @@ const contractClients = {
   pool_router: PoolRouterContract.Client,
   buffer: BufferContract.Client,
   insurance_fund: InsuranceFundContract.Client,
+  liquidity_calculator: LiquidityCalculatorContract.Client,
   token: SorobanTokenContract.Client,
 };
 
@@ -58,9 +61,11 @@ type ContractClientType<T extends ContractType> = T extends 'oracle_registry'
           ? BufferContract.Client
           : T extends 'insurance_fund'
             ? InsuranceFundContract.Client
-            : T extends 'token'
-              ? SorobanTokenContract.Client
-              : never;
+            : T extends 'liquidity_calculator'
+              ? LiquidityCalculatorContract.Client
+              : T extends 'token'
+                ? SorobanTokenContract.Client
+                : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;

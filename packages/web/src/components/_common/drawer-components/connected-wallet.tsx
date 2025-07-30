@@ -1,5 +1,6 @@
 'use client';
 
+import type { PoolPosition } from '@/hooks';
 import type { Activity } from '@/types/activity';
 import type { StateToken as Token } from '@normalfinance/types';
 
@@ -24,14 +25,12 @@ import ReceiveModal from '../receive-modal';
 import PositioinsTab from './positions-tab';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
-import type { PoolDetails } from '../../_pool-page-components/pool-chart/pool-chart-data';
-
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {
   balance?: number;
   percentageChange?: number;
   tokens?: Token[];
-  positions?: PoolDetails[];
+  positions?: PoolPosition[];
   activity?: Activity[];
 }
 
@@ -201,7 +200,7 @@ export default function ConnectedWallet({
 
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'tokens' && <TokensTab tokens={tokens} />}
-      {tabs.value === 'pools' && <PositioinsTab positions={positions} />}
+      {tabs.value === 'pools' && <PositioinsTab positions={positions ?? []} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
 
       <ReceiveModal open={showReceiveModal} onClose={() => setShowReceiveModal(false)} />

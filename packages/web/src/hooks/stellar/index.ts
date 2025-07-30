@@ -10,4 +10,5 @@ export * from './use-liquidity';
 export * from './use-total-tvl';
 export * from './use-insurance-fund';
 export * from './use-oracle-registry';
+export * from './use-liquidity-positions';
 export * from './use-contract-transaction';

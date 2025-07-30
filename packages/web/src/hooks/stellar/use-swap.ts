@@ -1,5 +1,6 @@
 'use client';
 
+import type { PoolSwapFeeContract } from '@normalfinance/contracts';
 import type { Client as PoolClient } from '@normalfinance/contracts/build/pool';
 import type { Client as PoolRouterClient } from '@normalfinance/contracts/build/pool_router';
 import type { Client as PoolSwapFeeClient } from '@normalfinance/contracts/build/pool_swap_fee';
@@ -33,6 +34,11 @@ interface ReturnType {
     token_out_decimals?: number
   ) => Promise<void>;
 }
+
+const buyDirection: PoolSwapFeeContract.SwapDirection = {
+  tag: 'Buy',
+  values: undefined,
+};
 
 // ----------------------------------------------------------------------
 
@@ -69,18 +75,19 @@ export function useSwap(): ReturnType {
   };
 
   const onEstimateSwap = async (args: EstimateSwapArgs, token_in_decimals?: number) => {
+    const buy = args.direction == buyDirection;
     const processedArgs = {
       ...args,
       in_amount: BigInt((args.in_amount * 10 ** (token_in_decimals || 7)).toFixed(0)),
     };
 
-    const transaction = await executeContractTransaction({
+    await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: args.token_in, amount: args.in_amount },
-        token2: { name: args.token_out, amount: '' },
+        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
+        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: '' },
       },
       transactionFunction: async (client, restore) =>
         client.estimate_swap(processedArgs, { simulate: !restore }),
@@ -92,6 +99,7 @@ export function useSwap(): ReturnType {
     token_in_decimals?: number,
     token_out_decimals?: number
   ) => {
+    const buy = args.direction == buyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
@@ -104,8 +112,8 @@ export function useSwap(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_SWAP_FEE_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: args.token_in, amount: args.in_amount },
-        token2: { name: args.token_out, amount: args.out_min },
+        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
+        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: args.out_min },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });
@@ -128,6 +136,7 @@ export function useSwap(): ReturnType {
     token_in_decimals?: number,
     token_out_decimals?: number
   ) => {
+    const buy = args.direction == buyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
@@ -140,8 +149,8 @@ export function useSwap(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: args.token_in, amount: args.in_amount },
-        token2: { name: args.token_out, amount: args.out_min },
+        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
+        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: args.out_min },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });
@@ -164,6 +173,7 @@ export function useSwap(): ReturnType {
     args: SwapStrictReceiveArgs,
     token_out_decimals?: number
   ) => {
+    const buy = args.direction == buyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
@@ -175,8 +185,8 @@ export function useSwap(): ReturnType {
       contractAddress: poolAddress,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: args.in_idx, amount: args.in_idx },
-        token2: { name: args.out_idx, amount: args.out_amount },
+        token1: { name: buy ? 'XLM' : '', amount: args.in_max },
+        token2: { name: buy ? '' : 'XLM', amount: args.out_amount },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap_strict_receive(processedArgs, { simulate: !restore });

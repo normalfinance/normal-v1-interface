@@ -4,9 +4,10 @@ import type { StateToken } from '@normalfinance/types';
 import type { PositionQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
-import { useTokenBalance } from '@/hooks';
 import { useState, useEffect } from 'react';
+import { constants } from '@normalfinance/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useLiquidity, useTokenBalance } from '@/hooks';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
@@ -59,6 +60,8 @@ export function StepContentPanel({
   const store = useAppStore();
   const persistStore = usePersistStore();
 
+  const { depositLiquidity } = useLiquidity();
+
   const [isLoading, setIsLoading] = useState(false);
 
   /* ---------------- RHF ---------------- */
@@ -101,7 +104,7 @@ export function StepContentPanel({
 
   // Get token balance for the selected token
   const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
-    selectedToken?.id || null
+    constants.StellarConfig.XLM_ADDRESS
   );
 
   // Check if user has insufficient balance
@@ -111,7 +114,9 @@ export function StepContentPanel({
     }
 
     // Convert the user input amount to the token's smallest unit (considering decimals)
-    const requiredAmount = BigInt(Math.floor(watchAmount * Math.pow(10, selectedToken.decimals)));
+    const requiredAmount = BigInt(
+      Math.floor(watchAmount * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
+    );
     return tokenBalance.data < requiredAmount;
   };
 
@@ -120,7 +125,7 @@ export function StepContentPanel({
     if (step === 1) {
       if (!watchAmount) return 'Enter amount';
       if (!isWalletConnected) return 'Connect Wallet';
-      if (hasInsufficientBalance()) return `Insufficient ${selectedToken?.symbol || 'balance'}`;
+      if (hasInsufficientBalance()) return 'Insufficient XLM';
       return 'Continue';
     }
     return 'Continue';
@@ -165,6 +170,13 @@ export function StepContentPanel({
       }
     }
 
+    if (step == 2 && watchAmount !== undefined) {
+      depositLiquidity({
+        asset: watchToken.startsWith('n') ? watchToken.slice(1) : watchToken,
+        token_b_amount: watchAmount,
+      });
+    }
+
     // ----- normal flow (validate & advance) ---------------------------
     setIsLoading(true);
     const ok = await methods.trigger(stepFields[step]);
@@ -187,7 +199,14 @@ export function StepContentPanel({
         <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
           {step === 1 && watchAmount ? (
             <WalletGate buttonText={getButtonLabel()} fullWidth variant="soft" color="success">
-              <Button fullWidth variant="soft" color="success" size="large" disabled>
+              <Button
+                fullWidth
+                variant="soft"
+                color="success"
+                size="large"
+                disabled={isButtonDisabled()}
+                onClick={handleMainButtonClick}
+              >
                 {getButtonLabel()}
               </Button>
             </WalletGate>

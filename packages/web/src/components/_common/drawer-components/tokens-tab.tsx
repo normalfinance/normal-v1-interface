@@ -5,7 +5,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fPercent, fCurrency } from '@/utils/format-number';
+import { fPercent, fCurrency, fTokenAmount } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -93,7 +93,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                     }}
                   >
                     {/* toFixed(4) */}
-                    {token.balance.toString()}
+                    {fTokenAmount(token.balance, token.decimals ?? 18)}
                   </Typography>
                   <Typography
                     variant="body2"
@@ -121,7 +121,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                   variant="body2"
                   sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                 >
-                  {fCurrency(Number(token.balance * BigInt(token.usdValue)))}
+                  {fCurrency(token.usdValue ? Number(token.balance * BigInt(token.usdValue)) : '0')}
                 </Typography>
                 <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                   <Box

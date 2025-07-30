@@ -6,15 +6,15 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 import axios from 'axios';
 import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
-import * as Sentry from '@sentry/nextjs';
 import { useTranslate } from '@/locales';
-import { useUserActivity } from '@/hooks';
+import * as Sentry from '@sentry/nextjs';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
+import { useApiTokens, useUserActivity, useLiquidityPositions } from '@/hooks';
+import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -193,12 +193,14 @@ function WalletConnected({ address }: { address: string }) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
 
-  // const { data } = useNativeTokenBalance();
-  // const { tokens } = useUserTokens();
-  // const { positions } = useLPTokens();
+  const { tokens, getAllTokens, setLoading } = useAppStore();
+  const { tokens: apiTokens } = useApiTokens();
+
+  const { positions } = useLiquidityPositions();
 
   const { loading, error, recentActivity } = useUserActivity();
 
+  // Faucet
   const [faucetLoading, setFaucetLoading] = useState(false);
   const [faucetOff, setFaucetOff] = useState(false);
 
@@ -221,6 +223,23 @@ function WalletConnected({ address }: { address: string }) {
       setFaucetLoading(false);
     }
   }, [address, enqueueSnackbar, t]);
+
+  // Effect hook to fetch all tokens once the component mounts
+  useEffect(() => {
+    const refreshTokens = async (): Promise<void> => {
+      setLoading(true);
+      try {
+        await getAllTokens(apiTokens);
+        setLoading(false);
+      } catch (e) {
+        Sentry.captureException(e);
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    refreshTokens();
+  }, [apiTokens]);
 
   if (!address) {
     return null;
@@ -254,7 +273,13 @@ function WalletConnected({ address }: { address: string }) {
       >
         {t('Get testnet XLM')}
       </Button>
-      <ConnectedWallet balance={0} percentageChange={0} tokens={[]} positions={[]} activity={[]} />
+      <ConnectedWallet
+        balance={0}
+        percentageChange={0}
+        tokens={tokens}
+        positions={positions ?? []}
+        activity={[]}
+      />
     </Box>
   );
 }
