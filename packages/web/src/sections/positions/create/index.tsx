@@ -59,7 +59,7 @@ export default function CreatePositionView() {
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12, md: 12 }}>
             <Box sx={{ position: 'relative' }}>
-              <CreatePosition tokens={store.tokens} queryParams={params} />
+              <CreatePosition tokens={tokens} queryParams={params} />
               <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
             </Box>
           </Grid2>

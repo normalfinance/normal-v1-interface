@@ -58,10 +58,6 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
   /* ----- full dataset --------------------------------------------------- */
   const tableData = pools;
 
-  useEffect(() => {
-    setTableData(pools);
-  }, [pools]);
-
   /* ----- search filter state ------------------------------------------- */
   const filters = useSetState<IMarketTableFilters>({
     name: '', // search-text

@@ -29,7 +29,7 @@ export const useApiTokens = () => {
 export const fetchApiTokens = async () => {
   let url = 'https://raw.githubusercontent.com/normalfinance/token-list/main/tokenList.json';
 
-  if (constants.RPC_URL.includes('testnet')) {
+  if (constants.StellarConfig.RPC_URL.includes('testnet')) {
     url = 'https://raw.githubusercontent.com/normalfinance/token-list/main/tokenListTestnet.json';
   }
 

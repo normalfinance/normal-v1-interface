@@ -51,7 +51,7 @@ export function usePools(): ReturnType {
         rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
-      const pool = await PoolRouter.query_pool_details({ pool_address: poolAddress });
+      const pool = await PoolRouter.query_pool_details({ asset: '' });
 
       if (pool.result) {
         return pool.result;

@@ -52,8 +52,8 @@ export function useLiquidityPositions(): ReturnType {
 
     const TokenContract = new SorobanTokenContract.Client({
       contractId: tokenAddress.toString(),
-      networkPassphrase: constants.NETWORK_PASSPHRASE,
-      rpcUrl: constants.RPC_URL,
+      networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+      rpcUrl: constants.StellarConfig.RPC_URL,
     });
 
     // BALANCE
@@ -123,9 +123,9 @@ export function useLiquidityPositions(): ReturnType {
       setLoading(true);
 
       const PoolRouter = new PoolRouterContract.Client({
-        contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const allPoolsDetails = await PoolRouter.query_all_pools_details();

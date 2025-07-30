@@ -112,18 +112,14 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
       case 'swap':
         return (
           <Box data-testid="swap-card" sx={{ position: 'relative' }}>
-            <SwapCard
-              tokensList={store.tokens}
-              swapFeeInfo={swapFeeInfo}
-              queryParams={queryParams}
-            />
+            <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} queryParams={queryParams} />
             <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />
           </Box>
         );
       case 'send':
         return (
           <SendCard
-            tokensList={store.tokens}
+            tokensList={tokensList}
             networkCost={0}
             queryParams={queryParams}
             data-testid="send-card"
