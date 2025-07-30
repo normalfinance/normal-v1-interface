@@ -32,7 +32,7 @@ type HeadCell = TableHeadCellProps;
 
 const TABLE_HEAD: HeadCell[] = [
   { id: 'rank', label: '#', width: 64, align: 'left' },
-  { id: 'pool', label: 'Pool', width: 160 },
+  { id: 'pool', label: 'Pool', width: 200 },
   { id: 'fee', label: 'Fee Tier', align: 'left' },
   { id: 'tvl', label: 'TVL', align: 'left' },
   { id: 'apr', label: 'Pool APR', align: 'left' },

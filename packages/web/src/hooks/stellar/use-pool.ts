@@ -52,7 +52,7 @@ export function usePool(poolAddress: string): ReturnType {
         // const liquidityInfo = await PoolRouter.get_liquidity({
         //   asset: data.pool_response.pool.base_asset,
         // });
-        
+
         // if (liquidityInfo.result) {
         //   setTvl(BigNumber(liquidityInfo.result));
         // }

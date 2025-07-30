@@ -4,7 +4,7 @@ import type { TxType, PoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
 import React, { useMemo, useState } from 'react';
-import { fShortenNumber } from '@/utils/format-number';
+import { fCurrency } from '@/utils/format-number';
 import { fTruncate } from '@normalfinance/utils/build/format';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 
@@ -21,6 +21,7 @@ import {
   TableCell,
   TableHead,
   Typography,
+  CardHeader,
   TableContainer,
   TableSortLabel,
 } from '@mui/material';
@@ -30,8 +31,8 @@ import { TableSkeleton } from '@/components/template/table';
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Buy: 'success',
   Sell: 'error',
-  Deposit: 'warning',
-  Withdraw: 'info',
+  Deposit: 'info',
+  Withdraw: 'warning',
 };
 
 function ago(sec: number) {
@@ -56,8 +57,9 @@ export const PoolTransactionsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
   rows: PoolTxRow[];
+  xlmPrice: number;
   loading?: boolean;
-}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, loading }) => {
+}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, xlmPrice, loading }) => {
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -99,6 +101,10 @@ export const PoolTransactionsTable: React.FC<{
   // -------------------------------------------------------------------
   return (
     <Card sx={{ p: 1 }}>
+      <CardHeader
+        sx={{ mb: 3 }}
+        title={<Typography variant="h5">{t('Transactions')}</Typography>}
+      />
       <Paper sx={{ width: '100%', overflow: 'auto' }}>
         <TableContainer
           sx={{
@@ -156,11 +162,7 @@ export const PoolTransactionsTable: React.FC<{
                 </TableCell>
 
                 {(['tokenAAmount', 'tokenBAmount'] as const).map((key) => (
-                  <TableCell
-                    key={key}
-                    align="right"
-                    sortDirection={orderBy === key ? order : false}
-                  >
+                  <TableCell key={key} sortDirection={orderBy === key ? order : false}>
                     <TableSortLabel
                       active={orderBy === key}
                       direction={order === null ? 'asc' : (order ?? 'asc')}
@@ -195,6 +197,10 @@ export const PoolTransactionsTable: React.FC<{
                 ordered.map((row, idx) => {
                   const stellarExpertUrl = createStellarExpertUrl('tx', row.txHash);
 
+                  const poolPrice = row.tokenBAmount / row.tokenAAmount;
+                  const baseFiatValue = poolPrice * row.tokenAAmount * xlmPrice;
+                  const quoteFiatValue = row.tokenBAmount * xlmPrice;
+
                   return (
                     <TableRow
                       hover
@@ -202,12 +208,18 @@ export const PoolTransactionsTable: React.FC<{
                       sx={{ cursor: 'pointer' }}
                       onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
                     >
-                      <TableCell>{row.timestamp ? ago(Number(row.timestamp)) : ''}</TableCell>
+                      <TableCell>
+                        {row.timestamp ? `${ago(row.timestamp / 1000)} ago` : ''}
+                      </TableCell>
                       <TableCell>
                         <Chip label={row.type} color={typeColor[row.type]} size="small" />
                       </TableCell>
-                      <TableCell align="right">{fShortenNumber(row.tokenAAmount)}</TableCell>
-                      <TableCell align="right">{fShortenNumber(row.tokenBAmount)}</TableCell>
+                      <TableCell>
+                        {row.tokenAAmount} ({fCurrency(baseFiatValue)})
+                      </TableCell>
+                      <TableCell>
+                        {row.tokenBAmount} ({fCurrency(quoteFiatValue)})
+                      </TableCell>
                       <TableCell>{fTruncate(row.user, 15)}</TableCell>
                     </TableRow>
                   );

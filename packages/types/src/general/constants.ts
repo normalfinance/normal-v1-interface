@@ -4,6 +4,7 @@ export interface NetworkConfig {
   // network
   TESTING_SOURCE: Account;
   NETWORK_PASSPHRASE: string;
+  HORIZON_URL: string;
   RPC_URL: string;
   // contracts
   POOL_ROUTER_ADDRESS: string;
@@ -17,4 +18,6 @@ export interface NetworkConfig {
   XLM_DECIMALS: number;
   // oracles
   REFLECTOR_ORACLE_ADDRESS: string;
+  // supabase
+  EVENTS_TABLENAME: string;
 }

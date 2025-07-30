@@ -20,7 +20,6 @@ export function useTotalTVL(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [totalTVL, setTotalTVl] = useState<number | undefined>(undefined);
-  const storePersist = usePersistStore();
 
   const fetchTVL = useCallback(async () => {
     try {

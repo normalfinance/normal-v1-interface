@@ -127,10 +127,10 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
               feeTier: fPercent(pool.pool_response.pool.fee_fraction / 100),
             }}
             exchangeRate={{
-              label: `1 n${pool.pool_response.pool.base_asset} = ${poolPrice} ${pool.pool_response.pool.quote_asset}`,
+              label: `1 n${pool.pool_response.pool.base_asset} = ${poolPrice?.toFixed(4)} ${pool.pool_response.pool.quote_asset}`,
               usdEquivalent: fCurrency(tokenUSDValue ? tokenUSDValue.toFixed(2) : 0),
               tokenSymbol: `n${pool.pool_response.pool.base_asset}`,
-              tokenRate: `${poolPrice} ${pool.pool_response.pool.quote_asset}`,
+              tokenRate: `${poolPrice?.toFixed(4)} ${pool.pool_response.pool.quote_asset}`,
               tokenUSDValue: fCurrency(tokenUSDValue ? tokenUSDValue.toFixed(2) : 0),
             }}
             performance={{ percentageChange: 0 }}
@@ -170,9 +170,10 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 12 }}>
           <PoolTransactionsTable
-            baseTokenSymbol={pool.pool_response.pool.base_asset}
+            baseTokenSymbol={`n${pool.pool_response.pool.base_asset}`}
             quoteTokenSymbol={pool.pool_response.pool.quote_asset}
             rows={rows}
+            xlmPrice={xlmPrice ? Number(formatTokenAmount(xlmPrice, 14)) : 0}
           />
         </Grid2>
       </Grid2>
@@ -180,25 +181,25 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   );
 }
 
-function convertToPoolTxRow(event: events.PoolEvent): PoolTxRow {
+function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
   switch (event.type) {
     case 'deposit_liquidity':
       return {
         type: 'Deposit',
-        tokenAAmount: Number(event.amount) / 1e6,
-        tokenBAmount: 0,
+        tokenAAmount: 0,
+        tokenBAmount: Number(formatTokenAmount(event.amount.toString())),
         user: event.user,
-        timestamp: event.timestamp || '',
+        timestamp: event.timestamp || 0,
         txHash: event.txHash,
       };
 
     case 'withdraw_liquidity':
       return {
         type: 'Withdraw',
-        tokenAAmount: Number(event.amount) / 1e6,
-        tokenBAmount: 0,
+        tokenAAmount: 0,
+        tokenBAmount: Number(formatTokenAmount(event.amount.toString())),
         user: event.user,
-        timestamp: event.timestamp || '',
+        timestamp: event.timestamp || 0,
         txHash: event.txHash,
       };
 
@@ -206,10 +207,14 @@ function convertToPoolTxRow(event: events.PoolEvent): PoolTxRow {
       const isBuy = event.direction === 'buy';
       return {
         type: isBuy ? 'Buy' : 'Sell',
-        tokenAAmount: isBuy ? Number(event.inAmount) / 1e6 : Number(event.outAmount) / 1e6,
-        tokenBAmount: isBuy ? Number(event.outAmount) / 1e6 : Number(event.inAmount) / 1e6,
+        tokenAAmount: isBuy
+          ? Number(formatTokenAmount(event.inAmount.toString()))
+          : Number(formatTokenAmount(event.outAmount.toString())),
+        tokenBAmount: isBuy
+          ? Number(formatTokenAmount(event.outAmount.toString()))
+          : Number(formatTokenAmount(event.inAmount.toString())),
         user: event.user,
-        timestamp: event.timestamp || '',
+        timestamp: event.timestamp || 0,
         txHash: event.txHash,
       };
     }

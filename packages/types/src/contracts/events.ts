@@ -175,7 +175,7 @@ export type PoolEvent = (
   | SwapEvent
   | RebalanceEvent
 ) & {
-  timestamp?: string;
+  timestamp?: number;
   txHash: string;
 };
 
@@ -185,17 +185,17 @@ export type BufferEvent = (
   | WithdrawSurplusEvent
   | SkimEvent
 ) & {
-  timestamp?: string;
+  timestamp?: number;
   txHash: string;
 };
 
 export type InsuranceFundEvent = IfStakeRecordEvent & {
-  timestamp?: string;
+  timestamp?: number;
   txHash: string;
 };
 
 export type PoolSwapFeeEvent = (CollectPremiumEvent | FeeSwapEvent | ClaimFeesEvent) & {
-  timestamp?: string;
+  timestamp?: number;
   txHash: string;
 };
 
@@ -207,7 +207,7 @@ export type PoolRouterEvent = (
   | ConfigRewardsEvent
   | ClaimRewardEvent
 ) & {
-  timestamp?: string;
+  timestamp?: number;
   txHash: string;
 };
 
