@@ -22,7 +22,7 @@ import {
 export default function ExploreView() {
   const { t } = useTranslate();
 
-  const store = useAppStore();
+  const { setGlobalIsLoading, getAllTokens } = useAppStore();
 
   const { pools, loading: poolsLoading } = usePools();
   const { totalTVL } = useTotalTVL();
@@ -49,18 +49,18 @@ export default function ExploreView() {
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
-    const getAllTokens = async (): Promise<void> => {
-      store.setLoading(true);
+    const refreshTokens = async (): Promise<void> => {
+      setGlobalIsLoading(true);
       try {
-        await store.getAllTokens([]);
-        store.setLoading(false);
+        await getAllTokens([]);
+        setGlobalIsLoading(false);
       } catch (e) {
         console.error(e);
       } finally {
-        store.setLoading(false);
+        setGlobalIsLoading(false);
       }
     };
-    getAllTokens();
+    refreshTokens();
   }, []);
 
   return (

@@ -6,6 +6,7 @@ import type { events } from '@normalfinance/types';
 import BigNumber from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
+import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { formatTokenAmount } from '@/utils/format-stellar';

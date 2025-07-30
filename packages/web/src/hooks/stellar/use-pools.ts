@@ -19,7 +19,7 @@ interface ReturnType {
 // ----------------------------------------------------------------------
 
 export function usePools(): ReturnType {
-  const store = useAppStore(); // Global state management
+  const { setGlobalIsLoading } = useAppStore();
   const storePersist = usePersistStore();
 
   const [error, setError] = useState(null);
@@ -89,9 +89,9 @@ export function usePools(): ReturnType {
       captureException(e);
       console.error(e);
       setError(e as any);
-      store.setLoading(false);
+      setGlobalIsLoading(false);
     } finally {
-      store.setLoading(false);
+      setGlobalIsLoading(false);
     }
   }, []);
 
