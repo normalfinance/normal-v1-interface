@@ -273,7 +273,13 @@ function WalletConnected({ address }: { address: string }) {
       >
         {t('Get testnet XLM')}
       </Button>
-      <ConnectedWallet balance={0} percentageChange={0} tokens={[]} positions={[]} activity={recentActivity} />
+      <ConnectedWallet
+        balance={0}
+        percentageChange={0}
+        tokens={[]}
+        positions={[]}
+        activity={recentActivity}
+      />
     </Box>
   );
 }

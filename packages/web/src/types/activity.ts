@@ -64,5 +64,3 @@ export type Activity =
   | RemoveLiquidityActivity
   | StakeActivity
   | UnstakeActivity;
-
-
