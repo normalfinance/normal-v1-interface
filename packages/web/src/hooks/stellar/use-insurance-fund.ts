@@ -175,22 +175,23 @@ export function useInsuranceFund(): ReturnType {
         type: TransactionType.STAKE,
         token1: { name: 'XLM', amount: args.amount },
       },
-      transactionFunction: async (client, restore) =>
-        await client.deposit(processedArgs, { simulate: !restore }),
-      // if (restore) {
-      //   await tx.simulate({ restore: true });
-      //   return tx;
-      // } else {
-      //   const signedTransaction = await tx.signAndSend();
+      transactionFunction: async (client, restore) => {
+        const tx = await client.deposit(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          const signedTransaction = await tx.signAndSend();
 
-      //   const signedXDR = signedTransaction.assembled?.toXDR();
+          const signedXDR = signedTransaction.built?.toXDR();
 
-      //   if (signedXDR) {
-      //     return await executeInsurance(signedXDR, 'Insurance Fund Deposit');
-      //   }
+          if (signedXDR) {
+            return await executeInsurance(signedXDR, 'Insurance Fund Deposit');
+          }
 
-      //   return signedTransaction;
-      // }
+          return signedTransaction;
+        }
+      },
     });
   };
 
