@@ -157,10 +157,7 @@ export const useContractTransaction = () => {
 
         const transaction = await transactionFunction(contractClient, restore);
 
-        console.log(
-          'Transaction hash: ',
-          (transaction as any).getTransactionResponse.txHash
-        );
+        console.log('Transaction hash: ', (transaction as any).getTransactionResponse.txHash);
 
         try {
           if (restore) {

@@ -24,9 +24,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Logging error:', error);
-    return NextResponse.json(
-      { error: error?.message || 'Failed to log message' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error?.message || 'Failed to log message' }, { status: 500 });
   }
 }
