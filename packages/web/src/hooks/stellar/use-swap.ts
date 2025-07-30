@@ -120,7 +120,7 @@ export function useSwap(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+        const signedXDR = signedTransaction.assembled?.toXDR();
 
         if (signedXDR) {
           return await executeSwap(signedXDR, 'Pool Swap with Fee');
@@ -157,7 +157,7 @@ export function useSwap(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+        const signedXDR = signedTransaction.assembled?.toXDR();
 
         if (signedXDR) {
           return await executeSwap(signedXDR, 'Pool Router Swap');
@@ -193,7 +193,7 @@ export function useSwap(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+        const signedXDR = signedTransaction.assembled?.toXDR();
 
         if (signedXDR) {
           return await executeSwap(signedXDR, 'Pool Swap Strict Receive');

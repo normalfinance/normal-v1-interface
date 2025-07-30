@@ -93,7 +93,7 @@ export function useLiquidity(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+        const signedXDR = signedTransaction.assembled?.toXDR();
 
         if (signedXDR) {
           return await executeLiquidity(signedXDR, 'Deposit Liquidity');
@@ -127,7 +127,7 @@ export function useLiquidity(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+        const signedXDR = signedTransaction.assembled?.toXDR();
 
         if (signedXDR) {
           return await executeLiquidity(signedXDR, 'Withdraw Liquidity');

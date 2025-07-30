@@ -175,22 +175,23 @@ export function useInsuranceFund(): ReturnType {
         type: TransactionType.STAKE,
         token1: { name: 'XLM', amount: args.amount },
       },
-      transactionFunction: async (client, restore) =>
-        client.deposit(processedArgs, { simulate: !restore }),
-      // const tx = await client.deposit(processedArgs, { simulate: !restore });
-      // if (restore) {
-      //   await tx.simulate({ restore: true });
-      //   return tx;
-      // } else {
-      //   const signedTransaction = await tx.signAndSend();
-      //   const signedXDR = signedTransaction.built?.toXDR();
+      transactionFunction: async (client, restore) => {
+        const tx = await client.deposit(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          const signedTransaction = await tx.signAndSend();
 
-      //   if (signedXDR) {
-      //     return await executeInsurance(signedXDR, 'Insurance Fund Deposit');
-      //   }
+          const signedXDR = signedTransaction.assembled?.toXDR();
 
-      //   return signedTransaction;
-      // }
+          if (signedXDR) {
+            return await executeInsurance(signedXDR, 'Insurance Fund Deposit');
+          }
+
+          return signedTransaction;
+        }
+      },
     });
   };
 
@@ -212,7 +213,7 @@ export function useInsuranceFund(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+        const signedXDR = signedTransaction.assembled?.toXDR();
 
         if (signedXDR) {
           return await executeInsurance(signedXDR, 'Insurance Fund Request Withdraw');
@@ -239,7 +240,7 @@ export function useInsuranceFund(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+        const signedXDR = signedTransaction.assembled?.toXDR();
 
         if (signedXDR) {
           return await executeInsurance(signedXDR, 'Insurance Fund Cancel Request Withdraw');
@@ -266,7 +267,7 @@ export function useInsuranceFund(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+        const signedXDR = signedTransaction.assembled?.toXDR();
 
         if (signedXDR) {
           return await executeInsurance(signedXDR, 'Insurance Fund Withdraw');

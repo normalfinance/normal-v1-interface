@@ -100,7 +100,7 @@ const SendReview: React.FC<SendReviewProps> = ({
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.built?.toXDR();
+        const signedXDR = signedTransaction.assembled?.toXDR();
 
         if (signedXDR) {
           return await executeSend(signedXDR, `Send ${sendToken.symbol}`);
