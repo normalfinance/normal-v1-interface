@@ -183,7 +183,7 @@ export function useInsuranceFund(): ReturnType {
         } else {
           const signedTransaction = await tx.signAndSend();
 
-          const signedXDR = signedTransaction.assembled?.toXDR();
+          const signedXDR = signedTransaction.built?.toXDR();
 
           if (signedXDR) {
             return await executeInsurance(signedXDR, 'Insurance Fund Deposit');
@@ -213,7 +213,7 @@ export function useInsuranceFund(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.assembled?.toXDR();
+        const signedXDR = signedTransaction.built?.toXDR();
 
         if (signedXDR) {
           return await executeInsurance(signedXDR, 'Insurance Fund Request Withdraw');
@@ -240,7 +240,7 @@ export function useInsuranceFund(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.assembled?.toXDR();
+        const signedXDR = signedTransaction.built?.toXDR();
 
         if (signedXDR) {
           return await executeInsurance(signedXDR, 'Insurance Fund Cancel Request Withdraw');
@@ -267,7 +267,7 @@ export function useInsuranceFund(): ReturnType {
         if (restore) return tx;
 
         const signedTransaction = await tx.signAndSend();
-        const signedXDR = signedTransaction.assembled?.toXDR();
+        const signedXDR = signedTransaction.built?.toXDR();
 
         if (signedXDR) {
           return await executeInsurance(signedXDR, 'Insurance Fund Withdraw');
