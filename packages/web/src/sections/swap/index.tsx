@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { TokenActionQueryParams } from '@/types/query-params';
 import type { TokenActionKey } from '@/components/_common/token-action-card';
@@ -83,6 +85,14 @@ export default function SwapView() {
     }
   }, []);
 
+  const allowedTokens = React.useMemo(
+    () =>
+      tokens.filter(
+        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
+      ),
+    [tokens]
+  );
+
   return (
     <DashboardContent maxWidth="xl">
       <Box
@@ -96,7 +106,7 @@ export default function SwapView() {
         <Box maxWidth={500} width={1}>
           <Box width={1}>
             <TokenActionCard
-              tokensList={tokens}
+              tokensList={allowedTokens}
               swapFeeInfo={swapFeeInfo}
               cashBalance={0}
               queryParams={getCardQueryParams()}

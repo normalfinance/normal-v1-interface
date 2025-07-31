@@ -80,13 +80,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   useEffect(() => {
     if (tokensList.length === 0) return;
-
-    // Update local state
     setTokens(tokensList);
-
-    // Set default sellToken if not already set
+    // If no sell token is set yet, default to XLM if present, otherwise first token
     if (!sellToken) {
-      setSellToken(tokensList[0]);
+      const xlmToken = tokensList.find((t) => t.symbol === 'XLM');
+      setSellToken(xlmToken || tokensList[0]);
     }
   }, [tokensList]);
 
@@ -193,16 +191,54 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   // 9) handle token selection from popup, are we picking a sell token or a buy token?
   const handleTokenSelect = (token: Token) => {
     if (activeButton === 'sell') {
+      // User selecting the sell token
       if (buyToken && buyToken.id === token.id) {
+        // Prevent selecting the same token as the buy side
         setBuyToken(null);
       }
       setSellToken(token);
+
+      if (token.symbol !== 'XLM') {
+        // Sell token is a Normal Token
+        // Ensure the buy token is XLM
+        if (!buyToken || buyToken.symbol !== 'XLM') {
+          const xlmToken = tokens.find((t) => t.symbol === 'XLM');
+          if (xlmToken) setBuyToken(xlmToken);
+        }
+      } else {
+        // Sell token is XLM
+        // Ensure buy token is a Normal Token (if it's something else or also XLM)
+        if (buyToken && !buyToken.symbol.startsWith('n')) {
+          // If buyToken is not a Normal Token (or if somehow XLM), clear it
+          setBuyToken(null);
+        }
+      }
     } else if (activeButton === 'buy') {
+      // User selecting the buy token
       if (sellToken && sellToken.id === token.id) {
+        // Prevent selecting the same token as the sell side
         setSellToken(null);
       }
       setBuyToken(token);
+
+      if (token.symbol !== 'XLM') {
+        // Buy token is a Normal Token
+        // Ensure the sell token is XLM
+        if (!sellToken || sellToken.symbol !== 'XLM') {
+          const xlmToken = tokens.find((t) => t.symbol === 'XLM');
+          if (xlmToken) setSellToken(xlmToken);
+        }
+      } else {
+        // Buy token is XLM
+        // Ensure sell token is a Normal Token
+        if (sellToken && !sellToken.symbol.startsWith('n')) {
+          setSellToken(null);
+        }
+      }
     }
+
+    // After adjusting, close the picker
+    handleClose();
   };
 
   // Function to invert tokens and amounts
@@ -385,6 +421,40 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
+
+  const getFilteredTokens = (): Token[] => {
+    if (activeButton === 'sell') {
+      // Filtering options for the sell token selection
+      if (!buyToken) {
+        // No buy token selected yet: allow XLM and Normal Tokens only
+        return tokens.filter((t) => t.symbol === 'XLM' || t.symbol.startsWith('n'));
+      }
+      // If buy token is already selected:
+      if (buyToken.symbol === 'XLM') {
+        // Buy is XLM, so sell must be a Normal Token
+        return tokens.filter((t) => t.symbol.startsWith('n'));
+      } else if (buyToken.symbol.startsWith('n')) {
+        // Buy is a Normal Token, so sell must be XLM
+        return tokens.filter((t) => t.symbol === 'XLM');
+      }
+    } else if (activeButton === 'buy') {
+      // Filtering options for the buy token selection
+      if (!sellToken) {
+        // No sell token selected yet: allow XLM and Normal Tokens only
+        return tokens.filter((t) => t.symbol === 'XLM' || t.symbol.startsWith('n'));
+      }
+      // If sell token is already selected:
+      if (sellToken.symbol === 'XLM') {
+        // Sell is XLM, so buy must be a Normal Token
+        return tokens.filter((t) => t.symbol.startsWith('n'));
+      } else if (sellToken.symbol.startsWith('n')) {
+        // Sell is a Normal Token, so buy must be XLM
+        return tokens.filter((t) => t.symbol === 'XLM');
+      }
+    }
+    // Fallback: if something is unexpected, default to allowing only XLM and Normal Tokens
+    return tokens.filter((t) => t.symbol === 'XLM' || t.symbol.startsWith('n'));
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>

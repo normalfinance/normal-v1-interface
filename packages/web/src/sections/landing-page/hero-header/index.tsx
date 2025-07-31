@@ -64,6 +64,14 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
     }
   }, []);
 
+  const allowedTokens = React.useMemo(
+    () =>
+      tokens.filter(
+        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
+      ),
+    [tokens]
+  );
+
   console.log('hero tokens', tokens);
 
   return (
@@ -211,7 +219,11 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard tokensList={tokens} swapFeeInfo={swapFeeInfo} queryParams={swapParams} />
+              <SwapCard
+                tokensList={allowedTokens}
+                swapFeeInfo={swapFeeInfo}
+                queryParams={swapParams}
+              />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
