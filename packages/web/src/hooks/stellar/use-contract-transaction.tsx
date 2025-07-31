@@ -144,7 +144,7 @@ export const useContractTransaction = () => {
       const rpcUrl = constants.StellarConfig.RPC_URL;
       const publicKey = storePersist.wallet.address!;
 
-      const run = async (restore: boolean = false): Promise<{ transactionId?: string }> => {
+      const run = async (restore: boolean = false): Promise<{ txHash?: string }> => {
         const contractClient = getContractClient(
           contractType,
           contractAddress,
@@ -157,7 +157,7 @@ export const useContractTransaction = () => {
 
         const transaction = await transactionFunction(contractClient, restore);
 
-        console.log('Transaction hash: ', (transaction as any).getTransactionResponse.txHash);
+        console.log('Transaction from backend: ', transaction);
 
         try {
           if (restore) {
@@ -165,18 +165,18 @@ export const useContractTransaction = () => {
             await transaction.simulate({ restore: true });
             return {};
           }
-          // const sentTransaction = await transaction.signAndSend();
-          const txHash = (transaction as any).getTransactionResponse.txHash || 'unknown';
+          const txHash = (transaction as any).hash || null;
 
-          // Log transaction to file
-          const timestamp = new Date().toISOString();
-          const transactionType = transactionDetails.type || 'unknown';
-          const walletAddress = publicKey || 'unknown';
-          const logMessage = `[${timestamp}], ${transactionType}, ${txHash}, ${walletAddress}`;
-          await logToFile(logMessage);
+          if (txHash) {
+            const timestamp = new Date().toISOString();
+            const transactionType = transactionDetails.type || 'unknown';
+            const walletAddress = publicKey || 'unknown';
+            const logMessage = `[${timestamp}], ${transactionType}, ${txHash}, ${walletAddress}`;
+            await logToFile(logMessage);
+          }
 
           return {
-            transactionId: txHash,
+            txHash,
           };
         } catch (error) {
           console.error('Error during returning transaction hash: ', error);
@@ -211,8 +211,8 @@ export const useContractTransaction = () => {
         .then((result) => {
           closeSnackbar(loadingKey);
 
-          if (result.transactionId) {
-            const stellarExpertUrl = createStellarExpertUrl('tx', result.transactionId);
+          if (result.txHash) {
+            const stellarExpertUrl = createStellarExpertUrl('tx', result.txHash);
 
             enqueueSnackbar(
               <Box component="span">

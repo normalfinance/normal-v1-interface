@@ -159,6 +159,8 @@ export function useInsuranceFund(): ReturnType {
       throw new Error(data.error || 'Insurance fund execution failed');
     }
 
+    console.log('Data from backend: ', data);
+
     return data;
   };
 
@@ -181,15 +183,20 @@ export function useInsuranceFund(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          const signedTransaction = await tx.signAndSend();
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-          const signedXDR = signedTransaction.built?.toXDR();
+          console.log('txtxtx', tx, tx.signed, signedXDR);
 
           if (signedXDR) {
-            return await executeInsurance(signedXDR, 'Insurance Fund Deposit');
+            const apiRes = await executeInsurance(signedXDR, 'Insurance Fund Deposit');
+            console.log('API result:', apiRes);
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
           }
 
-          return signedTransaction;
+          return tx;
         }
       },
     });
@@ -208,18 +215,22 @@ export function useInsuranceFund(): ReturnType {
         type: TransactionType.REQUEST_UNSTAKE,
         token1: { name: 'XLM', amount: args.amount },
       },
-      transactionFunction: async (client, restore) =>
-        await client.request_withdraw(processedArgs, { simulate: !restore }),
-      // if (restore) return tx;
+      transactionFunction: async (client, restore) => {
+        const tx = await client.request_withdraw(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-      // const signedTransaction = await tx.signAndSend();
-      // const signedXDR = signedTransaction.assembled?.toXDR();
+          if (signedXDR) {
+            await executeInsurance(signedXDR, 'Insurance Fund Request Withdraw');
+          }
 
-      // if (signedXDR) {
-      //   return await executeInsurance(signedXDR, 'Insurance Fund Request Withdraw');
-      // }
-
-      // return signedTransaction;
+          return tx;
+        }
+      },
     });
   };
 
@@ -234,18 +245,22 @@ export function useInsuranceFund(): ReturnType {
       transactionDetails: {
         type: TransactionType.CANCEL_REQUEST_UNSTAKE,
       },
-      transactionFunction: async (client, restore) =>
-        await client.cancel_request_withdraw(processedArgs, { simulate: !restore }),
-      // if (restore) return tx;
+      transactionFunction: async (client, restore) => {
+        const tx = await client.cancel_request_withdraw(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-      // const signedTransaction = await tx.signAndSend();
-      // const signedXDR = signedTransaction.assembled?.toXDR();
+          if (signedXDR) {
+            await executeInsurance(signedXDR, 'Insurance Fund Cancel Request Withdraw');
+          }
 
-      // if (signedXDR) {
-      //   return await executeInsurance(signedXDR, 'Insurance Fund Cancel Request Withdraw');
-      // }
-
-      // return signedTransaction;
+          return tx;
+        }
+      },
     });
   };
 
@@ -260,18 +275,22 @@ export function useInsuranceFund(): ReturnType {
       transactionDetails: {
         type: TransactionType.UNSTAKE,
       },
-      transactionFunction: async (client, restore) =>
-        await client.withdraw(processedArgs, { simulate: !restore }),
-      // if (restore) return tx;
+      transactionFunction: async (client, restore) => {
+        const tx = await client.withdraw(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-      // const signedTransaction = await tx.signAndSend();
-      // const signedXDR = signedTransaction.assembled?.toXDR();
+          if (signedXDR) {
+            await executeInsurance(signedXDR, 'Insurance Fund Withdraw');
+          }
 
-      // if (signedXDR) {
-      //   return await executeInsurance(signedXDR, 'Insurance Fund Withdraw');
-      // }
-
-      // return signedTransaction;
+          return tx;
+        }
+      },
     });
   };
 
