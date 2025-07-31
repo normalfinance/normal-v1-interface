@@ -85,5 +85,6 @@ jobs:
         working-directory: packages/web
         env:
           NEXT_PUBLIC_APP_ENV: ci
+          EDGE_CONFIG: ${{ secrets.EDGE_CONFIG }}
         run: yarn build
 
