@@ -95,18 +95,25 @@ const SendReview: React.FC<SendReviewProps> = ({
         type: TransactionType.SEND,
         token1: { name: sendToken.symbol, amount: tokenValue.toString() },
       },
-      transactionFunction: async (client, restore) =>
-        await client.transfer(processedArgs, { simulate: !restore }),
-      // if (restore) return tx;
+      transactionFunction: async (client, restore) => {
+        const tx = await client.transfer(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-      // const signedTransaction = await tx.signAndSend();
-      // const signedXDR = signedTransaction.assembled?.toXDR();
+          if (signedXDR) {
+            const apiRes = await executeSend(signedXDR, 'Send Token');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-      // if (signedXDR) {
-      //   return await executeSend(signedXDR, `Send ${sendToken.symbol}`);
-      // }
-
-      // return signedTransaction;
+          return tx;
+        }
+      },
     });
 
     onClose();
