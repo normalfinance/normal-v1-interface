@@ -15,6 +15,8 @@ import { Box } from '@mui/material';
 
 import TokenActionCard from '@/components/_common/token-action-card';
 
+import { fetchApiTokens } from '@/hooks';
+
 const swapFeeInfo: SwapFeeInfo = {
   feePercentage: 0.25,
   networkCost: 1.0,
@@ -64,19 +66,21 @@ export default function SwapView() {
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
+    // Only fetch if no tokens are loaded yet
+    if (tokens.length === 0) {
       setGlobalIsLoading(true);
-      try {
-        await getAllTokens(apiTokens);
-        setGlobalIsLoading(false);
-      } catch (e) {
-        captureException(e);
-        console.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-    refreshTokens();
+      fetchApiTokens()
+        .then((data) => {
+          getAllTokens(data.assets);
+        })
+        .catch((error) => {
+          captureException(error);
+          console.error(error);
+        })
+        .finally(() => {
+          setGlobalIsLoading(false);
+        });
+    }
   }, []);
 
   return (

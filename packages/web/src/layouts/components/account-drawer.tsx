@@ -276,7 +276,7 @@ function WalletConnected({ address }: { address: string }) {
       <ConnectedWallet
         balance={0}
         percentageChange={0}
-        tokens={[]}
+        tokens={tokens}
         positions={[]}
         activity={recentActivity}
       />

@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
@@ -12,6 +14,8 @@ import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 import SwapCard from '@/components/_common/swap-card';
 
 import { WavyBackground } from './wavy-background';
+
+import { fetchApiTokens } from '@/hooks';
 
 type ImageProps = {
   src: string;
@@ -44,7 +48,22 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
 
   const { t } = useTranslate();
 
-  const { tokens } = useAppStore();
+  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
+
+  useEffect(() => {
+    if (tokens.length === 0) {
+      setGlobalIsLoading(true);
+      fetchApiTokens()
+        .then((data) => {
+          getAllTokens(data.assets);
+        })
+        .catch((error) => console.error(error))
+        .finally(() => {
+          setGlobalIsLoading(false);
+        });
+    }
+  }, []);
+
   console.log('hero tokens', tokens);
 
   return (
