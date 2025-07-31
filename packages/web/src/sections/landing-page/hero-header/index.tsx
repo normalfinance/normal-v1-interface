@@ -45,7 +45,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   const { t } = useTranslate();
 
   const { tokens } = useAppStore();
-  console.log(tokens)
+  console.log('hero tokens', tokens);
 
   return (
     <Box

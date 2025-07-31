@@ -78,6 +78,18 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   // 5) Example of how much buyToken the user might get
   const [buyAmount, setBuyAmount] = useState<number>(0);
 
+  useEffect(() => {
+    if (tokensList.length === 0) return;
+
+    // Update local state
+    setTokens(tokensList);
+
+    // Set default sellToken if not already set
+    if (!sellToken) {
+      setSellToken(tokensList[0]);
+    }
+  }, [tokensList]);
+
   // Initialize from query params
   useEffect(() => {
     if (!queryParams) return;
