@@ -3,7 +3,11 @@
 import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
+import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
+import { useApiTokens } from '@/hooks';
+import { captureException } from '@sentry/nextjs';
+import { useAppStore } from '@normalfinance/state';
 import { useQueryParams } from '@/hooks/use-query-params';
 
 import { CtaImage } from './cta';
@@ -108,6 +112,26 @@ export const featureCardWide = {
 
 export default function LandingPage() {
   const { params } = useQueryParams<SwapQueryParams>();
+
+  const { tokens: apiTokens } = useApiTokens();
+  const { getAllTokens, setGlobalIsLoading } = useAppStore();
+
+  // Effect hook to fetch all tokens once the component mounts
+  useEffect(() => {
+    const refreshTokens = async (): Promise<void> => {
+      setGlobalIsLoading(true);
+      try {
+        await getAllTokens(apiTokens);
+        setGlobalIsLoading(false);
+      } catch (e) {
+        captureException(e);
+        console.error(e);
+      } finally {
+        setGlobalIsLoading(false);
+      }
+    };
+    refreshTokens();
+  }, []);
 
   return (
     <>

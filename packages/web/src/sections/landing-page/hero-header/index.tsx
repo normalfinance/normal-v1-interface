@@ -4,12 +4,9 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
-import { useApiTokens } from '@/hooks';
 import { useTranslate } from '@/locales';
-import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 
-import { useTheme } from '@mui/material/styles';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 import SwapCard from '@/components/_common/swap-card';
@@ -46,27 +43,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   } as Props;
 
   const { t } = useTranslate();
-  const theme = useTheme();
 
-  const { tokens: apiTokens } = useApiTokens();
-  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
-
-  // Effect hook to fetch all tokens once the component mounts
-  React.useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
-      setGlobalIsLoading(true);
-      try {
-        await getAllTokens(apiTokens);
-        setGlobalIsLoading(false);
-      } catch (e) {
-        captureException(e);
-        console.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-    refreshTokens();
-  }, []);
+  const { tokens } = useAppStore();
+  console.log(tokens)
 
   return (
     <Box
