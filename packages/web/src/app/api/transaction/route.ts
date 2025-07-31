@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        transactionId: result.hash,
+        transactionHash: result.hash,
         result,
       });
     } catch (contractError: any) {
