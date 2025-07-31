@@ -77,10 +77,14 @@ export async function POST(req: NextRequest) {
         allowHttp: process.env.NODE_ENV === 'development',
       });
 
+      console.log('[Transaction API] Stellar Server: ', server);
+
       // Submit the signed transaction
       const result = await server.sendTransaction(
         new Transaction(signedTransactionXDR, constants.StellarConfig.NETWORK_PASSPHRASE)
       );
+
+      console.log('[Transaction API] Result server.sendTransaction: ', result);
 
       return NextResponse.json({
         success: true,
