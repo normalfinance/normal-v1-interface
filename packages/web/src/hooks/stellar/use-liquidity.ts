@@ -90,18 +90,25 @@ export function useLiquidity(): ReturnType {
         type: TransactionType.DEPOSIT_LIQUIDITY,
         token1: { name: 'XLM', amount: args.token_b_amount },
       },
-      transactionFunction: async (client, restore) =>
-        await client.deposit(processedArgs, { simulate: !restore }),
-      // if (restore) return tx;
+      transactionFunction: async (client, restore) => {
+        const tx = await client.deposit(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-      // const signedTransaction = await tx.signAndSend();
-      // const signedXDR = signedTransaction.assembled?.toXDR();
+          if (signedXDR) {
+            const apiRes = await executeLiquidity(signedXDR, 'Deposit Liquidity');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-      // if (signedXDR) {
-      //   return await executeLiquidity(signedXDR, 'Deposit Liquidity');
-      // }
-
-      // return signedTransaction;
+          return tx;
+        }
+      },
     });
 
     setLoading(false);
@@ -127,18 +134,25 @@ export function useLiquidity(): ReturnType {
         type: TransactionType.REMOVE_LIQUIDITY,
         token1: { name: 'XLM', amount: args.share_amount },
       },
-      transactionFunction: async (client, restore) =>
-        await client.withdraw(processedArgs, { simulate: !restore }),
-      // if (restore) return tx;
+      transactionFunction: async (client, restore) => {
+        const tx = await client.withdraw(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-      // const signedTransaction = await tx.signAndSend();
-      // const signedXDR = signedTransaction.assembled?.toXDR();
+          if (signedXDR) {
+            const apiRes = await executeLiquidity(signedXDR, 'Withdraw Liquidity');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-      // if (signedXDR) {
-      //   return await executeLiquidity(signedXDR, 'Withdraw Liquidity');
-      // }
-
-      // return signedTransaction;
+          return tx;
+        }
+      },
     });
 
     setLoading(false);

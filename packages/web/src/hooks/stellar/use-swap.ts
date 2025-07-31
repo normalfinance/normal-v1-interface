@@ -115,18 +115,25 @@ export function useSwap(): ReturnType {
         token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
         token2: { name: buy ? `n${args.asset}` : 'XLM', amount: args.out_min },
       },
-      transactionFunction: async (client, restore) =>
-        await client.swap(processedArgs, { simulate: !restore }),
-      // if (restore) return tx;
+      transactionFunction: async (client, restore) => {
+        const tx = await client.swap(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-      // const signedTransaction = await tx.signAndSend();
-      // const signedXDR = signedTransaction.assembled?.toXDR();
+          if (signedXDR) {
+            const apiRes = await executeSwap(signedXDR, 'Pool Swap with Fee');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-      // if (signedXDR) {
-      //   return await executeSwap(signedXDR, 'Pool Swap with Fee');
-      // }
-
-      // return signedTransaction;
+          return tx;
+        }
+      },
     });
   };
 
@@ -151,18 +158,25 @@ export function useSwap(): ReturnType {
         token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
         token2: { name: buy ? `n${args.asset}` : 'XLM', amount: args.out_min },
       },
-      transactionFunction: async (client, restore) =>
-        await client.swap(processedArgs, { simulate: !restore }),
-      // if (restore) return tx;
+      transactionFunction: async (client, restore) => {
+        const tx = await client.swap(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-      // const signedTransaction = await tx.signAndSend();
-      // const signedXDR = signedTransaction.assembled?.toXDR();
+          if (signedXDR) {
+            const apiRes = await executeSwap(signedXDR, 'Pool Router Swap');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-      // if (signedXDR) {
-      //   return await executeSwap(signedXDR, 'Pool Router Swap');
-      // }
-
-      // return signedTransaction;
+          return tx;
+        }
+      },
     });
   };
 
@@ -186,18 +200,25 @@ export function useSwap(): ReturnType {
         token1: { name: buy ? 'XLM' : '', amount: args.in_max },
         token2: { name: buy ? '' : 'XLM', amount: args.out_amount },
       },
-      transactionFunction: async (client, restore) =>
-        await client.swap_strict_receive(processedArgs, { simulate: !restore }),
-      // if (restore) return tx;
+      transactionFunction: async (client, restore) => {
+        const tx = await client.swap_strict_receive(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-      // const signedTransaction = await tx.signAndSend();
-      // const signedXDR = signedTransaction.assembled?.toXDR();
+          if (signedXDR) {
+            const apiRes = await executeSwap(signedXDR, 'Pool Swap Strict Receive');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-      // if (signedXDR) {
-      //   return await executeSwap(signedXDR, 'Pool Swap Strict Receive');
-      // }
-
-      // return signedTransaction;
+          return tx;
+        }
+      },
     });
   };
 
