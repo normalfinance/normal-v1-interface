@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
+        url: '/og/home.png',
         width: 1200,
         height: 630,
         alt: 'Normal landing page',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Home | Normal',
     description: 'Normal helps you invest in diversified crypto indices and assets.',
-    images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
+    images: ['/og/home.png'],
   },
   robots: {
     index: true,

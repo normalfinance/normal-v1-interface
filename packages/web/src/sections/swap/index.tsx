@@ -1,10 +1,14 @@
 'use client';
 
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
-import type { SwapQueryParams } from '@/types/query-params';
+import type { TokenActionQueryParams } from '@/types/query-params';
+import type { TokenActionKey } from '@/components/_common/token-action-card';
 
+import React, { useEffect } from 'react';
+import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useApiTokens, fetchApiTokens } from '@/hooks';
 import { useQueryParams } from '@/hooks/use-query-params';
 
 import { Box } from '@mui/material';
@@ -18,11 +22,72 @@ const swapFeeInfo: SwapFeeInfo = {
   maxSlippage: 0.5,
 };
 
-const cashBalance = 1000;
-
 export default function SwapView() {
-  const store = useAppStore();
-  const { params } = useQueryParams<SwapQueryParams>();
+  const { params } = useQueryParams<TokenActionQueryParams>();
+  const { tokens: apiTokens } = useApiTokens();
+  const { tokens, getAllTokens, globalIsLoading, setGlobalIsLoading } = useAppStore();
+
+  // Determine which tab to show based on query params, default to 'swap'
+  const activeTab: TokenActionKey = params?.tab || 'swap';
+
+  // Determine which tabs should be enabled (you can customize this logic)
+  const enabledTabs: TokenActionKey[] = ['swap', 'send', 'buy'];
+
+  // Convert TokenActionQueryParams to the format expected by different cards
+  const getCardQueryParams = () => {
+    if (!params) return undefined;
+
+    switch (activeTab) {
+      case 'swap':
+        return {
+          asset: params.asset,
+          token_in: params.token_in,
+          token_out: params.token_out,
+          in_amount: params.in_amount,
+          out_minimum: params.out_minimum,
+        };
+      case 'send':
+        return {
+          token: params.token,
+          amount: params.amount,
+          destination: params.destination,
+        };
+      case 'buy':
+        return {
+          token: params.token,
+          amount: params.amount,
+        };
+      default:
+        return undefined;
+    }
+  };
+
+  // Effect hook to fetch all tokens once the component mounts
+  useEffect(() => {
+    // Only fetch if no tokens are loaded yet
+    if (tokens.length === 0) {
+      setGlobalIsLoading(true);
+      fetchApiTokens()
+        .then((data) => {
+          getAllTokens(data.assets);
+        })
+        .catch((error) => {
+          captureException(error);
+          console.error(error);
+        })
+        .finally(() => {
+          setGlobalIsLoading(false);
+        });
+    }
+  }, []);
+
+  const allowedTokens = React.useMemo(
+    () =>
+      tokens.filter(
+        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
+      ),
+    [tokens]
+  );
 
   return (
     <DashboardContent maxWidth="xl">
@@ -37,10 +102,13 @@ export default function SwapView() {
         <Box maxWidth={500} width={1}>
           <Box width={1}>
             <TokenActionCard
-              tokensList={store.tokens}
+              tokensList={allowedTokens}
               swapFeeInfo={swapFeeInfo}
-              cashBalance={cashBalance}
-              queryParams={params}
+              cashBalance={0}
+              queryParams={getCardQueryParams()}
+              loading={globalIsLoading}
+              enabledTabs={enabledTabs}
+              initialTab={activeTab}
             />
           </Box>
         </Box>

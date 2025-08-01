@@ -1,9 +1,9 @@
 name: Web CI
 
 on:
-  pull_request:
-    paths:
-      - 'packages/web/**'
+  # pull_request:
+  #   paths:
+  #     - 'packages/web/**'
   push:
     branches: 
       - '**'
@@ -49,18 +49,18 @@ jobs:
         working-directory: packages/web
         run: yarn i18n:extract
 
-      - name: i18n – download latest translations
-        working-directory: packages/web
-        env:
-          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
-          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
-        run: |
-          if [ -n "$CROWDIN_PROJECT_ID" ] && [ -n "$CROWDIN_API_TOKEN" ]; then
-            echo "Downloading latest translations from Crowdin..."
-            yarn i18n:download || echo "Warning: Failed to download translations, continuing with existing ones"
-          else
-            echo "Crowdin credentials not available, skipping translation download"
-          fi
+      # - name: i18n – download latest translations
+      #   working-directory: packages/web
+      #   env:
+      #     CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+      #     CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
+      #   run: |
+      #     if [ -n "$CROWDIN_PROJECT_ID" ] && [ -n "$CROWDIN_API_TOKEN" ]; then
+      #       echo "Downloading latest translations from Crowdin..."
+      #       yarn i18n:download || echo "Warning: Failed to download translations, continuing with existing ones"
+      #     else
+      #       echo "Crowdin credentials not available, skipping translation download"
+      #     fi
 
       # Sync keys from 'en' to other languages to ensure no missing keys
       - name: i18n – sync missing keys

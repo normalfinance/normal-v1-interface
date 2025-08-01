@@ -6,10 +6,12 @@ import { useBoolean } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { ZEALY_QUEST_IDS } from '@/global-config';
+import { formatTokenAmount } from '@/utils/format-stellar';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
 
@@ -26,9 +28,10 @@ export type BalanceRow = {
 type Props = CardProps & {
   title: string;
   yieldPercent: number;
-  staked: number;
+  staked: BigNumber;
   currentBalance: number;
   queryParams?: InsuranceQueryParams;
+  unstakingPeriod: number;
 };
 
 export function StakeBalance({
@@ -38,9 +41,11 @@ export function StakeBalance({
   staked,
   currentBalance,
   queryParams,
+  unstakingPeriod,
   ...other
 }: Props) {
   const { t } = useTranslate();
+  const theme = useTheme();
 
   const manageStake = useBoolean();
 
@@ -58,26 +63,39 @@ export function StakeBalance({
         display: 'flex',
         typography: 'body2',
         justifyContent: 'space-between',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        py: 2,
+        px: 1,
       }}
     >
       <Box component="span" sx={{ color: 'text.secondary' }}>
-        {label}
+        {t(label)}
       </Box>
-      <Box component="span">{formatter(value)}</Box>
+      <Box component="span">
+        {formatter(value)} {label === 'Staked' && 'XLM'}
+      </Box>
     </Box>
   );
 
   // Define default rows if none are provided via props.
   const defaultRows: BalanceRow[] = [
-    { label: 'Staked', value: staked, formatter: fCurrency },
+    { label: 'Staked', value: staked.toNumber(), formatter: formatTokenAmount },
     { label: 'Earned', value: yieldPercent, formatter: fCurrency },
   ];
 
   const rowsToRender = defaultRows;
 
   return (
-    <Card sx={[{ p: 3 }, ...(Array.isArray(sx) ? sx : [sx])]} {...other}>
-      <Box sx={{ mb: 1, typography: 'subtitle2' }}>{title}</Box>
+    <Card
+      sx={[
+        { p: 4, borderRadius: 3, border: 1, borderColor: alpha(theme.palette.grey[500], 0.32) },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
+      {...other}
+      data-testid="stake-balance-card"
+    >
+      <Box sx={{ mb: 2, typography: 'h5', fontSize: 20 }}>{title}</Box>
 
       <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ typography: 'h3' }}>{fCurrency(currentBalance)}</Box>
@@ -85,9 +103,15 @@ export function StakeBalance({
           <Box key={i}>{row(r.label, r.value, r.formatter)}</Box>
         ))}
 
-        <Box sx={{ gap: 2, display: 'flex' }}>
+        <Box sx={{ gap: 2, display: 'flex', mt: 2 }}>
           <WalletGate buttonText={t('Connect Wallet to Manage Stake')} fullWidth>
-            <Button fullWidth variant="contained" color="primary" onClick={manageStake.onTrue}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="secondary"
+              onClick={manageStake.onTrue}
+              data-testid="manage-stake-button"
+            >
               {t('Manage stake')}
             </Button>
           </WalletGate>
@@ -97,6 +121,7 @@ export function StakeBalance({
           open={manageStake.value}
           onClose={manageStake.onFalse}
           queryParams={queryParams}
+          unstakingPeriod={unstakingPeriod}
         />
       </Box>
     </Card>

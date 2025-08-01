@@ -9,6 +9,7 @@ import Skeleton from 'react-loading-skeleton';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Scrollbar } from '@/components/template/scrollbar'; // ⬅ adjust the path if yours is different
 
@@ -34,9 +35,14 @@ export interface ExploreStatsProps {
 /* component                                           */
 /* -------------------------------------------------- */
 export default function ExploreStats({ stats, sx, loading }: ExploreStatsProps) {
+  const theme = useTheme();
+
   if (loading) {
     return (
-      <Card sx={[{ mb: { xs: 3, md: 5 } }, ...(Array.isArray(sx) ? sx : [sx])]}>
+      <Card
+        sx={[{ mb: { xs: 3, md: 5 } }, ...(Array.isArray(sx) ? sx : [sx])]}
+        data-testid="explore-stats-loading"
+      >
         <Scrollbar sx={{ minHeight: 108 }}>
           <Stack
             direction="row"
@@ -57,13 +63,20 @@ export default function ExploreStats({ stats, sx, loading }: ExploreStatsProps) 
   }
 
   return (
-    <Card sx={[{ mb: { xs: 3, md: 5 } }, ...(Array.isArray(sx) ? sx : [sx])]}>
+    <Card
+      sx={[
+        {
+          mb: { xs: 3, md: 5 },
+          border: 1,
+          borderColor: alpha(theme.palette.grey[500], 0.32),
+          p: 0,
+        },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
+      data-testid="explore-stats"
+    >
       <Scrollbar sx={{ minHeight: 108 }}>
-        <Stack
-          direction="row"
-          sx={{ py: 2 }}
-          divider={<Divider orientation="vertical" flexItem sx={{ borderStyle: 'dashed' }} />}
-        >
+        <Stack direction="row" sx={{ py: 2 }} divider={<Divider orientation="vertical" flexItem />}>
           {stats.map((s) => (
             <ExploreStat
               key={s.title}

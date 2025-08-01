@@ -1,6 +1,13 @@
+import type { events } from '@normalfinance/types';
 import type { TableHeadCellProps } from '@/components/template/table';
 
+import { fDateTime } from '@/utils/format-time';
+import { formatTokenAmount } from '@/utils/format-stellar';
+import { fTruncate } from '@normalfinance/utils/build/format';
+import { createStellarExpertUrl } from '@/utils/transactions.utils';
+
 import Table from '@mui/material/Table';
+import { IconButton } from '@mui/material';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
 import TableBody from '@mui/material/TableBody';
@@ -8,43 +15,70 @@ import TableBody from '@mui/material/TableBody';
 import { Scrollbar } from '@/components/template/scrollbar';
 import { TableHeadCustom } from '@/components/template/table';
 
-import type { InsuranceFundEvent } from './insurance-actions-table-card';
+import { Iconify } from '../template/iconify';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD: TableHeadCellProps[] = [
   { id: 'action', label: 'Action' },
-  { id: 'amount', label: 'Amount', align: 'right' },
-  { id: 'shares_before', label: 'Total Shares Before', align: 'right' },
-  { id: 'shares_after', label: 'Total Shares After', align: 'right' },
-  { id: 'user', label: 'User', align: 'right' },
-  { id: 'timestamp', label: 'Timestamp', align: 'right' },
+  { id: 'amount', label: 'Amount' },
+  { id: 'shares_before', label: 'Shares Before' },
+  { id: 'shares_after', label: 'Shares After' },
+  { id: 'user', label: 'User' },
+  { id: 'timestamp', label: 'Timestamp' },
+  { id: '' },
 ];
 
 // ----------------------------------------------------------------------
 
 type Props = {
-  events: InsuranceFundEvent[] | undefined;
+  events: events.InsuranceFundEvent[] | undefined;
 };
 
 export function InsuranceFundEventsTableCard({ events }: Props) {
   return (
     <Scrollbar sx={{ minHeight: 0 }}>
-      <Table sx={{ minWidth: 800 }}>
-        <TableHeadCustom headCells={TABLE_HEAD} />
+      <Table
+        sx={{
+          minWidth: 800,
+        }}
+      >
+        <TableHeadCustom
+          headCells={TABLE_HEAD}
+          sx={{
+            backgroundColor: 'grey.100',
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        />
 
         <TableBody>
           {events &&
-            events.map((event) => (
-              <TableRow key={event.ts}>
-                <TableCell>{event.action}</TableCell>
-                <TableCell align="right">{event.amount}</TableCell>
-                <TableCell align="right">{event.total_if_shares_before}</TableCell>
-                <TableCell align="right">{event.total_if_shares_after}</TableCell>
-                <TableCell align="right">{event.user}</TableCell>
-                <TableCell align="right">{event.ts}</TableCell>
-              </TableRow>
-            ))}
+            events.map((event, index) => {
+              const stellarExpertUrl = createStellarExpertUrl('tx', event.txHash);
+              const viewOnStellarExpert = () =>
+                window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer');
+
+              return (
+                <TableRow
+                  key={index}
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+                >
+                  <TableCell>{event.action}</TableCell>
+                  <TableCell>{formatTokenAmount(event.amount.toString())} XLM</TableCell>
+                  <TableCell>{formatTokenAmount(event.totalIfSharesBefore.toString())}</TableCell>
+                  <TableCell>{formatTokenAmount(event.totalIfSharesAfter.toString())}</TableCell>
+                  <TableCell>{fTruncate(event.user, 15)}</TableCell>
+                  <TableCell>{event.timestamp ? fDateTime(event.timestamp) : ''}</TableCell>
+                  <TableCell sx={{ pr: 1 }}>
+                    <IconButton color="default" onClick={viewOnStellarExpert}>
+                      <Iconify icon="eva:external-link-fill" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
         </TableBody>
       </Table>
     </Scrollbar>

@@ -3,7 +3,11 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import type { TxType, PoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
+import { ago } from '@/utils/format-time';
 import React, { useMemo, useState } from 'react';
+import { fCurrency } from '@/utils/format-number';
+import { fTruncate } from '@normalfinance/utils/build/format';
+import { createStellarExpertUrl } from '@/utils/transactions.utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -18,6 +22,7 @@ import {
   TableCell,
   TableHead,
   Typography,
+  CardHeader,
   TableContainer,
   TableSortLabel,
 } from '@mui/material';
@@ -27,25 +32,15 @@ import { TableSkeleton } from '@/components/template/table';
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Buy: 'success',
   Sell: 'error',
-  Deposit: 'warning',
-  Withdraw: 'info',
+  Deposit: 'info',
+  Withdraw: 'warning',
 };
-
-function ago(sec: number) {
-  // floor the entire subtraction so we get an integer second count
-  const diff = Math.max(1, Math.floor(Date.now() / 1000 - sec));
-
-  if (diff < 60) return `${diff}s`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-  if (diff < 86_400) return `${Math.floor(diff / 3600)}h`;
-  return `${Math.floor(diff / 86_400)}d`;
-}
 
 // ----------------------------------------------------------------
 // Types
 // ----------------------------------------------------------------
 type Order = 'asc' | 'desc' | undefined;
-type ColumnKey = 'timestamp' | 'quoteValue' | 'baseValue' | 'wallet';
+type ColumnKey = 'timestamp' | 'tokenAAmount' | 'tokenBAmount' | 'user';
 
 // ----------------------------------------------------------------------
 
@@ -53,8 +48,9 @@ export const PoolTransactionsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
   rows: PoolTxRow[];
+  xlmPrice: number;
   loading?: boolean;
-}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, loading }) => {
+}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, xlmPrice, loading }) => {
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -80,7 +76,7 @@ export const PoolTransactionsTable: React.FC<{
       return 0;
     });
     // special case: wallet grouping (just keeps equal wallets adjacent)
-    return orderBy === 'wallet' ? sorted : sorted;
+    return orderBy === 'user' ? sorted : sorted;
   }, [filtered, order, orderBy]);
 
   // -------------------------------------------------------------------
@@ -96,6 +92,10 @@ export const PoolTransactionsTable: React.FC<{
   // -------------------------------------------------------------------
   return (
     <Card sx={{ p: 1 }}>
+      <CardHeader
+        sx={{ mb: 3 }}
+        title={<Typography variant="h5">{t('Transactions')}</Typography>}
+      />
       <Paper sx={{ width: '100%', overflow: 'auto' }}>
         <TableContainer
           sx={{
@@ -152,12 +152,8 @@ export const PoolTransactionsTable: React.FC<{
                   </Menu>
                 </TableCell>
 
-                {(['baseValue', 'quoteValue'] as const).map((key) => (
-                  <TableCell
-                    key={key}
-                    align="right"
-                    sortDirection={orderBy === key ? order : false}
-                  >
+                {(['tokenAAmount', 'tokenBAmount'] as const).map((key) => (
+                  <TableCell key={key} sortDirection={orderBy === key ? order : false}>
                     <TableSortLabel
                       active={orderBy === key}
                       direction={order === null ? 'asc' : (order ?? 'asc')}
@@ -170,14 +166,14 @@ export const PoolTransactionsTable: React.FC<{
                         },
                       }}
                     >
-                      {key === 'quoteValue' ? quoteTokenSymbol : baseTokenSymbol}
+                      {key === 'tokenBAmount' ? quoteTokenSymbol : baseTokenSymbol}
                     </TableSortLabel>
                   </TableCell>
                 ))}
 
                 <TableCell
-                  sortDirection={orderBy === 'wallet' ? order : false}
-                  onClick={() => toggleSort('wallet')}
+                  sortDirection={orderBy === 'user' ? order : false}
+                  onClick={() => toggleSort('user')}
                   sx={{ cursor: 'pointer' }}
                 >
                   <Typography variant="subtitle2">{t('Wallet')}</Typography>
@@ -189,17 +185,36 @@ export const PoolTransactionsTable: React.FC<{
               {loading ? (
                 <TableSkeleton rowCount={8} cellCount={5} />
               ) : (
-                ordered.map((row, idx) => (
-                  <TableRow hover key={idx}>
-                    <TableCell>
-                      <Chip label={row.type} color={typeColor[row.type]} size="small" />
-                    </TableCell>
-                    <TableCell align="right">{row.baseValue.toLocaleString()}</TableCell>
-                    <TableCell align="right">{row.quoteValue.toFixed(3)}</TableCell>
-                    <TableCell>{row.wallet}</TableCell>
-                    <TableCell>{ago(row.timestamp)}</TableCell>
-                  </TableRow>
-                ))
+                ordered.map((row, idx) => {
+                  const stellarExpertUrl = createStellarExpertUrl('tx', row.txHash);
+
+                  const poolPrice = row.tokenBAmount / row.tokenAAmount;
+                  const baseFiatValue = poolPrice * row.tokenAAmount * xlmPrice;
+                  const quoteFiatValue = row.tokenBAmount * xlmPrice;
+
+                  return (
+                    <TableRow
+                      hover
+                      key={idx}
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+                    >
+                      <TableCell>
+                        {row.timestamp ? `${ago(row.timestamp / 1000)} ago` : ''}
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={row.type} color={typeColor[row.type]} size="small" />
+                      </TableCell>
+                      <TableCell>
+                        {row.tokenAAmount} ({fCurrency(baseFiatValue)})
+                      </TableCell>
+                      <TableCell>
+                        {row.tokenBAmount} ({fCurrency(quoteFiatValue)})
+                      </TableCell>
+                      <TableCell>{fTruncate(row.user, 15)}</TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

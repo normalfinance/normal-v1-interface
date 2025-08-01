@@ -2,14 +2,12 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
-import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { useTabs } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useAppStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -61,8 +59,8 @@ export interface TokenActionCardProps extends CardProps {
   cashBalance?: number;
   /** Show skeleton loading state */
   loading?: boolean;
-  /** Query parameters for pre-populating swap form */
-  queryParams?: SwapQueryParams;
+  queryParams?: any;
+  initialTab?: TokenActionKey;
 }
 
 // ----------------------------------------------------------------------
@@ -78,11 +76,10 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   cashBalance,
   loading,
   queryParams,
+  initialTab,
   ...other
 }) => {
   const theme = useTheme();
-
-  const store = useAppStore();
 
   // Determine which tabs are active for this instance ------------------
   const activeTabs = React.useMemo<ActionConfig[]>(
@@ -95,13 +92,18 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
     console.warn('TokenActionCard: enabledTabs is empty – defaulting to all tabs.');
     activeTabs.push(...ALL_TABS);
   }
+  const getInitialTab = (): TokenActionKey => {
+    if (initialTab && activeTabs.some((tab) => tab.value === initialTab)) {
+      return initialTab;
+    }
+    return activeTabs[0].value as TokenActionKey;
+  };
 
-  // Initialise the tab hook with the first available tab --------------
-  const tabs = useTabs(activeTabs[0].value as TokenActionKey);
+  const tabs = useTabs(getInitialTab());
 
   const buyCardTokens = React.useMemo<Token[]>(
-    () => store.tokens.filter((t) => t.symbol === 'XLM' || t.symbol === 'USDC'),
-    [store.tokens]
+    () => tokensList!.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol === 'USDC'),
+    [tokensList]
   );
 
   // Helper – render the body matching the active tab -------------------
@@ -109,40 +111,33 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
     switch (tabs.value) {
       case 'swap':
         return (
-          <Box sx={{ position: 'relative' }}>
-            <SwapCard
-              tokensList={store.tokens}
-              swapFeeInfo={swapFeeInfo}
-              queryParams={queryParams}
-            />
+          <Box data-testid="swap-card" sx={{ position: 'relative' }}>
+            <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} queryParams={queryParams} />
             <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />
           </Box>
         );
       case 'send':
-        return <SendCard tokensList={store.tokens} networkCost={0} />;
+        return (
+          <SendCard
+            tokensList={tokensList}
+            networkCost={0}
+            queryParams={queryParams}
+            data-testid="send-card"
+          />
+        );
       case 'buy':
-        return <BuyCard tokensList={buyCardTokens} cashBalance={cashBalance} />;
+        return (
+          <BuyCard
+            tokensList={buyCardTokens}
+            cashBalance={cashBalance}
+            queryParams={queryParams}
+            data-testid="buy-card"
+          />
+        );
       default:
         return null;
     }
   };
-
-  // Effect hook to fetch all tokens once the component mounts
-  useEffect(() => {
-    const getAllTokens = async (): Promise<void> => {
-      store.setLoading(true);
-      try {
-        const allTokens = await store.getAllTokens();
-
-        store.setLoading(false);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        store.setLoading(false);
-      }
-    };
-    getAllTokens();
-  }, []);
 
   if (loading) {
     return (
@@ -156,7 +151,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           maxHeight: 800,
           p: 1.5,
           gap: 0.5,
-          borderRadius: 2,
+          borderRadius: 4,
           ...sx,
         }}
         {...other}
@@ -194,6 +189,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 
   return (
     <Card
+      data-testid="token-action-card"
       sx={{
         display: 'flex',
         flexDirection: 'column',
@@ -239,11 +235,17 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
               boxShadow: 'none !important',
               backgroundColor: alpha(theme.palette.grey[500], 0.08),
               border: `1px solid ${theme.palette.divider}`,
+              borderRadius: 9999,
             },
           }}
         >
           {activeTabs.map((tab) => (
-            <Tab key={tab.value} value={tab.value} label={tab.label} />
+            <Tab
+              key={tab.value}
+              value={tab.value}
+              label={tab.label}
+              data-testid={`${tab.value}-tab`}
+            />
           ))}
         </CustomTabsSwapSend>
       )}

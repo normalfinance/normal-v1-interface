@@ -1,9 +1,10 @@
 'use client';
 
 import { constants } from '@normalfinance/utils';
-import { useAppStore } from '@normalfinance/state';
+import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
 
@@ -18,26 +19,46 @@ interface ReturnType {
 // ----------------------------------------------------------------------
 
 export function usePools(): ReturnType {
-  const store = useAppStore(); // Global state management
+  const { setGlobalIsLoading } = useAppStore();
+  const storePersist = usePersistStore();
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
   const [allPools, setAllPools] = useState<PoolRouterContract.PoolInfo[]>([]); // State to hold pool data
 
+  const rateLimitCheck = async () => {
+    if (!storePersist.wallet.address) return;
+    const res = await fetch('/api/pools', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+    });
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    const data = await res.json();
+    if (!data.allowed) {
+      throw new Error(data.error || 'Pool data access not allowed');
+    }
+  };
+
   const fetchPool = useCallback(async (poolAddress: string) => {
     try {
+      await rateLimitCheck();
+
       const PoolRouter = new PoolRouterContract.Client({
-        contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
-      const pool = await PoolRouter.query_pool_details({ pool_address: poolAddress });
+      const pool = await PoolRouter.query_pool_details({ asset: '' });
 
       if (pool.result) {
         return pool.result;
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e);
     }
@@ -49,26 +70,28 @@ export function usePools(): ReturnType {
       setLoading(true);
       setError(null);
 
+      await rateLimitCheck();
+
       const PoolRouter = new PoolRouterContract.Client({
-        contractId: constants.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.NETWORK_PASSPHRASE,
-        rpcUrl: constants.RPC_URL,
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
       const pools = await PoolRouter.query_all_pools_details();
 
       if (pools.result) {
-        // console.log(pools.result)
         setAllPools(pools.result as PoolRouterContract.PoolInfo[]);
       }
 
       setLoading(false);
     } catch (e) {
+      captureException(e);
       console.error(e);
       setError(e as any);
-      store.setLoading(false);
+      setGlobalIsLoading(false);
     } finally {
-      store.setLoading(false);
+      setGlobalIsLoading(false);
     }
   }, []);
 
@@ -85,24 +108,3 @@ export function usePools(): ReturnType {
     fetchAllPools,
   };
 }
-
-//  // LP token stuff..
-//       // Get user share
-//       if (storePersist.wallet.address) {
-//         if (result) {
-//           // Get the total amount of LP tokens in the pool
-
-//           const lpShareAmount = Number(result.pool_response.asset_lp_share.amount);
-//           const lpShareAmountDec = Number(lpShareAmount) / 10 ** (_lpToken?.decimals || 7);
-
-//           // Get the amount of LP tokens the user has as balance or staked
-//           const totalUserLPTokens =
-//             Number(_lpToken!.balance || 0) / 10 ** (_lpToken?.decimals || 7);
-
-//           // Price per Unit
-//           const pricePerUnit = tvl / lpShareAmountDec;
-
-//           // User share
-//           setUserShare(totalUserLPTokens * pricePerUnit);
-//         }
-//       }

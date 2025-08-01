@@ -1,0 +1,48 @@
+name: normal-contracts-events-mainnet
+version: 2
+resource_size: s
+from_snapshot:
+  id: snapshot-cmdovbxjmmqx701wn6sywdg8p
+  created_at: 1753813606458
+apiVersion: 3
+sources:
+  source_1:
+    dataset_name: stellar.events_v2
+    version: 1.0.0
+    type: dataset
+    start_at: latest
+transforms:
+  sql_1:
+    type: sql
+    primary_key: id
+    sql: |-
+      SELECT
+        s.*, 
+        now() AS goldsky_timestamp
+      FROM source_1
+      WHERE type = 'contract'
+        AND in_successful_contract_call = true
+        AND contract_id IN (
+          '',         -- Pool Router
+          '',         -- Oracle Registry
+          '',         -- Buffer
+          '',         -- Insurance Fund
+          '',         -- Pool Swap Fee
+          '',         -- Pool Plane
+          '',         -- Liquidity Calc.
+          '', -- Pool Router
+          '', -- Oracle Registry
+          '', -- Buffer
+          '', -- Insurance Fund
+          '', -- Pool Swap Fee
+          '', -- Pool Plane
+          ''  -- Liquidity Calc.
+        )
+sinks:
+  sink_1:
+    type: postgres
+    table: normal_contract_events_mainnet
+    schema: public
+    secret_name: SUPABASE_POSTGRES
+    from: sql_1
+use_dedicated_ip: false

@@ -1,13 +1,16 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
+import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
+import BigNumber from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { fPercent, fShortenNumber } from '@/utils/format-number';
+import { formatTokenAmount } from '@/utils/format-stellar';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -26,13 +29,14 @@ import ZealyHighlight from '../_common/zealy/zealy-highlight';
 // ── Prop types ---------------------------------------------------------
 
 export interface PoolBalance {
-  coinShortName: string;
-  value: number;
+  tokenSymbol: string;
+  amount: BigNumber;
+  fiatValue: BigNumber;
 }
 
 export interface PoolStat {
   statName: string;
-  value: number;
+  value: BigNumber;
   percentage?: number;
 }
 
@@ -43,12 +47,13 @@ export interface PoolActionButton {
   onClick?: () => void; // Optional click handler
 }
 
-export type PoolsAprProps = CardProps & {
+export type PoolsOverviewProps = CardProps & {
   totalAprPercentage: number;
   poolBalances: [PoolBalance, PoolBalance]; // exactly two items
   stats: PoolStat[]; // any length (e.g. 3-4)
   actionButtons?: PoolActionButton[];
   loading?: boolean;
+  tokens?: Token[];
 };
 
 // ----------------------------------------------------------------------
@@ -58,9 +63,10 @@ export function PoolOverview({
   poolBalances,
   stats,
   loading,
+  tokens,
   sx,
   ...other
-}: PoolsAprProps) {
+}: PoolsOverviewProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -82,12 +88,12 @@ export function PoolOverview({
   ];
 
   const [balA, balB] = poolBalances || [
-    { coinShortName: '', value: 0 },
-    { coinShortName: '', value: 0 },
+    { tokenSymbol: '', amount: BigNumber(0), value: BigNumber(0) },
+    { tokenSymbol: '', amount: BigNumber(0), value: BigNumber(0) },
   ];
-  const total = balA.value + balB.value || 1;
-  const pctA = balA.value / total;
-  const pctB = balB.value / total;
+  const totalFiatValue = balA.fiatValue.plus(balB.fiatValue);
+  const pctA = balA.fiatValue.div(totalFiatValue);
+  const pctB = balB.fiatValue.div(totalFiatValue);
 
   if (loading) {
     return (
@@ -182,10 +188,9 @@ export function PoolOverview({
           </WalletGate>
         ))}
       </Stack>
-      {/* NEED TO ADD TOKENLIST */}
       {showSwap && (
         <Box sx={{ mt: 2 }}>
-          <SwapCard tokensList={[]} />
+          <SwapCard tokensList={tokens} />
         </Box>
       )}
       <Stack
@@ -240,10 +245,10 @@ export function PoolOverview({
             }}
           >
             <Typography variant="subtitle2" color="text.primary">
-              {fShortenNumber(balA.value)} {balA.coinShortName}
+              {formatTokenAmount(balA.amount)} {balA.tokenSymbol}
             </Typography>
             <Typography variant="subtitle2" color="text.primary">
-              {fShortenNumber(balB.value)} {balB.coinShortName}
+              {formatTokenAmount(balB.amount)} {balB.tokenSymbol}
             </Typography>
           </Box>
           <Box
@@ -257,13 +262,13 @@ export function PoolOverview({
           >
             <Box
               sx={{
-                flexGrow: pctA,
+                flexGrow: pctA.toNumber() * 100,
                 bgcolor: theme.palette.primary.dark,
               }}
             />
             <Box
               sx={{
-                flexGrow: pctB,
+                flexGrow: pctB.toNumber() * 100,
                 bgcolor: theme.palette.primary.dark,
                 opacity: 0.3,
               }}
@@ -290,7 +295,7 @@ export function PoolOverview({
               </Typography>
               <Box>
                 <Stack direction="row" spacing={1} alignItems="end">
-                  <Typography variant="h3">{fShortenNumber(value)}</Typography>
+                  <Typography variant="h3">{fCurrency(value.toFixed(2))}</Typography>
                   {percentage != null && (
                     <Stack direction="row" spacing={0.5} alignItems="center">
                       <Box

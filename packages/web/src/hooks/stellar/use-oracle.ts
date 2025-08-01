@@ -1,6 +1,8 @@
 'use client';
 
 import { constants } from '@normalfinance/utils';
+import { captureException } from '@sentry/nextjs';
+import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
 
@@ -20,6 +22,7 @@ interface ReturnType {
 export function useOracle(_asset: string): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
+  const storePersist = usePersistStore();
 
   // Config
   const [asset] = useState<string>(_asset);
@@ -35,10 +38,28 @@ export function useOracle(_asset: string): ReturnType {
     values: undefined,
   };
 
+  const rateLimitCheck = async () => {
+    if (!storePersist.wallet.address) return;
+    const res = await fetch('/api/oracle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+    });
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    const data = await res.json();
+    if (!data.allowed) {
+      throw new Error(data.error || 'Oracle access not allowed');
+    }
+  };
+
   const getPrice = useCallback(async (cached: boolean) => {
     try {
       setError(null);
       setLoading(true);
+
+      await rateLimitCheck();
 
       if (!oracleRegistry) return;
 
@@ -46,12 +67,14 @@ export function useOracle(_asset: string): ReturnType {
         asset,
         cached,
         action: defaultAction,
+        skip_validation: true,
       });
 
       if (oraclePriceData?.result) {
         setPrice(oraclePriceData?.result);
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -65,6 +88,8 @@ export function useOracle(_asset: string): ReturnType {
       setError(null);
       setLoading(true);
 
+      await rateLimitCheck();
+
       if (!oracleRegistry) return;
 
       const oraclePriceData = await oracleRegistry.get_last_price({
@@ -75,6 +100,7 @@ export function useOracle(_asset: string): ReturnType {
         setLastPrice(oraclePriceData?.result);
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -86,9 +112,9 @@ export function useOracle(_asset: string): ReturnType {
   // On component mount, fetch OracleRegistry and price
   useEffect(() => {
     const OracleRegistry = new OracleRegistryContract.Client({
-      contractId: constants.ORALCE_REGISTY_ADDRESS,
-      networkPassphrase: constants.NETWORK_PASSPHRASE,
-      rpcUrl: constants.RPC_URL,
+      contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
+      networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+      rpcUrl: constants.StellarConfig.RPC_URL,
     });
     setOracleRegistry(OracleRegistry);
 

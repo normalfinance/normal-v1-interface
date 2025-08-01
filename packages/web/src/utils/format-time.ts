@@ -288,3 +288,27 @@ export function fSub({
 
   return result;
 }
+
+export function formatDuration(seconds: number): string {
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+
+  if (days > 0) {
+    return `${days} day`;
+  } else if (hours > 0) {
+    return `${hours} hour`;
+  } else {
+    return `${minutes} minute`;
+  }
+}
+
+export function ago(sec: number) {
+  // floor the entire subtraction so we get an integer second count
+  const diff = Math.max(1, Math.floor(Date.now() / 1000 - sec));
+
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86_400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86_400)}d`;
+}

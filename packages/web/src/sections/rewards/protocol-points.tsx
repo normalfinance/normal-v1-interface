@@ -5,11 +5,11 @@ import { useTranslate } from '@/locales';
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
-import { Box, Grid2 } from '@mui/material';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
+import { Box, Grid2, Paper } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 
@@ -30,10 +30,21 @@ export function ProtocolPoints({ totalPoints, history }: ProtocolPointsProps) {
             {t('Protocol Points are coming soon')}
           </Alert>
         </Box>
-        <Card sx={{ p: 4, textAlign: 'center' }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 4,
+            display: 'inline-flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            backgroundColor: 'grey.100',
+            borderRadius: 3,
+          }}
+        >
           <Typography variant="h2">{totalPoints}</Typography>
           <Typography color="text.secondary">{t('Total Protocol Points')}</Typography>
-        </Card>
+        </Paper>
       </Grid2>
 
       {/* Recent earnings table */}

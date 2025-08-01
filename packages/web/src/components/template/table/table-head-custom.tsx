@@ -48,7 +48,15 @@ export function TableHeadCustom({
   onSelectAllRows,
 }: TableHeadCustomProps) {
   return (
-    <TableHead sx={{ width: '100%', ...sx }}>
+    <TableHead
+      sx={{
+        width: '100%',
+        backgroundColor: 'grey.100',
+        borderBottom: 1,
+        borderColor: 'divider',
+        ...sx,
+      }}
+    >
       <TableRow>
         {/* Instead of rendering the checkbox cell, render an empty cell that is visually hidden */}
         {onSelectAllRows && <TableCell padding="checkbox" sx={{ display: 'none' }} />}

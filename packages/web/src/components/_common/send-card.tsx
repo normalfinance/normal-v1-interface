@@ -1,4 +1,5 @@
 import type { CardProps } from '@mui/material';
+import type { SendQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useSnackbar } from 'notistack';
@@ -22,11 +23,17 @@ import { Iconify } from '../template/iconify';
 interface SendCardProps extends CardProps {
   tokensList?: Token[];
   networkCost?: number;
+  queryParams?: SendQueryParams;
 }
 
-const DEFAULT_DESTINATION = 'Wallet address or ENS name';
+const DEFAULT_DESTINATION = 'Wallet address';
 
-const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...other }) => {
+const SendCard: React.FC<SendCardProps> = ({
+  tokensList = [],
+  networkCost,
+  queryParams,
+  ...other
+}) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
@@ -51,6 +58,27 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
 
   const [coinValue, setCoinValue] = useState<number>(0);
   const [fiatValue, setFiatValue] = useState<number>(0);
+
+  useEffect(() => {
+    if (queryParams) {
+      if (queryParams.token) {
+        const foundToken = tokensList.find(
+          (token) => token.symbol.toLowerCase() === queryParams.token?.toLowerCase()
+        );
+        if (foundToken) {
+          setSendToken(foundToken);
+        }
+      }
+
+      if (queryParams.amount) {
+        setAmount(queryParams.amount);
+      }
+
+      if (queryParams.destination) {
+        setDestination(queryParams.destination);
+      }
+    }
+  }, [queryParams, tokensList]);
 
   useEffect(() => {
     if (sendToken) {
@@ -153,6 +181,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
+  const isSendReady = getButtonLabel() === 'Send';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1 }} width={1}>
@@ -165,7 +194,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
             height: '278px',
             padding: theme.spacing(2),
             alignItems: 'flex-start',
-            borderRadius: '8px 8px 0 0',
+            borderRadius: '20px 20px 0 0',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -281,7 +310,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
             padding: theme.spacing(2),
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderRadius: '0 0 8px 8px',
+            borderRadius: '0 0 20px 20px',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -334,7 +363,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
           >
             <Button
               variant="soft"
-              color="success"
+              color="secondary"
               size="small"
               sx={{ fontWeight: 500, fontSize: '12px', p: 0, height: '24px', minWidth: '36px' }}
               onClick={(e) => {
@@ -365,7 +394,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
           px: '16px',
           justifyContent: 'center',
           alignItems: 'flex-start',
-          borderRadius: '8px',
+          borderRadius: '20px',
           border: `1px solid ${theme.palette.divider}`,
           backgroundColor: alpha(theme.palette.grey[500], 0.08),
           overflow: 'hidden',
@@ -412,9 +441,11 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, ...ot
           <Button
             fullWidth
             variant="soft"
-            color="success"
+            color="secondary"
             size="large"
+            disabled={!isSendReady}
             onClick={handleMainButtonClick}
+            sx={{ borderRadius: 2.5 }}
           >
             {getButtonLabel()}
           </Button>

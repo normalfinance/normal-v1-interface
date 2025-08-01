@@ -44,7 +44,7 @@ export function CustomTabsSwapSend({ children, slotProps, sx, ...other }: Custom
             '& > span': {
               width: 1,
               height: 1,
-              borderRadius: 1,
+              borderRadius: 9999,
               display: 'block',
               bgcolor: 'common.white',
               boxShadow: theme.vars.customShadows.z1,

@@ -1,51 +1,64 @@
-import { Account } from '@stellar/stellar-sdk';
+import { NetworkConfig } from '@normalfinance/types';
+import { Account, Networks } from '@stellar/stellar-sdk';
 
-export const TESTING_SOURCE: Account = new Account(
-  'GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO',
-  '123'
-);
+const RPC_API_KEY = process.env.RPC_API_KEY ?? '';
 
-/**
- * The Soroban network passphrase used to initialize this library.
- */
-export const NETWORK_PASSPHRASE: string = 'Public Global Stellar Network ; September 2015';
+const TESTNET: NetworkConfig = {
+  // network
+  TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
+  NETWORK_PASSPHRASE: Networks.TESTNET,
+  HORIZON_URL: 'https://horizon-testnet.stellar.org',
+  RPC_URL: RPC_API_KEY
+    ? `https://testnet.stellar.validationcloud.io/v1/${RPC_API_KEY}`
+    : 'https://soroban-testnet.stellar.org',
 
-/**
- * The Soroban RPC endpoint used to initialize this library.
- */
-export const RPC_URL: string = 'https://soroban-testnet.stellar.org';
+  // contracts
+  POOL_ROUTER_ADDRESS: 'CC7BAPX2HYU76CDGCWLLVZT5O7CTTT5VHRC4H6VZUXLJ7PKHPKDT3PS3', // updated on 7.30.25
+  POOL_SWAP_FEE_ADDRESS: 'CBY6HH7FFNBLARQYSKJAK6O2AGPTM5VYGOYHTQQPTFLUTS2DNOXPT5QD', // updated on 7.30.25
+  BUFFER_ADDRESS: 'CAKRRRDCBT4K3TRIW4GTTIOUEEOCHOPEXO4WFQURP7W44KOCKHWNTLQM', // updated on 7.30.25
+  INSURANCE_FUND_ADDRESS: 'CDRVNXARMUM6IGTLMXBCMSBZ7DCI4Y3AANA7HQCZCP6XMXNCOXT7HKDZ', // updated on 7.30.25
+  ORACLE_REGISTRY_ADDRESS: 'CDB6MTYST4WQMQZB2ES4UVS6KMIHE2TAHWCONOIJQZ2HMH6NT2C77H3X', // updated on 7.30.25
+  LIQUIDITY_CALCULATOR_ADDRESS: 'CCDDTBUR7QFOS33HL4THNO7CZ6J25H7AUINYCKPIFQFZKLWLI26WE7BE', // updated on 7.30.25
 
-/**
- * Pool Router contract address
- */
-export const POOL_ROUTER_ADDRESS: string =
-  'CC2CCFGMCEH7XJ34WXHIQ3MDRLPMF6UVELDL4MTX5X5DSZSG6DH24ZM5';
+  // stellar
+  XLM_ADDRESS: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
+  XLM_DECIMALS: 7,
 
-/**
- * Pool Swap Fee contract address
- */
-export const POOL_SWAP_FEE_ADDRESS: string =
-  'CBQASVDLRJTGYFQBXEUVZUSS7CLZDLVWS4XNZ4TLHSPOCQAYAUJ3NKW6';
+  // oracle
+  REFLECTOR_ORACLE_ADDRESS: 'CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63',
 
-/**
- * Buffer contract address
- */
-export const BUFFER_ADDRESS: string = 'CCTEOV6E6VHBAQXVHPFR7ZRAJTIKBFNOVV7RNSLC7FMEPXSIIQJNOKGC';
+  // supabase
+  EVENTS_TABLENAME: 'normal_contract_events_testnet',
+};
 
-/**
- * Insurance Fund contract address
- */
-export const INSURANCE_FUND_ADDRESS: string =
-  'CBNEAYC3XYACNOXTCDKPX5R5LYBUHNCQ6TPMHTVEKWHH2JZJBXW6DIXQ';
+const MAINNET: NetworkConfig = {
+  // network
+  TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
+  NETWORK_PASSPHRASE: Networks.PUBLIC,
+  HORIZON_URL: 'https://horizon.stellar.org',
+  RPC_URL: RPC_API_KEY
+    ? `https://mainnet.stellar.validationcloud.io/v1/${RPC_API_KEY}`
+    : 'https://soroban.stellar.org',
 
-/**
- * Oracle Registry contract address
- */
-export const ORALCE_REGISTY_ADDRESS: string =
-  'CCDHMFVDXDKMKIQVSWJAJJHWYCAO4M6HFFSLKSSIJ6DQVH56J2GRS7UC';
+  // contracts
+  POOL_ROUTER_ADDRESS: '...', // updated on 7.30.25
+  POOL_SWAP_FEE_ADDRESS: '...', // updated on 7.30.25
+  BUFFER_ADDRESS: '...', // updated on 7.30.25
+  INSURANCE_FUND_ADDRESS: '...', // updated on 7.30.25
+  ORACLE_REGISTRY_ADDRESS: '...', // updated on 7.30.25
+  LIQUIDITY_CALCULATOR_ADDRESS: '...', // updated on 7.30.25
 
-/**
- * XLM token info
- */
-export const XLM_ADDRESS: string = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
-export const XLM_DECIMALS: number = 7;
+  // stellar
+  XLM_ADDRESS: 'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA',
+  XLM_DECIMALS: 7,
+
+  // oracle
+  REFLECTOR_ORACLE_ADDRESS: 'CAFJZQWSED6YAWZU3GWRTOCNPPCGBN32L7QV43XX5LZLFTK6JLN34DLN',
+
+  // supabase
+  EVENTS_TABLENAME: 'normal_contract_events_mainnet',
+};
+
+// Decide based on env
+const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'TESTNET'; // or use NEXT_PUBLIC_NETWORK for Next.js
+export const StellarConfig: NetworkConfig = NETWORK === 'MAINNET' ? MAINNET : TESTNET;

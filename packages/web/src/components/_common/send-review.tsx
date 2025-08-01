@@ -49,11 +49,44 @@ const SendReview: React.FC<SendReviewProps> = ({
   const store = usePersistStore();
   const { executeContractTransaction } = useContractTransaction();
 
+  const executeSend = async (
+    signedTransactionXDR: string,
+    transactionType: string = 'Send Token'
+  ) => {
+    if (!store.wallet.address) return null;
+    const res = await fetch('/api/transaction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        walletAddress: store.wallet.address,
+        signedTransactionXDR,
+        transactionType,
+      }),
+    });
+
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Send execution failed');
+    }
+
+    return data;
+  };
+
   const onSubmit = async () => {
     if (!store.wallet.address || !sendToken) {
       enqueueSnackbar(t('Cannot send token without wallet or token'), { variant: 'error' });
       return;
     }
+
+    const processedArgs = {
+      from: store.wallet.address!,
+      to: address,
+      amount: BigInt((tokenValue * 10 ** (sendToken?.decimals || 7)).toFixed(0)),
+    };
 
     await executeContractTransaction({
       contractType: 'token',
@@ -62,15 +95,25 @@ const SendReview: React.FC<SendReviewProps> = ({
         type: TransactionType.SEND,
         token1: { name: sendToken.symbol, amount: tokenValue.toString() },
       },
-      transactionFunction: async (client, restore) =>
-        client.transfer(
-          {
-            from: store.wallet.address!,
-            to: address,
-            amount: BigInt((tokenValue * 10 ** (sendToken?.decimals || 7)).toFixed(0)),
-          },
-          { simulate: !restore }
-        ),
+      transactionFunction: async (client, restore) => {
+        const tx = await client.transfer(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
+
+          if (signedXDR) {
+            const apiRes = await executeSend(signedXDR, 'Send Token');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
+
+          return tx;
+        }
+      },
     });
 
     onClose();

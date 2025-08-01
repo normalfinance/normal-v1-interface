@@ -75,11 +75,9 @@ export const getTransactionMessages = (details: TransactionDetails) => {
       };
   }
 };
-export const getStellarExpertNetwork = () =>
-  // can be public or testnet, default to public, depends on the network passphrase
-  'public';
 
 export const createStellarExpertUrl = (type: StellarExpertResourceType, id: string) => {
-  const network = getStellarExpertNetwork();
+  const network =
+    (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET' ? 'testnet' : 'public';
   return `https://stellar.expert/explorer/${network}/${type}/${id}`;
 };

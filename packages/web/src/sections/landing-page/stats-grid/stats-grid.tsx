@@ -3,11 +3,8 @@
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 
-import { Box, Grid, Paper, Button, Container, Typography } from '@mui/material';
-
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
+import Grid2 from '@mui/material/Grid2';
+import { Box, Paper, Button, Container, Typography } from '@mui/material';
 
 type StatsProps = {
   percentage: string;
@@ -16,22 +13,47 @@ type StatsProps = {
 };
 
 type Props = {
-  tagline: string;
-  heading: string;
-  description: string;
-  stats: StatsProps[];
+  tagline?: string;
+  heading?: string;
+  description?: string;
+  stats?: StatsProps[];
 };
 
-export type StatsGridProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
+export type StatsGridProps = React.ComponentPropsWithoutRef<'section'> & Props;
+
+const DEFAULT_PROPS = {
+  tagline: 'Tagline',
+  heading: 'Trusted by thousands',
+  description:
+    'Normal powers the largest catalogue of synthetic crypto and real-world assets, with thousands of dollars in weekly volume across 100+ assets and index funds.',
+  stats: [
+    {
+      percentage: '$340K',
+      heading: 'All time volume',
+      description: '',
+    },
+    {
+      percentage: '2,000+',
+      heading: 'All time swappers',
+      description: '',
+    },
+    {
+      percentage: 'Soon',
+      heading: 'All time LP fees',
+      description: '',
+    },
+    {
+      percentage: 'Soon',
+      heading: '+24H volume',
+      description: '',
+    },
+  ],
+};
 
 const paperSx = {
   bgcolor: '#F9FAFB',
   borderRadius: 3,
 };
-
-/* ------------------------------------------------------------------ */
-/*  Stat card                                                          */
-/* ------------------------------------------------------------------ */
 
 const StatCard: React.FC<StatsProps> = ({ percentage, heading }) => (
   <Paper variant="outlined" sx={{ ...paperSx }}>
@@ -60,15 +82,11 @@ const StatCard: React.FC<StatsProps> = ({ percentage, heading }) => (
   </Paper>
 );
 
-/* ------------------------------------------------------------------ */
-/*  Main component                                                     */
-/* ------------------------------------------------------------------ */
-
 export const StatsGrid: React.FC<StatsGridProps> = ({
-  tagline,
-  heading,
-  description,
-  stats,
+  tagline = DEFAULT_PROPS.tagline,
+  heading = DEFAULT_PROPS.heading,
+  description = DEFAULT_PROPS.description,
+  stats = DEFAULT_PROPS.stats,
   ...sectionProps
 }) => {
   const { t } = useTranslate();
@@ -83,18 +101,15 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
       {...sectionProps}
     >
       <Container>
-        <Grid
+        <Grid2
           container
           spacing={{ xs: 6, lg: 8 }}
           alignItems="center"
           columns={{ xs: 1, lg: 12 }}
           height={1}
         >
-          {/* ----- left column ----- */}
-          <Grid
-            item
-            xs={12}
-            lg={5}
+          <Grid2
+            size={{ xs: 12, lg: 5 }}
             sx={{
               display: 'flex',
               flexDirection: 'column',
@@ -102,12 +117,10 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
             }}
             height={1}
           >
-            {/* top */}
             <Typography variant="h3" fontWeight={500} mb={2}>
               {heading}
             </Typography>
 
-            {/* bottom */}
             <Box sx={{ mt: 'auto' }}>
               <Typography color="text.secondary" mb={2}>
                 {description}
@@ -125,55 +138,21 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
                 {t('Learn more')}
               </Button>
             </Box>
-          </Grid>
+          </Grid2>
 
-          <Grid item xs={1} lg={7}>
-            <Grid container spacing={4}>
-              {stats?.map((s, i) => (
-                <Grid item xs={12} md={6} key={i}>
+          <Grid2 size={{ xs: 1, lg: 7 }}>
+            <Grid2 container spacing={4}>
+              {stats.map((s, i) => (
+                <Grid2 size={{ xs: 12, md: 6 }} key={i}>
                   <StatCard {...s} />
-                </Grid>
+                </Grid2>
               ))}
-            </Grid>
-          </Grid>
-        </Grid>
+            </Grid2>
+          </Grid2>
+        </Grid2>
       </Container>
     </Box>
   );
 };
 
-/* ------------------------------------------------------------------ */
-/*  Defaults                                                           */
-/* ------------------------------------------------------------------ */
-
-export const StatsGridDefaults: Props = {
-  tagline: 'Tagline',
-  heading: 'Trusted by thousands',
-  description:
-    'Normal powers the largest catalogue of synthetic crypto and real-world assets, with thousands of dollars in weekly volume across 100+ assets and index funds.',
-  stats: [
-    {
-      percentage: '$340K',
-      heading: 'All time volume',
-      description: '',
-    },
-    {
-      percentage: '2,000+',
-      heading: 'All time swappers',
-      description: '',
-    },
-    {
-      percentage: 'Coming soon',
-      heading: 'All time LP fees',
-      description: '',
-    },
-    {
-      percentage: 'Coming soon',
-      heading: '+24H volume',
-      description: '',
-    },
-  ],
-};
-
-StatsGrid.defaultProps = StatsGridDefaults;
 StatsGrid.displayName = 'StatsGrid';

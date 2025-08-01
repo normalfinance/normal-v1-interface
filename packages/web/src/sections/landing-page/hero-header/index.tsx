@@ -4,10 +4,11 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
+import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
+import { fetchApiTokens } from '@/hooks';
 import { useAppStore } from '@normalfinance/state';
 
-import { useTheme } from '@mui/material/styles';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 import SwapCard from '@/components/_common/swap-card';
@@ -44,9 +45,32 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   } as Props;
 
   const { t } = useTranslate();
-  const theme = useTheme();
 
-  const store = useAppStore();
+  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
+
+  useEffect(() => {
+    if (tokens.length === 0) {
+      setGlobalIsLoading(true);
+      fetchApiTokens()
+        .then((data) => {
+          getAllTokens(data.assets);
+        })
+        .catch((error) => console.error(error))
+        .finally(() => {
+          setGlobalIsLoading(false);
+        });
+    }
+  }, []);
+
+  const allowedTokens = React.useMemo(
+    () =>
+      tokens.filter(
+        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
+      ),
+    [tokens]
+  );
+
+  console.log('hero tokens', tokens);
 
   return (
     <Box
@@ -106,7 +130,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   color="text.secondary"
                   sx={{ fontWeight: 500, fontSize: 14 }}
                 >
-                  {tagline}
+                  {t(tagline)}
                 </Typography>
                 <Box
                   sx={{
@@ -140,11 +164,18 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               <Box
                 component="span"
                 sx={{
-                  background: 'linear-gradient(90deg, #947BFF 79.77%, #F8279C 92.22%)',
+                  background: `linear-gradient(
+                                90deg,
+                                #2DE9C8 0%,
+                                #00AFF7 20%,
+                                #947BFF 40%,
+                                #F8279C 60%,
+                                #FF6F4C 80%,
+                                #FFE13D 100%
+                              )`,
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text', // for Firefox
-                  color: 'transparent',
+                  backgroundClip: 'text',
                 }}
               >
                 {t('Normal')}
@@ -187,7 +218,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               }}
             >
               <SwapCard
-                tokensList={store.tokens}
+                tokensList={allowedTokens}
                 swapFeeInfo={swapFeeInfo}
                 queryParams={swapParams}
               />

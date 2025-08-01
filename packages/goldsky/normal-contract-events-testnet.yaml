@@ -1,0 +1,48 @@
+name: normal-contracts-events-testnet
+version: 2
+resource_size: s
+from_snapshot:
+  id: snapshot-cmdovbxjmmqx701wn6sywdg8p
+  created_at: 1753813606458
+apiVersion: 3
+sources:
+  source_1:
+    dataset_name: stellar_testnet.events_v2
+    version: 1.0.0
+    type: dataset
+    start_at: latest
+transforms:
+  sql_1:
+    type: sql
+    primary_key: id
+    sql: |-
+      SELECT
+        s.*, 
+        now() AS goldsky_timestamp
+      FROM source_1
+      WHERE type = 'contract'
+        AND in_successful_contract_call = true
+        AND contract_id IN (
+          'CC7BAPX2HYU76CDGCWLLVZT5O7CTTT5VHRC4H6VZUXLJ7PKHPKDT3PS3',         -- Pool Router
+          'CDB6MTYST4WQMQZB2ES4UVS6KMIHE2TAHWCONOIJQZ2HMH6NT2C77H3X',         -- Oracle Registry
+          'CAKRRRDCBT4K3TRIW4GTTIOUEEOCHOPEXO4WFQURP7W44KOCKHWNTLQM',         -- Buffer
+          'CDRVNXARMUM6IGTLMXBCMSBZ7DCI4Y3AANA7HQCZCP6XMXNCOXT7HKDZ',         -- Insurance Fund
+          'CBY6HH7FFNBLARQYSKJAK6O2AGPTM5VYGOYHTQQPTFLUTS2DNOXPT5QD',         -- Pool Swap Fee
+          'CBFZY3TUS4NGJRTBJ3Y3NONTNL25WOPOQ5HRVTBVROMQVEB2XMWBEPK2',         -- Pool Plane
+          'CB5TC2DCKGHMHOREAKXCKEE2Z5LRY7G66RR2ZZBVJBRPA5DVHEF326LA',         -- Liquidity Calc.
+          'be103efa3e29ff08661596bae67d77c539cfb53c45c3fab9a5d69fbd477a873d', -- Pool Router
+          'c3e64f129f2d064321d125ca565e5310726a603d84e6b9098674761fcd9e85ff', -- Oracle Registry
+          '1518c4620cf8adce28b70d39a1d4211c23b9e4bbb962c2917fedce29c251ecd9', -- Buffer
+          'e356dc116519e41a6b65c2264839f8c48e63600341f3c05913fd765da275e7f3', -- Insurance Fund
+          '71e39fe52b42b0461892920579da019f3676b833b079c20f995749cb436baef9', -- Pool Swap Fee
+          '4b9c6e74971a64c6614ef1b6b9b36af5db39ee874f1acc358b990a903abb2c12', -- Pool Plane
+          '7b316862518ec3ba2402ae25109acf571c7cdef463ace4354862f07475390bbd'  -- Liquidity Calc.
+        )
+sinks:
+  sink_1:
+    type: postgres
+    table: normal_contract_events_testnet
+    schema: public
+    secret_name: SUPABASE_POSTGRES
+    from: sql_1
+use_dedicated_ip: false

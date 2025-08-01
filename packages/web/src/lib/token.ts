@@ -31,14 +31,14 @@ import { rpc, Contract, scValToNative, TransactionBuilder } from '@stellar/stell
 // }
 
 export const getTokenName = async (tokenAddress: string): Promise<string> => {
-  const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
   tx_builder.addOperation(new Contract(tokenAddress).call('name'));
 
-  const stellarRpc = new rpc.Server(constants.RPC_URL);
+  const stellarRpc = new rpc.Server(constants.StellarConfig.RPC_URL);
 
   const scval_result: rpc.Api.SimulateTransactionResponse = await stellarRpc.simulateTransaction(
     tx_builder.build()
@@ -55,14 +55,14 @@ export const getTokenName = async (tokenAddress: string): Promise<string> => {
 };
 
 export const getTokenSymbol = async (tokenAddress: string): Promise<string> => {
-  const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
   tx_builder.addOperation(new Contract(tokenAddress).call('symbol'));
 
-  const stellarRpc = new rpc.Server(constants.RPC_URL);
+  const stellarRpc = new rpc.Server(constants.StellarConfig.RPC_URL);
 
   const scval_result: rpc.Api.SimulateTransactionResponse = await stellarRpc.simulateTransaction(
     tx_builder.build()
@@ -79,14 +79,14 @@ export const getTokenSymbol = async (tokenAddress: string): Promise<string> => {
 };
 
 export const getTokenDecimals = async (tokenAddress: string): Promise<number> => {
-  const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
   tx_builder.addOperation(new Contract(tokenAddress).call('decimals'));
 
-  const stellarRpc = new rpc.Server(constants.RPC_URL);
+  const stellarRpc = new rpc.Server(constants.StellarConfig.RPC_URL);
 
   const scval_result: rpc.Api.SimulateTransactionResponse = await stellarRpc.simulateTransaction(
     tx_builder.build()
@@ -105,14 +105,14 @@ export const getTokenDecimals = async (tokenAddress: string): Promise<number> =>
 export async function getTokenBalance(tokenAddress: string, address: string): Promise<bigint> {
   const user = addressToScVal(address);
 
-  const tx_builder = new TransactionBuilder(constants.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.NETWORK_PASSPHRASE,
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
   tx_builder.addOperation(new Contract(tokenAddress).call('balance', user));
 
-  const stellarRpc = new rpc.Server(constants.RPC_URL);
+  const stellarRpc = new rpc.Server(constants.StellarConfig.RPC_URL);
 
   const scval_result: rpc.Api.SimulateTransactionResponse = await stellarRpc.simulateTransaction(
     tx_builder.build()

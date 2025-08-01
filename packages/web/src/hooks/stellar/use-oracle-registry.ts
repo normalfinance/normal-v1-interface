@@ -1,10 +1,10 @@
 'use client';
 
 import { constants } from '@normalfinance/utils';
+import { captureException } from '@sentry/nextjs';
+import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
-
-// ----------------------------------------------------------------------
 
 interface ReturnType {
   error: any | null;
@@ -18,15 +18,14 @@ interface ReturnType {
   getOracle: (asset: string) => Promise<OracleRegistryContract.OracleInfo>;
 }
 
-// ----------------------------------------------------------------------
-
 export function useOracleRegistry(): ReturnType {
   const [oracleRegistry, setOracleRegistry] = useState<OracleRegistryContract.Client | undefined>(
     undefined
   );
 
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true); // Loading state for async operations
+  const [loading, setLoading] = useState(true);
+  const storePersist = usePersistStore();
 
   const defaultAction: OracleRegistryContract.NormalAction = {
     tag: 'UpdateTwap',
@@ -40,13 +39,14 @@ export function useOracleRegistry(): ReturnType {
 
       if (!oracleRegistry) {
         const OracleRegistry = new OracleRegistryContract.Client({
-          contractId: constants.ORALCE_REGISTY_ADDRESS,
-          networkPassphrase: constants.NETWORK_PASSPHRASE,
-          rpcUrl: constants.RPC_URL,
+          contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
+          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+          rpcUrl: constants.StellarConfig.RPC_URL,
         });
         setOracleRegistry(OracleRegistry);
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -55,10 +55,28 @@ export function useOracleRegistry(): ReturnType {
     return;
   }, []);
 
+  const rateLimitCheck = async () => {
+    if (!storePersist.wallet.address) return;
+    const res = await fetch('/api/oracle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
+    });
+    if (res.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    const data = await res.json();
+    if (!data.allowed) {
+      throw new Error(data.error || 'Oracle access not allowed');
+    }
+  };
+
   const getPrice = useCallback(async (asset: string, cached: boolean) => {
     try {
       setError(null);
       setLoading(true);
+
+      await rateLimitCheck();
 
       if (!oracleRegistry) {
         fetchOracleRegistry();
@@ -69,12 +87,14 @@ export function useOracleRegistry(): ReturnType {
         asset,
         cached,
         action: defaultAction,
+        skip_validation: true,
       });
 
       if (oraclePriceData?.result) {
         return oraclePriceData?.result;
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -88,6 +108,8 @@ export function useOracleRegistry(): ReturnType {
       setError(null);
       setLoading(true);
 
+      await rateLimitCheck();
+
       if (!oracleRegistry) {
         fetchOracleRegistry();
         return undefined;
@@ -100,6 +122,7 @@ export function useOracleRegistry(): ReturnType {
         return oraclePriceData.result;
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -112,6 +135,8 @@ export function useOracleRegistry(): ReturnType {
     try {
       setError(null);
       setLoading(true);
+
+      await rateLimitCheck();
 
       if (!oracleRegistry) {
         fetchOracleRegistry();
@@ -126,6 +151,7 @@ export function useOracleRegistry(): ReturnType {
         return oracle.result;
       }
     } catch (e: any) {
+      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -134,12 +160,11 @@ export function useOracleRegistry(): ReturnType {
     return undefined;
   }, []);
 
-  // On component mount, fetch OracleRegistry
   useEffect(() => {
     const OracleRegistry = new OracleRegistryContract.Client({
-      contractId: constants.ORALCE_REGISTY_ADDRESS,
-      networkPassphrase: constants.NETWORK_PASSPHRASE,
-      rpcUrl: constants.RPC_URL,
+      contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
+      networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+      rpcUrl: constants.StellarConfig.RPC_URL,
     });
     setOracleRegistry(OracleRegistry);
   }, []);

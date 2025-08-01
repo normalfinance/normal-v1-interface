@@ -4,11 +4,12 @@ import type { StateToken } from '@normalfinance/types';
 import type { PositionQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
-import { useTokenBalance } from '@/hooks';
 import { useState, useEffect } from 'react';
+import { constants } from '@normalfinance/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { usePersistStore } from '@normalfinance/state';
+import { useLiquidity, useTokenBalance } from '@/hooks';
 import { useForm, FormProvider } from 'react-hook-form';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box, Stack, Button } from '@mui/material';
 
@@ -56,8 +57,9 @@ export function StepContentPanel({
   tokens,
   queryParams,
 }: StepContentPanelProps) {
-  const store = useAppStore();
   const persistStore = usePersistStore();
+
+  const { depositLiquidity } = useLiquidity();
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -94,24 +96,25 @@ export function StepContentPanel({
   /* ------------- helpers --------------- */
   const watchToken = methods.watch('tokenASymbol');
   const watchAmount = methods.watch('depositAmount');
-  const selectedToken = store.tokens.find((t) => t.symbol === watchToken) ?? null;
 
   // Check if wallet is connected
   const isWalletConnected = !!persistStore.wallet.address;
 
   // Get token balance for the selected token
   const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
-    selectedToken?.id || null
+    constants.StellarConfig.XLM_ADDRESS
   );
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
-    if (!isWalletConnected || !selectedToken || !watchAmount || !tokenBalance) {
+    if (!isWalletConnected || !watchAmount || !tokenBalance) {
       return false;
     }
 
     // Convert the user input amount to the token's smallest unit (considering decimals)
-    const requiredAmount = BigInt(Math.floor(watchAmount * Math.pow(10, selectedToken.decimals)));
+    const requiredAmount = BigInt(
+      Math.floor(watchAmount * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
+    );
     return tokenBalance.data < requiredAmount;
   };
 
@@ -120,7 +123,7 @@ export function StepContentPanel({
     if (step === 1) {
       if (!watchAmount) return 'Enter amount';
       if (!isWalletConnected) return 'Connect Wallet';
-      if (hasInsufficientBalance()) return `Insufficient ${selectedToken?.symbol || 'balance'}`;
+      if (hasInsufficientBalance()) return 'Insufficient XLM';
       return 'Continue';
     }
     return 'Continue';
@@ -140,12 +143,6 @@ export function StepContentPanel({
   const isButtonDisabled = () => {
     if (isLoading) return true;
     if (step === 0) return !watchToken;
-    if (step === 1) {
-      if (!watchAmount) return true;
-      if (!isWalletConnected) return false; // Allow wallet connection
-      if (hasInsufficientBalance()) return true; // Disable if insufficient balance
-      return false;
-    }
     return false;
   };
 
@@ -163,6 +160,19 @@ export function StepContentPanel({
         // Button is disabled for insufficient balance
         return;
       }
+
+      await depositLiquidity({
+        asset: watchToken.startsWith('n') ? watchToken.slice(1) : watchToken,
+        token_b_amount: watchAmount,
+      });
+      return;
+    }
+
+    if (step == 2 && watchAmount !== undefined) {
+      depositLiquidity({
+        asset: watchToken.startsWith('n') ? watchToken.slice(1) : watchToken,
+        token_b_amount: watchAmount,
+      });
     }
 
     // ----- normal flow (validate & advance) ---------------------------
@@ -187,7 +197,14 @@ export function StepContentPanel({
         <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
           {step === 1 && watchAmount ? (
             <WalletGate buttonText={getButtonLabel()} fullWidth variant="soft" color="success">
-              <Button fullWidth variant="soft" color="success" size="large" disabled>
+              <Button
+                fullWidth
+                variant="soft"
+                color="success"
+                size="large"
+                onClick={handleMainButtonClick}
+                disabled={isButtonDisabled()}
+              >
                 {getButtonLabel()}
               </Button>
             </WalletGate>

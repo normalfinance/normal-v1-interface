@@ -1,14 +1,17 @@
 'use client';
 
 import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { fPercent, fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Stack from '@mui/material/Stack';
+import { IconButton } from '@mui/material';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
 import Typography from '@mui/material/Typography';
 
+import { Iconify } from '@/components/template/iconify';
 import PoolTokensAvatarGroup from '@/components/_common/pool-tokens-avatar-group';
 
 /* ------------------------------------------------------------------ */
@@ -33,13 +36,18 @@ type Props = {
 /* ------------------------------------------------------------------ */
 
 export function ExplorePoolsTableRow({ row, index }: Props) {
+  const { t } = useTranslate();
+
   const router = useRouter();
+
+  const onClickRow = () => router.push(paths.pools.details(row.address));
 
   return (
     <TableRow
       hover
       sx={{ cursor: 'pointer' }}
       onClick={() => router.push(paths.pools.details(row.address))}
+      data-testid={`explore-pools-table-row-${index}`}
     >
       {/* Rank (#) ---------------------------------------------------- */}
       <TableCell>{index}</TableCell>
@@ -61,7 +69,10 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       <TableCell>{fCurrency(row.tvl)}</TableCell>
 
       {/* APR % ------------------------------------------------------- */}
-      <TableCell>{fPercent(row.apr)}</TableCell>
+      <TableCell>
+        {t('Coming soon')}
+        {/* {fPercent(row.apr)} */}
+      </TableCell>
 
       {/* Volume ---------------------------------------------- */}
       <TableCell>{fCurrency(row.volume1d)}</TableCell>
@@ -69,6 +80,12 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
 
       {/* Ratio -------------------------------------------------- */}
       <TableCell>{fShortenNumber(row.ratio)}</TableCell>
+
+      <TableCell align="right" sx={{ pr: 1 }}>
+        <IconButton color="default" onClick={onClickRow}>
+          <Iconify icon="eva:external-link-fill" />
+        </IconButton>
+      </TableCell>
     </TableRow>
   );
 }

@@ -105,7 +105,12 @@ const ZealyHighlight: React.FC<ZealyHighlightProps> = ({
     <>
       {/* Badge */}
       <Wrapper sx={position}>
-        <PulseButton title="Earn Zealy XP" $diameter={sizePx} onClick={() => setOpen(true)}>
+        <PulseButton
+          title="Earn Zealy XP"
+          $diameter={sizePx}
+          onClick={() => setOpen(true)}
+          data-testid={`zealy-highlight-button-${questId}`}
+        >
           <HelpOutlineIcon />
         </PulseButton>
       </Wrapper>

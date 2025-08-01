@@ -19,12 +19,25 @@ import {
   SorobanTokenContract,
   InsuranceFundContract,
   OracleRegistryContract,
+  LiquidityCalculatorContract,
 } from '@normalfinance/contracts';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 
 import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
+
+const logToFile = async (message: string) => {
+  try {
+    await fetch('/api/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+  } catch (error) {
+    console.error('Failed to log to file:', error);
+  }
+};
 
 // Define Contract Types
 type ContractType =
@@ -34,6 +47,7 @@ type ContractType =
   | 'pool_router'
   | 'buffer'
   | 'insurance_fund'
+  | 'liquidity_calculator'
   | 'token';
 
 const contractClients = {
@@ -43,6 +57,7 @@ const contractClients = {
   pool_router: PoolRouterContract.Client,
   buffer: BufferContract.Client,
   insurance_fund: InsuranceFundContract.Client,
+  liquidity_calculator: LiquidityCalculatorContract.Client,
   token: SorobanTokenContract.Client,
 };
 
@@ -58,9 +73,11 @@ type ContractClientType<T extends ContractType> = T extends 'oracle_registry'
           ? BufferContract.Client
           : T extends 'insurance_fund'
             ? InsuranceFundContract.Client
-            : T extends 'token'
-              ? SorobanTokenContract.Client
-              : never;
+            : T extends 'liquidity_calculator'
+              ? LiquidityCalculatorContract.Client
+              : T extends 'token'
+                ? SorobanTokenContract.Client
+                : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;
@@ -123,11 +140,11 @@ export const useContractTransaction = () => {
       transactionDetails,
     }: ExecuteContractTransactionParams<T>) => {
       const signer = getSigner(storePersist, appStore);
-      const networkPassphrase = constants.NETWORK_PASSPHRASE;
-      const rpcUrl = constants.RPC_URL;
+      const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
+      const rpcUrl = constants.StellarConfig.RPC_URL;
       const publicKey = storePersist.wallet.address!;
 
-      const run = async (restore: boolean = false): Promise<{ transactionId?: string }> => {
+      const run = async (restore: boolean = false): Promise<{ txHash?: string }> => {
         const contractClient = getContractClient(
           contractType,
           contractAddress,
@@ -140,7 +157,7 @@ export const useContractTransaction = () => {
 
         const transaction = await transactionFunction(contractClient, restore);
 
-        console.log('Attempting to sign and send transaction...');
+        console.log('Transaction from backend: ', transaction);
 
         try {
           if (restore) {
@@ -148,12 +165,21 @@ export const useContractTransaction = () => {
             await transaction.simulate({ restore: true });
             return {};
           }
-          const sentTransaction = await transaction.signAndSend();
+          const txHash = (transaction as any).hash || null;
+
+          if (txHash) {
+            const timestamp = new Date().toISOString();
+            const transactionType = transactionDetails.type || 'unknown';
+            const walletAddress = publicKey || 'unknown';
+            const logMessage = `[${timestamp}], ${transactionType}, ${txHash}, ${walletAddress}`;
+            await logToFile(logMessage);
+          }
+
           return {
-            transactionId: sentTransaction.sendTransactionResponse?.hash,
+            txHash,
           };
         } catch (error) {
-          console.error('Error during signing and sending:', error);
+          console.error('Error during returning transaction hash: ', error);
 
           if (error instanceof Error && error.message.includes('restore some contract state')) {
             return new Promise((resolve, reject) => {
@@ -185,8 +211,8 @@ export const useContractTransaction = () => {
         .then((result) => {
           closeSnackbar(loadingKey);
 
-          if (result.transactionId) {
-            const stellarExpertUrl = createStellarExpertUrl('tx', result.transactionId);
+          if (result.txHash) {
+            const stellarExpertUrl = createStellarExpertUrl('tx', result.txHash);
 
             enqueueSnackbar(
               <Box component="span">
@@ -211,12 +237,14 @@ export const useContractTransaction = () => {
               {
                 variant: 'success',
                 persist: false,
+                autoHideDuration: 7500,
               }
             );
           } else {
             enqueueSnackbar(messages.success, {
               variant: 'success',
               persist: false,
+              autoHideDuration: 7500,
             });
           }
 
@@ -228,6 +256,7 @@ export const useContractTransaction = () => {
           enqueueSnackbar(messages.error, {
             variant: 'error',
             persist: true,
+            autoHideDuration: 7500,
           });
 
           throw error;

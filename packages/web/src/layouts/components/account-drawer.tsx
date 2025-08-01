@@ -3,23 +3,26 @@
 import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import axios from 'axios';
 import { paths } from '@/routes/paths';
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import * as Sentry from '@sentry/nextjs';
-import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
+import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
+import { useApiTokens, useUserActivity, useLiquidityPositions } from '@/hooks';
+import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Paper,
   Stack,
-  Drawer,
   Button,
+  Drawer,
   Tooltip,
   IconButton,
   Typography,
@@ -133,7 +136,12 @@ function WalletDisconnected({
       }}
     >
       <Box sx={{ position: 'relative' }}>
-        <Typography variant="subtitle1" sx={{ mb: 3 }} textAlign="left">
+        <Typography
+          variant="subtitle1"
+          sx={{ mb: 3 }}
+          textAlign="left"
+          data-testid="connect-wallet-title"
+        >
           {t('Connect your wallet')}
         </Typography>
         <ZealyHighlight
@@ -182,12 +190,56 @@ function WalletDisconnected({
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
-  // const { data } = useNativeTokenBalance();
-  // const { tokens } = useUserTokens();
-  // const { positions } = useLPTokens();
+  const { t } = useTranslate();
+  const { enqueueSnackbar } = useSnackbar();
 
-  // TODO: Fetch user activity
-  // const { activity } = useUserActivity();
+  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
+  const { tokens: apiTokens } = useApiTokens();
+
+  const { positions } = useLiquidityPositions();
+
+  const { loading, error, recentActivity } = useUserActivity();
+
+  // Faucet
+  const [faucetLoading, setFaucetLoading] = useState(false);
+  const [faucetOff, setFaucetOff] = useState(false);
+
+  const handleFaucetRequest = useCallback(async () => {
+    try {
+      setFaucetLoading(true);
+      const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
+
+      if (data) {
+        enqueueSnackbar(t('Account funded!'), { variant: 'success' });
+      }
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        if (e?.response?.data.detail === 'account already funded to starting balance') {
+          setFaucetOff(true);
+          enqueueSnackbar(t('Account already funded'), { variant: 'warning' });
+        }
+      }
+    } finally {
+      setFaucetLoading(false);
+    }
+  }, [address, enqueueSnackbar, t]);
+
+  // Effect hook to fetch all tokens once the component mounts
+  useEffect(() => {
+    const refreshTokens = async (): Promise<void> => {
+      setGlobalIsLoading(true);
+      try {
+        await getAllTokens(apiTokens);
+        setGlobalIsLoading(false);
+      } catch (e) {
+        Sentry.captureException(e);
+        console.error(e);
+      } finally {
+        setGlobalIsLoading(false);
+      }
+    };
+    refreshTokens();
+  }, [apiTokens]);
 
   if (!address) {
     return null;
@@ -195,6 +247,7 @@ function WalletConnected({ address }: { address: string }) {
 
   return (
     <Box
+      data-testid="wallet-connected"
       sx={{
         p: 2,
         pt: 10,
@@ -207,13 +260,25 @@ function WalletConnected({ address }: { address: string }) {
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
+      <Button
+        fullWidth
+        variant="soft"
+        color="info"
+        size="large"
+        startIcon={<Iconify icon="eva:droplet-fill" />}
+        onClick={handleFaucetRequest}
+        sx={{ my: 1 }}
+        loading={faucetLoading}
+        disabled={faucetOff}
+      >
+        {t('Get testnet XLM')}
+      </Button>
       <ConnectedWallet
         balance={0}
-        // balance={Number(data?.data) || 0}
         percentageChange={0}
-        tokens={[]}
+        tokens={tokens}
         positions={[]}
-        activity={[]}
+        activity={recentActivity}
       />
     </Box>
   );
@@ -289,13 +354,19 @@ export function AccountDrawer(props: AccountDrawerProps) {
     <>
       {isConnected ? (
         <AccountButton
+          data-testid="account-button"
           onClick={handleMainButtonClick}
           photoURL={avatarURL}
           displayName=" "
           {...props}
         />
       ) : (
-        <Button variant="contained" color="info" onClick={handleMainButtonClick}>
+        <Button
+          variant="contained"
+          color="info"
+          onClick={handleMainButtonClick}
+          data-testid="connect-wallet-button"
+        >
           {t('Connect Wallet')}
         </Button>
       )}
@@ -325,7 +396,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
         >
           {/* ← close (X) */}
           <Tooltip title="Close">
-            <IconButton onClick={onClose}>
+            <IconButton onClick={onClose} data-testid="close-drawer-button">
               <Iconify icon="mingcute:close-line" />
             </IconButton>
           </Tooltip>
@@ -338,6 +409,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   onClose();
                 }}
                 sx={{ ml: 'auto' }}
+                data-testid="disconnect-wallet-button"
               >
                 <Iconify icon="solar:power-bold" />
               </IconButton>

@@ -2,13 +2,19 @@
 
 import * as React from 'react';
 import { Icon } from '@iconify/react';
+import { useTranslate } from '@/locales';
 
 import Masonry from '@mui/lab/Masonry';
-import { Box, Paper, Stack, Avatar, Container, Typography, type ButtonProps } from '@mui/material';
-
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
+import {
+  Box,
+  Paper,
+  Stack,
+  Avatar,
+  Button,
+  Container,
+  Typography,
+  type ButtonProps,
+} from '@mui/material';
 
 type ImageProps = { src: string; alt?: string };
 
@@ -20,106 +26,21 @@ type Testimonial = {
   numberOfStars: number;
 };
 
+type CTA = {
+  title: string;
+  variant?: 'text' | 'outlined' | 'contained';
+} & Omit<ButtonProps, 'variant'>;
+
 type Props = {
-  heading: string;
-  description: string;
-  testimonials: Testimonial[];
-  cta?: ButtonProps & { title: string };
+  heading?: string;
+  description?: string;
+  testimonials?: Testimonial[];
+  cta?: CTA;
 };
 
-export type TestimonialGridProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
+export type TestimonialGridProps = React.ComponentPropsWithoutRef<'section'> & Props;
 
-const paperSx = {
-  bgcolor: '#F9FAFB',
-  borderRadius: 2,
-};
-
-/* ------------------------------------------------------------------ */
-/*  Card component                                                     */
-/* ------------------------------------------------------------------ */
-
-const TestimonialCard: React.FC<Testimonial> = ({
-  quote,
-  avatar,
-  name,
-  position,
-  numberOfStars,
-}) => (
-  <Paper
-    variant="outlined"
-    sx={{
-      ...paperSx,
-      p: { xs: 3, md: 4 },
-      display: 'flex',
-      flexDirection: 'column',
-    }}
-  >
-    {/* stars */}
-    <Box mb={{ xs: 2.5, md: 3 }} display="flex">
-      {Array.from({ length: numberOfStars }).map((_, i) => (
-        <Icon // ⬅︎ use Iconify
-          key={i}
-          icon="material-symbols:star-rounded"
-          width={24}
-          height={24}
-          style={{ color: '#FFAB00', marginRight: '0px' }} // 4 px ≈ .5 spacing
-        />
-      ))}
-    </Box>
-
-    {/* quote */}
-    <Typography variant="body1" mb={{ xs: 2.5, md: 3 }}>
-      {quote}
-    </Typography>
-
-    {/* author block */}
-    <Stack direction="row" spacing={2} alignItems="center" mt="auto">
-      <Avatar src={avatar.src} alt={avatar.alt} sx={{ width: 48, height: 48 }} />
-      <Box>
-        <Typography fontWeight={600}>{name}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {position}
-        </Typography>
-      </Box>
-    </Stack>
-  </Paper>
-);
-
-/* ------------------------------------------------------------------ */
-/*  Main component                                                     */
-/* ------------------------------------------------------------------ */
-
-export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
-  heading,
-  description,
-  testimonials,
-  cta,
-  ...sectionProps
-}) => (
-  <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 12, lg: 14 } }} {...sectionProps}>
-    <Container disableGutters>
-      {/* header */}
-      <Stack spacing={2} maxWidth={640} mx="auto" textAlign="center" mb={{ xs: 6, md: 8 }}>
-        <Typography variant="h2" fontWeight={500}>
-          {heading}
-        </Typography>
-      </Stack>
-
-      {/* masonry grid */}
-      <Masonry columns={{ xs: 1, md: 2, lg: 3 }} sx={{ m: 0 }} spacing={2}>
-        {(testimonials ?? []).map((t, i) => (
-          <TestimonialCard key={i} {...t} />
-        ))}
-      </Masonry>
-    </Container>
-  </Box>
-);
-
-/* ------------------------------------------------------------------ */
-/*  Defaults                                                           */
-/* ------------------------------------------------------------------ */
-
-export const TestimonialGridDefaults: Props = {
+const DEFAULT_PROPS = {
   heading: 'Customer testimonials',
   description: '',
   testimonials: [
@@ -148,8 +69,97 @@ export const TestimonialGridDefaults: Props = {
       numberOfStars: 5,
     },
   ],
-  cta: { title: 'Read more success stories', variant: 'outlined' },
+  cta: { title: 'Read more success stories', variant: 'outlined' as const },
 };
 
-TestimonialGrid.defaultProps = TestimonialGridDefaults;
+const paperSx = {
+  bgcolor: '#F9FAFB',
+  borderRadius: 2,
+};
+
+const TestimonialCard: React.FC<Testimonial> = ({
+  quote,
+  avatar,
+  name,
+  position,
+  numberOfStars,
+}) => {
+  const { t } = useTranslate();
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        ...paperSx,
+        p: { xs: 3, md: 4 },
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Box mb={{ xs: 2.5, md: 3 }} display="flex">
+        {Array.from({ length: numberOfStars }).map((_, i) => (
+          <Icon
+            key={i}
+            icon="material-symbols:star-rounded"
+            width={24}
+            height={24}
+            style={{ color: '#FFAB00' }}
+          />
+        ))}
+      </Box>
+
+      <Typography variant="body1" mb={{ xs: 2.5, md: 3 }}>
+        {t(quote)}
+      </Typography>
+
+      <Stack direction="row" spacing={2} alignItems="center" mt="auto">
+        <Avatar src={avatar.src} alt={avatar.alt} sx={{ width: 48, height: 48 }} />
+        <Box>
+          <Typography fontWeight={600}>{t(name)}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t(position)}
+          </Typography>
+        </Box>
+      </Stack>
+    </Paper>
+  );
+};
+
+export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
+  heading = DEFAULT_PROPS.heading,
+  description = DEFAULT_PROPS.description,
+  testimonials = DEFAULT_PROPS.testimonials,
+  cta = DEFAULT_PROPS.cta,
+  ...sectionProps
+}) => {
+  const { t } = useTranslate();
+
+  return (
+    <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 12, lg: 14 } }} {...sectionProps}>
+      <Container disableGutters>
+        <Stack spacing={2} maxWidth={640} mx="auto" textAlign="center" mb={{ xs: 6, md: 8 }}>
+          <Typography variant="h2" fontWeight={500}>
+            {t(heading)}
+          </Typography>
+          {description && <Typography color="text.secondary">{t(description)}</Typography>}
+        </Stack>
+
+        <Masonry columns={{ xs: 1, md: 2, lg: 3 }} sx={{ m: 0 }} spacing={2}>
+          {testimonials.map((tItem, i) => (
+            <TestimonialCard key={i} {...tItem} />
+          ))}
+        </Masonry>
+
+        {cta && (
+          <Box textAlign="center" mt={{ xs: 6, md: 8 }}>
+            <Button variant={cta.variant ?? 'outlined'} {...cta}>
+              {t(cta.title)}
+            </Button>
+          </Box>
+        )}
+      </Container>
+    </Box>
+  );
+};
+
 TestimonialGrid.displayName = 'TestimonialGrid';

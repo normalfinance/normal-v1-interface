@@ -1,43 +1,39 @@
-import {
-  getPublicKey,
-  isConnected,
-  signTransaction,
-} from "@lobstrco/signer-extension-api";
-import { Connector, NetworkDetails } from "@normalfinance/types";
+import { getPublicKey, isConnected, signTransaction } from '@lobstrco/signer-extension-api';
+import { Connector, NetworkDetails } from '@normalfinance/types';
+import { constants } from '@normalfinance/utils';
 
 export function lobstr(): Connector {
   return {
     async isConnected(): Promise<boolean> {
       return await isConnected();
     },
-    id: "lobstr",
-    name: "LOBSTR",
+    id: 'lobstr',
+    name: 'LOBSTR',
     iconUrl:
-      "https://raw.githubusercontent.com/Lobstrco/lobstr-browser-extension/main/extension/public/static/images/icon128.png",
-    iconBackground: "#fff",
+      'https://raw.githubusercontent.com/Lobstrco/lobstr-browser-extension/main/extension/public/static/images/icon128.png',
+    iconBackground: '#fff',
     installed: true,
     downloadUrls: {
       browserExtension:
-        "https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en",
+        'https://chrome.google.com/webstore/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en',
     },
     async getNetworkDetails(): Promise<NetworkDetails> {
-      // TODO
       return {
-        network: "public",
-        networkUrl: "https://horizon.stellar.org",
-        networkPassphrase: "Public Global Stellar Network ; September 2015",
+        network:
+          (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET'
+            ? 'testnet'
+            : 'public',
+        networkUrl: constants.StellarConfig.HORIZON_URL,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
       };
     },
     async isAvailable(): Promise<boolean> {
       return isConnected();
     },
     getPublicKey(): Promise<string> {
-      const pubKey: Promise<string> = getAddressFromLocalStorageByKey(
-        "app-storage"
-      )
+      const pubKey: Promise<string> = getAddressFromLocalStorageByKey('app-storage')
         ? new Promise((resolve, reject) => {
-            const pub: string =
-              getAddressFromLocalStorageByKey("app-storage") || "";
+            const pub: string = getAddressFromLocalStorageByKey('app-storage') || '';
             return pub;
           })
         : getPublicKey();
@@ -58,7 +54,7 @@ export function lobstr(): Connector {
 }
 
 function getAddressFromLocalStorageByKey(key: string): string | undefined {
-  const localStorageData = JSON.parse(localStorage.getItem(key) || "{}");
+  const localStorageData = JSON.parse(localStorage.getItem(key) || '{}');
   if (
     localStorageData &&
     localStorageData.state &&

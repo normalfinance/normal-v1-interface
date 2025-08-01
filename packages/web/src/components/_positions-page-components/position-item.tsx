@@ -1,48 +1,68 @@
 'use client';
 
+import type { PoolPosition } from '@/hooks';
+
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
 import { fPercent } from '@/utils/format-number';
+import { formatTokenAmount } from '@/utils/format-stellar';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Stack, Button, Typography } from '@mui/material';
+import { Stack, Button, Typography, IconButton } from '@mui/material';
 
+import { Iconify } from '../template/iconify';
 import PoolTokensAvatarGroup from '../_common/pool-tokens-avatar-group';
 
-export interface PositionItemProps {
-  pool: {
-    fee: number;
-    name: string;
-  };
-  position: any;
+interface PositionItemProps {
+  position: PoolPosition;
+  onWithdraw: () => void;
 }
 
-export default function PositionItem({ position, pool }: PositionItemProps) {
+export default function PositionItem({ position, onWithdraw }: PositionItemProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  const router = useRouter();
 
+  const handleCardClick = () => {
+    router.push(paths.pools.details(position.poolAddress));
+  };
   return (
-    <Box sx={{ p: 2, pt: 0 }}>
-      <Button
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          padding: 2,
-          width: '100%',
-          alignItems: 'center',
-          borderRadius: '16px',
-          border: `1px solid ${theme.palette.divider}`,
-        }}
-      >
-        <Stack direction="row" width={1} alignItems="center">
-          <PoolTokensAvatarGroup tokenAName="" tokenBName="" />
+    <Button
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 4,
+        width: '100%',
+        alignItems: 'center',
+        borderRadius: 3,
+        border: 1,
+        borderColor: alpha(theme.palette.grey[500], 0.32),
+        bgcolor: 'white',
+      }}
+      // href={paths.pools.details(position.poolAddress)}
+      onClick={handleCardClick}
+    >
+      <Stack direction="row" width={1} alignItems="center">
+        <PoolTokensAvatarGroup
+          tokenAName={position.tokenA.name}
+          tokenBName={position.tokenB.name}
+        />
 
-          <Stack direction="column" width={1} alignItems="start">
-            <Typography component="span" color="text.primary" variant="h6" ml={1}>
-              {/* {pool.pairInfo?.tokenA.name}
-              {t('/')}
-              {pool.pairInfo?.tokenB.name} */}
-            </Typography>
+        <Stack direction="column" width={1} alignItems="start">
+          <Typography component="span" color="text.primary" variant="h6" ml={1}>
+            {position.tokenA.name}
+            {t('/')}
+            {position.tokenB.name}
+          </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+            }}
+          >
             <Box
               sx={{
                 display: 'flex',
@@ -50,75 +70,78 @@ export default function PositionItem({ position, pool }: PositionItemProps) {
                 justifyContent: 'flex-start',
               }}
             >
-              <Box
+              <Typography
+                color="text.primary"
+                variant="caption"
+                ml={1}
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-start',
+                  backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: '4px',
+                  px: '6px',
+                  py: '2px',
                 }}
               >
-                <Typography
-                  color="text.primary"
-                  variant="caption"
-                  ml={1}
-                  sx={{
-                    backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    px: '6px',
-                    py: '2px',
-                  }}
-                >
-                  {fPercent(pool.fee)}
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-start',
-                }}
-              >
-                <Typography
-                  color="text.primary"
-                  variant="caption"
-                  ml={1}
-                  sx={{
-                    backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    px: '6px',
-                    py: '2px',
-                  }}
-                  // eslint-disable-next-line i18next/no-literal-string
-                >
-                  v1
-                </Typography>
-              </Box>
+                {fPercent(position.poolFee)}
+              </Typography>
             </Box>
-          </Stack>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+              }}
+            >
+              <Typography
+                color="text.primary"
+                variant="caption"
+                ml={1}
+                sx={{
+                  backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: '4px',
+                  px: '6px',
+                  py: '2px',
+                }}
+              >
+                {position.poolVersion}
+              </Typography>
+            </Box>
+          </Box>
         </Stack>
 
-        {/* <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
-          <Stack direction="column" alignItems="start">
-            <Typography color="text.primary" variant="body1">
-              {fCurrency(pool.performance?.position)}
-            </Typography>
-            <Typography color="text.secondary" variant="caption">
-              {t('Position')}
-            </Typography>
-          </Stack>
+        <IconButton
+          onClick={(e) => {
+            e.stopPropagation(); // Prevents outer button from triggering
+            onWithdraw();
+          }}
+          sx={{ top: 8, right: 8, position: 'absolute', color: 'error.main' }}
+        >
+          <Iconify icon="solar:trash-bin-trash-bold" />
+        </IconButton>
+      </Stack>
 
-          <Stack direction="column" alignItems="start">
-            <Typography color="text.primary" variant="body1">
-              {fCurrency(pool.performance?.fees)}
-            </Typography>
-            <Typography color="text.secondary" variant="caption">
-              {t('Fees')}
-            </Typography>
-          </Stack>
-        </Stack> */}
-      </Button>
-    </Box>
+      <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
+        <Stack direction="column" alignItems="start">
+          <Typography color="text.primary" variant="body1">
+            {/* {fCurrency(pool.performance?.position)} */}
+            {formatTokenAmount(position.balance)} XLM
+          </Typography>
+          <Typography color="text.secondary" variant="caption">
+            {t('Position')}
+          </Typography>
+        </Stack>
+
+        <Stack direction="column" alignItems="start">
+          <Typography color="text.primary" variant="body1">
+            {/* {fCurrency(pool.performance?.fees)} */}
+            {t('Coming soon')}
+          </Typography>
+          <Typography color="text.secondary" variant="caption">
+            {t('Fees')}
+          </Typography>
+        </Stack>
+      </Stack>
+    </Button>
   );
 }

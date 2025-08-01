@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
+import { useBufferEvents, useInsuranceFundEvents } from '@/hooks';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
-import { CardHeader } from '@mui/material';
+import { CardHeader, Typography } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 
@@ -36,78 +39,68 @@ const NAV_ITEMS = [
 
 // ----------------------------------------------------------------------
 
-export type InsuranceFundEvent = {
-  ts: number;
-  user: string;
-  action: string;
-  amount: number;
-  insurance_vault_amount_before: number;
-  if_shares_before: number;
-  total_if_shares_before: number;
-  if_shares_after: number;
-  total_if_shares_after: number;
-};
-
-export type BufferEvent = {
-  ts: number;
-  user: string;
-  type: string;
-  amount: number;
-  token: string;
-};
-
 export function InsuranceActionsTable() {
   const { t } = useTranslate();
+  const theme = useTheme();
 
-  // const store = usePersistStore();
+  const { events: bufferEvents } = useBufferEvents();
+  const { events: insuranceFundEvents } = useInsuranceFundEvents();
 
-  const [selectedTab, setSelectedTab] = useState('insurance'); // Default to first tab
-  const [ifEvents, setIfEvents] = useState<InsuranceFundEvent[] | undefined>(undefined);
-  const [bufferEvents, setBufferEvents] = useState<BufferEvent[] | undefined>(undefined);
+  const store = usePersistStore();
+
+  const [selectedTab, setSelectedTab] = useState('insurance');
 
   const handleChangeTab = (_event: React.SyntheticEvent, newValue: string) => {
     setSelectedTab(newValue);
   };
 
-  // useEffect(() => {
-  //   async function fetchData() {
-  //     // Historical txs
-  //     const { insuranceFund, buffer } = await fetchInsuranceEvents(
-  //       constants.INSURANCE_FUND_ADDRESS,
-  //       constants.BUFFER_ADDRESS
-  //     );
-  //     setIfEvents(insuranceFund);
-  //     setBufferEvents(buffer);
-  //   }
-
-  //   fetchData();
-  // }, [fetchInsuranceEvents]);
-
-  // const userEvents = ifEvents && ifEvents.filter((e) => e.user === store.wallet.address);
-  const userEvents = undefined;
+  const userEvents = store.wallet.address
+    ? insuranceFundEvents.filter((e) => e.user === store.wallet.address)
+    : [];
 
   return (
-    <Card sx={{ mb: 3, height: 'auto' }}>
-      <CardHeader title={t('Recent events')} sx={{ mb: 2 }} />
+    <Card
+      sx={{
+        mb: 3,
+        height: 'auto',
+        borderRadius: 3,
+        border: 1,
+        borderColor: alpha(theme.palette.grey[500], 0.32),
+      }}
+      data-testid="insurance-actions-table"
+    >
+      <CardHeader
+        sx={{ mb: 2 }}
+        title={
+          <Typography variant="h5" sx={{ fontSize: 20 }}>
+            {t('Recent events')}
+          </Typography>
+        }
+      />
       <Box
         sx={{
           width: 1,
           zIndex: 9,
-          px: { md: 3 },
+          px: 3,
           display: 'flex',
           bgcolor: 'background.paper',
-          justifyContent: { xs: 'center', md: 'flex-start' },
+          justifyContent: 'flex-start',
         }}
       >
-        <Tabs value={selectedTab} onChange={handleChangeTab}>
+        <Tabs value={t(selectedTab)} onChange={handleChangeTab}>
           {NAV_ITEMS.map((tab) => (
-            <Tab key={tab.value} value={tab.value} icon={tab.icon} label={tab.label} />
+            <Tab
+              key={tab.value}
+              value={tab.value}
+              icon={tab.icon}
+              label={tab.label}
+              data-testid={`insurance-actions-tab-${tab.value}`}
+            />
           ))}
         </Tabs>
       </Box>
-
       {/* Render the correct component based on the selected tab */}
-      {selectedTab === 'insurance' && <InsuranceFundEventsTableCard events={ifEvents} />}
+      {selectedTab === 'insurance' && <InsuranceFundEventsTableCard events={insuranceFundEvents} />}
       {selectedTab === 'buffer' && <BufferEventsTableCard events={bufferEvents} />}
       {selectedTab === 'user' && <InsuranceFundEventsTableCard events={userEvents} />}
     </Card>

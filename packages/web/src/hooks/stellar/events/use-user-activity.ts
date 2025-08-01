@@ -1,0 +1,195 @@
+'use client';
+
+import type { Activity } from '@/types/activity';
+import type { events } from '@normalfinance/types';
+import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
+import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
+
+import { rpc } from '@stellar/stellar-sdk';
+import { useState, useEffect } from 'react';
+import { captureException } from '@sentry/nextjs';
+import { supabase } from '@/lib/createSupabaseClient';
+import { usePersistStore } from '@normalfinance/state';
+import { formatTokenAmount } from '@/utils/format-stellar';
+import { constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
+
+// ----------------------------------------------------------------------
+
+interface ReturnType {
+  error: any | null;
+  loading: boolean;
+  recentActivity: Activity[];
+}
+
+// ----------------------------------------------------------------------
+
+const server = new rpc.Server(constants.StellarConfig.RPC_URL);
+
+export function useUserActivity(): ReturnType {
+  const store = usePersistStore();
+
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
+
+  useEffect(() => {
+    const userAddress = store.wallet.address;
+
+    if (!userAddress) return;
+
+    const fetchInitialData = async () => {
+      setError(null);
+      setLoading(true);
+
+      const { data, error: e } = await supabase
+        .from(constants.StellarConfig.EVENTS_TABLENAME)
+        .select('*')
+        .eq('transaction_account', userAddress)
+        .eq('type', 'contract')
+        .eq('in_successful_contract_call', true)
+        .order('id', { ascending: false });
+
+      if (e) {
+        captureException(e);
+        setError(e.toString() as any);
+      } else {
+        const rows = data as GoldskyTableRow[];
+
+        const compact = <T>(arr: (T | null | undefined)[]): T[] =>
+          arr.filter((x): x is T => x != null);
+
+        const parsed = compact(
+          await Promise.all(
+            rows
+              .filter((r) => r.topics && r.data)
+              .map(async (r) => {
+                const parsedEvent = parseEvent(
+                  JSON.parse(r.topics!),
+                  JSON.parse(r.data!),
+                  r.transaction_hash
+                ) as events.UserActivityEvent;
+
+                const tx = await server.getTransaction(r.transaction_hash);
+                if (tx.status === 'SUCCESS') {
+                  parsedEvent.timestamp = tx.createdAt * 1000;
+                }
+
+                return parseEventToActivity(r.id, parsedEvent);
+              })
+          )
+        );
+
+        setRecentActivity(parsed);
+      }
+      setLoading(false);
+    };
+
+    fetchInitialData();
+
+    const channel = supabase
+      .channel('realtime:goldsky:user_activity')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: constants.StellarConfig.EVENTS_TABLENAME,
+        },
+        async (payload: RealtimePostgresInsertPayload<GoldskyTableRow>) => {
+          const { topics, data, transaction_hash } = payload.new;
+
+          if (topics && data) {
+            const parsed = parseEvent(
+              JSON.parse(topics),
+              JSON.parse(data),
+              transaction_hash
+            ) as events.UserActivityEvent;
+
+            const tx = await server.getTransaction(transaction_hash);
+            if (tx.status === 'SUCCESS') {
+              parsed.timestamp = tx.createdAt * 1000;
+            }
+
+            const activityParsed = parseEventToActivity(payload.new.id, parsed);
+
+            if (activityParsed) setRecentActivity((prev) => [activityParsed, ...prev]);
+          }
+        }
+      )
+      .subscribe();
+
+    // eslint-disable-next-line consistent-return
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [store.wallet.address]);
+
+  return {
+    error,
+    loading,
+    recentActivity,
+  };
+}
+
+function parseEventToActivity(id: string, event: events.UserActivityEvent): Activity | null {
+  switch (event.type) {
+    case 'swap': {
+      const buy = event.direction == 'Buy';
+      return {
+        id,
+        type: 'Swapped',
+        timestamp: event.timestamp ?? 0,
+        sell: {
+          token: buy ? constants.StellarConfig.XLM_ADDRESS : event.pool,
+          iconUrl: getCryptoIconUrl(buy ? 'XLM' : `n${event.asset}`),
+          amount: Number(formatTokenAmount(event.inAmount.toString())),
+        },
+        buy: {
+          token: buy ? event.pool : constants.StellarConfig.XLM_ADDRESS,
+          iconUrl: getCryptoIconUrl(buy ? `n${event.asset}` : 'XLM'),
+          amount: Number(formatTokenAmount(event.outAmount.toString())),
+        },
+      };
+    }
+    case 'deposit_liquidity':
+      return {
+        id,
+        type: 'Add Liquidity',
+        timestamp: event.timestamp ?? 0,
+        tokenB: {
+          token: constants.StellarConfig.XLM_ADDRESS,
+          iconUrl: getCryptoIconUrl('XLM'),
+          amount: Number(formatTokenAmount(event.amount.toString())),
+        },
+      };
+    case 'withdraw_liquidity':
+      return {
+        id,
+        type: 'Remove Liquidity',
+        timestamp: event.timestamp ?? 0,
+        tokenB: {
+          token: constants.StellarConfig.XLM_ADDRESS,
+          iconUrl: getCryptoIconUrl('XLM'),
+          amount: Number(formatTokenAmount(event.amount.toString())),
+        },
+      };
+    case 'if_stake_record': {
+      if (event.action == 'stake' || event.action == 'unstake') {
+        return {
+          id,
+          type: event.action == 'stake' ? 'Stake' : 'Unstake',
+          timestamp: event.timestamp ?? 0,
+          asset: {
+            token: constants.StellarConfig.XLM_ADDRESS,
+            iconUrl: getCryptoIconUrl('XLM'),
+            amount: Number(formatTokenAmount(event.amount.toString())),
+          },
+        };
+      }
+      return null;
+    }
+    default:
+      return null;
+  }
+}

@@ -1,4 +1,15 @@
-import { Horizon } from "@stellar/stellar-sdk";
+import { Horizon } from '@stellar/stellar-sdk';
+
+export type ApiToken = {
+  code: string;
+  issuer: string;
+  contract: string;
+  name: string;
+  org: string;
+  domain: string;
+  icon: string;
+  decimals: number;
+};
 
 export type StateToken = {
   id: string;
@@ -25,21 +36,13 @@ export type Wallet = {
   address: string | undefined;
   activeChain: WalletChain | undefined;
   server: Horizon.Server | undefined;
-  walletType:
-    | "freighter"
-    | "xbull"
-    | "lobstr"
-    | "wallet-connect"
-    | "hana"
-    | undefined;
+  walletType: 'freighter' | 'xbull' | 'lobstr' | 'wallet-connect' | 'hana' | undefined;
 };
 
 export interface WalletActions {
-  tokens: StateToken[]; 
-  fetchTokenInfo: (
-    tokenAddress: string
-  ) => Promise<StateToken | undefined>;
-  getAllTokens: () => Promise<any[]>;
+  tokens: StateToken[];
+  fetchTokenInfo: (tokenAddress: string) => Promise<StateToken | undefined>;
+  getAllTokens: (apiTokens: ApiToken[]) => Promise<any[]>;
   walletConnectInstance?: any;
 }
 
@@ -90,11 +93,6 @@ export interface Connector {
 
 // Sourced from https://github.com/tmm/wagmi/blob/main/packages/core/src/constants/chains.ts
 // This is just so we can clearly see which of wagmi's first-class chains we provide metadata for
-export type ChainName =
-  | "futurenet"
-  | "public"
-  | "testnet"
-  | "sandbox"
-  | "standalone";
+export type ChainName = 'futurenet' | 'public' | 'testnet' | 'sandbox' | 'standalone';
 
 export type ChainMetadata = WalletChain;
