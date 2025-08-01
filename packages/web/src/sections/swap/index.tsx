@@ -1,23 +1,19 @@
 'use client';
 
-import React from 'react';
-
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { TokenActionQueryParams } from '@/types/query-params';
 import type { TokenActionKey } from '@/components/_common/token-action-card';
 
-import { useEffect } from 'react';
-import { useApiTokens } from '@/hooks';
+import React, { useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useApiTokens , fetchApiTokens } from '@/hooks';
 import { useQueryParams } from '@/hooks/use-query-params';
 
 import { Box } from '@mui/material';
 
 import TokenActionCard from '@/components/_common/token-action-card';
-
-import { fetchApiTokens } from '@/hooks';
 
 const swapFeeInfo: SwapFeeInfo = {
   feePercentage: 0.25,

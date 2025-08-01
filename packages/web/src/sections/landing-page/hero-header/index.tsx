@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
-
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
+import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
+import { fetchApiTokens } from '@/hooks';
 import { useAppStore } from '@normalfinance/state';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
@@ -14,8 +14,6 @@ import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 import SwapCard from '@/components/_common/swap-card';
 
 import { WavyBackground } from './wavy-background';
-
-import { fetchApiTokens } from '@/hooks';
 
 type ImageProps = {
   src: string;
