@@ -8,6 +8,7 @@ import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
 import { constants } from '@normalfinance/utils';
 import { createReferralActions } from './persist/createReferralActions';
+import { createErrorActions } from './error/actions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
@@ -20,11 +21,15 @@ export const useAppStore = create<AppStore>()((set, get) => {
   // Create a loading state
   const loading = createLoadingActions(set, get);
 
+  // Create an error state
+  const error = createErrorActions(set, get);
+
   return {
     server,
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
     ...wallet,
     ...loading,
+    ...error,
   };
 });
 
