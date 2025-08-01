@@ -8,7 +8,7 @@ import React, { useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useApiTokens , fetchApiTokens } from '@/hooks';
+import { useApiTokens, fetchApiTokens } from '@/hooks';
 import { useQueryParams } from '@/hooks/use-query-params';
 
 import { Box } from '@mui/material';
