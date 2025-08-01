@@ -83,7 +83,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setTokens(tokensList);
     // If no sell token is set yet, default to XLM if present, otherwise first token
     if (!sellToken) {
-      const xlmToken = tokensList.find((t) => t.symbol === 'XLM');
+      const xlmToken = tokensList.find((tkn) => tkn.symbol === 'XLM');
       setSellToken(xlmToken || tokensList[0]);
     }
   }, [tokensList]);
@@ -202,7 +202,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         // Sell token is a Normal Token
         // Ensure the buy token is XLM
         if (!buyToken || buyToken.symbol !== 'XLM') {
-          const xlmToken = tokens.find((t) => t.symbol === 'XLM');
+          const xlmToken = tokens.find((tkn) => tkn.symbol === 'XLM');
           if (xlmToken) setBuyToken(xlmToken);
         }
       } else {
@@ -225,7 +225,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         // Buy token is a Normal Token
         // Ensure the sell token is XLM
         if (!sellToken || sellToken.symbol !== 'XLM') {
-          const xlmToken = tokens.find((t) => t.symbol === 'XLM');
+          const xlmToken = tokens.find((tkn) => tkn.symbol === 'XLM');
           if (xlmToken) setSellToken(xlmToken);
         }
       } else {
@@ -427,33 +427,33 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       // Filtering options for the sell token selection
       if (!buyToken) {
         // No buy token selected yet: allow XLM and Normal Tokens only
-        return tokens.filter((t) => t.symbol === 'XLM' || t.symbol.startsWith('n'));
+        return tokens.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol.startsWith('n'));
       }
       // If buy token is already selected:
       if (buyToken.symbol === 'XLM') {
         // Buy is XLM, so sell must be a Normal Token
-        return tokens.filter((t) => t.symbol.startsWith('n'));
+        return tokens.filter((tkn) => tkn.symbol.startsWith('n'));
       } else if (buyToken.symbol.startsWith('n')) {
         // Buy is a Normal Token, so sell must be XLM
-        return tokens.filter((t) => t.symbol === 'XLM');
+        return tokens.filter((tkn) => tkn.symbol === 'XLM');
       }
     } else if (activeButton === 'buy') {
       // Filtering options for the buy token selection
       if (!sellToken) {
         // No sell token selected yet: allow XLM and Normal Tokens only
-        return tokens.filter((t) => t.symbol === 'XLM' || t.symbol.startsWith('n'));
+        return tokens.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol.startsWith('n'));
       }
       // If sell token is already selected:
       if (sellToken.symbol === 'XLM') {
         // Sell is XLM, so buy must be a Normal Token
-        return tokens.filter((t) => t.symbol.startsWith('n'));
+        return tokens.filter((tkn) => tkn.symbol.startsWith('n'));
       } else if (sellToken.symbol.startsWith('n')) {
         // Sell is a Normal Token, so buy must be XLM
-        return tokens.filter((t) => t.symbol === 'XLM');
+        return tokens.filter((tkn) => tkn.symbol === 'XLM');
       }
     }
     // Fallback: if something is unexpected, default to allowing only XLM and Normal Tokens
-    return tokens.filter((t) => t.symbol === 'XLM' || t.symbol.startsWith('n'));
+    return tokens.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol.startsWith('n'));
   };
 
   return (
