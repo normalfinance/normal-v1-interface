@@ -4,13 +4,13 @@ import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
-import { useSwap, useTrustLine } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
@@ -142,9 +142,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
     doSimulateSwap();
 
-    // const buyTokenContractID = appStore.allTokens.find(
-    //   (token: Token) => token.name === buyToken.name
-    // )?.contractId;
     const buyTokenContractID = appStore.tokens.find(
       (token: Token) => token.name === buyToken.name
     )?.id;
@@ -344,13 +341,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setLoadingSimulate(true);
       try {
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        const isBuy = buyToken.symbol !== 'XLM';
+        const direction = buyToken.symbol !== 'XLM' ? BuyDirection : SellDirection;
 
-        // onEstimateSwap({
-        //   asset,
-        //   is_buy: isBuy,
-        //   in_amount: amount,
-        // });
+        onEstimateSwap({
+          asset,
+          direction,
+          in_amount: amount,
+        });
 
         // TODO: will fix errors below once relocated outside this component
         // if (poolInfo.result && tx.result) {
@@ -399,14 +396,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         if (!allowed) return;
         // Now call the client-side onSwap (sign and submit)
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        // await onSwap({
-        //   token_in: sellToken.symbol,
-        //   token_out: buyToken.symbol,
-        //   asset,
-        //   in_amount: Number(amount),
-        //   out_min: Number(buyAmount),
-        //   tokens: [sellToken.symbol, buyToken.symbol],
-        // });
+        const direction = buyToken.symbol === 'XLM' ? BuyDirection : SellDirection;
+        await onSwap({
+          asset,
+          direction,
+          in_amount: Number(amount),
+          out_min: Number(buyAmount),
+        });
         setTimeout(async () => {
           await appStore.fetchTokenInfo(sellToken.name!);
           await appStore.fetchTokenInfo(buyToken.name!);
