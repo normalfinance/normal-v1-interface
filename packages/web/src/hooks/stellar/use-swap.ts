@@ -35,8 +35,13 @@ interface ReturnType {
   ) => Promise<void>;
 }
 
-const buyDirection: PoolSwapFeeContract.SwapDirection = {
+export const BuyDirection: PoolSwapFeeContract.SwapDirection = {
   tag: 'Buy',
+  values: undefined,
+};
+
+export const SellDirection: PoolSwapFeeContract.SwapDirection = {
+  tag: 'Sell',
   values: undefined,
 };
 
@@ -75,7 +80,7 @@ export function useSwap(): ReturnType {
   };
 
   const onEstimateSwap = async (args: EstimateSwapArgs, token_in_decimals?: number) => {
-    const buy = args.direction == buyDirection;
+    const buy = args.direction == BuyDirection;
     const processedArgs = {
       ...args,
       in_amount: BigInt((args.in_amount * 10 ** (token_in_decimals || 7)).toFixed(0)),
@@ -99,7 +104,7 @@ export function useSwap(): ReturnType {
     token_in_decimals?: number,
     token_out_decimals?: number
   ) => {
-    const buy = args.direction == buyDirection;
+    const buy = args.direction == BuyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
@@ -142,7 +147,7 @@ export function useSwap(): ReturnType {
     token_in_decimals?: number,
     token_out_decimals?: number
   ) => {
-    const buy = args.direction == buyDirection;
+    const buy = args.direction == BuyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
@@ -185,7 +190,7 @@ export function useSwap(): ReturnType {
     args: SwapStrictReceiveArgs,
     token_out_decimals?: number
   ) => {
-    const buy = args.direction == buyDirection;
+    const buy = args.direction == BuyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
