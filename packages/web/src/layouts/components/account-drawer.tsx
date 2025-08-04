@@ -8,6 +8,7 @@ import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import * as Sentry from '@sentry/nextjs';
+import { BigNumber } from 'bignumber.js';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
@@ -249,6 +250,9 @@ function WalletConnected({ address }: { address: string }) {
     refreshTokens();
   }, [apiTokens]);
 
+  // Total balance
+  const totalBalance = tokens.reduce((acc, tkn) => acc.plus(tkn.usdValue), new BigNumber(0));
+
   if (!address) {
     return null;
   }
@@ -282,10 +286,10 @@ function WalletConnected({ address }: { address: string }) {
         {t('Get testnet XLM')}
       </Button>
       <ConnectedWallet
-        balance={0}
+        balance={Number(totalBalance.toFixed(2))}
         percentageChange={0}
         tokens={tokens}
-        positions={[]}
+        positions={positions}
         activity={recentActivity}
       />
     </Box>
