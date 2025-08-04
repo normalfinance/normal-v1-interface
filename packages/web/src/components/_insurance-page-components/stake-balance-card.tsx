@@ -109,8 +109,18 @@ export function StakeBalance({
               fullWidth
               variant="contained"
               color="secondary"
-              onClick={manageStake.onTrue}
               data-testid="manage-stake-button"
+              onClick={() => {
+                // trackEvent('button_clicked', {
+                //   label: 'Manage Stake',
+                //   location: 'Insurance',
+                // });
+                // trackEvent('popup_opened', {
+                //   label: 'Manage Stake',
+                //   location: 'Insurance',
+                // });
+                manageStake.onTrue();
+              }}
             >
               {t('Manage stake')}
             </Button>

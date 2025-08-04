@@ -73,6 +73,12 @@ export function CustomBreadcrumbs({
             href={link.href}
             name={link.name}
             disabled={link.name === lastLink && !activeLast}
+            // onClick={() =>
+            //   trackEvent('button_clicked', {
+            //     label: 'Manage Stake',
+            //     location: 'Insurance',
+            //   })
+            // }
           />
         ))}
       </Breadcrumbs>

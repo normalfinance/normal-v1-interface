@@ -16,6 +16,8 @@ const isStaticExport = 'false';
 
 const nextConfig = {
   trailingSlash: true,
+  // This is required to support PostHog trailing slash API requests
+  skipTrailingSlashRedirect: true,
   env: {
     BUILD_STATIC_EXPORT: isStaticExport,
     NEXT_PUBLIC_APP_VERSION: version,
@@ -55,6 +57,18 @@ const nextConfig = {
       {
         source: '/.well-known/stellar.toml',
         destination: '/api/stellar',
+      },
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
+      },
+      {
+        source: '/ingest/decide',
+        destination: 'https://us.i.posthog.com/decide',
       },
     ];
   },

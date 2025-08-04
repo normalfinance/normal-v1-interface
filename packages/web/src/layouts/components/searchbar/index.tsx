@@ -48,6 +48,10 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleClose = useCallback(() => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     onClose();
     setSearchQuery('');
   }, [onClose]);

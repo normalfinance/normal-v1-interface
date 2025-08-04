@@ -76,7 +76,19 @@ export default function TermsOfServiceDialog({ open, onClose }: TermsOfServiceDi
   const setDisclaimerAccepted = usePersistStore((s: AppStorePersist) => s.setDisclaimerAccepted);
 
   const handleAccept = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Accept ToS',
+    //   location: '',
+    // });
     setDisclaimerAccepted(true);
+    onClose?.();
+  };
+
+  const handleDecline = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Decline ToS',
+    //   location: '',
+    // });
     onClose?.();
   };
 

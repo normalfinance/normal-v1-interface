@@ -53,13 +53,23 @@ export default function ConnectedWallet({
       label: 'Send',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => {
+        // trackEvent('button_clicked', {
+        //   label: 'Manage Stake',
+        //   location: 'Insurance',
+        // });
         router.push(`${paths.swap}?tab=send`);
       },
     },
     {
       label: 'Receive',
       icon: 'mingcute:add-line',
-      onClick: () => setShowReceiveModal(true),
+      onClick: () => {
+        // trackEvent('button_clicked', {
+        //   label: 'Manage Stake',
+        //   location: 'Insurance',
+        // });
+        setShowReceiveModal(true);
+      },
     },
   ];
 
@@ -206,7 +216,16 @@ export default function ConnectedWallet({
       {tabs.value === 'pools' && <PositioinsTab positions={positions ?? []} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
 
-      <ReceiveModal open={showReceiveModal} onClose={() => setShowReceiveModal(false)} />
+      <ReceiveModal
+        open={showReceiveModal}
+        onClose={() => {
+          // trackEvent('button_clicked', {
+          //   label: 'Learn more',
+          //   location: 'Home',
+          // });
+          setShowReceiveModal(false);
+        }}
+      />
     </Stack>
   );
 }

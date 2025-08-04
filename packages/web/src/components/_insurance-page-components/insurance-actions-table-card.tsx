@@ -43,14 +43,18 @@ export function InsuranceActionsTable() {
   const { t } = useTranslate();
   const theme = useTheme();
 
-  const { events: bufferEvents } = useBufferEvents();
-  const { events: insuranceFundEvents } = useInsuranceFundEvents();
+  const { events: bufferEvents } = useBufferEvents(10);
+  const { events: insuranceFundEvents } = useInsuranceFundEvents(10);
 
   const store = usePersistStore();
 
   const [selectedTab, setSelectedTab] = useState('insurance');
 
   const handleChangeTab = (_event: React.SyntheticEvent, newValue: string) => {
+    // trackEvent('button_clicked', {
+    //   label: 'Insurnace - Recent events - Tab',
+    //   location: 'Insurnace',
+    // });
     setSelectedTab(newValue);
   };
 

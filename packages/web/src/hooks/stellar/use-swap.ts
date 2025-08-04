@@ -80,7 +80,6 @@ export function useSwap(): ReturnType {
   };
 
   const onEstimateSwap = async (args: EstimateSwapArgs, token_in_decimals?: number) => {
-    const buy = args.direction == BuyDirection;
     const processedArgs = {
       ...args,
       in_amount: BigInt((args.in_amount * 10 ** (token_in_decimals || 7)).toFixed(0)),
@@ -90,9 +89,7 @@ export function useSwap(): ReturnType {
       contractType: 'pool_router',
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
-        type: TransactionType.SWAP,
-        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
-        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: '' },
+        type: TransactionType.ESTIMATE_SWAP,
       },
       transactionFunction: async (client, restore) =>
         await client.estimate_swap(processedArgs, { simulate: !restore }),

@@ -28,6 +28,10 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
 
   /** user picks a token */
   const handleSelect = (tok: StateToken) => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     setValue('tokenASymbol', tok.symbol, { shouldValidate: true });
     clearErrors('tokenASymbol');
     setDialogOpen(false);
@@ -87,7 +91,13 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
       {/* token picker dialog */}
       <PickToken
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => {
+          // trackEvent('button_clicked', {
+          //   label: 'Manage Stake',
+          //   location: 'Insurance',
+          // });
+          setDialogOpen(false);
+        }}
         buttonSource="A"
         tokens={tokens}
         onTokenSelect={handleSelect}

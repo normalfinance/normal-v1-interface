@@ -70,8 +70,6 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
     [tokens]
   );
 
-  console.log('hero tokens', tokens);
-
   return (
     <Box
       component="section"
