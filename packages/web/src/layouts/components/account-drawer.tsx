@@ -14,7 +14,15 @@ import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useApiTokens, useUserActivity, useLiquidityPositions } from '@/hooks';
-import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
+import {
+  hana,
+  xbull,
+  lobstr,
+  freighter,
+  useAppStore,
+  WalletConnect,
+  usePersistStore,
+} from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -296,13 +304,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const { t } = useTranslate();
 
   /* ↓ connectors -------------------------------------------------- */
-  const connectors: Connector[] = [
-    freighter(),
-    xbull(),
-    lobstr(),
-    hana(),
-    // new WalletConnect(),
-  ];
+  const connectors: Connector[] = [freighter(), xbull(), lobstr(), hana(), new WalletConnect(true)];
 
   const connect = (c: Connector) => persist.connectWallet(c.id);
   const disconnect = () => persist.disconnectWallet();
