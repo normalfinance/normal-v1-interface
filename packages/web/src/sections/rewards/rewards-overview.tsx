@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import copy from 'copy-to-clipboard';
 import { useTranslate } from '@/locales';
-import { trackEvent } from '@normalfinance/utils';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
@@ -47,10 +46,10 @@ export function RewardsOverview({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    trackEvent('button_clicked', {
-      label: 'Manage Stake',
-      location: 'Insurance',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     copy(referralLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

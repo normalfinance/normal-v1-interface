@@ -1,9 +1,9 @@
 import type { Connector } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
+import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import React, { useState, useEffect } from 'react';
-import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
@@ -195,10 +195,10 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     if (disclaimerVersion < CURRENT_TOS_VERSION) {
       setShowTos(true);
     } else {
-      trackEvent('button_clicked', {
-        label: 'WalletGate - Connect',
-        location: '',
-      });
+      // trackEvent('button_clicked', {
+      //   label: 'WalletGate - Connect',
+      //   location: '',
+      // });
       onOpen();
     }
   };

@@ -1,10 +1,10 @@
 'use client';
 
 import { useTranslate } from '@/locales';
+import { format } from '@normalfinance/utils';
 import { RouterLink } from '@/routes/components';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
-import { format, trackEvent } from '@normalfinance/utils';
 import { usePathname, useSearchParams } from '@/routes/hooks';
 
 import Box from '@mui/material/Box';
@@ -158,12 +158,12 @@ export function RewardsView() {
               rel="noopener"
               sx={{ mb: 2 }}
               startIcon={<Iconify icon="eva:external-link-outline" width={18} />}
-              onClick={() =>
-                trackEvent('button_clicked', {
-                  label: 'Manage Stake',
-                  location: 'Insurance',
-                })
-              }
+              // onClick={() =>
+              //   trackEvent('button_clicked', {
+              //     label: 'Manage Stake',
+              //     location: 'Insurance',
+              //   })
+              // }
             >
               {t('Go to Zealy')}
             </Button>

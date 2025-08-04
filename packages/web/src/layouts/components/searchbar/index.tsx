@@ -10,7 +10,6 @@ import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
 import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
-import { trackEvent } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
@@ -49,10 +48,10 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleClose = useCallback(() => {
-    trackEvent('button_clicked', {
-      label: 'Manage Stake',
-      location: 'Insurance',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     onClose();
     setSearchQuery('');
   }, [onClose]);

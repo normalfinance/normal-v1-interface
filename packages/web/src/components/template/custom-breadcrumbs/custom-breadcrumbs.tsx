@@ -1,8 +1,6 @@
 import type { Theme, SxProps } from '@mui/material/styles';
 import type { BreadcrumbsProps } from '@mui/material/Breadcrumbs';
 
-import { trackEvent } from '@normalfinance/utils';
-
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 
 import { BackLink } from './back-link';
@@ -75,12 +73,12 @@ export function CustomBreadcrumbs({
             href={link.href}
             name={link.name}
             disabled={link.name === lastLink && !activeLast}
-            onClick={() =>
-              trackEvent('button_clicked', {
-                label: 'Manage Stake',
-                location: 'Insurance',
-              })
-            }
+            // onClick={() =>
+            //   trackEvent('button_clicked', {
+            //     label: 'Manage Stake',
+            //     location: 'Insurance',
+            //   })
+            // }
           />
         ))}
       </Breadcrumbs>

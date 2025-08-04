@@ -6,7 +6,6 @@ import { useBoolean } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { trackEvent } from '@normalfinance/utils';
 import { formatTokenAmount } from '@/utils/format-stellar';
 
 import Box from '@mui/material/Box';
@@ -112,10 +111,10 @@ export function StakeBalance({
               color="secondary"
               data-testid="manage-stake-button"
               onClick={() => {
-                trackEvent('button_clicked', {
-                  label: 'Manage Stake',
-                  location: 'Insurance',
-                });
+                // trackEvent('button_clicked', {
+                //   label: 'Manage Stake',
+                //   location: 'Insurance',
+                // });
                 // trackEvent('popup_opened', {
                 //   label: 'Manage Stake',
                 //   location: 'Insurance',

@@ -6,7 +6,6 @@ import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { trackEvent } from '@normalfinance/utils';
 import { useBoolean, type PoolPosition } from '@/hooks';
 
 import Box from '@mui/material/Box';
@@ -106,12 +105,12 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
                   sx={{ color: theme.palette.primary.dark, rotate: '-90deg' }}
                 />
               }
-              onClick={() =>
-                trackEvent('button_clicked', {
-                  label: 'Manage Stake',
-                  location: 'Insurance',
-                })
-              }
+              // onClick={() =>
+              //   trackEvent('button_clicked', {
+              //     label: 'Manage Stake',
+              //     location: 'Insurance',
+              //   })
+              // }
             >
               {btn.label}
             </Button>

@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { useTranslate } from '@/locales';
-import { trackEvent } from '@normalfinance/utils';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Paper, Button, Container, Typography } from '@mui/material';
@@ -135,12 +134,12 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
                   bgcolor: '#6E4BFF',
                   '&:hover': { bgcolor: '#6E4BFF' },
                 }}
-                onClick={() =>
-                  trackEvent('button_clicked', {
-                    label: 'Learn more',
-                    location: 'Home',
-                  })
-                }
+                // onClick={() =>
+                //   trackEvent('button_clicked', {
+                //     label: 'Learn more',
+                //     location: 'Home',
+                //   })
+                // }
               >
                 {t('Learn more')}
               </Button>

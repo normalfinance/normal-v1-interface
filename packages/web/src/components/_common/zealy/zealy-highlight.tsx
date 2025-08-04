@@ -1,4 +1,3 @@
-import { trackEvent } from '@normalfinance/utils';
 import React, { useState, useEffect } from 'react';
 
 import { styled, keyframes } from '@mui/system';
@@ -110,10 +109,10 @@ const ZealyHighlight: React.FC<ZealyHighlightProps> = ({
           title="Earn Zealy XP"
           $diameter={sizePx}
           onClick={() => {
-            trackEvent('button_clicked', {
-              label: 'Manage Stake',
-              location: 'Insurance',
-            });
+            // trackEvent('button_clicked', {
+            //   label: 'Manage Stake',
+            //   location: 'Insurance',
+            // });
             setOpen(true);
           }}
         >

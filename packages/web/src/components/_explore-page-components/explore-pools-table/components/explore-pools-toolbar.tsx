@@ -3,7 +3,6 @@ import type { IMarketTableFilters } from '@/types/marketTable';
 
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
-import { trackEvent } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
@@ -24,10 +23,10 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
 
   const handleFilterName = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      trackEvent('button_clicked', {
-        label: 'Learn more',
-        location: 'Home',
-      });
+      // trackEvent('button_clicked', {
+      //   label: 'Learn more',
+      //   location: 'Home',
+      // });
       onResetPage();
       updateFilters({ name: event.target.value });
     },

@@ -7,7 +7,6 @@ import { m } from 'framer-motion';
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
 import { usePopover } from 'minimal-shared/hooks';
-import { trackEvent } from '@normalfinance/utils';
 
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
@@ -34,10 +33,10 @@ export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProp
 
   const handleChangeLang = useCallback(
     (newLang: LanguageValue) => {
-      trackEvent('button_clicked', {
-        label: 'Manage Stake',
-        location: 'Insurance',
-      });
+      // trackEvent('button_clicked', {
+      //   label: 'Manage Stake',
+      //   location: 'Insurance',
+      // });
       onChangeLang(newLang);
       onClose();
     },
@@ -71,10 +70,10 @@ export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProp
         data-testid="languages-button"
         aria-label="languages-button"
         onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-          trackEvent('button_clicked', {
-            label: 'Manage Stake',
-            location: 'Insurance',
-          });
+          // trackEvent('button_clicked', {
+          //   label: 'Manage Stake',
+          //   location: 'Insurance',
+          // });
           onOpen(e);
         }}
         sx={[

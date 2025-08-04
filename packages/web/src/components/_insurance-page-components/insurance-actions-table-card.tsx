@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { trackEvent } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { useBufferEvents, useInsuranceFundEvents } from '@/hooks';
 
@@ -52,10 +51,10 @@ export function InsuranceActionsTable() {
   const [selectedTab, setSelectedTab] = useState('insurance');
 
   const handleChangeTab = (_event: React.SyntheticEvent, newValue: string) => {
-    trackEvent('button_clicked', {
-      label: 'Insurnace - Recent events - Tab',
-      location: 'Insurnace',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Insurnace - Recent events - Tab',
+    //   location: 'Insurnace',
+    // });
     setSelectedTab(newValue);
   };
 

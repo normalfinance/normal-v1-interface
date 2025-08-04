@@ -6,7 +6,6 @@ import type { NavSectionProps } from '@/components/template/nav-section';
 import { merge } from 'es-toolkit';
 import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
-import { trackEvent } from '@normalfinance/utils';
 import { allLangs, useTranslate } from '@/locales';
 import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
 
@@ -76,10 +75,10 @@ export function DashboardLayout({
   const isNavVertical = isNavMini || settings.state.navLayout === 'vertical';
 
   const handleGiveFeedback = () => {
-    trackEvent('button_clicked', {
-      label: 'Give feedback / Report bug',
-      location: '',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Give feedback / Report bug',
+    //   location: '',
+    // });
     window.open(' https://forms.fillout.com/t/cumVTceVQeus', '_blank', 'noopener');
   };
 

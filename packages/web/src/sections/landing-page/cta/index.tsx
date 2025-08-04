@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
-import { trackEvent } from '@normalfinance/utils';
 
 import { Box, Stack, Button, Container, Typography, type ButtonProps } from '@mui/material';
 
@@ -99,12 +98,12 @@ export const CtaImage: React.FC<CtaImageProps> = ({
               color: '#6E4BFF',
               fontWeight: 500,
             }}
-            onClick={() =>
-              trackEvent('button_clicked', {
-                label: 'Start swapping now',
-                location: 'Home',
-              })
-            }
+            // onClick={() =>
+            //   trackEvent('button_clicked', {
+            //     label: 'Start swapping now',
+            //     location: 'Home',
+            //   })
+            // }
           >
             {t('Start swapping now')}
           </Button>

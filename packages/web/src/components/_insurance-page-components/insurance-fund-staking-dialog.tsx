@@ -10,10 +10,10 @@ import { fCurrency } from '@/utils/format-number';
 import { useMemo, useState, useEffect } from 'react';
 import { formatDuration } from '@/utils/format-time';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useTokenPrice, useInsuranceFund } from '@/hooks';
 import { formatTokenAmount } from '@/utils/format-stellar';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { trackEvent, getCryptoIconUrl } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
@@ -112,10 +112,10 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
   const [selectedTab, setSelectedTab] = useState('stake'); // Default to first tab
 
   const handleChangeTab = (_event: React.SyntheticEvent, newValue: string) => {
-    trackEvent('button_clicked', {
-      label: 'Manage Stake',
-      location: 'Insurance',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     setSelectedTab(newValue);
   };
 
@@ -158,10 +158,10 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
   // -- keep field in sync with the text input ------------------------
   const amount = watch('amount') ?? '';
   const handleChange = (value: string) => {
-    trackEvent('button_clicked', {
-      label: 'Manage Stake',
-      location: 'Insurance',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     setValue('amount', value === '' ? undefined : Number(value), {
       shouldValidate: true,
     });
@@ -185,10 +185,10 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
   };
 
   const handleUnstakeButtonClick = () => {
-    trackEvent('button_clicked', {
-      label: 'Manage Stake',
-      location: 'Insurance',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
 
     const label = getButtonLabel();
 

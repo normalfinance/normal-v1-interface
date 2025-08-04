@@ -5,11 +5,11 @@ import type { PositionQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
 import { useState, useEffect } from 'react';
+import { constants } from '@normalfinance/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
 import { useLiquidity, useTokenBalance } from '@/hooks';
 import { useForm, FormProvider } from 'react-hook-form';
-import { constants, trackEvent } from '@normalfinance/utils';
 
 import { Box, Stack, Button } from '@mui/material';
 
@@ -148,10 +148,10 @@ export function StepContentPanel({
 
   /* ------- main CTA click handler ------------------------------------ */
   const handleMainButtonClick = async () => {
-    trackEvent('button_clicked', {
-      label: 'Manage Stake',
-      location: 'Insurance',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
 
     if (isLoading) return;
 

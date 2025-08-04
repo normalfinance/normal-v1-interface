@@ -5,7 +5,6 @@ import type { StateToken } from '@normalfinance/types';
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { useFormContext } from 'react-hook-form';
-import { trackEvent } from '@normalfinance/utils';
 
 import { Stack, alpha, Avatar, Button, useTheme, Typography } from '@mui/material';
 
@@ -29,10 +28,10 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
 
   /** user picks a token */
   const handleSelect = (tok: StateToken) => {
-    trackEvent('button_clicked', {
-      label: 'Manage Stake',
-      location: 'Insurance',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     setValue('tokenASymbol', tok.symbol, { shouldValidate: true });
     clearErrors('tokenASymbol');
     setDialogOpen(false);
@@ -93,10 +92,10 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
       <PickToken
         open={dialogOpen}
         onClose={() => {
-          trackEvent('button_clicked', {
-            label: 'Manage Stake',
-            location: 'Insurance',
-          });
+          // trackEvent('button_clicked', {
+          //   label: 'Manage Stake',
+          //   location: 'Insurance',
+          // });
           setDialogOpen(false);
         }}
         buttonSource="A"

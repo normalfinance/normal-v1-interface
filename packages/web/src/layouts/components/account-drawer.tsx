@@ -13,7 +13,7 @@ import { BigNumber } from 'bignumber.js';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
-import { format , trackEvent } from '@normalfinance/utils';
+import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useApiTokens, useUserActivity, useLiquidityPositions } from '@/hooks';
 import {
@@ -347,10 +347,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   /** Open drawer OR show ToS dialog, depending on acceptance */
   const handleMainButtonClick = () => {
-    trackEvent('button_clicked', {
-      label: 'Manage Stake',
-      location: 'Insurance',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     if (disclaimerVersion < CURRENT_TOS_VERSION) {
       setShowTos(true);
     } else {
@@ -361,10 +361,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /** Called whenever the ToS modal closes (Accept or Decline).
    *  If they accepted, open the wallet drawer right away. */
   const handleTosClose = () => {
-    trackEvent('button_clicked', {
-      label: 'Manage Stake',
-      location: 'Insurance',
-    });
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
 
     setShowTos(false);
 
@@ -430,10 +430,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <Tooltip title="Disconnect">
               <IconButton
                 onClick={() => {
-                  trackEvent('button_clicked', {
-                    label: 'Manage Stake',
-                    location: 'Insurance',
-                  });
+                  // trackEvent('button_clicked', {
+                  //   label: 'Manage Stake',
+                  //   location: 'Insurance',
+                  // });
                   disconnect();
                   onClose();
                 }}
@@ -452,10 +452,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <WalletDisconnected
               connectors={connectors}
               onSelect={async (c) => {
-                trackEvent('button_clicked', {
-                  label: 'Manage Stake',
-                  location: 'Insurance',
-                });
+                // trackEvent('button_clicked', {
+                //   label: 'Manage Stake',
+                //   location: 'Insurance',
+                // });
                 await connect(c);
                 onClose();
               }}
