@@ -1,0 +1,8 @@
+export type ContractType =
+  | 'oracle_registry'
+  | 'pool_swap_fee'
+  | 'pool'
+  | 'pool_router'
+  | 'buffer'
+  | 'insurance_fund'
+  | 'token';

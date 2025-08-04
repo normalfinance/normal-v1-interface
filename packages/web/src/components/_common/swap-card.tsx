@@ -5,10 +5,10 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
-import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
+import { trackEvent, getCryptoIconUrl } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
 
@@ -119,7 +119,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // 6) Open/close the token picker
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
+    setOpen(false);
+  };
 
   // 7) Auto-fetch quote whenever relevant fields change: sellToken, buyToken, amount
   useEffect(() => {
@@ -305,6 +311,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // Max the sell token
   const handleMaxClick = () => {
+    trackEvent('button_clicked', {
+      label: 'Max',
+      location: 'Swap',
+    });
     if (sellToken) {
       setAmount(sellToken.balance.toString());
     }

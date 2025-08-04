@@ -3,6 +3,7 @@ import type { BuyQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
+import { trackEvent } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
@@ -54,7 +55,13 @@ const BuyCard: React.FC<BuyCardProps> = ({
   const [open, setOpen] = useState(false);
 
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
+    setOpen(false);
+  };
 
   // For dynamic width measurement
   const [inputWidth, setInputWidth] = useState<number>(0);
@@ -97,6 +104,10 @@ const BuyCard: React.FC<BuyCardProps> = ({
 
   //prevent "-" ot "," in input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
     setAmount(sanitizeAmountInput(e.target.value));
   };
 
@@ -133,6 +144,11 @@ const BuyCard: React.FC<BuyCardProps> = ({
   };
 
   const handleMainButtonClick = () => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
+
     const label = getButtonLabel();
 
     if (label !== 'Buy') {
@@ -143,6 +159,10 @@ const BuyCard: React.FC<BuyCardProps> = ({
   };
 
   const handleTokenSelect = (token: Token) => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
     setBuyToken(token);
   };
 

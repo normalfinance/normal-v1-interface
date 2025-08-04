@@ -4,7 +4,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
-import { getCryptoIconUrl } from '@normalfinance/utils';
+import { trackEvent, getCryptoIconUrl } from '@normalfinance/utils';
 import { fPercent, fCurrency, fTokenAmount } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -22,6 +22,10 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const { t } = useTranslate('auto');
 
   const handleRequestAsset = () => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
     window.open('https://forms.fillout.com/t/tQuo1BRFJeus', '_blank', 'noopener');
   };
 

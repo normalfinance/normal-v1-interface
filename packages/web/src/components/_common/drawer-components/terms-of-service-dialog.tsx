@@ -47,6 +47,7 @@ import type { AppStorePersist } from '@normalfinance/types';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { trackEvent } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 
 import {
@@ -76,7 +77,19 @@ export default function TermsOfServiceDialog({ open, onClose }: TermsOfServiceDi
   const setDisclaimerAccepted = usePersistStore((s: AppStorePersist) => s.setDisclaimerAccepted);
 
   const handleAccept = () => {
+    trackEvent('button_clicked', {
+      label: 'Accept ToS',
+      location: '',
+    });
     setDisclaimerAccepted(true);
+    onClose?.();
+  };
+
+  const handleDecline = () => {
+    trackEvent('button_clicked', {
+      label: 'Decline ToS',
+      location: '',
+    });
     onClose?.();
   };
 

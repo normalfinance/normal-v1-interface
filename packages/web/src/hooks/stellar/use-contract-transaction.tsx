@@ -1,12 +1,12 @@
 'use client';
 
-import type { AppStore, AppStorePersist } from '@normalfinance/types';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
+import type { AppStore, ContractType , AppStorePersist} from '@normalfinance/types';
 
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
-import { constants } from '@normalfinance/utils';
 import { Signer } from '@normalfinance/utils/build/stellar';
+import { constants, trackEvent } from '@normalfinance/utils';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { TransactionType, type TransactionDetails } from '@/types/transaction';
@@ -177,12 +177,25 @@ export const useContractTransaction = () => {
             await logToFile(logMessage);
           }
 
+          trackEvent('transaction_successful', {
+            txHash: sentTransaction.sendTransactionResponse?.hash || '',
+            contractName: contractType,
+            contractAddress,
+            method: transactionDetails.type,
+          });
           return {
             txHash,
             notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP,
           };
         } catch (error) {
           console.error('Error during returning transaction hash: ', error);
+
+          trackEvent('transaction_failed', {
+            error: (error as any).toString(),
+            contractName: contractType,
+            contractAddress,
+            method: transactionDetails.type,
+          });
 
           if (error instanceof Error && error.message.includes('restore some contract state')) {
             return new Promise((resolve, reject) => {

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@normalfinance/utils';
+import { trackEvent, getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -49,6 +49,10 @@ const PickToken: React.FC<PickTokenProps> = ({
   });
 
   const handleTokenClick = (token: Token) => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
     onTokenSelect(token);
     onClose();
   };
@@ -108,9 +112,15 @@ const PickToken: React.FC<PickTokenProps> = ({
             variant="outlined"
             fullWidth
             size="small"
-            placeholder="Search tokens"
+            placeholder={t('Search tokens')}
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              trackEvent('button_clicked', {
+                label: 'Manage Stake',
+                location: 'Insurance',
+              });
+              setSearchTerm(e.target.value);
+            }}
             slotProps={{
               input: {
                 startAdornment: (

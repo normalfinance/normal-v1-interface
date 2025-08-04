@@ -2,6 +2,7 @@
 
 import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
+import { trackEvent } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -69,6 +70,10 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
 
   const handleCopyAddress = () => {
     if (walletAddress) {
+      trackEvent('button_clicked', {
+        label: 'Copy Address',
+        location: 'Account Drawer',
+      });
       copy(walletAddress);
       enqueueSnackbar('Wallet address copied to clipboard', { variant: 'success' });
     }
@@ -76,6 +81,10 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
 
   const handleViewOnExplorer = () => {
     if (walletAddress) {
+      trackEvent('button_clicked', {
+        label: 'View on Explorer',
+        location: 'Account Drawer',
+      });
       const url = createStellarExpertUrl('account', walletAddress);
       window.open(url, '_blank', 'noopener');
     }

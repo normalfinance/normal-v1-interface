@@ -1,9 +1,9 @@
 import type { Connector } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
-import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import React, { useState, useEffect } from 'react';
+import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
 
@@ -144,6 +144,7 @@ function WalletDisconnected({
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
+  const { t } = useTranslate();
   // const { data: tokenBalances, isLoading: balancesLoading } = useUserTokens();
 
   return (
@@ -158,7 +159,7 @@ function WalletConnected({ address }: { address: string }) {
     >
       <Stack direction="row" width={1} justifyContent="space-between" alignItems="center">
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
-        <CopyIconButton value={address} alert="Address copied" />
+        <CopyIconButton value={address} alert={t('Address copied')} />
       </Stack>
       {/* TODO: replace balance with tokenBalances */}
       <ConnectedWallet balance={0} percentageChange={0} tokens={[]} positions={[]} activity={[]} />
@@ -194,6 +195,10 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     if (disclaimerVersion < CURRENT_TOS_VERSION) {
       setShowTos(true);
     } else {
+      trackEvent('button_clicked', {
+        label: 'WalletGate - Connect',
+        location: '',
+      });
       onOpen();
     }
   };

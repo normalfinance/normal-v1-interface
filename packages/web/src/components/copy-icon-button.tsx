@@ -1,5 +1,6 @@
 'use client';
 
+import { trackEvent } from '@normalfinance/utils';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 
 // @mui
@@ -26,6 +27,10 @@ export default function CopyIconButton({ value, alert }: Props) {
     <Tooltip title="Copy">
       <IconButton
         onClick={() => {
+          trackEvent('button_clicked', {
+            label: 'Learn more',
+            location: 'Home',
+          });
           copy(value);
           enqueueSnackbar(alert);
         }}

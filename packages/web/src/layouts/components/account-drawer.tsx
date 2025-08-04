@@ -4,15 +4,16 @@ import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import axios from 'axios';
+import posthog from 'posthog-js';
 import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import * as Sentry from '@sentry/nextjs';
 import { BigNumber } from 'bignumber.js';
-import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
+import { format , trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useApiTokens, useUserActivity, useLiquidityPositions } from '@/hooks';
 import {
@@ -113,6 +114,10 @@ function WalletDisconnected({
   const { t } = useTranslate();
 
   const handleWalletHelp = () => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
     window.open(`${paths.docs}/getting-started/guides`, '_blank', 'noopener');
   };
 
@@ -327,6 +332,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   useEffect(() => {
     if (connectedAddress) {
       Sentry.setUser({ id: connectedAddress });
+      posthog.identify(
+        connectedAddress,
+        { last_login: new Date() }, // updates every time
+        { signup_date: new Date() } // sets only once
+      );
     } else {
       Sentry.setUser(null);
     }
@@ -337,6 +347,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   /** Open drawer OR show ToS dialog, depending on acceptance */
   const handleMainButtonClick = () => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
     if (disclaimerVersion < CURRENT_TOS_VERSION) {
       setShowTos(true);
     } else {
@@ -347,6 +361,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /** Called whenever the ToS modal closes (Accept or Decline).
    *  If they accepted, open the wallet drawer right away. */
   const handleTosClose = () => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
+
     setShowTos(false);
 
     // read the latest store value directly (no hooks inside a callback)
@@ -411,6 +430,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <Tooltip title="Disconnect">
               <IconButton
                 onClick={() => {
+                  trackEvent('button_clicked', {
+                    label: 'Manage Stake',
+                    location: 'Insurance',
+                  });
                   disconnect();
                   onClose();
                 }}
@@ -429,6 +452,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <WalletDisconnected
               connectors={connectors}
               onSelect={async (c) => {
+                trackEvent('button_clicked', {
+                  label: 'Manage Stake',
+                  location: 'Insurance',
+                });
                 await connect(c);
                 onClose();
               }}
