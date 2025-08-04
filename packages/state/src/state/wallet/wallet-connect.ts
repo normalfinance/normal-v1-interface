@@ -35,7 +35,10 @@ export class WalletConnect implements Connector {
       url: 'https://app.normalfinance.io',
       icons: ['https://app.normalfinance.io/logoIcon.png'],
       method: WalletConnectAllowedMethods.SIGN_AND_SUBMIT,
-      network: 'stellar:pubnet',
+      network:
+        (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET'
+          ? 'stellar:testnet'
+          : 'stellar:pubnet',
     });
   }
 
