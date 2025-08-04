@@ -5,4 +5,5 @@ export type ContractType =
   | 'pool_router'
   | 'buffer'
   | 'insurance_fund'
+  | 'liquidity_calculator'
   | 'token';

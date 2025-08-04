@@ -5,6 +5,7 @@ import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { formatTokenAmount } from '@/utils/format-stellar';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -241,8 +242,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             fontSize: '12px',
                           }}
                         >
-                          {/* toFixed(4) */}
-                          {token.balance.toString()}
+                          {formatTokenAmount(token.balance.toString())}
                         </Typography>
                       </Box>
                     )}

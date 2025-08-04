@@ -39,17 +39,6 @@ const logToFile = async (message: string) => {
   }
 };
 
-// Define Contract Types
-type ContractType =
-  | 'oracle_registry'
-  | 'pool_swap_fee'
-  | 'pool'
-  | 'pool_router'
-  | 'buffer'
-  | 'insurance_fund'
-  | 'liquidity_calculator'
-  | 'token';
-
 const contractClients = {
   oracle_registry: OracleRegistryContract.Client,
   pool_swap_fee: PoolSwapFeeContract.Client,
@@ -178,11 +167,12 @@ export const useContractTransaction = () => {
           }
 
           trackEvent('transaction_successful', {
-            txHash: sentTransaction.sendTransactionResponse?.hash || '',
+            txHash,
             contractName: contractType,
             contractAddress,
             method: transactionDetails.type,
           });
+
           return {
             txHash,
             notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP,
