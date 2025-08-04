@@ -43,8 +43,8 @@ export function InsuranceActionsTable() {
   const { t } = useTranslate();
   const theme = useTheme();
 
-  const { events: bufferEvents } = useBufferEvents();
-  const { events: insuranceFundEvents } = useInsuranceFundEvents();
+  const { events: bufferEvents } = useBufferEvents(10);
+  const { events: insuranceFundEvents } = useInsuranceFundEvents(10);
 
   const store = usePersistStore();
 

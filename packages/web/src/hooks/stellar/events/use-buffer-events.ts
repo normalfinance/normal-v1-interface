@@ -19,7 +19,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export function useBufferEvents(): ReturnType {
+export function useBufferEvents(limit: number): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +36,8 @@ export function useBufferEvents(): ReturnType {
         .eq('contract_id', constants.StellarConfig.BUFFER_ADDRESS)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
-        .order('id', { ascending: false });
+        .order('id', { ascending: false })
+        .limit(limit);
 
       if (e) {
         captureException(e);

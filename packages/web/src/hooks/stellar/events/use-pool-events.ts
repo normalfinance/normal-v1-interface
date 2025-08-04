@@ -19,7 +19,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export function usePoolEvents(poolAddress: string): ReturnType {
+export function usePoolEvents(poolAddress: string, limit: number): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +38,8 @@ export function usePoolEvents(poolAddress: string): ReturnType {
         .eq('in_successful_contract_call', true)
         .ilike('topics', `%${poolAddress}%`)
         .or(`topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%`)
-        .order('id', { ascending: false });
+        .order('id', { ascending: false })
+        .limit(limit);
 
       if (e) {
         captureException(e);
