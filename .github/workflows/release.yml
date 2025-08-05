@@ -6,6 +6,9 @@ on:
       - staging
       - master
 
+permissions:
+  contents: write  # needed for semantic-release to push
+
 jobs:
   release:
     name: Release
