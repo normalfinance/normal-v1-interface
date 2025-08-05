@@ -10,10 +10,9 @@ import { fCurrency } from '@/utils/format-number';
 import { useMemo, useState, useEffect } from 'react';
 import { formatDuration } from '@/utils/format-time';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useTokenPrice, useInsuranceFund } from '@/hooks';
-import { formatTokenAmount } from '@/utils/format-stellar';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { format , getCryptoIconUrl } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
@@ -169,8 +168,8 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
 
   const fiatValue = useMemo(() => {
     if (xlmPrice && amount) {
-      // const shares = formatTokenAmount(stake.if_shares);
-      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      // const shares = format.formatTokenAmount(stake.if_shares);
+      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
       return xlm_price.multipliedBy(amount);
     }
     return BigNumber(0);
@@ -383,7 +382,7 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
                       fontSize: '12px',
                     }}
                   >
-                    {formatTokenAmount(stake ? stake.if_shares : 0)} XLM
+                    {format.formatTokenAmount(stake ? stake.if_shares : 0)} XLM
                   </Typography>
                 </Box>
 
@@ -423,7 +422,7 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
                       fontSize: '12px',
                     }}
                   >
-                    {formatTokenAmount(stake ? stake.last_withdraw_request_shares : 0)} XLM
+                    {format.formatTokenAmount(stake ? stake.last_withdraw_request_shares : 0)} XLM
                   </Typography>
                 </Box>
               </Box>

@@ -4,9 +4,9 @@ import type { InsuranceQueryParams } from '@/types/query-params';
 import { useEffect } from 'react';
 import { useBoolean } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { format } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { formatTokenAmount } from '@/utils/format-stellar';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -80,7 +80,7 @@ export function StakeBalance({
 
   // Define default rows if none are provided via props.
   const defaultRows: BalanceRow[] = [
-    { label: 'Staked', value: staked.toNumber(), formatter: formatTokenAmount },
+    { label: 'Staked', value: staked.toNumber(), formatter: format.formatTokenAmount },
     { label: 'Earned', value: yieldPercent, formatter: fCurrency },
   ];
 

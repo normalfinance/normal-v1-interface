@@ -10,7 +10,7 @@ import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
-import { fPercent, fCurrencyCompact } from '@/utils/format-number';
+import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -101,7 +101,7 @@ export default function ConnectedWallet({
             sx={{ fontSize: '40px', lineHeight: '48px', fontWeight: 600 }}
             noWrap
           >
-            {fCurrencyCompact(balance)}
+            {fCurrencyTwoDecimals(balance)}
           </Typography>
         )}
         {percentageChange !== undefined && (
@@ -212,7 +212,7 @@ export default function ConnectedWallet({
       </CustomTabsSwapSend>
 
       {/* ------- tab panels ---------------------------------------- */}
-      {tabs.value === 'tokens' && <TokensTab tokens={tokens} />}
+      {tabs.value === 'tokens' && <TokensTab tokens={tokens?.filter((tkn) => tkn.balance > 0)} />}
       {tabs.value === 'pools' && <PositioinsTab positions={positions ?? []} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
 

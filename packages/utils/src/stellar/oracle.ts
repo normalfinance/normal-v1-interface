@@ -1,5 +1,5 @@
-import { constants } from '@normalfinance/utils';
 import { rpc, xdr, Contract, scValToNative, TransactionBuilder } from '@stellar/stellar-sdk';
+import { constants } from '..';
 
 export interface PriceData {
   price: bigint;
@@ -13,7 +13,7 @@ export async function getOraclePrice(oracle_address: string, _asset: string): Pr
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
 
-  const asset = xdr.ScVal.scvVec([xdr.ScVal.scvSymbol('Other'), xdr.ScVal.scvString(_asset)]);
+  const asset = xdr.ScVal.scvVec([xdr.ScVal.scvSymbol('Other'), xdr.ScVal.scvSymbol(_asset)]);
 
   tx_builder.addOperation(new Contract(oracle_address).call('lastprice', asset));
 

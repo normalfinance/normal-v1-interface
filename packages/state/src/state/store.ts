@@ -9,6 +9,7 @@ import { createLoadingActions } from './loading/actions';
 import { constants } from '@normalfinance/utils';
 import { createReferralActions } from './persist/createReferralActions';
 import { createErrorActions } from './error/actions';
+import { createPoolActions } from './pool/actions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
@@ -24,12 +25,16 @@ export const useAppStore = create<AppStore>()((set, get) => {
   // Create an error state
   const error = createErrorActions(set, get);
 
+  // Create
+  const pool = createPoolActions(set, get);
+
   return {
     server,
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
     ...wallet,
     ...loading,
     ...error,
+    ...pool,
   };
 });
 

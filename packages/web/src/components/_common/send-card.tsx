@@ -183,6 +183,10 @@ const SendCard: React.FC<SendCardProps> = ({
         enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
         return;
       }
+      if (destination == persist.wallet.address) {
+        enqueueSnackbar(t('Cannot send tokens to yourself'), { variant: 'error' });
+        return;
+      }
       setReviewOpen(true);
     }
   };

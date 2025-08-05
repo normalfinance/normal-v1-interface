@@ -1,5 +1,6 @@
 'use client';
 
+import type { SnackbarKey } from '@/components/template/snackbar';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 import type { AppStore, ContractType, AppStorePersist } from '@normalfinance/types';
 
@@ -208,14 +209,17 @@ export const useContractTransaction = () => {
 
       const messages = getTransactionMessages(transactionDetails);
 
-      const loadingKey = enqueueSnackbar(messages.loading, {
-        variant: 'info',
-        persist: true,
-      });
+      let loadingKey: SnackbarKey | null = null;
+      if (transactionDetails.type !== TransactionType.ESTIMATE_SWAP) {
+        loadingKey = enqueueSnackbar(messages.loading, {
+          variant: 'info',
+          persist: true,
+        });
+      }
 
       return run()
         .then((result) => {
-          closeSnackbar(loadingKey);
+          if (loadingKey) closeSnackbar(loadingKey);
 
           if (result.notify) {
             if (result.txHash) {
@@ -259,7 +263,7 @@ export const useContractTransaction = () => {
           return result;
         })
         .catch((error) => {
-          closeSnackbar(loadingKey);
+          if (loadingKey) closeSnackbar(loadingKey);
 
           enqueueSnackbar(messages.error, {
             variant: 'error',

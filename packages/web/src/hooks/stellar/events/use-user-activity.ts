@@ -10,8 +10,7 @@ import { useState, useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { formatTokenAmount } from '@/utils/format-stellar';
-import { constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
+import { format , constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -143,12 +142,12 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
         sell: {
           token: buy ? constants.StellarConfig.XLM_ADDRESS : event.pool,
           iconUrl: getCryptoIconUrl(buy ? 'XLM' : `n${event.asset}`),
-          amount: Number(formatTokenAmount(event.inAmount.toString())),
+          amount: Number(format.formatTokenAmount(event.inAmount.toString())),
         },
         buy: {
           token: buy ? event.pool : constants.StellarConfig.XLM_ADDRESS,
           iconUrl: getCryptoIconUrl(buy ? `n${event.asset}` : 'XLM'),
-          amount: Number(formatTokenAmount(event.outAmount.toString())),
+          amount: Number(format.formatTokenAmount(event.outAmount.toString())),
         },
       };
     }
@@ -160,7 +159,7 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
         tokenB: {
           token: constants.StellarConfig.XLM_ADDRESS,
           iconUrl: getCryptoIconUrl('XLM'),
-          amount: Number(formatTokenAmount(event.amount.toString())),
+          amount: Number(format.formatTokenAmount(event.amount.toString())),
         },
       };
     case 'withdraw_liquidity':
@@ -171,7 +170,7 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
         tokenB: {
           token: constants.StellarConfig.XLM_ADDRESS,
           iconUrl: getCryptoIconUrl('XLM'),
-          amount: Number(formatTokenAmount(event.amount.toString())),
+          amount: Number(format.formatTokenAmount(event.amount.toString())),
         },
       };
     case 'if_stake_record': {
@@ -183,7 +182,7 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
           asset: {
             token: constants.StellarConfig.XLM_ADDRESS,
             iconUrl: getCryptoIconUrl('XLM'),
-            amount: Number(formatTokenAmount(event.amount.toString())),
+            amount: Number(format.formatTokenAmount(event.amount.toString())),
           },
         };
       }

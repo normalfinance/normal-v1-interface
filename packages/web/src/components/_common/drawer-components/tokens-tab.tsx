@@ -5,7 +5,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fPercent, fCurrency, fTokenAmount } from '@/utils/format-number';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -46,8 +46,8 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
       {tokens.length > 0 ? (
         [...tokens]
           .sort((a, b) => {
-            const aBal = Number(a.balance);
-            const bBal = Number(b.balance);
+            const aBal = a.balance;
+            const bBal = b.balance;
             return bBal - aBal;
           })
           .map((token) => (
@@ -102,8 +102,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                         fontSize: '12px',
                       }}
                     >
-                      {/* toFixed(4) */}
-                      {fTokenAmount(token.balance, token.decimals ?? 18)}
+                      {token.balance}
                     </Typography>
                     <Typography
                       variant="body2"
@@ -131,9 +130,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                     variant="body2"
                     sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                   >
-                    {fCurrency(
-                      token.usdValue ? Number(token.balance * BigInt(token.usdValue)) : '0'
-                    )}
+                    {fCurrency(token.usdValue && token.balance)}
                   </Typography>
                   <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                     <Box

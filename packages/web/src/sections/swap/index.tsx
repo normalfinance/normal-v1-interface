@@ -8,7 +8,6 @@ import React, { useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useApiTokens, fetchApiTokens } from '@/hooks';
 import { useQueryParams } from '@/hooks/use-query-params';
 
 import { Box } from '@mui/material';
@@ -24,7 +23,6 @@ const swapFeeInfo: SwapFeeInfo = {
 
 export default function SwapView() {
   const { params } = useQueryParams<TokenActionQueryParams>();
-  const { tokens: apiTokens } = useApiTokens();
   const { tokens, getAllTokens, globalIsLoading, setGlobalIsLoading } = useAppStore();
 
   // Determine which tab to show based on query params, default to 'swap'
@@ -67,10 +65,8 @@ export default function SwapView() {
     // Only fetch if no tokens are loaded yet
     if (tokens.length === 0) {
       setGlobalIsLoading(true);
-      fetchApiTokens()
-        .then((data) => {
-          getAllTokens(data.assets);
-        })
+
+      getAllTokens()
         .catch((error) => {
           captureException(error);
           console.error(error);

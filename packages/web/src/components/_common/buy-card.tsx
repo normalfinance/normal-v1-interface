@@ -70,9 +70,6 @@ const BuyCard: React.FC<BuyCardProps> = ({
   const buyableAmt =
     buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.usdValue) : 0;
 
-  const balance = cashBalance ?? 0;
-  const insufficient = fiatValue > balance;
-
   // State for review dialog
   const [reviewOpen, setReviewOpen] = useState(false);
   const handleReviewClose = () => setReviewOpen(false);
@@ -134,9 +131,6 @@ const BuyCard: React.FC<BuyCardProps> = ({
     const amt = parseFloat(amount) || 0;
     if (amt <= 0) {
       return 'Enter an amount';
-    }
-    if (insufficient) {
-      return 'Insufficient balance';
     }
 
     return 'Buy';
@@ -217,11 +211,6 @@ const BuyCard: React.FC<BuyCardProps> = ({
                 padding: 0,
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
-                color: insufficient
-                  ? theme.palette.error.main
-                  : amount === '0' || amount === ''
-                    ? theme.palette.text.secondary
-                    : theme.palette.text.primary,
                 '& input': {
                   textAlign: 'center',
                   padding: 0,

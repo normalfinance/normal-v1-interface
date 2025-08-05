@@ -301,7 +301,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           fontSize: '12px',
                         }}
                       >
-                        {t('Fee')}
+                        {t('Fee')}&nbsp;
                         <Box component="span">
                           {t('(')}
                           {feePercentage}

@@ -9,13 +9,12 @@ import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import * as Sentry from '@sentry/nextjs';
-import { BigNumber } from 'bignumber.js';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
 import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { useApiTokens, useUserActivity, useLiquidityPositions } from '@/hooks';
+import { useUserActivity, useLiquidityPositions } from '@/hooks';
 import {
   hana,
   xbull,
@@ -208,7 +207,6 @@ function WalletConnected({ address }: { address: string }) {
   const { enqueueSnackbar } = useSnackbar();
 
   const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
-  const { tokens: apiTokens } = useApiTokens();
 
   const { positions } = useLiquidityPositions();
 
@@ -243,7 +241,7 @@ function WalletConnected({ address }: { address: string }) {
     const refreshTokens = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
-        await getAllTokens(apiTokens);
+        await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
         Sentry.captureException(e);
@@ -253,10 +251,13 @@ function WalletConnected({ address }: { address: string }) {
       }
     };
     refreshTokens();
-  }, [apiTokens]);
+  }, []);
 
   // Total balance
-  const totalBalance = tokens.reduce((acc, tkn) => acc.plus(tkn.usdValue), new BigNumber(0));
+  const totalBalance = tokens.reduce((acc, tkn) => {
+    const holdings = tkn.balance * tkn.usdValue;
+    return acc + holdings;
+  }, 0);
 
   if (!address) {
     return null;
@@ -291,7 +292,7 @@ function WalletConnected({ address }: { address: string }) {
         {t('Get testnet XLM')}
       </Button>
       <ConnectedWallet
-        balance={Number(totalBalance.toFixed(2))}
+        balance={totalBalance}
         percentageChange={0}
         tokens={tokens}
         positions={positions}

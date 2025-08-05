@@ -8,9 +8,8 @@ import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
-import { getCryptoIconUrl } from '@normalfinance/utils';
-import { formatTokenAmount } from '@/utils/format-stellar';
 import { fPercent, fCurrency } from '@/utils/format-number';
+import { format , getCryptoIconUrl } from '@normalfinance/utils';
 import { usePool, usePoolEvents, useSwapVolume, useTokenPrice, usePoolPriceChart } from '@/hooks';
 
 import { Alert, Stack, Grid2, useTheme, Typography } from '@mui/material';
@@ -62,13 +61,13 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
 
   useEffect(() => {
     if (pool && xlmPrice) {
-      const reserve_a = BigNumber(formatTokenAmount(pool.pool_response.token_a.amount));
-      const reserve_b = BigNumber(formatTokenAmount(pool.pool_response.token_b.amount));
+      const reserve_a = BigNumber(format.formatTokenAmount(pool.pool_response.token_a.amount));
+      const reserve_b = BigNumber(format.formatTokenAmount(pool.pool_response.token_b.amount));
 
       const pool_price = reserve_b.div(reserve_a);
       setPoolPrice(pool_price);
 
-      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
       setTokenUSDValue(pool_price.multipliedBy(xlm_price));
 
       const reserve_b_value = reserve_b.multipliedBy(xlm_price);
@@ -174,7 +173,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
             baseTokenSymbol={`n${pool.pool_response.pool.base_asset}`}
             quoteTokenSymbol={pool.pool_response.pool.quote_asset}
             rows={rows}
-            xlmPrice={xlmPrice ? Number(formatTokenAmount(xlmPrice, 14)) : 0}
+            xlmPrice={xlmPrice ? Number(format.formatTokenAmount(xlmPrice, 14)) : 0}
           />
         </Grid2>
       </Grid2>
@@ -188,7 +187,7 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
       return {
         type: 'Deposit',
         tokenAAmount: 0,
-        tokenBAmount: Number(formatTokenAmount(event.amount.toString())),
+        tokenBAmount: Number(format.formatTokenAmount(event.amount.toString())),
         user: event.user,
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
@@ -198,7 +197,7 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
       return {
         type: 'Withdraw',
         tokenAAmount: 0,
-        tokenBAmount: Number(formatTokenAmount(event.amount.toString())),
+        tokenBAmount: Number(format.formatTokenAmount(event.amount.toString())),
         user: event.user,
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
@@ -209,11 +208,11 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
       return {
         type: isBuy ? 'Buy' : 'Sell',
         tokenAAmount: isBuy
-          ? Number(formatTokenAmount(event.inAmount.toString()))
-          : Number(formatTokenAmount(event.outAmount.toString())),
+          ? Number(format.formatTokenAmount(event.inAmount.toString()))
+          : Number(format.formatTokenAmount(event.outAmount.toString())),
         tokenBAmount: isBuy
-          ? Number(formatTokenAmount(event.outAmount.toString()))
-          : Number(formatTokenAmount(event.inAmount.toString())),
+          ? Number(format.formatTokenAmount(event.outAmount.toString()))
+          : Number(format.formatTokenAmount(event.inAmount.toString())),
         user: event.user,
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
