@@ -32,7 +32,7 @@
     "packages/types",
     "packages/utils",
     "packages/state",
-    "packages/*"
+    "packages/web"
   ],
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.2",
