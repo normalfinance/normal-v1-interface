@@ -1,0 +1,26 @@
+{
+  "app": "Aplicație",
+  "job": "Job",
+  "user": "Utilizator",
+  "travel": "Călătorie",
+  "invoice": "Factură",
+  "blog": {
+    "title": "Blog",
+    "caption": "Comenzi rapide personalizate."
+  },
+  "subheader": "Sub antet",
+  "Overview": "Prezentare generală",
+  "Trade": "Tranzacționați",
+  "Spot": "Punct",
+  "Indexes": "Indexuri",
+  "Earn": "Câștigă",
+  "Yield": "Randament",
+  "LP": "LP",
+  "Rewards": "Recompense",
+  "Referrals": "Sesizări",
+  "Analytics": "Analize",
+  "More": "Mai",
+  "Governance": "Guvernanță",
+  "Help & Feedback": "Ajutor & Feedback",
+  "Docs": "Documente"
+}

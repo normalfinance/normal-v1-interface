@@ -1,0 +1,26 @@
+{
+  "app": "Aplicativo",
+  "job": "Trabalho",
+  "user": "Usuário",
+  "travel": "Viagem",
+  "invoice": "Fatura",
+  "blog": {
+    "title": "Blogue",
+    "caption": "Atalhos de teclado personalizados."
+  },
+  "subheader": "Sub cabeçalho",
+  "Overview": "Geral",
+  "Trade": "Negociar",
+  "Spot": "Ponto",
+  "Indexes": "Índices",
+  "Earn": "Ganhar",
+  "Yield": "Produção",
+  "LP": "PL",
+  "Rewards": "Prêmios",
+  "Referrals": "Referências",
+  "Analytics": "Análises",
+  "More": "MAIS",
+  "Governance": "Governança",
+  "Help & Feedback": "Ajuda e Feedback",
+  "Docs": "Documentação"
+}

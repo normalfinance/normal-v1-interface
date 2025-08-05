@@ -1,0 +1,66 @@
+import type { NavSectionProps } from '@/components/template/nav-section';
+
+import { useEffect } from 'react';
+import { usePathname } from '@/routes/hooks';
+import { mergeClasses } from 'minimal-shared/utils';
+
+import Box from '@mui/material/Box';
+import Drawer from '@mui/material/Drawer';
+
+import { Logo } from '@/components/template/logo';
+import { Scrollbar } from '@/components/template/scrollbar';
+import { NavSectionVertical } from '@/components/template/nav-section';
+
+import { layoutClasses } from '../core/classes';
+
+// ----------------------------------------------------------------------
+
+type NavMobileProps = NavSectionProps & {
+  open: boolean;
+  onClose: () => void;
+  slots?: {
+    topArea?: React.ReactNode;
+    bottomArea?: React.ReactNode;
+  };
+};
+
+export function NavMobile({ data, open, onClose, slots, sx, className, ...other }: NavMobileProps) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (open) {
+      onClose();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        className: mergeClasses([layoutClasses.nav.root, layoutClasses.nav.vertical, className]),
+        sx: [
+          (theme) => ({
+            overflow: 'unset',
+            bgcolor: 'var(--layout-nav-bg)',
+            width: 'var(--layout-nav-mobile-width)',
+          }),
+          ...(Array.isArray(sx) ? sx : [sx]),
+        ],
+      }}
+    >
+      {slots?.topArea ?? (
+        <Box sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
+          <Logo />
+        </Box>
+      )}
+
+      <Scrollbar fillContent>
+        <NavSectionVertical data={data} sx={{ px: 2, flex: '1 1 auto' }} {...other} />
+      </Scrollbar>
+
+      {slots?.bottomArea}
+    </Drawer>
+  );
+}

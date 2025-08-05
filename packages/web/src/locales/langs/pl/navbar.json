@@ -1,0 +1,26 @@
+{
+  "app": "Aplikacja",
+  "job": "Zadanie",
+  "user": "Użytkownik",
+  "travel": "Podróże",
+  "invoice": "Faktura",
+  "blog": {
+    "title": "Blog",
+    "caption": "Niestandardowe skróty klawiaturowe."
+  },
+  "subheader": "Podnagłówek",
+  "Overview": "Przegląd",
+  "Trade": "Handluj",
+  "Spot": "Miejscowość",
+  "Indexes": "Indeksy",
+  "Earn": "Zarabiaj",
+  "Yield": "Wydajność",
+  "LP": "LP",
+  "Rewards": "Nagrody",
+  "Referrals": "Polecenia",
+  "Analytics": "Analityka",
+  "More": "Więcej",
+  "Governance": "Zarządzanie",
+  "Help & Feedback": "Pomoc i opinie",
+  "Docs": "Dokumentacja"
+}

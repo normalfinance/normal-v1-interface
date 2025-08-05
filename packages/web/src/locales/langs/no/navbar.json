@@ -1,0 +1,26 @@
+{
+  "app": "App",
+  "job": "Jobb",
+  "user": "Bruker",
+  "travel": "Reise",
+  "invoice": "Faktura",
+  "blog": {
+    "title": "Blogg",
+    "caption": "Custom keyboard shortcuts."
+  },
+  "subheader": "Underordnet hode",
+  "Overview": "Oversikt",
+  "Trade": "Byttehandel",
+  "Spot": "Punkt",
+  "Indexes": "Indekser",
+  "Earn": "Tjen",
+  "Yield": "Avkastning",
+  "LP": "l.grad",
+  "Rewards": "Belønninger",
+  "Referrals": "Vervinger",
+  "Analytics": "Analyser",
+  "More": "Mer",
+  "Governance": "Styresett",
+  "Help & Feedback": "Hjelp & tilbakemelding",
+  "Docs": "Dokumenter"
+}

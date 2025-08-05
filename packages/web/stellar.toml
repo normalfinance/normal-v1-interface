@@ -1,0 +1,108 @@
+NETWORK_PASSPHRASE = "Public Global Stellar Network ; September 2015"
+FEDERATION_SERVER = "https://api.domain.com/federation"
+AUTH_SERVER = "https://api.domain.com/auth"
+TRANSFER_SERVER = "https://api.domain.com"
+SIGNING_KEY = "GBBHQ7H4V6RRORKYLHTCAWP6MOHNORRFJSDPXDFYDGJB2LPZUFPXUEW3"
+HORIZON_URL = "https://horizon.domain.com"
+ACCOUNTS = [""]
+VERSION = "0.1.0"
+
+[DOCUMENTATION]
+ORG_NAME = "Normal Finance"
+ORG_DBA = "Normal"
+ORG_URL = "https://www.normalfinance.io"
+ORG_LOGO = "https://www.normalfinance.io/logo.png"
+ORG_DESCRIPTION = "Synthetic asset protocol"
+ORG_PHYSICAL_ADDRESS = "254 Chapman Rd Ste 208 #7553 Newark Delaware, 19702, United States"
+ORG_PHYSICAL_ADDRESS_ATTESTATION = ""
+ORG_PHONE_NUMBER = "1 (827)-274-3151"
+ORG_PHONE_NUMBER_ATTESTATION = ""
+ORG_KEYBASE = "normalfi"
+ORG_TWITTER = "normalfi"
+ORG_GITHUB = "normalfinance"
+ORG_OFFICIAL_EMAIL = "hello@normalfinance.io"
+
+[[PRINCIPALS]]
+name = "Joshua Blew"
+email = "joshua@normalfinance.io"
+keybase = "jblewnormal"
+twitter = "0xjblew"
+github = "jblewnormal"
+
+[[PRINCIPALS]]
+name = "Justin Benjamin"
+email = "justin@normalfinance.io"
+twitter = "justinbenjaminn"
+
+# Governance
+[[CURRENCIES]]
+code = "NORM"
+issuer = ""
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Token"
+desc = "Utility and governance token for the Normal Protocol and DAO"
+image = ""
+fixed_number = 100000000 # 100 million
+
+# Synthetics
+[[CURRENCIES]]
+code = "nBTC"
+issuer = ""
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Bitcoin"
+desc = "An over-collateralized synthethic Bitcoin token"
+image = "https://cryptologos.cc/logos/bitcoin-btc-logo.png" # TODO: replace with Normal subscript version
+anchor_asset_type = "crypto"
+anchor_asset = "BTC"
+redemption_instructions = "Invoke <swap> on the nBTC synth market's AMM via our app"
+attestation_of_reserve = ""
+collateral_addresses = [""]
+collateral_address_signatures = [""]
+
+[[CURRENCIES]]
+code = "nETH"
+issuer = ""
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Ethereum"
+desc = "An over-collateralized synthethic Ethereum token"
+image = "https://cryptologos.cc/logos/ethereum-eth-logo.png" # TODO: replace with Normal subscript version
+anchor_asset_type = "crypto"
+anchor_asset = "ETH"
+redemption_instructions = "Invoke <swap> on the nETH synth market's AMM via our app"
+attestation_of_reserve = ""
+collateral_addresses = [""]
+collateral_address_signatures = [""]
+
+[[CURRENCIES]]
+code = "nSOL"
+issuer = ""
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Solana"
+desc = "An over-collateralized synthethic Solana token"
+image = "https://cryptologos.cc/logos/solana-sol-logo.png" # TODO: replace with Normal subscript version
+anchor_asset_type = "crypto"
+anchor_asset = "SOL"
+redemption_instructions = "Invoke <swap> on the nSOL synth market's AMM via our app"
+attestation_of_reserve = ""
+collateral_addresses = [""]
+collateral_address_signatures = [""]
+
+# Indexes
+[[CURRENCIES]]
+code = "NT5CI"
+issuer = ""
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Top 5 Crypto Index"
+desc = "A crypto index fund token composed of the top 5 cryptocurrencies"
+image = "https://app.normalfinance.io/assets/icons/indexes/top_5.png"
+anchor_asset_type = "crypto"
+anchor_asset = ["nBTC", "nETH", "nSOL", "nXRP", "nBNB"]
+redemption_instructions = "Invoke <redeem_index_tokens> on the NT5CI contract via our app"
+attestation_of_reserve = ""
+collateral_addresses = ["", "", "", "", ""]
+collateral_address_signatures = ["", "", "", "", ""]

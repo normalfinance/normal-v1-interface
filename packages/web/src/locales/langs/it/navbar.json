@@ -1,0 +1,26 @@
+{
+  "app": "App",
+  "job": "Lavoro",
+  "user": "Utente",
+  "travel": "Viaggi",
+  "invoice": "Fattura",
+  "blog": {
+    "title": "Blog",
+    "caption": "Scorciatoie da tastiera personalizzate."
+  },
+  "subheader": "Intestazione secondaria",
+  "Overview": "Panoramica",
+  "Trade": "Scambi",
+  "Spot": "Spot",
+  "Indexes": "Indici",
+  "Earn": "Guadagna",
+  "Yield": "Rendimento",
+  "LP": "LP",
+  "Rewards": "Ricompensa",
+  "Referrals": "Referenze",
+  "Analytics": "Analisi",
+  "More": "Altro",
+  "Governance": "Governance",
+  "Help & Feedback": "Aiuto & Feedback",
+  "Docs": "Documenti"
+}

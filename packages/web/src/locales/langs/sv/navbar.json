@@ -1,0 +1,26 @@
+{
+  "app": "App",
+  "job": "Jobb",
+  "user": "Användare",
+  "travel": "Resor",
+  "invoice": "Faktura",
+  "blog": {
+    "title": "Blogg",
+    "caption": "Anpassade kortkommandon."
+  },
+  "subheader": "Sub sidhuvud",
+  "Overview": "Översikt",
+  "Trade": "Handel",
+  "Spot": "Plats",
+  "Indexes": "Index",
+  "Earn": "Tjäna",
+  "Yield": "Skörd",
+  "LP": "LP",
+  "Rewards": "Belöningar",
+  "Referrals": "Hänvisningar",
+  "Analytics": "Analys",
+  "More": "Mer",
+  "Governance": "Styrning",
+  "Help & Feedback": "Hjälp och feedback",
+  "Docs": "Dokument"
+}

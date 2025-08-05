@@ -1,0 +1,26 @@
+{
+  "app": "Application",
+  "job": "Tâche",
+  "user": "Utilisateur",
+  "travel": "Voyage",
+  "invoice": "Facture",
+  "blog": {
+    "title": "Blogue",
+    "caption": "Raccourcis clavier personnalisés."
+  },
+  "subheader": "Sous-en-tête",
+  "Overview": "Aperçu",
+  "Trade": "Négocier",
+  "Spot": "Tache",
+  "Indexes": "Indexations",
+  "Earn": "Gagnez des gains",
+  "Yield": "Rendement",
+  "LP": "LP",
+  "Rewards": "Récompenses",
+  "Referrals": "Recommandations",
+  "Analytics": "Analyses",
+  "More": "En savoir plus",
+  "Governance": "Gouvernance",
+  "Help & Feedback": "Aide et commentaires",
+  "Docs": "Documents"
+}

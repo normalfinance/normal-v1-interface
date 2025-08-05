@@ -1,0 +1,26 @@
+{
+  "app": "アプリ",
+  "job": "ジョブ",
+  "user": "ユーザー",
+  "travel": "旅行",
+  "invoice": "請求書",
+  "blog": {
+    "title": "ブログ",
+    "caption": "カスタムキーボードショートカット。"
+  },
+  "subheader": "サブヘッダー",
+  "Overview": "概要",
+  "Trade": "取引",
+  "Spot": "スポット",
+  "Indexes": "インデックス",
+  "Earn": "収入を得る",
+  "Yield": "収穫量",
+  "LP": "LP",
+  "Rewards": "Recompensas",
+  "Referrals": "紹介",
+  "Analytics": "分析",
+  "More": "もっと見る",
+  "Governance": "Governance",
+  "Help & Feedback": "ヘルプとフィードバック",
+  "Docs": "ドキュメント"
+}

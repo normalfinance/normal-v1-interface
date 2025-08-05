@@ -1,0 +1,26 @@
+{
+  "app": "Uygulama",
+  "job": "İş",
+  "user": "Kullanıcı",
+  "travel": "Seyahat",
+  "invoice": "Fatura",
+  "blog": {
+    "title": "Blog",
+    "caption": "Özel klavye kısayolları."
+  },
+  "subheader": "Alt başlık",
+  "Overview": "Genel Bakış",
+  "Trade": "Ticaret",
+  "Spot": "Leke",
+  "Indexes": "Endeksler",
+  "Earn": "Para kazanmak",
+  "Yield": "Teslim olmak",
+  "LP": "LP",
+  "Rewards": "Ödüller",
+  "Referrals": "Yönlendirmeler",
+  "Analytics": "Analitik",
+  "More": "Daha",
+  "Governance": "Yönetim",
+  "Help & Feedback": "Yardım ve Geri Bildirim",
+  "Docs": "Belgeler"
+}

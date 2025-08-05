@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Logo_-_Color" data-name="Logo - Color" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 700 150">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#linear-gradient);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="31.5" y1="75" x2="668.5" y2="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#75ffff"/>
+      <stop offset=".03" stop-color="#62f2fd"/>
+      <stop offset=".13" stop-color="#2dcdfa"/>
+      <stop offset=".21" stop-color="#0cb7f7"/>
+      <stop offset=".25" stop-color="#00aff7"/>
+      <stop offset=".31" stop-color="#23a2f8"/>
+      <stop offset=".5" stop-color="#947bff"/>
+      <stop offset=".57" stop-color="#bc58d6"/>
+      <stop offset=".65" stop-color="#dd3db6"/>
+      <stop offset=".71" stop-color="#f02ca3"/>
+      <stop offset=".75" stop-color="#f8279c"/>
+      <stop offset=".78" stop-color="#f95882"/>
+      <stop offset=".82" stop-color="#fb816d"/>
+      <stop offset=".85" stop-color="#fca45c"/>
+      <stop offset=".89" stop-color="#fdbe4e"/>
+      <stop offset=".92" stop-color="#fed144"/>
+      <stop offset=".96" stop-color="#fedd3e"/>
+      <stop offset="1" stop-color="#ffe13d"/>
+    </linearGradient>
+  </defs>
+  <path class="cls-1" d="M188.53,19.91c-30.56,0-55.34,24.78-55.34,55.34s24.78,55.34,55.34,55.34,55.34-24.78,55.34-55.34-24.78-55.34-55.34-55.34Zm275.47,.19h0c-6.39,0-12.63,2.35-17.17,6.84-4.89,4.84-11.61,7.83-19.03,7.83s-14.14-2.99-19.03-7.83c-4.54-4.49-10.78-6.84-17.17-6.84h0c-10.38,0-18.8,8.42-18.8,18.8V103.7c0,15.19,12.31,27.5,27.5,27.5h0c15.19,0,27.5-12.31,27.5-27.5,0,15.19,12.31,27.5,27.5,27.5h0c15.19,0,27.5-12.31,27.5-27.5V38.9c0-10.38-8.42-18.8-18.8-18.8Zm83.27,.06h0c-30.38,0-55,24.62-55,55h0c0,30.38,24.62,55,55,55h55v-55c0-30.38-24.62-55-55-55Zm111.44,.19h-37.19c-5.41,0-9.79,4.38-9.79,9.79V120.56c0,5.41,4.38,9.79,9.79,9.79h37.19c5.41,0,9.79-4.38,9.79-9.79V30.13c0-5.41-4.38-9.79-9.79-9.79Zm-350.38-1.54h0c-30.38,0-55,24.62-55,55h0v49.95c0,3.81,3.09,6.9,6.9,6.9h43.05c3.81,0,6.9-3.09,6.9-6.9v-49.95h53.15c0-30.38-24.62-55-55-55ZM123.72,130.59H31.5V64.91c0-25.47,20.64-46.11,46.11-46.11h0c25.47,0,46.11,20.64,46.11,46.11v65.68Z"/>
+</svg>
