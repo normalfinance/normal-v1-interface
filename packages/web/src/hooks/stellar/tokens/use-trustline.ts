@@ -42,11 +42,11 @@ export function useTrustLine(): ReturnType {
       const trust = await checkTrustline(storePersist.wallet.address!, tokenAddress);
       setTrustlineButtonActive(!trust.exists);
       // setTrustlineTokenSymbol(trust.asset?.code || '');
-      const tlAsset = await store.fetchTokenInfo(
-        'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA'
-      );
-      // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-      setTrustlineAssetAmount(Number(tlAsset?.balance) / 10 ** tlAsset?.decimals!);
+      // const tlAsset = await store.fetchTokenInfo(
+      //   'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA'
+      // );
+      // // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+      // setTrustlineAssetAmount(Number(tlAsset?.balance) / 10 ** tlAsset?.decimals!);
       setTrustlineTokenName(trust.asset?.contract || '');
     },
     [storePersist.wallet.address]

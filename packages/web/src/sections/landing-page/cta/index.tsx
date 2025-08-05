@@ -87,7 +87,7 @@ export const CtaImage: React.FC<CtaImageProps> = ({
           }}
         >
           <Typography variant="h3" fontWeight={500} sx={{ fontSize: { xs: '24px', md: '40px' } }}>
-            {heading}
+            {t(heading)}
           </Typography>
 
           <Button

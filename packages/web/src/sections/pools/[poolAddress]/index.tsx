@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fPercent, fCurrency } from '@/utils/format-number';
-import { format , getCryptoIconUrl } from '@normalfinance/utils';
+import { format, getCryptoIconUrl } from '@normalfinance/utils';
 import { usePool, usePoolEvents, useSwapVolume, useTokenPrice, usePoolPriceChart } from '@/hooks';
 
 import { Alert, Stack, Grid2, useTheme, Typography } from '@mui/material';

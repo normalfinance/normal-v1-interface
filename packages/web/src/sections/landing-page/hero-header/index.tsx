@@ -6,7 +6,6 @@ import type { SwapQueryParams } from '@/types/query-params';
 import * as React from 'react';
 import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
-import { fetchApiTokens } from '@/hooks';
 import { useAppStore } from '@normalfinance/state';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
@@ -51,10 +50,8 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   useEffect(() => {
     if (tokens.length === 0) {
       setGlobalIsLoading(true);
-      fetchApiTokens()
-        .then((data) => {
-          getAllTokens(data.assets);
-        })
+
+      getAllTokens()
         .catch((error) => console.error(error))
         .finally(() => {
           setGlobalIsLoading(false);
@@ -223,7 +220,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
-              {description}
+              {t(description)}
             </Typography>
             <Box
               component="img"
