@@ -289,7 +289,7 @@ export interface Client {
   /**
    * Construct and simulate a get_price transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  get_price: ({asset, cached, action, skip_validation}: {asset: string, cached: boolean, action: NormalAction, skip_validation: boolean}, options?: {
+  get_price: ({asset, cached, action}: {asset: string, cached: boolean, action: NormalAction}, options?: {
     /**
      * The fee to pay for the transaction. Default: BASE_FEE
      */

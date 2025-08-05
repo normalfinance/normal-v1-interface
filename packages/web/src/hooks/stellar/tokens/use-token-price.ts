@@ -40,7 +40,6 @@ export const useTokenPrice = (asset: string): ReturnType => {
         asset,
         cached: false,
         action: defaultAction,
-        skip_validation: true,
       });
 
       if (oraclePriceData.result) {

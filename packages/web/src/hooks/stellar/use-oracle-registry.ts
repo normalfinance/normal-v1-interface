@@ -87,7 +87,6 @@ export function useOracleRegistry(): ReturnType {
         asset,
         cached,
         action: defaultAction,
-        skip_validation: true,
       });
 
       if (oraclePriceData?.result) {
