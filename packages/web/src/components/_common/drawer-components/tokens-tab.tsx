@@ -165,7 +165,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                           : 'success.main',
                     }}
                   >
-                    {fCurrency(token.usdValue && token.balance)}
+                    {fCurrency(token.usdValue * token.balance)}
                   </Typography>
                 </Stack>
               </Box>
