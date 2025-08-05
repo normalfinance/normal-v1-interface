@@ -7,7 +7,6 @@ permissions:
 on:
   push:
     branches:
-      - staging
       - master
   workflow_dispatch:
     inputs:
