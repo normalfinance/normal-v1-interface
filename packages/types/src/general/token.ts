@@ -4,7 +4,6 @@ export interface Token {
   usdValue?: number;
   amount?: number;
   category?: string;
-  //
   id: number;
   url: string;
   logo?: string;
