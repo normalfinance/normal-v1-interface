@@ -19,10 +19,6 @@ type Props = CardProps & {
   description?: string;
   total: number;
   percent: number;
-  /**
-   * Optional formatter function for total.
-   * E.g. fNumber, fCurrency, fPercent, fShortenNumber, or fData.
-   */
   formatter?: (value: number) => string;
   chartType?: ChartProps['type'];
   displayChart?: boolean;

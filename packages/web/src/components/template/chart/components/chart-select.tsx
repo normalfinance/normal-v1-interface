@@ -58,7 +58,7 @@ export function ChartSelect({ options, value, onChange, slotProps, ...other }: C
             pl: 1.5,
             gap: 1.5,
             height: 34,
-            borderRadius: 1,
+            borderRadius: 9999,
             typography: 'subtitle2',
             border: `solid 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.24)}`,
           }),

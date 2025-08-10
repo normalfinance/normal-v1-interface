@@ -1,7 +1,7 @@
 'use client';
 
 import type { CardProps } from '@mui/material/Card';
-import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
+import type { RealtimeChartData, TimeframeKey } from '@/utils/portfolio-value-chart-series';
 
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
@@ -13,29 +13,22 @@ import CardHeader from '@mui/material/CardHeader';
 
 import { Chart, useChart, ChartSelect, ChartLegends } from '@/components/template/chart';
 
-// Define a type for legend values
 export type LegendValue = {
   title: string;
   number: number;
   formatter?: (value: number) => string;
 };
 
-type Props = CardProps & {
+interface AreaChartCardProps extends CardProps {
   title?: string;
   subheader?: string;
   legendValues?: LegendValue[];
-  /**
-   * Optional palette color to override the default chart color.
-   */
   color?: string;
-  // Chart prop holds realtime chart data for each timeframe.
-  chart: Partial<{
-    '24h': RealtimeChartData;
-    '7d': RealtimeChartData;
-    '30d': RealtimeChartData;
-    '12m': RealtimeChartData;
-  }>;
-};
+  // Chart data for various timeframes:
+  chart: Partial<Record<TimeframeKey, RealtimeChartData>>;
+  // New prop to indicate if values should be formatted as percentages
+  percentage?: boolean;
+}
 
 export function AreaChartCard({
   title,
@@ -43,46 +36,66 @@ export function AreaChartCard({
   legendValues,
   chart,
   color,
+  percentage = false,
   sx,
   ...other
-}: Props) {
+}: AreaChartCardProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
-  // Use provided color or fallback to theme palette primary
   const effectiveColor = color || theme.palette.primary.main;
-
-  // Compute available timeframes based on provided keys
-  const availableOptions = Object.keys(chart) as Array<'24h' | '7d' | '30d' | '12m'>;
-  const [selectedSeries, setSelectedSeries] = useState<(typeof availableOptions)[number]>(
-    availableOptions[0]
-  );
-
-  // Make sure there's data for the selected timeframe
+  // Determine available timeframe options from the keys of the chart prop
+  const availableOptions = Object.keys(chart) as TimeframeKey[];
+  const [selectedSeries, setSelectedSeries] = useState<TimeframeKey>(availableOptions[0]);
   const realtimeData = chart[selectedSeries];
 
-  const chartOptions = useChart({
-    colors: [effectiveColor],
-    xaxis: {
-      categories: realtimeData?.categories || [],
-      tickAmount: realtimeData?.tickAmount || 0,
+  // Handle timeframe selection (if multiple options are provided)
+  const handleChangeSeries = useCallback(
+    (newValue: string) => {
+      // Only switch if newValue is one of the known timeframe keys
+      if (availableOptions.includes(newValue as TimeframeKey)) {
+        setSelectedSeries(newValue as TimeframeKey);
+      }
     },
-    yaxis: {
-      labels: {
-        formatter: (value: number) => fShortenNumber(value),
-      },
-    },
-  });
-
-  const handleChangeSeries = useCallback((newValue: string) => {
-    if (newValue === '24h' || newValue === '7d' || newValue === '30d' || newValue === '12m') {
-      setSelectedSeries(newValue);
-    }
-  }, []);
+    [availableOptions]
+  );
 
   if (!realtimeData) {
     return <div>{t('No chart data available')}</div>;
   }
+
+  // Choose value formatter based on whether we are showing percentages
+  const formatValue = (val: number): string => {
+    if (percentage) {
+      // Format as percentage string (one decimal place for fractional percentages)
+      const valRounded = Math.abs(val) < 10 ? val.toFixed(2) : val.toFixed(1);
+      // Include a + sign for positive values (optional):
+      // return (val >= 0 ? '+' : '') + valRounded + '%';
+      return valRounded + '%';
+    } else {
+      // Default number shortening for large values (e.g., 15000 -> "15k")
+      return fShortenNumber(val);
+    }
+  };
+
+  // Prepare chart options with custom axis and tooltip formatters
+  const chartOptions = useChart({
+    colors: [effectiveColor],
+    xaxis: {
+      categories: realtimeData.categories,
+      tickAmount: realtimeData.tickAmount,
+    },
+    yaxis: {
+      labels: {
+        formatter: (value: number) => formatValue(value), // Use our formatter for y-axis ticks
+      },
+    },
+    tooltip: {
+      y: {
+        formatter: (value: number) => formatValue(value), // Use our formatter for tooltip values
+      },
+    },
+  });
 
   return (
     <Card sx={sx} {...other}>
@@ -113,7 +126,7 @@ export function AreaChartCard({
             ? legendValues.map((v) =>
                 v.formatter ? v.formatter(v.number) : fShortenNumber(v.number)
               )
-            : [fShortenNumber(realtimeData.series[0].data[0].data.slice(-1)[0])]
+            : [formatValue(realtimeData.series[0].data[0].data.slice(-1)[0])]
         }
         sx={{ px: 3, gap: 3 }}
       />
@@ -123,12 +136,7 @@ export function AreaChartCard({
         series={realtimeData.series[0].data}
         options={chartOptions}
         slotProps={{ loading: { p: 2.5 } }}
-        sx={{
-          pl: 1,
-          py: 2.5,
-          pr: 2.5,
-          height: 320,
-        }}
+        sx={{ pl: 1, py: 2.5, pr: 2.5, height: 320 }}
       />
     </Card>
   );

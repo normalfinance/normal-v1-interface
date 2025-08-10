@@ -21,27 +21,42 @@ import { IndexHistoryTimeline } from '@/components/_index-details/index-history-
 import { createChartData, RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 import { AreaChartCard, LegendValue } from '@/components/_common/area-chart-card';
 
-const data24h = [
-  3444, 3600, 3750, 3900, 4100, 4300, 4500, 4700, 4900, 5200, 5400, 5500, 5650, 5800, 6000, 6200,
-  6400, 6600, 6800, 7000, 7200, 7300, 7320, 7334,
+const data1d = [
+  0, 0.3, 0.6, 0.9, 1.1, 1.0, 1.3, 1.5, 1.7, 1.6, 1.8, 2.0, 2.1, 2.2, 2.4, 2.5, 2.7, 2.9, 3.0, 3.1,
+  3.0, 3.2, 3.3, 3.4,
 ];
-const data7d = [3444, 4000, 4800, 8200, 5800, 6800, 7334];
-const data30d = [
-  3444, 3500, 3600, 3700, 3800, 3900, 4000, 4200, 4300, 4400, 4500, 4600, 4800, 5000, 5200, 5400,
-  5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7100, 7200, 7250, 7300, 7320, 7330, 7334,
-];
-// Hardcoded 12 month data
+
+const data1w = [0, 0.4, 1.0, 0.8, 1.6, 2.1, 2.4];
+const data2w = Array.from({ length: 14 }, (_, i) => (i - 7) * 0.3 + 3);
+const data1m = Array.from({ length: 31 }, (_, i) => Math.sin(i / 6) * 2 + i * 0.15);
+const data3m = Array.from({ length: 91 }, (_, i) => Math.sin(i / 10) * 4 + i * 0.08);
+const data6m = Array.from({ length: 181 }, (_, i) => Math.sin(i / 12) * 7 + i * 0.05);
+const data1y = Array.from({ length: 12 }, (_, i) => i * 2.5 + (i % 2 ? 1 : -1));
+const data3y = Array.from({ length: 36 }, (_, i) => i * 1.1 + Math.sin(i / 3) * 2.5);
+const data5y = Array.from({ length: 60 }, (_, i) => i * 0.9 + Math.sin(i / 5) * 3.5);
 
 // Create chart data objects using our helper.
-const chartData24h: RealtimeChartData = createChartData('24h', data24h, 8);
-const chartData7d: RealtimeChartData = createChartData('7d', data7d, 7);
-const chartData30d: RealtimeChartData = createChartData('30d', data30d, 8);
+const chart1d = createChartData('1d', data1d);
+const chart1w = createChartData('1w', data1w);
+const chart2w = createChartData('2w', data2w);
+const chart1m = createChartData('1m', data1m);
+const chart3m = createChartData('3m', data3m);
+const chart6m = createChartData('6m', data6m);
+const chart1y = createChartData('1y', data1y);
+const chart3y = createChartData('3y', data3y);
+const chart5y = createChartData('5y', data5y);
 
 // Combine chart data into one object.
-const portfolioChartData: { [key in '24h' | '7d' | '30d']: RealtimeChartData } = {
-  '24h': chartData24h,
-  '7d': chartData7d,
-  '30d': chartData30d,
+const indexReturnChartData = {
+  '1d': chart1d,
+  '1w': chart1w,
+  '2w': chart2w,
+  '1m': chart1m,
+  '3m': chart3m,
+  '6m': chart6m,
+  '1y': chart1y,
+  '3y': chart3y,
+  '5y': chart5y,
 };
 
 const myLegendValues: LegendValue[] = [
@@ -253,11 +268,17 @@ export default function IndexDetailsView() {
 
           <Grid2 size={{ xs: 12, md: 8 }}>
             <AreaChartCard
-              id="portfolio_value"
-              title="Portfolio Value"
-              chart={portfolioChartData}
+              id="index_return"
+              title="Index Return"
+              chart={indexReturnChartData}
+              percentage
               legendValues={myLegendValues}
               color={theme.palette.primary.main}
+              sx={{
+                borderRadius: 3,
+                border: 1,
+                borderColor: alpha(theme.palette.grey[500], 0.32),
+              }}
             />
           </Grid2>
         </Grid2>
