@@ -26,19 +26,6 @@ interface IndexBuyCardProps extends CardProps {
 export interface QuickAmountButton {
   amount: number;
 }
-
-const QUICK_BUTTONS: QuickAmountButton[] = [
-  {
-    amount: 100,
-  },
-  {
-    amount: 300,
-  },
-  {
-    amount: 1000,
-  },
-];
-
 const DEFAULT_DESTINATION = 'Wallet address';
 
 const IndexBuyCard: React.FC<IndexBuyCardProps> = ({

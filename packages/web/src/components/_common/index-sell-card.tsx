@@ -17,7 +17,7 @@ import IndexSellReviewDialog from './index-sell-review-dialog';
 
 interface IndexSellCardProps extends CardProps {
   tokensList?: Token[];
-  cashBalance?: number;
+  userIndexBalanceTokens: number;
   queryParams?: BuyQueryParams;
   index: IndexDetails;
 }
@@ -26,38 +26,21 @@ export interface QuickAmountButton {
   amount: number;
 }
 
-const QUICK_BUTTONS: QuickAmountButton[] = [
-  {
-    amount: 100,
-  },
-  {
-    amount: 300,
-  },
-  {
-    amount: 1000,
-  },
-];
-
-const DEFAULT_DESTINATION = 'Wallet address';
-
 const IndexSellCard: React.FC<IndexSellCardProps> = ({
   tokensList = [],
-  cashBalance,
+  userIndexBalanceTokens,
   queryParams,
   index,
   ...other
 }) => {
   const theme = useTheme();
   const { t } = useTranslate();
-  const [destination, setDestination] = useState<string>(DEFAULT_DESTINATION);
-  const [buyForDifferentAddress, setBuyForDifferentAddress] = useState(false);
   const [isFiatMode, setIsFiatMode] = useState<boolean>(true);
   const [buyToken, setBuyToken] = useState<Token | null>(tokensList.length ? tokensList[0] : null);
   const [amount, setAmount] = useState<string>('0');
   const [open, setOpen] = useState(false);
   const [activeButton, setActiveButton] = useState<'sell' | 'buy' | 'send' | ''>('');
 
-  const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const toggleAmountMode = () => {
@@ -84,7 +67,7 @@ const IndexSellCard: React.FC<IndexSellCardProps> = ({
   const buyableAmt =
     buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.usdValue) : 0;
 
-  const balance = cashBalance ?? 0;
+  const balance = userIndexBalanceTokens ?? 0;
   const insufficient = fiatValue > balance;
 
   // State for review dialog
@@ -149,13 +132,13 @@ const IndexSellCard: React.FC<IndexSellCardProps> = ({
       return 'Insufficient balance';
     }
 
-    return 'Buy';
+    return 'Sell';
   };
 
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
 
-    if (label !== 'Buy') {
+    if (label !== 'Sell') {
       return;
     }
 
@@ -303,7 +286,7 @@ const IndexSellCard: React.FC<IndexSellCardProps> = ({
           {/* Pick token */}
           <Button
             onClick={() => {
-              setActiveButton('buy');
+              setActiveButton('sell');
               setOpen(true);
             }}
             sx={{
@@ -398,7 +381,7 @@ const IndexSellCard: React.FC<IndexSellCardProps> = ({
               size="large"
               sx={{ borderRadius: 2.5 }}
               onClick={handleMainButtonClick}
-              disabled={getButtonLabel() !== 'Buy'}
+              disabled={getButtonLabel() !== 'Sell'}
             >
               {getButtonLabel()}
             </Button>

@@ -56,6 +56,7 @@ export interface TokenActionCardProps extends CardProps {
   queryParams?: any;
   initialTab?: TokenActionKey;
   index?: IndexDetails;
+  userIndexBalanceTokens?: number;
 }
 
 // ----------------------------------------------------------------------
@@ -73,6 +74,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   queryParams,
   initialTab,
   index,
+  userIndexBalanceTokens,
   ...other
 }) => {
   const theme = useTheme();
@@ -154,7 +156,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
       }
       case 'index-sell': {
         if (!index) {
-          console.warn('TokenActionCard: `index` is required for the index-buy tab.');
+          console.warn('TokenActionCard: `index` is required for the index-sell tab.');
           return (
             <Box sx={{ p: 2 }}>
               <Typography variant="body2" color="text.secondary">
@@ -164,12 +166,14 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           );
         }
 
+        const balanceTokens = userIndexBalanceTokens ?? 0; // <-- default
+
         return (
           <IndexSellCard
             tokensList={buyCardTokens}
-            cashBalance={cashBalance}
+            userIndexBalanceTokens={balanceTokens}
             queryParams={queryParams}
-            data-testid="buy-card"
+            data-testid="sell-card"
             index={index}
           />
         );

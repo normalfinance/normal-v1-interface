@@ -378,6 +378,7 @@ export default function IndexDetailsView() {
               loading={globalIsLoading}
               enabledTabs={enabledTabs}
               initialTab={activeTab}
+              userIndexBalanceTokens={idx.priceUsd}
               index={idx}
               sx={{
                 borderRadius: 3,
