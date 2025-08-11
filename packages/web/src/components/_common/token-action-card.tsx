@@ -2,7 +2,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
-import type { StateToken as Token } from '@normalfinance/types';
+import type { IndexDetails, StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
 import Skeleton from 'react-loading-skeleton';
@@ -21,11 +21,12 @@ import SwapCard from './swap-card';
 import SendCard from './send-card';
 import ZealyHighlight from './zealy/zealy-highlight';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
+import IndexBuyCard from './index-buy-card';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
 
-export type TokenActionKey = 'swap' | 'send' | 'buy';
+export type TokenActionKey = 'swap' | 'send' | 'buy' | 'index-buy';
 
 interface ActionConfig {
   value: TokenActionKey;
@@ -36,6 +37,7 @@ const ALL_TABS: readonly ActionConfig[] = [
   { value: 'swap', label: 'Swap' },
   { value: 'send', label: 'Send' },
   { value: 'buy', label: 'Buy' },
+  { value: 'index-buy', label: 'Buy' },
 ] as const;
 
 // ----------------------------------------------------------------------
@@ -61,6 +63,7 @@ export interface TokenActionCardProps extends CardProps {
   loading?: boolean;
   queryParams?: any;
   initialTab?: TokenActionKey;
+  index?: IndexDetails;
 }
 
 // ----------------------------------------------------------------------
@@ -77,6 +80,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   loading,
   queryParams,
   initialTab,
+  index,
   ...other
 }) => {
   const theme = useTheme();
@@ -134,6 +138,28 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
             data-testid="buy-card"
           />
         );
+      case 'index-buy': {
+        if (!index) {
+          console.warn('TokenActionCard: `index` is required for the index-buy tab.');
+          return (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Index data unavailable.
+              </Typography>
+            </Box>
+          );
+        }
+
+        return (
+          <IndexBuyCard
+            tokensList={buyCardTokens}
+            cashBalance={cashBalance}
+            queryParams={queryParams}
+            data-testid="buy-card"
+            index={index} // now narrowed, TS is happy
+          />
+        );
+      }
       default:
         return null;
     }

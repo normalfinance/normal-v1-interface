@@ -1,5 +1,12 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useApiTokens } from '@/hooks';
+import { captureException } from '@sentry/nextjs';
+import { useQueryParams } from '@/hooks/use-query-params';
+import { useAppStore } from '@normalfinance/state';
+import type { TokenActionQueryParams } from '@/types/query-params';
+
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import Grid2 from '@mui/material/Grid2';
@@ -8,13 +15,13 @@ import { ProfileCover } from '@/sections/rewards/profile-cover';
 import { format } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import Card from '@mui/material/Card';
-import type { IndexDetails, WeightedToken, IndexEvent } from '@normalfinance/types';
+import type { IndexDetails, WeightedToken } from '@normalfinance/types';
 import type { Token } from '@normalfinance/types';
 import { fCurrency, fCurrencyCompact, fShortenNumber } from '@/utils/format-number';
 import { SingleStat } from '@/components/_explore-page-components';
 import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
 import IndexMetaCard from '@/components/_index-details/index-meta-card';
-import TokenActionCard from '@/components/_common/token-action-card';
+import TokenActionCard, { TokenActionKey } from '@/components/_common/token-action-card';
 import IndexPieChart from '@/components/_index-details/index-pie-chart';
 import { alpha, useTheme } from '@mui/material/styles';
 import { IndexHistoryTimeline } from '@/components/_index-details/index-history-timeline';
@@ -65,7 +72,13 @@ const myLegendValues: LegendValue[] = [
   { title: 'Balance', number: 7334, formatter: fCurrencyCompact },
 ];
 
-const makeToken = (id: number, name: string, short: string, logo: string): Token => ({
+const makeToken = (
+  id: number,
+  name: string,
+  short: string,
+  logo: string,
+  usdValue: number
+): Token => ({
   id,
   name,
   shortname: short,
@@ -76,6 +89,7 @@ const makeToken = (id: number, name: string, short: string, logo: string): Token
   countstatus: 0,
   pricestatus: 0,
   address: '',
+  usdValue,
 });
 
 /* Base tokens */
@@ -83,25 +97,29 @@ const BTC = makeToken(
   1,
   'Bitcoin',
   'BTC',
-  'https://s2.coinmarketcap.com/static/img/coins/64x64/1.png'
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/1.png',
+  64000
 );
 const ETH = makeToken(
   2,
   'Ethereum',
   'ETH',
-  'https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png'
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png',
+  3200
 );
 const SOL = makeToken(
   3,
   'Solana',
   'SOL',
-  'https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png'
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png',
+  150
 );
 const XRP = makeToken(
   4,
   'Ripple',
   'XRP',
-  'https://s2.coinmarketcap.com/static/img/coins/64x64/52.png'
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/52.png',
+  0.55
 );
 
 /* Helper to merge weight */
@@ -248,6 +266,66 @@ export default function IndexDetailsView() {
   const { t } = useTranslate();
   const walletAddress = usePersistStore((s) => s.wallet.address);
 
+  const { params } = useQueryParams<TokenActionQueryParams>();
+  const { tokens: apiTokens } = useApiTokens();
+  const { tokens, getAllTokens, globalIsLoading, setGlobalIsLoading } = useAppStore();
+
+  // Determine which tab to show based on query params, default to 'swap'
+  const activeTab: TokenActionKey = params?.tab || 'index-buy';
+
+  // Determine which tabs should be enabled (you can customize this logic)
+  const enabledTabs: TokenActionKey[] = ['buy', 'index-buy'];
+
+  const getCardQueryParams = () => {
+    if (!params) return undefined;
+
+    switch (activeTab) {
+      case 'swap':
+        return {
+          asset: params.asset,
+          token_in: params.token_in,
+          token_out: params.token_out,
+          in_amount: params.in_amount,
+          out_minimum: params.out_minimum,
+        };
+      case 'send':
+        return {
+          token: params.token,
+          amount: params.amount,
+          destination: params.destination,
+        };
+      case 'buy':
+        return {
+          token: params.token,
+          amount: params.amount,
+        };
+      case 'index-buy':
+        return {
+          token: params.token,
+          amount: params.amount,
+        };
+      default:
+        return undefined;
+    }
+  };
+
+  // Effect hook to fetch all tokens once the component mounts
+  useEffect(() => {
+    const refreshTokens = async (): Promise<void> => {
+      setGlobalIsLoading(true);
+      try {
+        await getAllTokens(apiTokens);
+        setGlobalIsLoading(false);
+      } catch (e) {
+        captureException(e);
+        console.error(e);
+      } finally {
+        setGlobalIsLoading(false);
+      }
+    };
+    refreshTokens();
+  }, []);
+
   const idx = INDEXES[0];
 
   const stats = buildStats(idx);
@@ -293,12 +371,19 @@ export default function IndexDetailsView() {
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12, md: 4 }}>
             <TokenActionCard
-              tokensList={TOKENS_LIST}
+              tokensList={tokens}
               swapFeeInfo={swapFeeInfo}
-              cashBalance={0}
-              enabledTabs={['send', 'buy']}
-              initialTab="send"
-              sx={{ borderRadius: 3, border: 1, borderColor: alpha(theme.palette.grey[500], 0.32) }}
+              cashBalance={1000}
+              queryParams={getCardQueryParams()}
+              loading={globalIsLoading}
+              enabledTabs={enabledTabs}
+              initialTab={activeTab}
+              index={idx}
+              sx={{
+                borderRadius: 3,
+                border: 1,
+                borderColor: alpha(theme.palette.grey[500], 0.32),
+              }}
             />
           </Grid2>
 
