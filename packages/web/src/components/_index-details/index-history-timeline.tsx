@@ -32,6 +32,13 @@ export function IndexHistoryTimeline({ events }: { events: IndexEvent[] }) {
   const [open, setOpen] = useState(false);
   const theme = useTheme();
 
+  const typeTextColor: Record<IndexEvent['type'], string> = {
+    CREATION: theme.palette.primary.main,
+    ADD: theme.palette.success.main,
+    REMOVE: theme.palette.error.main,
+    REBALANCE: theme.palette.warning.main,
+  };
+
   // Sort events by timestamp descending (most recent first)
   const sortedEvents = [...events].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -87,9 +94,28 @@ export function IndexHistoryTimeline({ events }: { events: IndexEvent[] }) {
                   {idx < recentEvents.length - 1 && <TimelineConnector />}
                 </TimelineSeparator>
                 <TimelineContent>
-                  <Typography variant="body2" color="text.primary">
-                    {label}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <Box
+                      component="span"
+                      sx={{
+                        borderRadius: 9999,
+                        border: `1px solid ${theme.palette.divider}`,
+                        backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                        color: typeTextColor[event.type],
+                        px: 1,
+                        py: 0.25,
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {event.type}
+                    </Box>
+
+                    <Typography variant="body2" color="text.primary" component="span">
+                      {label}
+                    </Typography>
+                  </Box>
+
                   <Typography variant="caption" color="text.secondary">
                     {new Date(event.timestamp).toLocaleString()}
                   </Typography>
@@ -147,9 +173,28 @@ export function IndexHistoryTimeline({ events }: { events: IndexEvent[] }) {
                       {idx < sortedEvents.length - 1 && <TimelineConnector />}
                     </TimelineSeparator>
                     <TimelineContent>
-                      <Typography variant="body2" color="text.primary">
-                        {label}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Box
+                          component="span"
+                          sx={{
+                            borderRadius: 9999,
+                            border: `1px solid ${theme.palette.divider}`,
+                            backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                            color: typeTextColor[event.type],
+                            px: 1,
+                            py: 0.25,
+                            fontSize: 12,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {event.type}
+                        </Box>
+
+                        <Typography variant="body2" color="text.primary" component="span">
+                          {label}
+                        </Typography>
+                      </Box>
+
                       <Typography variant="caption" color="text.secondary">
                         {new Date(event.timestamp).toLocaleString()}
                       </Typography>

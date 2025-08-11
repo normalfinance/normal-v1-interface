@@ -20,6 +20,8 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { IndexHistoryTimeline } from '@/components/_index-details/index-history-timeline';
 import { createChartData, RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 import { AreaChartCard, LegendValue } from '@/components/_common/area-chart-card';
+import IndexDetailsTable from '@/components/_index-details/index-details-table';
+import type { PoolTxRow } from '@/types/pools';
 
 const data1d = [
   0, 0.3, 0.6, 0.9, 1.1, 1.0, 1.3, 1.5, 1.7, 1.6, 1.8, 2.0, 2.1, 2.2, 2.4, 2.5, 2.7, 2.9, 3.0, 3.1,
@@ -141,6 +143,49 @@ export const INDEXES: IndexDetails[] = [
       { type: 'ADD', assetShortname: 'ADA', timestamp: '2025-06-18T08:15:00Z' },
       { type: 'REMOVE', assetShortname: 'DOT', timestamp: '2025-07-22T11:45:00Z' },
     ],
+  },
+];
+
+const TABLE_ROWS: PoolTxRow[] = [
+  {
+    type: 'Buy',
+    timestamp: Date.now() - 60 * 60 * 1000,
+    tokenAAmount: 120.5,
+    tokenBAmount: 360.0,
+    user: 'GB6P...3K9Q',
+    txHash: 'a1f3e0b2c4d5e6f7a8b9c0d1e2f3a4b5',
+  },
+  {
+    type: 'Sell',
+    timestamp: Date.now() - 2 * 60 * 60 * 1000,
+    tokenAAmount: 75.2,
+    tokenBAmount: 210.4,
+    user: 'GC7X...P0ZT',
+    txHash: 'b2c4d5e6f7a8b9c0d1e2f3a4b5a1f3e0',
+  },
+  {
+    type: 'Buy',
+    timestamp: Date.now() - 6 * 60 * 60 * 1000,
+    tokenAAmount: 300.0,
+    tokenBAmount: 915.3,
+    user: 'GD1M...L8QW',
+    txHash: 'c4d5e6f7a8b9c0d1e2f3a4b5a1f3e0b2',
+  },
+  {
+    type: 'Sell',
+    timestamp: Date.now() - 12 * 60 * 60 * 1000,
+    tokenAAmount: 48.9,
+    tokenBAmount: 150.2,
+    user: 'GE9K...R2VX',
+    txHash: 'd5e6f7a8b9c0d1e2f3a4b5a1f3e0b2c4',
+  },
+  {
+    type: 'Buy',
+    timestamp: Date.now() - 24 * 60 * 60 * 1000,
+    tokenAAmount: 510.75,
+    tokenBAmount: 1610.0,
+    user: 'GF2H...M7NP',
+    txHash: 'e6f7a8b9c0d1e2f3a4b5a1f3e0b2c4d5',
   },
 ];
 
@@ -279,6 +324,17 @@ export default function IndexDetailsView() {
                 border: 1,
                 borderColor: alpha(theme.palette.grey[500], 0.32),
               }}
+            />
+          </Grid2>
+        </Grid2>
+
+        <Grid2 container spacing={3} sx={{ mt: 3 }}>
+          <Grid2 size={{ xs: 12 }}>
+            <IndexDetailsTable
+              baseTokenSymbol="BTC"
+              quoteTokenSymbol="XLM"
+              rows={TABLE_ROWS}
+              xlmPrice={0.12}
             />
           </Grid2>
         </Grid2>
