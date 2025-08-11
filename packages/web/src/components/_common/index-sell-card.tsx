@@ -9,14 +9,13 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
 import PickToken from './pick-token';
 import { WalletGate } from './wallet-gate';
-import { Checkbox, FormControlLabel } from '@mui/material';
-import IndexPurchaseReviewDialog from './index-purchase-review-dialog';
 import { Iconify } from '../template/iconify';
 import { fCurrency } from '@/utils/format-number';
 import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import IndexSellReviewDialog from './index-sell-review-dialog';
 
-interface IndexBuyCardProps extends CardProps {
+interface IndexSellCardProps extends CardProps {
   tokensList?: Token[];
   cashBalance?: number;
   queryParams?: BuyQueryParams;
@@ -41,7 +40,7 @@ const QUICK_BUTTONS: QuickAmountButton[] = [
 
 const DEFAULT_DESTINATION = 'Wallet address';
 
-const IndexBuyCard: React.FC<IndexBuyCardProps> = ({
+const IndexSellCard: React.FC<IndexSellCardProps> = ({
   tokensList = [],
   cashBalance,
   queryParams,
@@ -178,6 +177,13 @@ const IndexBuyCard: React.FC<IndexBuyCardProps> = ({
   }
 
   const insufficientBalance = buyToken ? coinAmount > buyToken.balance : false;
+
+  const amountInputNum = parseFloat(amount) || 0;
+  const amountUsd = isFiatMode
+    ? amountInputNum
+    : (buyToken?.usdValue ?? 0) > 0
+      ? amountInputNum * (index.priceUsd || 0)
+      : 0;
 
   return (
     <Stack sx={{ gap: '2px' }}>
@@ -383,67 +389,6 @@ const IndexBuyCard: React.FC<IndexBuyCardProps> = ({
           </Button>
         </Box>
 
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            padding: '12px',
-            px: '16px',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-            borderRadius: '20px',
-            border: `1px solid ${theme.palette.divider}`,
-            backgroundColor: alpha(theme.palette.grey[500], 0.08),
-            overflow: 'hidden',
-          }}
-        >
-          <FormControlLabel
-            sx={{ mb: 2 }}
-            control={
-              <Checkbox
-                checked={buyForDifferentAddress}
-                onChange={(e) => setBuyForDifferentAddress(e.target.checked)}
-                color="primary"
-              />
-            }
-            label={t('Buy for different address')}
-          />
-          <Typography variant="caption" sx={{ color: theme.palette.text.primary }}>
-            {t('To')}
-          </Typography>
-          <InputBase
-            type="text"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            onFocus={() => {
-              if (destination === DEFAULT_DESTINATION) {
-                setDestination('');
-              }
-            }}
-            onBlur={() => {
-              if (destination.trim() === '') {
-                setDestination(DEFAULT_DESTINATION);
-              }
-            }}
-            sx={{
-              width: '100%',
-              border: 'none',
-              padding: 0,
-              color:
-                destination === DEFAULT_DESTINATION
-                  ? theme.palette.text.secondary
-                  : theme.palette.text.primary,
-            }}
-            inputProps={{
-              style: {
-                fontSize: '14px',
-                fontWeight: 400,
-                lineHeight: '22px',
-              },
-            }}
-            disabled={!buyForDifferentAddress}
-          />
-        </Box>
         <Box>
           {isConnected ? (
             <Button
@@ -471,17 +416,13 @@ const IndexBuyCard: React.FC<IndexBuyCardProps> = ({
         />
 
         {reviewOpen && (
-          <IndexPurchaseReviewDialog
+          <IndexSellReviewDialog
             open={reviewOpen}
             onClose={handleReviewClose}
             index={index}
-            amountUsd={fiatValue}
-            paymentToken={buyToken ?? undefined}
-            destinationLabel={
-              buyForDifferentAddress && destination && destination !== DEFAULT_DESTINATION
-                ? destination
-                : persist.wallet.address || 'Your wallet'
-            }
+            amountInput={amountInputNum}
+            isFiatMode={isFiatMode}
+            payoutToken={buyToken ?? undefined}
           />
         )}
       </Stack>
@@ -489,4 +430,4 @@ const IndexBuyCard: React.FC<IndexBuyCardProps> = ({
   );
 };
 
-export default IndexBuyCard;
+export default IndexSellCard;

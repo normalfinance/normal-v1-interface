@@ -274,7 +274,7 @@ export default function IndexDetailsView() {
   const activeTab: TokenActionKey = params?.tab || 'index-buy';
 
   // Determine which tabs should be enabled (you can customize this logic)
-  const enabledTabs: TokenActionKey[] = ['buy', 'index-buy'];
+  const enabledTabs: TokenActionKey[] = ['index-buy', 'index-sell'];
 
   const getCardQueryParams = () => {
     if (!params) return undefined;
