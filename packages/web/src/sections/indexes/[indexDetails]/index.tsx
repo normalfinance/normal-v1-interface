@@ -125,13 +125,23 @@ export const INDEXES: IndexDetails[] = [
     updatedAt: '2025-08-05T07:30:00Z',
 
     weighting: {
-      type: 'MARKET_CAP',
+      type: 'CUSTOM',
       label: 'Market Cap Weighted',
       description: 'Weights each asset according to its circulating-market-cap share.',
     },
 
     /* Only four assets for the demo; others 0 % */
-    constituents: [w(BTC, 48.0), w(ETH, 25.5), w(SOL, 15.0), w(XRP, 7.5)],
+    constituents: [
+      w(BTC, 48.0),
+      w(ETH, 25.5),
+      w(SOL, 15.0),
+      w(XRP, 7.5),
+      w(XRP, 7.5),
+      w(XRP, 7.5),
+      w(XRP, 7.5),
+      w(XRP, 7.5),
+      w(XRP, 7.5),
+    ],
 
     methodologyUrl: 'https://normal.finance/methodology/blue-chip-10',
 

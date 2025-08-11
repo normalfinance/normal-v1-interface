@@ -1,8 +1,26 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import type { IndexDetails } from '@normalfinance/types';
-import { Card, Stack, Typography, Divider, List, ListItem, ListItemText, Box } from '@mui/material';
-import { fCurrency } from '@/utils/format-number';
+import {
+  Card,
+  Stack,
+  Typography,
+  Divider,
+  Box,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  useMediaQuery,
+} from '@mui/material';
 import { format } from 'date-fns';
 import { alpha, useTheme } from '@mui/material/styles';
 
@@ -10,154 +28,237 @@ interface Props {
   index: IndexDetails;
 }
 
+/** Reusable minimalist table for token rows */
+function ConstituentsTable({
+  rows,
+  showHead = true,
+}: {
+  rows: IndexDetails['constituents'];
+  showHead?: boolean;
+}) {
+  const theme = useTheme();
+  const isXs = useMediaQuery(theme.breakpoints.down('sm'));
+
+  return (
+    <TableContainer
+      sx={{
+        border: '1px solid',
+        borderColor: alpha(theme.palette.grey[500], 0.18),
+        borderRadius: 2,
+        overflow: 'hidden',
+      }}
+    >
+      <Table
+        size="small"
+        sx={{
+          '& th, & td': {
+            borderBottom: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+            borderColor: alpha(theme.palette.divider, 0.6),
+          },
+          '& th:first-of-type, & td:first-of-type': { pl: 2 },
+          '& th:last-of-type, & td:last-of-type': { pr: 2 },
+        }}
+      >
+        {showHead && (
+          <TableHead>
+            <TableRow sx={{ '& th': { fontWeight: 600, color: 'text.secondary' } }}>
+              <TableCell>Asset</TableCell>
+              <TableCell align="right">{isXs ? 'Wgt %' : 'Weight (%)'}</TableCell>
+            </TableRow>
+          </TableHead>
+        )}
+        <TableBody>
+          {rows.map((tok) => (
+            <TableRow key={tok.id} hover>
+              <TableCell sx={{ py: 1.25 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    component="img"
+                    src={tok.icon}
+                    alt={tok.shortname}
+                    sx={{ width: 20, height: 20, borderRadius: 9999, flexShrink: 0 }}
+                  />
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {tok.shortname}
+                  </Typography>
+                </Box>
+              </TableCell>
+              <TableCell align="right" sx={{ py: 1.25, color: 'text.secondary' }}>
+                {tok.weightPct.toFixed(2)} %
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
+
 export default function IndexMetaCard({ index }: Props) {
   const fmt = (iso: string) => format(new Date(iso), 'yyyy-MM-dd');
   const theme = useTheme();
 
-  const getLargestSmallest = (arr: IndexDetails['constituents']) => {
-    if (arr.length === 0) return { largest: null, smallest: null, others: [] };
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-    const sorted = [...arr].sort((a, b) => b.weightPct - a.weightPct);
+  const isEqualWeighting =
+    index.weighting?.type === 'EQUAL' || index.weighting?.label?.toLowerCase().includes('equal');
 
-    const largest = sorted[0];
-    const smallest = sorted[sorted.length - 1];
-    const others = sorted.slice(1, -1);
+  // Sorted list + largest/smallest for display
+  const { largest, smallest, allTokensSorted } = useMemo(() => {
+    const sorted = [...index.constituents].sort((a, b) => b.weightPct - a.weightPct);
 
-    return { largest, smallest, others };
-  };
+    if (sorted.length === 0) {
+      return {
+        largest: null as IndexDetails['constituents'][number] | null,
+        smallest: null as IndexDetails['constituents'][number] | null,
+        allTokensSorted: sorted,
+      };
+    }
 
-  const { largest, smallest, others } = getLargestSmallest(index.constituents);
+    const lg = sorted[0];
+    const sm = sorted[sorted.length - 1];
+    const smallestFinal = lg.id === sm.id ? null : sm;
+
+    return {
+      largest: lg,
+      smallest: smallestFinal,
+      allTokensSorted: sorted,
+    };
+  }, [index.constituents]);
+
+  // Truncate table to first 5, show dialog for full list
+  const MAX_SHOW = 5;
+  const needsTruncate = allTokensSorted.length > MAX_SHOW;
+  const displayedRows = needsTruncate ? allTokensSorted.slice(0, MAX_SHOW) : allTokensSorted;
 
   return (
-    <Card
-      sx={[
-        {
+    <>
+      <Card
+        sx={{
           p: 4,
           borderRadius: 3,
           alignItems: 'center',
           border: 1,
           borderColor: alpha(theme.palette.grey[500], 0.32),
-        },
-      ]}
-    >
-      <Stack spacing={1}>
-        <Typography variant="h6">{index.name}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {index.description}
-        </Typography>
+        }}
+      >
+        <Stack spacing={1.5}>
+          {/* Index Name and Description */}
+          <Typography variant="h6">{index.name}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {index.description}
+          </Typography>
 
-        <Divider flexItem sx={{ my: 1 }} />
+          <Divider flexItem sx={{ my: 1 }} />
 
-        <Typography variant="subtitle2">Details</Typography>
-        <List dense disablePadding>
-          {[
-            { label: 'Created', value: fmt(index.creationDate) },
-            { label: 'Last update', value: fmt(index.updatedAt) },
-            { label: 'Weighting strategy', value: index.weighting.label },
-          ].map((row) => (
-            <ListItem key={row.label} disableGutters sx={{ px: 0 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  width: 1,
-                }}
-              >
-                <Typography variant="body2" fontWeight={400} color="text.secondary">
+          {/* Index Details */}
+          <Typography variant="subtitle2">Details</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 0.5, columnGap: 2 }}>
+            {[
+              { label: 'Created', value: fmt(index.creationDate) },
+              { label: 'Last update', value: fmt(index.updatedAt) },
+              { label: 'Weighting strategy', value: index.weighting.label },
+            ].map((row) => (
+              <Box key={row.label} sx={{ display: 'contents' }}>
+                <Typography variant="body2" color="text.secondary">
                   {row.label}:
                 </Typography>
-                <Typography variant="body2" fontWeight={700} color="text.primary">
+                <Typography
+                  variant="body2"
+                  fontWeight={700}
+                  color="text.primary"
+                  sx={{ textAlign: 'right' }}
+                >
                   {row.value}
                 </Typography>
               </Box>
-            </ListItem>
-          ))}
-        </List>
-
-        <Divider flexItem sx={{ my: 1 }} />
-
-        <Typography variant="subtitle2">Constituents</Typography>
-
-        <List dense disablePadding>
-          {[
-            { label: 'Largest asset', token: largest },
-            { label: 'Smallest asset', token: smallest },
-          ]
-            .filter((row) => row.token)
-            .map((row) => (
-              <ListItem key={row.label} disableGutters sx={{ px: 0 }}>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    width: 1,
-                  }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    {row.label}:
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 1 }}>
-                    <Box
-                      component="img"
-                      src={row.token!.icon}
-                      alt={row.token!.shortname}
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        display: 'inline-block',
-                        flexShrink: 0,
-                        borderRadius: 9999,
-                      }}
-                    />
-
-                    <Typography variant="body2" color="text.primary" sx={{ fontWeight: 500 }}>
-                      {row.token!.shortname}
-                    </Typography>
-
-                    <Typography variant="body2" color="text.secondary">
-                      {`${row.token!.weightPct.toFixed(2)} %`}
-                    </Typography>
-                  </Box>
-                </Box>
-              </ListItem>
             ))}
-        </List>
+          </Box>
 
-        <Typography variant="subtitle2">Other</Typography>
+          <Divider flexItem sx={{ my: 1 }} />
 
-        <List dense disablePadding>
-          {others.map((tok) => (
-            <ListItem key={tok.id} disableGutters sx={{ px: 0 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  alignItems: 'center',
-                  columnGap: 1,
-                  width: 1,
-                }}
-              >
-                <Box
-                  component="img"
-                  src={tok.icon}
-                  alt={tok.shortname}
-                  sx={{ width: 20, height: 20, borderRadius: 9999 }}
-                />
+          {/* Constituents */}
+          <Typography variant="subtitle2">Constituents</Typography>
 
-                <Typography variant="body2" color="text.primary" sx={{ fontWeight: 500 }}>
-                  {tok.shortname}
-                </Typography>
+          {/* Non-equal weighting: show Largest/Smallest as simple rows (no table/borders) */}
+          {!isEqualWeighting && (
+            <>
+              {[
+                { label: 'Largest asset', token: largest },
+                { label: 'Smallest asset', token: smallest },
+              ]
+                .filter((r) => r.token)
+                .map((row) => (
+                  <Box
+                    key={row.label}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      width: 1,
+                      py: 0.75,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      {row.label}:
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 1 }}>
+                      <Box
+                        component="img"
+                        src={row.token!.icon}
+                        alt={row.token!.shortname}
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          display: 'inline-block',
+                          flexShrink: 0,
+                          borderRadius: 9999,
+                        }}
+                      />
+                      <Typography variant="body2" color="text.primary" sx={{ fontWeight: 500 }}>
+                        {row.token!.shortname}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {row.token!.weightPct.toFixed(2)} %
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+            </>
+          )}
 
-                <Typography variant="body2" color="text.secondary">
-                  {`${tok.weightPct.toFixed(2)} %`}
-                </Typography>
-              </Box>
-            </ListItem>
-          ))}
-        </List>
-      </Stack>
-    </Card>
+          {/* All assets table (truncated to 5) */}
+          <ConstituentsTable rows={displayedRows} />
+
+          {/* View all button if truncated */}
+          {needsTruncate && (
+            <Button
+              onClick={() => setDialogOpen(true)}
+              size="small"
+              sx={{ alignSelf: 'flex-end', mt: 1 }}
+            >
+              View all constituents
+            </Button>
+          )}
+        </Stack>
+      </Card>
+
+      {/* Dialog showing ALL constituents */}
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        scroll="paper"
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>All Constituents</DialogTitle>
+        <DialogContent dividers>
+          <ConstituentsTable rows={allTokensSorted} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
