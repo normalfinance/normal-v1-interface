@@ -91,7 +91,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
       >
         {/* animated waves */}
         <WavyBackground
-          containerClassName="w-full h-full"
+          sizing="viewport"
+          baseline="center" // or "top"
+          yOffset={0}
           colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
           waveOpacity={0.35}
           speed="slow"
