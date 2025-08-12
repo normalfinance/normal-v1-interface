@@ -1,24 +1,27 @@
+import type { IndexEvent } from '@normalfinance/types';
+
 import React, { useState } from 'react';
-import {
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineDot,
-  TimelineConnector,
-  TimelineContent,
-} from '@mui/lab';
+import { useTranslate } from '@/locales';
+
+import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
-  Typography,
+  Card,
   Button,
   Dialog,
+  Typography,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Card,
 } from '@mui/material';
-import { IndexEvent } from '@normalfinance/types';
-import { alpha, useTheme } from '@mui/material/styles';
+import {
+  Timeline,
+  TimelineDot,
+  TimelineItem,
+  TimelineContent,
+  TimelineSeparator,
+  TimelineConnector,
+} from '@mui/lab';
 
 // Color mapping for different event types
 const eventDotColor: Record<IndexEvent['type'], 'primary' | 'success' | 'error' | 'warning'> = {
@@ -29,6 +32,7 @@ const eventDotColor: Record<IndexEvent['type'], 'primary' | 'success' | 'error' 
 };
 
 export function IndexHistoryTimeline({ events }: { events: IndexEvent[] }) {
+  const { t } = useTranslate();
   const [open, setOpen] = useState(false);
   const theme = useTheme();
 
@@ -85,6 +89,9 @@ export function IndexHistoryTimeline({ events }: { events: IndexEvent[] }) {
               case 'REBALANCE':
                 label = `Rebalanced ${event.assetShortname} to ${event.percent}%`;
                 break;
+              default:
+                label = 'Unknown';
+                break;
             }
             return (
               <TimelineItem key={idx}>
@@ -129,7 +136,7 @@ export function IndexHistoryTimeline({ events }: { events: IndexEvent[] }) {
         {events.length > 5 && (
           <Box textAlign="left" sx={{ mt: 1 }}>
             <Button size="small" onClick={handleOpen}>
-              View All
+              {t('View All')}
             </Button>
           </Box>
         )}
@@ -143,8 +150,8 @@ export function IndexHistoryTimeline({ events }: { events: IndexEvent[] }) {
           scroll="paper"
           aria-labelledby="timeline-dialog-title"
         >
-          <DialogTitle id="timeline-dialog-title">Index Event History</DialogTitle>
-          <DialogContent dividers={true} sx={{ maxHeight: '80vh' }}>
+          <DialogTitle id="timeline-dialog-title">{t('Index Event History')}</DialogTitle>
+          <DialogContent dividers sx={{ maxHeight: '80vh' }}>
             <Timeline
               position="right"
               sx={{ '& .MuiTimelineItem-missingOppositeContent:before': { display: 'none' } }}
@@ -164,6 +171,9 @@ export function IndexHistoryTimeline({ events }: { events: IndexEvent[] }) {
                     break;
                   case 'REBALANCE':
                     label = `Rebalanced ${event.assetShortname} to ${event.percent}%`;
+                    break;
+                  default:
+                    label = 'Unknown';
                     break;
                 }
                 return (
@@ -205,7 +215,7 @@ export function IndexHistoryTimeline({ events }: { events: IndexEvent[] }) {
             </Timeline>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Close</Button>
+            <Button onClick={handleClose}>{t('Close')}</Button>
           </DialogActions>
         </Dialog>
       </Box>

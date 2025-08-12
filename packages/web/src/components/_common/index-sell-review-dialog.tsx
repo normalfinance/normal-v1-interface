@@ -1,17 +1,20 @@
 'use client';
 
-import * as React from 'react';
 import type { IndexDetails, StateToken as Token } from '@normalfinance/types';
+
+import * as React from 'react';
+import { useTranslate } from '@/locales';
+
+import { useTheme } from '@mui/material/styles';
 import {
+  Box,
   Dialog,
+  Button,
+  Typography,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
-  Box,
-  Typography,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 
 /** Props for the sell confirmation */
 export interface IndexSellReviewDialogProps {
@@ -44,6 +47,7 @@ export default function IndexSellReviewDialog({
   isFiatMode,
   payoutToken,
 }: IndexSellReviewDialogProps) {
+  const { t } = useTranslate();
   const theme = useTheme();
 
   // derive token + USD amounts from the input mode
@@ -67,19 +71,19 @@ export default function IndexSellReviewDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" scroll="paper">
-      <DialogTitle>Confirm Index Sell</DialogTitle>
+      <DialogTitle>{t('Confirm Index Sell')}</DialogTitle>
 
       <DialogContent dividers>
         <Box sx={{ display: 'grid', rowGap: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            Index
+            {t('Index')}
           </Typography>
           <Typography variant="body1" sx={{ fontWeight: 600 }}>
             {index.name}
           </Typography>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Amount to sell
+            {t('Amount to sell')}
           </Typography>
           <Typography variant="body1">
             {isFiatMode
@@ -88,14 +92,14 @@ export default function IndexSellReviewDialog({
           </Typography>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Estimated proceeds
+            {t('Estimated proceeds')}
           </Typography>
           <Typography variant="body1">{fmtCurrency(proceedsUsd)}</Typography>
 
           {payoutToken && (
             <>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                You will receive (estimated)
+                {t('You will receive (estimated)')}
               </Typography>
               <Typography variant="body1">
                 {Number.isFinite(payoutUnits)
@@ -106,17 +110,17 @@ export default function IndexSellReviewDialog({
           )}
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
-            This is an estimate. Final amounts may vary slightly due to pricing and fees.
+            {t('This is an estimate. Final amounts may vary slightly due to pricing and fees.')}
           </Typography>
         </Box>
       </DialogContent>
 
       <DialogActions>
         <Button onClick={onClose} variant="outlined">
-          Cancel
+          {t('Cancel')}
         </Button>
         <Button onClick={onConfirm ?? onClose} variant="contained" color="primary">
-          Confirm Sell
+          {t('Confirm Sell')}
         </Button>
       </DialogActions>
     </Dialog>

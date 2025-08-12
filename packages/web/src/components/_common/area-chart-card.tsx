@@ -1,7 +1,7 @@
 'use client';
 
 import type { CardProps } from '@mui/material/Card';
-import type { RealtimeChartData, TimeframeKey } from '@/utils/portfolio-value-chart-series';
+import type { TimeframeKey, RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
@@ -79,6 +79,7 @@ export function AreaChartCard({
   };
 
   // Prepare chart options with custom axis and tooltip formatters
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const chartOptions = useChart({
     colors: [effectiveColor],
     xaxis: {

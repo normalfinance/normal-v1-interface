@@ -1,28 +1,31 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import type { IndexDetails } from '@normalfinance/types';
+
+import { format } from 'date-fns';
+import { useTranslate } from '@/locales';
+import { useMemo, useState } from 'react';
+
+import { alpha, useTheme } from '@mui/material/styles';
 import {
+  Box,
   Card,
   Stack,
-  Typography,
-  Divider,
-  Box,
+  Table,
   Button,
   Dialog,
+  Divider,
+  TableRow,
+  TableBody,
+  TableCell,
+  TableHead,
+  Typography,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   useMediaQuery,
+  TableContainer,
 } from '@mui/material';
-import { format } from 'date-fns';
-import { alpha, useTheme } from '@mui/material/styles';
 
 interface Props {
   index: IndexDetails;
@@ -36,6 +39,7 @@ function ConstituentsTable({
   rows: IndexDetails['constituents'];
   showHead?: boolean;
 }) {
+  const { t } = useTranslate();
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -62,7 +66,7 @@ function ConstituentsTable({
         {showHead && (
           <TableHead>
             <TableRow sx={{ '& th': { fontWeight: 600, color: 'text.secondary' } }}>
-              <TableCell>Asset</TableCell>
+              <TableCell>{t('Asset')}</TableCell>
               <TableCell align="right">{isXs ? 'Wgt %' : 'Weight (%)'}</TableCell>
             </TableRow>
           </TableHead>
@@ -95,6 +99,7 @@ function ConstituentsTable({
 }
 
 export default function IndexMetaCard({ index }: Props) {
+  const { t } = useTranslate();
   const fmt = (iso: string) => format(new Date(iso), 'yyyy-MM-dd');
   const theme = useTheme();
 
@@ -152,7 +157,7 @@ export default function IndexMetaCard({ index }: Props) {
           <Divider flexItem sx={{ my: 1 }} />
 
           {/* Index Details */}
-          <Typography variant="subtitle2">Details</Typography>
+          <Typography variant="subtitle2">{t('Details')}</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 0.5, columnGap: 2 }}>
             {[
               { label: 'Created', value: fmt(index.creationDate) },
@@ -178,7 +183,7 @@ export default function IndexMetaCard({ index }: Props) {
           <Divider flexItem sx={{ my: 1 }} />
 
           {/* Constituents */}
-          <Typography variant="subtitle2">Constituents</Typography>
+          <Typography variant="subtitle2">{t('Constituents')}</Typography>
 
           {/* Non-equal weighting: show Largest/Smallest as simple rows (no table/borders) */}
           {!isEqualWeighting && (
@@ -237,7 +242,7 @@ export default function IndexMetaCard({ index }: Props) {
               size="small"
               sx={{ alignSelf: 'flex-end', mt: 1 }}
             >
-              View all constituents
+              {t('View all constituents')}
             </Button>
           )}
         </Stack>
@@ -251,12 +256,12 @@ export default function IndexMetaCard({ index }: Props) {
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>All Constituents</DialogTitle>
+        <DialogTitle>{t('All Constituents')}</DialogTitle>
         <DialogContent dividers>
           <ConstituentsTable rows={allTokensSorted} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Close</Button>
+          <Button onClick={() => setDialogOpen(false)}>{t('Close')}</Button>
         </DialogActions>
       </Dialog>
     </>

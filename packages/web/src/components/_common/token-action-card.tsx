@@ -5,6 +5,7 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { IndexDetails, StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
+import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
 import { useTabs } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
@@ -19,10 +20,10 @@ import { alpha, useTheme } from '@mui/material/styles';
 import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
-import ZealyHighlight from './zealy/zealy-highlight';
-import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 import IndexBuyCard from './index-buy-card';
 import IndexSellCard from './index-sell-card';
+import ZealyHighlight from './zealy/zealy-highlight';
+import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
@@ -77,6 +78,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   userIndexBalanceTokens,
   ...other
 }) => {
+  const { t } = useTranslate();
   const theme = useTheme();
 
   // Determine which tabs are active for this instance ------------------
@@ -100,7 +102,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   const tabs = useTabs(getInitialTab());
 
   const buyCardTokens = React.useMemo<Token[]>(
-    () => tokensList!.filter((t) => t.symbol === 'XLM' || t.symbol === 'USDC'),
+    () => tokensList!.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol === 'USDC'),
     [tokensList]
   );
 
@@ -138,7 +140,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           return (
             <Box sx={{ p: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                Index data unavailable.
+                {t('Index data unavailable.')}
               </Typography>
             </Box>
           );
@@ -160,7 +162,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           return (
             <Box sx={{ p: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                Index data unavailable.
+                {t('Index data unavailable.')}
               </Typography>
             </Box>
           );

@@ -1,20 +1,30 @@
 import type { CardProps } from '@mui/material';
 import type { BuyQueryParams } from '@/types/query-params';
 import type { IndexDetails, StateToken as Token } from '@normalfinance/types';
+
 import { useTranslate } from '@/locales';
+import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
+
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
+import {
+  Box,
+  Stack,
+  Button,
+  Checkbox,
+  InputBase,
+  Typography,
+  FormControlLabel,
+} from '@mui/material';
+
 import PickToken from './pick-token';
 import { WalletGate } from './wallet-gate';
-import { Checkbox, FormControlLabel } from '@mui/material';
-import IndexPurchaseReviewDialog from './index-purchase-review-dialog';
 import { Iconify } from '../template/iconify';
-import { fCurrency } from '@/utils/format-number';
-import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
-import { getCryptoIconUrl } from '@normalfinance/utils';
+import IndexPurchaseReviewDialog from './index-purchase-review-dialog';
 
 interface IndexBuyCardProps extends CardProps {
   tokensList?: Token[];

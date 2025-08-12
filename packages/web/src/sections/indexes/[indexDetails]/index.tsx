@@ -1,34 +1,36 @@
 'use client';
 
+import type { PoolTxRow } from '@/types/pools';
+import type { TokenActionQueryParams } from '@/types/query-params';
+import type { SingleStat } from '@/components/_explore-page-components';
+import type { LegendValue } from '@/components/_common/area-chart-card';
+import type { TokenActionKey } from '@/components/_common/token-action-card';
+import type { Token, IndexDetails, WeightedToken } from '@normalfinance/types';
+
 import { useEffect } from 'react';
 import { useApiTokens } from '@/hooks';
-import { captureException } from '@sentry/nextjs';
-import { useQueryParams } from '@/hooks/use-query-params';
-import { useAppStore } from '@normalfinance/state';
-import type { TokenActionQueryParams } from '@/types/query-params';
-
 import { useTranslate } from '@/locales';
+import { format } from '@normalfinance/utils';
+import { captureException } from '@sentry/nextjs';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useQueryParams } from '@/hooks/use-query-params';
+import { ProfileCover } from '@/sections/rewards/profile-cover';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { createChartData } from '@/utils/portfolio-value-chart-series';
+import { fCurrency, fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
+
+import Card from '@mui/material/Card';
 import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
-import { ProfileCover } from '@/sections/rewards/profile-cover';
-import { format } from '@normalfinance/utils';
-import { usePersistStore } from '@normalfinance/state';
-import Card from '@mui/material/Card';
-import type { IndexDetails, WeightedToken } from '@normalfinance/types';
-import type { Token } from '@normalfinance/types';
-import { fCurrency, fCurrencyCompact, fShortenNumber } from '@/utils/format-number';
-import { SingleStat } from '@/components/_explore-page-components';
-import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
-import IndexMetaCard from '@/components/_index-details/index-meta-card';
-import TokenActionCard, { TokenActionKey } from '@/components/_common/token-action-card';
-import IndexPieChart from '@/components/_index-details/index-pie-chart';
 import { alpha, useTheme } from '@mui/material/styles';
-import { IndexHistoryTimeline } from '@/components/_index-details/index-history-timeline';
-import { createChartData, RealtimeChartData } from '@/utils/portfolio-value-chart-series';
-import { AreaChartCard, LegendValue } from '@/components/_common/area-chart-card';
+
+import { AreaChartCard } from '@/components/_common/area-chart-card';
+import TokenActionCard from '@/components/_common/token-action-card';
+import IndexMetaCard from '@/components/_index-details/index-meta-card';
+import IndexPieChart from '@/components/_index-details/index-pie-chart';
 import IndexDetailsTable from '@/components/_index-details/index-details-table';
-import type { PoolTxRow } from '@/types/pools';
+import { IndexHistoryTimeline } from '@/components/_index-details/index-history-timeline';
+import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
 
 const data1d = [
   0, 0.3, 0.6, 0.9, 1.1, 1.0, 1.3, 1.5, 1.7, 1.6, 1.8, 2.0, 2.1, 2.2, 2.4, 2.5, 2.7, 2.9, 3.0, 3.1,

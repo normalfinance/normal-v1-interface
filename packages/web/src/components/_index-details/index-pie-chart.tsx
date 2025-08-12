@@ -1,12 +1,13 @@
 import type { CardProps } from '@mui/material/Card';
-import Card from '@mui/material/Card';
-import CardHeader from '@mui/material/CardHeader';
-import Divider from '@mui/material/Divider';
-import { useTheme } from '@mui/material/styles';
-
 import type { IndexDetails } from '@normalfinance/types';
 
+import Card from '@mui/material/Card';
+import Divider from '@mui/material/Divider';
+import { useTheme } from '@mui/material/styles';
+import CardHeader from '@mui/material/CardHeader';
+
 import { ChartLegends } from '@/components/template/chart';
+
 import IndexDonutChart from './index-donut-chart';
 
 type Props = CardProps & {

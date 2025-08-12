@@ -1,6 +1,8 @@
-import { styled, useTheme } from '@mui/material/styles';
-import ReactApexChart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
+
+import ReactApexChart from 'react-apexcharts';
+
+import { styled, useTheme } from '@mui/material/styles';
 
 interface DonutChartProps {
   labels: string[];

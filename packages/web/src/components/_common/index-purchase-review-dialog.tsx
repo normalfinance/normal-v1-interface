@@ -1,24 +1,27 @@
 'use client';
 
-import * as React from 'react';
 import type { IndexDetails, StateToken as Token } from '@normalfinance/types';
+
+import * as React from 'react';
+import { useTranslate } from '@/locales';
+
+import { alpha, useTheme } from '@mui/material/styles';
 import {
+  Box,
+  Table,
   Dialog,
+  Button,
+  TableRow,
+  TableBody,
+  TableCell,
+  TableHead,
+  Typography,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
-  Box,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   useMediaQuery,
+  TableContainer,
 } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
 
 /** Props */
 export interface IndexPurchaseReviewDialogProps {
@@ -39,6 +42,7 @@ const fmtNum = (v: number, max = 6) =>
 
 /** Minimalist table for breakdown */
 function AllocationTable({ index, investmentUsd }: { index: IndexDetails; investmentUsd: number }) {
+  const { t } = useTranslate();
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
   const rows = [...index.constituents].sort((a, b) => b.weightPct - a.weightPct);
@@ -65,7 +69,7 @@ function AllocationTable({ index, investmentUsd }: { index: IndexDetails; invest
       >
         <TableHead>
           <TableRow sx={{ '& th': { fontWeight: 600, color: 'text.secondary' } }}>
-            <TableCell>Asset</TableCell>
+            <TableCell>{t('Asset')}</TableCell>
             <TableCell align="right">{isXs ? 'Wgt %' : 'Weight (%)'}</TableCell>
             <TableCell align="right">{isXs ? 'USD' : 'Allocation (USD)'}</TableCell>
             <TableCell align="right">{isXs ? 'Units' : 'Est. Units'}</TableCell>
@@ -128,6 +132,7 @@ export default function IndexPurchaseReviewDialog({
   paymentToken,
   destinationLabel,
 }: IndexPurchaseReviewDialogProps) {
+  const { t } = useTranslate();
   const theme = useTheme();
 
   const indexTokens =
@@ -135,33 +140,33 @@ export default function IndexPurchaseReviewDialog({
 
   return (
     <Dialog open={open} onClose={onClose} scroll="paper" fullWidth maxWidth="sm">
-      <DialogTitle>Review Index Purchase</DialogTitle>
+      <DialogTitle>{t('Review Index Purchase')}</DialogTitle>
 
       <DialogContent dividers>
         <Box sx={{ display: 'grid', rowGap: 1, mb: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            Index
+            {t('Index')}
           </Typography>
           <Typography variant="body1" sx={{ fontWeight: 600 }}>
             {index.name}
           </Typography>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Destination
+            {t('Destination')}
           </Typography>
           <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>
             {destinationLabel}
           </Typography>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Investment
+            {t('Investment')}
           </Typography>
           <Typography variant="body1">
             {fmtCurrency(amountUsd)} {paymentToken ? `(${paymentToken.symbol})` : ''}
           </Typography>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Est. Index Tokens Received
+            {t('Est. Index Tokens Received')}
           </Typography>
           <Typography variant="body1">
             {Number.isFinite(indexTokens) ? `${fmtNum(indexTokens)} ${index.name ?? ''}` : '—'}
@@ -169,7 +174,7 @@ export default function IndexPurchaseReviewDialog({
         </Box>
 
         <Typography variant="subtitle2" sx={{ mt: 2 }}>
-          Asset Allocation
+          {t('Asset Allocation')}
         </Typography>
 
         <AllocationTable index={index} investmentUsd={amountUsd} />
@@ -177,10 +182,10 @@ export default function IndexPurchaseReviewDialog({
 
       <DialogActions>
         <Button onClick={onClose} variant="outlined">
-          Close
+          {t('Close')}
         </Button>
         <Button onClick={onClose} variant="contained" color="primary">
-          Confirm Buy
+          {t('Confirm Buy')}
         </Button>
       </DialogActions>
     </Dialog>

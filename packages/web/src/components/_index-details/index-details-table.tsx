@@ -7,7 +7,6 @@ import { ago } from '@/utils/format-time';
 import React, { useMemo, useState } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { fTruncate } from '@normalfinance/utils/build/format';
-import { createStellarExpertUrl } from '@/utils/transactions.utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
