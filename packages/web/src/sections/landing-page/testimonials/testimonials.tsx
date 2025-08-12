@@ -46,6 +46,85 @@ const DEFAULT_PROPS = {
   testimonials: [
     {
       quote:
+        '"Whether you’re new to crypto or a long standing investor I would highly recommend checking out Normal Finance. Through Normal’s investment indexes, you have the opportunity to invest in many components within the market, as well as still zeroing in on individual crypto’s should choose that direction."',
+      avatar: { src: '/assets/images/testimonials/4.webp' },
+      name: 'Dr. McGuire',
+      position: 'Doctor of Education (Ed. D.)',
+      numberOfStars: 5,
+    },
+    {
+      quote: `"In crypto, you're not just investing in tokens; you're investing in a team. The Normal Finance team’s drive and positive energy are truly building something special that’s inclusive to everyone."`,
+      avatar: { src: '/assets/images/testimonials/6.webp' },
+      name: 'Raph',
+      position: 'Stellar',
+      numberOfStars: 5,
+    },
+    {
+      quote:
+        '"Hito Wallet, crypto friendly hardware, looks forward to storing Normal Crypto Index tokens."',
+      avatar: { src: '/assets/images/testimonials/5.webp' },
+      name: 'Mikhail Kirillov',
+      position: 'Founder of Hito Wallet',
+      numberOfStars: 5,
+    },
+    {
+      quote: `"Normal Crypto Indexes make financial freedom easy for my family."`,
+      avatar: { src: '/assets/images/testimonials/7.webp' },
+      name: 'Richie Lewis',
+      position: 'Professional Fighter and World Champion Wrestler',
+      numberOfStars: 5,
+    },
+    {
+      quote: `"Normal has the best team and makes crypto investing simpler, smarter, and exactly how it should be."`,
+      avatar: { src: '/assets/images/testimonials/8.webp' },
+      name: 'Zahid Valencia',
+      position: 'Professional USA Wrestler',
+      numberOfStars: 5,
+    },
+    {
+      quote: `"Normal makes crypto investing automated and customizable, perfect for users to diversify."`,
+      avatar: { src: '/assets/images/testimonials/10.webp' },
+      name: 'Roshan Vadassery',
+      position: 'Founder of Permissionaless.net and Crypto Influencer',
+      numberOfStars: 5,
+    },
+    {
+      quote: `"Shoutout to Normal Crypto Indexes! Excited for the new protocol and token!"`,
+      avatar: { src: '/assets/images/testimonials/9.webp' },
+      name: 'Lor Albrighi',
+      position: 'Founder of SPIN.FASHION',
+      numberOfStars: 5,
+    },
+    {
+      quote: `"The Normal Team is legendary and their vision is clear with Normal Crypto Indexes."`,
+      avatar: { src: '/assets/images/testimonials/14.webp' },
+      name: 'Shabbir Khan',
+      position: 'crypto pioneer & investor',
+      numberOfStars: 5,
+    },
+    {
+      quote: `"Normal has made transitioning from traditional finance to DeFi effortless by streamlining the entire investing process. It serves as the perfect bridge connecting the old world with the new."`,
+      avatar: { src: '/assets/images/testimonials/13.webp' },
+      name: 'Clarissa Gamoke',
+      position: 'Bitcoin OS',
+      numberOfStars: 5,
+    },
+    {
+      quote: `"I believe in the Normal Team and their mission of crypto indexes. I look forward to supporting them!"`,
+      avatar: { src: '/assets/images/testimonials/12.webp' },
+      name: 'Nima',
+      position: 'Luganodes',
+      numberOfStars: 5,
+    },
+    {
+      quote: `"The Normal team is beast and their product is awesome! I aspire to be Normal!"`,
+      avatar: { src: '/assets/images/testimonials/11.webp' },
+      name: 'Srijeth',
+      position: 'Reclaim Protocol',
+      numberOfStars: 5,
+    },
+    {
+      quote:
         '"Normal saves me time and money - all while being as easy to use as my traditional banking apps."',
       avatar: { src: '/assets/images/testimonials/1.webp' },
       name: 'Devin Kopp',
