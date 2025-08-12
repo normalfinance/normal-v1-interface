@@ -15,6 +15,7 @@ import {
   Typography,
   type ButtonProps,
 } from '@mui/material';
+import { GlowBorder } from '@/components/_common/glow-border';
 
 type ImageProps = { src: string; alt?: string };
 
