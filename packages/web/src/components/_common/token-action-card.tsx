@@ -2,9 +2,10 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
-import type { StateToken as Token } from '@normalfinance/types';
+import type { IndexDetails, StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
+import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
 import { useTabs } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
@@ -19,13 +20,15 @@ import { alpha, useTheme } from '@mui/material/styles';
 import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
+import IndexBuyCard from './index-buy-card';
+import IndexSellCard from './index-sell-card';
 import ZealyHighlight from './zealy/zealy-highlight';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
 
-export type TokenActionKey = 'swap' | 'send' | 'buy';
+export type TokenActionKey = 'swap' | 'send' | 'buy' | 'index-buy' | 'index-sell';
 
 interface ActionConfig {
   value: TokenActionKey;
@@ -36,31 +39,25 @@ const ALL_TABS: readonly ActionConfig[] = [
   { value: 'swap', label: 'Swap' },
   { value: 'send', label: 'Send' },
   { value: 'buy', label: 'Buy' },
+  { value: 'index-buy', label: 'Buy' },
+  { value: 'index-sell', label: 'Sell' },
 ] as const;
 
 // ----------------------------------------------------------------------
 // PROPS -----------------------------------------------------------------
 
 export interface TokenActionCardProps extends CardProps {
-  /** Main title displayed in the card header */
   title?: string;
-  /** Optional subtitle displayed under the title */
   subheader?: string;
-  /** Tokens available for the child action components */
   tokensList?: Token[];
-  /** Swap‑fee info, forwarded to **SwapCard** and **SendCard** */
   swapFeeInfo?: SwapFeeInfo;
-  /**
-   * Which action tabs should be enabled. If omitted, **all** known tabs are shown.
-   * Example: `['swap', 'buy']` will hide the **Send** tab.
-   */
   enabledTabs?: TokenActionKey[];
-
   cashBalance?: number;
-  /** Show skeleton loading state */
   loading?: boolean;
   queryParams?: any;
   initialTab?: TokenActionKey;
+  index?: IndexDetails;
+  userIndexBalanceTokens?: number;
 }
 
 // ----------------------------------------------------------------------
@@ -77,8 +74,11 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   loading,
   queryParams,
   initialTab,
+  index,
+  userIndexBalanceTokens,
   ...other
 }) => {
+  const { t } = useTranslate();
   const theme = useTheme();
 
   // Determine which tabs are active for this instance ------------------
@@ -102,7 +102,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   const tabs = useTabs(getInitialTab());
 
   const buyCardTokens = React.useMemo<Token[]>(
-    () => tokensList!.filter((t) => t.symbol === 'XLM' || t.symbol === 'USDC'),
+    () => tokensList!.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol === 'USDC'),
     [tokensList]
   );
 
@@ -134,6 +134,52 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
             data-testid="buy-card"
           />
         );
+      case 'index-buy': {
+        if (!index) {
+          console.warn('TokenActionCard: `index` is required for the index-buy tab.');
+          return (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                {t('Index data unavailable.')}
+              </Typography>
+            </Box>
+          );
+        }
+
+        return (
+          <IndexBuyCard
+            tokensList={buyCardTokens}
+            cashBalance={cashBalance}
+            queryParams={queryParams}
+            data-testid="buy-card"
+            index={index}
+          />
+        );
+      }
+      case 'index-sell': {
+        if (!index) {
+          console.warn('TokenActionCard: `index` is required for the index-sell tab.');
+          return (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                {t('Index data unavailable.')}
+              </Typography>
+            </Box>
+          );
+        }
+
+        const balanceTokens = userIndexBalanceTokens ?? 0; // <-- default
+
+        return (
+          <IndexSellCard
+            tokensList={buyCardTokens}
+            userIndexBalanceTokens={balanceTokens}
+            queryParams={queryParams}
+            data-testid="sell-card"
+            index={index}
+          />
+        );
+      }
       default:
         return null;
     }

@@ -68,6 +68,7 @@ export default function ExploreStats({ stats, sx, loading }: ExploreStatsProps) 
         {
           mb: { xs: 3, md: 5 },
           border: 1,
+          borderRadius: 3,
           borderColor: alpha(theme.palette.grey[500], 0.32),
           p: 0,
         },

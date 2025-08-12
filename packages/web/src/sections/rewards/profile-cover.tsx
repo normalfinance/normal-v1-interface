@@ -23,6 +23,7 @@ export function ProfileCover({
           }),
           height: 1,
           color: 'common.white',
+          borderRadius: 3,
         }),
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
