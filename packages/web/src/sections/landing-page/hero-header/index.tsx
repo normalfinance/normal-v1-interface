@@ -16,7 +16,6 @@ import SwapCard from '@/components/_common/swap-card';
 import { WavyBackground } from './wavy-background';
 
 import { fetchApiTokens } from '@/hooks';
-//test
 type ImageProps = {
   src: string;
   alt?: string;
