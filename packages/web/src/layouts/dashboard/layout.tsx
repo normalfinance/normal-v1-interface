@@ -35,6 +35,8 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
+import { NormalNavbar } from './normal-navbar';
+import { NormalNavbarDefaults } from './navbar-props';
 
 // ----------------------------------------------------------------------
 
@@ -137,6 +139,16 @@ export function DashboardLayout({
       />
     );
   };
+
+  const renderNormalNavbar = () => (
+    <Box sx={{ width: '100%' }}>
+      <NormalNavbar
+        logo={NormalNavbarDefaults.logo}
+        links={NormalNavbarDefaults.links}
+        buttons={NormalNavbarDefaults.buttons}
+      />
+    </Box>
+  );
 
   const renderSidebar = () => (
     <NavVertical
