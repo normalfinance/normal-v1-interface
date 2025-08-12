@@ -1,7 +1,10 @@
 'use client';
 
+import type { BoxProps } from '@mui/material';
+
 import * as React from 'react';
-import { Box, BoxProps } from '@mui/material';
+
+import { Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 type GlowBorderProps = BoxProps & {
