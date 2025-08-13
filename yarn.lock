@@ -4552,6 +4552,7 @@ __metadata:
     cz-conventional-changelog: ^3.3.0
     cz-customizable: ^7.4.0
     dayjs: ^1.11.13
+    elliptic-sdk: ^0.9.0
     es-toolkit: ^1.31.0
     eslint: ^9.17.0
     eslint-import-resolver-typescript: ^3.7.0
@@ -9294,7 +9295,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axios@npm:^1.6.0, axios@npm:^1.7.9, axios@npm:^1.8.4":
+"axios@npm:^1.6.0, axios@npm:^1.7.8, axios@npm:^1.7.9, axios@npm:^1.8.4":
   version: 1.11.0
   resolution: "axios@npm:1.11.0"
   dependencies:
@@ -11762,6 +11763,15 @@ __metadata:
   version: 1.5.192
   resolution: "electron-to-chromium@npm:1.5.192"
   checksum: 6d22320d5a946065e7919da8bfb7f47e6a1166239cf63be7ce12f93bbd91d3fec21e6082e39bc1c500d71f851d6d8893ca91e2952225634c122851a87e2dc9d3
+  languageName: node
+  linkType: hard
+
+"elliptic-sdk@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "elliptic-sdk@npm:0.9.0"
+  dependencies:
+    axios: ^1.7.8
+  checksum: dc8f2f3a366d8718ec30ed58ac6a9a7b98e976287af3fee5cbcee5d841b335c4f4afa8b433f02d89199d08ebc98431655dc6d94057884872911c0cad45110b03
   languageName: node
   linkType: hard
 
