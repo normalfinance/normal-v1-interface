@@ -1,7 +1,10 @@
 'use client';
 
+import { paths } from '@/routes/paths';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { usePersistStore } from '@normalfinance/state';
+
 import InviteCodeDialog from './drawer-components/invite-code-dialog';
 
 export type InviteCodeGateProps = {
@@ -9,10 +12,13 @@ export type InviteCodeGateProps = {
   enforceInDev?: boolean;
 };
 
+const UNBLOCKED_PATHS = [paths.root, paths.core.about, paths.core.contact];
+
 export const InviteCodeGate: React.FC<InviteCodeGateProps> = ({
   children,
   enforceInDev = true,
 }) => {
+  const pathName = usePathname();
   const inviteCodeState = usePersistStore((s) => s.inviteCode);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -49,8 +55,10 @@ export const InviteCodeGate: React.FC<InviteCodeGateProps> = ({
     return <>{children}</>;
   }
 
+  const isUnblockedPath = UNBLOCKED_PATHS.includes(pathName.toLowerCase());
+
   // Block access if no valid invite code
-  if (!inviteCodeState.hasValidCode) {
+  if (!inviteCodeState.hasValidCode && !isUnblockedPath) {
     return (
       <InviteCodeDialog
         open={showInviteDialog}
