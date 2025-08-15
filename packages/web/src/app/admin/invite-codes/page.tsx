@@ -38,7 +38,6 @@ interface RecentActivity {
   inviteCode: string;
   usedAt: string;
   walletAddress?: string;
-  twitterHandle?: string;
   source?: string;
 }
 
@@ -48,7 +47,6 @@ interface InviteCode {
   isUsed: boolean;
   usedAt?: string;
   walletAddress?: string;
-  twitterHandle?: string;
   source?: string;
   createdAt: string;
 }

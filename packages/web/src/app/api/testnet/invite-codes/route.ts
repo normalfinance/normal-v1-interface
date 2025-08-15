@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { inviteCode, action, walletAddress, twitterHandle } = body;
+    const { inviteCode, action, walletAddress } = body;
 
     if (!inviteCode) {
       return NextResponse.json(
@@ -45,8 +45,7 @@ export async function POST(request: NextRequest) {
       // Consume the code and mark it as used
       const result = await InviteCodeService.consumeInviteCode(
         inviteCode,
-        walletAddress,
-        twitterHandle
+        walletAddress
       );
       return NextResponse.json(result);
     } else {
@@ -59,8 +58,7 @@ export async function POST(request: NextRequest) {
 
       const result = await InviteCodeService.consumeInviteCode(
         inviteCode,
-        walletAddress,
-        twitterHandle
+        walletAddress
       );
       
       return NextResponse.json(result);

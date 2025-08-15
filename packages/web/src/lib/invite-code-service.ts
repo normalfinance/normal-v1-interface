@@ -49,8 +49,7 @@ export class InviteCodeService {
    */
   static async consumeInviteCode(
     code: string,
-    walletAddress?: string,
-    twitterHandle?: string
+    walletAddress?: string
   ): Promise<{
     success: boolean;
     message: string;
@@ -73,7 +72,6 @@ export class InviteCodeService {
           isUsed: true,
           usedAt: new Date(),
           walletAddress: walletAddress || null,
-          twitterHandle: twitterHandle || null,
         },
       });
 
@@ -150,7 +148,6 @@ export class InviteCodeService {
           inviteCode: true,
           usedAt: true,
           walletAddress: true,
-          twitterHandle: true,
           source: true,
         },
       });
