@@ -13,10 +13,7 @@ function isAdminRequest(request: NextRequest): boolean {
 export async function GET(request: NextRequest) {
   try {
     if (!isAdminRequest(request)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -28,7 +25,7 @@ export async function GET(request: NextRequest) {
       // Get usage statistics
       const stats = await InviteCodeGenerator.getUsageStats();
       const recentActivity = await InviteCodeService.getRecentActivity();
-      
+
       return NextResponse.json({
         stats,
         recentActivity,
@@ -44,20 +41,14 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     console.error('GET /api/admin/invite-codes error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     if (!isAdminRequest(request)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -73,7 +64,7 @@ export async function POST(request: NextRequest) {
 
       const codes = await InviteCodeGenerator.generateCodes(count, source);
       const stats = await InviteCodeGenerator.getUsageStats();
-      
+
       return NextResponse.json({
         success: true,
         message: `Successfully generated ${codes.length} invite codes`,
@@ -81,16 +72,10 @@ export async function POST(request: NextRequest) {
         stats,
       });
     } else {
-      return NextResponse.json(
-        { error: 'Invalid action. Use "generate"' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid action. Use "generate"' }, { status: 400 });
     }
   } catch (error) {
     console.error('POST /api/admin/invite-codes error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

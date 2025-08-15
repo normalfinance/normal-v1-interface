@@ -4,34 +4,32 @@ import { randomBytes } from 'crypto';
 export class InviteCodeGenerator {
   private static prisma = new PrismaClient();
 
-
   static async generateCodes(count: number, source: string = 'admin'): Promise<string[]> {
     const codes: string[] = [];
-    
+
     for (let i = 0; i < count; i++) {
       let code: string;
       let isUnique = false;
-      
+
       //Collision check
       while (!isUnique) {
         code = this.generateSingleCode();
         isUnique = await this.isCodeUnique(code);
       }
-      
+
       codes.push(code!);
     }
-    
+
     // Insert all codes into database
     await this.prisma.testnetUser.createMany({
-      data: codes.map(code => ({
+      data: codes.map((code) => ({
         inviteCode: code,
         source,
       })),
     });
-    
+
     return codes;
   }
-
 
   private static generateSingleCode(): string {
     const bytes = randomBytes(3); // 3 bytes = 6 hex chars
@@ -62,7 +60,7 @@ export class InviteCodeGenerator {
 
   static async getAllCodes(page: number = 1, limit: number = 50) {
     const skip = (page - 1) * limit;
-    
+
     const [codes, total] = await Promise.all([
       this.prisma.testnetUser.findMany({
         skip,

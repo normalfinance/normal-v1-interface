@@ -125,10 +125,11 @@ export class InviteCodeService {
     text: string;
     url: string;
   } {
-    const tweetText = "Just got my invite code for @normalfinance testnet! 🚀 Excited to try out the future of DeFi. #NormalFinance #DeFi #Testnet";
+    const tweetText =
+      'Just got my invite code for @normalfinance testnet! 🚀 Excited to try out the future of DeFi. #NormalFinance #DeFi #Testnet';
     const encodedText = encodeURIComponent(tweetText);
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodedText}`;
-    
+
     return {
       text: tweetText,
       url: tweetUrl,

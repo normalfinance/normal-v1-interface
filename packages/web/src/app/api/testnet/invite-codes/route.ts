@@ -7,21 +7,15 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get('code');
 
     if (!code) {
-      return NextResponse.json(
-        { error: 'Invite code is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invite code is required' }, { status: 400 });
     }
 
     const result = await InviteCodeService.verifyInviteCode(code);
-    
+
     return NextResponse.json(result);
   } catch (error) {
     console.error('GET /api/testnet/invite-codes error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -31,10 +25,7 @@ export async function POST(request: NextRequest) {
     const { inviteCode, action, walletAddress } = body;
 
     if (!inviteCode) {
-      return NextResponse.json(
-        { error: 'Invite code is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invite code is required' }, { status: 400 });
     }
 
     if (action === 'verify') {
@@ -43,31 +34,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result);
     } else if (action === 'consume') {
       // Consume the code and mark it as used
-      const result = await InviteCodeService.consumeInviteCode(
-        inviteCode,
-        walletAddress
-      );
+      const result = await InviteCodeService.consumeInviteCode(inviteCode, walletAddress);
       return NextResponse.json(result);
     } else {
       // Default action is to verify and consume in one step
       const verification = await InviteCodeService.verifyInviteCode(inviteCode);
-      
+
       if (!verification.isValid) {
         return NextResponse.json(verification, { status: 400 });
       }
 
-      const result = await InviteCodeService.consumeInviteCode(
-        inviteCode,
-        walletAddress
-      );
-      
+      const result = await InviteCodeService.consumeInviteCode(inviteCode, walletAddress);
+
       return NextResponse.json(result);
     }
   } catch (error) {
     console.error('POST /api/testnet/invite-codes error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

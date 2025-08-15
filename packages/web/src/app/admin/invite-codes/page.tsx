@@ -69,14 +69,14 @@ export default function AdminInviteCodesPage() {
       const [statsResponse, codesResponse] = await Promise.all([
         fetch('/api/admin/invite-codes?action=stats', {
           headers: {
-            'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || 'dev-key'
-          }
+            'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || 'dev-key',
+          },
         }),
         fetch(`/api/admin/invite-codes?action=list&page=${page}&limit=50`, {
           headers: {
-            'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || 'dev-key'
-          }
-        })
+            'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || 'dev-key',
+          },
+        }),
       ]);
 
       if (!statsResponse.ok || !codesResponse.ok) {
@@ -105,13 +105,13 @@ export default function AdminInviteCodesPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || 'dev-key'
+          'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || 'dev-key',
         },
         body: JSON.stringify({
           action: 'generate',
           count: generateCount,
-          source: 'admin'
-        })
+          source: 'admin',
+        }),
       });
 
       if (!response.ok) {
@@ -132,12 +132,12 @@ export default function AdminInviteCodesPage() {
 
   const downloadCodes = () => {
     const csvContent = codes
-      .map(code => `${code.inviteCode},${code.isUsed ? 'Used' : 'Unused'},${code.createdAt}`)
+      .map((code) => `${code.inviteCode},${code.isUsed ? 'Used' : 'Unused'},${code.createdAt}`)
       .join('\n');
-    
+
     const csvHeader = 'Code,Status,Created At\n';
     const csvData = csvHeader + csvContent;
-    
+
     const blob = new Blob([csvData], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -225,11 +225,7 @@ export default function AdminInviteCodesPage() {
 
       {/* Actions */}
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => setShowGenerateDialog(true)}
-        >
+        <Button variant="contained" startIcon={<Add />} onClick={() => setShowGenerateDialog(true)}>
           Generate Codes
         </Button>
         <Button
@@ -240,11 +236,7 @@ export default function AdminInviteCodesPage() {
         >
           Download CSV
         </Button>
-        <Button
-          variant="outlined"
-          startIcon={<Refresh />}
-          onClick={loadData}
-        >
+        <Button variant="outlined" startIcon={<Refresh />} onClick={loadData}>
           Refresh
         </Button>
       </Stack>
@@ -279,17 +271,16 @@ export default function AdminInviteCodesPage() {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" fontFamily="monospace" noWrap>
-                          {activity.walletAddress ? 
-                            `${activity.walletAddress.slice(0, 10)}...` : 
-                            '-'
-                          }
+                          {activity.walletAddress
+                            ? `${activity.walletAddress.slice(0, 10)}...`
+                            : '-'}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          label={activity.source || 'unknown'} 
-                          size="small" 
-                          variant="outlined" 
+                        <Chip
+                          label={activity.source || 'unknown'}
+                          size="small"
+                          variant="outlined"
                         />
                       </TableCell>
                     </TableRow>
@@ -334,26 +325,17 @@ export default function AdminInviteCodesPage() {
                         size="small"
                       />
                     </TableCell>
-                    <TableCell>
-                      {new Date(code.createdAt).toLocaleDateString()}
-                    </TableCell>
+                    <TableCell>{new Date(code.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       {code.usedAt ? new Date(code.usedAt).toLocaleString() : '-'}
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontFamily="monospace" noWrap>
-                        {code.walletAddress ? 
-                          `${code.walletAddress.slice(0, 10)}...` : 
-                          '-'
-                        }
+                        {code.walletAddress ? `${code.walletAddress.slice(0, 10)}...` : '-'}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={code.source || 'unknown'} 
-                        size="small" 
-                        variant="outlined" 
-                      />
+                      <Chip label={code.source || 'unknown'} size="small" variant="outlined" />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -379,11 +361,7 @@ export default function AdminInviteCodesPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowGenerateDialog(false)}>Cancel</Button>
-          <Button
-            onClick={handleGenerateCodes}
-            variant="contained"
-            disabled={generateLoading}
-          >
+          <Button onClick={handleGenerateCodes} variant="contained" disabled={generateLoading}>
             {generateLoading ? 'Generating...' : 'Generate'}
           </Button>
         </DialogActions>
