@@ -15,6 +15,7 @@ export const paths = {
     twitter: 'https://x.com/normalfi',
     discord: 'https://discord.com/invite/xQMvceZjeS',
     github: 'https://github.com/normalfinance/',
+    telegram: 'https://t.me/normalfinance'
   },
   blog: 'https://blog.normalfinance.io/',
   // docs: 'https://docs.normalfinance.io',
