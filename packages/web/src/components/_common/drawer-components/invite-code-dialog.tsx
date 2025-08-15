@@ -1,24 +1,24 @@
 'use client';
 
-
-import { useState } from 'react';
 import type { AppStorePersist } from '@normalfinance/types';
 
+import { useState } from 'react';
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { InviteCodeService } from '@/lib/invite-code-service';
 
 import {
   Box,
+  Alert,
   Dialog,
   Button,
+  Divider,
   TextField,
   Typography,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
-  Divider,
   Link as MuiLink,
 } from '@mui/material';
 
@@ -32,7 +32,7 @@ export type InviteCodeDialogProps = {
 export default function InviteCodeDialog({ open, onClose }: InviteCodeDialogProps) {
   const { t } = useTranslate();
   const setInviteCodeAccepted = usePersistStore((s: AppStorePersist) => s.setInviteCodeAccepted);
-  
+
   const [inviteCode, setInviteCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,26 +72,28 @@ export default function InviteCodeDialog({ open, onClose }: InviteCodeDialogProp
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={undefined} // Prevent closing by clicking outside
-      maxWidth="sm" 
+      maxWidth="sm"
       fullWidth
       disableEscapeKeyDown // Prevent closing with ESC key
     >
       <DialogTitle data-testid="invite-code-dialog-title">
-        {t('Testnet Access Required')}
+        {t('Testnet Invite Required')}
       </DialogTitle>
 
       <DialogContent dividers>
         {success ? (
           <Alert severity="success" sx={{ mb: 2 }}>
-            🎉 Welcome to the Normal Finance testnet! Access granted.
+            🎉 {t('Welcome to the Normal Finance testnet! Access granted.')}
           </Alert>
         ) : (
           <>
             <Typography variant="body1" sx={{ mb: 3 }}>
-              Normal Finance is currently in private testnet. Please enter your invite code to continue.
+              {t(
+                'Normal is currently in private testnet. Please enter your invite code to continue.'
+              )}
             </Typography>
 
             <TextField
@@ -107,31 +109,33 @@ export default function InviteCodeDialog({ open, onClose }: InviteCodeDialogProp
               sx={{ mb: 3 }}
               inputProps={{
                 maxLength: 8,
-                style: { textTransform: 'uppercase' }
+                style: { textTransform: 'uppercase' },
               }}
             />
 
             <Divider sx={{ mb: 3 }}>
               <Typography variant="body2" color="text.secondary">
-                Don't have an invite code?
+                {t("Don't have an invite code?")}
               </Typography>
             </Divider>
 
-            <Box sx={{ 
-              p: 3, 
-              border: 1, 
-              borderColor: 'divider', 
-              borderRadius: 1,
-              backgroundColor: 'background.paper'
-            }}>
+            <Box
+              sx={{
+                p: 3,
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1,
+                backgroundColor: 'background.paper',
+              }}
+            >
               <Typography variant="h6" sx={{ mb: 2 }}>
-                🐦 Get an invite code by tweeting about us!
+                🐦 {t('Get an invite code by tweeting about us!')}
               </Typography>
-              
+
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Share your excitement about Normal Finance on Twitter and we'll send you an invite code.
+                {t("Share your excitement about Normal on X and we'll send you an invite code.")}
               </Typography>
-              
+
               <Button
                 variant="outlined"
                 color="primary"
@@ -139,29 +143,29 @@ export default function InviteCodeDialog({ open, onClose }: InviteCodeDialogProp
                 fullWidth
                 sx={{ mb: 2 }}
               >
-                📝 Tweet about Normal Finance
+                📝 {t('Tweet about Normal')}
               </Button>
-              
+
               <Typography variant="caption" color="text.secondary">
-                After tweeting, contact our team on{' '}
+                {t('After tweeting, contact our team on')}{' '}
                 <MuiLink
-                  href="https://discord.gg/normalfinance"
+                  href={paths.socials.discord}
                   target="_blank"
                   rel="noopener noreferrer"
                   underline="always"
                 >
-                  Discord
-                </MuiLink>
-                {' '}or{' '}
+                  {t('Discord')}
+                </MuiLink>{' '}
+                {t('or')}{' '}
                 <MuiLink
-                  href="https://t.me/normalfinance"
+                  href={paths.socials.telegram}
                   target="_blank"
                   rel="noopener noreferrer"
                   underline="always"
                 >
-                  Telegram
-                </MuiLink>
-                {' '}with your tweet link to receive your code.
+                  {t('Telegram')}
+                </MuiLink>{' '}
+                {t('with your tweet link to receive your code.')}
               </Typography>
             </Box>
           </>
@@ -178,7 +182,7 @@ export default function InviteCodeDialog({ open, onClose }: InviteCodeDialogProp
             fullWidth
             data-testid="invite-code-submit-button"
           >
-            {isLoading ? 'Verifying...' : 'Access Testnet'}
+            {isLoading ? t('Verifying...') : t('Access Testnet')}
           </Button>
         </DialogActions>
       )}
