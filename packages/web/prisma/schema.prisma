@@ -78,6 +78,20 @@ model ReferralAction {
   @@map("referral_actions")
 }
 
+// Testnet access control model
+model TestnetUser {
+  id              String   @id @default(cuid())
+  inviteCode      String   @unique
+  walletAddress   String?  @unique  // Optional, set when code is used
+  isUsed          Boolean  @default(false)
+  usedAt          DateTime?
+  createdAt       DateTime @default(now())
+  twitterHandle   String?  // Optional, for tweet verification
+  source          String?  // "admin", "tweet", etc.
+  
+  @@map("testnet_users")
+}
+
 // Indexes for performance
 // Index on wallet address for fast user lookups
 // Index on referral code for fast referral lookups

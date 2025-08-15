@@ -12,6 +12,7 @@ import { I18nProvider } from '@/locales/i18n-provider';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
+import { InviteCodeGate } from '@/components/_common/invite-code-gate';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
@@ -120,7 +121,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                           <ProgressBar />
                           <SettingsDrawer defaultSettings={defaultSettings} />
                           <AnnouncementProvider>
-                            <DashboardLayout>{children}</DashboardLayout>
+                            <InviteCodeGate>
+                              <DashboardLayout>{children}</DashboardLayout>
+                            </InviteCodeGate>
                           </AnnouncementProvider>
                         </SnackbarProvider>
                       </MotionLazy>
