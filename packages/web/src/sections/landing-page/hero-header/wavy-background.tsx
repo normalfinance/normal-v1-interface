@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
 import { createNoise3D } from 'simplex-noise';
+import React, { useRef, useEffect } from 'react';
+
 import { cn } from './lib/utils';
 
 type WavyBackgroundProps = {
@@ -77,7 +78,7 @@ export const WavyBackground = ({
 
     let width = 0;
     let height = 0;
-    let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     let needsResize = true;
 
     const measure = () => {

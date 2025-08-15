@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { InviteCodeGenerator } from '@/lib/invite-code-generator';
+import type { NextRequest} from 'next/server';
+
+import { NextResponse } from 'next/server';
 import { InviteCodeService } from '@/lib/invite-code-service';
+import { InviteCodeGenerator } from '@/lib/invite-code-generator';
 
 // Simple auth check - in production you'd want proper admin authentication
 function isAdminRequest(request: NextRequest): boolean {

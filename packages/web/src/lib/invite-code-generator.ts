@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { PrismaClient } from '@prisma/client';
 
 export class InviteCodeGenerator {
   private static prisma = new PrismaClient();
