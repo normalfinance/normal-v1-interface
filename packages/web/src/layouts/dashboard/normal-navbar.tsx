@@ -1,29 +1,17 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import {
-  AppBar,
-  Toolbar,
-  Box,
-  Button,
-  IconButton,
-  Typography,
-  useTheme,
-  useMediaQuery,
-  Popover,
-  Grid,
-  Divider,
-  Drawer,
-  List,
-  ListItemButton,
-  ListItemText,
-  ListItemIcon,
-  Collapse,
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/material';
+import type { ButtonProps as MUIButtonProps } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
+import { m, AnimatePresence } from 'framer-motion';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { Logo } from '@/components/template/logo';
+
+export type NavButton = Omit<MUIButtonProps, 'children'> & {
+  title: string;
+};
 
 type ImageProps = {
   url?: string;
@@ -36,7 +24,7 @@ type MegaMenuLink = {
   image: ImageProps;
   title: string;
   description: string;
-  button?: { title: string; variant?: string; size?: string; iconRight?: React.ReactNode };
+  button?: NavButton;
 };
 
 type CategoryLink = {
@@ -44,209 +32,423 @@ type CategoryLink = {
   links: MegaMenuLink[];
 };
 
-type MegaMenuLinkProps = {
+type MegaMenuProps = {
   categoryLinks: CategoryLink[];
   featuredSections: {
     title: string;
     links: MegaMenuLink[];
   };
-  button: { title: string; variant?: string; size?: string; iconRight?: React.ReactNode };
+  button: NavButton;
 };
 
 type LinkProps = {
   title: string;
   url: string;
-  megaMenu?: MegaMenuLinkProps;
+  megaMenu?: MegaMenuProps;
 };
 
-export type Props = {
+interface Props {
   logo: ImageProps;
   links: LinkProps[];
-  buttons: { title: string; variant?: string; size?: string }[];
-};
+  buttons: NavButton[];
+}
 
-export function NormalNavbar({ logo, links, buttons }: Props) {
+export type NormalNavbarProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
+
+export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
+  const { logo, links, buttons } = { ...NormalNavbarDefaults, ...props };
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const toggleMobile = () => setMobileOpen((p) => !p);
-
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [activeMega, setActiveMega] = useState<MegaMenuLinkProps | null>(null);
+  // Desktop dock (mega menu)
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const [dockOpen, setDockOpen] = useState(false);
   const hoverTimerRef = useRef<number | null>(null);
 
-  const openMega = useCallback((el: HTMLElement, mega?: MegaMenuLinkProps) => {
-    if (!mega) return;
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    setAnchorEl(el);
-    setActiveMega(mega);
-  }, []);
+  const activeMega = useMemo(
+    () => (activeIdx != null ? (links[activeIdx]?.megaMenu ?? null) : null),
+    [activeIdx, links]
+  );
 
-  const scheduleCloseMega = useCallback(() => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+  const clearTimer = () => {
+    if (hoverTimerRef.current) {
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  };
+  const scheduleClose = useCallback((delay = 120) => {
+    clearTimer();
     hoverTimerRef.current = window.setTimeout(() => {
-      setAnchorEl(null);
-      setActiveMega(null);
-    }, 120);
+      setDockOpen(false);
+      setActiveIdx(null);
+    }, delay);
+  }, []);
+  const openDock = useCallback((idx: number) => {
+    clearTimer();
+    setActiveIdx(idx);
+    setDockOpen(true);
   }, []);
 
-  const cancelScheduledClose = useCallback(() => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+  // Mobile overlay
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const toggleMobile = () => setMobileOpen((p) => !p);
+  const closeMobile = () => setMobileOpen(false);
+
+  // Lock body scroll when mobile panel is open
+  useEffect(() => {
+    if (mobileOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [mobileOpen]);
+
+  // Open from under header, calculate height
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const [headerH, setHeaderH] = useState(64);
+
+  const mobilePanelVariants = {
+    open: (h: number) => ({ height: `calc(100dvh - ${h}px)`, opacity: 1 }),
+    close: () => ({ height: 0, opacity: 0.98 }),
+  } as const;
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const update = () => setHeaderH(el.getBoundingClientRect().height || 64);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   return (
-    <AppBar
-      position="static"
-      color="default"
-      elevation={0}
-      sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}
+    <Box
+      component="section"
+      id="normal-navbar"
+      ref={headerRef}
+      sx={{
+        position: 'relative',
+        display: 'flex',
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        backgroundColor: theme.palette.background.paper,
+        minHeight: { xs: 64, lg: 72 },
+        px: { xs: 2, lg: '5%' },
+      }}
     >
-      <Toolbar sx={{ px: { xs: 2, lg: '5%' } }}>
-        {/* Logo */}
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <a href={logo.url ?? '#'}>
-            <img src={logo.src} alt={logo.alt} style={{ height: 28 }} />
-          </a>
-        </Box>
-
-        {/* Desktop Links */}
-        {!isMobile && (
-          <Box sx={{ display: 'flex', ml: 4 }}>
-            {links.map((link, i) => {
-              const hasMega = !!link.megaMenu;
-              return (
-                <Box
-                  key={i}
-                  onMouseEnter={(e) => hasMega && openMega(e.currentTarget, link.megaMenu)}
-                  onMouseLeave={() => hasMega && scheduleCloseMega()}
-                >
-                  <Button
-                    href={!hasMega ? link.url : undefined}
-                    endIcon={hasMega ? <ExpandMoreIcon /> : undefined}
-                    onClick={(e) => {
-                      if (hasMega) {
-                        e.preventDefault();
-                        openMega(e.currentTarget, link.megaMenu);
-                      }
-                    }}
-                  >
-                    {link.title}
-                  </Button>
-                </Box>
-              );
-            })}
-          </Box>
-        )}
-
-        {/* Desktop Buttons */}
-        {!isMobile && (
-          <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-            {buttons.map((btn, i) => (
-              <Button
-                key={i}
-                variant={btn.variant === 'secondary' ? 'outlined' : 'contained'}
-                size={btn.size === 'sm' ? 'small' : btn.size === 'lg' ? 'large' : 'medium'}
-              >
-                {btn.title}
-              </Button>
-            ))}
-          </Box>
-        )}
-
-        {/* Mobile menu button */}
-        {isMobile && (
-          <IconButton sx={{ ml: 'auto' }} onClick={toggleMobile}>
-            <MenuIcon />
-          </IconButton>
-        )}
-      </Toolbar>
-
-      {/* Mega Menu (Desktop) */}
-      <Popover
-        open={Boolean(anchorEl) && Boolean(activeMega)}
-        anchorEl={anchorEl}
-        onClose={() => {
-          setAnchorEl(null);
-          setActiveMega(null);
-        }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        PaperProps={{
-          onMouseEnter: cancelScheduledClose,
-          onMouseLeave: scheduleCloseMega,
-          sx: { mt: 1, px: 3, py: 3, maxWidth: 1100, width: '100%', borderRadius: 2 },
+      {/* Row: logo | links (desktop) | actions */}
+      <Box
+        sx={{
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr auto', lg: 'auto 1fr auto' },
+          alignItems: 'center',
+          columnGap: 2,
         }}
       >
-        {activeMega && (
-          <Grid container spacing={4}>
-            {/* Categories */}
-            <Grid item xs={12} md={8}>
-              <Grid container spacing={4}>
-                {activeMega.categoryLinks.map((group, gi) => (
-                  <Grid item xs={12} md={6} key={gi}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                      {group.title}
-                    </Typography>
-                    {group.links.map((l, li) => (
-                      <Box
-                        key={li}
-                        component="a"
-                        href={l.url}
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: '24px 1fr',
-                          gap: 1.5,
-                          alignItems: 'flex-start',
-                          py: 1,
-                          color: 'inherit',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        <img src={l.image.src} alt={l.image.alt} width={24} height={24} />
-                        <Box>
-                          <Typography variant="body2" fontWeight={600}>
-                            {l.title}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {l.description}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
+        {/* Left: Logo (always pinned) */}
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Logo
+            isSingle={false}
+            sx={{
+              display: 'inline-flex', // <-- always show
+              height: 28, // optional: match your img height
+              alignItems: 'center',
+            }}
+          />
+        </Box>
 
-            {/* Featured */}
-            <Grid item xs={12} md={4}>
-              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                {activeMega.featuredSections.title}
-              </Typography>
-              {activeMega.featuredSections.links.map((l, li) => (
-                <Box key={li} sx={{ mb: 2 }}>
-                  <Box
-                    sx={{
-                      position: 'relative',
-                      pt: '56.25%',
-                      mb: 1,
-                      borderRadius: 1,
-                      overflow: 'hidden',
+        {/* Middle: DESKTOP links only */}
+        <Box
+          sx={{
+            display: { xs: 'none', lg: 'flex' },
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+          }}
+        >
+          {links.map((link, i) => {
+            const hasMega = !!link.megaMenu;
+            return (
+              <Box
+                key={i}
+                onMouseEnter={() => (hasMega ? openDock(i) : undefined)}
+                onMouseLeave={() => (hasMega ? scheduleClose() : undefined)}
+              >
+                <Button
+                  href={!hasMega ? link.url : undefined}
+                  onClick={(e) => {
+                    if (hasMega) {
+                      e.preventDefault();
+                      openDock(i);
+                    }
+                  }}
+                  endIcon={hasMega ? <ExpandMoreIcon /> : undefined}
+                  sx={{
+                    textTransform: 'none',
+                    py: 2.25,
+                    px: 2,
+                    color: 'text.primary',
+                  }}
+                >
+                  {link.title}
+                </Button>
+              </Box>
+            );
+          })}
+        </Box>
+
+        {/* Right: Desktop buttons / Mobile hamburger */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+          {/* Desktop buttons */}
+          <Box sx={{ display: { xs: 'none', lg: 'flex' }, gap: 2 }}>
+            {buttons.map((button, idx) => (
+              <Button key={idx} {...button} />
+            ))}
+          </Box>
+
+          {/* Mobile hamburger (animated 3 bars like Navbar5) */}
+          <IconButton
+            onClick={toggleMobile}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            sx={{
+              display: { xs: 'inline-flex', lg: 'none' },
+              width: 48,
+              height: 48,
+              p: 0,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <m.span
+                style={{
+                  display: 'block',
+                  width: '1.5rem',
+                  height: 2,
+                  background: '#000',
+                  margin: '3px 0',
+                }}
+                animate={mobileOpen ? ['open', 'rotatePhase'] : 'closed'}
+                variants={topLineVariants}
+              />
+              <m.span
+                style={{
+                  display: 'block',
+                  width: '1.5rem',
+                  height: 2,
+                  background: '#000',
+                  margin: '3px 0',
+                }}
+                animate={mobileOpen ? 'open' : 'closed'}
+                variants={middleLineVariants}
+              />
+              <m.span
+                style={{
+                  display: 'block',
+                  width: '1.5rem',
+                  height: 2,
+                  background: '#000',
+                  margin: '3px 0',
+                }}
+                animate={mobileOpen ? ['open', 'rotatePhase'] : 'closed'}
+                variants={bottomLineVariants}
+              />
+            </Box>
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* DESKTOP: full-width dropdown dock */}
+      <DesktopDock
+        open={isDesktop && dockOpen && !!activeMega}
+        onMouseEnter={() => clearTimer()}
+        onMouseLeave={() => scheduleClose()}
+      >
+        {activeMega && <DockContent mega={activeMega} />}
+      </DesktopDock>
+
+      {/* MOBILE: fixed overlay with height animation */}
+      <AnimatePresence initial={false}>
+        {mobileOpen && (
+          <m.div
+            key="mobile-under-header"
+            initial="close"
+            animate="open"
+            exit="close"
+            custom={headerH}
+            variants={mobilePanelVariants}
+            transition={{ duration: 0.4 }}
+            style={{
+              position: 'fixed',
+              left: 0,
+              right: 0,
+              top: headerH,
+              zIndex: theme.zIndex.modal,
+              background: theme.palette.background.paper,
+              overflow: 'hidden',
+            }}
+            aria-modal="true"
+            role="dialog"
+          >
+            {/* Scrollable content only, no extra header */}
+            <Box sx={{ height: '100%', overflow: 'auto', px: '5%', py: 2 }}>
+              {links.map((link, i) => {
+                const hasMega = !!link.megaMenu;
+                if (hasMega)
+                  return <MobileMega key={i} title={link.title} megaMenu={link.megaMenu!} />;
+                return (
+                  <a
+                    key={i}
+                    href={link.url}
+                    style={{
+                      display: 'block',
+                      padding: '12px 0',
+                      textDecoration: 'none',
+                      color: 'inherit',
                     }}
+                    onClick={() => setMobileOpen(false)}
                   >
-                    <img
-                      src={l.image.src}
-                      alt={l.image.alt}
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                    />
-                  </Box>
+                    {link.title}
+                  </a>
+                );
+              })}
+
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  mt: 2,
+                  gap: 2,
+                  pb: 6,
+                }}
+              >
+                {buttons.map((button, idx) => (
+                  <Button key={idx} fullWidth {...button} />
+                ))}
+              </Box>
+            </Box>
+          </m.div>
+        )}
+      </AnimatePresence>
+    </Box>
+  );
+};
+
+/* ---------------------------- DESKTOP DOCK UI ---------------------------- */
+
+function DesktopDock({
+  open,
+  children,
+  onMouseEnter,
+  onMouseLeave,
+}: React.PropsWithChildren<{
+  open: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+}>) {
+  const theme = useTheme();
+
+  return (
+    <m.div
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      initial={false}
+      animate={open ? 'open' : 'closed'}
+      variants={{
+        open: { opacity: 1, y: 0, pointerEvents: 'auto' as const },
+        closed: { opacity: 0, y: -6, pointerEvents: 'none' as const },
+      }}
+      transition={{ duration: 0.2 }}
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: '100%',
+        zIndex: theme.zIndex.appBar + 1,
+      }}
+    >
+      <Box
+        sx={{
+          px: '5%',
+          py: 3,
+          borderTop: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
+          borderBottom: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
+          bgcolor: theme.palette.background.paper,
+          boxShadow: `0 16px 40px ${alpha('#000', 0.14)}`,
+        }}
+      >
+        {children}
+      </Box>
+    </m.div>
+  );
+}
+
+function DockContent({ mega }: { mega: MegaMenuProps }) {
+  const theme = useTheme();
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        gap: { xs: 2, lg: 4 },
+        alignItems: 'stretch',
+      }}
+    >
+      {/* Left: category link columns */}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+          columnGap: { xs: 2, md: 4 },
+          rowGap: { xs: 2, md: 3 },
+          pr: { lg: 3 },
+        }}
+      >
+        {mega.categoryLinks.map((group, gi) => (
+          <Box
+            key={gi}
+            sx={{ display: 'grid', gridAutoRows: 'max-content', rowGap: { xs: 1, md: 2 } }}
+          >
+            <Typography variant="subtitle2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
+              {group.title}
+            </Typography>
+            {group.links.map((l, li) => (
+              <a
+                key={li}
+                href={l.url}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'max-content 1fr',
+                  alignItems: 'start',
+                  columnGap: '12px',
+                  padding: '8px 0',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <img
+                    src={l.image.src}
+                    alt={l.image.alt}
+                    style={{ maxWidth: '100%', maxHeight: '100%' }}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                   <Typography variant="body2" fontWeight={700}>
                     {l.title}
                   </Typography>
@@ -254,80 +456,413 @@ export function NormalNavbar({ logo, links, buttons }: Props) {
                     {l.description}
                   </Typography>
                 </Box>
-              ))}
-              <Button variant="text" size="small" endIcon={activeMega.button.iconRight}>
-                {activeMega.button.title}
-              </Button>
-            </Grid>
-          </Grid>
-        )}
-      </Popover>
-
-      {/* Mobile Drawer */}
-      <Drawer anchor="right" open={mobileOpen} onClose={toggleMobile}>
-        <Box sx={{ width: 300, p: 2 }}>
-          {/* Mobile Nav */}
-          <List>
-            {links.map((link, i) => {
-              const [open, setOpen] = useState(false);
-              const hasMega = !!link.megaMenu;
-              return (
-                <Box key={i}>
-                  <ListItemButton
-                    onClick={() => (hasMega ? setOpen((p) => !p) : undefined)}
-                    component={!hasMega ? 'a' : 'div'}
-                    href={!hasMega ? link.url : undefined}
-                  >
-                    <ListItemText primary={link.title} />
-                    {hasMega ? (
-                      open ? (
-                        <ExpandLessIcon />
-                      ) : (
-                        <ExpandMoreIcon />
-                      )
-                    ) : (
-                      <ArrowRightAltIcon />
-                    )}
-                  </ListItemButton>
-                  {hasMega && (
-                    <Collapse in={open}>
-                      {link.megaMenu!.categoryLinks.map((group, gi) => (
-                        <Box key={gi} sx={{ pl: 2, py: 1 }}>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            {group.title}
-                          </Typography>
-                          {group.links.map((l, li) => (
-                            <ListItemButton key={li} component="a" href={l.url} sx={{ pl: 0 }}>
-                              <ListItemIcon>
-                                <img src={l.image.src} alt={l.image.alt} width={20} height={20} />
-                              </ListItemIcon>
-                              <ListItemText primary={l.title} secondary={l.description} />
-                            </ListItemButton>
-                          ))}
-                        </Box>
-                      ))}
-                    </Collapse>
-                  )}
-                </Box>
-              );
-            })}
-          </List>
-
-          {/* Mobile Buttons */}
-          <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
-            {buttons.map((btn, i) => (
-              <Button
-                key={i}
-                fullWidth
-                variant={btn.variant === 'secondary' ? 'outlined' : 'contained'}
-                size={btn.size === 'sm' ? 'small' : btn.size === 'lg' ? 'large' : 'medium'}
-              >
-                {btn.title}
-              </Button>
+              </a>
             ))}
           </Box>
+        ))}
+      </Box>
+
+      {/* Right: featured section */}
+      <Box sx={{ flex: 1, position: 'relative', maxWidth: { lg: 448 }, p: { xs: 2, md: 3 } }}>
+        <Box
+          sx={{
+            position: 'relative',
+            zIndex: 1,
+            display: 'grid',
+            gridTemplateRows: 'max-content auto max-content',
+            gap: 2,
+          }}
+        >
+          <Typography variant="subtitle2" fontWeight={600}>
+            {mega.featuredSections.title}
+          </Typography>
+          <Box sx={{ display: 'grid', gap: 2 }}>
+            {mega.featuredSections.links.map((item, k) => (
+              <a
+                key={k}
+                href={item.url}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '0.6fr 1fr',
+                  gap: '16px',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  padding: '8px 0',
+                }}
+              >
+                <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
+                  <img
+                    src={item.image.src}
+                    alt={item.image.alt}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      borderRadius: 8,
+                    }}
+                  />
+                </Box>
+                <Box
+                  sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}
+                >
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+                    {item.title}
+                  </Typography>
+                  <Typography variant="body2">{item.description}</Typography>
+                  {item.button && (
+                    <Box sx={{ mt: 1 }}>
+                      <Button
+                        variant="text"
+                        size="small"
+                        sx={{ textDecoration: 'underline', p: 0, minWidth: 0 }}
+                        endIcon={<ChevronRightIcon />}
+                        {...item.button}
+                      >
+                        {item.button.title}
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              </a>
+            ))}
+          </Box>
+
+          <Box sx={{ mt: 1 }}>
+            <Button {...mega.button} />
+          </Box>
         </Box>
-      </Drawer>
-    </AppBar>
+
+        {/* Opaque background panel behind the right column */}
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            width: '100vw',
+            left: { xs: 0, lg: 'calc(-5% - 0px)' },
+            bgcolor: theme.palette.background.paper,
+            zIndex: 0,
+          }}
+        />
+      </Box>
+    </Box>
   );
 }
+
+/* ------------------------------ MOBILE MEGA ------------------------------ */
+
+function MobileMega({ title, megaMenu }: { title: string; megaMenu: MegaMenuProps }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Box sx={{ borderTop: (t) => `1px solid ${alpha(t.palette.text.primary, 0.06)}` }}>
+      <Button
+        onClick={() => setOpen((p) => !p)}
+        aria-expanded={open}
+        endIcon={
+          <m.span
+            variants={{ rotated: { rotate: 180 }, initial: { rotate: 0 } }}
+            animate={open ? 'rotated' : 'initial'}
+            transition={{ duration: 0.3 }}
+            style={{ display: 'flex', alignItems: 'center' }}
+          >
+            <ExpandMoreIcon />
+          </m.span>
+        }
+        sx={{
+          width: '100%',
+          justifyContent: 'space-between',
+          textTransform: 'none',
+          py: 1.25,
+          px: 0,
+          color: 'text.primary',
+        }}
+      >
+        {title}
+      </Button>
+
+      <m.div
+        initial={false}
+        animate={open ? 'open' : 'closed'}
+        variants={{ open: { height: 'auto', opacity: 1 }, closed: { height: 0, opacity: 0 } }}
+        transition={{ duration: 0.3 }}
+        style={{ overflow: 'hidden' }}
+      >
+        {/* Same content layout as desktop, stacked / responsive */}
+        <Box sx={{ py: 2 }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 2,
+            }}
+          >
+            {megaMenu.categoryLinks.map((group, gi) => (
+              <Box key={gi} sx={{ display: 'grid', gridAutoRows: 'max-content', rowGap: 1 }}>
+                <Typography variant="subtitle2" fontWeight={600}>
+                  {group.title}
+                </Typography>
+                {group.links.map((l, li) => (
+                  <a
+                    key={li}
+                    href={l.url}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'max-content 1fr',
+                      alignItems: 'start',
+                      columnGap: '12px',
+                      padding: '8px 0',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <img
+                        src={l.image.src}
+                        alt={l.image.alt}
+                        style={{ maxWidth: '100%', maxHeight: '100%' }}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        {l.title}
+                      </Typography>
+                      <Typography variant="body2">{l.description}</Typography>
+                    </Box>
+                  </a>
+                ))}
+              </Box>
+            ))}
+          </Box>
+
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+              {megaMenu.featuredSections.title}
+            </Typography>
+            <Box sx={{ display: 'grid', gap: 2 }}>
+              {megaMenu.featuredSections.links.map((item, k) => (
+                <a
+                  key={k}
+                  href={item.url}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr',
+                    gap: '12px',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                  }}
+                >
+                  <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
+                    <img
+                      src={item.image.src}
+                      alt={item.image.alt}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: 8,
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+                      {item.title}
+                    </Typography>
+                    <Typography variant="body2">{item.description}</Typography>
+                    {item.button && (
+                      <Box sx={{ mt: 1 }}>
+                        <Button
+                          variant="text"
+                          size="small"
+                          sx={{ textDecoration: 'underline', p: 0, minWidth: 0 }}
+                          endIcon={<ChevronRightIcon />}
+                          {...item.button}
+                        >
+                          {item.button.title}
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </a>
+              ))}
+            </Box>
+
+            <Box sx={{ mt: 1 }}>
+              <Button {...megaMenu.button} />
+            </Box>
+          </Box>
+        </Box>
+      </m.div>
+    </Box>
+  );
+}
+
+/* ------------------------------- DEFAULTS -------------------------------- */
+
+export const NormalNavbarDefaults: Props = {
+  logo: {
+    url: '#',
+    src: 'https://d22po4pjz3o32e.cloudfront.net/logo-image.svg',
+    alt: 'Logo image',
+  },
+  links: [
+    { title: 'Link One', url: '#' },
+    { title: 'Link Two', url: '#' },
+    { title: 'Link Three', url: '#' },
+    {
+      title: 'Link Four',
+      url: '#',
+      megaMenu: {
+        categoryLinks: [
+          {
+            title: 'Page group one',
+            links: [
+              {
+                url: '#',
+                image: {
+                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
+                  alt: 'Icon 1',
+                },
+                title: 'Page One',
+                description: 'Lorem ipsum dolor sit amet consectetur elit',
+              },
+              {
+                url: '#',
+                image: {
+                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
+                  alt: 'Icon 2',
+                },
+                title: 'Page Two',
+                description: 'Lorem ipsum dolor sit amet consectetur elit',
+              },
+              {
+                url: '#',
+                image: {
+                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
+                  alt: 'Icon 3',
+                },
+                title: 'Page Three',
+                description: 'Lorem ipsum dolor sit amet consectetur elit',
+              },
+              {
+                url: '#',
+                image: {
+                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
+                  alt: 'Icon 4',
+                },
+                title: 'Page Four',
+                description: 'Lorem ipsum dolor sit amet consectetur elit',
+              },
+            ],
+          },
+          {
+            title: 'Page group two',
+            links: [
+              {
+                url: '#',
+                image: {
+                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
+                  alt: 'Icon 5',
+                },
+                title: 'Page Five',
+                description: 'Lorem ipsum dolor sit amet consectetur elit',
+              },
+              {
+                url: '#',
+                image: {
+                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
+                  alt: 'Icon 6',
+                },
+                title: 'Page Six',
+                description: 'Lorem ipsum dolor sit amet consectetur elit',
+              },
+              {
+                url: '#',
+                image: {
+                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
+                  alt: 'Icon 7',
+                },
+                title: 'Page Seven',
+                description: 'Lorem ipsum dolor sit amet consectetur elit',
+              },
+              {
+                url: '#',
+                image: {
+                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
+                  alt: 'Icon 8',
+                },
+                title: 'Page Eight',
+                description: 'Lorem ipsum dolor sit amet consectetur elit',
+              },
+            ],
+          },
+        ],
+        featuredSections: {
+          title: 'Featured from Blog',
+          links: [
+            {
+              url: '#',
+              image: {
+                src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg',
+                alt: 'Relume 1',
+              },
+              title: 'Article Title',
+              description: 'Lorem ipsum dolor sit amet consectetur elit',
+              button: { title: 'Read more', variant: 'text', size: 'small' },
+            },
+            {
+              url: '#',
+              image: {
+                src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg',
+                alt: 'Relume 2',
+              },
+              title: 'Article Title',
+              description: 'Lorem ipsum dolor sit amet consectetur elit',
+              button: { title: 'Read more', variant: 'text', size: 'small' },
+            },
+          ],
+        },
+        button: {
+          title: 'See all articles',
+          variant: 'text',
+          size: 'small',
+          endIcon: <ChevronRightIcon />,
+        },
+      },
+    },
+  ],
+  buttons: [
+    { title: 'Button', variant: 'contained', size: 'small' },
+    { title: 'Button', size: 'small' },
+  ],
+};
+
+/* ----------------------------- FRAMER VARIANTS ---------------------------- */
+
+const topLineVariants = {
+  open: { translateY: 8, transition: { delay: 0.1 } },
+  rotatePhase: { rotate: -45, transition: { delay: 0.2 } },
+  closed: { translateY: 0, rotate: 0, transition: { duration: 0.2 } },
+};
+const middleLineVariants = {
+  open: { width: 0, transition: { duration: 0.1 } },
+  closed: { width: '1.5rem', transition: { delay: 0.3, duration: 0.2 } },
+};
+const bottomLineVariants = {
+  open: { translateY: -8, transition: { delay: 0.1 } },
+  rotatePhase: { rotate: 45, transition: { delay: 0.2 } },
+  closed: { translateY: 0, rotate: 0, transition: { duration: 0.2 } },
+};
+
+NormalNavbar.displayName = 'NormalNavbar';

@@ -175,7 +175,7 @@ export function DashboardLayout({
         /** **************************************
          * @Header
          *************************************** */
-        headerSection={renderHeader()}
+        headerSection={renderNormalNavbar()}
         /** **************************************
          * @Sidebar
          *************************************** */
