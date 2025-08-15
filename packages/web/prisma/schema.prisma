@@ -91,6 +91,24 @@ model TestnetUser {
   @@map("testnet_users")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model normal_contract_events_testnet {
+  id                          String   @id(map: "normal_contracts_testnet_pkey")
+  type                        String
+  contract_id                 String?
+  topics                      String?
+  data                        String?
+  in_successful_contract_call Boolean
+  transaction_hash            String
+  transaction_account         String
+  transaction_fee_account     String?
+  transaction_successful      Boolean
+  ledger_sequence             BigInt
+  ledger_hash                 String
+  ledger_closed_at            DateTime @db.Timestamp(6)
+  ledger_signature            String?
+}
+
 // Indexes for performance
 // Index on wallet address for fast user lookups
 // Index on referral code for fast referral lookups
