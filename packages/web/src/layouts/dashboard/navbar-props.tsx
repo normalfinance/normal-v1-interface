@@ -39,6 +39,23 @@ export const NormalNavbarDefaults: Props = {
             ],
           },
           {
+            title: 'Indexes',
+            links: [
+              {
+                url: '/indexes',
+                image: { src: '/assets/icons/normal-navbar/indexes.svg', alt: 'Browse Indexes' },
+                title: 'Browse indexes',
+                description: 'Discover curated on-chain indexes.',
+              },
+              {
+                url: '/indexes/create',
+                image: { src: '/assets/icons/normal-navbar/create-index.svg', alt: 'Create Index' },
+                title: 'Create index',
+                description: 'Build and manage your own index.',
+              },
+            ],
+          },
+          {
             title: 'Liquidity',
             links: [
               {

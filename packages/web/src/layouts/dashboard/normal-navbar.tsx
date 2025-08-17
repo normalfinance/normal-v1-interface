@@ -8,9 +8,15 @@ import { m, AnimatePresence } from 'framer-motion';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { Logo } from '@/components/template/logo';
-import { GROUP_ACCENTS, groupAccentByIndex } from '@/theme/accents';
+import {
+  GROUP_ACCENTS,
+  GROUP_ACCENTS_DARK,
+  groupAccentByIndex,
+  groupAccentDarkByIndex,
+} from '@/theme/accents';
 
-const FEATURED_ACCENT = GROUP_ACCENTS[4] ?? '#FFB020';
+const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
+const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
 
 const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: string) => {
   const isExternal = /^https?:\/\//i.test(url);
@@ -191,7 +197,10 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
             {links.map((link, i) => {
               const hasMega = !!link.megaMenu;
               const { target, rel } = linkAttrs(link.url, link.target, link.rel);
-
+              const chevronVariants = {
+                open: { rotate: 180 },
+                closed: { rotate: 0 },
+              } as const;
               if (hasMega) {
                 return (
                   <Box
@@ -204,7 +213,17 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                         e.preventDefault();
                         openDock(i);
                       }}
-                      endIcon={<ExpandMoreIcon />}
+                      aria-expanded={dockOpen && activeIdx === i ? true : undefined}
+                      endIcon={
+                        <m.span
+                          style={{ display: 'inline-flex', alignItems: 'center' }}
+                          animate={dockOpen && activeIdx === i ? 'open' : 'closed'}
+                          variants={chevronVariants}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ExpandMoreIcon />
+                        </m.span>
+                      }
                       sx={{
                         textTransform: 'none',
                         py: 1,
@@ -404,8 +423,8 @@ function DesktopDock({
     >
       <Box
         sx={{
-          px: '5%',
-          py: 3,
+          px: 2,
+
           borderTop: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
           borderBottom: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
           bgcolor: theme.palette.background.paper,
@@ -427,7 +446,6 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
         display: 'flex',
         gap: { xs: 2, lg: 4 },
         alignItems: 'stretch',
-        py: 1,
       }}
     >
       {/* Left: category link columns */}
@@ -435,14 +453,24 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
         sx={{
           flex: 1,
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr 1fr' },
-          columnGap: { xs: 2, md: 4 },
+          gridTemplateColumns: 'repeat(1, minmax(0, 1fr))',
+          columnGap: { xs: 2, md: 2 },
           rowGap: { xs: 2, md: 3 },
           pr: { lg: 3 },
+          py: 4,
+          px: 2,
+
+          /* explicit pixel breakpoints so the 5-col rule always applies */
+          '@media (min-width: 900px)': { gridTemplateColumns: 'repeat(2, minmax(0, 320px))' },
+          '@media (min-width: 1200px)': { gridTemplateColumns: 'repeat(3, minmax(0, 320px))' },
+          '@media (min-width: 1440px)': { gridTemplateColumns: 'repeat(4, minmax(0, 320px))' },
+          '@media (min-width: 1600px)': { gridTemplateColumns: 'repeat(5, minmax(0, 320px))' },
         }}
       >
         {mega.categoryLinks.map((group, gi) => {
           const accent = groupAccentByIndex(gi);
+          const accentText = groupAccentDarkByIndex(gi);
+
           return (
             <Box
               key={gi}
@@ -464,7 +492,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 <Typography
                   variant="subtitle2"
                   fontWeight={400}
-                  sx={{ lineHeight: 1.3, color: accent }}
+                  sx={{ lineHeight: 1.3, color: accentText }}
                 >
                   {group.title}
                 </Typography>
@@ -532,7 +560,15 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
       </Box>
 
       {/* Right: featured section */}
-      <Box sx={{ flex: 1, position: 'relative', maxWidth: { lg: 448 }, px: { xs: 2, md: 3 } }}>
+      <Box
+        sx={{
+          flex: 1,
+          position: 'relative',
+          maxWidth: { lg: 448 },
+          px: { xs: 2, md: 3 },
+          py: 4,
+        }}
+      >
         <Box
           sx={{
             position: 'relative',
@@ -558,7 +594,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             <Typography
               variant="subtitle2"
               fontWeight={400}
-              sx={{ lineHeight: 1.3, color: FEATURED_ACCENT }}
+              sx={{ lineHeight: 1.3, color: FEATURED_ACCENT_TEXT }}
             >
               {mega.featuredSections.title}
             </Typography>
@@ -647,7 +683,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             inset: 0,
             width: '100vw',
             left: { xs: 0, lg: 'calc(-5% - 0px)' },
-            bgcolor: theme.palette.background.paper,
+            bgcolor: (t) => t.palette.grey[100],
             zIndex: 0,
           }}
         />
