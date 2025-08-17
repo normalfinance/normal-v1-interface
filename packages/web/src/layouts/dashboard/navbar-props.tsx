@@ -1,6 +1,7 @@
 'use client';
 
 import type { Props } from './normal-navbar';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 export const NormalNavbarDefaults: Props = {
   logo: {
@@ -9,132 +10,165 @@ export const NormalNavbarDefaults: Props = {
     alt: 'Logo image',
   },
   links: [
-    { title: 'Link One', url: '#' },
-    { title: 'Link Two', url: '#' },
-    { title: 'Link Three', url: '#' },
     {
-      title: 'Link Four',
-      url: '#',
+      title: 'App',
+      url: '/app',
       megaMenu: {
         categoryLinks: [
           {
-            title: 'Page group one',
+            title: 'Trading',
             links: [
               {
-                url: '#',
+                url: '/explore',
                 image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 1',
+                  src: '/assets/icons/normal-navbar/explore.svg',
+                  alt: 'Explore',
                 },
-                title: 'Page One',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
+                title: 'Explore',
+                description: 'Browse markets and pools.',
               },
               {
-                url: '#',
+                url: '/swap',
                 image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 2',
+                  src: '/assets/icons/normal-navbar/swap.svg',
+                  alt: 'Swap',
                 },
-                title: 'Page Two',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 3',
-                },
-                title: 'Page Three',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 4',
-                },
-                title: 'Page Four',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
+                title: 'Swap',
+                description: 'Trade tokens instantly.',
               },
             ],
           },
           {
-            title: 'Page group two',
+            title: 'Liquidity',
             links: [
               {
-                url: '#',
+                url: '/liquidity/positions',
                 image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 5',
+                  src: '/assets/icons/normal-navbar/positions.svg',
+                  alt: 'Positions',
                 },
-                title: 'Page Five',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
+                title: 'Positions',
+                description: 'View & manage LP positions.',
               },
               {
-                url: '#',
+                url: '/liquidity/provide',
                 image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 6',
+                  src: '/assets/icons/normal-navbar/provide-liquidity.svg',
+                  alt: 'Provide',
                 },
-                title: 'Page Six',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
+                title: 'Provide liquidity',
+                description: 'Deposit tokens to earn fees.',
+              },
+            ],
+          },
+          {
+            title: 'Safety & Rewards',
+            links: [
+              {
+                url: '/insurance',
+                image: {
+                  src: '/assets/icons/normal-navbar/insurance.svg',
+                  alt: 'Insurance',
+                },
+                title: 'Insurance',
+                description: 'Protect your positions.',
               },
               {
-                url: '#',
+                url: '/rewards',
                 image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 7',
+                  src: '/assets/icons/normal-navbar/rewards.svg',
+                  alt: 'Rewards',
                 },
-                title: 'Page Seven',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
+                title: 'Rewards',
+                description: 'Current incentives & APRs.',
+              },
+            ],
+          },
+          {
+            title: 'Support',
+            links: [
+              {
+                url: '/help',
+                image: {
+                  src: '/assets/icons/normal-navbar/help.svg',
+                  alt: 'Help',
+                },
+                title: 'Help & feedback',
+                description: 'Report bugs, request features.',
               },
               {
-                url: '#',
+                url: '/docs',
                 image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 8',
+                  src: '/assets/icons/normal-navbar/docs.svg',
+                  alt: 'Docs',
                 },
-                title: 'Page Eight',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
+                title: 'Docs',
+                description: 'Protocol, integration, API.',
+              },
+              {
+                url: '/about',
+                image: {
+                  src: '/assets/icons/normal-navbar/about.svg',
+                  alt: 'About us',
+                },
+                title: 'About us',
+                description: 'Mission, team & roadmap.',
+              },
+              {
+                url: '/contact',
+                image: {
+                  src: '/assets/icons/normal-navbar/contact.svg',
+                  alt: 'Contact',
+                },
+                title: 'Contact',
+                description: 'Get in touch with the team.',
               },
             ],
           },
         ],
         featuredSections: {
-          title: 'Featured from Blog',
+          title: 'Shortcuts',
           links: [
             {
-              url: '#',
+              url: 'https://normalfi.substack.com/p/normal-partners-with-halborn-for',
               image: {
-                src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg',
-                alt: 'Relume placeholder image 1',
+                src: '/assets/images/normal-navbar/halborn.webp',
+                alt: 'Normal Partners with Halborn',
               },
-              title: 'Article Title',
-              description: 'Lorem ipsum dolor sit amet consectetur elit',
-              button: { title: 'Read more', variant: 'link', size: 'link' },
+              title: 'Normal Partners with Halborn',
+              description: 'Comprehensive Security Audit, Backed by Stellar Development Foundation',
+              button: { title: 'Read more', variant: 'text', size: 'small' },
             },
             {
-              url: '#',
+              url: 'https://normalfi.substack.com/p/the-normal-top-10-index',
               image: {
-                src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg',
-                alt: 'Relume placeholder image 2',
+                src: '/assets/images/normal-navbar/index.webp',
+                alt: 'The Normal Top 10 Index',
               },
-              title: 'Article Title',
-              description: 'Lorem ipsum dolor sit amet consectetur elit',
-              button: { title: 'Read more', variant: 'link', size: 'link' },
+              title: 'The Normal Top 10 Index',
+              description: 'Composed of the top 10 cryptocurrencies by market capitalization.',
+              button: { title: 'Read more', variant: 'text', size: 'small' },
             },
           ],
         },
         button: {
-          title: 'See all articles',
-          variant: 'link',
-          size: 'link',
+          title: 'All docs',
+          variant: 'text',
+          size: 'small',
+          endIcon: <ChevronRightIcon />,
         },
       },
     },
+    {
+      title: 'Docs',
+      url: 'https://normalfinance.gitbook.io/docs',
+      target: '_blank',
+      rel: 'noopener noreferrer',
+    },
+    { title: 'About', url: '/about' },
   ],
   buttons: [
-    { title: 'Button', variant: 'secondary', size: 'sm' },
-    { title: 'Button', size: 'sm' },
+    { title: 'Button', variant: 'contained', size: 'small' },
+    { title: 'Button', size: 'small' },
   ],
 };

@@ -146,6 +146,9 @@ export function DashboardLayout({
         logo={NormalNavbarDefaults.logo}
         links={NormalNavbarDefaults.links}
         buttons={NormalNavbarDefaults.buttons}
+        searchbar={<Searchbar data={navData} />}
+        language={<LanguagePopover data={allLangs} />}
+        account={<AccountDrawer />}
       />
     </Box>
   );

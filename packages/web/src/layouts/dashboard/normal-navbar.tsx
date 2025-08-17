@@ -8,6 +8,16 @@ import { m, AnimatePresence } from 'framer-motion';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { Logo } from '@/components/template/logo';
+import { GROUP_ACCENTS, groupAccentByIndex } from '@/theme/accents';
+
+const FEATURED_ACCENT = GROUP_ACCENTS[4] ?? '#FFB020';
+
+const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: string) => {
+  const isExternal = /^https?:\/\//i.test(url);
+  const t = target ?? (isExternal ? '_blank' : undefined);
+  const r = rel ?? (t === '_blank' ? 'noopener noreferrer' : undefined);
+  return { target: t, rel: r };
+};
 
 export type NavButton = Omit<MUIButtonProps, 'children'> & {
   title: string;
@@ -45,18 +55,23 @@ type LinkProps = {
   title: string;
   url: string;
   megaMenu?: MegaMenuProps;
+  target?: React.HTMLAttributeAnchorTarget;
+  rel?: string;
 };
 
-interface Props {
+export interface Props {
   logo: ImageProps;
   links: LinkProps[];
   buttons: NavButton[];
+  searchbar?: React.ReactNode;
+  language?: React.ReactNode;
+  account?: React.ReactNode;
 }
 
 export type NormalNavbarProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
 export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
-  const { logo, links, buttons } = { ...NormalNavbarDefaults, ...props };
+  const { logo, links = [], buttons = [], searchbar, language, account } = props;
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
@@ -138,91 +153,105 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         borderBottom: `1px solid ${theme.palette.divider}`,
         backgroundColor: theme.palette.background.paper,
         minHeight: { xs: 64, lg: 72 },
-        px: { xs: 2, lg: '5%' },
+        px: { xs: 2, lg: 2 },
       }}
     >
-      {/* Row: logo | links (desktop) | actions */}
+      {/* Row: logo | search (desktop) | right cluster */}
       <Box
         sx={{
           width: '100%',
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr auto', lg: 'auto 1fr auto' },
+          // was: { xs: '1fr auto', lg: 'auto 1fr auto' }
+          gridTemplateColumns: { xs: '1fr auto', lg: '1fr minmax(160px, 200px) 1fr' },
           alignItems: 'center',
           columnGap: 2,
         }}
       >
-        {/* Left: Logo (always pinned) */}
+        {/* Left: Logo */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Logo
-            isSingle={false}
-            sx={{
-              display: 'inline-flex', // <-- always show
-              height: 28, // optional: match your img height
-              alignItems: 'center',
-            }}
-          />
+          <Logo isSingle={false} sx={{ display: 'inline-flex', height: 28 }} />
         </Box>
 
-        {/* Middle: DESKTOP links only */}
+        {/* Middle: DESKTOP searchbar — perfectly centered */}
         <Box
           sx={{
             display: { xs: 'none', lg: 'flex' },
             alignItems: 'center',
-            justifyContent: 'flex-start',
+            justifyContent: 'center',
           }}
         >
-          {links.map((link, i) => {
-            const hasMega = !!link.megaMenu;
-            return (
-              <Box
-                key={i}
-                onMouseEnter={() => (hasMega ? openDock(i) : undefined)}
-                onMouseLeave={() => (hasMega ? scheduleClose() : undefined)}
-              >
-                <Button
-                  href={!hasMega ? link.url : undefined}
-                  onClick={(e) => {
-                    if (hasMega) {
-                      e.preventDefault();
-                      openDock(i);
-                    }
-                  }}
-                  endIcon={hasMega ? <ExpandMoreIcon /> : undefined}
-                  sx={{
-                    textTransform: 'none',
-                    py: 2.25,
-                    px: 2,
-                    color: 'text.primary',
-                  }}
-                >
-                  {link.title}
-                </Button>
-              </Box>
-            );
-          })}
+          {/* Keep the bar from stretching; center it */}
+          <Box sx={{ width: '100%', maxWidth: 200, mx: 'auto' }}>{searchbar}</Box>
         </Box>
 
-        {/* Right: Desktop buttons / Mobile hamburger */}
+        {/* Right: links + language + account + hamburger */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-          {/* Desktop buttons */}
-          <Box sx={{ display: { xs: 'none', lg: 'flex' }, gap: 2 }}>
-            {buttons.map((button, idx) => (
-              <Button key={idx} {...button} />
-            ))}
+          {/* DESKTOP links */}
+          <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center' }}>
+            {links.map((link, i) => {
+              const hasMega = !!link.megaMenu;
+              const { target, rel } = linkAttrs(link.url, link.target, link.rel);
+
+              if (hasMega) {
+                return (
+                  <Box
+                    key={i}
+                    onMouseEnter={() => openDock(i)}
+                    onMouseLeave={() => scheduleClose()}
+                  >
+                    <Button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openDock(i);
+                      }}
+                      endIcon={<ExpandMoreIcon />}
+                      sx={{
+                        textTransform: 'none',
+                        py: 1,
+                        px: 1.5,
+                        color: 'text.primary',
+                        fontWeight: 400,
+                      }}
+                    >
+                      {link.title}
+                    </Button>
+                  </Box>
+                );
+              }
+
+              return (
+                <Box key={i}>
+                  <Button
+                    component="a"
+                    href={link.url}
+                    target={target}
+                    rel={rel}
+                    sx={{
+                      textTransform: 'none',
+                      py: 1,
+                      px: 1.5,
+                      color: 'text.primary',
+                      fontWeight: 400,
+                    }}
+                  >
+                    {link.title}
+                  </Button>
+                </Box>
+              );
+            })}
           </Box>
 
-          {/* Mobile hamburger (animated 3 bars like Navbar5) */}
+          {/* DESKTOP language + account */}
+          <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center', gap: 1 }}>
+            {language}
+            {account}
+          </Box>
+
+          {/* MOBILE hamburger (unchanged) */}
           <IconButton
             onClick={toggleMobile}
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            sx={{
-              display: { xs: 'inline-flex', lg: 'none' },
-              width: 48,
-              height: 48,
-              p: 0,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
+            sx={{ display: { xs: 'inline-flex', lg: 'none' }, width: 48, height: 48, p: 0 }}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <m.span
@@ -398,6 +427,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
         display: 'flex',
         gap: { xs: 2, lg: 4 },
         alignItems: 'stretch',
+        py: 1,
       }}
     >
       {/* Left: category link columns */}
@@ -405,65 +435,104 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
         sx={{
           flex: 1,
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr 1fr' },
           columnGap: { xs: 2, md: 4 },
           rowGap: { xs: 2, md: 3 },
           pr: { lg: 3 },
         }}
       >
-        {mega.categoryLinks.map((group, gi) => (
-          <Box
-            key={gi}
-            sx={{ display: 'grid', gridAutoRows: 'max-content', rowGap: { xs: 1, md: 2 } }}
-          >
-            <Typography variant="subtitle2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
-              {group.title}
-            </Typography>
-            {group.links.map((l, li) => (
-              <a
-                key={li}
-                href={l.url}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'max-content 1fr',
-                  alignItems: 'start',
-                  columnGap: '12px',
-                  padding: '8px 0',
-                  textDecoration: 'none',
-                  color: 'inherit',
+        {mega.categoryLinks.map((group, gi) => {
+          const accent = groupAccentByIndex(gi);
+          return (
+            <Box
+              key={gi}
+              sx={{ display: 'grid', gridAutoRows: 'max-content', rowGap: { xs: 1, md: 2 } }}
+            >
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  bgcolor: alpha(accent, 0.1),
+                  width: 'fit-content',
+                  whiteSpace: 'nowrap',
+                  alignSelf: 'start',
                 }}
               >
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={400}
+                  sx={{ lineHeight: 1.3, color: accent }}
+                >
+                  {group.title}
+                </Typography>
+              </Box>
+              {group.links.map((l, li) => (
                 <Box
+                  key={li}
+                  component="a"
+                  href={l.url}
                   sx={{
-                    width: 24,
-                    height: 24,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: 'grid',
+                    gridTemplateColumns: 'max-content 1fr',
+                    alignItems: 'start',
+                    columnGap: '12px',
+                    py: 1,
+                    px: 1,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    borderRadius: 1,
+                    transition: 'background-color 0.15s ease',
+                    '&:hover': {
+                      backgroundColor: (t) => t.palette.grey[200],
+                    },
+                    '&:focus-visible': (t) => ({
+                      outline: `2px solid ${t.palette.primary.main}`,
+                      outlineOffset: 2,
+                    }),
                   }}
                 >
-                  <img
-                    src={l.image.src}
-                    alt={l.image.alt}
-                    style={{ maxWidth: '100%', maxHeight: '100%' }}
-                  />
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      p: 0.75,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: '#F9FAFB',
+                      borderRadius: 1,
+                      border: (t) => `1px solid ${t.palette.divider}`,
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src={l.image.src}
+                      alt={l.image.alt}
+                      sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                    />
+                  </Box>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="body2" fontWeight={700}>
+                      {l.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {l.description}
+                    </Typography>
+                  </Box>
                 </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="body2" fontWeight={700}>
-                    {l.title}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {l.description}
-                  </Typography>
-                </Box>
-              </a>
-            ))}
-          </Box>
-        ))}
+              ))}
+            </Box>
+          );
+        })}
       </Box>
 
       {/* Right: featured section */}
-      <Box sx={{ flex: 1, position: 'relative', maxWidth: { lg: 448 }, p: { xs: 2, md: 3 } }}>
+      <Box sx={{ flex: 1, position: 'relative', maxWidth: { lg: 448 }, px: { xs: 2, md: 3 } }}>
         <Box
           sx={{
             position: 'relative',
@@ -473,9 +542,27 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             gap: 2,
           }}
         >
-          <Typography variant="subtitle2" fontWeight={600}>
-            {mega.featuredSections.title}
-          </Typography>
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              bgcolor: alpha(FEATURED_ACCENT, 0.2),
+              width: 'fit-content',
+              whiteSpace: 'nowrap',
+              alignSelf: 'start',
+            }}
+          >
+            <Typography
+              variant="subtitle2"
+              fontWeight={400}
+              sx={{ lineHeight: 1.3, color: FEATURED_ACCENT }}
+            >
+              {mega.featuredSections.title}
+            </Typography>
+          </Box>
           <Box sx={{ display: 'grid', gap: 2 }}>
             {mega.featuredSections.links.map((item, k) => (
               <a
@@ -529,8 +616,27 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             ))}
           </Box>
 
-          <Box sx={{ mt: 1 }}>
-            <Button {...mega.button} />
+          <Box
+            sx={{ mt: 1 }}
+            component="a"
+            href="https://normalfi.substack.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button
+              {...mega.button}
+              sx={{
+                color: 'text.primary',
+                textDecoration: 'none',
+                '&:hover': {
+                  textDecoration: 'none',
+                  backgroundColor: (t) => t.palette.action.hover,
+                },
+                '&:link, &:visited': { color: 'text.primary' },
+              }}
+            >
+              {mega.button.title}
+            </Button>
           </Box>
         </Box>
 
@@ -699,7 +805,7 @@ function MobileMega({ title, megaMenu }: { title: string; megaMenu: MegaMenuProp
             </Box>
 
             <Box sx={{ mt: 1 }}>
-              <Button {...megaMenu.button} />
+              <Button {...megaMenu.button}>{megaMenu.button.title}</Button>
             </Box>
           </Box>
         </Box>
@@ -707,146 +813,6 @@ function MobileMega({ title, megaMenu }: { title: string; megaMenu: MegaMenuProp
     </Box>
   );
 }
-
-/* ------------------------------- DEFAULTS -------------------------------- */
-
-export const NormalNavbarDefaults: Props = {
-  logo: {
-    url: '#',
-    src: 'https://d22po4pjz3o32e.cloudfront.net/logo-image.svg',
-    alt: 'Logo image',
-  },
-  links: [
-    { title: 'Link One', url: '#' },
-    { title: 'Link Two', url: '#' },
-    { title: 'Link Three', url: '#' },
-    {
-      title: 'Link Four',
-      url: '#',
-      megaMenu: {
-        categoryLinks: [
-          {
-            title: 'Page group one',
-            links: [
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 1',
-                },
-                title: 'Page One',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 2',
-                },
-                title: 'Page Two',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 3',
-                },
-                title: 'Page Three',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 4',
-                },
-                title: 'Page Four',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-            ],
-          },
-          {
-            title: 'Page group two',
-            links: [
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 5',
-                },
-                title: 'Page Five',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 6',
-                },
-                title: 'Page Six',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 7',
-                },
-                title: 'Page Seven',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-              {
-                url: '#',
-                image: {
-                  src: 'https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg',
-                  alt: 'Icon 8',
-                },
-                title: 'Page Eight',
-                description: 'Lorem ipsum dolor sit amet consectetur elit',
-              },
-            ],
-          },
-        ],
-        featuredSections: {
-          title: 'Featured from Blog',
-          links: [
-            {
-              url: '#',
-              image: {
-                src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg',
-                alt: 'Relume 1',
-              },
-              title: 'Article Title',
-              description: 'Lorem ipsum dolor sit amet consectetur elit',
-              button: { title: 'Read more', variant: 'text', size: 'small' },
-            },
-            {
-              url: '#',
-              image: {
-                src: 'https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg',
-                alt: 'Relume 2',
-              },
-              title: 'Article Title',
-              description: 'Lorem ipsum dolor sit amet consectetur elit',
-              button: { title: 'Read more', variant: 'text', size: 'small' },
-            },
-          ],
-        },
-        button: {
-          title: 'See all articles',
-          variant: 'text',
-          size: 'small',
-          endIcon: <ChevronRightIcon />,
-        },
-      },
-    },
-  ],
-  buttons: [
-    { title: 'Button', variant: 'contained', size: 'small' },
-    { title: 'Button', size: 'small' },
-  ],
-};
 
 /* ----------------------------- FRAMER VARIANTS ---------------------------- */
 

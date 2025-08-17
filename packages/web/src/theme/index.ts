@@ -7,3 +7,5 @@ export * from './load-fonts';
 export * from './theme-config';
 
 export * from './theme-provider';
+
+export * from './accents';
