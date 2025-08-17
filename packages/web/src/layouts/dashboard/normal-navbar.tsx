@@ -345,41 +345,12 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           >
             {/* Scrollable content only, no extra header */}
             <Box sx={{ height: '100%', overflow: 'auto', px: '5%', py: 2 }}>
-              {links.map((link, i) => {
-                const hasMega = !!link.megaMenu;
-                if (hasMega)
-                  return <MobileMega key={i} title={link.title} megaMenu={link.megaMenu!} />;
-                return (
-                  <a
-                    key={i}
-                    href={link.url}
-                    style={{
-                      display: 'block',
-                      padding: '12px 0',
-                      textDecoration: 'none',
-                      color: 'inherit',
-                    }}
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {link.title}
-                  </a>
-                );
-              })}
-
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  width: '100%',
-                  mt: 2,
-                  gap: 2,
-                  pb: 6,
-                }}
-              >
-                {buttons.map((button, idx) => (
-                  <Button key={idx} fullWidth {...button} />
+              {/* ONLY render links that have a megaMenu */}
+              {links
+                .filter((l) => !!l.megaMenu)
+                .map((link, i) => (
+                  <MobileMega key={i} megaMenu={link.megaMenu!} />
                 ))}
-              </Box>
             </Box>
           </m.div>
         )}
@@ -455,7 +426,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
           display: 'grid',
           gridTemplateColumns: 'repeat(1, minmax(0, 1fr))',
           columnGap: { xs: 2, md: 2 },
-          rowGap: { xs: 2, md: 3 },
+          rowGap: { xs: 4, md: 4 },
           pr: { lg: 3 },
           py: 4,
           px: 2,
@@ -694,158 +665,200 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
 
 /* ------------------------------ MOBILE MEGA ------------------------------ */
 
-function MobileMega({ title, megaMenu }: { title: string; megaMenu: MegaMenuProps }) {
-  const [open, setOpen] = useState(false);
-
+function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
   return (
-    <Box sx={{ borderTop: (t) => `1px solid ${alpha(t.palette.text.primary, 0.06)}` }}>
-      <Button
-        onClick={() => setOpen((p) => !p)}
-        aria-expanded={open}
-        endIcon={
-          <m.span
-            variants={{ rotated: { rotate: 180 }, initial: { rotate: 0 } }}
-            animate={open ? 'rotated' : 'initial'}
-            transition={{ duration: 0.3 }}
-            style={{ display: 'flex', alignItems: 'center' }}
-          >
-            <ExpandMoreIcon />
-          </m.span>
-        }
+    <Box
+      sx={{
+        py: 2,
+      }}
+    >
+      {/* Category groups */}
+      <Box
         sx={{
-          width: '100%',
-          justifyContent: 'space-between',
-          textTransform: 'none',
-          py: 1.25,
-          px: 0,
-          color: 'text.primary',
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'repeat(1, minmax(0, 1fr))', // phones: 1 col
+            sm: 'repeat(2, minmax(0, 1fr))', // ≥600 & <1200 (mobile overlay): 2 cols
+          },
+          columnGap: 2,
+          rowGap: 4,
         }}
       >
-        {title}
-      </Button>
+        {megaMenu.categoryLinks.map((group, gi) => {
+          const accent = groupAccentByIndex(gi);
+          const accentText = groupAccentDarkByIndex(gi);
 
-      <m.div
-        initial={false}
-        animate={open ? 'open' : 'closed'}
-        variants={{ open: { height: 'auto', opacity: 1 }, closed: { height: 0, opacity: 0 } }}
-        transition={{ duration: 0.3 }}
-        style={{ overflow: 'hidden' }}
-      >
-        {/* Same content layout as desktop, stacked / responsive */}
-        <Box sx={{ py: 2 }}>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: 2,
-            }}
-          >
-            {megaMenu.categoryLinks.map((group, gi) => (
-              <Box key={gi} sx={{ display: 'grid', gridAutoRows: 'max-content', rowGap: 1 }}>
-                <Typography variant="subtitle2" fontWeight={600}>
+          return (
+            <Box
+              key={gi}
+              sx={{
+                display: 'grid',
+                gridAutoRows: 'max-content',
+                rowGap: { xs: 1, md: 2 },
+              }}
+            >
+              {/* Accent label like desktop */}
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  bgcolor: alpha(accent, 0.1),
+                  width: 'fit-content',
+                  whiteSpace: 'nowrap',
+                  alignSelf: 'start',
+                  mb: 1,
+                }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={400}
+                  sx={{ lineHeight: 1.3, color: accentText }}
+                >
                   {group.title}
                 </Typography>
-                {group.links.map((l, li) => (
-                  <a
-                    key={li}
-                    href={l.url}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'max-content 1fr',
-                      alignItems: 'start',
-                      columnGap: '12px',
-                      padding: '8px 0',
-                      textDecoration: 'none',
-                      color: 'inherit',
+              </Box>
+
+              {/* Links with same icon wrapper as DockContent */}
+              {group.links.map((l, li) => (
+                <Box
+                  key={li}
+                  component="a"
+                  href={l.url}
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'max-content 1fr',
+                    alignItems: 'start',
+                    columnGap: '12px',
+                    py: 1,
+                    px: 1,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    borderRadius: 1,
+                    transition: 'background-color 0.15s ease',
+                    '&:hover': {
+                      backgroundColor: (t) => t.palette.grey[200],
+                    },
+                    '&:focus-visible': (t) => ({
+                      outline: `2px solid ${t.palette.primary.main}`,
+                      outlineOffset: 2,
+                    }),
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      p: 0.75,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: '#F9FAFB',
+                      borderRadius: 1,
+                      border: (t) => `1px solid ${t.palette.divider}`,
+                      boxSizing: 'border-box',
                     }}
                   >
                     <Box
-                      sx={{
-                        width: 24,
-                        height: 24,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <img
-                        src={l.image.src}
-                        alt={l.image.alt}
-                        style={{ maxWidth: '100%', maxHeight: '100%' }}
-                      />
-                    </Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="subtitle2" fontWeight={700}>
-                        {l.title}
-                      </Typography>
-                      <Typography variant="body2">{l.description}</Typography>
-                    </Box>
-                  </a>
-                ))}
-              </Box>
-            ))}
-          </Box>
-
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-              {megaMenu.featuredSections.title}
-            </Typography>
-            <Box sx={{ display: 'grid', gap: 2 }}>
-              {megaMenu.featuredSections.links.map((item, k) => (
-                <a
-                  key={k}
-                  href={item.url}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr',
-                    gap: '12px',
-                    textDecoration: 'none',
-                    color: 'inherit',
-                  }}
-                >
-                  <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
-                    <img
-                      src={item.image.src}
-                      alt={item.image.alt}
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        borderRadius: 8,
-                      }}
+                      component="img"
+                      src={l.image.src}
+                      alt={l.image.alt}
+                      sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                     />
                   </Box>
+
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-                      {item.title}
+                    <Typography variant="body2" fontWeight={700}>
+                      {l.title}
                     </Typography>
-                    <Typography variant="body2">{item.description}</Typography>
-                    {item.button && (
-                      <Box sx={{ mt: 1 }}>
-                        <Button
-                          variant="text"
-                          size="small"
-                          sx={{ textDecoration: 'underline', p: 0, minWidth: 0 }}
-                          endIcon={<ChevronRightIcon />}
-                          {...item.button}
-                        >
-                          {item.button.title}
-                        </Button>
-                      </Box>
-                    )}
+                    <Typography variant="caption" color="text.secondary">
+                      {l.description}
+                    </Typography>
                   </Box>
-                </a>
+                </Box>
               ))}
             </Box>
+          );
+        })}
+      </Box>
 
-            <Box sx={{ mt: 1 }}>
-              <Button {...megaMenu.button}>{megaMenu.button.title}</Button>
-            </Box>
-          </Box>
+      {/* Optional: featured section on mobile (kept, matches your desktop styling) */}
+      <Box sx={{ mt: 3 }}>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            bgcolor: alpha(FEATURED_ACCENT, 0.2),
+            width: 'fit-content',
+            whiteSpace: 'nowrap',
+            alignSelf: 'start',
+            mb: 1.5,
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            fontWeight={400}
+            sx={{ lineHeight: 1.3, color: FEATURED_ACCENT_TEXT }}
+          >
+            {megaMenu.featuredSections.title}
+          </Typography>
         </Box>
-      </m.div>
+
+        <Box sx={{ display: 'grid', gap: 2 }}>
+          {megaMenu.featuredSections.links.map((item, k) => (
+            <a
+              key={k}
+              href={item.url}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr',
+                gap: '12px',
+                textDecoration: 'none',
+                color: 'inherit',
+              }}
+            >
+              <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
+                <img
+                  src={item.image.src}
+                  alt={item.image.alt}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 8,
+                  }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+                  {item.title}
+                </Typography>
+                <Typography variant="body2">{item.description}</Typography>
+                {item.button && (
+                  <Box sx={{ mt: 1 }}>
+                    <Button
+                      variant="text"
+                      size="small"
+                      sx={{ textDecoration: 'underline', p: 0, minWidth: 0 }}
+                      endIcon={<ChevronRightIcon />}
+                      {...item.button}
+                    >
+                      {item.button.title}
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            </a>
+          ))}
+        </Box>
+      </Box>
     </Box>
   );
 }
