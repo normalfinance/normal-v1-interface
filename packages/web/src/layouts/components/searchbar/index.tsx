@@ -85,38 +85,46 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
     <Box
       onClick={onOpen}
       sx={[
+        // Base: look like the Explore TextField on every breakpoint
         {
           display: 'flex',
           alignItems: 'center',
-          [theme.breakpoints.up(breakpoint)]: {
-            pr: 1,
-            borderRadius: 1.5,
-            cursor: 'pointer',
-            bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
-            transition: theme.transitions.create('background-color', {
-              easing: theme.transitions.easing.easeInOut,
-              duration: theme.transitions.duration.shortest,
+          gap: 1,
+          pr: 1, // space for the ⌘K label on sm+
+          pl: 0.5,
+          py: 0.25, // ~12px like your TextField input
+          borderRadius: 9999, // pill
+          cursor: 'pointer',
+          bgcolor: 'grey.250', // same background
+          border: (t) => `1px solid ${t.palette.divider}`,
+          transition: (t) =>
+            t.transitions.create('background-color', {
+              easing: t.transitions.easing.easeInOut,
+              duration: t.transitions.duration.shortest,
             }),
-            '&:hover': {
-              bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.16),
-            },
+          '&:hover': {
+            bgcolor: (t) =>
+              // subtle lift on hover (works with CSS vars or without)
+              t.vars
+                ? `color-mix(in srgb, rgba(${t.vars.palette.grey['500Channel']} / 1) 16%, transparent)`
+                : t.palette.action.hover,
           },
+          color: 'text.secondary', // placeholder-ish text color
         },
+        // Allow caller to override/extend
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
       {...other}
     >
+      {/* Left icon (same on all sizes now) */}
       <Box
-        component={smUp ? 'span' : IconButton}
+        component="span"
         sx={{
-          [theme.breakpoints.up(breakpoint)]: {
-            p: 1,
-            display: 'inline-flex',
-            color: 'action.active',
-          },
+          p: 1,
+          display: 'inline-flex',
+          color: 'text.disabled',
         }}
       >
-        {/* https://icon-sets.iconify.design/eva/search-fill/ */}
         <SvgIcon sx={{ width: 20, height: 20 }}>
           <path
             fill="currentColor"
@@ -124,21 +132,26 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           />
         </SvgIcon>
       </Box>
-      {t('Search tokens...')}
-      {/* eslint-disable i18next/no-literal-string */}
+
+      {/* “Placeholder” text */}
+      <Box component="span" sx={{ typography: 'body2', flexShrink: 0 }}>
+        {t('Search tokens...')}
+      </Box>
+
+      {/* ⌘K helper shown at sm+ 
       <Label
-        sx={{
+        sx={(t) => ({
+          ml: 'auto',
           color: 'grey.800',
           cursor: 'inherit',
           bgcolor: 'common.white',
-          fontSize: theme.typography.pxToRem(12),
-          boxShadow: theme.vars.customShadows.z1,
+          fontSize: t.typography.pxToRem(12),
+          boxShadow: t.vars.customShadows.z1,
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
-        }}
+        })}
       >
         ⌘K
-      </Label>
-      {/* eslint-enable i18next/no-literal-string */}
+      </Label>*/}
     </Box>
   );
 

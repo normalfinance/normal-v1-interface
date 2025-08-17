@@ -14,9 +14,13 @@ import {
   groupAccentByIndex,
   groupAccentDarkByIndex,
 } from '@/theme/accents';
+import { Searchbar } from '../components/searchbar';
+import { NavItemDataProps } from '@/components/template/nav-section';
 
 const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
 const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
+
+const navData: { subheader?: string; items: NavItemDataProps[] }[] | undefined = [];
 
 const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: string) => {
   const isExternal = /^https?:\/\//i.test(url);
@@ -145,6 +149,15 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
     return () => ro.disconnect();
   }, []);
 
+  const lineStyle: React.CSSProperties = {
+    display: 'block',
+    width: '1.5rem',
+    height: 2, // change to 3–4 if you want thicker bars
+    margin: '3px 0',
+    backgroundColor: 'currentColor',
+    borderRadius: 9999, // fully rounded ends
+  };
+
   return (
     <Box
       component="section"
@@ -168,14 +181,45 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           width: '100%',
           display: 'grid',
           // was: { xs: '1fr auto', lg: 'auto 1fr auto' }
-          gridTemplateColumns: { xs: '1fr auto', lg: '1fr minmax(160px, 200px) 1fr' },
+          gridTemplateColumns: { xs: '1fr auto', lg: '1fr minmax(160px, 320px) 1fr' },
           alignItems: 'center',
           columnGap: 2,
         }}
       >
         {/* Left: Logo */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Logo isSingle={false} sx={{ display: 'inline-flex', height: 28 }} />
+          <Logo isSingle={false} sx={{ display: { xs: 'none', lg: 'inline-flex' }, height: 28 }} />
+
+          {/* MOBILE hamburger (unchanged) */}
+          <IconButton
+            onClick={toggleMobile}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            sx={{
+              display: { xs: 'inline-flex', lg: 'none' },
+              width: 48,
+              height: 48,
+              p: 0,
+              color: 'text.primary',
+            }}
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <m.span
+                style={lineStyle}
+                animate={mobileOpen ? ['open', 'rotatePhase'] : 'closed'}
+                variants={topLineVariants}
+              />
+              <m.span
+                style={lineStyle}
+                animate={mobileOpen ? 'open' : 'closed'}
+                variants={middleLineVariants}
+              />
+              <m.span
+                style={lineStyle}
+                animate={mobileOpen ? ['open', 'rotatePhase'] : 'closed'}
+                variants={bottomLineVariants}
+              />
+            </Box>
+          </IconButton>
         </Box>
 
         {/* Middle: DESKTOP searchbar — perfectly centered */}
@@ -187,7 +231,9 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           }}
         >
           {/* Keep the bar from stretching; center it */}
-          <Box sx={{ width: '100%', maxWidth: 200, mx: 'auto' }}>{searchbar}</Box>
+          <Box sx={{ width: '100%', maxWidth: 320, mx: 'auto' }}>
+            <Searchbar data={navData} />
+          </Box>
         </Box>
 
         {/* Right: links + language + account + hamburger */}
@@ -261,53 +307,10 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           </Box>
 
           {/* DESKTOP language + account */}
-          <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: { xs: 'flex', lg: 'flex' }, alignItems: 'center', gap: 1 }}>
             {language}
             {account}
           </Box>
-
-          {/* MOBILE hamburger (unchanged) */}
-          <IconButton
-            onClick={toggleMobile}
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            sx={{ display: { xs: 'inline-flex', lg: 'none' }, width: 48, height: 48, p: 0 }}
-          >
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <m.span
-                style={{
-                  display: 'block',
-                  width: '1.5rem',
-                  height: 2,
-                  background: '#000',
-                  margin: '3px 0',
-                }}
-                animate={mobileOpen ? ['open', 'rotatePhase'] : 'closed'}
-                variants={topLineVariants}
-              />
-              <m.span
-                style={{
-                  display: 'block',
-                  width: '1.5rem',
-                  height: 2,
-                  background: '#000',
-                  margin: '3px 0',
-                }}
-                animate={mobileOpen ? 'open' : 'closed'}
-                variants={middleLineVariants}
-              />
-              <m.span
-                style={{
-                  display: 'block',
-                  width: '1.5rem',
-                  height: 2,
-                  background: '#000',
-                  margin: '3px 0',
-                }}
-                animate={mobileOpen ? ['open', 'rotatePhase'] : 'closed'}
-                variants={bottomLineVariants}
-              />
-            </Box>
-          </IconButton>
         </Box>
       </Box>
 
@@ -349,7 +352,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               {links
                 .filter((l) => !!l.megaMenu)
                 .map((link, i) => (
-                  <MobileMega key={i} megaMenu={link.megaMenu!} />
+                  <MobileMega key={i} megaMenu={link.megaMenu!} searchbar={searchbar} />
                 ))}
             </Box>
           </m.div>
@@ -665,13 +668,23 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
 
 /* ------------------------------ MOBILE MEGA ------------------------------ */
 
-function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
+function MobileMega({
+  megaMenu,
+  searchbar,
+}: {
+  megaMenu: MegaMenuProps;
+  searchbar?: React.ReactNode;
+}) {
   return (
     <Box
       sx={{
-        py: 2,
+        py: 0,
       }}
     >
+      <Box sx={{ width: '100%', mb: 4 }}>
+        <Searchbar data={navData} />
+      </Box>
+
       {/* Category groups */}
       <Box
         sx={{
@@ -785,7 +798,19 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
       </Box>
 
       {/* Optional: featured section on mobile (kept, matches your desktop styling) */}
-      <Box sx={{ mt: 3 }}>
+      <Box sx={{ mt: 3, position: 'relative', py: 4 }}>
+        {/* Full-bleed background to cover parent's px: '5%' padding */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: '-5%', // match the parent's left padding
+            right: '-5%', // match the parent's right padding
+            bgcolor: (t) => t.palette.grey[100],
+            zIndex: 0,
+          }}
+        />
         <Box
           sx={{
             display: 'inline-flex',
@@ -798,6 +823,8 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
             whiteSpace: 'nowrap',
             alignSelf: 'start',
             mb: 1.5,
+            position: 'relative',
+            zIndex: 1,
           }}
         >
           <Typography
@@ -809,7 +836,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
           </Typography>
         </Box>
 
-        <Box sx={{ display: 'grid', gap: 2 }}>
+        <Box sx={{ display: 'grid', gap: 2, position: 'relative', zIndex: 1 }}>
           {megaMenu.featuredSections.links.map((item, k) => (
             <a
               key={k}

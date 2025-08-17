@@ -363,11 +363,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
       ) : (
         <Button
           variant="contained"
-          color="info"
+          color="secondary"
           onClick={handleMainButtonClick}
           data-testid="connect-wallet-button"
+          sx={{ borderRadius: '6px', fontWeight: 400 }}
         >
-          {t('Connect Wallet')}
+          {t('Connect')}
         </Button>
       )}
       <Drawer
