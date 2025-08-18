@@ -92,8 +92,8 @@ model TestnetUser {
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model normal_contract_events_testnet {
-  id                          String   @id(map: "normal_contracts_testnet_pkey")
+model normal_contract_events {
+  id                          String   @id(map: "normal_contracts_pkey")
   type                        String
   contract_id                 String?
   topics                      String?
