@@ -3,6 +3,7 @@
 import type { IndexDetails } from '@normalfinance/types';
 import type { IMarketTableFilters } from '@/types/marketTable';
 import type { TableHeadCellProps } from '@/components/template/table';
+import { useTranslate } from '@/locales';
 
 import { useSetState } from 'minimal-shared/hooks';
 import {
@@ -32,18 +33,6 @@ import { ExploreIndexesTableToolbar } from '@/components/_index-details/explore-
 
 type HeadCell = TableHeadCellProps;
 
-const TABLE_HEAD: HeadCell[] = [
-  { id: 'id', label: 'ID', width: 64 },
-  { id: 'name', label: 'Index', width: 240 },
-  { id: 'coinCount', label: 'Coins', width: 80 },
-  { id: 'weighting', label: 'Weighting Strategy', width: 160 },
-  { id: 'largest', label: 'Largest Asset', width: 160 },
-  { id: 'smallest', label: 'Smallest Asset', width: 160 },
-  { id: 'tvlUsd', label: 'TVL', align: 'left' },
-  { id: 'priceUsd', label: 'Price', align: 'left' },
-  { id: '', label: '' },
-];
-
 export interface ExploreIndexesTableProps {
   indexes: IndexDetails[];
   loading: boolean;
@@ -51,13 +40,13 @@ export interface ExploreIndexesTableProps {
 
 export function ExploreIndexesTable({ indexes, loading }: ExploreIndexesTableProps) {
   const theme = useTheme();
+  const { t } = useTranslate();
   const table = useTable({ defaultRowsPerPage: 20 });
 
-  // ✅ Make filters match IMarketTableFilters so the toolbar type fits
   const filters = useSetState<IMarketTableFilters>({
     name: '',
-    role: [], // unused for indexes, but required by the type
-    status: 'all', // unused for indexes, but required by the type
+    role: [],
+    status: 'all',
   });
 
   type SortableKeys = 'tvlUsd' | 'priceUsd' | 'coinCount';
@@ -74,15 +63,27 @@ export function ExploreIndexesTable({ indexes, loading }: ExploreIndexesTablePro
 
   const notFound = !dataFiltered.length;
 
+  // 🟢 move TABLE_HEAD inside so labels can be translated
+  const TABLE_HEAD: HeadCell[] = [
+    { id: 'id', label: t('ID'), width: 64 },
+    { id: 'name', label: t('Index'), width: 240 },
+    { id: 'coinCount', label: t('Coins'), width: 80 },
+    { id: 'weighting', label: t('Weighting Strategy'), width: 160 },
+    { id: 'largest', label: t('Largest Asset'), width: 160 },
+    { id: 'smallest', label: t('Smallest Asset'), width: 160 },
+    { id: 'tvlUsd', label: t('TVL'), align: 'left' },
+    { id: 'priceUsd', label: t('Price'), align: 'left' },
+    { id: '', label: '' },
+  ];
+
   return (
     <div data-testid="explore-indexes-table">
-      {/* ✅ Reuse the pools toolbar (search box) */}
       <ExploreIndexesTableToolbar
         filters={filters}
         onResetPage={table.onResetPage}
         createHref="/indexes/create"
-        createLabel="Create index"
-        placeholder="Search indexes..."
+        createLabel={t('Create index')}
+        placeholder={t('Search indexes...')}
       />
 
       <Card sx={{ borderRadius: 3, border: 1, borderColor: alpha(theme.palette.grey[500], 0.32) }}>
@@ -144,7 +145,7 @@ export function ExploreIndexesTable({ indexes, loading }: ExploreIndexesTablePro
                                 </Typography>
                               </Stack>
                             ) : (
-                              '-'
+                              t('-')
                             )}
                           </TableCell>
 
@@ -158,12 +159,12 @@ export function ExploreIndexesTable({ indexes, loading }: ExploreIndexesTablePro
                                 </Typography>
                               </Stack>
                             ) : (
-                              '-'
+                              t('-')
                             )}
                           </TableCell>
 
-                          <TableCell>${idx.tvlUsd.toLocaleString()}</TableCell>
-                          <TableCell>${idx.priceUsd.toFixed(2)}</TableCell>
+                          <TableCell>{`$${idx.tvlUsd.toLocaleString()}`}</TableCell>
+                          <TableCell>{`$${idx.priceUsd.toFixed(2)}`}</TableCell>
                           <TableCell />
                         </TableRow>
                       );

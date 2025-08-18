@@ -1,7 +1,8 @@
 'use client';
 
 import type { IndexDetails } from '@normalfinance/types';
-import { Card, Stack, Typography, Avatar, Box, Chip } from '@mui/material';
+import { useTranslate } from '@/locales';
+import { Card, Stack, Typography, Avatar, Box } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { fCurrency, fPercent } from '@/utils/format-number';
 import { groupAccentByIndex, groupAccentDarkByIndex } from '@/theme/accents';
@@ -14,18 +15,15 @@ export interface IndexCardProps {
 
 export function IndexCard({ index, highlightType, onClick }: IndexCardProps) {
   const theme = useTheme();
+  const { t } = useTranslate();
 
-  const highlightMap: Record<
-    NonNullable<IndexCardProps['highlightType']>,
-    { label: string; color: 'primary' | 'secondary' | 'success' }
-  > = {
-    'staff-pick': { label: 'Staff Pick', color: 'secondary' },
-    trending: { label: 'Trending', color: 'primary' },
-    gainer: { label: 'Top Gainer', color: 'success' },
+  const highlightMap: Record<NonNullable<IndexCardProps['highlightType']>, { label: string }> = {
+    'staff-pick': { label: t('Staff Pick') },
+    trending: { label: t('Trending') },
+    gainer: { label: t('Top Gainer') },
   };
 
   const highlight = highlightType ? highlightMap[highlightType] : undefined;
-
   const largest = [...index.constituents].sort((a, b) => b.weightPct - a.weightPct)[0];
 
   return (
@@ -39,10 +37,7 @@ export function IndexCard({ index, highlightType, onClick }: IndexCardProps) {
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
         transition: 'all 0.2s ease',
         cursor: 'pointer',
-        '&:hover': {
-          boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-          transform: 'translateY(-2px)',
-        },
+        '&:hover': { boxShadow: '0 4px 16px rgba(0,0,0,0.1)', transform: 'translateY(-2px)' },
         minHeight: 240,
         display: 'flex',
         flexDirection: 'column',
@@ -58,10 +53,14 @@ export function IndexCard({ index, highlightType, onClick }: IndexCardProps) {
               {index.name}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {index.coinCount} Coins · {index.weighting.label}
+              {t('{{count}} Coins · {{strategy}}', {
+                count: index.coinCount,
+                strategy: index.weighting.label,
+              })}
             </Typography>
           </Box>
         </Stack>
+
         {highlight && (
           <Box
             sx={{
@@ -106,7 +105,7 @@ export function IndexCard({ index, highlightType, onClick }: IndexCardProps) {
       <Stack direction="row" justifyContent="space-between" mt={2}>
         <Box>
           <Typography variant="caption" color="text.secondary">
-            Price
+            {t('Price')}
           </Typography>
           <Typography variant="body2" fontWeight={600}>
             {fCurrency(index.priceUsd)}
@@ -115,7 +114,7 @@ export function IndexCard({ index, highlightType, onClick }: IndexCardProps) {
 
         <Box>
           <Typography variant="caption" color="text.secondary">
-            24h Change
+            {t('24h Change')}
           </Typography>
           <Typography
             variant="body2"
@@ -128,7 +127,7 @@ export function IndexCard({ index, highlightType, onClick }: IndexCardProps) {
 
         <Box>
           <Typography variant="caption" color="text.secondary">
-            TVL
+            {t('TVL')}
           </Typography>
           <Typography variant="body2" fontWeight={600}>
             {fCurrency(index.tvlUsd)}

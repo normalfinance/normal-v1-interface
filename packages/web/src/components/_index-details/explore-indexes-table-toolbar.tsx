@@ -3,6 +3,7 @@
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
 import type { IMarketTableFilters } from '@/types/marketTable';
 import { useCallback, forwardRef } from 'react';
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -27,9 +28,10 @@ export const ExploreIndexesTableToolbar = ({
   onResetPage,
   onCreateIndex,
   createHref,
-  createLabel = 'Create index',
-  placeholder = 'Search indexes...',
+  createLabel,
+  placeholder,
 }: Props) => {
+  const { t } = useTranslate();
   const { state: currentFilters, setState: updateFilters } = filters;
 
   const handleFilterName = useCallback(
@@ -67,7 +69,7 @@ export const ExploreIndexesTableToolbar = ({
           sx={{ borderRadius: 2 }}
           href={''}
         >
-          {createLabel}
+          {createLabel ?? t('Create index')}
         </ButtonComponent>
       </Box>
 
@@ -76,12 +78,11 @@ export const ExploreIndexesTableToolbar = ({
         <TextField
           value={currentFilters.name}
           onChange={handleFilterName}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('Search indexes...')}
           sx={{
             ml: { xs: 0, md: 'auto' },
             maxWidth: 260,
             width: { xs: '100%', md: 1 },
-
             '& .MuiOutlinedInput-root': {
               bgcolor: (theme) => alpha(theme.palette.grey[500], 0.08),
               borderRadius: 9999,
