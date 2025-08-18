@@ -140,17 +140,31 @@ export function DashboardLayout({
     );
   };
 
+  const HEADER_H = { xs: 64, lg: 72 };
+
   const renderNormalNavbar = () => (
-    <Box sx={{ width: '100%' }}>
-      <NormalNavbar
-        logo={NormalNavbarDefaults.logo}
-        links={NormalNavbarDefaults.links}
-        buttons={NormalNavbarDefaults.buttons}
-        searchbar={<Searchbar data={navData} />}
-        language={<LanguagePopover data={allLangs} />}
-        account={<AccountDrawer />}
-      />
-    </Box>
+    <>
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: (t) => t.zIndex.appBar,
+        }}
+      >
+        <NormalNavbar
+          logo={NormalNavbarDefaults.logo}
+          links={NormalNavbarDefaults.links}
+          buttons={NormalNavbarDefaults.buttons}
+          searchbar={<Searchbar data={navData} />}
+          language={<LanguagePopover data={allLangs} />}
+          account={<AccountDrawer />}
+        />
+      </Box>
+
+      <Box sx={{ height: { xs: HEADER_H.xs, lg: HEADER_H.lg } }} />
+    </>
   );
 
   const renderSidebar = () => (
