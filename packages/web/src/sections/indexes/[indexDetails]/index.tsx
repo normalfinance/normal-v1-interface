@@ -32,6 +32,10 @@ import IndexDetailsTable from '@/components/_index-details/index-details-table';
 import { IndexHistoryTimeline } from '@/components/_index-details/index-history-timeline';
 import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
 
+import { ExploreIndexesTable } from '@/components/_index-details/explore-indexes-table';
+import { IndexCard } from '@/components/_index-details/index-card';
+import { IndexFundsInfoSection } from '@/components/_index-details/index-funds-info-section';
+
 const data1d = [
   0, 0.3, 0.6, 0.9, 1.1, 1.0, 1.3, 1.5, 1.7, 1.6, 1.8, 2.0, 2.1, 2.2, 2.4, 2.5, 2.7, 2.9, 3.0, 3.1,
   3.0, 3.2, 3.3, 3.4,
@@ -434,6 +438,30 @@ export default function IndexDetailsView() {
               rows={TABLE_ROWS}
               xlmPrice={0.12}
             />
+          </Grid2>
+        </Grid2>
+
+        <Grid2 container spacing={3} sx={{ mt: 3 }}>
+          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+            <IndexCard index={INDEXES[0]} highlightType="staff-pick" />
+          </Grid2>
+          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+            <IndexCard index={INDEXES[0]} highlightType="trending" />
+          </Grid2>
+          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+            <IndexCard index={INDEXES[0]} highlightType="gainer" />
+          </Grid2>
+        </Grid2>
+
+        <Grid2 container spacing={3} sx={{ mt: 3 }}>
+          <Grid2 size={{ xs: 12 }}>
+            <ExploreIndexesTable indexes={INDEXES} loading={false} />
+          </Grid2>
+        </Grid2>
+
+        <Grid2 container spacing={3} sx={{ mt: 3 }}>
+          <Grid2 size={{ xs: 12 }}>
+            <IndexFundsInfoSection />
           </Grid2>
         </Grid2>
       </DashboardContent>
