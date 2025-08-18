@@ -1,0 +1,9 @@
+import { Roadmap } from '@/components/_roadmap-page/roadmap';
+
+export default function RoadmapPage() {
+  return (
+    <>
+      <Roadmap />
+    </>
+  );
+}
