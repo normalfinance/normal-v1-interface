@@ -8,7 +8,6 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
-import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -16,7 +15,6 @@ import Box from '@mui/material/Box';
 import SvgIcon from '@mui/material/SvgIcon';
 import MenuList from '@mui/material/MenuList';
 import { useTheme } from '@mui/material/styles';
-import IconButton from '@mui/material/IconButton';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import InputAdornment from '@mui/material/InputAdornment';
 import Dialog, { dialogClasses } from '@mui/material/Dialog';
@@ -96,18 +94,18 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           borderRadius: 9999, // pill
           cursor: 'pointer',
           bgcolor: 'grey.250', // same background
-          border: (t) => `1px solid ${t.palette.divider}`,
-          transition: (t) =>
-            t.transitions.create('background-color', {
-              easing: t.transitions.easing.easeInOut,
-              duration: t.transitions.duration.shortest,
+          border: (_theme) => `1px solid ${_theme.palette.divider}`,
+          transition: (_theme) =>
+            _theme.transitions.create('background-color', {
+              easing: _theme.transitions.easing.easeInOut,
+              duration: _theme.transitions.duration.shortest,
             }),
           '&:hover': {
-            bgcolor: (t) =>
+            bgcolor: (_theme) =>
               // subtle lift on hover (works with CSS vars or without)
-              t.vars
-                ? `color-mix(in srgb, rgba(${t.vars.palette.grey['500Channel']} / 1) 16%, transparent)`
-                : t.palette.action.hover,
+              _theme.vars
+                ? `color-mix(in srgb, rgba(${_theme.vars.palette.grey['500Channel']} / 1) 16%, transparent)`
+                : _theme.palette.action.hover,
           },
           color: 'text.secondary', // placeholder-ish text color
         },

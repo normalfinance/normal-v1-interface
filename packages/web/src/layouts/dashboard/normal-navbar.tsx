@@ -1,22 +1,26 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
-import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/material';
 import type { ButtonProps as MUIButtonProps } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
+import type { NavItemDataProps } from '@/components/template/nav-section';
+
+import { useTranslate } from '@/locales';
 import { m, AnimatePresence } from 'framer-motion';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { Logo } from '@/components/template/logo';
+import React, { useRef, useMemo, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import {
   GROUP_ACCENTS,
   GROUP_ACCENTS_DARK,
   groupAccentByIndex,
   groupAccentDarkByIndex,
 } from '@/theme/accents';
+
+import { alpha, useTheme } from '@mui/material/styles';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/material';
+
+import { Logo } from '@/components/template/logo';
+
 import { Searchbar } from '../components/searchbar';
-import { NavItemDataProps } from '@/components/template/nav-section';
-import { useTranslate } from '@/locales';
 
 const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
 const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
@@ -107,6 +111,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   const toggleMobile = () => setMobileOpen((p) => !p);
   const closeMobile = () => setMobileOpen(false);
 
+  // eslint-disable-next-line consistent-return
   useEffect(() => {
     if (mobileOpen) {
       const prev = document.body.style.overflow;
@@ -132,6 +137,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
+    // eslint-disable-next-line consistent-return
     return () => ro.disconnect();
   }, []);
 

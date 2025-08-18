@@ -26,6 +26,7 @@ const hexToRgb = (hex: HexColor): [number, number, number] => {
       .map((c) => c + c)
       .join('');
   const n = parseInt(h, 16);
+  // eslint-disable-next-line no-bitwise
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 };
 
