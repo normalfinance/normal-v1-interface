@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql" // Can be changed to "sqlite" for local dev
-  url      = env("DATABASE_URL")
+  url      = env("DIRECT_URL")
 }
 
 // User model - identified by wallet address

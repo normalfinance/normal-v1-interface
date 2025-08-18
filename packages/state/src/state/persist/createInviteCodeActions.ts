@@ -29,7 +29,7 @@ export const createInviteCodeActions = () => {
           },
           body: JSON.stringify({ 
             inviteCode: code,
-            action: 'verify'
+            // action: 'verify' //no need of specific action here, unless we specifically need to verify/consume the code
           }),
         });
 

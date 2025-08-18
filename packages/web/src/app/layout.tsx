@@ -121,7 +121,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                           <ProgressBar />
                           <SettingsDrawer defaultSettings={defaultSettings} />
                           <AnnouncementProvider>
-                            <InviteCodeGate>
+                            <InviteCodeGate enforceInDev={true}>
                               <DashboardLayout>{children}</DashboardLayout>
                             </InviteCodeGate>
                           </AnnouncementProvider>
