@@ -7,6 +7,7 @@ import { useTheme } from '@mui/material/styles';
 import CardHeader from '@mui/material/CardHeader';
 
 import { ChartLegends } from '@/components/template/chart';
+import { useTranslate } from '@/locales';
 
 import IndexDonutChart from './index-donut-chart';
 
@@ -16,14 +17,9 @@ type Props = CardProps & {
   subheader?: string;
 };
 
-export default function IndexPieChart({
-  index,
-  title = 'Index Assets Overview',
-  subheader = 'A consolidated snapshot of every underlying holding in the index.',
-  sx,
-  ...other
-}: Props) {
+export default function IndexPieChart({ index, title, subheader, sx, ...other }: Props) {
   const theme = useTheme();
+  const { t } = useTranslate();
 
   const labels = index.constituents.map((c) => c.shortname ?? c.name);
   const values = index.constituents.map((c) => c.weightPct);
@@ -44,7 +40,13 @@ export default function IndexPieChart({
 
   return (
     <Card sx={sx} {...other}>
-      <CardHeader title={title} subheader={subheader} sx={{ p: 4, pb: 0 }} />
+      <CardHeader
+        title={title ?? t('Index Assets Overview')}
+        subheader={
+          subheader ?? t('A consolidated snapshot of every underlying holding in the index.')
+        }
+        sx={{ p: 4, pb: 0 }}
+      />
 
       <IndexDonutChart
         labels={labels}
