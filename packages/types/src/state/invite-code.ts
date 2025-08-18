@@ -6,6 +6,7 @@ export interface InviteCodeState {
 
 export interface InviteCodeActions {
   inviteCode: InviteCodeState;
-  setInviteCodeAccepted: (code: string) => Promise<void>;
+  checkWalletInviteStatus: (walletAddress: string) => Promise<boolean>;
+  setInviteCodeAccepted: (code: string, walletAddress?: string) => Promise<void>;
   clearInviteCode: () => void;
 }

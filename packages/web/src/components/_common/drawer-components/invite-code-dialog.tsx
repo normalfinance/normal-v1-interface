@@ -25,11 +25,13 @@ import {
 export type InviteCodeDialogProps = {
   /** Whether the dialog is visible */
   open: boolean;
+  /** Wallet address to link the invite code to */
+  walletAddress?: string;
   /** Called on cancel or after successful accept */
   onClose?: () => void;
 };
 
-export default function InviteCodeDialog({ open, onClose }: InviteCodeDialogProps) {
+export default function InviteCodeDialog({ open, walletAddress, onClose }: InviteCodeDialogProps) {
   const { t } = useTranslate();
   const setInviteCodeAccepted = usePersistStore((s: AppStorePersist) => s.setInviteCodeAccepted);
 
@@ -48,7 +50,7 @@ export default function InviteCodeDialog({ open, onClose }: InviteCodeDialogProp
     setError(null);
 
     try {
-      await setInviteCodeAccepted(inviteCode.trim());
+      await setInviteCodeAccepted(inviteCode.trim(), walletAddress);
       setSuccess(true);
       setTimeout(() => {
         onClose?.();

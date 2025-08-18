@@ -2,26 +2,44 @@ import { usePersistStore } from '../store';
 import { AppStorePersist } from '@normalfinance/types';
 
 export const createInviteCodeActions = () => {
-  const storedCode =
-    typeof window !== 'undefined'
-      ? localStorage.getItem('accepted_invite_code')
-      : null;
-
-  const storedTimestamp =
-    typeof window !== 'undefined'
-      ? Number(localStorage.getItem('invite_code_timestamp') ?? 0)
-      : null;
-
   return {
     inviteCode: {
-      hasValidCode: !!storedCode,
-      inviteCode: storedCode,
-      verifiedAt: storedTimestamp,
+      hasValidCode: false,
+      inviteCode: null,
+      verifiedAt: null,
     },
 
-    setInviteCodeAccepted: async (code: string) => {
+    // Check if current wallet has valid invite code
+    checkWalletInviteStatus: async (walletAddress: string) => {
       try {
-        // First verify the code with the API
+        const response = await fetch(`/api/testnet/invite-codes?walletAddress=${encodeURIComponent(walletAddress)}`);
+        
+        if (response.ok) {
+          const result = await response.json();
+          const hasValidCode = result.hasUsedCode || false;
+          
+          usePersistStore.setState((state: AppStorePersist) => ({
+            ...state,
+            inviteCode: {
+              hasValidCode,
+              inviteCode: result.inviteCode || null,
+              verifiedAt: result.usedAt ? new Date(result.usedAt).getTime() : null,
+            },
+          }));
+
+          return hasValidCode;
+        }
+
+        return false;
+      } catch (error) {
+        console.error('Failed to check wallet invite status:', error);
+        return false;
+      }
+    },
+
+    setInviteCodeAccepted: async (code: string, walletAddress?: string) => {
+      try {
+        // Verify and consume the code with the API, linking to wallet address
         const response = await fetch('/api/testnet/invite-codes', {
           method: 'POST',
           headers: {
@@ -29,7 +47,7 @@ export const createInviteCodeActions = () => {
           },
           body: JSON.stringify({ 
             inviteCode: code,
-            // action: 'verify' //no need of specific action here, unless we specifically need to verify/consume the code
+            walletAddress: walletAddress,
           }),
         });
 
@@ -39,9 +57,6 @@ export const createInviteCodeActions = () => {
         }
 
         const now = Date.now();
-
-        localStorage.setItem('accepted_invite_code', code);
-        localStorage.setItem('invite_code_timestamp', String(now));
 
         usePersistStore.setState((state: AppStorePersist) => ({
           ...state,

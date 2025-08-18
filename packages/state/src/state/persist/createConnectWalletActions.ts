@@ -111,6 +111,14 @@ export const createConnectWalletActions = () => {
         wallet: { address, activeChain, server, walletType: wallet },
       }));
 
+      // Check invite code status for this wallet address
+      try {
+        const persistStore = usePersistStore.getState();
+        await persistStore.checkWalletInviteStatus(address);
+      } catch (error) {
+        console.error('Error checking wallet invite status:', error);
+      }
+
       return;
     },
 

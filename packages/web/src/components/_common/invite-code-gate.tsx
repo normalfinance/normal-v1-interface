@@ -20,6 +20,7 @@ export const InviteCodeGate: React.FC<InviteCodeGateProps> = ({
 }) => {
   const pathName = usePathname();
   const inviteCodeState = usePersistStore((s) => s.inviteCode);
+  const walletAddress = usePersistStore((s) => s.wallet.address);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -37,13 +38,13 @@ export const InviteCodeGate: React.FC<InviteCodeGateProps> = ({
       return;
     }
 
-    // Show dialog if no valid invite code
-    if (!inviteCodeState.hasValidCode) {
+    // Only show dialog if wallet is connected and no valid invite code
+    if (walletAddress && !inviteCodeState.hasValidCode) {
       setShowInviteDialog(true);
     } else {
       setShowInviteDialog(false);
     }
-  }, [inviteCodeState.hasValidCode, isHydrated, enforceInDev]);
+  }, [inviteCodeState.hasValidCode, walletAddress, isHydrated, enforceInDev]);
 
   // Don't render anything until hydrated to prevent hydration mismatch
   if (!isHydrated) {
@@ -57,11 +58,12 @@ export const InviteCodeGate: React.FC<InviteCodeGateProps> = ({
 
   const isUnblockedPath = UNBLOCKED_PATHS.includes(pathName.toLowerCase());
 
-  // Block access if no valid invite code
-  if (!inviteCodeState.hasValidCode && !isUnblockedPath) {
+  // Block access if wallet is connected but no valid invite code
+  if (walletAddress && !inviteCodeState.hasValidCode && !isUnblockedPath) {
     return (
       <InviteCodeDialog
         open={showInviteDialog}
+        walletAddress={walletAddress}
         onClose={() => {
           // Check if invite code was accepted during dialog interaction
           if (inviteCodeState.hasValidCode) {

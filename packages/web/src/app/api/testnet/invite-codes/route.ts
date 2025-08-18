@@ -7,9 +7,22 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
+    const walletAddress = searchParams.get('walletAddress');
 
+    // If checking for a specific wallet address
+    if (walletAddress) {
+      const walletInviteCode = await InviteCodeService.getWalletInviteCode(walletAddress);
+      
+      return NextResponse.json({
+        hasUsedCode: !!walletInviteCode,
+        inviteCode: walletInviteCode?.inviteCode || null,
+        usedAt: walletInviteCode?.usedAt || null,
+      });
+    }
+
+    // If checking a specific code
     if (!code) {
-      return NextResponse.json({ error: 'Invite code is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Invite code or wallet address is required' }, { status: 400 });
     }
 
     const result = await InviteCodeService.verifyInviteCode(code);
