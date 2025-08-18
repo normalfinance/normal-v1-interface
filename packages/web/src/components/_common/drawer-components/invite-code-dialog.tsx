@@ -2,9 +2,9 @@
 
 import type { AppStorePersist } from '@normalfinance/types';
 
-import { useState, useEffect } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { InviteCodeService } from '@/lib/invite-code-service';
 

@@ -1,4 +1,4 @@
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { InviteCodeService } from '@/lib/invite-code-service';
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     // If checking for a specific wallet address
     if (walletAddress) {
       const walletInviteCode = await InviteCodeService.getWalletInviteCode(walletAddress);
-      
+
       return NextResponse.json({
         hasUsedCode: !!walletInviteCode,
         inviteCode: walletInviteCode?.inviteCode || null,
@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
 
     // If checking a specific code
     if (!code) {
-      return NextResponse.json({ error: 'Invite code or wallet address is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invite code or wallet address is required' },
+        { status: 400 }
+      );
     }
 
     const result = await InviteCodeService.verifyInviteCode(code);

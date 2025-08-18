@@ -24,7 +24,7 @@ export const InviteCodeGate: React.FC<InviteCodeGateProps> = ({
   const walletAddress = usePersistStore((s) => s.wallet.address);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
-  
+
   // Initialize URL invite code detection
   useUrlInviteCode();
 
