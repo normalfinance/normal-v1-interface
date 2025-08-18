@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql" // Can be changed to "sqlite" for local dev
-  url      = env("DATABASE_URL")
+  url      = env("DIRECT_URL")
 }
 
 // User model - identified by wallet address
@@ -76,6 +76,37 @@ model ReferralAction {
   
   @@unique([userId, referralId, action]) // Prevent duplicate actions per user per referral
   @@map("referral_actions")
+}
+
+// Testnet access control model
+model TestnetUser {
+  id              String   @id @default(cuid())
+  inviteCode      String   @unique
+  walletAddress   String?  @unique  // Optional, set when code is used
+  isUsed          Boolean  @default(false)
+  usedAt          DateTime?
+  createdAt       DateTime @default(now())
+  source          String?  // "admin", "tweet", etc.
+  
+  @@map("testnet_users")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model normal_contract_events {
+  id                          String   @id(map: "normal_contracts_pkey")
+  type                        String
+  contract_id                 String?
+  topics                      String?
+  data                        String?
+  in_successful_contract_call Boolean
+  transaction_hash            String
+  transaction_account         String
+  transaction_fee_account     String?
+  transaction_successful      Boolean
+  ledger_sequence             BigInt
+  ledger_hash                 String
+  ledger_closed_at            DateTime @db.Timestamp(6)
+  ledger_signature            String?
 }
 
 // Indexes for performance

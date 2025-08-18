@@ -154,6 +154,7 @@
     "prisma": "^5.22.0",
     "semantic-release": "^24.0.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.4",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.19.0"
   },

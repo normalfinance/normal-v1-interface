@@ -8,6 +8,7 @@ import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
 import { constants } from '@normalfinance/utils';
 import { createReferralActions } from './persist/createReferralActions';
+import { createInviteCodeActions } from './persist/createInviteCodeActions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
@@ -43,12 +44,16 @@ export const usePersistStore = create<AppStorePersist>()(
       // Create referral actions
       const referralActions = createReferralActions();
 
+      // Create invite code actions
+      const inviteCodeActions = createInviteCodeActions();
+
       return {
         server,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         ...walletPersist,
         ...disclaimer,
         ...referralActions,
+        ...inviteCodeActions,
       };
     },
     {
