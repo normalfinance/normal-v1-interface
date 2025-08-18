@@ -16,7 +16,8 @@
     "clean": "rm -rf node_modules .turbo yarn.lock && rm -rf packages/*/{node_modules,.next,.swc,dist,build,tsconfig.tsbuildinfo,.turbo}",
     "setup": "yarn install && yarn build",
     "refresh": "yarn run clean && yarn run setup",
-    "invite:generate": "node get-unused-invite-code.js"
+    "invite:generate": "node get-unused-invite-code.js",
+    "invite:seed": "node generate-invite-codes.js"
   },
   "repository": {
     "type": "git",
