@@ -7,6 +7,7 @@ export const createInviteCodeActions = () => {
       hasValidCode: false,
       inviteCode: null,
       verifiedAt: null,
+      urlInviteCode: null, // Store invite code from URL parameter
     },
 
     // Check if current wallet has valid invite code
@@ -21,6 +22,7 @@ export const createInviteCodeActions = () => {
           usePersistStore.setState((state: AppStorePersist) => ({
             ...state,
             inviteCode: {
+              ...state.inviteCode,
               hasValidCode,
               inviteCode: result.inviteCode || null,
               verifiedAt: result.usedAt ? new Date(result.usedAt).getTime() : null,
@@ -64,6 +66,7 @@ export const createInviteCodeActions = () => {
             hasValidCode: true,
             inviteCode: code,
             verifiedAt: now,
+            urlInviteCode: null,
           },
         }));
 
@@ -74,9 +77,21 @@ export const createInviteCodeActions = () => {
       }
     },
 
+    // Set invite code from URL parameter
+    setUrlInviteCode: (code: string | null) => {
+      usePersistStore.setState((state: AppStorePersist) => ({
+        ...state,
+        inviteCode: {
+          ...state.inviteCode,
+          urlInviteCode: code,
+        },
+      }));
+    },
+
     clearInviteCode: () => {
       localStorage.removeItem('accepted_invite_code');
       localStorage.removeItem('invite_code_timestamp');
+      localStorage.removeItem('normal_url_invite_code');
 
       usePersistStore.setState((state: AppStorePersist) => ({
         ...state,
@@ -84,6 +99,7 @@ export const createInviteCodeActions = () => {
           hasValidCode: false,
           inviteCode: null,
           verifiedAt: null,
+          urlInviteCode: null,
         },
       }));
     },

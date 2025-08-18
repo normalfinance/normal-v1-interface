@@ -2,7 +2,7 @@
 
 import type { AppStorePersist } from '@normalfinance/types';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
@@ -34,11 +34,19 @@ export type InviteCodeDialogProps = {
 export default function InviteCodeDialog({ open, walletAddress, onClose }: InviteCodeDialogProps) {
   const { t } = useTranslate();
   const setInviteCodeAccepted = usePersistStore((s: AppStorePersist) => s.setInviteCodeAccepted);
+  const urlInviteCode = usePersistStore((s: AppStorePersist) => s.inviteCode.urlInviteCode);
 
   const [inviteCode, setInviteCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Auto-fill invite code from URL parameter when dialog opens
+  useEffect(() => {
+    if (open && urlInviteCode && !inviteCode) {
+      setInviteCode(urlInviteCode);
+    }
+  }, [open, urlInviteCode, inviteCode]);
 
   const handleSubmitCode = async () => {
     if (!inviteCode.trim()) {

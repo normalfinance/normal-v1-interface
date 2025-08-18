@@ -43,7 +43,7 @@ export function useReferralTracking(): UseReferralTrackingReturn {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const urlReferralCode = params.ref || params.referral || params.referrer || params.invite;
+    const urlReferralCode = params.ref || params.referral || params.referrer;
 
     if (urlReferralCode && !referralState.hasReferral) {
       console.log('[referral] New referral code detected:', urlReferralCode);
