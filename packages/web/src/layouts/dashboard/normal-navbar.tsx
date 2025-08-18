@@ -16,6 +16,7 @@ import {
 } from '@/theme/accents';
 import { Searchbar } from '../components/searchbar';
 import { NavItemDataProps } from '@/components/template/nav-section';
+import { useTranslate } from '@/locales';
 
 const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
 const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
@@ -29,15 +30,9 @@ const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: 
   return { target: t, rel: r };
 };
 
-export type NavButton = Omit<MUIButtonProps, 'children'> & {
-  title: string;
-};
+export type NavButton = Omit<MUIButtonProps, 'children'> & { title: string };
 
-type ImageProps = {
-  url?: string;
-  src: string;
-  alt?: string;
-};
+type ImageProps = { url?: string; src: string; alt?: string };
 
 type MegaMenuLink = {
   url: string;
@@ -47,17 +42,11 @@ type MegaMenuLink = {
   button?: NavButton;
 };
 
-type CategoryLink = {
-  title: string;
-  links: MegaMenuLink[];
-};
+type CategoryLink = { title: string; links: MegaMenuLink[] };
 
 type MegaMenuProps = {
   categoryLinks: CategoryLink[];
-  featuredSections: {
-    title: string;
-    links: MegaMenuLink[];
-  };
+  featuredSections: { title: string; links: MegaMenuLink[] };
   button: NavButton;
 };
 
@@ -81,11 +70,11 @@ export interface Props {
 export type NormalNavbarProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
 export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
+  const { t } = useTranslate();
   const { logo, links = [], buttons = [], searchbar, language, account } = props;
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
-  // Desktop dock (mega menu)
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [dockOpen, setDockOpen] = useState(false);
   const hoverTimerRef = useRef<number | null>(null);
@@ -114,12 +103,10 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
     setDockOpen(true);
   }, []);
 
-  // Mobile overlay
   const [mobileOpen, setMobileOpen] = useState(false);
   const toggleMobile = () => setMobileOpen((p) => !p);
   const closeMobile = () => setMobileOpen(false);
 
-  // Lock body scroll when mobile panel is open
   useEffect(() => {
     if (mobileOpen) {
       const prev = document.body.style.overflow;
@@ -130,7 +117,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
     }
   }, [mobileOpen]);
 
-  // Open from under header, calculate height
   const headerRef = useRef<HTMLDivElement | null>(null);
   const [headerH, setHeaderH] = useState(64);
 
@@ -152,10 +138,10 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   const lineStyle: React.CSSProperties = {
     display: 'block',
     width: '1.5rem',
-    height: 2, // change to 3–4 if you want thicker bars
+    height: 2,
     margin: '3px 0',
     backgroundColor: 'currentColor',
-    borderRadius: 9999, // fully rounded ends
+    borderRadius: 9999,
   };
 
   return (
@@ -175,25 +161,20 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         px: { xs: 2, lg: 2 },
       }}
     >
-      {/* Row: logo | search (desktop) | right cluster */}
       <Box
         sx={{
           width: '100%',
           display: 'grid',
-          // was: { xs: '1fr auto', lg: 'auto 1fr auto' }
           gridTemplateColumns: { xs: '1fr auto', lg: '1fr minmax(160px, 320px) 1fr' },
           alignItems: 'center',
           columnGap: 2,
         }}
       >
-        {/* Left: Logo */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Logo isSingle={false} sx={{ display: { xs: 'none', lg: 'inline-flex' }, height: 28 }} />
-
-          {/* MOBILE hamburger (unchanged) */}
           <IconButton
             onClick={toggleMobile}
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-label={mobileOpen ? t('Close menu') : t('Open menu')}
             sx={{
               display: { xs: 'inline-flex', lg: 'none' },
               width: 48,
@@ -222,7 +203,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           </IconButton>
         </Box>
 
-        {/* Middle: DESKTOP searchbar — perfectly centered */}
         <Box
           sx={{
             display: { xs: 'none', lg: 'flex' },
@@ -230,23 +210,17 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
             justifyContent: 'center',
           }}
         >
-          {/* Keep the bar from stretching; center it */}
           <Box sx={{ width: '100%', maxWidth: 320, mx: 'auto' }}>
             <Searchbar data={navData} />
           </Box>
         </Box>
 
-        {/* Right: links + language + account + hamburger */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-          {/* DESKTOP links */}
           <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center' }}>
             {links.map((link, i) => {
               const hasMega = !!link.megaMenu;
               const { target, rel } = linkAttrs(link.url, link.target, link.rel);
-              const chevronVariants = {
-                open: { rotate: 180 },
-                closed: { rotate: 0 },
-              } as const;
+              const chevronVariants = { open: { rotate: 180 }, closed: { rotate: 0 } } as const;
               if (hasMega) {
                 return (
                   <Box
@@ -278,12 +252,11 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                         fontWeight: 400,
                       }}
                     >
-                      {link.title}
+                      {t(link.title)}
                     </Button>
                   </Box>
                 );
               }
-
               return (
                 <Box key={i}>
                   <Button
@@ -299,14 +272,13 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                       fontWeight: 400,
                     }}
                   >
-                    {link.title}
+                    {t(link.title)}
                   </Button>
                 </Box>
               );
             })}
           </Box>
 
-          {/* DESKTOP language + account */}
           <Box sx={{ display: { xs: 'flex', lg: 'flex' }, alignItems: 'center', gap: 1 }}>
             {language}
             {account}
@@ -314,7 +286,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         </Box>
       </Box>
 
-      {/* DESKTOP: full-width dropdown dock */}
       <DesktopDock
         open={isDesktop && dockOpen && !!activeMega}
         onMouseEnter={() => clearTimer()}
@@ -323,7 +294,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         {activeMega && <DockContent mega={activeMega} />}
       </DesktopDock>
 
-      {/* MOBILE: fixed overlay with height animation */}
       <AnimatePresence initial={false}>
         {mobileOpen && (
           <m.div
@@ -346,9 +316,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
             aria-modal="true"
             role="dialog"
           >
-            {/* Scrollable content only, no extra header */}
             <Box sx={{ height: '100%', overflow: 'auto', px: '5%', py: 2 }}>
-              {/* ONLY render links that have a megaMenu */}
               {links
                 .filter((l) => !!l.megaMenu)
                 .map((link, i) => (
@@ -362,8 +330,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   );
 };
 
-/* ---------------------------- DESKTOP DOCK UI ---------------------------- */
-
 function DesktopDock({
   open,
   children,
@@ -375,7 +341,6 @@ function DesktopDock({
   onMouseLeave?: () => void;
 }>) {
   const theme = useTheme();
-
   return (
     <m.div
       onMouseEnter={onMouseEnter}
@@ -398,7 +363,6 @@ function DesktopDock({
       <Box
         sx={{
           px: 2,
-
           borderTop: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
           borderBottom: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
           bgcolor: theme.palette.background.paper,
@@ -413,16 +377,9 @@ function DesktopDock({
 
 function DockContent({ mega }: { mega: MegaMenuProps }) {
   const theme = useTheme();
-
+  const { t } = useTranslate();
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        gap: { xs: 2, lg: 4 },
-        alignItems: 'stretch',
-      }}
-    >
-      {/* Left: category link columns */}
+    <Box sx={{ display: 'flex', gap: { xs: 2, lg: 4 }, alignItems: 'stretch' }}>
       <Box
         sx={{
           flex: 1,
@@ -433,8 +390,6 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
           pr: { lg: 3 },
           py: 4,
           px: 2,
-
-          /* explicit pixel breakpoints so the 5-col rule always applies */
           '@media (min-width: 900px)': { gridTemplateColumns: 'repeat(2, minmax(0, 320px))' },
           '@media (min-width: 1200px)': { gridTemplateColumns: 'repeat(3, minmax(0, 320px))' },
           '@media (min-width: 1440px)': { gridTemplateColumns: 'repeat(4, minmax(0, 320px))' },
@@ -444,7 +399,6 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
         {mega.categoryLinks.map((group, gi) => {
           const accent = groupAccentByIndex(gi);
           const accentText = groupAccentDarkByIndex(gi);
-
           return (
             <Box
               key={gi}
@@ -468,7 +422,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   fontWeight={400}
                   sx={{ lineHeight: 1.3, color: accentText }}
                 >
-                  {group.title}
+                  {t(group.title)}
                 </Typography>
               </Box>
               {group.links.map((l, li) => (
@@ -487,11 +441,9 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                     color: 'inherit',
                     borderRadius: 1,
                     transition: 'background-color 0.15s ease',
-                    '&:hover': {
-                      backgroundColor: (t) => t.palette.grey[200],
-                    },
-                    '&:focus-visible': (t) => ({
-                      outline: `2px solid ${t.palette.primary.main}`,
+                    '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
+                    '&:focus-visible': (t2) => ({
+                      outline: `2px solid ${t2.palette.primary.main}`,
                       outlineOffset: 2,
                     }),
                   }}
@@ -506,24 +458,23 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                       justifyContent: 'center',
                       bgcolor: '#F9FAFB',
                       borderRadius: 1,
-                      border: (t) => `1px solid ${t.palette.divider}`,
+                      border: (t2) => `1px solid ${t2.palette.divider}`,
                       boxSizing: 'border-box',
                     }}
                   >
                     <Box
                       component="img"
                       src={l.image.src}
-                      alt={l.image.alt}
+                      alt={t(l.image.alt || '')}
                       sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                     />
                   </Box>
-
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                     <Typography variant="body2" fontWeight={700}>
-                      {l.title}
+                      {t(l.title)}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {l.description}
+                      {t(l.description)}
                     </Typography>
                   </Box>
                 </Box>
@@ -533,15 +484,8 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
         })}
       </Box>
 
-      {/* Right: featured section */}
       <Box
-        sx={{
-          flex: 1,
-          position: 'relative',
-          maxWidth: { lg: 448 },
-          px: { xs: 2, md: 3 },
-          py: 4,
-        }}
+        sx={{ flex: 1, position: 'relative', maxWidth: { lg: 448 }, px: { xs: 2, md: 3 }, py: 4 }}
       >
         <Box
           sx={{
@@ -570,7 +514,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
               fontWeight={400}
               sx={{ lineHeight: 1.3, color: FEATURED_ACCENT_TEXT }}
             >
-              {mega.featuredSections.title}
+              {t(mega.featuredSections.title)}
             </Typography>
           </Box>
           <Box sx={{ display: 'grid', gap: 2 }}>
@@ -590,7 +534,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
                   <img
                     src={item.image.src}
-                    alt={item.image.alt}
+                    alt={t(item.image.alt || '')}
                     style={{
                       position: 'absolute',
                       inset: 0,
@@ -605,9 +549,9 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}
                 >
                   <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-                    {item.title}
+                    {t(item.title)}
                   </Typography>
-                  <Typography variant="body2">{item.description}</Typography>
+                  <Typography variant="body2">{t(item.description)}</Typography>
                   {item.button && (
                     <Box sx={{ mt: 1 }}>
                       <Button
@@ -617,7 +561,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                         endIcon={<ChevronRightIcon />}
                         {...item.button}
                       >
-                        {item.button.title}
+                        {t(item.button.title)}
                       </Button>
                     </Box>
                   )}
@@ -640,24 +584,23 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 textDecoration: 'none',
                 '&:hover': {
                   textDecoration: 'none',
-                  backgroundColor: (t) => t.palette.action.hover,
+                  backgroundColor: (t2) => t2.palette.action.hover,
                 },
                 '&:link, &:visited': { color: 'text.primary' },
               }}
             >
-              {mega.button.title}
+              {t(mega.button.title)}
             </Button>
           </Box>
         </Box>
 
-        {/* Opaque background panel behind the right column */}
         <Box
           sx={{
             position: 'absolute',
             inset: 0,
             width: '100vw',
             left: { xs: 0, lg: 'calc(-5% - 0px)' },
-            bgcolor: (t) => t.palette.grey[100],
+            bgcolor: (t2) => t2.palette.grey[100],
             zIndex: 0,
           }}
         />
@@ -666,8 +609,6 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
   );
 }
 
-/* ------------------------------ MOBILE MEGA ------------------------------ */
-
 function MobileMega({
   megaMenu,
   searchbar,
@@ -675,24 +616,17 @@ function MobileMega({
   megaMenu: MegaMenuProps;
   searchbar?: React.ReactNode;
 }) {
+  const { t } = useTranslate();
   return (
-    <Box
-      sx={{
-        py: 0,
-      }}
-    >
+    <Box sx={{ py: 0 }}>
       <Box sx={{ width: '100%', mb: 4 }}>
         <Searchbar data={navData} />
       </Box>
 
-      {/* Category groups */}
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: {
-            xs: 'repeat(1, minmax(0, 1fr))', // phones: 1 col
-            sm: 'repeat(2, minmax(0, 1fr))', // ≥600 & <1200 (mobile overlay): 2 cols
-          },
+          gridTemplateColumns: { xs: 'repeat(1, minmax(0, 1fr))', sm: 'repeat(2, minmax(0, 1fr))' },
           columnGap: 2,
           rowGap: 4,
         }}
@@ -700,17 +634,11 @@ function MobileMega({
         {megaMenu.categoryLinks.map((group, gi) => {
           const accent = groupAccentByIndex(gi);
           const accentText = groupAccentDarkByIndex(gi);
-
           return (
             <Box
               key={gi}
-              sx={{
-                display: 'grid',
-                gridAutoRows: 'max-content',
-                rowGap: { xs: 1, md: 2 },
-              }}
+              sx={{ display: 'grid', gridAutoRows: 'max-content', rowGap: { xs: 1, md: 2 } }}
             >
-              {/* Accent label like desktop */}
               <Box
                 sx={{
                   display: 'inline-flex',
@@ -730,11 +658,10 @@ function MobileMega({
                   fontWeight={400}
                   sx={{ lineHeight: 1.3, color: accentText }}
                 >
-                  {group.title}
+                  {t(group.title)}
                 </Typography>
               </Box>
 
-              {/* Links with same icon wrapper as DockContent */}
               {group.links.map((l, li) => (
                 <Box
                   key={li}
@@ -751,11 +678,9 @@ function MobileMega({
                     color: 'inherit',
                     borderRadius: 1,
                     transition: 'background-color 0.15s ease',
-                    '&:hover': {
-                      backgroundColor: (t) => t.palette.grey[200],
-                    },
-                    '&:focus-visible': (t) => ({
-                      outline: `2px solid ${t.palette.primary.main}`,
+                    '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
+                    '&:focus-visible': (t2) => ({
+                      outline: `2px solid ${t2.palette.primary.main}`,
                       outlineOffset: 2,
                     }),
                   }}
@@ -770,24 +695,24 @@ function MobileMega({
                       justifyContent: 'center',
                       bgcolor: '#F9FAFB',
                       borderRadius: 1,
-                      border: (t) => `1px solid ${t.palette.divider}`,
+                      border: (t2) => `1px solid ${t2.palette.divider}`,
                       boxSizing: 'border-box',
                     }}
                   >
                     <Box
                       component="img"
                       src={l.image.src}
-                      alt={l.image.alt}
+                      alt={t(l.image.alt || '')}
                       sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                     />
                   </Box>
 
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                     <Typography variant="body2" fontWeight={700}>
-                      {l.title}
+                      {t(l.title)}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {l.description}
+                      {t(l.description)}
                     </Typography>
                   </Box>
                 </Box>
@@ -797,17 +722,15 @@ function MobileMega({
         })}
       </Box>
 
-      {/* Optional: featured section on mobile (kept, matches your desktop styling) */}
       <Box sx={{ mt: 3, position: 'relative', py: 4 }}>
-        {/* Full-bleed background to cover parent's px: '5%' padding */}
         <Box
           sx={{
             position: 'absolute',
             top: 0,
             bottom: 0,
-            left: '-5%', // match the parent's left padding
-            right: '-5%', // match the parent's right padding
-            bgcolor: (t) => t.palette.grey[100],
+            left: '-5%',
+            right: '-5%',
+            bgcolor: (t2) => t2.palette.grey[100],
             zIndex: 0,
           }}
         />
@@ -832,7 +755,7 @@ function MobileMega({
             fontWeight={400}
             sx={{ lineHeight: 1.3, color: FEATURED_ACCENT_TEXT }}
           >
-            {megaMenu.featuredSections.title}
+            {t(megaMenu.featuredSections.title)}
           </Typography>
         </Box>
 
@@ -852,7 +775,7 @@ function MobileMega({
               <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
                 <img
                   src={item.image.src}
-                  alt={item.image.alt}
+                  alt={t(item.image.alt || '')}
                   style={{
                     position: 'absolute',
                     inset: 0,
@@ -865,9 +788,9 @@ function MobileMega({
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-                  {item.title}
+                  {t(item.title)}
                 </Typography>
-                <Typography variant="body2">{item.description}</Typography>
+                <Typography variant="body2">{t(item.description)}</Typography>
                 {item.button && (
                   <Box sx={{ mt: 1 }}>
                     <Button
@@ -877,7 +800,7 @@ function MobileMega({
                       endIcon={<ChevronRightIcon />}
                       {...item.button}
                     >
-                      {item.button.title}
+                      {t(item.button.title)}
                     </Button>
                   </Box>
                 )}
@@ -889,8 +812,6 @@ function MobileMega({
     </Box>
   );
 }
-
-/* ----------------------------- FRAMER VARIANTS ---------------------------- */
 
 const topLineVariants = {
   open: { translateY: 8, transition: { delay: 0.1 } },
