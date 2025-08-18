@@ -16,14 +16,10 @@ import { Iconify } from '@/components/template/iconify';
 type Props = {
   filters: UseSetStateReturn<IMarketTableFilters>;
   onResetPage: () => void;
-
-  /** left-side action */
   onCreateIndex?: () => void;
-  createHref?: string; // if provided, button becomes a <Link>
-  createLabel?: string; // default: "Create index"
-
-  /** right-side search */
-  placeholder?: string; // default: "Search indexes..."
+  createHref?: string;
+  createLabel?: string;
+  placeholder?: string;
 };
 
 export const ExploreIndexesTableToolbar = ({
