@@ -15,9 +15,11 @@ const SIMPLE_CONFIG = {
   explorer: 'stellarexpert',
 };
 
+
+//TODO: Fix these anys, at a priority
 export const BLUX_CONFIG = {
   appName: 'Normal Finance',
-  networks: [networks.testnet, networks.mainnet],
+  networks: [networks.testnet],
   defaultNetwork,
   appearance: {
     theme: 'light' as any,
@@ -27,9 +29,9 @@ export const BLUX_CONFIG = {
     font: 'Inter, sans-serif',
     borderRadius: '8px',
   },
-  loginMethods: ['wallet', 'email', 'google', 'passkey'],
+  loginMethods: ['wallet', 'email', 'google', 'passkey'] as any,
   showWalletUIs: true,
-  explorer: 'stellarexpert',
+  explorer: 'stellarexpert' as any,
 };
 
 // Export simple config for debugging
