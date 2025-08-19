@@ -5,6 +5,7 @@ import type { PoolPosition } from '@/hooks';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
+import { format } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
 import { formatTokenAmount } from '@/utils/format-stellar';
 
@@ -125,7 +126,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
             {/* {fCurrency(pool.performance?.position)} */}
-            {formatTokenAmount(position.balance)} XLM
+            {format.formatTokenAmount(position.balance)} XLM
           </Typography>
           <Typography color="text.secondary" variant="caption">
             {t('Position')}

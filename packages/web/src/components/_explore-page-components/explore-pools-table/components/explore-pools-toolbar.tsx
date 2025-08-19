@@ -23,6 +23,10 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
 
   const handleFilterName = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
+      // trackEvent('button_clicked', {
+      //   label: 'Learn more',
+      //   location: 'Home',
+      // });
       onResetPage();
       updateFilters({ name: event.target.value });
     },

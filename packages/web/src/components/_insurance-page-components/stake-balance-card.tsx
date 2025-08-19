@@ -4,6 +4,7 @@ import type { InsuranceQueryParams } from '@/types/query-params';
 import { useEffect } from 'react';
 import { useBoolean } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { format } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { formatTokenAmount } from '@/utils/format-stellar';
@@ -80,7 +81,7 @@ export function StakeBalance({
 
   // Define default rows if none are provided via props.
   const defaultRows: BalanceRow[] = [
-    { label: 'Staked', value: staked.toNumber(), formatter: formatTokenAmount },
+    { label: 'Staked', value: staked.toNumber(), formatter: format.formatTokenAmount },
     { label: 'Earned', value: yieldPercent, formatter: fCurrency },
   ];
 
@@ -109,8 +110,18 @@ export function StakeBalance({
               fullWidth
               variant="contained"
               color="secondary"
-              onClick={manageStake.onTrue}
               data-testid="manage-stake-button"
+              onClick={() => {
+                // trackEvent('button_clicked', {
+                //   label: 'Manage Stake',
+                //   location: 'Insurance',
+                // });
+                // trackEvent('popup_opened', {
+                //   label: 'Manage Stake',
+                //   location: 'Insurance',
+                // });
+                manageStake.onTrue();
+              }}
             >
               {t('Manage stake')}
             </Button>

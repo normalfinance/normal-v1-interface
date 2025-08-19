@@ -22,6 +22,8 @@
     "@mui/styled-engine-sc": "6.1.7",
     "@mui/system": "6.1.7",
     "@mui/utils": "6.1.7",
-    "@stellar/stellar-sdk": "^13.3.0"
+    "@normalfinance/contracts": "workspace:^",
+    "@stellar/stellar-sdk": "^13.3.0",
+    "bignumber.js": "^9.1.1"
   }
 }

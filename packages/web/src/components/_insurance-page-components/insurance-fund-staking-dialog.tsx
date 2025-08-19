@@ -14,6 +14,7 @@ import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useTokenPrice, useInsuranceFund } from '@/hooks';
 import { formatTokenAmount } from '@/utils/format-stellar';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { format, getCryptoIconUrl } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
@@ -112,6 +113,10 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
   const [selectedTab, setSelectedTab] = useState('stake'); // Default to first tab
 
   const handleChangeTab = (_event: React.SyntheticEvent, newValue: string) => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     setSelectedTab(newValue);
   };
 
@@ -153,25 +158,39 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
 
   // -- keep field in sync with the text input ------------------------
   const amount = watch('amount') ?? '';
-  const handleChange = (value: string) =>
+  const handleChange = (value: string) => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     setValue('amount', value === '' ? undefined : Number(value), {
       shouldValidate: true,
     });
+  };
 
   const fiatValue = useMemo(() => {
     if (xlmPrice && amount) {
-      // const shares = formatTokenAmount(stake.if_shares);
-      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      // const shares = format.formatTokenAmount(stake.if_shares);
+      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
       return xlm_price.multipliedBy(amount);
     }
     return BigNumber(0);
   }, [xlmPrice, amount]);
 
   const handleStake = () => {
+    // trackEvent('transaction_submitted', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     onDeposit({ amount });
   };
 
   const handleUnstakeButtonClick = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
+
     const label = getButtonLabel();
 
     if (label === 'Cancel unstake request') {
@@ -365,7 +384,7 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
                       fontSize: '12px',
                     }}
                   >
-                    {formatTokenAmount(stake ? stake.if_shares : 0)} XLM
+                    {format.formatTokenAmount(stake ? stake.if_shares : 0)} XLM
                   </Typography>
                 </Box>
 
@@ -405,7 +424,7 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
                       fontSize: '12px',
                     }}
                   >
-                    {formatTokenAmount(stake ? stake.last_withdraw_request_shares : 0)} XLM
+                    {format.formatTokenAmount(stake ? stake.last_withdraw_request_shares : 0)} XLM
                   </Typography>
                 </Box>
               </Box>

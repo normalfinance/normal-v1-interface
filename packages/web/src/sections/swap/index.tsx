@@ -4,8 +4,7 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { TokenActionQueryParams } from '@/types/query-params';
 import type { TokenActionKey } from '@/components/_common/token-action-card';
 
-import { useEffect } from 'react';
-import { useApiTokens } from '@/hooks';
+import React, { useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
@@ -24,7 +23,6 @@ const swapFeeInfo: SwapFeeInfo = {
 
 export default function SwapView() {
   const { params } = useQueryParams<TokenActionQueryParams>();
-  const { tokens: apiTokens } = useApiTokens();
   const { tokens, getAllTokens, globalIsLoading, setGlobalIsLoading } = useAppStore();
 
   // Determine which tab to show based on query params, default to 'swap'
@@ -64,20 +62,28 @@ export default function SwapView() {
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
+    // Only fetch if no tokens are loaded yet
+    if (tokens.length === 0) {
       setGlobalIsLoading(true);
-      try {
-        await getAllTokens(apiTokens);
-        setGlobalIsLoading(false);
-      } catch (e) {
-        captureException(e);
-        console.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-    refreshTokens();
+
+      getAllTokens()
+        .catch((error) => {
+          captureException(error);
+          console.error(error);
+        })
+        .finally(() => {
+          setGlobalIsLoading(false);
+        });
+    }
   }, []);
+
+  const allowedTokens = React.useMemo(
+    () =>
+      tokens.filter(
+        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
+      ),
+    [tokens]
+  );
 
   return (
     <DashboardContent maxWidth="xl">
@@ -92,7 +98,7 @@ export default function SwapView() {
         <Box maxWidth={500} width={1}>
           <Box width={1}>
             <TokenActionCard
-              tokensList={tokens}
+              tokensList={allowedTokens}
               swapFeeInfo={swapFeeInfo}
               cashBalance={0}
               queryParams={getCardQueryParams()}

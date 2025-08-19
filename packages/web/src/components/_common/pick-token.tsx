@@ -49,6 +49,10 @@ const PickToken: React.FC<PickTokenProps> = ({
   });
 
   const handleTokenClick = (token: Token) => {
+    // trackEvent('button_clicked', {
+    //   label: 'Select Token',
+    //   location: 'Insurance',
+    // });
     onTokenSelect(token);
     onClose();
   };
@@ -56,7 +60,7 @@ const PickToken: React.FC<PickTokenProps> = ({
   const featuredTokens = tokens.filter((token) => token.featured);
 
   const ownedTokens = tokens.filter((token) => token.balance > 0);
-  const unownedTokens = tokens.filter((token) => token.balance == BigInt(0));
+  const unownedTokens = tokens.filter((token) => token.balance == 0);
   const arrangedTokens = [...ownedTokens, ...unownedTokens];
 
   return (
@@ -108,9 +112,15 @@ const PickToken: React.FC<PickTokenProps> = ({
             variant="outlined"
             fullWidth
             size="small"
-            placeholder="Search tokens"
+            placeholder={t('Search tokens')}
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              // trackEvent('button_clicked', {
+              //   label: 'Manage Stake',
+              //   location: 'Insurance',
+              // });
+              setSearchTerm(e.target.value);
+            }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -192,7 +202,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                         >
                           {token.symbol}
                         </Typography>
-                        {token.balance == BigInt(0) && token.id && (
+                        {token.balance == 0 && token.id && (
                           <Typography
                             variant="body2"
                             sx={{
@@ -221,7 +231,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           variant="body2"
                           sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                         >
-                          {fCurrency(Number(token.balance * BigInt(token.usdValue)))}
+                          {fCurrency(token.usdValue * token.balance)}
                         </Typography>
                         <Typography
                           variant="body2"
@@ -231,8 +241,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             fontSize: '12px',
                           }}
                         >
-                          {/* toFixed(4) */}
-                          {token.balance.toString()}
+                          {token.balance}
                         </Typography>
                       </Box>
                     )}
@@ -389,9 +398,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 variant="body2"
                                 sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                               >
-                                {token.usdValue
-                                  ? fCurrency(Number(token.balance * BigInt(token.usdValue)))
-                                  : ''}
+                                {fCurrency(token.usdValue * token.balance)}
                               </Typography>
                               <Typography
                                 variant="body2"
@@ -401,8 +408,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                   fontSize: '12px',
                                 }}
                               >
-                                {/* toFixed(4) */}
-                                {token.balance.toString()}
+                                {token.balance}
                               </Typography>
                             </Box>
                           </Box>
@@ -482,7 +488,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             >
                               {token.symbol}
                             </Typography>
-                            {token.balance == BigInt(0) && token.id && (
+                            {token.balance == 0 && token.id && (
                               <Typography
                                 variant="body2"
                                 sx={{
@@ -511,9 +517,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               variant="body2"
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
-                              {token.usdValue
-                                ? fCurrency(Number(token.balance * BigInt(token.usdValue)))
-                                : ''}
+                              {fCurrency(token.usdValue * token.balance)}
                             </Typography>
                             <Typography
                               variant="body2"
@@ -523,8 +527,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 fontSize: '12px',
                               }}
                             >
-                              {/* toFixed(4) */}
-                              {token.balance.toString()}
+                              {token.balance}
                             </Typography>
                           </Box>
                         )}

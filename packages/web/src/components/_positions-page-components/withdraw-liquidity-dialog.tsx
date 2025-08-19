@@ -10,10 +10,9 @@ import { useMemo, useEffect } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
-import { formatTokenAmount } from '@/utils/format-stellar';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useLiquidity, useTokenPrice, useTokenBalance } from '@/hooks';
+import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
@@ -94,9 +93,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
   const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(position.tokenAddress);
 
   // Get the price for XLM
-  const { loading: priceLoading, price: xlmPrice } = useTokenPrice(
-    constants.StellarConfig.XLM_ADDRESS
-  );
+  const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
 
   // Check if wallet is connected
   const isWalletConnected = !!store.wallet.address;
@@ -124,7 +121,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
   const fiatValue = useMemo(() => {
     if (xlmPrice && amount) {
-      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
       return xlm_price.multipliedBy(amount);
     }
     return new BigNumber(0);
@@ -286,7 +283,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                     fontSize: '12px',
                   }}
                 >
-                  {formatTokenAmount(position.balance)} XLM
+                  {format.formatTokenAmount(position.balance)} XLM
                 </Typography>
               </Box>
             </Box>

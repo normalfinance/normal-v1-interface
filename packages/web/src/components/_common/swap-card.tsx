@@ -4,13 +4,13 @@ import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
-import { useSwap, useTrustLine } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
@@ -33,6 +33,7 @@ interface SwapCardProps extends CardProps {
 const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  // console.log(tokensList)
 
   // Using the store
   const storePersist = usePersistStore();
@@ -78,6 +79,16 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   // 5) Example of how much buyToken the user might get
   const [buyAmount, setBuyAmount] = useState<number>(0);
 
+  useEffect(() => {
+    if (tokensList.length === 0) return;
+    setTokens(tokensList);
+    // If no sell token is set yet, default to XLM if present, otherwise first token
+    if (!sellToken) {
+      const xlmToken = tokensList.find((tkn) => tkn.symbol === 'XLM');
+      setSellToken(xlmToken || tokensList[0]);
+    }
+  }, [tokensList]);
+
   // Initialize from query params
   useEffect(() => {
     if (!queryParams) return;
@@ -108,8 +119,20 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   }, [queryParams, tokens]);
 
   // 6) Open/close the token picker
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleOpen = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
+    setOpen(true);
+  };
+  const handleClose = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
+    setOpen(false);
+  };
 
   // 7) Auto-fetch quote whenever relevant fields change: sellToken, buyToken, amount
   useEffect(() => {
@@ -170,16 +193,54 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   // 9) handle token selection from popup, are we picking a sell token or a buy token?
   const handleTokenSelect = (token: Token) => {
     if (activeButton === 'sell') {
+      // User selecting the sell token
       if (buyToken && buyToken.id === token.id) {
+        // Prevent selecting the same token as the buy side
         setBuyToken(null);
       }
       setSellToken(token);
+
+      if (token.symbol !== 'XLM') {
+        // Sell token is a Normal Token
+        // Ensure the buy token is XLM
+        if (!buyToken || buyToken.symbol !== 'XLM') {
+          const xlmToken = tokens.find((tkn) => tkn.symbol === 'XLM');
+          if (xlmToken) setBuyToken(xlmToken);
+        }
+      } else {
+        // Sell token is XLM
+        // Ensure buy token is a Normal Token (if it's something else or also XLM)
+        if (buyToken && !buyToken.symbol.startsWith('n')) {
+          // If buyToken is not a Normal Token (or if somehow XLM), clear it
+          setBuyToken(null);
+        }
+      }
     } else if (activeButton === 'buy') {
+      // User selecting the buy token
       if (sellToken && sellToken.id === token.id) {
+        // Prevent selecting the same token as the sell side
         setSellToken(null);
       }
       setBuyToken(token);
+
+      if (token.symbol !== 'XLM') {
+        // Buy token is a Normal Token
+        // Ensure the sell token is XLM
+        if (!sellToken || sellToken.symbol !== 'XLM') {
+          const xlmToken = tokens.find((tkn) => tkn.symbol === 'XLM');
+          if (xlmToken) setSellToken(xlmToken);
+        }
+      } else {
+        // Buy token is XLM
+        // Ensure sell token is a Normal Token
+        if (sellToken && !sellToken.symbol.startsWith('n')) {
+          setSellToken(null);
+        }
+      }
     }
+
+    // After adjusting, close the picker
+    handleClose();
   };
 
   // Function to invert tokens and amounts
@@ -220,9 +281,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       if (insufficientBalance) {
         return `Insufficient ${sellToken.symbol}`;
       }
-      if (trustlineButtonActive) {
-        return 'Add trustline';
-      }
+      // if (trustlineButtonActive) {
+      //   return 'Add trustline';
+      // }
       return 'Review';
     }
     return 'Enter an amount';
@@ -249,6 +310,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // Max the sell token
   const handleMaxClick = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Max',
+    //   location: 'Swap',
+    // });
     if (sellToken) {
       setAmount(sellToken.balance.toString());
     }
@@ -285,46 +350,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setLoadingSimulate(true);
       try {
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        const isBuy = buyToken.symbol !== 'XLM';
+        const direction = buyToken.symbol !== 'XLM' ? BuyDirection : SellDirection;
 
-        // onEstimateSwap({
-        //   asset,
-        //   is_buy: isBuy,
-        //   in_amount: amount,
-        // });
-
-        // TODO: will fix errors below once relocated outside this component
-        // if (poolInfo.result && tx.result) {
-        //   const _exchangeRate = Number(tx.result) / Number(amount);
-
-        //   setExchangeRate(
-        //     `${(_exchangeRate / 10 ** 7).toFixed(2)} ${buyToken?.name} per ${sellToken?.name}`
-        //   );
-        //   // setNetworkFee(
-        //   //   `${Number(tx.result.commission_amounts[0][1]) / 10 ** 7} ${sellToken?.name}`
-        //   // );
-        //   setPoolFee(poolInfo.result.total_fee_bps.toString());
-
-        //   // dy = (y * dx) / (x + dx)
-        //   const dy =
-        //     (poolInfo.result.pool_response.asset_b.amount * BigInt(amount)) /
-        //     (poolInfo.result.pool_response.asset_a.amount + BigInt(amount));
-
-        //   const execution_price = BigInt(amount) / dy;
-        //   const market_price =
-        //     poolInfo.result.pool_response.asset_a.amount /
-        //     poolInfo.result.pool_response.asset_b.amount;
-
-        //   // price_impact = (execution_price - market_price) / market_price * 100
-        //   const _priceImpact =
-        //     BigInt((execution_price - market_price) / market_price) * BigInt(100);
-        //   setPriceImpact(Number(_priceImpact));
-
-        //   // setTokenAmounts((prevAmounts) => {
-        //   //   const newToTokenAmount = Number(tx.result.ask_amount) / 10 ** 7;
-        //   //   return [prevAmounts[0], newToTokenAmount];
-        //   // });
-        // }
+        onEstimateSwap({
+          asset,
+          direction,
+          in_amount: amount,
+        });
       } catch (e) {
         console.log(e);
       }
@@ -340,17 +372,16 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         if (!allowed) return;
         // Now call the client-side onSwap (sign and submit)
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        // await onSwap({
-        //   token_in: sellToken.symbol,
-        //   token_out: buyToken.symbol,
-        //   asset,
-        //   in_amount: Number(amount),
-        //   out_min: Number(buyAmount),
-        //   tokens: [sellToken.symbol, buyToken.symbol],
-        // });
+        const direction = buyToken.symbol === 'XLM' ? BuyDirection : SellDirection;
+        await onSwap({
+          asset,
+          direction,
+          in_amount: Number(amount),
+          out_min: Number(buyAmount),
+        });
         setTimeout(async () => {
-          await appStore.fetchTokenInfo(sellToken.name!);
-          await appStore.fetchTokenInfo(buyToken.name!);
+          await appStore.fetchNativeTokenInfo();
+          // await appStore.fetchNormalTokenInfo(pool);
         }, 7000);
       } catch (error) {
         setSwapError('Error during swap transaction');
@@ -362,6 +393,40 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
+
+  const getFilteredTokens = (): Token[] => {
+    if (activeButton === 'sell') {
+      // Filtering options for the sell token selection
+      if (!buyToken) {
+        // No buy token selected yet: allow XLM and Normal Tokens only
+        return tokens.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol.startsWith('n'));
+      }
+      // If buy token is already selected:
+      if (buyToken.symbol === 'XLM') {
+        // Buy is XLM, so sell must be a Normal Token
+        return tokens.filter((tkn) => tkn.symbol.startsWith('n'));
+      } else if (buyToken.symbol.startsWith('n')) {
+        // Buy is a Normal Token, so sell must be XLM
+        return tokens.filter((tkn) => tkn.symbol === 'XLM');
+      }
+    } else if (activeButton === 'buy') {
+      // Filtering options for the buy token selection
+      if (!sellToken) {
+        // No sell token selected yet: allow XLM and Normal Tokens only
+        return tokens.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol.startsWith('n'));
+      }
+      // If sell token is already selected:
+      if (sellToken.symbol === 'XLM') {
+        // Sell is XLM, so buy must be a Normal Token
+        return tokens.filter((tkn) => tkn.symbol.startsWith('n'));
+      } else if (sellToken.symbol.startsWith('n')) {
+        // Sell is a Normal Token, so buy must be XLM
+        return tokens.filter((tkn) => tkn.symbol === 'XLM');
+      }
+    }
+    // Fallback: if something is unexpected, default to allowing only XLM and Normal Tokens
+    return tokens.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol.startsWith('n'));
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -738,7 +803,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           conversionText={sellToken && buyToken ? getConversionText(sellToken, buyToken) : ''}
           insufficientBalance={insufficientBalance}
           sellToken={sellToken || undefined}
-          poolFee={Number(poolFee)}
+          poolFee={0.3} // TODO: fix
           networkCost={0}
           priceImpact={priceImpact ?? 0}
           maxSlippage={maxSlippage}
@@ -753,7 +818,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           buyToken={buyToken!}
           sellAmount={amount}
           buyAmount={buyAmount}
-          feePercentage={poolFee}
+          feePercentage="0.3" // TODO: fix
           networkCost={networkFee ?? '0'}
           priceImpact={priceImpact ?? 0}
           maxSlippage={maxSlippage}

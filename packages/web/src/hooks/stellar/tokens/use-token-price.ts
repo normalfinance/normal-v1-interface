@@ -1,7 +1,6 @@
-import { constants } from '@normalfinance/utils';
 import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
-import { OracleRegistryContract } from '@normalfinance/contracts';
+import { constants, getOraclePrice } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -13,10 +12,10 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-const defaultAction: OracleRegistryContract.NormalAction = {
-  tag: 'UpdateTwap',
-  values: undefined,
-};
+// const defaultAction: OracleRegistryContract.NormalAction = {
+//   tag: 'UpdateTwap',
+//   values: undefined,
+// };
 
 export const useTokenPrice = (asset: string): ReturnType => {
   const [error, setError] = useState(null);
@@ -28,24 +27,27 @@ export const useTokenPrice = (asset: string): ReturnType => {
       setError(null);
       setLoading(true);
 
-      // await rateLimitCheck();
+      const data = await getOraclePrice(constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS, asset);
 
-      const OracleRegistry = new OracleRegistryContract.Client({
-        contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-        rpcUrl: constants.StellarConfig.RPC_URL,
-      });
-
-      const oraclePriceData = await OracleRegistry.get_price({
-        asset,
-        cached: false,
-        action: defaultAction,
-        skip_validation: true,
-      });
-
-      if (oraclePriceData.result) {
-        setPrice(oraclePriceData.result.price);
+      if (data && data.price) {
+        setPrice(Number(data.price));
       }
+      // const OracleRegistry = new OracleRegistryContract.Client({
+      //   contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
+      //   networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+      //   rpcUrl: constants.StellarConfig.RPC_URL,
+      // });
+
+      // const oraclePriceData = await OracleRegistry.get_price({
+      //   asset,
+      //   cached: false,
+      //   action: defaultAction,
+      //   skip_validation: true,
+      // });
+
+      // if (oraclePriceData.result) {
+      //   setPrice(oraclePriceData.result.price);
+      // }
     } catch (e: any) {
       captureException(e);
       console.log(e);

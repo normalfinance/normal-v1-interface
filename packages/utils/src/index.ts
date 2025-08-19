@@ -4,6 +4,7 @@ export * from './stellar';
 export * from './checkout';
 export * from './time';
 export * from './ui';
+export * from './analytics';
 
 // tacky, i know
 import { WalletConnectAllowedMethods } from './stellar/wallets/wallet-connect';

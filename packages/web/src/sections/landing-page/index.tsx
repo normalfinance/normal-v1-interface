@@ -3,7 +3,10 @@
 import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
+import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
+import { captureException } from '@sentry/nextjs';
+import { useAppStore } from '@normalfinance/state';
 import { useQueryParams } from '@/hooks/use-query-params';
 
 import { CtaImage } from './cta';
@@ -24,7 +27,7 @@ export const tokens: Token[] = [
     usdValue: 67600.18,
     percentageChange: 2.45435,
     decimals: 7,
-    balance: BigInt(0),
+    balance: 0,
     featured: false,
   },
   {
@@ -35,7 +38,7 @@ export const tokens: Token[] = [
     usdValue: 3150,
     percentageChange: 1.1,
     decimals: 7,
-    balance: BigInt(0),
+    balance: 0,
     featured: false,
   },
   {
@@ -46,7 +49,7 @@ export const tokens: Token[] = [
     usdValue: 141,
     percentageChange: -0.8,
     decimals: 7,
-    balance: BigInt(0),
+    balance: 0,
     featured: false,
   },
   {
@@ -57,7 +60,7 @@ export const tokens: Token[] = [
     usdValue: 0.48,
     percentageChange: 0.5,
     decimals: 7,
-    balance: BigInt(0),
+    balance: 0,
     featured: false,
   },
 ];
@@ -108,6 +111,25 @@ export const featureCardWide = {
 
 export default function LandingPage() {
   const { params } = useQueryParams<SwapQueryParams>();
+
+  const { getAllTokens, setGlobalIsLoading } = useAppStore();
+
+  // Effect hook to fetch all tokens once the component mounts
+  useEffect(() => {
+    const refreshTokens = async (): Promise<void> => {
+      setGlobalIsLoading(true);
+      try {
+        await getAllTokens();
+        setGlobalIsLoading(false);
+      } catch (e) {
+        captureException(e);
+        console.error(e);
+      } finally {
+        setGlobalIsLoading(false);
+      }
+    };
+    refreshTokens();
+  }, []);
 
   return (
     <>

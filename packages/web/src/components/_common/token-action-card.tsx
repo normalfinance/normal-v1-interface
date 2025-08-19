@@ -102,7 +102,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   const tabs = useTabs(getInitialTab());
 
   const buyCardTokens = React.useMemo<Token[]>(
-    () => tokensList!.filter((t) => t.symbol === 'XLM' || t.symbol === 'USDC'),
+    () => tokensList!.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol === 'USDC'),
     [tokensList]
   );
 

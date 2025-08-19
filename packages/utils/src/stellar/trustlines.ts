@@ -5,17 +5,13 @@ import {
   rpc as SorobanRpc,
   StrKey,
   TransactionBuilder,
-} from "@stellar/stellar-sdk";
-import { constants } from "..";
-import { assetList } from "./assets/assetList";
-import { xBull } from "./wallets/xbull";
-import { lobstr } from "./wallets/lobstr";
-import { hana } from "./wallets/hana";
-import { Wallet } from "./wallets/types";
-import { StellarConfig } from "../constants";
-
-const horizonUrl = "https://horizon.stellar.org";
-const server = new Horizon.Server(horizonUrl);
+} from '@stellar/stellar-sdk';
+import { constants, horizonServer, rpcServer } from '..';
+import { assetList } from './assets/assetList';
+import { xBull } from './wallets/xbull';
+import { lobstr } from './wallets/lobstr';
+import { hana } from './wallets/hana';
+import { Wallet } from './wallets/types';
 
 /**
  * Fetches and returns details about an account on the Stellar network.
@@ -28,7 +24,7 @@ const server = new Horizon.Server(horizonUrl);
 export async function fetchAccount(publicKey: string) {
   if (StrKey.isValidEd25519PublicKey(publicKey)) {
     try {
-      let account: Horizon.ServerApi.AccountRecord = await server
+      let account: Horizon.ServerApi.AccountRecord = await horizonServer
         .accounts()
         .accountId(publicKey)
         .call();
@@ -37,30 +33,27 @@ export async function fetchAccount(publicKey: string) {
       return;
     }
   } else {
-    throw new Error("invalid public key");
+    throw new Error('invalid public key');
   }
 }
 
 function getWalletType(): string {
-  const appStorageValue = localStorage.getItem("app-storage");
+  const appStorageValue = localStorage.getItem('app-storage');
   if (appStorageValue !== null) {
     try {
       const parsedValue = JSON.parse(appStorageValue);
       const walletType = parsedValue?.state?.wallet?.walletType;
       return walletType;
     } catch (error) {
-      console.log("Error parsing app-storage value:", error);
+      console.log('Error parsing app-storage value:', error);
     }
   } else {
-    console.log("app-storage key not found in localStorage.");
+    console.log('app-storage key not found in localStorage.');
   }
-  return "";
+  return '';
 }
 
-export async function checkTrustline(
-  publicKey: string,
-  assetContractAddress: string
-) {
+export async function checkTrustline(publicKey: string, assetContractAddress: string) {
   // Fetch Account
   const account = await fetchAccount(publicKey);
 
@@ -74,9 +67,7 @@ export async function checkTrustline(
   // Check trustlines
   const balances = account.balances;
 
-  const asset = assetList.find(
-    (asset) => asset.contract === assetContractAddress
-  );
+  const asset = assetList.find((asset) => asset.contract === assetContractAddress);
 
   if (!asset) {
     return {
@@ -88,8 +79,8 @@ export async function checkTrustline(
   // Check if trustline exists
   const trustlineExists = balances.some(
     (a) =>
-      "asset_issuer" in a &&
-      "asset_code" in a &&
+      'asset_issuer' in a &&
+      'asset_code' in a &&
       a.asset_issuer === asset.issuer &&
       a.asset_code === asset.code
   );
@@ -100,54 +91,44 @@ export async function checkTrustline(
   };
 }
 
-export async function fetchAndIssueTrustline(
-  publicKey: string,
-  assetContractAddress: string
-) {
+export async function fetchAndIssueTrustline(publicKey: string, assetContractAddress: string) {
   // Fetch Account
   const account = await fetchAccount(publicKey);
 
   if (!account) {
-    throw new Error("Account not found");
+    throw new Error('Account not found');
   }
 
   // Check trustlines
   const balances = account.balances;
 
-  const asset = assetList.find(
-    (asset) => asset.contract === assetContractAddress
-  );
+  const asset = assetList.find((asset) => asset.contract === assetContractAddress);
 
   if (!asset) {
-    throw new Error("Asset not found");
+    throw new Error('Asset not found');
   }
 
   // Check if trustline exists
   const trustlineExists = balances.some(
     (a) =>
-      "asset_issuer" in a &&
-      "asset_code" in a &&
+      'asset_issuer' in a &&
+      'asset_code' in a &&
       a.asset_issuer === asset.issuer &&
       a.asset_code === asset.code
   );
 
   // If trustline does not exist, issue trustline
   if (!trustlineExists) {
-    const server = new SorobanRpc.Server(StellarConfig.RPC_URL);
-
     // Find asset name and issuer
 
     if (!asset) {
-      throw new Error("Asset not found");
+      throw new Error('Asset not found');
     }
     // Issue trustline
-    const transaction = new TransactionBuilder(
-      await server.getAccount(publicKey),
-      {
-        fee: "100000",
-        networkPassphrase: StellarConfig.NETWORK_PASSPHRASE,
-      }
-    )
+    const transaction = new TransactionBuilder(await rpcServer.getAccount(publicKey), {
+      fee: '100000',
+      networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+    })
       .addOperation(
         Operation.changeTrust({
           asset: new Asset(asset.code, asset.issuer),
@@ -163,36 +144,33 @@ export async function fetchAndIssueTrustline(
     let wallet: Wallet;
 
     switch (walletType) {
-      case "xbull":
+      case 'xbull':
         wallet = new xBull();
         break;
-      case "lobstr":
+      case 'lobstr':
         wallet = new lobstr();
         break;
-      case "hana":
+      case 'hana':
         wallet = new hana();
         break;
       default:
-        wallet = (await import("@stellar/freighter-api")).default;
+        wallet = (await import('@stellar/freighter-api')).default;
     }
 
     const signature = await wallet.signTransaction(transaction.toXDR());
 
     const signed = TransactionBuilder.fromXDR(
       signature.signedTxXdr.toString(),
-      StellarConfig.NETWORK_PASSPHRASE
+      constants.StellarConfig.NETWORK_PASSPHRASE
     );
 
-    await server.sendTransaction(signed);
+    await rpcServer.sendTransaction(signed);
 
     return await waitForTrustline(publicKey, assetContractAddress);
   }
 }
 
-async function waitForTrustline(
-  publicKey: string,
-  assetContractAddress: string
-): Promise<void> {
+async function waitForTrustline(publicKey: string, assetContractAddress: string): Promise<void> {
   let attempts = 0;
   while (attempts < 5) {
     const result = await checkTrustline(publicKey, assetContractAddress);

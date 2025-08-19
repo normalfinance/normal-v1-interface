@@ -1,4 +1,4 @@
-import { AppStore } from '@normalfinance/types';
+// import { AppStore } from '@normalfinance/types';
 import axios from 'axios';
 
 interface apiToken {
@@ -21,32 +21,32 @@ export async function fetchTokenList(): Promise<apiToken[]> {
   }
 }
 
-export async function scaToToken(scaAddress: string, appStore: AppStore) {
-  const tokenList = await fetchTokenList();
+// export async function scaToToken(scaAddress: string, appStore: AppStore) {
+//   const tokenList = await fetchTokenList();
 
-  let contractAddress = tokenList.find(
-    (token) =>
-      token.token.toUpperCase() == scaAddress.toUpperCase() ||
-      token.symbol.toUpperCase() == scaAddress.toUpperCase()
-  )?.soroban_contract;
-  if (!contractAddress) {
-    const dashIndex = scaAddress.indexOf('-');
-    contractAddress = dashIndex === -1 ? '' : scaAddress.slice(dashIndex + 1);
-  }
+//   let contractAddress = tokenList.find(
+//     (token) =>
+//       token.token.toUpperCase() == scaAddress.toUpperCase() ||
+//       token.symbol.toUpperCase() == scaAddress.toUpperCase()
+//   )?.soroban_contract;
+//   if (!contractAddress) {
+//     const dashIndex = scaAddress.indexOf('-');
+//     contractAddress = dashIndex === -1 ? '' : scaAddress.slice(dashIndex + 1);
+//   }
 
-  return appStore.fetchTokenInfo(contractAddress);
-}
+//   return appStore.fetchTokenInfo(contractAddress);
+// }
 
-export async function symbolToToken(symbol: string, appStore: AppStore) {
-  const tokenList = await fetchTokenList();
-  // If symbol is a contractAddress, return token info directly. A contract address always starts with uppercase C
-  if (symbol[0] === 'C' && symbol.length > 6) {
-    return appStore.fetchTokenInfo(symbol);
-  }
-  const contractAddress = tokenList.find((token) => token.symbol == symbol)?.soroban_contract;
-  if (!contractAddress) {
-    throw new Error(`No token with given address ${symbol} found!`);
-  }
+// export async function symbolToToken(symbol: string, appStore: AppStore) {
+//   const tokenList = await fetchTokenList();
+//   // If symbol is a contractAddress, return token info directly. A contract address always starts with uppercase C
+//   if (symbol[0] === 'C' && symbol.length > 6) {
+//     return appStore.fetchTokenInfo(symbol);
+//   }
+//   const contractAddress = tokenList.find((token) => token.symbol == symbol)?.soroban_contract;
+//   if (!contractAddress) {
+//     throw new Error(`No token with given address ${symbol} found!`);
+//   }
 
-  return appStore.fetchTokenInfo(contractAddress);
-}
+//   return appStore.fetchTokenInfo(contractAddress);
+// }

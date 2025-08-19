@@ -35,8 +35,13 @@ interface ReturnType {
   ) => Promise<void>;
 }
 
-const buyDirection: PoolSwapFeeContract.SwapDirection = {
+export const BuyDirection: PoolSwapFeeContract.SwapDirection = {
   tag: 'Buy',
+  values: undefined,
+};
+
+export const SellDirection: PoolSwapFeeContract.SwapDirection = {
+  tag: 'Sell',
   values: undefined,
 };
 
@@ -75,7 +80,6 @@ export function useSwap(): ReturnType {
   };
 
   const onEstimateSwap = async (args: EstimateSwapArgs, token_in_decimals?: number) => {
-    const buy = args.direction == buyDirection;
     const processedArgs = {
       ...args,
       in_amount: BigInt((args.in_amount * 10 ** (token_in_decimals || 7)).toFixed(0)),
@@ -85,9 +89,7 @@ export function useSwap(): ReturnType {
       contractType: 'pool_router',
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
-        type: TransactionType.SWAP,
-        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
-        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: '' },
+        type: TransactionType.ESTIMATE_SWAP,
       },
       transactionFunction: async (client, restore) =>
         await client.estimate_swap(processedArgs, { simulate: !restore }),
@@ -99,7 +101,7 @@ export function useSwap(): ReturnType {
     token_in_decimals?: number,
     token_out_decimals?: number
   ) => {
-    const buy = args.direction == buyDirection;
+    const buy = args.direction == BuyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
@@ -112,8 +114,8 @@ export function useSwap(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_SWAP_FEE_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
-        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: args.out_min },
+        token1: { name: buy ? 'XLM' : args.asset, amount: args.in_amount },
+        token2: { name: buy ? args.asset : 'XLM', amount: args.out_min },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });
@@ -142,7 +144,7 @@ export function useSwap(): ReturnType {
     token_in_decimals?: number,
     token_out_decimals?: number
   ) => {
-    const buy = args.direction == buyDirection;
+    const buy = args.direction == BuyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
@@ -155,8 +157,8 @@ export function useSwap(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
-        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: args.out_min },
+        token1: { name: buy ? 'XLM' : args.asset, amount: args.in_amount },
+        token2: { name: buy ? args.asset : 'XLM', amount: args.out_min },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });
@@ -185,7 +187,7 @@ export function useSwap(): ReturnType {
     args: SwapStrictReceiveArgs,
     token_out_decimals?: number
   ) => {
-    const buy = args.direction == buyDirection;
+    const buy = args.direction == BuyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,

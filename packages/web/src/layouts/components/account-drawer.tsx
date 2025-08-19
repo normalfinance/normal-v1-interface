@@ -4,17 +4,26 @@ import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import axios from 'axios';
+import posthog from 'posthog-js';
 import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import * as Sentry from '@sentry/nextjs';
-import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
+import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { useApiTokens, useUserActivity, useLiquidityPositions } from '@/hooks';
-import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
+import { useUserActivity, useLiquidityPositions } from '@/hooks';
+import {
+  hana,
+  xbull,
+  lobstr,
+  freighter,
+  useAppStore,
+  WalletConnect,
+  usePersistStore,
+} from '@normalfinance/state';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -104,6 +113,10 @@ function WalletDisconnected({
   const { t } = useTranslate();
 
   const handleWalletHelp = () => {
+    trackEvent('button_clicked', {
+      label: 'Manage Stake',
+      location: 'Insurance',
+    });
     window.open(`${paths.docs}/getting-started/guides`, '_blank', 'noopener');
   };
 
@@ -194,7 +207,6 @@ function WalletConnected({ address }: { address: string }) {
   const { enqueueSnackbar } = useSnackbar();
 
   const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
-  const { tokens: apiTokens } = useApiTokens();
 
   const { positions } = useLiquidityPositions();
 
@@ -229,7 +241,7 @@ function WalletConnected({ address }: { address: string }) {
     const refreshTokens = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
-        await getAllTokens(apiTokens);
+        await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
         Sentry.captureException(e);
@@ -239,7 +251,13 @@ function WalletConnected({ address }: { address: string }) {
       }
     };
     refreshTokens();
-  }, [apiTokens]);
+  }, []);
+
+  // Total balance
+  const totalBalance = tokens.reduce((acc, tkn) => {
+    const holdings = tkn.balance * tkn.usdValue;
+    return acc + holdings;
+  }, 0);
 
   if (!address) {
     return null;
@@ -274,10 +292,10 @@ function WalletConnected({ address }: { address: string }) {
         {t('Get testnet XLM')}
       </Button>
       <ConnectedWallet
-        balance={0}
+        balance={totalBalance}
         percentageChange={0}
-        tokens={[]}
-        positions={[]}
+        tokens={tokens}
+        positions={positions}
         activity={recentActivity}
       />
     </Box>
@@ -296,13 +314,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const { t } = useTranslate();
 
   /* ↓ connectors -------------------------------------------------- */
-  const connectors: Connector[] = [
-    freighter(),
-    xbull(),
-    lobstr(),
-    hana(),
-    // new WalletConnect(),
-  ];
+  const connectors: Connector[] = [freighter(), xbull(), lobstr(), hana(), new WalletConnect(true)];
 
   const connect = (c: Connector) => persist.connectWallet(c.id);
   const disconnect = () => persist.disconnectWallet();
@@ -321,6 +333,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   useEffect(() => {
     if (connectedAddress) {
       Sentry.setUser({ id: connectedAddress });
+      posthog.identify(
+        connectedAddress,
+        { last_login: new Date() }, // updates every time
+        { signup_date: new Date() } // sets only once
+      );
     } else {
       Sentry.setUser(null);
     }
@@ -331,6 +348,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   /** Open drawer OR show ToS dialog, depending on acceptance */
   const handleMainButtonClick = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     if (disclaimerVersion < CURRENT_TOS_VERSION) {
       setShowTos(true);
     } else {
@@ -341,6 +362,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /** Called whenever the ToS modal closes (Accept or Decline).
    *  If they accepted, open the wallet drawer right away. */
   const handleTosClose = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
+
     setShowTos(false);
 
     // read the latest store value directly (no hooks inside a callback)
@@ -363,12 +389,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
       ) : (
         <Button
           variant="contained"
-          color="secondary"
+          color="info"
           onClick={handleMainButtonClick}
           data-testid="connect-wallet-button"
-          sx={{ borderRadius: '6px', fontWeight: 400 }}
         >
-          {t('Connect')}
+          {t('Connect Wallet')}
         </Button>
       )}
       <Drawer
@@ -406,6 +431,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <Tooltip title="Disconnect">
               <IconButton
                 onClick={() => {
+                  // trackEvent('button_clicked', {
+                  //   label: 'Manage Stake',
+                  //   location: 'Insurance',
+                  // });
                   disconnect();
                   onClose();
                 }}
@@ -424,6 +453,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <WalletDisconnected
               connectors={connectors}
               onSelect={async (c) => {
+                // trackEvent('button_clicked', {
+                //   label: 'Manage Stake',
+                //   location: 'Insurance',
+                // });
                 await connect(c);
                 onClose();
               }}
