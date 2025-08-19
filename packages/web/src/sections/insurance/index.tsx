@@ -6,9 +6,9 @@ import type { InsuranceQueryParams } from '@/types/query-params';
 import { useMemo } from 'react';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { format } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
-import { formatTokenAmount } from '@/utils/format-stellar';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 import { useBuffer, useTokenPrice, useInsuranceFund } from '@/hooks';
 
@@ -34,8 +34,8 @@ export default function InsuranceView() {
   // Insurance Fund USD value
   const insuranceFundValue = useMemo(() => {
     if (xlmPrice && insuranceFundBalance) {
-      const balance = formatTokenAmount(insuranceFundBalance);
-      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      const balance = format.formatTokenAmount(insuranceFundBalance);
+      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
       return xlm_price.multipliedBy(balance);
     }
     return BigNumber(0);
@@ -44,8 +44,8 @@ export default function InsuranceView() {
   // Buffer USD value
   const bufferValue = useMemo(() => {
     if (xlmPrice && buffer && buffer.reserve) {
-      const reserve_balance = BigNumber(formatTokenAmount(buffer.reserve.balance));
-      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      const reserve_balance = BigNumber(format.formatTokenAmount(buffer.reserve.balance));
+      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
       return reserve_balance.multipliedBy(xlm_price);
     }
     return BigNumber(0);
@@ -54,8 +54,8 @@ export default function InsuranceView() {
   // Connected user's stake USD value
   const stakeValue = useMemo(() => {
     if (xlmPrice && stake) {
-      const shares = formatTokenAmount(stake.if_shares);
-      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+      const shares = format.formatTokenAmount(stake.if_shares);
+      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
       return xlm_price.multipliedBy(shares);
     }
     return BigNumber(0);

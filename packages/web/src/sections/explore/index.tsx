@@ -4,11 +4,11 @@ import type { PoolRouterContract } from '@normalfinance/contracts';
 
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
+import { format } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
-import { formatTokenAmount } from '@/utils/format-stellar';
-import { usePools, useSwapVolume, useTokenPrice } from '@/hooks';
+import { useSwapVolume, useTokenPrice } from '@/hooks';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Grid2 from '@mui/material/Grid2';
@@ -24,9 +24,8 @@ import {
 export default function ExploreView() {
   const { t } = useTranslate();
 
-  const { setGlobalIsLoading, getAllTokens } = useAppStore();
+  const { globalIsLoading, setGlobalIsLoading, getAllTokens, pools } = useAppStore();
 
-  const { pools, loading: poolsLoading } = usePools();
   // const { totalTVL } = useTotalTVL();
   const { getSwapVolume } = useSwapVolume();
 
@@ -62,7 +61,7 @@ export default function ExploreView() {
     const refreshTokens = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
-        await getAllTokens([]);
+        await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
         console.error(e);
@@ -85,7 +84,7 @@ export default function ExploreView() {
           <ExploreStats stats={stats} />
         </Grid2>
         <Grid2 sx={{ mt: 3 }}>
-          <ExplorePoolsTable pools={formattedPools} loading={poolsLoading} />
+          <ExplorePoolsTable pools={formattedPools} loading={globalIsLoading} />
         </Grid2>
       </DashboardContent>
     </Box>
@@ -98,12 +97,12 @@ const formatPool = (pool_info: PoolRouterContract.PoolInfo, xlmPrice: number): E
     pool_response: { pool, token_a, token_b },
   } = pool_info;
 
-  const reserve_a = BigNumber(formatTokenAmount(token_a.amount));
-  const reserve_b = BigNumber(formatTokenAmount(token_b.amount));
+  const reserve_a = BigNumber(format.formatTokenAmount(token_a.amount));
+  const reserve_b = BigNumber(format.formatTokenAmount(token_b.amount));
 
   const pool_price = reserve_b.div(reserve_a);
 
-  const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
+  const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
 
   const reserve_b_value = reserve_b.multipliedBy(xlm_price);
   const reserve_a_value = pool_price.multipliedBy(reserve_a).multipliedBy(xlm_price);

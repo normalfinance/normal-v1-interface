@@ -110,8 +110,8 @@ export function useSwap(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_SWAP_FEE_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
-        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: args.out_min },
+        token1: { name: buy ? 'XLM' : args.asset, amount: args.in_amount },
+        token2: { name: buy ? args.asset : 'XLM', amount: args.out_min },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });
@@ -153,8 +153,8 @@ export function useSwap(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
-        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: args.out_min },
+        token1: { name: buy ? 'XLM' : args.asset, amount: args.in_amount },
+        token2: { name: buy ? args.asset : 'XLM', amount: args.out_min },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });

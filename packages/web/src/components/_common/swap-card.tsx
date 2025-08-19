@@ -33,6 +33,7 @@ interface SwapCardProps extends CardProps {
 const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  // console.log(tokensList)
 
   // Using the store
   const storePersist = usePersistStore();
@@ -108,7 +109,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   }, [queryParams, tokens]);
 
   // 6) Open/close the token picker
-  const handleOpen = () => setOpen(true);
+  const handleOpen = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
+    setOpen(true);
+  };
   const handleClose = () => {
     // trackEvent('button_clicked', {
     //   label: 'Manage Stake',
@@ -226,9 +233,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       if (insufficientBalance) {
         return `Insufficient ${sellToken.symbol}`;
       }
-      if (trustlineButtonActive) {
-        return 'Add trustline';
-      }
+      // if (trustlineButtonActive) {
+      //   return 'Add trustline';
+      // }
       return 'Review';
     }
     return 'Enter an amount';
@@ -297,44 +304,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
         const isBuy = buyToken.symbol !== 'XLM';
 
-        // onEstimateSwap({
-        //   asset,
-        //   is_buy: isBuy,
-        //   in_amount: amount,
-        // });
-
-        // TODO: will fix errors below once relocated outside this component
-        // if (poolInfo.result && tx.result) {
-        //   const _exchangeRate = Number(tx.result) / Number(amount);
-
-        //   setExchangeRate(
-        //     `${(_exchangeRate / 10 ** 7).toFixed(2)} ${buyToken?.name} per ${sellToken?.name}`
-        //   );
-        //   // setNetworkFee(
-        //   //   `${Number(tx.result.commission_amounts[0][1]) / 10 ** 7} ${sellToken?.name}`
-        //   // );
-        //   setPoolFee(poolInfo.result.total_fee_bps.toString());
-
-        //   // dy = (y * dx) / (x + dx)
-        //   const dy =
-        //     (poolInfo.result.pool_response.asset_b.amount * BigInt(amount)) /
-        //     (poolInfo.result.pool_response.asset_a.amount + BigInt(amount));
-
-        //   const execution_price = BigInt(amount) / dy;
-        //   const market_price =
-        //     poolInfo.result.pool_response.asset_a.amount /
-        //     poolInfo.result.pool_response.asset_b.amount;
-
-        //   // price_impact = (execution_price - market_price) / market_price * 100
-        //   const _priceImpact =
-        //     BigInt((execution_price - market_price) / market_price) * BigInt(100);
-        //   setPriceImpact(Number(_priceImpact));
-
-        //   // setTokenAmounts((prevAmounts) => {
-        //   //   const newToTokenAmount = Number(tx.result.ask_amount) / 10 ** 7;
-        //   //   return [prevAmounts[0], newToTokenAmount];
-        //   // });
-        // }
+        onEstimateSwap({
+          asset,
+          direction,
+          in_amount: amount,
+        });
       } catch (e) {
         console.log(e);
       }
@@ -359,8 +333,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         //   tokens: [sellToken.symbol, buyToken.symbol],
         // });
         setTimeout(async () => {
-          await appStore.fetchTokenInfo(sellToken.name!);
-          await appStore.fetchTokenInfo(buyToken.name!);
+          await appStore.fetchNativeTokenInfo();
+          // await appStore.fetchNormalTokenInfo(pool);
         }, 7000);
       } catch (error) {
         setSwapError('Error during swap transaction');
@@ -748,7 +722,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           conversionText={sellToken && buyToken ? getConversionText(sellToken, buyToken) : ''}
           insufficientBalance={insufficientBalance}
           sellToken={sellToken || undefined}
-          poolFee={Number(poolFee)}
+          poolFee={0.3} // TODO: fix
           networkCost={0}
           priceImpact={priceImpact ?? 0}
           maxSlippage={maxSlippage}
@@ -763,7 +737,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           buyToken={buyToken!}
           sellAmount={amount}
           buyAmount={buyAmount}
-          feePercentage={poolFee}
+          feePercentage="0.3" // TODO: fix
           networkCost={networkFee ?? '0'}
           priceImpact={priceImpact ?? 0}
           maxSlippage={maxSlippage}

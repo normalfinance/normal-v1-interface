@@ -9,6 +9,7 @@ export * from './trustlines';
 export * from './address';
 export * from './events';
 import Signer from './wallets/Signer';
+export * from './oracle';
 
 export { WalletConnect } from './wallets/wallet-connect';
 

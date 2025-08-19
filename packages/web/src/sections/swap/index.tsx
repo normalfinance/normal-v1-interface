@@ -24,7 +24,6 @@ const swapFeeInfo: SwapFeeInfo = {
 
 export default function SwapView() {
   const { params } = useQueryParams<TokenActionQueryParams>();
-  const { tokens: apiTokens } = useApiTokens();
   const { tokens, getAllTokens, globalIsLoading, setGlobalIsLoading } = useAppStore();
 
   // Determine which tab to show based on query params, default to 'swap'
@@ -66,17 +65,16 @@ export default function SwapView() {
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       setGlobalIsLoading(true);
-      try {
-        await getAllTokens(apiTokens);
-        setGlobalIsLoading(false);
-      } catch (e) {
-        captureException(e);
-        console.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-    refreshTokens();
+
+      getAllTokens()
+        .catch((error) => {
+          captureException(error);
+          console.error(error);
+        })
+        .finally(() => {
+          setGlobalIsLoading(false);
+        });
+    }
   }, []);
 
   return (

@@ -30,9 +30,9 @@
   },
   "homepage": "https://github.com/normalfinance/normal-v1-interface",
   "workspaces": [
+    "packages/contracts",
     "packages/types",
     "packages/utils",
-    "packages/contracts",
     "packages/state",
     "packages/*"
   ],

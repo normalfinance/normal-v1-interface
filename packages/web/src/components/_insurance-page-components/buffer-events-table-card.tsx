@@ -1,8 +1,8 @@
 import type { events } from '@normalfinance/types';
 import type { TableHeadCellProps } from '@/components/template/table';
 
+import { format } from '@normalfinance/utils';
 import { fDateTime } from '@/utils/format-time';
-import { formatTokenAmount } from '@/utils/format-stellar';
 import { fTruncate } from '@normalfinance/utils/build/format';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 
@@ -56,7 +56,7 @@ export function BufferEventsTableCard({ events }: Props) {
               return (
                 <TableRow key={index} sx={{ cursor: 'pointer' }} onClick={viewOnStellarExpert}>
                   <TableCell>{event.type}</TableCell>
-                  <TableCell>{formatTokenAmount(event.amount.toString())} XLM</TableCell>
+                  <TableCell>{format.formatTokenAmount(event.amount.toString())} XLM</TableCell>
                   <TableCell>{fTruncate(event.token, 15)}</TableCell>
                   <TableCell>{fTruncate(event.user, 15)}</TableCell>
                   <TableCell>{event.timestamp ? fDateTime(event.timestamp) : ''}</TableCell>

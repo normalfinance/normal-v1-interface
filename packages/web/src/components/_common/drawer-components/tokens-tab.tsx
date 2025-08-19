@@ -5,7 +5,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fPercent, fCurrency, fTokenAmount } from '@/utils/format-number';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -44,42 +44,24 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
       </Button>
 
       {tokens.length > 0 ? (
-        tokens?.map((token) => (
-          <Button
-            key={token.id}
-            sx={{
-              display: 'flex',
-              padding: '16px 0px',
-              width: '100%',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
-              <Box
-                component="img"
-                src={token.icon ?? getCryptoIconUrl(token.symbol)}
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                }}
-              />
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  justifyContent: 'center',
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                >
-                  {token.name}
-                </Typography>
+        [...tokens]
+          .sort((a, b) => {
+            const aBal = a.balance;
+            const bBal = b.balance;
+            return bBal - aBal;
+          })
+          .map((token) => (
+            <Button
+              key={token.id}
+              sx={{
+                display: 'flex',
+                padding: '16px 0px',
+                width: '100%',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                 <Box
                   sx={{
                     display: 'flex',
@@ -153,19 +135,26 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                         }),
                     }}
                   >
-                    <Iconify
-                      width={10}
-                      icon={
-                        token.percentageChange && token.percentageChange < 0
-                          ? 'eva:trending-down-fill'
-                          : 'eva:trending-up-fill'
-                      }
-                      color={
-                        token.percentageChange && token.percentageChange < 0
-                          ? 'error.main'
-                          : 'success.main'
-                      }
-                    />
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.secondary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      {token.balance}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.secondary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      {token.symbol}
+                    </Typography>
                   </Box>
                   <Typography
                     variant="caption"
@@ -176,8 +165,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                           : 'success.main',
                     }}
                   >
-                    {token.percentageChange && token.percentageChange >= 0 && '+'}
-                    {fPercent(token.percentageChange && token.percentageChange)}
+                    {fCurrency(token.usdValue && token.balance)}
                   </Typography>
                 </Stack>
               </Box>

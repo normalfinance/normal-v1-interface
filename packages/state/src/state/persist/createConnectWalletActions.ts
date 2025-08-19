@@ -60,8 +60,8 @@ export const createConnectWalletActions = () => {
             ? 'testnet'
             : 'public',
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-        networkUrl: constants.StellarConfig.HORIZON_URL, // "https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0",
-        sorobanRpcUrl: constants.StellarConfig.RPC_URL, // "https://bitter-alpha-layer.stellar-mainnet.quiknode.pro/54b50c548864e1470fd52dbd629b647d556b983e",
+        networkUrl: constants.StellarConfig.HORIZON_URL,
+        sorobanRpcUrl: constants.StellarConfig.RPC_URL,
       };
 
       // Throw an error if the network is not supported.
