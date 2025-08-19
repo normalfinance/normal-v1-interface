@@ -33,6 +33,10 @@ export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProp
 
   const handleChangeLang = useCallback(
     (newLang: LanguageValue) => {
+      // trackEvent('button_clicked', {
+      //   label: 'Manage Stake',
+      //   location: 'Insurance',
+      // });
       onChangeLang(newLang);
       onClose();
     },
@@ -65,7 +69,13 @@ export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProp
         transition={transitionTap()}
         data-testid="languages-button"
         aria-label="languages-button"
-        onClick={onOpen}
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+          // trackEvent('button_clicked', {
+          //   label: 'Manage Stake',
+          //   location: 'Insurance',
+          // });
+          onOpen(e);
+        }}
         sx={[
           (theme) => ({
             p: 0,

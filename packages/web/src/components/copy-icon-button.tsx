@@ -26,6 +26,10 @@ export default function CopyIconButton({ value, alert }: Props) {
     <Tooltip title="Copy">
       <IconButton
         onClick={() => {
+          // trackEvent('button_clicked', {
+          //   label: 'Copy',
+          //   location: 'Home',
+          // });
           copy(value);
           enqueueSnackbar(alert);
         }}

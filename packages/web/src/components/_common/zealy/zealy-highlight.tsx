@@ -108,8 +108,13 @@ const ZealyHighlight: React.FC<ZealyHighlightProps> = ({
         <PulseButton
           title="Earn Zealy XP"
           $diameter={sizePx}
-          onClick={() => setOpen(true)}
-          data-testid={`zealy-highlight-button-${questId}`}
+          onClick={() => {
+            // trackEvent('button_clicked', {
+            //   label: 'Manage Stake',
+            //   location: 'Insurance',
+            // });
+            setOpen(true);
+          }}
         >
           <HelpOutlineIcon />
         </PulseButton>

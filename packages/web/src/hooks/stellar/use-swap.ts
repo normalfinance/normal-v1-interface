@@ -85,9 +85,7 @@ export function useSwap(): ReturnType {
       contractType: 'pool_router',
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
-        type: TransactionType.SWAP,
-        token1: { name: buy ? 'XLM' : `n${args.asset}`, amount: args.in_amount },
-        token2: { name: buy ? `n${args.asset}` : 'XLM', amount: '' },
+        type: TransactionType.ESTIMATE_SWAP,
       },
       transactionFunction: async (client, restore) =>
         await client.estimate_swap(processedArgs, { simulate: !restore }),

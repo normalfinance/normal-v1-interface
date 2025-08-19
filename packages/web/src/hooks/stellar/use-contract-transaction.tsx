@@ -1,15 +1,15 @@
 'use client';
 
-import type { TransactionDetails } from '@/types/transaction';
-import type { AppStore, AppStorePersist } from '@normalfinance/types';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
+import type { AppStore, ContractType, AppStorePersist } from '@normalfinance/types';
 
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
-import { constants } from '@normalfinance/utils';
 import { Signer } from '@normalfinance/utils/build/stellar';
+import { constants, trackEvent } from '@normalfinance/utils';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
   PoolContract,
@@ -38,17 +38,6 @@ const logToFile = async (message: string) => {
     console.error('Failed to log to file:', error);
   }
 };
-
-// Define Contract Types
-type ContractType =
-  | 'oracle_registry'
-  | 'pool_swap_fee'
-  | 'pool'
-  | 'pool_router'
-  | 'buffer'
-  | 'insurance_fund'
-  | 'liquidity_calculator'
-  | 'token';
 
 const contractClients = {
   oracle_registry: OracleRegistryContract.Client,
@@ -144,7 +133,9 @@ export const useContractTransaction = () => {
       const rpcUrl = constants.StellarConfig.RPC_URL;
       const publicKey = storePersist.wallet.address!;
 
-      const run = async (restore: boolean = false): Promise<{ txHash?: string }> => {
+      const run = async (
+        restore: boolean = false
+      ): Promise<{ txHash?: string; notify: boolean }> => {
         const contractClient = getContractClient(
           contractType,
           contractAddress,
@@ -163,7 +154,7 @@ export const useContractTransaction = () => {
           if (restore) {
             console.log('Restoring transaction state...');
             await transaction.simulate({ restore: true });
-            return {};
+            return { notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP };
           }
           const txHash = (transaction as any).hash || null;
 
@@ -175,11 +166,26 @@ export const useContractTransaction = () => {
             await logToFile(logMessage);
           }
 
+          trackEvent('transaction_successful', {
+            txHash,
+            contractName: contractType,
+            contractAddress,
+            method: transactionDetails.type,
+          });
+
           return {
             txHash,
+            notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP,
           };
         } catch (error) {
           console.error('Error during returning transaction hash: ', error);
+
+          trackEvent('transaction_failed', {
+            error: (error as any).toString(),
+            contractName: contractType,
+            contractAddress,
+            method: transactionDetails.type,
+          });
 
           if (error instanceof Error && error.message.includes('restore some contract state')) {
             return new Promise((resolve, reject) => {
@@ -211,41 +217,43 @@ export const useContractTransaction = () => {
         .then((result) => {
           closeSnackbar(loadingKey);
 
-          if (result.txHash) {
-            const stellarExpertUrl = createStellarExpertUrl('tx', result.txHash);
+          if (result.notify) {
+            if (result.txHash) {
+              const stellarExpertUrl = createStellarExpertUrl('tx', result.txHash);
 
-            enqueueSnackbar(
-              <Box component="span">
-                {messages.success}{' '}
-                <Button
-                  size="small"
-                  onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
-                  sx={{
-                    textTransform: 'none',
-                    minWidth: 'auto',
-                    p: 0,
-                    textDecoration: 'underline',
-                    '&:hover': {
+              enqueueSnackbar(
+                <Box component="span">
+                  {messages.success}{' '}
+                  <Button
+                    size="small"
+                    onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+                    sx={{
+                      textTransform: 'none',
+                      minWidth: 'auto',
+                      p: 0,
                       textDecoration: 'underline',
-                      backgroundColor: 'transparent',
-                    },
-                  }}
-                >
-                  {t('View More')}
-                </Button>
-              </Box>,
-              {
+                      '&:hover': {
+                        textDecoration: 'underline',
+                        backgroundColor: 'transparent',
+                      },
+                    }}
+                  >
+                    {t('View More')}
+                  </Button>
+                </Box>,
+                {
+                  variant: 'success',
+                  persist: false,
+                  autoHideDuration: 7500,
+                }
+              );
+            } else {
+              enqueueSnackbar(messages.success, {
                 variant: 'success',
                 persist: false,
                 autoHideDuration: 7500,
-              }
-            );
-          } else {
-            enqueueSnackbar(messages.success, {
-              variant: 'success',
-              persist: false,
-              autoHideDuration: 7500,
-            });
+              });
+            }
           }
 
           return result;

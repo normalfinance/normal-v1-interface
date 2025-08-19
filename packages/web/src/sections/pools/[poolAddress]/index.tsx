@@ -34,7 +34,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const { chartData } = usePoolPriceChart(poolAddress);
 
   // Load recent pool events
-  const { events } = usePoolEvents(poolAddress);
+  const { events } = usePoolEvents(poolAddress, 20);
 
   // Format the pool events
   const rows = events

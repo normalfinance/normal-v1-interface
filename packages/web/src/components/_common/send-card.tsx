@@ -103,6 +103,10 @@ const SendCard: React.FC<SendCardProps> = ({
 
   //prevent "-" ot "," in input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     setAmount(sanitizeAmountInput(e.target.value));
   };
 
@@ -168,6 +172,11 @@ const SendCard: React.FC<SendCardProps> = ({
 
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
+
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
 
     if (label === 'Send') {
       if (!isValidStellarAddress(destination)) {
@@ -368,6 +377,10 @@ const SendCard: React.FC<SendCardProps> = ({
               sx={{ fontWeight: 500, fontSize: '12px', p: 0, height: '24px', minWidth: '36px' }}
               onClick={(e) => {
                 e.stopPropagation();
+                // trackEvent('button_clicked', {
+                //   label: 'Max',
+                //   location: 'Swap',
+                // });
                 if (sendToken) {
                   setAmount(
                     getMaxAmount(Number(sendToken.balance), sendToken.usdValue, isFiatMode)
@@ -469,7 +482,13 @@ const SendCard: React.FC<SendCardProps> = ({
       {/* Token Picker Popup */}
       <PickToken
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          // trackEvent('button_clicked', {
+          //   label: 'Manage Stake',
+          //   location: 'Insurance',
+          // });
+          setOpen(false);
+        }}
         buttonSource="send"
         tokens={tokensList}
         onTokenSelect={(token) => {

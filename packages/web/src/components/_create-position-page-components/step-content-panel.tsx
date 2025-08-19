@@ -148,6 +148,11 @@ export function StepContentPanel({
 
   /* ------- main CTA click handler ------------------------------------ */
   const handleMainButtonClick = async () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
+
     if (isLoading) return;
 
     // ----- Step-2 special case  ---------------------------------------

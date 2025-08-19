@@ -109,7 +109,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // 6) Open/close the token picker
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
+    setOpen(false);
+  };
 
   // 7) Auto-fetch quote whenever relevant fields change: sellToken, buyToken, amount
   useEffect(() => {
@@ -249,6 +255,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // Max the sell token
   const handleMaxClick = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Max',
+    //   location: 'Swap',
+    // });
     if (sellToken) {
       setAmount(sellToken.balance.toString());
     }

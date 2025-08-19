@@ -68,6 +68,14 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
     refreshTokens();
   }, []);
 
+  const allowedTokens = React.useMemo(
+    () =>
+      tokens.filter(
+        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
+      ),
+    [tokens]
+  );
+
   return (
     <Box
       component="section"

@@ -69,6 +69,10 @@ export function DashboardLayout({
   const isNavVertical = isNavMini || settings.state.navLayout === 'vertical';
 
   const handleGiveFeedback = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Give feedback / Report bug',
+    //   location: '',
+    // });
     window.open(' https://forms.fillout.com/t/cumVTceVQeus', '_blank', 'noopener');
   };
 

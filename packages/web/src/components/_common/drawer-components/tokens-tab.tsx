@@ -22,6 +22,10 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const { t } = useTranslate('auto');
 
   const handleRequestAsset = () => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     window.open('https://forms.fillout.com/t/tQuo1BRFJeus', '_blank', 'noopener');
   };
 
