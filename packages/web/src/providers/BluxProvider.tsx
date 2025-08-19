@@ -1,8 +1,10 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+
+import React from 'react';
 import { BluxProvider as BluxSDKProvider } from '@bluxcc/react';
-import { BLUX_CONFIG, BLUX_CONFIG_SIMPLE, ENABLE_BLUX_AUTH } from '@/lib/blux-config';
+import { BLUX_CONFIG, ENABLE_BLUX_AUTH } from '@/lib/blux-config';
 
 interface BluxProviderProps {
   children: ReactNode;

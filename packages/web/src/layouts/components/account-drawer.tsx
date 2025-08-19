@@ -6,17 +6,17 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 import axios from 'axios';
 import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
+import { useBlux } from '@bluxcc/react';
 import { useTranslate } from '@/locales';
 import * as Sentry from '@sentry/nextjs';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
+import { ENABLE_BLUX_AUTH } from '@/lib/blux-config';
 import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useApiTokens, useUserActivity, useLiquidityPositions } from '@/hooks';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
-import { ENABLE_BLUX_AUTH } from '@/lib/blux-config';
-import { useBlux } from '@bluxcc/react';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -99,7 +99,7 @@ function WalletDisconnected({
   onSelect: (c: Connector) => void;
 }) {
   const theme = useTheme();
-  const blux = ENABLE_BLUX_AUTH ? useBlux() : null;
+  const blux = useBlux();
 
   const [allowed, setAllowed] = useState<Connector[]>([]);
   const [disallowed, setDisallowed] = useState<Connector[]>([]);
@@ -175,20 +175,15 @@ function WalletDisconnected({
             position={{ top: -22, right: -32 }}
           /> */}
         </Box>
-        
+
         {loading ? (
           <CircularProgress />
         ) : (
           <>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              textAlign="center"
-              sx={{ mb: 3 }}
-            >
-              Sign in with your social account or email to get started
+            <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
+              {t('Sign in with your social account or email to get started')}
             </Typography>
-            
+
             <Button
               fullWidth
               variant="contained"
@@ -199,7 +194,7 @@ function WalletDisconnected({
             >
               {t('Sign in with Blux')}
             </Button>
-            
+
             <Button
               fullWidth
               variant="soft"
@@ -384,16 +379,16 @@ export type AccountDrawerProps = IconButtonProps;
 export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ stores ------------------------------------------------------ */
   const persist = usePersistStore();
-  const blux = ENABLE_BLUX_AUTH ? useBlux() : null;
+  const blux = useBlux();
 
   const { t } = useTranslate();
-  
+
   console.log('🏠 AccountDrawer: Component rendered', {
     bluxEnabled: ENABLE_BLUX_AUTH,
     bluxReady: blux?.isReady,
     bluxAuthenticated: blux?.isAuthenticated,
     bluxUser: blux?.user,
-    legacyWalletAddress: persist.wallet.address
+    legacyWalletAddress: persist.wallet.address,
   });
 
   /* ↓ connectors -------------------------------------------------- */
@@ -409,13 +404,13 @@ export function AccountDrawer(props: AccountDrawerProps) {
     console.log('🔗 AccountDrawer: Connecting legacy wallet', c.id);
     return persist.connectWallet(c.id);
   };
-  
+
   const disconnect = () => {
-    console.log('🔌 AccountDrawer: Disconnecting wallet', { 
-      bluxEnabled: ENABLE_BLUX_AUTH, 
-      bluxAuthenticated: blux?.isAuthenticated 
+    console.log('🔌 AccountDrawer: Disconnecting wallet', {
+      bluxEnabled: ENABLE_BLUX_AUTH,
+      bluxAuthenticated: blux?.isAuthenticated,
     });
-    
+
     if (ENABLE_BLUX_AUTH && blux?.isAuthenticated) {
       console.log('🚪 AccountDrawer: Using Blux logout');
       blux.logout();
@@ -429,29 +424,31 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
   /* ↓ main button uses Blux user avatar or dummy avatar ---------- */
-  const avatarURL = ENABLE_BLUX_AUTH && blux?.user?.email 
-    ? `https://www.gravatar.com/avatar/${btoa(blux.user.email)}?d=identicon`
-    : '/assets/icons/navbar/logo.webp';
-  
-  const displayName = ENABLE_BLUX_AUTH && blux?.user?.email 
-    ? blux.user.email.charAt(0).toUpperCase()
-    : ' ';
+  const avatarURL =
+    ENABLE_BLUX_AUTH && blux?.user?.email
+      ? `https://www.gravatar.com/avatar/${btoa(blux.user.email)}?d=identicon`
+      : '/assets/icons/navbar/logo.webp';
+
+  const displayName =
+    ENABLE_BLUX_AUTH && blux?.user?.email ? blux.user.email.charAt(0).toUpperCase() : ' ';
 
   /* ↓ derived state ---------------------------------------------- */
   // Priority: Blux authentication over legacy wallet connection
-  const connectedAddress = ENABLE_BLUX_AUTH && blux?.isAuthenticated && blux?.user?.wallet?.address
-    ? blux.user.wallet.address
-    : persist.wallet.address;
+  const connectedAddress =
+    ENABLE_BLUX_AUTH && blux?.isAuthenticated && blux?.user?.wallet?.address
+      ? blux.user.wallet.address
+      : persist.wallet.address;
 
-  const isConnected = ENABLE_BLUX_AUTH && blux
-    ? blux.isAuthenticated && !!blux.user?.wallet?.address
-    : !!persist.wallet.address;
-    
-  console.log('🔍 AccountDrawer: Connection status', { 
-    connectedAddress, 
+  const isConnected =
+    ENABLE_BLUX_AUTH && blux
+      ? blux.isAuthenticated && !!blux.user?.wallet?.address
+      : !!persist.wallet.address;
+
+  console.log('🔍 AccountDrawer: Connection status', {
+    connectedAddress,
     isConnected,
     bluxAuth: !!blux?.isAuthenticated,
-    legacyAuth: !!persist.wallet.address
+    legacyAuth: !!persist.wallet.address,
   });
 
   useEffect(() => {

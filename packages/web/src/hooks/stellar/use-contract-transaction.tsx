@@ -5,14 +5,14 @@ import type { AppStore, AppStorePersist } from '@normalfinance/types';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 
 import { useCallback } from 'react';
+import { useBlux } from '@bluxcc/react';
 import { useTranslate } from '@/locales';
 import { constants } from '@normalfinance/utils';
+import { ENABLE_BLUX_AUTH } from '@/lib/blux-config';
 import { Signer } from '@normalfinance/utils/build/stellar';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
-import { ENABLE_BLUX_AUTH } from '@/lib/blux-config';
-import { useBlux } from '@bluxcc/react';
 import {
   PoolContract,
   BufferContract,
@@ -130,7 +130,7 @@ const getContractClient = <T extends ContractType>(
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
   const appStore = useAppStore();
-  const blux = ENABLE_BLUX_AUTH ? useBlux() : null;
+  const blux = useBlux();
   const { t } = useTranslate();
 
   const { openRestoreModal, closeRestoreModal } = useRestoreModal();

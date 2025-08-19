@@ -6,13 +6,13 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { paths } from '@/routes/paths';
+import { useBlux } from '@bluxcc/react';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
-import { fPercent, fCurrencyCompact } from '@/utils/format-number';
 import { ENABLE_BLUX_AUTH } from '@/lib/blux-config';
-import { useBlux } from '@bluxcc/react';
+import { fPercent, fCurrencyCompact } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -48,14 +48,14 @@ export default function ConnectedWallet({
   const { t } = useTranslate();
   const theme = useTheme();
   const router = useRouter();
-  const blux = ENABLE_BLUX_AUTH ? useBlux() : null;
+  const blux = useBlux();
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   console.log('📱 ConnectedWallet: Rendered with Blux data', {
     bluxEnabled: ENABLE_BLUX_AUTH,
     bluxReady: blux?.isReady,
     bluxAuthenticated: blux?.isAuthenticated,
-    bluxUser: blux?.user
+    bluxUser: blux?.user,
   });
 
   // Show Blux user info if using Blux authentication
@@ -99,7 +99,6 @@ export default function ConnectedWallet({
           }}
         >
           <Stack direction="row" spacing={2} alignItems="center">
-           
             <Stack flex={1}>
               <Typography variant="subtitle2" color="text.primary">
                 {blux?.user?.email || t('Blux User')}
@@ -115,7 +114,7 @@ export default function ConnectedWallet({
               </Typography>
             </Stack>
           </Stack>
-          
+
           {/* Connected Wallet */}
           {blux?.user?.wallet && (
             <Stack spacing={1} mt={1}>
@@ -132,16 +131,8 @@ export default function ConnectedWallet({
                   backgroundColor: alpha(theme.palette.grey[500], 0.08),
                 }}
               >
-                <Iconify 
-                  icon="mingcute:wallet-4-line" 
-                  width={16} 
-                  color="primary.main"
-                />
-                <Typography 
-                  variant="caption" 
-                  color="primary.main"
-                  flex={1}
-                >
+                <Iconify icon="mingcute:wallet-4-line" width={16} color="primary.main" />
+                <Typography variant="caption" color="primary.main" flex={1}>
                   {blux.user.wallet.name}
                 </Typography>
                 <Typography variant="caption" color="primary.main">

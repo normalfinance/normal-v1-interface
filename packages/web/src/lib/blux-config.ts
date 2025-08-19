@@ -15,7 +15,6 @@ const SIMPLE_CONFIG = {
   explorer: 'stellarexpert',
 };
 
-
 //TODO: Fix these anys, at a priority
 export const BLUX_CONFIG = {
   appName: 'Normal Finance',
