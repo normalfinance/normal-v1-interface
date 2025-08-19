@@ -165,7 +165,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
       sx={{
         position: 'sticky',
         top: 0,
-        zIndex: (t) => t.zIndex.appBar,
+        zIndex: (_theme) => _theme.zIndex.appBar,
         display: 'flex',
         width: '100%',
         alignItems: 'center',

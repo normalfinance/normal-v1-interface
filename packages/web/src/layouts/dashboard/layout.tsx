@@ -82,7 +82,7 @@ export function DashboardLayout({
           top: 0,
           left: 0,
           right: 0,
-          zIndex: (t) => t.zIndex.appBar,
+          zIndex: (_theme) => _theme.zIndex.appBar,
         }}
       >
         <NormalNavbar
