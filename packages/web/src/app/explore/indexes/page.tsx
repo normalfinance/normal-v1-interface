@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
-import IndexDetailsView from '@/sections/indexes/[indexDetails]';
 import ExploreIndexesView from '@/sections/explore/indexes';
 
 // ----------------------------------------------------------------------

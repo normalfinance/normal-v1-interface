@@ -1,11 +1,13 @@
 'use client';
 
 import type { IndexDetails } from '@normalfinance/types';
+
 import { useTranslate } from '@/locales';
-import { Card, Stack, Typography, Avatar, Box } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
-import { fCurrency, fPercent } from '@/utils/format-number';
+import { fPercent, fCurrency } from '@/utils/format-number';
 import { groupAccentByIndex, groupAccentDarkByIndex } from '@/theme/accents';
+
+import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Card, Stack, Avatar, Typography } from '@mui/material';
 
 export interface IndexCardProps {
   index: IndexDetails;

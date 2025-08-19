@@ -6,13 +6,13 @@ import type { Token, IndexDetails, WeightedToken } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
-import { fCurrency, fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
+import { fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
 
-import { ExploreIndexesTable } from '@/components/_index-details/explore-indexes-table';
 import { IndexCard } from '@/components/_index-details/index-card';
+import { ExploreIndexesTable } from '@/components/_index-details/explore-indexes-table';
 import { IndexFundsInfoSection } from '@/components/_index-details/index-funds-info-section';
 
 const makeToken = (

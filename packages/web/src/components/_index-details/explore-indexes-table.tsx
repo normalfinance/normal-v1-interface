@@ -3,22 +3,24 @@
 import type { IndexDetails } from '@normalfinance/types';
 import type { IMarketTableFilters } from '@/types/marketTable';
 import type { TableHeadCellProps } from '@/components/template/table';
-import { useTranslate } from '@/locales';
 
+import { useTranslate } from '@/locales';
 import { useSetState } from 'minimal-shared/hooks';
+
+import { alpha, useTheme } from '@mui/material/styles';
 import {
   Card,
   Table,
-  TableBody,
-  Avatar,
   Stack,
-  Typography,
+  Avatar,
   TableRow,
+  TableBody,
   TableCell,
+  Typography,
 } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
 
 import { Scrollbar } from '@/components/template/scrollbar';
+import { ExploreIndexesTableToolbar } from '@/components/_index-details/explore-indexes-table-toolbar';
 import {
   useTable,
   emptyRows,
@@ -28,8 +30,6 @@ import {
   TableEmptyRows,
   TableHeadCustom,
 } from '@/components/template/table';
-
-import { ExploreIndexesTableToolbar } from '@/components/_index-details/explore-indexes-table-toolbar';
 
 type HeadCell = TableHeadCellProps;
 

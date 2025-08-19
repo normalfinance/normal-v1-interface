@@ -2,15 +2,16 @@
 
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
 import type { IMarketTableFilters } from '@/types/marketTable';
-import { useCallback, forwardRef } from 'react';
+
+import Link from 'next/link';
 import { useTranslate } from '@/locales';
+import { forwardRef, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import { alpha } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
-import { alpha } from '@mui/material/styles';
-import Link from 'next/link';
 
 import { Iconify } from '@/components/template/iconify';
 
@@ -67,7 +68,7 @@ export const ExploreIndexesTableToolbar = ({
           startIcon={<Iconify icon="solar:add-square-bold" />}
           onClick={createHref ? undefined : onCreateIndex}
           sx={{ borderRadius: 2 }}
-          href={''}
+          href=""
         >
           {createLabel ?? t('Create index')}
         </ButtonComponent>
