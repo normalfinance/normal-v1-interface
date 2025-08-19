@@ -4,12 +4,15 @@ import { NextResponse } from 'next/server';
 import { constants } from '@normalfinance/utils';
 import { rateLimiter } from '@/server/rateLimiter';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
+import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
-export async function POST(req: NextRequest) {
+async function transactionHandler(req: NextRequest) {
   try {
     const { walletAddress, signedTransactionXDR, transactionType } = await req.json();
 
     if (!walletAddress || !signedTransactionXDR) {
+      await logWithConfig('warn', 'Transaction API called without required parameters');
       return NextResponse.json(
         {
           error: 'Missing walletAddress or signedTransactionXDR',
@@ -18,21 +21,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Get Edge Config for rate limiting
+    const rateLimitConfig = await getRateLimitConfig('transaction');
+    const apiConfig = await getApiConfig('transaction');
+
     // Get client IP address (prioritize proxy headers like middleware)
     const ip =
       req.headers.get('x-real-ip') || // many reverse proxies
       req.headers.get('X-Forwarded-For')?.split(',')[0] ||
       req.ip;
 
+    // Use Edge Config rate limit override if available
+    const effectiveLimit = apiConfig.rateLimitOverride || {
+      requests: rateLimitConfig.requests,
+      windowMs: rateLimitConfig.windowMs,
+    };
+
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
-    console.log(`${transactionType || 'Transaction'} rate limit check:`, {
+
+    await logWithConfig('info', `${transactionType || 'Transaction'} rate limit check`, {
       success,
       limit,
       remaining,
       reset,
+      walletAddress: walletAddress.substring(0, 8) + '...',
+      effectiveLimit,
+      transactionType,
     });
 
     if (!success) {
+      await logWithConfig('warn', 'Rate limit exceeded for transaction API', {
+        walletAddress,
+        transactionType,
+      });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
@@ -54,6 +75,10 @@ export async function POST(req: NextRequest) {
       });
 
       if (!hasValidSignature) {
+        await logWithConfig('warn', 'Invalid signature for wallet address', {
+          walletAddress,
+          transactionType,
+        });
         return NextResponse.json(
           {
             error: 'Invalid signature for wallet address',
@@ -62,7 +87,11 @@ export async function POST(req: NextRequest) {
         );
       }
     } catch (error) {
-      console.error('Signature verification failed:', error);
+      await logWithConfig('error', 'Signature verification failed', {
+        error,
+        walletAddress,
+        transactionType,
+      });
       return NextResponse.json(
         {
           error: 'Failed to verify signature',
@@ -90,9 +119,16 @@ export async function POST(req: NextRequest) {
         success: true,
         transactionHash: result.hash,
         result,
+        config: {
+          timeout: apiConfig.timeout,
+          rateLimitRemaining: remaining,
+        },
       });
     } catch (contractError: any) {
-      console.error(`${transactionType || 'Contract'} execution failed:`, contractError);
+      await logWithConfig('error', `${transactionType || 'Contract'} execution failed`, {
+        error: contractError?.message,
+        walletAddress,
+      });
       return NextResponse.json(
         {
           error: contractError?.message || 'Contract execution failed',
@@ -101,10 +137,15 @@ export async function POST(req: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error(`Transaction API error:`, error);
+    await logWithConfig('error', 'Transaction API error', {
+      error: error?.message,
+      transactionType: req.method,
+    });
     return NextResponse.json(
       { error: error?.message || 'Transaction processing failed' },
       { status: 500 }
     );
   }
 }
+
+export const POST = createEdgeConfigHandler(transactionHandler, 'transaction');
