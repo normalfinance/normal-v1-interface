@@ -3,8 +3,6 @@
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
-import { merge } from 'es-toolkit';
-import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { allLangs, useTranslate } from '@/locales';
 import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
@@ -12,22 +10,16 @@ import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 import { Alert, Button, AlertTitle } from '@mui/material';
-import { iconButtonClasses } from '@mui/material/IconButton';
 
-import { Logo } from '@/components/template/logo';
 import { useSettingsContext } from '@/components/template/settings';
 
 import { FooterSection } from '../core';
-import { NavMobile } from './nav-mobile';
 import { NavVertical } from './nav-vertical';
 import { NormalNavbar } from './normal-navbar';
 import { layoutClasses } from '../core/classes';
-import { NavHorizontal } from './nav-horizontal';
 import { MainSection } from '../core/main-section';
 import { Searchbar } from '../components/searchbar';
 import { NormalNavbarDefaults } from './navbar-props';
-import { MenuButton } from '../components/menu-button';
-import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
 import { AccountDrawer } from '../components/account-drawer';
 import { LanguagePopover } from '../components/language-popover';
@@ -78,66 +70,6 @@ export function DashboardLayout({
 
   const handleGiveFeedback = () => {
     window.open(' https://forms.fillout.com/t/cumVTceVQeus', '_blank', 'noopener');
-  };
-
-  const renderHeader = () => {
-    const headerSlotProps: HeaderSectionProps['slotProps'] = {
-      container: {
-        maxWidth: false,
-        sx: {
-          ...(isNavVertical && { px: { [layoutQuery]: 5 } }),
-          ...(isNavHorizontal && {
-            bgcolor: 'var(--layout-nav-bg)',
-            height: { [layoutQuery]: 'var(--layout-nav-horizontal-height)' },
-            [`& .${iconButtonClasses.root}`]: { color: 'var(--layout-nav-text-secondary-color)' },
-            borderBottom: `solid 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
-          }),
-        },
-      },
-    };
-
-    const headerSlots: HeaderSectionProps['slots'] = {
-      leftArea: (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {/** @slot Nav mobile */}
-
-          <MenuButton
-            onClick={onOpen}
-            sx={{ mr: 1, ml: -1, [theme.breakpoints.up(layoutQuery)]: { display: 'none' } }}
-          />
-          <NavMobile data={navData} open={open} onClose={onClose} cssVars={navVars.section} />
-
-          {/** Desktop Logo */}
-          <Logo
-            isSingle={false}
-            sx={{
-              display: { xs: 'none', [layoutQuery]: 'inline-flex' },
-            }}
-          />
-
-          {/** Desktop NavHorizontal */}
-          <NavHorizontal data={navData} layoutQuery={layoutQuery} cssVars={navVars.section} />
-        </Box>
-      ),
-      rightArea: (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
-          <Searchbar data={navData} />
-          <LanguagePopover data={allLangs} />
-          <AccountDrawer />
-        </Box>
-      ),
-    };
-
-    return (
-      <HeaderSection
-        layoutQuery={layoutQuery}
-        disableElevation={isNavVertical}
-        {...slotProps?.header}
-        slots={{ ...headerSlots, ...slotProps?.header?.slots }}
-        slotProps={merge(headerSlotProps, slotProps?.header?.slotProps ?? {})}
-        sx={slotProps?.header?.sx}
-      />
-    );
   };
 
   const HEADER_H = { xs: 64, lg: 72 };

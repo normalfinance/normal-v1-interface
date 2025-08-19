@@ -391,8 +391,7 @@ function DesktopDock({
 }
 
 function DockContent({ mega }: { mega: MegaMenuProps }) {
-  const theme = useTheme();
-  const { t } = useTranslate();
+  const { t: tDock } = useTranslate();
 
   const href = mega.button.href;
   const isExternal = !!href && /^https?:\/\//i.test(href);
@@ -451,7 +450,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   fontWeight={400}
                   sx={{ lineHeight: 1.3, color: accentText }}
                 >
-                  {t(group.title)}
+                  {tDock(group.title)}
                 </Typography>
               </Box>
               {group.links.map((l, li) => {
@@ -498,7 +497,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                       <Box
                         component="img"
                         src={l.image.src}
-                        alt={t(l.image.alt || '')}
+                        alt={tDock(l.image.alt || '')}
                         sx={{
                           width: '100%',
                           height: '100%',
@@ -509,10 +508,10 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                     </Box>
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                       <Typography variant="body2" fontWeight={700}>
-                        {t(l.title)}
+                        {tDock(l.title)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {t(l.description)}
+                        {tDock(l.description)}
                       </Typography>
                     </Box>
                   </Box>
@@ -553,7 +552,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
               fontWeight={400}
               sx={{ lineHeight: 1.3, color: FEATURED_ACCENT_TEXT }}
             >
-              {t(mega.featuredSections.title)}
+              {tDock(mega.featuredSections.title)}
             </Typography>
           </Box>
           <Box sx={{ display: 'grid', gap: 2 }}>
@@ -573,7 +572,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
                   <img
                     src={item.image.src}
-                    alt={t(item.image.alt || '')}
+                    alt={tDock(item.image.alt || '')}
                     style={{
                       position: 'absolute',
                       inset: 0,
@@ -588,9 +587,9 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}
                 >
                   <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-                    {t(item.title)}
+                    {tDock(item.title)}
                   </Typography>
-                  <Typography variant="body2">{t(item.description)}</Typography>
+                  <Typography variant="body2">{tDock(item.description)}</Typography>
                   {item.button && (
                     <Box sx={{ mt: 1 }}>
                       <Button
@@ -600,7 +599,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                         endIcon={<ChevronRightIcon />}
                         {...item.button}
                       >
-                        {t(item.button.title)}
+                        {tDock(item.button.title)}
                       </Button>
                     </Box>
                   )}
@@ -629,7 +628,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 '&:link, &:visited': { color: 'text.primary' },
               }}
             >
-              {t(mega.button.title)}
+              {tDock(mega.button.title)}
             </Button>
           </Box>
         </Box>
@@ -656,7 +655,7 @@ function MobileMega({
   megaMenu: MegaMenuProps;
   searchbar?: React.ReactNode;
 }) {
-  const { t } = useTranslate();
+  const { t: tMobile } = useTranslate();
   return (
     <Box sx={{ py: 0 }}>
       <Box sx={{ width: '100%', mb: 4 }}>
@@ -698,7 +697,7 @@ function MobileMega({
                   fontWeight={400}
                   sx={{ lineHeight: 1.3, color: accentText }}
                 >
-                  {t(group.title)}
+                  {tMobile(group.title)}
                 </Typography>
               </Box>
 
@@ -744,7 +743,7 @@ function MobileMega({
                       <Box
                         component="img"
                         src={l.image.src}
-                        alt={t(l.image.alt || '')}
+                        alt={tMobile(l.image.alt || '')}
                         sx={{
                           width: '100%',
                           height: '100%',
@@ -756,10 +755,10 @@ function MobileMega({
 
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                       <Typography variant="body2" fontWeight={700}>
-                        {t(l.title)}
+                        {tMobile(l.title)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {t(l.description)}
+                        {tMobile(l.description)}
                       </Typography>
                     </Box>
                   </Box>
@@ -803,7 +802,7 @@ function MobileMega({
             fontWeight={400}
             sx={{ lineHeight: 1.3, color: FEATURED_ACCENT_TEXT }}
           >
-            {t(megaMenu.featuredSections.title)}
+            {tMobile(megaMenu.featuredSections.title)}
           </Typography>
         </Box>
 
@@ -823,7 +822,7 @@ function MobileMega({
               <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
                 <img
                   src={item.image.src}
-                  alt={t(item.image.alt || '')}
+                  alt={tMobile(item.image.alt || '')}
                   style={{
                     position: 'absolute',
                     inset: 0,
@@ -836,9 +835,9 @@ function MobileMega({
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-                  {t(item.title)}
+                  {tMobile(item.title)}
                 </Typography>
-                <Typography variant="body2">{t(item.description)}</Typography>
+                <Typography variant="body2">{tMobile(item.description)}</Typography>
                 {item.button && (
                   <Box sx={{ mt: 1 }}>
                     <Button
@@ -848,7 +847,7 @@ function MobileMega({
                       endIcon={<ChevronRightIcon />}
                       {...item.button}
                     >
-                      {t(item.button.title)}
+                      {tMobile(item.button.title)}
                     </Button>
                   </Box>
                 )}
