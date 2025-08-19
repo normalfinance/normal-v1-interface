@@ -1,1 +1,1 @@
-yarn fm:fix
+yarn lint-staged
