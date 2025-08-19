@@ -99,17 +99,39 @@ function WalletDisconnected({
   onSelect: (c: Connector) => void;
 }) {
   const theme = useTheme();
+  const blux = ENABLE_BLUX_AUTH ? useBlux() : null;
 
   const [allowed, setAllowed] = useState<Connector[]>([]);
   const [disallowed, setDisallowed] = useState<Connector[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslate();
 
+  console.log('💳 WalletDisconnected: Component rendered', {
+    bluxEnabled: ENABLE_BLUX_AUTH,
+    bluxReady: blux?.isReady,
+    bluxAuthenticated: blux?.isAuthenticated,
+  });
+
   const handleWalletHelp = () => {
     window.open(`${paths.docs}/getting-started/guides`, '_blank', 'noopener');
   };
 
+  const handleBluxLogin = () => {
+    console.log('🚀 WalletDisconnected: Triggering Blux login...');
+    if (blux) {
+      blux.login();
+    }
+  };
+
   useEffect(() => {
+    // If Blux is enabled, skip the legacy wallet detection
+    if (ENABLE_BLUX_AUTH && blux) {
+      console.log('⏭️ WalletDisconnected: Blux enabled, skipping legacy wallet detection');
+      setLoading(false);
+      return;
+    }
+
+    // Legacy wallet detection for when Blux is disabled
     (async () => {
       const ok: Connector[] = [];
       const no: Connector[] = [];
@@ -125,8 +147,76 @@ function WalletDisconnected({
       setDisallowed(no);
       setLoading(false);
     })();
-  }, [connectors]);
+  }, [connectors, blux]);
 
+  // If Blux is enabled, show Blux authentication UI
+  if (ENABLE_BLUX_AUTH && blux) {
+    return (
+      <Box
+        sx={{
+          p: 2,
+          pt: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Box sx={{ position: 'relative' }}>
+          <Typography
+            variant="subtitle1"
+            sx={{ mb: 3 }}
+            textAlign="center"
+            data-testid="connect-wallet-title"
+          >
+            {t('Connect with Blux')}
+          </Typography>
+          {/* <ZealyHighlight
+            questId={ZEALY_QUEST_IDS.connectWallet}
+            position={{ top: -22, right: -32 }}
+          /> */}
+        </Box>
+        
+        {loading ? (
+          <CircularProgress />
+        ) : (
+          <>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              textAlign="center"
+              sx={{ mb: 3 }}
+            >
+              Sign in with your social account or email to get started
+            </Typography>
+            
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={handleBluxLogin}
+              sx={{ mb: 2 }}
+            >
+              {t('Sign in with Blux')}
+            </Button>
+            
+            <Button
+              fullWidth
+              variant="soft"
+              color="secondary"
+              size="large"
+              startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
+              onClick={handleWalletHelp}
+            >
+              {t('Need help?')}
+            </Button>
+          </>
+        )}
+      </Box>
+    );
+  }
+
+  // Legacy wallet UI (when Blux is disabled)
   return (
     <Box
       sx={{

@@ -21,17 +21,16 @@ export function BluxProvider({ children }: BluxProviderProps) {
     return <>{children}</>;
   }
 
-  // Try simple config first to isolate the issue
-  const configToUse = BLUX_CONFIG_SIMPLE;
+  // Use the full config now that it's fixed
+  const configToUse = BLUX_CONFIG;
   
-  console.log('✅ BluxProvider: Blux is enabled, using SIMPLE config for debugging:', {
+  console.log('✅ BluxProvider: Blux is enabled, using full config:', {
     ...configToUse,
-    // Log transports separately to see if they're valid
-    transports: JSON.stringify(configToUse.transports, null, 2)
+    networks: configToUse.networks.map((n: any) => n.name || n)
   });
 
   try {
-    console.log('🔧 BluxProvider: Creating BluxSDKProvider with simple config...');
+    console.log('🔧 BluxProvider: Creating BluxSDKProvider with full config...');
     console.log('🔧 BluxProvider: Final config being passed to Blux:', JSON.stringify(configToUse, null, 2));
     
     // Try to create the provider step by step to catch where exactly the error happens

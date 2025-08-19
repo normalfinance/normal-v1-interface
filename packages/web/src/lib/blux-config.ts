@@ -17,23 +17,19 @@ const SIMPLE_CONFIG = {
 
 export const BLUX_CONFIG = {
   appName: 'Normal Finance',
-  networks: ['testnet', 'mainnet'],
+  networks: [networks.testnet, networks.mainnet],
   defaultNetwork,
-
-  // Add transports configuration for custom networks - this fixes the "Must set transports" error
-  // Using the same URLs as the existing app configuration
-
   appearance: {
-    theme: 'light', // or 'dark'
-    accent: '#1976d2', // Primary color
+    theme: 'light' as any,
+    accent: '#1976d2',
     background: '#ffffff',
     textColor: '#333333',
     font: 'Inter, sans-serif',
     borderRadius: '8px',
   },
-  loginMethods: ['wallet', 'email', 'google', 'passkey'], // Available auth methods
-  showWalletUIs: true, // Show wallet connection UIs
-  explorer: 'stellarexpert', // Block explorer
+  loginMethods: ['wallet', 'email', 'google', 'passkey'],
+  showWalletUIs: true,
+  explorer: 'stellarexpert',
 };
 
 // Export simple config for debugging
