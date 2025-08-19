@@ -60,7 +60,7 @@ export const NormalNavbarDefaults: Props = {
             title: 'Liquidity',
             links: [
               {
-                url: '/liquidity/positions',
+                url: '/positions',
                 image: {
                   src: '/assets/icons/normal-navbar/positions.svg',
                   alt: 'Positions',
@@ -69,7 +69,7 @@ export const NormalNavbarDefaults: Props = {
                 description: 'View & manage LP positions.',
               },
               {
-                url: '/liquidity/provide',
+                url: '/positions/create',
                 image: {
                   src: '/assets/icons/normal-navbar/provide-liquidity.svg',
                   alt: 'Provide',
@@ -106,7 +106,7 @@ export const NormalNavbarDefaults: Props = {
             title: 'Support',
             links: [
               {
-                url: '/help',
+                url: '/contact',
                 image: {
                   src: '/assets/icons/normal-navbar/help.svg',
                   alt: 'Help',
@@ -115,13 +115,15 @@ export const NormalNavbarDefaults: Props = {
                 description: 'Report bugs, request features.',
               },
               {
-                url: '/docs',
+                url: 'https://normalfinance.gitbook.io/docs',
                 image: {
                   src: '/assets/icons/normal-navbar/docs.svg',
                   alt: 'Docs',
                 },
                 title: 'Docs',
                 description: 'Protocol, integration, API.',
+                target: '_blank',
+                rel: 'noopener noreferrer',
               },
               {
                 url: '/about',
@@ -174,6 +176,9 @@ export const NormalNavbarDefaults: Props = {
           variant: 'text',
           size: 'small',
           endIcon: <ChevronRightIcon />,
+          href: 'https://normalfinance.gitbook.io/docs',
+          target: '_blank',
+          rel: 'noopener noreferrer',
         },
       },
     },

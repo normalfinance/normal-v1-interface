@@ -34,8 +34,13 @@ const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: 
   return { target: t, rel: r };
 };
 
-export type NavButton = Omit<MUIButtonProps, 'children'> & { title: string };
-
+export type NavButton = Omit<MUIButtonProps, 'children'> & {
+  title: string;
+  href?: string;
+  target?: React.HTMLAttributeAnchorTarget;
+  rel?: string;
+  component?: React.ElementType;
+};
 type ImageProps = { url?: string; src: string; alt?: string };
 
 type MegaMenuLink = {
@@ -44,6 +49,8 @@ type MegaMenuLink = {
   title: string;
   description: string;
   button?: NavButton;
+  target?: React.HTMLAttributeAnchorTarget;
+  rel?: string;
 };
 
 type CategoryLink = { title: string; links: MegaMenuLink[] };
@@ -386,6 +393,20 @@ function DesktopDock({
 function DockContent({ mega }: { mega: MegaMenuProps }) {
   const theme = useTheme();
   const { t } = useTranslate();
+
+  const href = mega.button.href;
+  const isExternal = !!href && /^https?:\/\//i.test(href);
+
+  const btnDefaults = {
+    component: mega.button.component ?? (href ? 'a' : undefined),
+    target: mega.button.target ?? (isExternal ? '_blank' : undefined),
+    rel:
+      mega.button.rel ??
+      ((mega.button.target ?? (isExternal ? '_blank' : '')) === '_blank'
+        ? 'noopener noreferrer'
+        : undefined),
+  };
+
   return (
     <Box sx={{ display: 'flex', gap: { xs: 2, lg: 4 }, alignItems: 'stretch' }}>
       <Box
@@ -433,60 +454,70 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   {t(group.title)}
                 </Typography>
               </Box>
-              {group.links.map((l, li) => (
-                <Box
-                  key={li}
-                  component="a"
-                  href={l.url}
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'max-content 1fr',
-                    alignItems: 'start',
-                    columnGap: '12px',
-                    py: 1,
-                    px: 1,
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    borderRadius: 1,
-                    transition: 'background-color 0.15s ease',
-                    '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
-                    '&:focus-visible': (t2) => ({
-                      outline: `2px solid ${t2.palette.primary.main}`,
-                      outlineOffset: 2,
-                    }),
-                  }}
-                >
+              {group.links.map((l, li) => {
+                const { target, rel } = linkAttrs(l.url, l.target, l.rel);
+                return (
                   <Box
+                    key={li}
+                    component="a"
+                    href={l.url}
+                    target={target}
+                    rel={rel}
                     sx={{
-                      width: 36,
-                      height: 36,
-                      p: 0.75,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: '#F9FAFB',
+                      display: 'grid',
+                      gridTemplateColumns: 'max-content 1fr',
+                      alignItems: 'start',
+                      columnGap: '12px',
+                      py: 1,
+                      px: 1,
+                      textDecoration: 'none',
+                      color: 'inherit',
                       borderRadius: 1,
-                      border: (t2) => `1px solid ${t2.palette.divider}`,
-                      boxSizing: 'border-box',
+                      transition: 'background-color 0.15s ease',
+                      '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
+                      '&:focus-visible': (t2) => ({
+                        outline: `2px solid ${t2.palette.primary.main}`,
+                        outlineOffset: 2,
+                      }),
                     }}
                   >
                     <Box
-                      component="img"
-                      src={l.image.src}
-                      alt={t(l.image.alt || '')}
-                      sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                    />
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        p: 0.75,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: '#F9FAFB',
+                        borderRadius: 1,
+                        border: (t2) => `1px solid ${t2.palette.divider}`,
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={l.image.src}
+                        alt={t(l.image.alt || '')}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          display: 'block',
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                      <Typography variant="body2" fontWeight={700}>
+                        {t(l.title)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t(l.description)}
+                      </Typography>
+                    </Box>
                   </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="body2" fontWeight={700}>
-                      {t(l.title)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {t(l.description)}
-                    </Typography>
-                  </Box>
-                </Box>
-              ))}
+                );
+              })}
             </Box>
           );
         })}
@@ -586,6 +617,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             rel="noopener noreferrer"
           >
             <Button
+              {...btnDefaults}
               {...mega.button}
               sx={{
                 color: 'text.primary',
@@ -670,61 +702,69 @@ function MobileMega({
                 </Typography>
               </Box>
 
-              {group.links.map((l, li) => (
-                <Box
-                  key={li}
-                  component="a"
-                  href={l.url}
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'max-content 1fr',
-                    alignItems: 'start',
-                    columnGap: '12px',
-                    py: 1,
-                    px: 1,
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    borderRadius: 1,
-                    transition: 'background-color 0.15s ease',
-                    '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
-                    '&:focus-visible': (t2) => ({
-                      outline: `2px solid ${t2.palette.primary.main}`,
-                      outlineOffset: 2,
-                    }),
-                  }}
-                >
+              {group.links.map((l, li) => {
+                const { target, rel } = linkAttrs(l.url, l.target, l.rel);
+                return (
                   <Box
+                    key={li}
+                    component="a"
+                    href={l.url}
                     sx={{
-                      width: 36,
-                      height: 36,
-                      p: 0.75,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: '#F9FAFB',
+                      display: 'grid',
+                      gridTemplateColumns: 'max-content 1fr',
+                      alignItems: 'start',
+                      columnGap: '12px',
+                      py: 1,
+                      px: 1,
+                      textDecoration: 'none',
+                      color: 'inherit',
                       borderRadius: 1,
-                      border: (t2) => `1px solid ${t2.palette.divider}`,
-                      boxSizing: 'border-box',
+                      transition: 'background-color 0.15s ease',
+                      '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
+                      '&:focus-visible': (t2) => ({
+                        outline: `2px solid ${t2.palette.primary.main}`,
+                        outlineOffset: 2,
+                      }),
                     }}
                   >
                     <Box
-                      component="img"
-                      src={l.image.src}
-                      alt={t(l.image.alt || '')}
-                      sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                    />
-                  </Box>
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        p: 0.75,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: '#F9FAFB',
+                        borderRadius: 1,
+                        border: (t2) => `1px solid ${t2.palette.divider}`,
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={l.image.src}
+                        alt={t(l.image.alt || '')}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          display: 'block',
+                        }}
+                      />
+                    </Box>
 
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="body2" fontWeight={700}>
-                      {t(l.title)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {t(l.description)}
-                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                      <Typography variant="body2" fontWeight={700}>
+                        {t(l.title)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t(l.description)}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
-              ))}
+                );
+              })}
             </Box>
           );
         })}
