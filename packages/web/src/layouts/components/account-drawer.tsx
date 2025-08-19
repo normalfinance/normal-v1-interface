@@ -15,6 +15,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useApiTokens, useUserActivity, useLiquidityPositions } from '@/hooks';
 import { hana, xbull, lobstr, freighter, useAppStore, usePersistStore } from '@normalfinance/state';
+import { ENABLE_BLUX_AUTH } from '@/lib/blux-config';
+import { useBlux } from '@bluxcc/react';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -292,8 +294,17 @@ export type AccountDrawerProps = IconButtonProps;
 export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ stores ------------------------------------------------------ */
   const persist = usePersistStore();
+  const blux = ENABLE_BLUX_AUTH ? useBlux() : null;
 
   const { t } = useTranslate();
+  
+  console.log('🏠 AccountDrawer: Component rendered', {
+    bluxEnabled: ENABLE_BLUX_AUTH,
+    bluxReady: blux?.isReady,
+    bluxAuthenticated: blux?.isAuthenticated,
+    bluxUser: blux?.user,
+    legacyWalletAddress: persist.wallet.address
+  });
 
   /* ↓ connectors -------------------------------------------------- */
   const connectors: Connector[] = [
@@ -304,19 +315,54 @@ export function AccountDrawer(props: AccountDrawerProps) {
     // new WalletConnect(),
   ];
 
-  const connect = (c: Connector) => persist.connectWallet(c.id);
-  const disconnect = () => persist.disconnectWallet();
+  const connect = (c: Connector) => {
+    console.log('🔗 AccountDrawer: Connecting legacy wallet', c.id);
+    return persist.connectWallet(c.id);
+  };
+  
+  const disconnect = () => {
+    console.log('🔌 AccountDrawer: Disconnecting wallet', { 
+      bluxEnabled: ENABLE_BLUX_AUTH, 
+      bluxAuthenticated: blux?.isAuthenticated 
+    });
+    
+    if (ENABLE_BLUX_AUTH && blux?.isAuthenticated) {
+      console.log('🚪 AccountDrawer: Using Blux logout');
+      blux.logout();
+    } else {
+      console.log('🚪 AccountDrawer: Using legacy wallet disconnect');
+      persist.disconnectWallet();
+    }
+  };
 
   /* ↓ drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
-  /* ↓ main button uses dummy avatar ------------------------------ */
-  const avatarURL = '/assets/icons/navbar/logo.webp';
+  /* ↓ main button uses Blux user avatar or dummy avatar ---------- */
+  const avatarURL = ENABLE_BLUX_AUTH && blux?.user?.email 
+    ? `https://www.gravatar.com/avatar/${btoa(blux.user.email)}?d=identicon`
+    : '/assets/icons/navbar/logo.webp';
+  
+  const displayName = ENABLE_BLUX_AUTH && blux?.user?.email 
+    ? blux.user.email.charAt(0).toUpperCase()
+    : ' ';
 
   /* ↓ derived state ---------------------------------------------- */
-  const connectedAddress = persist.wallet.address;
+  // Priority: Blux authentication over legacy wallet connection
+  const connectedAddress = ENABLE_BLUX_AUTH && blux?.isAuthenticated && blux?.user?.wallet?.address
+    ? blux.user.wallet.address
+    : persist.wallet.address;
 
-  const isConnected = !!connectedAddress;
+  const isConnected = ENABLE_BLUX_AUTH && blux
+    ? blux.isAuthenticated && !!blux.user?.wallet?.address
+    : !!persist.wallet.address;
+    
+  console.log('🔍 AccountDrawer: Connection status', { 
+    connectedAddress, 
+    isConnected,
+    bluxAuth: !!blux?.isAuthenticated,
+    legacyAuth: !!persist.wallet.address
+  });
 
   useEffect(() => {
     if (connectedAddress) {
@@ -357,7 +403,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           data-testid="account-button"
           onClick={handleMainButtonClick}
           photoURL={avatarURL}
-          displayName=" "
+          displayName={displayName}
           {...props}
         />
       ) : (

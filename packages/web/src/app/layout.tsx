@@ -12,6 +12,7 @@ import { I18nProvider } from '@/locales/i18n-provider';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
+import { BluxProvider } from '@/providers/BluxProvider';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
@@ -115,19 +116,21 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
                   <ExternalProvider>
-                    <ReferralProvider>
-                      <MotionLazy>
-                        <SnackbarProvider>
-                          <ProgressBar />
-                          <SettingsDrawer defaultSettings={defaultSettings} />
-                          <AnnouncementProvider>
-                            <InviteCodeGate enforceInDev>
-                              <DashboardLayout>{children}</DashboardLayout>
-                            </InviteCodeGate>
-                          </AnnouncementProvider>
-                        </SnackbarProvider>
-                      </MotionLazy>
-                    </ReferralProvider>
+                    <BluxProvider>
+                      <ReferralProvider>
+                        <MotionLazy>
+                          <SnackbarProvider>
+                            <ProgressBar />
+                            <SettingsDrawer defaultSettings={defaultSettings} />
+                            <AnnouncementProvider>
+                              <InviteCodeGate enforceInDev>
+                                <DashboardLayout>{children}</DashboardLayout>
+                              </InviteCodeGate>
+                            </AnnouncementProvider>
+                          </SnackbarProvider>
+                        </MotionLazy>
+                      </ReferralProvider>
+                    </BluxProvider>
                   </ExternalProvider>
                 </ThemeProvider>
               </AppRouterCacheProvider>

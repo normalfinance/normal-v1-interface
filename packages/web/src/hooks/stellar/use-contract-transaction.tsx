@@ -11,6 +11,8 @@ import { Signer } from '@normalfinance/utils/build/stellar';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
+import { ENABLE_BLUX_AUTH } from '@/lib/blux-config';
+import { useBlux } from '@bluxcc/react';
 import {
   PoolContract,
   BufferContract,
@@ -128,9 +130,22 @@ const getContractClient = <T extends ContractType>(
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
   const appStore = useAppStore();
+  const blux = ENABLE_BLUX_AUTH ? useBlux() : null;
   const { t } = useTranslate();
 
   const { openRestoreModal, closeRestoreModal } = useRestoreModal();
+
+  // Determine if we should use Blux for transactions
+  const useBluxTransactions =
+    ENABLE_BLUX_AUTH && blux?.isAuthenticated && !!blux?.user?.wallet?.address;
+
+  console.log('💰 useContractTransaction: Hook initialized', {
+    bluxEnabled: ENABLE_BLUX_AUTH,
+    bluxReady: blux?.isReady,
+    bluxAuthenticated: blux?.isAuthenticated,
+    bluxWallet: blux?.user?.wallet?.address,
+    useBluxTransactions,
+  });
 
   const executeContractTransaction = useCallback(
     <T extends ContractType>({
@@ -142,41 +157,108 @@ export const useContractTransaction = () => {
       const signer = getSigner(storePersist, appStore);
       const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
       const rpcUrl = constants.StellarConfig.RPC_URL;
-      const publicKey = storePersist.wallet.address!;
+
+      // Use Blux wallet address if available, otherwise use legacy wallet
+      const publicKey = useBluxTransactions
+        ? blux?.user?.wallet?.address || ''
+        : storePersist.wallet.address!;
+
+      console.log('💰 useContractTransaction: Transaction setup', {
+        contractType,
+        contractAddress,
+        useBluxTransactions,
+        publicKey,
+        transactionDetails,
+      });
 
       const run = async (restore: boolean = false): Promise<{ txHash?: string }> => {
-        const contractClient = getContractClient(
-          contractType,
-          contractAddress,
-          signer,
-          networkPassphrase,
-          rpcUrl,
-          publicKey,
-          storePersist
-        );
+        let txHash: string | null = null;
 
-        const transaction = await transactionFunction(contractClient, restore);
+        if (useBluxTransactions && blux) {
+          // Use Blux for transaction signing and submission
+          try {
+            console.log('🚀 useContractTransaction: Using Blux for transaction execution');
 
-        console.log('Transaction from backend: ', transaction);
+            // Build the transaction without signing it first
+            const contractClient = getContractClient(
+              contractType,
+              contractAddress,
+              signer,
+              networkPassphrase,
+              rpcUrl,
+              publicKey,
+              storePersist
+            );
 
-        try {
+            const transaction = await transactionFunction(contractClient, restore);
+
+            if (restore) {
+              console.log('🔄 useContractTransaction: Restoring transaction state...');
+              await transaction.simulate({ restore: true });
+              return {};
+            }
+
+            // Get the transaction XDR for Blux
+            const transactionXdr = transaction.built?.toXDR() || transaction.toXDR();
+            console.log('📤 useContractTransaction: Sending transaction via Blux', {
+              xdr: transactionXdr.substring(0, 100) + '...',
+              network: networkPassphrase,
+              isSoroban: true,
+            });
+
+            // Use Blux sendTransaction with proper parameters
+            const result = await blux.sendTransaction(transactionXdr, {
+              network: networkPassphrase,
+              isSoroban: true,
+            });
+
+            txHash = result.txHash;
+            console.log('✅ useContractTransaction: Blux transaction successful', { hash: txHash });
+          } catch (error) {
+            console.error('❌ useContractTransaction: Blux transaction failed:', error);
+            throw error;
+          }
+        } else {
+          // Use legacy wallet transaction flow
+          console.log('🏛️ useContractTransaction: Using legacy wallet transaction flow');
+
+          const contractClient = getContractClient(
+            contractType,
+            contractAddress,
+            signer,
+            networkPassphrase,
+            rpcUrl,
+            publicKey,
+            storePersist
+          );
+
+          const transaction = await transactionFunction(contractClient, restore);
+          console.log('📝 useContractTransaction: Transaction from backend:', transaction);
+
           if (restore) {
-            console.log('Restoring transaction state...');
+            console.log('🔄 useContractTransaction: Restoring transaction state...');
             await transaction.simulate({ restore: true });
             return {};
           }
-          const txHash = (transaction as any).hash || null;
 
+          txHash = (transaction as any).hash || null;
+          console.log('✅ useContractTransaction: Legacy transaction successful', { hash: txHash });
+        }
+
+        try {
           if (txHash) {
             const timestamp = new Date().toISOString();
             const transactionType = transactionDetails.type || 'unknown';
             const walletAddress = publicKey || 'unknown';
             const logMessage = `[${timestamp}], ${transactionType}, ${txHash}, ${walletAddress}`;
             await logToFile(logMessage);
+            return {
+              txHash,
+            };
           }
 
           return {
-            txHash,
+            txHash: undefined,
           };
         } catch (error) {
           console.error('Error during returning transaction hash: ', error);
@@ -262,7 +344,7 @@ export const useContractTransaction = () => {
           throw error;
         });
     },
-    [storePersist, appStore, openRestoreModal, closeRestoreModal]
+    [storePersist, appStore, blux, useBluxTransactions, openRestoreModal, closeRestoreModal]
   );
 
   return {

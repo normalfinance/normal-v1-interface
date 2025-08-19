@@ -11,6 +11,8 @@ import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
 import { fPercent, fCurrencyCompact } from '@/utils/format-number';
+import { ENABLE_BLUX_AUTH } from '@/lib/blux-config';
+import { useBlux } from '@bluxcc/react';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -46,7 +48,18 @@ export default function ConnectedWallet({
   const { t } = useTranslate();
   const theme = useTheme();
   const router = useRouter();
+  const blux = ENABLE_BLUX_AUTH ? useBlux() : null;
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+
+  console.log('📱 ConnectedWallet: Rendered with Blux data', {
+    bluxEnabled: ENABLE_BLUX_AUTH,
+    bluxReady: blux?.isReady,
+    bluxAuthenticated: blux?.isAuthenticated,
+    bluxUser: blux?.user
+  });
+
+  // Show Blux user info if using Blux authentication
+  const showBluxInfo = ENABLE_BLUX_AUTH && blux?.isAuthenticated && blux?.user;
 
   const actionButtons = [
     {
@@ -73,6 +86,73 @@ export default function ConnectedWallet({
 
   return (
     <Stack spacing={2} sx={{ width: 1 }} mt={2}>
+      {/* Blux User Info Section */}
+      {showBluxInfo && (
+        <Stack
+          sx={{
+            width: 1,
+            borderRadius: '12px',
+            border: `1px solid ${theme.palette.primary.main}`,
+            backgroundColor: alpha(theme.palette.primary.main, 0.04),
+            p: 2,
+            gap: 1,
+          }}
+        >
+          <Stack direction="row" spacing={2} alignItems="center">
+           
+            <Stack flex={1}>
+              <Typography variant="subtitle2" color="text.primary">
+                {blux?.user?.email || t('Blux User')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t('Connected via')} {blux?.user?.wallet?.name || 'Blux'}
+              </Typography>
+            </Stack>
+            <Stack spacing={0.5} alignItems="center">
+              <Iconify icon="mingcute:shield-check-line" width={16} color="primary.main" />
+              <Typography variant="caption" color="primary.main">
+                {t('Verified')}
+              </Typography>
+            </Stack>
+          </Stack>
+          
+          {/* Connected Wallet */}
+          {blux?.user?.wallet && (
+            <Stack spacing={1} mt={1}>
+              <Typography variant="caption" color="text.secondary">
+                {t('Connected Wallet')}
+              </Typography>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{
+                  p: 1,
+                  borderRadius: '8px',
+                  backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                }}
+              >
+                <Iconify 
+                  icon="mingcute:wallet-4-line" 
+                  width={16} 
+                  color="primary.main"
+                />
+                <Typography 
+                  variant="caption" 
+                  color="primary.main"
+                  flex={1}
+                >
+                  {blux.user.wallet.name}
+                </Typography>
+                <Typography variant="caption" color="primary.main">
+                  {t('Active')}
+                </Typography>
+              </Stack>
+            </Stack>
+          )}
+        </Stack>
+      )}
+
       <Stack
         sx={{
           width: 1,

@@ -6,6 +6,8 @@ import { useBoolean } from 'minimal-shared/hooks';
 import React, { useState, useEffect } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { hana, xbull, lobstr, freighter, usePersistStore } from '@normalfinance/state';
+import { ENABLE_BLUX_AUTH } from '@/lib/blux-config';
+import { useBlux } from '@bluxcc/react';
 
 import {
   Box,
@@ -175,7 +177,24 @@ export const WalletGate: React.FC<WalletGateProps> = ({
 }) => {
   const persist = usePersistStore();
   const { t } = useTranslate();
-  const isConnected = !!persist.wallet.address;
+  
+  // Use actual Blux hook
+  const blux = ENABLE_BLUX_AUTH ? useBlux() : null;
+  
+  console.log('🔍 WalletGate: Component rendered', {
+    ENABLE_BLUX_AUTH,
+    bluxReady: blux?.isReady,
+    bluxAuthenticated: blux?.isAuthenticated,
+    bluxUser: blux?.user,
+    legacyWalletAddress: persist.wallet.address
+  });
+  
+  // Check connection status - prioritize Blux if enabled and authenticated
+  const isConnected = ENABLE_BLUX_AUTH && blux
+    ? blux.isAuthenticated && blux.user?.wallet?.address
+    : !!persist.wallet.address;
+  
+  console.log('✅ WalletGate: Connection status determined', { isConnected });
 
   /* ↓ drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
@@ -183,17 +202,45 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   /* ↓ connectors -------------------------------------------------- */
   const connectors: Connector[] = [freighter(), xbull(), lobstr(), hana()];
 
-  const connect = (c: Connector) => persist.connectWallet(c.id);
-  const disconnect = () => persist.disconnectWallet();
+  const connect = (c: Connector) => {
+    console.log('🔗 WalletGate: Connecting legacy wallet', c.id);
+    return persist.connectWallet(c.id);
+  };
+  
+  const disconnect = () => {
+    console.log('🔌 WalletGate: Disconnecting wallet', { 
+      bluxEnabled: ENABLE_BLUX_AUTH, 
+      bluxAuthenticated: blux?.isAuthenticated 
+    });
+    
+    if (ENABLE_BLUX_AUTH && blux?.isAuthenticated) {
+      console.log('🚪 WalletGate: Using Blux logout');
+      blux.logout();
+    } else {
+      console.log('🚪 WalletGate: Using legacy wallet disconnect');
+      persist.disconnectWallet();
+    }
+  };
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
 
   /** Open drawer OR show ToS dialog, depending on acceptance */
   const handleMainButtonClick = () => {
+    console.log('👆 WalletGate: Main button clicked', {
+      disclaimerVersion,
+      currentTosVersion: CURRENT_TOS_VERSION,
+      bluxEnabled: ENABLE_BLUX_AUTH
+    });
+    
     if (disclaimerVersion < CURRENT_TOS_VERSION) {
+      console.log('📋 WalletGate: Showing ToS dialog');
       setShowTos(true);
+    } else if (ENABLE_BLUX_AUTH && blux) {
+      console.log('🚀 WalletGate: Opening Blux login modal');
+      blux.login();
     } else {
+      console.log('📱 WalletGate: Opening legacy wallet drawer');
       onOpen();
     }
   };
@@ -201,12 +248,21 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   /** Called whenever the ToS modal closes (Accept or Decline).
    *  If they accepted, open the wallet drawer right away. */
   const handleTosClose = () => {
+    console.log('📋 WalletGate: ToS dialog closed');
     setShowTos(false);
 
     // read the latest store value directly (no hooks inside a callback)
     const latestVersion = usePersistStore.getState().disclaimer.version;
+    console.log('📋 WalletGate: Checking ToS acceptance', { latestVersion, required: CURRENT_TOS_VERSION });
+    
     if (latestVersion >= CURRENT_TOS_VERSION) {
-      onOpen(); // open the drawer immediately
+      if (ENABLE_BLUX_AUTH && blux) {
+        console.log('🚀 WalletGate: ToS accepted, opening Blux login');
+        blux.login();
+      } else {
+        console.log('📱 WalletGate: ToS accepted, opening legacy wallet drawer');
+        onOpen();
+      }
     }
   };
 
@@ -271,7 +327,13 @@ export const WalletGate: React.FC<WalletGateProps> = ({
         </Box>
         <Scrollbar>
           {isConnected ? (
-            <WalletConnected address={persist.wallet.address!} />
+            <WalletConnected 
+              address={
+                ENABLE_BLUX_AUTH && blux?.isAuthenticated
+                  ? blux.user?.wallet?.address || ''
+                  : persist.wallet.address!
+              } 
+            />
           ) : (
             <WalletDisconnected
               connectors={connectors}
