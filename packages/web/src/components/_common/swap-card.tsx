@@ -38,7 +38,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const storePersist = usePersistStore();
   const appStore = useAppStore();
 
-  const { trustlineButtonActive, handleTrustLine, addTrustLine } = useTrustLine();
+  const { trustlineButtonActive, addTrustLine } = useTrustLine();
   const { onEstimateSwap, onSwap } = useSwap();
 
   const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
@@ -131,17 +131,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setIsLoading(true);
 
     doSimulateSwap();
-
-    // const buyTokenContractID = appStore.allTokens.find(
-    //   (token: Token) => token.name === buyToken.name
-    // )?.contractId;
-    const buyTokenContractID = appStore.tokens.find(
-      (token: Token) => token.name === buyToken.name
-    )?.id;
-
-    if (storePersist.wallet.address) {
-      if (buyTokenContractID) handleTrustLine(buyTokenContractID);
-    }
 
     // Simulate an async fetch with a 1s delay
     const timer = setTimeout(() => {
@@ -251,7 +240,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     } else if (label.startsWith('Insufficient')) {
       return;
     } else if (label === 'Add trustline') {
-      addTrustLine();
+      addTrustLine(buyToken?.id || '');
     } else if (label === 'Review') {
       // open a review popup
       setReviewOpen(true);
