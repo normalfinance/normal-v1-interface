@@ -440,30 +440,6 @@ export default function IndexDetailsView() {
             />
           </Grid2>
         </Grid2>
-
-        <Grid2 container spacing={3} sx={{ mt: 3 }}>
-          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-            <IndexCard index={INDEXES[0]} highlightType="staff-pick" />
-          </Grid2>
-          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-            <IndexCard index={INDEXES[0]} highlightType="trending" />
-          </Grid2>
-          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-            <IndexCard index={INDEXES[0]} highlightType="gainer" />
-          </Grid2>
-        </Grid2>
-
-        <Grid2 container spacing={3} sx={{ mt: 3 }}>
-          <Grid2 size={{ xs: 12 }}>
-            <ExploreIndexesTable indexes={INDEXES} loading={false} />
-          </Grid2>
-        </Grid2>
-
-        <Grid2 container spacing={3} sx={{ mt: 3 }}>
-          <Grid2 size={{ xs: 12 }}>
-            <IndexFundsInfoSection />
-          </Grid2>
-        </Grid2>
       </DashboardContent>
     </Box>
   );
