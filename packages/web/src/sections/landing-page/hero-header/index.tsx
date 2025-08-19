@@ -55,17 +55,13 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   React.useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       setGlobalIsLoading(true);
-      try {
-        await getAllTokens(apiTokens);
-        setGlobalIsLoading(false);
-      } catch (e) {
-        captureException(e);
-        console.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-    refreshTokens();
+
+      getAllTokens()
+        .catch((error) => console.error(error))
+        .finally(() => {
+          setGlobalIsLoading(false);
+        });
+    }
   }, []);
 
   const allowedTokens = React.useMemo(
@@ -227,7 +223,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
-              {description}
+              {t(description)}
             </Typography>
             <Box
               component="img"

@@ -26,7 +26,7 @@ export const tokens: Token[] = [
     usdValue: 67600.18,
     percentageChange: 2.45435,
     decimals: 7,
-    balance: BigInt(0),
+    balance: 0,
     featured: false,
   },
   {
@@ -37,7 +37,7 @@ export const tokens: Token[] = [
     usdValue: 3150,
     percentageChange: 1.1,
     decimals: 7,
-    balance: BigInt(0),
+    balance: 0,
     featured: false,
   },
   {
@@ -48,7 +48,7 @@ export const tokens: Token[] = [
     usdValue: 141,
     percentageChange: -0.8,
     decimals: 7,
-    balance: BigInt(0),
+    balance: 0,
     featured: false,
   },
   {
@@ -59,7 +59,7 @@ export const tokens: Token[] = [
     usdValue: 0.48,
     percentageChange: 0.5,
     decimals: 7,
-    balance: BigInt(0),
+    balance: 0,
     featured: false,
   },
 ];

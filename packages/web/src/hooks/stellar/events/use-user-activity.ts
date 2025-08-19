@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { format , constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
+import { format, constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
