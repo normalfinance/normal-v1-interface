@@ -17,7 +17,8 @@
     "setup": "yarn install && yarn build",
     "refresh": "yarn run clean && yarn run setup",
     "invite:generate": "node get-unused-invite-code.js",
-    "invite:seed": "node generate-invite-codes.js"
+    "invite:seed": "node generate-invite-codes.js",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -40,6 +41,7 @@
     "@tsconfig/recommended": "^1.0.2",
     "@types/jest": "^29.5.2",
     "concurrently": "^9.1.2",
+    "husky": "^9.1.7",
     "jest": "^29.5.0",
     "turbo": "^2.5.3"
   },
