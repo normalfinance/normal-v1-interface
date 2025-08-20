@@ -12,7 +12,7 @@ import { formatDuration } from '@/utils/format-time';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTokenPrice, useInsuranceFund } from '@/hooks';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { format , getCryptoIconUrl} from '@normalfinance/utils';
+import { format, getCryptoIconUrl } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
