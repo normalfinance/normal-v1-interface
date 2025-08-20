@@ -9,7 +9,7 @@ interface GeneralStore {
   networkPassphrase: string;
 }
 
-export type AppStore = WalletActions & GeneralStore & LoadingActions & ErrorActions & PoolActions;
+export type AppStore = WalletActions & GeneralStore & LoadingActions & PoolActions;
 
 export { AppStorePersist };
 
