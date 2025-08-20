@@ -9,8 +9,6 @@ import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middle
 
 export const dynamic = 'force-dynamic';
 
-export const dynamic = 'force-dynamic';
-
 const GetStatsSchema = z.object({
   walletAddress: z.string().min(1, 'Wallet address is required'),
 });
