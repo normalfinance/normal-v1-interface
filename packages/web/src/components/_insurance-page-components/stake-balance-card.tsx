@@ -7,7 +7,6 @@ import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { formatTokenAmount } from '@/utils/format-stellar';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';

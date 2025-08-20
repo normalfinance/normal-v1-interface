@@ -6,7 +6,6 @@ import type { SwapQueryParams } from '@/types/query-params';
 import * as React from 'react';
 import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
-import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';

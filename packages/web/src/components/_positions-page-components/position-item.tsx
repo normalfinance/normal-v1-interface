@@ -7,7 +7,6 @@ import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { format } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
-import { formatTokenAmount } from '@/utils/format-stellar';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';

@@ -9,7 +9,6 @@ import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
-import { formatTokenAmount } from '@/utils/format-stellar';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 import { useBuffer, useTokenPrice, useInsuranceFund } from '@/hooks';
 

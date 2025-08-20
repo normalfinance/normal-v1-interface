@@ -105,37 +105,37 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             attribute={themeConfig.cssVariables.colorSchemeSelector}
           />
 
-        <I18nProvider lang={appConfig.i18nLang}>
-          <SettingsProvider
-            cookieSettings={appConfig.cookieSettings}
-            defaultSettings={defaultSettings}
-          >
-            <LocalizationProvider>
-              <AppRouterCacheProvider options={{ key: 'css' }}>
-                <ThemeProvider
-                  defaultMode={themeConfig.defaultMode}
-                  modeStorageKey={themeConfig.modeStorageKey}
-                >
-                  <ExternalProvider>
-                    <ReferralProvider>
-                      <MotionLazy>
-                        <SnackbarProvider>
-                          <ProgressBar />
-                          <SettingsDrawer defaultSettings={defaultSettings} />
-                          <AnnouncementProvider>
-                            <InviteCodeGate enforceInDev>
-                              <DashboardLayout>{children}</DashboardLayout>
-                            </InviteCodeGate>
-                          </AnnouncementProvider>
-                        </SnackbarProvider>
-                      </MotionLazy>
-                    </ReferralProvider>
-                  </ExternalProvider>
-                </ThemeProvider>
-              </AppRouterCacheProvider>
-            </LocalizationProvider>
-          </SettingsProvider>
-        </I18nProvider>
+          <I18nProvider lang={appConfig.i18nLang}>
+            <SettingsProvider
+              cookieSettings={appConfig.cookieSettings}
+              defaultSettings={defaultSettings}
+            >
+              <LocalizationProvider>
+                <AppRouterCacheProvider options={{ key: 'css' }}>
+                  <ThemeProvider
+                    defaultMode={themeConfig.defaultMode}
+                    modeStorageKey={themeConfig.modeStorageKey}
+                  >
+                    <ExternalProvider>
+                      <ReferralProvider>
+                        <MotionLazy>
+                          <SnackbarProvider>
+                            <ProgressBar />
+                            <SettingsDrawer defaultSettings={defaultSettings} />
+                            <AnnouncementProvider>
+                              <InviteCodeGate enforceInDev>
+                                <DashboardLayout>{children}</DashboardLayout>
+                              </InviteCodeGate>
+                            </AnnouncementProvider>
+                          </SnackbarProvider>
+                        </MotionLazy>
+                      </ReferralProvider>
+                    </ExternalProvider>
+                  </ThemeProvider>
+                </AppRouterCacheProvider>
+              </LocalizationProvider>
+            </SettingsProvider>
+          </I18nProvider>
         </PostHogProvider>
       </body>
     </html>

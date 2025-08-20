@@ -10,11 +10,9 @@ import { fCurrency } from '@/utils/format-number';
 import { useMemo, useState, useEffect } from 'react';
 import { formatDuration } from '@/utils/format-time';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useTokenPrice, useInsuranceFund } from '@/hooks';
-import { formatTokenAmount } from '@/utils/format-stellar';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { format, getCryptoIconUrl } from '@normalfinance/utils';
+import { format , getCryptoIconUrl} from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
