@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 
-import { Box, Stack, Button, Container, Typography } from '@mui/material';
+import { Box, Stack, Container, Typography } from '@mui/material';
 
 export const IndexFundsInfoSection: React.FC = () => {
   const { t } = useTranslate();

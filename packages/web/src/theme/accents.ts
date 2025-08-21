@@ -19,14 +19,20 @@ export const groupAccentByIndex = (i: number): GroupAccent =>
 const clamp = (n: number, min = 0, max = 255) => Math.min(max, Math.max(min, n));
 
 const hexToRgb = (hex: HexColor): [number, number, number] => {
-  let h = hex.replace('#', '');
-  if (h.length === 3)
+  let h = hex.replace('#', '').trim();
+  if (h.length === 3) {
     h = h
       .split('')
       .map((c) => c + c)
       .join('');
-  const n = parseInt(h, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  // Ensure 6 chars; fallback to black if malformed
+  if (h.length !== 6) return [0, 0, 0];
+
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return [Number.isNaN(r) ? 0 : r, Number.isNaN(g) ? 0 : g, Number.isNaN(b) ? 0 : b];
 };
 
 const rgbToHex = (r: number, g: number, b: number): HexColor =>

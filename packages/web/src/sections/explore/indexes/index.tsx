@@ -3,6 +3,7 @@
 import type { SingleStat } from '@/components/_explore-page-components';
 import type { Token, IndexDetails, WeightedToken } from '@normalfinance/types';
 
+import { useMemo } from 'react';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
@@ -13,8 +14,6 @@ import { Box, Stack, Typography } from '@mui/material';
 import { IndexCard } from '@/components/_index-details/index-card';
 import { ExploreIndexesTable } from '@/components/_index-details/explore-indexes-table';
 import { IndexFundsInfoSection } from '@/components/_index-details/index-funds-info-section';
-
-import { useMemo } from 'react';
 
 const makeToken = (
   id: number,
@@ -150,9 +149,10 @@ export default function ExploreIndexesView() {
     const result: number[] = [];
 
     for (let i = 0; i < points; i += 1) {
-      const t = i / (points - 1); // 0..1
-      const base = then + (priceNow - then) * t;
-      const wiggle = 1 + 0.004 * Math.sin(t * Math.PI * 2) + 0.003 * Math.sin(t * 5.2);
+      const progress = i / (points - 1); // 0..1
+      const base = then + (priceNow - then) * progress;
+      const wiggle =
+        1 + 0.004 * Math.sin(progress * Math.PI * 2) + 0.003 * Math.sin(progress * 5.2);
       result.push(Number((base * wiggle).toFixed(2)));
     }
     return result;

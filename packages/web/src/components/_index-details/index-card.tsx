@@ -1,17 +1,20 @@
 'use client';
 
-import type { IndexDetails } from '@normalfinance/types';
 import type { ApexOptions } from 'apexcharts';
+import type { IndexDetails } from '@normalfinance/types';
+
+import { useMemo } from 'react';
+import NextLink from 'next/link';
 import { useTranslate } from '@/locales';
 import { fPercent, fCurrency } from '@/utils/format-number';
 import { groupAccentByIndex, groupAccentDarkByIndex } from '@/theme/accents';
+
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Card, Stack, Avatar, Typography, Button } from '@mui/material';
-import { Iconify } from '../template/iconify';
-import NextLink from 'next/link';
+import { Box, Card, Stack, Avatar, Button, Typography } from '@mui/material';
+
 import { Chart } from '@/components/template/chart';
-import { useMemo } from 'react';
-import { varAlpha } from 'minimal-shared/utils';
+
+import { Iconify } from '../template/iconify';
 
 const RIGHT_MIN_PX = 240;
 
@@ -23,7 +26,7 @@ export interface IndexCardProps {
 }
 
 export function IndexCard({ index, highlightType, onClick, chartSeries }: IndexCardProps) {
-  const theme = useTheme();
+  const muiTheme = useTheme();
   const { t } = useTranslate();
 
   const highlightMap: Record<NonNullable<IndexCardProps['highlightType']>, { label: string }> = {
@@ -33,8 +36,6 @@ export function IndexCard({ index, highlightType, onClick, chartSeries }: IndexC
   };
 
   const highlight = highlightType ? highlightMap[highlightType] : undefined;
-
-  const isUp = index.priceChangePct24h >= 0;
 
   const paletteIndex = highlightType === 'staff-pick' ? 1 : highlightType === 'trending' ? 2 : 3;
 
@@ -102,7 +103,7 @@ export function IndexCard({ index, highlightType, onClick, chartSeries }: IndexC
         p: 3,
         borderRadius: 3,
         border: 1,
-        borderColor: alpha(theme.palette.grey[500], 0.24),
+        borderColor: alpha(muiTheme.palette.grey[500], 0.24),
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
         transition: 'all 0.2s ease',
         minHeight: 240,
@@ -297,9 +298,9 @@ export function IndexCard({ index, highlightType, onClick, chartSeries }: IndexC
           </Stack>
 
           <Stack direction="row" flexWrap="wrap" useFlexGap gap={1} sx={{ mt: 1, width: '100%' }}>
-            {index.constituents.map((t, i) => (
+            {index.constituents.map((token, i) => (
               <Box
-                key={`${t.shortname}-${i}`}
+                key={`${token.shortname}-${i}`}
                 sx={{
                   gap: 0.5,
                   display: 'inline-flex',
@@ -313,7 +314,7 @@ export function IndexCard({ index, highlightType, onClick, chartSeries }: IndexC
                   typography: 'caption',
                 }}
               >
-                {t.shortname}
+                {token.shortname}
               </Box>
             ))}
           </Stack>
