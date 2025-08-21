@@ -1,6 +1,5 @@
 'use client';
 
-import type { PoolTxRow } from '@/types/pools';
 import type { SingleStat } from '@/components/_explore-page-components';
 import type { Token, IndexDetails, WeightedToken } from '@normalfinance/types';
 
@@ -14,6 +13,8 @@ import { Box, Stack, Typography } from '@mui/material';
 import { IndexCard } from '@/components/_index-details/index-card';
 import { ExploreIndexesTable } from '@/components/_index-details/explore-indexes-table';
 import { IndexFundsInfoSection } from '@/components/_index-details/index-funds-info-section';
+
+import { useMemo } from 'react';
 
 const makeToken = (
   id: number,
@@ -71,8 +72,11 @@ const w = (tok: Token, weightPct: number): WeightedToken => ({ ...tok, weightPct
 export const INDEXES: IndexDetails[] = [
   {
     id: 1,
+    avatar: '/assets/images/index/index-avatar-example.webp',
     name: 'Blue-Chip Top 10',
     slug: 'blue-chip-10',
+
+    url: '/index/blue-chip-10',
 
     priceUsd: 125.37,
     priceChangePct24h: 1.12,
@@ -117,49 +121,6 @@ export const INDEXES: IndexDetails[] = [
   },
 ];
 
-const TABLE_ROWS: PoolTxRow[] = [
-  {
-    type: 'Buy',
-    timestamp: Date.now() - 60 * 60 * 1000,
-    tokenAAmount: 120.5,
-    tokenBAmount: 360.0,
-    user: 'GB6P...3K9Q',
-    txHash: 'a1f3e0b2c4d5e6f7a8b9c0d1e2f3a4b5',
-  },
-  {
-    type: 'Sell',
-    timestamp: Date.now() - 2 * 60 * 60 * 1000,
-    tokenAAmount: 75.2,
-    tokenBAmount: 210.4,
-    user: 'GC7X...P0ZT',
-    txHash: 'b2c4d5e6f7a8b9c0d1e2f3a4b5a1f3e0',
-  },
-  {
-    type: 'Buy',
-    timestamp: Date.now() - 6 * 60 * 60 * 1000,
-    tokenAAmount: 300.0,
-    tokenBAmount: 915.3,
-    user: 'GD1M...L8QW',
-    txHash: 'c4d5e6f7a8b9c0d1e2f3a4b5a1f3e0b2',
-  },
-  {
-    type: 'Sell',
-    timestamp: Date.now() - 12 * 60 * 60 * 1000,
-    tokenAAmount: 48.9,
-    tokenBAmount: 150.2,
-    user: 'GE9K...R2VX',
-    txHash: 'd5e6f7a8b9c0d1e2f3a4b5a1f3e0b2c4',
-  },
-  {
-    type: 'Buy',
-    timestamp: Date.now() - 24 * 60 * 60 * 1000,
-    tokenAAmount: 510.75,
-    tokenBAmount: 1610.0,
-    user: 'GF2H...M7NP',
-    txHash: 'e6f7a8b9c0d1e2f3a4b5a1f3e0b2c4d5',
-  },
-];
-
 export const buildStats = (idx: IndexDetails): SingleStat[] => [
   {
     title: 'Index Price',
@@ -183,6 +144,25 @@ export const buildStats = (idx: IndexDetails): SingleStat[] => [
 
 export default function ExploreIndexesView() {
   const { t } = useTranslate();
+
+  const buildSparkline = (priceNow: number, pct24h: number, points = 24) => {
+    const then = priceNow / (1 + pct24h / 100);
+    const result: number[] = [];
+
+    for (let i = 0; i < points; i += 1) {
+      const t = i / (points - 1); // 0..1
+      const base = then + (priceNow - then) * t;
+      const wiggle = 1 + 0.004 * Math.sin(t * Math.PI * 2) + 0.003 * Math.sin(t * 5.2);
+      result.push(Number((base * wiggle).toFixed(2)));
+    }
+    return result;
+  };
+
+  const spark0 = useMemo(
+    () => buildSparkline(INDEXES[0].priceUsd, INDEXES[0].priceChangePct24h, 28),
+    []
+  );
+
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
       <DashboardContent maxWidth="xl">
@@ -193,25 +173,25 @@ export default function ExploreIndexesView() {
         </Stack>
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-            <IndexCard index={INDEXES[0]} highlightType="staff-pick" />
+            <IndexCard index={INDEXES[0]} highlightType="staff-pick" chartSeries={spark0} />
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-            <IndexCard index={INDEXES[0]} highlightType="trending" />
+            <IndexCard index={INDEXES[0]} highlightType="trending" chartSeries={spark0} />
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-            <IndexCard index={INDEXES[0]} highlightType="gainer" />
-          </Grid2>
-        </Grid2>
-
-        <Grid2 container spacing={3} sx={{ mt: 3 }}>
-          <Grid2 size={{ xs: 12 }}>
-            <ExploreIndexesTable indexes={INDEXES} loading={false} />
+            <IndexCard index={INDEXES[0]} highlightType="gainer" chartSeries={spark0} />
           </Grid2>
         </Grid2>
 
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12 }}>
             <IndexFundsInfoSection />
+          </Grid2>
+        </Grid2>
+
+        <Grid2 container spacing={3} sx={{ mt: 3 }}>
+          <Grid2 size={{ xs: 12 }}>
+            <ExploreIndexesTable indexes={INDEXES} loading={false} />
           </Grid2>
         </Grid2>
       </DashboardContent>

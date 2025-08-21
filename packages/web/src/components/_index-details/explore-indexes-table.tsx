@@ -122,7 +122,7 @@ export function ExploreIndexesTable({ indexes, loading }: ExploreIndexesTablePro
                           <TableCell>
                             <Stack direction="row" alignItems="center" spacing={1.5}>
                               <Avatar
-                                src={idx.constituents[0]?.icon}
+                                src={idx.avatar}
                                 alt={idx.name}
                                 sx={{ width: 32, height: 32 }}
                               />
