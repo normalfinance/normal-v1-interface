@@ -48,7 +48,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
   const slice = 1 / totalItems; // Note: last item will not use the full slice for transform
 
   return (
-    <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 12 }, ...sx }}>
+    <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 12 }, bgcolor: 'grey.100', ...sx }}>
       <Container disableGutters maxWidth="lg">
         <Box
           sx={{
