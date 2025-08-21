@@ -13,7 +13,7 @@ export type InviteCodeGateProps = {
   enforceInDev?: boolean;
 };
 
-const UNBLOCKED_PATHS = [paths.root, paths.core.about, paths.core.contact];
+const UNBLOCKED_PATHS = [paths.root, paths.core.about, paths.core.contact, paths.core.roadmap];
 
 export const InviteCodeGate: React.FC<InviteCodeGateProps> = ({
   children,
