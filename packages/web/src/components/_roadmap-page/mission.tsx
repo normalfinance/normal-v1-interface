@@ -54,8 +54,11 @@ export function MissionSection() {
       <Container maxWidth="lg" disableGutters>
         <Stack spacing={3} sx={{ maxWidth: 960 }}>
           <Typography variant="h2" sx={{ fontWeight: 800, lineHeight: 1.05 }}>
+            {t('Normal’s Product Roadmap')}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
             {t(
-              'Normal’s mission is to make sophisticated, low-cost crypto investing accessible to everyone — by turning complex on-chain primitives into simple, transparent index products.'
+              'Our mission: to make sophisticated, low-cost crypto investing accessible to everyone — by turning complex on-chain primitives into simple, transparent index products.'
             )}
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -97,14 +100,14 @@ export function MissionSection() {
                 <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1 }}>
                   {t('What we’re shipping')}
                 </Typography>
-                <Box component="ul" sx={{ m: 0, pl: 3 }}>
+                <Box component="ul" sx={{ m: 0 }}>
                   {shippingItems.map((text, idx) => (
                     <Box
                       key={idx}
                       component="li"
                       sx={{ '&::marker': { color: 'text.secondary' }, mb: 1 }}
                     >
-                      <Typography variant="body1">{text}</Typography>
+                      <Typography variant="body1">• {text}</Typography>
                     </Box>
                   ))}
                 </Box>

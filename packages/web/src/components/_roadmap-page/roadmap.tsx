@@ -72,15 +72,15 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
                   mb: { xs: 2, md: 3 },
                 }}
               >
-                {heading}
+                {t(heading)}
               </Typography>
 
-              <Typography variant="body1">{description}</Typography>
+              <Typography variant="body1">{t(description)}</Typography>
 
               <Stack direction="row" spacing={2} sx={{ mt: { xs: 3, md: 4 }, flexWrap: 'wrap' }}>
                 {buttons.map((button, i) => (
                   <Button key={i} {...button}>
-                    {button.title}
+                    {t(button.title)}
                   </Button>
                 ))}
               </Stack>
@@ -128,7 +128,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
                   </Box>
 
                   <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-                    {item.title}
+                    {t(item.title)}
                   </Typography>
 
                   <Typography variant="body2" sx={{ mb: 2, opacity: 0.85 }}>
@@ -136,7 +136,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
                   </Typography>
 
                   <Typography variant="body1" sx={{ mb: item.link ? 2 : 0 }}>
-                    {item.description}
+                    {t(item.description)}
                   </Typography>
 
                   {item.link ? (

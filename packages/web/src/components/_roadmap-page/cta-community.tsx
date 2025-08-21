@@ -3,6 +3,7 @@
 import type { Theme, SxProps } from '@mui/material/styles';
 
 import * as React from 'react';
+import { paths } from '@/routes/paths';
 
 import { Box, Stack, Button, Container, Typography } from '@mui/material';
 
@@ -20,8 +21,8 @@ export type CtaCommunityProps = React.ComponentPropsWithoutRef<'section'> & {
 export const CtaCommunity: React.FC<CtaCommunityProps> = ({
   heading = 'Join the Normal community to help us achieve our mission.',
   description = '',
-  twitterUrl = 'https://x.com/normalfi',
-  discordUrl = 'https://discord.gg/normalfinance',
+  twitterUrl = paths.socials.twitter,
+  discordUrl = paths.socials.discord,
   twitterLabel = 'Follow us on X (Twitter)',
   discordLabel = 'Join our Discord',
   image = '/assets/images/landing-page/cta-bg.webp',
