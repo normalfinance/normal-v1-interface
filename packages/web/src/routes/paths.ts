@@ -10,6 +10,7 @@ export const paths = {
     root: 'https://www.normalfinance.io/',
     about: '/about',
     contact: '/contact',
+    roadmap: '/roadmap',
   },
   socials: {
     twitter: 'https://x.com/normalfi',
