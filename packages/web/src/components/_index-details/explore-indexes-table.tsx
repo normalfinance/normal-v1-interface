@@ -68,11 +68,11 @@ export function ExploreIndexesTable({ indexes, loading }: ExploreIndexesTablePro
     { id: 'id', label: t('ID'), width: 64 },
     { id: 'name', label: t('Index'), width: 240 },
     { id: 'coinCount', label: t('Coins'), width: 80 },
-    { id: 'weighting', label: t('Weighting Strategy'), width: 160 },
-    { id: 'largest', label: t('Largest Asset'), width: 160 },
-    { id: 'smallest', label: t('Smallest Asset'), width: 160 },
-    { id: 'tvlUsd', label: t('TVL'), align: 'left' },
-    { id: 'priceUsd', label: t('Price'), align: 'left' },
+    { id: 'weighting', label: t('Weighting Strategy'), width: 240 },
+    { id: 'largest', label: t('Largest Asset'), width: 240 },
+    { id: 'smallest', label: t('Smallest Asset'), width: 240 },
+    { id: 'tvlUsd', label: t('TVL'), align: 'right' },
+    { id: 'priceUsd', label: t('Price'), align: 'right' },
     { id: '', label: '' },
   ];
 
@@ -163,8 +163,8 @@ export function ExploreIndexesTable({ indexes, loading }: ExploreIndexesTablePro
                             )}
                           </TableCell>
 
-                          <TableCell>{`$${idx.tvlUsd.toLocaleString()}`}</TableCell>
-                          <TableCell>{`$${idx.priceUsd.toFixed(2)}`}</TableCell>
+                          <TableCell align="right">{`$${idx.tvlUsd.toLocaleString()}`}</TableCell>
+                          <TableCell align="right">{`$${idx.priceUsd.toFixed(2)}`}</TableCell>
                           <TableCell />
                         </TableRow>
                       );
