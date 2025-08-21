@@ -1,16 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { useRef } from 'react';
 import type { SxProps, Theme } from '@mui/material/styles';
 import type { ButtonProps } from '@mui/material/Button';
-import { useTheme } from '@mui/material/styles';
-import { Box, Button, Container, Stack, Typography, Card, CardContent } from '@mui/material';
-import { m, useScroll, useTransform } from 'framer-motion';
+
+import Box from '@mui/material/Box';
+import Container from '@mui/material/Container';
+import Grid2 from '@mui/material/Grid2';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
-type ImageProps = { src: string; alt?: string };
-type FeatureItem = {
+export type FeatureItem = {
   title: string;
   description: string;
   date: string;
@@ -30,205 +32,138 @@ type Props = {
 export type RoadmapProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
 export const Roadmap: React.FC<RoadmapProps> = (props) => {
-  const { tagline, heading, description, buttons, items, sx } = { ...RoadmapDefaults, ...props };
-  const theme = useTheme();
-
-  // Refs for sticky container (stage) and scroll track
-  const stageRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-
-  // Use scroll progress relative to the trackRef (from its start to end)
-  const { scrollYProgress } = useScroll({
-    target: trackRef,
-    offset: ['start start', 'end end'],
-  });
-
-  // Each feature card gets an equal slice of the scroll progress (except the last card remains static at the end)
-  const totalItems = Math.max(items.length, 1);
-  const slice = 1 / totalItems; // Note: last item will not use the full slice for transform
+  const { tagline, heading, description, buttons, items, sx, ...sectionProps } = {
+    ...RoadmapDefaults,
+    ...props,
+  };
 
   return (
-    <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 12 }, bgcolor: 'grey.100', ...sx }}>
-      <Container disableGutters maxWidth="lg">
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-            gap: { xs: 4, md: 6 },
-            alignItems: { md: 'start' },
-          }}
-        >
-          {/* Left Column: Text Content (sticky on desktop) */}
-          <Box
+    <Box
+      component="section"
+      sx={{
+        px: '5%',
+        py: { xs: 6, md: 12, lg: 14 },
+        bgcolor: 'grey.100',
+        ...sx,
+      }}
+      {...sectionProps}
+    >
+      <Container disableGutters>
+        <Grid2 container spacing={{ xs: 6, md: 8 }}>
+          {/* Left */}
+          <Grid2
+            size={{ xs: 12, md: 6 }}
             sx={{
-              position: { md: 'sticky' },
-              top: { md: 0 },
-              alignSelf: 'start',
-              height: { md: '100vh' },
-              display: 'flex',
-              alignItems: 'center',
+              alignSelf: { md: 'stretch' },
             }}
           >
-            <Stack spacing={2}>
-              <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1 }}>
+            <Box
+              sx={{
+                position: { xs: 'static', md: 'sticky' },
+                top: { md: '10%' },
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ mb: { xs: 1, md: 1.5 }, fontWeight: 600 }}>
                 {tagline}
               </Typography>
-              <Typography variant="h2" sx={{ fontWeight: 800, lineHeight: 1.05 }}>
+
+              <Typography
+                variant="h2"
+                sx={{
+                  fontWeight: 800,
+                  lineHeight: 1.05,
+                  mb: { xs: 2, md: 3 },
+                }}
+              >
                 {heading}
               </Typography>
-              <Typography variant="body1" color="text.secondary">
-                {description}
-              </Typography>
-              <Stack direction="row" spacing={2} sx={{ mt: 2, flexWrap: 'wrap' }}>
+
+              <Typography variant="body1">{description}</Typography>
+
+              <Stack direction="row" spacing={2} sx={{ mt: { xs: 3, md: 4 }, flexWrap: 'wrap' }}>
                 {buttons.map((button, i) => (
                   <Button key={i} {...button}>
                     {button.title}
                   </Button>
                 ))}
               </Stack>
-            </Stack>
-          </Box>
-
-          {/* Right Column: Feature Cards (sticky stage + scroll track) */}
-          <Box sx={{ position: 'relative' }}>
-            {/* Sticky Stage: holds the feature cards (overlapping) */}
-            <Box
-              ref={stageRef}
-              sx={{
-                position: 'sticky',
-                top: { xs: '25%', md: 0 },
-                height: { xs: '25vh', md: '100vh' },
-                minHeight: { xs: '24.5rem', md: 'auto' },
-                overflow: 'visible',
-              }}
-            >
-              <Box
-                sx={{
-                  position: 'relative',
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {items.map((item, index) => (
-                  <FeatureCard
-                    key={index}
-                    item={item}
-                    index={index}
-                    total={items.length}
-                    progress={scrollYProgress}
-                    slice={slice}
-                  />
-                ))}
-              </Box>
             </Box>
+          </Grid2>
 
-            {/* Scroll Track: invisible extra space to drive scroll animations */}
-            <Box
-              ref={trackRef}
-              sx={{
-                // Height = (total items - 1) * 100vh (using safe viewport unit on mobile for consistency)
-                height: {
-                  xs: `calc(${items.length - 1} * 100svh)`,
-                  md: `calc(${items.length - 1} * 100vh)`,
-                },
-              }}
-            />
-          </Box>
-        </Box>
+          {/* Right */}
+          <Grid2 size={{ xs: 12, md: 6 }}>
+            {items.map((item, index) => {
+              const status = item.completed
+                ? { bg: '#ECFDF3', fg: '#065F46', label: 'Complete' }
+                : { bg: '#FEE2E2', fg: '#991B1B', label: 'Incomplete' };
+
+              return (
+                <Box
+                  key={index}
+                  sx={{
+                    position: { xs: 'static', md: 'sticky' },
+                    top: { md: `${10 + index * 1}%` },
+                    mb: 4,
+                    border: 1,
+                    borderRadius: 3,
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                    p: 4,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      px: 1.25,
+                      py: 0.5,
+                      borderRadius: 1.5,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      letterSpacing: 0.2,
+                      mb: 1.5,
+                      backgroundColor: status.bg,
+                      color: status.fg,
+                      width: 'fit-content',
+                    }}
+                  >
+                    {status.label}
+                  </Box>
+
+                  <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                    {item.title}
+                  </Typography>
+
+                  <Typography variant="body2" sx={{ mb: 2, opacity: 0.85 }}>
+                    {item.date}
+                  </Typography>
+
+                  <Typography variant="body1" sx={{ mb: item.link ? 2 : 0 }}>
+                    {item.description}
+                  </Typography>
+
+                  {item.link ? (
+                    <Button
+                      variant="text"
+                      size="small"
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      endIcon={<ChevronRightIcon />}
+                      sx={{ mt: 1 }}
+                    >
+                      Learn more
+                    </Button>
+                  ) : null}
+                </Box>
+              );
+            })}
+          </Grid2>
+        </Grid2>
       </Container>
     </Box>
   );
 };
-
-function FeatureCard({
-  item,
-  index,
-  total,
-  progress,
-  slice,
-}: {
-  item: FeatureItem;
-  index: number;
-  total: number;
-  progress: ReturnType<typeof useScroll>['scrollYProgress'];
-  slice: number;
-}) {
-  // Define the animation range for this card
-  const start = index * slice;
-  const end = (index + 1) * slice;
-
-  // Framer Motion transforms for the card based on scroll progress
-  const rotate = useTransform(progress, [start, end], [index * 3, -30]);
-  const translateY = useTransform(progress, [start, end], ['0vh', '-100vh']);
-  const translateX = useTransform(progress, [start, end], ['0vw', '-10vw']);
-
-  // Status pill colors
-  const status = item.completed
-    ? { bg: '#ECFDF3', fg: '#065F46', label: 'Complete' }
-    : { bg: '#FEE2E2', fg: '#991B1B', label: 'Incomplete' };
-
-  return (
-    <Box
-      component={m.div}
-      sx={{
-        position: 'absolute',
-        left: { xs: 0, md: 24 },
-        right: { xs: 0, md: 'auto' },
-        mx: { xs: 2, md: 0 },
-      }}
-      style={{
-        rotate: index === total ? '9deg' : (rotate as unknown as string),
-        translateY: index === total ? undefined : (translateY as unknown as string),
-        translateX: index === total ? undefined : (translateX as unknown as string),
-        zIndex: total - index,
-      }}
-    >
-      <Card
-        variant="outlined"
-        sx={{
-          borderRadius: 2,
-          minWidth: { xs: 'auto', md: 420 },
-          maxWidth: { xs: 'auto', md: 520 },
-          boxShadow: 'none',
-          backgroundColor: 'background.paper',
-        }}
-      >
-        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              px: 1.25,
-              py: 0.5,
-              borderRadius: 1.5,
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: 0.2,
-              mb: 1.5,
-              backgroundColor: status.bg,
-              color: status.fg,
-              width: 'fit-content',
-            }}
-          >
-            {status.label}
-          </Box>
-
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-            {item.title}
-          </Typography>
-
-          <Typography variant="body2" sx={{ mb: 2, opacity: 0.85 }}>
-            {item.date}
-          </Typography>
-        </CardContent>
-      </Card>
-    </Box>
-  );
-}
 
 export const RoadmapDefaults: Props = {
   tagline: 'Roadmap',
