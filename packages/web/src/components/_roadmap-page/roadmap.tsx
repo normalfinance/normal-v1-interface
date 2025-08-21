@@ -21,7 +21,6 @@ export type FeatureItem = {
 };
 
 type Props = {
-  tagline: string;
   heading: string;
   description: string;
   buttons: (ButtonProps & { title: string })[];
@@ -32,7 +31,7 @@ type Props = {
 export type RoadmapProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
 export const Roadmap: React.FC<RoadmapProps> = (props) => {
-  const { tagline, heading, description, buttons, items, sx, ...sectionProps } = {
+  const { heading, description, buttons, items, sx, ...sectionProps } = {
     ...RoadmapDefaults,
     ...props,
   };
@@ -60,13 +59,9 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
             <Box
               sx={{
                 position: { xs: 'static', md: 'sticky' },
-                top: { md: '10%' },
+                top: { md: '20%' },
               }}
             >
-              <Typography variant="subtitle2" sx={{ mb: { xs: 1, md: 1.5 }, fontWeight: 600 }}>
-                {tagline}
-              </Typography>
-
               <Typography
                 variant="h2"
                 sx={{
@@ -102,7 +97,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
                   key={index}
                   sx={{
                     position: { xs: 'static', md: 'sticky' },
-                    top: { md: `${10 + index * 1}%` },
+                    top: { md: `${20 + index * 1}%` },
                     mb: 4,
                     border: 1,
                     borderRadius: 3,
@@ -166,13 +161,11 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
 };
 
 export const RoadmapDefaults: Props = {
-  tagline: 'Roadmap',
   heading: 'Where we’re headed next',
   description:
     'A quick look at what we’re building. Scroll to explore upcoming milestones and how they improve your experience.',
   buttons: [
-    { title: 'Learn more', variant: 'contained', color: 'primary' },
-    { title: 'Contact us', variant: 'text', endIcon: <ChevronRightIcon /> },
+    { title: 'Contact us', variant: 'text', endIcon: <ChevronRightIcon />, href: '/contact' },
   ],
   items: [
     {

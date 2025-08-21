@@ -1,16 +1,28 @@
-import { Box, Container, Stack, Typography, Card, CardContent, Chip, Divider } from '@mui/material';
+import {
+  Box,
+  Container,
+  Stack,
+  Typography,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  Paper,
+} from '@mui/material';
 import Grid2 from '@mui/material/Grid2';
+
+const paperSx = {
+  bgcolor: '#F9FAFB',
+  borderRadius: 3,
+};
+
+const cardPadding = { xs: 2.5, md: 4 };
 
 export function MissionSection() {
   return (
     <Box sx={{ px: '5%', py: { xs: 8, md: 12 } }}>
       <Container maxWidth="lg" disableGutters>
         <Stack spacing={3} sx={{ maxWidth: 960 }}>
-          <Chip
-            label="Our Mission"
-            size="small"
-            sx={{ alignSelf: 'flex-start', fontWeight: 700 }}
-          />
           <Typography variant="h2" sx={{ fontWeight: 800, lineHeight: 1.05 }}>
             Normal’s mission is to make sophisticated, low-cost crypto investing accessible to
             everyone — by turning complex on-chain primitives into simple, transparent index
@@ -48,8 +60,8 @@ export function MissionSection() {
             },
           ].map((p, i) => (
             <Grid2 key={i} size={{ xs: 12, sm: 6 }}>
-              <Card variant="outlined" sx={{ height: '100%' }}>
-                <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+              <Paper variant="outlined" sx={{ ...paperSx }}>
+                <Stack spacing={2} p={cardPadding} flexGrow={1} justifyContent="flex-start">
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
                     <span aria-hidden style={{ marginRight: 8 }}>
                       {p.emoji}
@@ -59,8 +71,8 @@ export function MissionSection() {
                   <Typography variant="body2" color="text.secondary">
                     {p.body}
                   </Typography>
-                </CardContent>
-              </Card>
+                </Stack>
+              </Paper>
             </Grid2>
           ))}
         </Grid2>
@@ -70,8 +82,8 @@ export function MissionSection() {
         {/* What we’re shipping / Our promise */}
         <Grid2 container spacing={2}>
           <Grid2 size={{ xs: 12, md: 6 }}>
-            <Card variant="outlined" sx={{ height: '100%' }}>
-              <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+            <Paper variant="outlined" sx={{ ...paperSx }}>
+              <Stack spacing={2} p={cardPadding} flexGrow={1} justifyContent="flex-start">
                 <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1 }}>
                   What we’re shipping
                 </Typography>
@@ -83,13 +95,13 @@ export function MissionSection() {
                   • Open analytics, proofs of rebalance, and audit-friendly data
                   <br />• Education and UX that lowers the learning curve for everyone
                 </Typography>
-              </CardContent>
-            </Card>
+              </Stack>
+            </Paper>
           </Grid2>
 
           <Grid2 size={{ xs: 12, md: 6 }}>
-            <Card variant="outlined" sx={{ height: '100%' }}>
-              <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+            <Paper variant="outlined" sx={{ ...paperSx }}>
+              <Stack spacing={2} p={cardPadding} flexGrow={1} justifyContent="flex-start">
                 <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1 }}>
                   Our promise
                 </Typography>
@@ -98,8 +110,8 @@ export function MissionSection() {
                   long-term outcomes — not hype. Help us shape the future of on-chain indexes by
                   sharing feedback and co-creating what gets built next.
                 </Typography>
-              </CardContent>
-            </Card>
+              </Stack>
+            </Paper>
           </Grid2>
         </Grid2>
       </Container>
