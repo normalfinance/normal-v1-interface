@@ -91,18 +91,14 @@ export const WavyBackground = ({
         width = Math.max(1, Math.floor(rect.width));
         height = Math.max(1, Math.floor(rect.height));
       }
-      // back buffer size
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
-      // CSS size
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-      // scale to CSS pixels
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       needsResize = false;
     };
 
-    // Observe container or window (depending on sizing mode)
     const ro = new ResizeObserver(() => {
       if (cfgRef.current.sizing === 'container') needsResize = true;
     });
@@ -129,13 +125,11 @@ export const WavyBackground = ({
         yOffset: yOff,
       } = cfgRef.current;
 
-      // clear fully (prevents flashing)
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, width, height);
 
-      // compute base Y
       const baseY =
         typeof base === 'number'
           ? base
@@ -145,7 +139,6 @@ export const WavyBackground = ({
               ? height
               : height * 0.5;
 
-      // draw waves
       nt += spd;
       const waveCount = 5;
       ctx.lineWidth = wWidth;

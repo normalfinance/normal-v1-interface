@@ -1,15 +1,17 @@
 'use client';
 
-import * as React from 'react';
-import type { SxProps, Theme } from '@mui/material/styles';
 import type { ButtonProps } from '@mui/material/Button';
+import type { Theme, SxProps } from '@mui/material/styles';
+
+import * as React from 'react';
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
 import Grid2 from '@mui/material/Grid2';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 export type FeatureItem = {
@@ -31,6 +33,7 @@ type Props = {
 export type RoadmapProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
 export const Roadmap: React.FC<RoadmapProps> = (props) => {
+  const { t } = useTranslate();
   const { heading, description, buttons, items, sx, ...sectionProps } = {
     ...RoadmapDefaults,
     ...props,
@@ -49,7 +52,6 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
     >
       <Container disableGutters>
         <Grid2 container spacing={{ xs: 6, md: 8 }}>
-          {/* Left */}
           <Grid2
             size={{ xs: 12, md: 6 }}
             sx={{
@@ -85,12 +87,12 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
             </Box>
           </Grid2>
 
-          {/* Right */}
           <Grid2 size={{ xs: 12, md: 6 }}>
             {items.map((item, index) => {
+              const statusLabel = t(item.completed ? 'Complete' : 'Incomplete');
               const status = item.completed
-                ? { bg: '#ECFDF3', fg: '#065F46', label: 'Complete' }
-                : { bg: '#FEE2E2', fg: '#991B1B', label: 'Incomplete' };
+                ? { bg: '#ECFDF3', fg: '#065F46', label: statusLabel }
+                : { bg: '#FEE2E2', fg: '#991B1B', label: statusLabel };
 
               return (
                 <Box
@@ -147,7 +149,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
                       endIcon={<ChevronRightIcon />}
                       sx={{ mt: 1 }}
                     >
-                      Learn more
+                      {t('Learn more')}
                     </Button>
                   ) : null}
                 </Box>

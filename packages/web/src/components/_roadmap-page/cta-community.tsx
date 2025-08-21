@@ -1,7 +1,9 @@
 'use client';
 
+import type { Theme, SxProps } from '@mui/material/styles';
+
 import * as React from 'react';
-import type { SxProps, Theme } from '@mui/material/styles';
+
 import { Box, Stack, Button, Container, Typography } from '@mui/material';
 
 export type CtaCommunityProps = React.ComponentPropsWithoutRef<'section'> & {
@@ -25,103 +27,101 @@ export const CtaCommunity: React.FC<CtaCommunityProps> = ({
   image = '/assets/images/landing-page/cta-bg.webp',
   sx,
   ...sectionProps
-}) => {
-  return (
-    <Box
-      component="section"
-      sx={{
-        position: 'relative',
-        overflow: 'hidden',
-        px: '5%',
-        py: { xs: 6, md: 12, lg: 14 },
-        color: 'common.white',
-        bgcolor: 'grey.100',
-        ...sx,
-      }}
-      {...sectionProps}
-    >
-      <Container sx={{ position: 'relative', zIndex: 1 }}>
+}) => (
+  <Box
+    component="section"
+    sx={{
+      position: 'relative',
+      overflow: 'hidden',
+      px: '5%',
+      py: { xs: 6, md: 12, lg: 14 },
+      color: 'common.white',
+      bgcolor: 'grey.100',
+      ...sx,
+    }}
+    {...sectionProps}
+  >
+    <Container sx={{ position: 'relative', zIndex: 1 }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: 3,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}
+      >
         <Box
+          component="img"
+          src={image}
+          alt=""
           sx={{
             position: 'absolute',
             inset: 0,
-            borderRadius: 3,
-            overflow: 'hidden',
-            pointerEvents: 'none',
+            width: 1,
+            height: 1,
+            objectFit: 'cover',
           }}
-        >
-          <Box
-            component="img"
-            src={image}
-            alt=""
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              width: 1,
-              height: 1,
-              objectFit: 'cover',
-            }}
-          />
-        </Box>
+        />
+      </Box>
+
+      <Stack
+        spacing={3}
+        alignItems="center"
+        textAlign="center"
+        sx={{
+          position: 'relative',
+          zIndex: 2,
+          px: { xs: '24px', md: '64px' },
+          py: { xs: '32px', md: '80px' },
+        }}
+      >
+        <Typography variant="h3" fontWeight={500} sx={{ fontSize: { xs: '24px', md: '40px' } }}>
+          {heading}
+        </Typography>
+
+        {description ? (
+          <Typography variant="body1" sx={{ opacity: 0.9, maxWidth: 720 }}>
+            {description}
+          </Typography>
+        ) : null}
 
         <Stack
-          spacing={3}
-          alignItems="center"
-          textAlign="center"
-          sx={{
-            position: 'relative',
-            zIndex: 2,
-            px: { xs: '24px', md: '64px' },
-            py: { xs: '32px', md: '80px' },
-          }}
+          direction="row"
+          spacing={2}
+          sx={{ flexWrap: 'wrap', justifyContent: 'center', mt: 1 }}
         >
-          <Typography variant="h3" fontWeight={500} sx={{ fontSize: { xs: '24px', md: '40px' } }}>
-            {heading}
-          </Typography>
-
-          {description ? (
-            <Typography variant="body1" sx={{ opacity: 0.9, maxWidth: 720 }}>
-              {description}
-            </Typography>
-          ) : null}
-
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{ flexWrap: 'wrap', justifyContent: 'center', mt: 1 }}
+          <Button
+            href={twitterUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              border: '1px solid #6E4BFF',
+              backgroundColor: '#E0D9FF',
+              color: '#6E4BFF',
+              fontWeight: 500,
+            }}
           >
-            <Button
-              href={twitterUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                border: '1px solid #6E4BFF',
-                backgroundColor: '#E0D9FF',
-                color: '#6E4BFF',
-                fontWeight: 500,
-              }}
-            >
-              {twitterLabel}
-            </Button>
+            {twitterLabel}
+          </Button>
 
-            <Button
-              href={discordUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                border: '1px solid #6E4BFF',
-                backgroundColor: '#E0D9FF',
-                color: '#6E4BFF',
-                fontWeight: 500,
-              }}
-            >
-              {discordLabel}
-            </Button>
-          </Stack>
+          <Button
+            href={discordUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              border: '1px solid #6E4BFF',
+              backgroundColor: '#E0D9FF',
+              color: '#6E4BFF',
+              fontWeight: 500,
+            }}
+          >
+            {discordLabel}
+          </Button>
         </Stack>
-      </Container>
-    </Box>
-  );
-};
+      </Stack>
+    </Container>
+  </Box>
+);
 
 CtaCommunity.displayName = 'CtaCommunity';
