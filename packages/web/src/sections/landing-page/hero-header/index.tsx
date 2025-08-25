@@ -10,6 +10,7 @@ import { useAppStore } from '@normalfinance/state';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 import SwapCard from '@/components/_common/swap-card';
+
 import { WavyBackground } from './wavy-background';
 
 type ImageProps = { src: string; alt?: string };

@@ -9,13 +9,14 @@ import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { useQueryParams } from '@/hooks/use-query-params';
 
+import { LogoLoader } from '@/components/_async/logo-loader';
+
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
 import { HeroHeader } from './hero-header';
 import { FeatureGrid } from './features-grid';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
-import { LogoLoader } from '@/components/_async/logo-loader';
 
 import type { SmallCard } from './features-grid';
 
