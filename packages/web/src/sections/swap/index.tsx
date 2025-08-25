@@ -77,6 +77,9 @@ export default function SwapView() {
     }
   }, []);
 
+  const isTokensReady = tokens.length > 0;
+  const isLoadingTokens = globalIsLoading || !isTokensReady;
+
   const allowedTokens = React.useMemo(
     () =>
       tokens.filter(
@@ -98,11 +101,11 @@ export default function SwapView() {
         <Box maxWidth={500} width={1}>
           <Box width={1}>
             <TokenActionCard
-              tokensList={allowedTokens}
+              tokensList={isTokensReady ? allowedTokens : undefined}
               swapFeeInfo={swapFeeInfo}
               cashBalance={0}
               queryParams={getCardQueryParams()}
-              loading={globalIsLoading}
+              loading={isLoadingTokens}
               enabledTabs={enabledTabs}
               initialTab={activeTab}
             />
