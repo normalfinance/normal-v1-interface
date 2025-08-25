@@ -20,6 +20,8 @@ import {
   ExplorePoolsTable,
   type ExplorePoolsRow,
 } from '@/components/_explore-page-components';
+import { AsyncGuard } from '@/components/_async/async-guard';
+import { useExploreStatsState } from '@/hooks/use-explore-stats-state';
 
 export default function ExploreView() {
   const { t } = useTranslate();
@@ -45,16 +47,13 @@ export default function ExploreView() {
 
   const totalTvl = formattedPools.reduce((acc, p) => acc.plus(p.tvl), new BigNumber(0));
 
-  const stats: SingleStat[] = [
-    { title: '1D Volume', total: volume ?? 0, percent: 0, formatter: fCurrency },
-    { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
-    {
-      title: 'Total Pools',
-      total: pools ? pools.length : 0,
-      percent: 0,
-      formatter: fShortenNumber,
-    },
-  ];
+  function placeholderStats() {
+    return [
+      { title: '1D Volume', total: 0, percent: 0, formatter: (n: number) => String(n) },
+      { title: 'Total TVL', total: 0, percent: 0, formatter: (n: number) => String(n) },
+      { title: 'Total Pools', total: 0, percent: 0, formatter: (n: number) => String(n) },
+    ];
+  }
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
@@ -81,7 +80,25 @@ export default function ExploreView() {
           </Typography>
         </Stack>
         <Grid2 width={1} sx={{ mt: 3 }}>
-          <ExploreStats stats={stats} />
+          <Grid2 width={1} sx={{ mt: 3 }}>
+            <AsyncGuard
+              state={useExploreStatsState()}
+              loading={<ExploreStats stats={placeholderStats()} loading />}
+              error={(err, refetch) => (
+                <div role="alert" className="text-red-600">
+                  Failed to load stats: {String((err as any)?.message ?? err)}
+                  {refetch && (
+                    <button onClick={refetch} className="ml-2 underline">
+                      Retry
+                    </button>
+                  )}
+                </div>
+              )}
+              empty={<ExploreStats stats={[]} />}
+            >
+              {(stats) => <ExploreStats stats={stats} />}
+            </AsyncGuard>
+          </Grid2>
         </Grid2>
         <Grid2 sx={{ mt: 3 }}>
           <ExplorePoolsTable pools={formattedPools} loading={globalIsLoading} />
