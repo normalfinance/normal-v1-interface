@@ -15,6 +15,7 @@ import { HeroHeader } from './hero-header';
 import { FeatureGrid } from './features-grid';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
+import { LogoLoader } from '@/components/_async/logo-loader';
 
 import type { SmallCard } from './features-grid';
 
@@ -65,8 +66,6 @@ export const tokens: Token[] = [
   },
 ];
 
-/* ---------- Feature-grid content ---------- */
-
 export const featureCardsSmall: [SmallCard, SmallCard] = [
   {
     icon: <Icon icon="streamline-ultimate:crypto-currency-bitcoin-laptop" width={14} height={14} />,
@@ -79,22 +78,16 @@ export const featureCardsSmall: [SmallCard, SmallCard] = [
     icon: <Icon icon="ph:spinner-bold" width={14} height={14} />,
     tagline: 'Indexes',
     heading: 'Diversify with ease. Custom crypto baskets in seconds.',
-    image: {
-      src: '/assets/images/landing-page/index-feature.svg',
-      alt: 'Indexes',
-    },
+    image: { src: '/assets/images/landing-page/index-feature.svg', alt: 'Indexes' },
     url: 'https://normalfinance.gitbook.io/docs/getting-started/crypto-index-funds',
   },
 ];
 
 export const featureCardTall = {
-  icon: <Icon icon="mage:chart-fill" width={14} height={14} />,
+  icon: <Icon icon="mage:chart-fill" width={14} />,
   tagline: 'Liquidity',
   heading: 'Provide liquidity to pools on Normal and create indexes to earn yield.',
-  image: {
-    src: '/assets/images/landing-page/pools-feature.svg',
-    alt: 'Pools',
-  },
+  image: { src: '/assets/images/landing-page/pools-feature.svg', alt: 'Pools' },
   url: 'https://normalfinance.gitbook.io/docs/getting-started/guides/providing-liquidity',
 };
 
@@ -102,25 +95,20 @@ export const featureCardWide = {
   icon: <Icon icon="mdi:code-tags" width={14} />,
   tagline: 'Developer docs',
   heading: 'Expand the possibilities of your applications with Normal Tokens.',
-  image: {
-    src: '/assets/images/landing-page/dev-feature.svg',
-    alt: 'Developers',
-  },
+  image: { src: '/assets/images/landing-page/dev-feature.svg', alt: 'Developers' },
   url: 'https://normalfinance.gitbook.io/docs/developers/the-normal-amm',
 };
 
 export default function LandingPage() {
   const { params } = useQueryParams<SwapQueryParams>();
+  const { tokens: storeTokens, getAllTokens, setGlobalIsLoading, globalIsLoading } = useAppStore();
 
-  const { getAllTokens, setGlobalIsLoading } = useAppStore();
-
-  // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
+    if (storeTokens.length > 0) return;
     const refreshTokens = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
         await getAllTokens();
-        setGlobalIsLoading(false);
       } catch (e) {
         captureException(e);
         console.error(e);
@@ -129,7 +117,10 @@ export default function LandingPage() {
       }
     };
     refreshTokens();
-  }, []);
+  }, [storeTokens.length, getAllTokens, setGlobalIsLoading]);
+
+  const isLoading = globalIsLoading || storeTokens.length === 0;
+  if (isLoading) return <LogoLoader fullScreen size={420} />;
 
   return (
     <>
