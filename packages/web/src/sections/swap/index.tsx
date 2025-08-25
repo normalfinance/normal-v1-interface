@@ -12,6 +12,7 @@ import { useQueryParams } from '@/hooks/use-query-params';
 
 import { Box } from '@mui/material';
 
+import { LogoLoader } from '@/components/_async/logo-loader';
 import TokenActionCard from '@/components/_common/token-action-card';
 
 const swapFeeInfo: SwapFeeInfo = {
@@ -25,16 +26,11 @@ export default function SwapView() {
   const { params } = useQueryParams<TokenActionQueryParams>();
   const { tokens, getAllTokens, globalIsLoading, setGlobalIsLoading } = useAppStore();
 
-  // Determine which tab to show based on query params, default to 'swap'
   const activeTab: TokenActionKey = params?.tab || 'swap';
-
-  // Determine which tabs should be enabled (you can customize this logic)
   const enabledTabs: TokenActionKey[] = ['swap', 'send', 'buy'];
 
-  // Convert TokenActionQueryParams to the format expected by different cards
   const getCardQueryParams = () => {
     if (!params) return undefined;
-
     switch (activeTab) {
       case 'swap':
         return {
@@ -45,27 +41,17 @@ export default function SwapView() {
           out_minimum: params.out_minimum,
         };
       case 'send':
-        return {
-          token: params.token,
-          amount: params.amount,
-          destination: params.destination,
-        };
+        return { token: params.token, amount: params.amount, destination: params.destination };
       case 'buy':
-        return {
-          token: params.token,
-          amount: params.amount,
-        };
+        return { token: params.token, amount: params.amount };
       default:
         return undefined;
     }
   };
 
-  // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
-    // Only fetch if no tokens are loaded yet
     if (tokens.length === 0) {
       setGlobalIsLoading(true);
-
       getAllTokens()
         .catch((error) => {
           captureException(error);
@@ -77,6 +63,10 @@ export default function SwapView() {
     }
   }, []);
 
+  const isTokensReady = tokens.length > 0;
+  const isLoadingTokens = globalIsLoading || !isTokensReady;
+
+  // ⬅️ Call hooks BEFORE any early return
   const allowedTokens = React.useMemo(
     () =>
       tokens.filter(
@@ -84,6 +74,10 @@ export default function SwapView() {
       ),
     [tokens]
   );
+
+  if (isLoadingTokens) {
+    return <LogoLoader fullScreen size={420} />;
+  }
 
   return (
     <DashboardContent maxWidth="xl">
@@ -102,7 +96,6 @@ export default function SwapView() {
               swapFeeInfo={swapFeeInfo}
               cashBalance={0}
               queryParams={getCardQueryParams()}
-              loading={globalIsLoading}
               enabledTabs={enabledTabs}
               initialTab={activeTab}
             />

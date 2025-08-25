@@ -16,52 +16,51 @@ import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
 
 import { StatCard } from '@/components/_common/stat-card';
+import { LogoLoader } from '@/components/_async/logo-loader';
 import { StakeBalance } from '@/components/_insurance-page-components/stake-balance-card';
 import { InsuranceActionsTable } from '@/components/_insurance-page-components/insurance-actions-table-card';
 
 export default function InsuranceView() {
   const { t } = useTranslate();
-
-  // Get insurance query params
   const { params: insuranceParams } = useQueryParams<InsuranceQueryParams>();
 
-  const { balance: insuranceFundBalance, insuranceFund, stake } = useInsuranceFund();
+  const {
+    balance: insuranceFundBalance,
+    insuranceFund,
+    stake,
+    loading: fundLoading,
+  } = (useInsuranceFund() as any) ?? {};
+  const { buffer, loading: bufferLoading } = (useBuffer() as any) ?? {};
+  const { price: xlmPrice, loading: priceLoading } = (useTokenPrice('XLM') as any) ?? {};
 
-  const { buffer } = useBuffer();
+  const price = Number(xlmPrice ?? 0);
 
-  const { price: xlmPrice } = useTokenPrice('XLM');
-
-  // Insurance Fund USD value
   const insuranceFundValue = useMemo(() => {
-    if (xlmPrice && insuranceFundBalance) {
-      const balance = format.formatTokenAmount(insuranceFundBalance);
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return xlm_price.multipliedBy(balance);
-    }
-    return BigNumber(0);
-  }, [xlmPrice, insuranceFundBalance]);
+    const bal = insuranceFundBalance ? format.formatTokenAmount(insuranceFundBalance) : 0;
+    return BigNumber(format.formatTokenAmount(price, 14)).multipliedBy(bal);
+  }, [price, insuranceFundBalance]);
 
-  // Buffer USD value
   const bufferValue = useMemo(() => {
-    if (xlmPrice && buffer && buffer.reserve) {
-      const reserve_balance = BigNumber(format.formatTokenAmount(buffer.reserve.balance));
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return reserve_balance.multipliedBy(xlm_price);
-    }
-    return BigNumber(0);
-  }, [xlmPrice, buffer]);
+    const reserveBal = buffer?.reserve?.balance
+      ? BigNumber(format.formatTokenAmount(buffer.reserve.balance))
+      : BigNumber(0);
+    return BigNumber(format.formatTokenAmount(price, 14)).multipliedBy(reserveBal);
+  }, [price, buffer]);
 
-  // Connected user's stake USD value
   const stakeValue = useMemo(() => {
-    if (xlmPrice && stake) {
-      const shares = format.formatTokenAmount(stake.if_shares);
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return xlm_price.multipliedBy(shares);
-    }
-    return BigNumber(0);
-  }, [xlmPrice, stake]);
+    const shares = stake?.if_shares ? format.formatTokenAmount(stake.if_shares) : 0;
+    return BigNumber(format.formatTokenAmount(price, 14)).multipliedBy(shares);
+  }, [price, stake]);
 
-  // Stat card data array
+  const isLoading =
+    Boolean(priceLoading ?? xlmPrice === undefined) ||
+    Boolean(fundLoading ?? (insuranceFund === undefined || insuranceFundBalance === undefined)) ||
+    Boolean(bufferLoading ?? buffer === undefined);
+
+  if (isLoading) {
+    return <LogoLoader fullScreen size={420} />;
+  }
+
   const statCardsData: StatCardData[] = [
     {
       title: 'Normal Buffer',
@@ -71,11 +70,7 @@ export default function InsuranceView() {
       formatter: fCurrency,
       chartType: 'line',
       displayChart: true,
-      chart: {
-        colors: ['#4BABFF', '#4BABFF'],
-        categories: ['Current'],
-        series: [0],
-      },
+      chart: { colors: ['#4BABFF', '#4BABFF'], categories: ['Current'], series: [0] },
     },
     {
       title: 'Normal Insurance Fund',
@@ -85,11 +80,7 @@ export default function InsuranceView() {
       formatter: fCurrency,
       chartType: 'line',
       displayChart: true,
-      chart: {
-        colors: ['#FF4BE1', '#FF4BE1'],
-        categories: ['Current'],
-        series: [0],
-      },
+      chart: { colors: ['#FF4BE1', '#FF4BE1'], categories: ['Current'], series: [0] },
     },
     {
       title: 'Insurance Staking Yield',
@@ -99,11 +90,7 @@ export default function InsuranceView() {
       formatter: fRawPercent,
       chartType: 'line',
       displayChart: true,
-      chart: {
-        colors: ['#FF8A4B', '#FF8A4B'],
-        categories: ['Current'],
-        series: [0],
-      },
+      chart: { colors: ['#FF8A4B', '#FF8A4B'], categories: ['Current'], series: [0] },
     },
   ];
 
@@ -120,6 +107,7 @@ export default function InsuranceView() {
             )}
           </Typography>
         </Stack>
+
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           {statCardsData.map((item, index) => (
             <Grid2 key={index} size={{ xs: 12, md: 4 }}>
@@ -136,6 +124,7 @@ export default function InsuranceView() {
             </Grid2>
           ))}
         </Grid2>
+
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12, md: 4 }}>
             <StakeBalance
@@ -147,7 +136,6 @@ export default function InsuranceView() {
               unstakingPeriod={insuranceFund ? Number(insuranceFund.unstaking_period) : 1123200}
             />
           </Grid2>
-
           <Grid2 size={{ xs: 12, md: 8 }}>
             <InsuranceActionsTable />
           </Grid2>

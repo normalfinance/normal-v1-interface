@@ -1,92 +1,132 @@
 'use client';
 
+import type { AsyncState } from '@/types/async';
 import type { PoolRouterContract } from '@normalfinance/contracts';
 
-import { useTranslate } from '@/locales';
+import { useTokenPrice } from '@/hooks';
 import { BigNumber } from 'bignumber.js';
+import { useTranslate } from '@/locales';
+import { useMemo, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
-import { useMemo, useState, useEffect } from 'react';
+import { combineAsync } from '@/types/combine-async';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useSwapVolume, useTokenPrice } from '@/hooks';
-import { fCurrency, fShortenNumber } from '@/utils/format-number';
+import { useExploreStatsState } from '@/hooks/use-explore-stats-state';
 
 import Grid2 from '@mui/material/Grid2';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, Button, Typography } from '@mui/material';
 
+import { AsyncGuard } from '@/components/_async/async-guard';
+import { LogoLoader } from '@/components/_async/logo-loader';
 import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
-import {
-  type SingleStat,
-  ExplorePoolsTable,
-  type ExplorePoolsRow,
-} from '@/components/_explore-page-components';
+import { ExplorePoolsTable, type ExplorePoolsRow } from '@/components/_explore-page-components';
 
 export default function ExploreView() {
   const { t } = useTranslate();
-
   const { globalIsLoading, setGlobalIsLoading, getAllTokens, pools } = useAppStore();
-
-  // const { totalTVL } = useTotalTVL();
-  const { getSwapVolume } = useSwapVolume();
-
-  // Load XLM price
-  const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
-
-  const [volume, setVolume] = useState<number | undefined>(undefined);
-
-  useEffect(() => {
-    getSwapVolume({ timeframe: '24h' }).then((res) => setVolume(res['24h'].volume));
-  }, []);
+  const { price: xlmPrice } = useTokenPrice('XLM');
 
   const formattedPools = useMemo(
     () => pools.map((p) => formatPool(p, xlmPrice ?? 0)),
     [pools, xlmPrice]
   );
 
-  const totalTvl = formattedPools.reduce((acc, p) => acc.plus(p.tvl), new BigNumber(0));
-
-  const stats: SingleStat[] = [
-    { title: '1D Volume', total: volume ?? 0, percent: 0, formatter: fCurrency },
-    { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
-    {
-      title: 'Total Pools',
-      total: pools ? pools.length : 0,
-      percent: 0,
-      formatter: fShortenNumber,
-    },
-  ];
-
-  // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
+    const refreshTokens = async () => {
       setGlobalIsLoading(true);
       try {
         await getAllTokens();
-        setGlobalIsLoading(false);
-      } catch (e) {
-        console.error(e);
       } finally {
         setGlobalIsLoading(false);
       }
     };
     refreshTokens();
-  }, []);
+  }, [getAllTokens, setGlobalIsLoading]);
+
+  const poolsState: AsyncState<ExplorePoolsRow[]> = useMemo(
+    () => ({
+      data: formattedPools,
+      isLoading: globalIsLoading,
+      error: null,
+      isEmpty: !globalIsLoading && formattedPools.length === 0,
+      refetch: () => {
+        void getAllTokens();
+      },
+    }),
+    [formattedPools, globalIsLoading, getAllTokens]
+  );
+
+  const statsState = useExploreStatsState();
+
+  const pageState = combineAsync(statsState, poolsState);
 
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
-      <DashboardContent maxWidth="xl">
-        <Stack spacing={1}>
-          <Typography variant="h4" color="text.primary">
-            {t('Explore')}
-          </Typography>
-        </Stack>
-        <Grid2 width={1} sx={{ mt: 3 }}>
-          <ExploreStats stats={stats} />
-        </Grid2>
-        <Grid2 sx={{ mt: 3 }}>
-          <ExplorePoolsTable pools={formattedPools} loading={globalIsLoading} />
-        </Grid2>
-      </DashboardContent>
+      <AsyncGuard
+        state={pageState}
+        loading={<LogoLoader fullScreen size={420} />}
+        error={(err, refetch) => (
+          <Box
+            role="alert"
+            sx={{
+              position: 'fixed',
+              inset: 0,
+              display: 'grid',
+              placeItems: 'center',
+              textAlign: 'center',
+              p: 2,
+              zIndex: (theme) => theme.zIndex.modal + 2, // renamed param
+              bgcolor: 'background.default',
+            }}
+          >
+            <div>
+              <Typography variant="h6" gutterBottom>
+                {t('explore.loadErrorTitle')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                {String((err as any)?.message ?? err ?? t('common.unknownError'))}
+              </Typography>
+              {refetch && (
+                <Button variant="contained" onClick={refetch}>
+                  {t('common.retry')}
+                </Button>
+              )}
+            </div>
+          </Box>
+        )}
+        empty={
+          <Box
+            sx={{
+              position: 'fixed',
+              inset: 0,
+              display: 'grid',
+              placeItems: 'center',
+              zIndex: (theme) => theme.zIndex.modal + 2, // renamed param
+              bgcolor: 'background.default',
+            }}
+          >
+            <Typography>{t('explore.empty')}</Typography>
+          </Box>
+        }
+      >
+        {([stats, rows]) => (
+          <DashboardContent maxWidth="xl">
+            <Stack spacing={1}>
+              <Typography variant="h4" color="text.primary">
+                {t('Explore')}
+              </Typography>
+            </Stack>
+
+            <Grid2 width={1} sx={{ mt: 3 }}>
+              <ExploreStats stats={stats} />
+            </Grid2>
+
+            <Grid2 sx={{ mt: 3 }}>
+              <ExplorePoolsTable pools={rows} loading={false} />
+            </Grid2>
+          </DashboardContent>
+        )}
+      </AsyncGuard>
     </Box>
   );
 }
@@ -99,11 +139,8 @@ const formatPool = (pool_info: PoolRouterContract.PoolInfo, xlmPrice: number): E
 
   const reserve_a = BigNumber(format.formatTokenAmount(token_a.amount));
   const reserve_b = BigNumber(format.formatTokenAmount(token_b.amount));
-
   const pool_price = reserve_b.div(reserve_a);
-
   const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-
   const reserve_b_value = reserve_b.multipliedBy(xlm_price);
   const reserve_a_value = pool_price.multipliedBy(reserve_a).multipliedBy(xlm_price);
 

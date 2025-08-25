@@ -4,13 +4,12 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { Theme, SxProps } from '@mui/material/styles';
 
-import Skeleton from 'react-loading-skeleton';
-
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
 import { alpha, useTheme } from '@mui/material/styles';
 
+import { Spinner } from '@/components/_async/spinner';
 import { Scrollbar } from '@/components/template/scrollbar'; // ⬅ adjust the path if yours is different
 
 import { ExploreStat } from './explore-stat';
@@ -40,24 +39,19 @@ export default function ExploreStats({ stats, sx, loading }: ExploreStatsProps) 
   if (loading) {
     return (
       <Card
-        sx={[{ mb: { xs: 3, md: 5 } }, ...(Array.isArray(sx) ? sx : [sx])]}
+        sx={[
+          {
+            mb: { xs: 3, md: 5 },
+            minHeight: 228,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+          ...(Array.isArray(sx) ? sx : [sx]),
+        ]}
         data-testid="explore-stats-loading"
       >
-        <Scrollbar sx={{ minHeight: 108 }}>
-          <Stack
-            direction="row"
-            sx={{ py: 2 }}
-            divider={<Divider orientation="vertical" flexItem sx={{ borderStyle: 'dashed' }} />}
-          >
-            {Array.from({ length: 3 }).map((_, idx) => (
-              <Stack key={idx} spacing={1} sx={{ flex: 1, textAlign: 'center', px: 2 }}>
-                <Skeleton height={16} width="60%" style={{ margin: '0 auto' }} />
-                <Skeleton height={32} width="40%" style={{ margin: '0 auto' }} />
-                <Skeleton height={12} width="30%" style={{ margin: '0 auto' }} />
-              </Stack>
-            ))}
-          </Stack>
-        </Scrollbar>
+        <Spinner size={40} />
       </Card>
     );
   }

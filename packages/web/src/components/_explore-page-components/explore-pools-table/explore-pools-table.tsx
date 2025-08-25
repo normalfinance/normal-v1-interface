@@ -5,9 +5,10 @@ import type { TableHeadCellProps } from '@/components/template/table';
 
 import { useSetState } from 'minimal-shared/hooks';
 
-import { Card, Table, TableBody } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Card, Table, TableRow, TableBody, TableCell } from '@mui/material';
 
+import { Spinner } from '@/components/_async/spinner';
 import { Scrollbar } from '@/components/template/scrollbar';
 import {
   useTable,
@@ -107,10 +108,19 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
               onSort={table.onSort}
             />
 
-            {/* body ── unchanged */}
             <TableBody>
               {loading ? (
-                <TableSkeleton rowCount={10} cellCount={8} />
+                <>
+                  <TableRow>
+                    <TableCell colSpan={TABLE_HEAD.length} sx={{ py: 6 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        <Spinner size={40} />
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+
+                  <TableSkeleton rowCount={9} cellCount={8} />
+                </>
               ) : (
                 <>
                   {dataFiltered

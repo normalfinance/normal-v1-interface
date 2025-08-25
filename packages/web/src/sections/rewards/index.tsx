@@ -4,8 +4,8 @@ import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { RouterLink } from '@/routes/components';
 import { DashboardContent } from '@/layouts/dashboard';
-import { usePersistStore } from '@normalfinance/state';
 import { usePathname, useSearchParams } from '@/routes/hooks';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -14,6 +14,7 @@ import Tabs from '@mui/material/Tabs';
 import { Button } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import { LogoLoader } from '@/components/_async/logo-loader';
 import { WalletGate } from '@/components/_common/wallet-gate';
 
 import { ProfileCover } from './profile-cover';
@@ -32,14 +33,11 @@ interface UserAbout {
   coverUrl: string;
 }
 
-// ----------------------------------------------------------------------
-
 const USER_DATA = {
   user: {
     id: 'u001',
     photoURL: '/assets/avatar/avatar_1.jpg',
   } as User,
-
   about: {
     role: 'Product Designer',
     coverUrl: '/assets/images/normal-images/normal-gradient.webp',
@@ -64,29 +62,20 @@ const REWARDS_OVERVIEW = {
   zealyUrl: 'https://zealy.io/c/normal',
   zealyXP: 0,
   protocolPoints: 0,
-  referrals: [
-    // { id: '1', address: '0xA1...C4', joined: '2025-06-01', points: 120 },
-    // { id: '2', address: '0xB2...D5', joined: '2025-06-03', points: 90 },
-    // { id: '3', address: '0xC3...E6', joined: '2025-06-07', points: 60 },
-  ],
+  referrals: [],
 };
 
 const POINTS_DATA = {
   totalPoints: 0,
-  history: [
-    // { date: '2025-07-08', points: 150, action: 'Swap' },
-    // { date: '2025-07-07', points: 75, action: 'Provide Liquidity' },
-    // { date: '2025-07-05', points: 200, action: 'Stake LP' },
-  ],
+  history: [],
 };
-
-// ----------------------------------------------------------------------
 
 export function RewardsView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedTab = searchParams.get(TAB_PARAM) ?? '';
   const walletAddress = usePersistStore((s) => s.wallet.address);
+  const { globalIsLoading } = useAppStore();
   const { t } = useTranslate();
 
   const createRedirectPath = (currentPath: string, query: string) => {
@@ -101,6 +90,10 @@ export function RewardsView() {
     walletAddress && walletAddress.length > 0
       ? format.fTruncate(walletAddress, 12)
       : t('Not connected');
+
+  if (globalIsLoading) {
+    return <LogoLoader fullScreen size={420} />;
+  }
 
   return (
     <DashboardContent>
@@ -134,7 +127,6 @@ export function RewardsView() {
         </Box>
       </Card>
 
-      {/* ---- Tab panels ----------------------------------------------------- */}
       {selectedTab === '' && (
         <WalletGate buttonText={t('Connect Wallet to view rewards')} fullWidth>
           <RewardsOverview
@@ -147,6 +139,7 @@ export function RewardsView() {
           />
         </WalletGate>
       )}
+
       {selectedTab === 'zealy' && (
         <WalletGate buttonText={t('Connect Wallet to view Zealy')} fullWidth>
           <Box sx={{ mt: 3, textAlign: 'center' }}>
@@ -158,12 +151,6 @@ export function RewardsView() {
               rel="noopener"
               sx={{ mb: 2 }}
               startIcon={<Iconify icon="eva:external-link-outline" width={18} />}
-              // onClick={() =>
-              //   trackEvent('button_clicked', {
-              //     label: 'Manage Stake',
-              //     location: 'Insurance',
-              //   })
-              // }
             >
               {t('Go to Zealy')}
             </Button>

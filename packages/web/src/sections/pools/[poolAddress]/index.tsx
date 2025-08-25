@@ -14,6 +14,7 @@ import { usePool, usePoolEvents, useSwapVolume, useTokenPrice, usePoolPriceChart
 
 import { Alert, Stack, Grid2, useTheme, Typography } from '@mui/material';
 
+import { LogoLoader } from '@/components/_async/logo-loader';
 import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
 import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-transactions-table';
@@ -23,35 +24,33 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const { t } = useTranslate();
   const { tokens } = useAppStore();
 
-  // Load the pool
+  // Pool
   const { loading: poolLoading, error: poolError, pool } = usePool(poolAddress);
 
-  // Load XLM price
+  // XLM price
   const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
 
-  // Load price and volume chart data
+  // Price & volume chart
   const { chartData } = usePoolPriceChart(poolAddress);
 
-  // Load recent pool events
+  // Recent events
   const { events } = usePoolEvents(poolAddress, 20);
 
-  // Format the pool events
   const rows = events
     .map(convertToPoolTxRow)
     .sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
 
-  // Load the past 24h volume
+  // 24h volume
   const { getSwapVolume } = useSwapVolume();
-
   const [past24hVolume, setPast24hVolume] = useState<BigNumber | undefined>(undefined);
 
   useEffect(() => {
     getSwapVolume({ timeframe: '24h', poolAddress }).then((res) =>
       setPast24hVolume(BigNumber(res['24h'].volume))
     );
-  }, []);
+  }, [getSwapVolume, poolAddress]);
 
-  // Load pool price and exchange rate info
+  // Derived metrics
   const [poolPrice, setPoolPrice] = useState<BigNumber | undefined>(undefined);
   const [tokenUSDValue, setTokenUSDValue] = useState<BigNumber | undefined>(undefined);
   const [reserveFiatValues, setReserveFiatValues] = useState<
@@ -63,7 +62,6 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
     if (pool && xlmPrice) {
       const reserve_a = BigNumber(format.formatTokenAmount(pool.pool_response.token_a.amount));
       const reserve_b = BigNumber(format.formatTokenAmount(pool.pool_response.token_b.amount));
-
       const pool_price = reserve_b.div(reserve_a);
       setPoolPrice(pool_price);
 
@@ -72,16 +70,23 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
 
       const reserve_b_value = reserve_b.multipliedBy(xlm_price);
       const reserve_a_value = pool_price.multipliedBy(reserve_a).multipliedBy(xlm_price);
-      setReserveFiatValues({
-        token_a: reserve_a_value,
-        token_b: reserve_b_value,
-      });
+      setReserveFiatValues({ token_a: reserve_a_value, token_b: reserve_b_value });
 
       setTvl(reserve_a_value.plus(reserve_b_value));
     }
   }, [pool, xlmPrice]);
 
-  if (!poolAddress || pool == undefined) {
+  // ----- Page-level loading guard (same as other pages) ------------------
+  // We block on pool + chart readiness. Price can arrive slightly later; UI will update.
+  const chartLoading = chartData == null;
+  const isLoading = poolLoading || chartLoading || priceLoading;
+
+  if (isLoading) {
+    return <LogoLoader fullScreen size={420} />;
+  }
+
+  // ----- Error / not-found states AFTER loading is finished -------------
+  if (!poolAddress || (!poolLoading && !pool)) {
     return (
       <DashboardContent maxWidth="xl">
         <Alert severity="info">{t("The pool you're looking for doesn't exist.")}</Alert>
@@ -92,10 +97,15 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   if (poolError != null) {
     return (
       <DashboardContent maxWidth="xl">
-        <Alert severity="info">{t('There was an error loading this pool.')}</Alert>
+        <Alert severity="error">{t('There was an error loading this pool.')}</Alert>
       </DashboardContent>
     );
   }
+
+  const p = pool as NonNullable<typeof pool>;
+  const base = p.pool_response.pool.base_asset;
+  const quote = p.pool_response.pool.quote_asset;
+  const fee = p.pool_response.pool.fee_fraction;
 
   return (
     <DashboardContent maxWidth="xl">
@@ -104,7 +114,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
           {t('Pool')}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          {pool.pool_address}
+          {p.pool_address}
         </Typography>
       </Stack>
 
@@ -112,29 +122,20 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
         <Grid2 size={{ xs: 12, md: 8 }}>
           <PoolChart
             pairInfo={{
-              tokenA: {
-                name: `n${pool.pool_response.pool.base_asset}`,
-                iconUrl: getCryptoIconUrl(pool.pool_response.pool.base_asset),
-              },
-              tokenB: {
-                name: pool.pool_response.pool.quote_asset,
-                iconUrl: getCryptoIconUrl(pool.pool_response.pool.quote_asset),
-              },
-              address: pool.pool_address,
+              tokenA: { name: `n${base}`, iconUrl: getCryptoIconUrl(base) },
+              tokenB: { name: quote, iconUrl: getCryptoIconUrl(quote) },
+              address: p.pool_address,
             }}
-            metadata={{
-              version: 'v1',
-              feeTier: fPercent(pool.pool_response.pool.fee_fraction / 100),
-            }}
+            metadata={{ version: 'v1', feeTier: fPercent(fee / 100) }}
             exchangeRate={{
-              label: `1 n${pool.pool_response.pool.base_asset} = ${poolPrice?.toFixed(4)} ${pool.pool_response.pool.quote_asset}`,
+              label: `1 n${base} = ${poolPrice?.toFixed(4) ?? '0.0000'} ${quote}`,
               usdEquivalent: fCurrency(tokenUSDValue ? tokenUSDValue.toFixed(2) : 0),
-              tokenSymbol: `n${pool.pool_response.pool.base_asset}`,
-              tokenRate: `${poolPrice?.toFixed(4)} ${pool.pool_response.pool.quote_asset}`,
+              tokenSymbol: `n${base}`,
+              tokenRate: `${poolPrice?.toFixed(4) ?? '0.0000'} ${quote}`,
               tokenUSDValue: fCurrency(tokenUSDValue ? tokenUSDValue.toFixed(2) : 0),
             }}
             performance={{ percentageChange: 0 }}
-            chart={chartData}
+            chart={chartData!}
             color={theme.palette.primary.main}
           />
         </Grid2>
@@ -143,13 +144,13 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
             totalAprPercentage={0}
             poolBalances={[
               {
-                tokenSymbol: `n${pool.pool_response.pool.base_asset}`,
-                amount: BigNumber(pool.pool_response.token_a.amount),
+                tokenSymbol: `n${base}`,
+                amount: BigNumber(p.pool_response.token_a.amount),
                 fiatValue: reserveFiatValues ? reserveFiatValues.token_a : BigNumber(0),
               },
               {
-                tokenSymbol: pool.pool_response.pool.quote_asset,
-                amount: BigNumber(pool.pool_response.token_b.amount),
+                tokenSymbol: quote,
+                amount: BigNumber(p.pool_response.token_b.amount),
                 fiatValue: reserveFiatValues ? reserveFiatValues.token_b : BigNumber(0),
               },
             ]}
@@ -167,11 +168,12 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
           />
         </Grid2>
       </Grid2>
+
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 12 }}>
           <PoolTransactionsTable
-            baseTokenSymbol={`n${pool.pool_response.pool.base_asset}`}
-            quoteTokenSymbol={pool.pool_response.pool.quote_asset}
+            baseTokenSymbol={`n${base}`}
+            quoteTokenSymbol={quote}
             rows={rows}
             xlmPrice={xlmPrice ? Number(format.formatTokenAmount(xlmPrice, 14)) : 0}
           />
@@ -192,7 +194,6 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
       };
-
     case 'withdraw_liquidity':
       return {
         type: 'Withdraw',
@@ -202,7 +203,6 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
       };
-
     case 'swap': {
       const isBuy = event.direction === 'buy';
       return {
@@ -218,7 +218,6 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
         txHash: event.txHash,
       };
     }
-
     default:
       throw new Error(`Unsupported pool event type: ${event.type}`);
   }

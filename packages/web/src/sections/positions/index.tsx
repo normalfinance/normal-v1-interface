@@ -7,15 +7,19 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { Box } from '@mui/material';
 
 import PageHeader from '@/components/page-header';
+import { LogoLoader } from '@/components/_async/logo-loader';
 import { WalletGate } from '@/components/_common/wallet-gate';
 import { PositionsTable } from '@/components/_positions-page-components/positions-table';
 
-// ----------------------------------------------------------------------
-
 export default function PositionsView() {
   const { t } = useTranslate();
+  const lp = useLiquidityPositions() as any;
+  const positions = lp?.positions ?? [];
+  const isLoading = lp?.isLoading ?? lp?.positions === undefined;
 
-  const { positions } = useLiquidityPositions();
+  if (isLoading) {
+    return <LogoLoader fullScreen size={420} />;
+  }
 
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
@@ -23,7 +27,7 @@ export default function PositionsView() {
         <PageHeader title={t('Your positions')} />
 
         <WalletGate buttonText={t('Connect Wallet to view positions')} fullWidth>
-          <PositionsTable positions={positions ?? []} />
+          <PositionsTable positions={positions} />
         </WalletGate>
       </DashboardContent>
     </Box>

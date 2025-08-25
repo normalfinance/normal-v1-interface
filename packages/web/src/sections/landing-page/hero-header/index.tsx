@@ -4,7 +4,6 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
-import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { useAppStore } from '@normalfinance/state';
 
@@ -14,11 +13,7 @@ import SwapCard from '@/components/_common/swap-card';
 
 import { WavyBackground } from './wavy-background';
 
-type ImageProps = {
-  src: string;
-  alt?: string;
-};
-
+type ImageProps = { src: string; alt?: string };
 type Props = {
   heading: string;
   description: string;
@@ -27,7 +22,6 @@ type Props = {
   taglineLogo: ImageProps;
   swapParams?: SwapQueryParams;
 };
-
 type HeroHeaderProps = Partial<Props>;
 
 const swapFeeInfo: SwapFeeInfo = {
@@ -44,20 +38,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   } as Props;
 
   const { t } = useTranslate();
-
-  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
-
-  useEffect(() => {
-    if (tokens.length === 0) {
-      setGlobalIsLoading(true);
-
-      getAllTokens()
-        .catch((error) => console.error(error))
-        .finally(() => {
-          setGlobalIsLoading(false);
-        });
-    }
-  }, []);
+  const { tokens } = useAppStore();
 
   const allowedTokens = React.useMemo(
     () =>
@@ -79,19 +60,10 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
       }}
       {...sectionProps}
     >
-      {/* ------------ BACKGROUND LAYER ------------ */}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-        }}
-      >
-        {/* animated waves */}
+      <Box sx={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
         <WavyBackground
           sizing="viewport"
-          baseline="center" // or "top"
+          baseline="center"
           yOffset={0}
           colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
           waveOpacity={0.35}
@@ -100,7 +72,6 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
         />
       </Box>
 
-      {/* ------------ FOREGROUND CONTENT ------------ */}
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, px: 0 }}>
         <Stack spacing={{ xs: 6, md: 10 }} alignItems="center">
           <Box textAlign="center" maxWidth={750}>
@@ -144,32 +115,21 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 />
               </Stack>
             </Paper>
+
             <Typography
               component="h1"
               variant="h1"
               sx={{
                 fontWeight: 500,
                 mb: { xs: 3, md: 4 },
-                fontSize: {
-                  xs: '2.5rem',
-                  md: '3.75rem',
-                  lg: '4rem',
-                },
+                fontSize: { xs: '2.5rem', md: '3.75rem', lg: '4rem' },
               }}
             >
               {t('Instant crypto swaps, finally made')}{' '}
               <Box
                 component="span"
                 sx={{
-                  background: `linear-gradient(
-                                90deg,
-                                #2DE9C8 0%,
-                                #00AFF7 20%,
-                                #947BFF 40%,
-                                #F8279C 60%,
-                                #FF6F4C 80%,
-                                #FFE13D 100%
-                              )`,
+                  background: `linear-gradient(90deg,#2DE9C8 0%,#00AFF7 20%,#947BFF 40%,#F8279C 60%,#FF6F4C 80%,#FFE13D 100%)`,
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -237,21 +197,13 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   );
 };
 
-/* ---------- defaults ---------- */
-
 export const HeroHeaderDefaults: Props = {
   heading: 'Medium length hero heading goes here',
   description:
     'The largest on-chain catalogue of synthetic crypto and real-world assets built on Stellar.',
-  image: {
-    src: '/assets/images/landing-page/stellar-logo.webp',
-    alt: 'Stellar Logo Long',
-  },
+  image: { src: '/assets/images/landing-page/stellar-logo.webp', alt: 'Stellar Logo Long' },
   tagline: 'Crypto that just works',
-  taglineLogo: {
-    src: '/assets/images/landing-page/normal-long.svg',
-    alt: 'Normal Logo Long',
-  },
+  taglineLogo: { src: '/assets/images/landing-page/normal-long.svg', alt: 'Normal Logo Long' },
 };
 
 HeroHeader.displayName = 'HeroHeader';
