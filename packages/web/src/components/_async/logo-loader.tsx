@@ -18,16 +18,6 @@ const breathe = keyframes`
   50% { transform: scale(1.05); }
 `;
 
-const pulse = keyframes`
-  0%, 100% { transform: translate(-50%, -50%) scale(0.95); opacity: .25; }
-  50% { transform: translate(-50%, -50%) scale(1.1); opacity: .35; }
-`;
-
-const counterPulse = keyframes`
-  0%, 100% { transform: translate(-50%, -50%) scale(1.1); opacity: .15; }
-  50% { transform: translate(-50%, -50%) scale(0.95); opacity: .3; }
-`;
-
 export function LogoLoader({
   size = 320,
   speed = 1.6,
@@ -65,49 +55,12 @@ export function LogoLoader({
         <Box
           sx={{
             position: 'absolute',
-            left: '50%',
-            top: '50%',
-            width: size * 1.7,
-            height: size * 1.7,
-            borderRadius: '50%',
-            background: `radial-gradient(50% 50% at 50% 50%,
-              ${alpha(primary, 0.55)} 0%,
-              ${alpha(primary, 0.35)} 30%,
-              transparent 70%)`,
-            filter: 'blur(36px)',
-            animation: `${pulse} ${speed}s ease-in-out infinite`,
-            pointerEvents: 'none',
-            zIndex: 0,
-          }}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            width: size * 1.3,
-            height: size * 1.3,
-            borderRadius: '50%',
-            background: `radial-gradient(50% 50% at 50% 50%,
-              ${alpha(secondary, 0.4)} 0%,
-              ${alpha(secondary, 0.25)} 35%,
-              transparent 70%)`,
-            filter: 'blur(48px)',
-            animation: `${counterPulse} ${speed * 1.05}s ease-in-out infinite`,
-            pointerEvents: 'none',
-            zIndex: 0,
-          }}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
             inset: 0,
             display: 'grid',
             placeItems: 'center',
             zIndex: 1,
             transformOrigin: '50% 50%',
             animation: `${breathe} ${speed}s ease-in-out infinite`,
-            filter: `drop-shadow(0 4px 18px ${alpha(primary, 0.35)})`,
           }}
         >
           <Box sx={{ width: size, height: 'auto' }}>
