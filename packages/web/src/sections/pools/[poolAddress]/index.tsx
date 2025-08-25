@@ -14,10 +14,10 @@ import { usePool, usePoolEvents, useSwapVolume, useTokenPrice, usePoolPriceChart
 
 import { Alert, Stack, Grid2, useTheme, Typography } from '@mui/material';
 
+import { LogoLoader } from '@/components/_async/logo-loader';
 import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
 import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-transactions-table';
-import { LogoLoader } from '@/components/_async/logo-loader';
 
 export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const theme = useTheme();

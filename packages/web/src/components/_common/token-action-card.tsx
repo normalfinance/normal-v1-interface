@@ -5,23 +5,21 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
-import Skeleton from 'react-loading-skeleton';
 import { useTabs } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
 import { Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
+import { Spinner } from '../_async/spinner';
 import ZealyHighlight from './zealy/zealy-highlight';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
-import { Spinner } from '../_async/spinner';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------

@@ -1,14 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { AsyncState } from '@/types/async';
+import type { PoolRouterContract } from '@normalfinance/contracts';
+import type { SingleStat } from '@/components/_explore-page-components/explore-stats/explore-stats';
+
 import { BigNumber } from 'bignumber.js';
 import { format } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
 import { useSwapVolume, useTokenPrice } from '@/hooks';
-import type { PoolRouterContract } from '@normalfinance/contracts';
-import type { AsyncState } from '@/types/async';
-import type { SingleStat } from '@/components/_explore-page-components/explore-stats/explore-stats';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 export function useExploreStatsState(): AsyncState<SingleStat[]> {
   const { pools, getAllTokens } = useAppStore();

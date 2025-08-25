@@ -5,9 +5,10 @@ import type { TableHeadCellProps } from '@/components/template/table';
 
 import { useSetState } from 'minimal-shared/hooks';
 
-import { Box, Card, Table, TableBody, TableCell, TableRow } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Card, Table, TableRow, TableBody, TableCell } from '@mui/material';
 
+import { Spinner } from '@/components/_async/spinner';
 import { Scrollbar } from '@/components/template/scrollbar';
 import {
   useTable,
@@ -23,7 +24,6 @@ import { ExplorePoolsTableRow } from './components/explore-pools-table-row';
 import { ExplorePoolsTableToolbar } from './components/explore-pools-toolbar';
 
 import type { ExplorePoolsRow } from './components/explore-pools-table-row';
-import { Spinner } from '@/components/_async/spinner';
 
 /* ------------------------------------------------------------------ */
 /* columns                                                             */

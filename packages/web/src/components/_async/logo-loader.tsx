@@ -1,10 +1,14 @@
 // components/_async/logo-loader.tsx
+
 'use client';
 
+import type { BoxProps } from '@mui/material/Box';
+
 import * as React from 'react';
-import Box, { BoxProps } from '@mui/material/Box';
-import { useTheme, alpha } from '@mui/material/styles';
+
+import Box from '@mui/material/Box';
 import { keyframes } from '@mui/system';
+import { useTheme } from '@mui/material/styles';
 
 export type LogoLoaderProps = BoxProps & {
   size?: number;

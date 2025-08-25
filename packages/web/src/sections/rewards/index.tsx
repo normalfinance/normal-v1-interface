@@ -4,8 +4,8 @@ import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { RouterLink } from '@/routes/components';
 import { DashboardContent } from '@/layouts/dashboard';
-import { usePersistStore, useAppStore } from '@normalfinance/state';
 import { usePathname, useSearchParams } from '@/routes/hooks';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -14,8 +14,8 @@ import Tabs from '@mui/material/Tabs';
 import { Button } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
-import { WalletGate } from '@/components/_common/wallet-gate';
 import { LogoLoader } from '@/components/_async/logo-loader';
+import { WalletGate } from '@/components/_common/wallet-gate';
 
 import { ProfileCover } from './profile-cover';
 import { ZealyProgress } from './zealy-progress';

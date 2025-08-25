@@ -1,26 +1,25 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
-import { Box, Stack, Typography, Button } from '@mui/material';
-import Grid2 from '@mui/material/Grid2';
-import { BigNumber } from 'bignumber.js';
+import type { AsyncState } from '@/types/async';
+import type { PoolRouterContract } from '@normalfinance/contracts';
 
-import { DashboardContent } from '@/layouts/dashboard';
-import { useTranslate } from '@/locales';
-import { useAppStore } from '@normalfinance/state';
 import { useTokenPrice } from '@/hooks';
+import { BigNumber } from 'bignumber.js';
+import { useTranslate } from '@/locales';
+import { useMemo, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
+import { useAppStore } from '@normalfinance/state';
+import { combineAsync } from '@/types/combine-async';
+import { DashboardContent } from '@/layouts/dashboard';
+import { useExploreStatsState } from '@/hooks/use-explore-stats-state';
 
+import Grid2 from '@mui/material/Grid2';
+import { Box, Stack, Button, Typography } from '@mui/material';
+
+import { AsyncGuard } from '@/components/_async/async-guard';
+import { LogoLoader } from '@/components/_async/logo-loader';
 import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
 import { ExplorePoolsTable, type ExplorePoolsRow } from '@/components/_explore-page-components';
-
-import { Spinner } from '@/components/_async/spinner';
-import { AsyncGuard } from '@/components/_async/async-guard';
-import type { AsyncState } from '@/types/async';
-import { useExploreStatsState } from '@/hooks/use-explore-stats-state';
-import { combineAsync } from '@/types/combine-async';
-import type { PoolRouterContract } from '@normalfinance/contracts';
-import { LogoLoader } from '@/components/_async/logo-loader';
 
 export default function ExploreView() {
   const { t } = useTranslate();
@@ -76,20 +75,20 @@ export default function ExploreView() {
               placeItems: 'center',
               textAlign: 'center',
               p: 2,
-              zIndex: (t) => t.zIndex.modal + 2,
+              zIndex: (theme) => theme.zIndex.modal + 2, // renamed param
               bgcolor: 'background.default',
             }}
           >
             <div>
               <Typography variant="h6" gutterBottom>
-                Failed to load Explore data
+                {t('explore.loadErrorTitle')}
               </Typography>
               <Typography variant="body2" sx={{ mb: 2 }}>
-                {String((err as any)?.message ?? err ?? 'Unknown error')}
+                {String((err as any)?.message ?? err ?? t('common.unknownError'))}
               </Typography>
               {refetch && (
                 <Button variant="contained" onClick={refetch}>
-                  Retry
+                  {t('common.retry')}
                 </Button>
               )}
             </div>
@@ -102,11 +101,11 @@ export default function ExploreView() {
               inset: 0,
               display: 'grid',
               placeItems: 'center',
-              zIndex: (t) => t.zIndex.modal + 2,
+              zIndex: (theme) => theme.zIndex.modal + 2, // renamed param
               bgcolor: 'background.default',
             }}
           >
-            <Typography>No data available yet.</Typography>
+            <Typography>{t('explore.empty')}</Typography>
           </Box>
         }
       >

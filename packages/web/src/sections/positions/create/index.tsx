@@ -13,10 +13,10 @@ import { useQueryParams } from '@/hooks/use-query-params';
 
 import { Box, Grid2 } from '@mui/material';
 
+import { LogoLoader } from '@/components/_async/logo-loader';
 import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
 import { CreatePosition } from '@/components/_create-position-page-components/create-position';
-import { LogoLoader } from '@/components/_async/logo-loader';
 
 export default function CreatePositionView() {
   const { t } = useTranslate();

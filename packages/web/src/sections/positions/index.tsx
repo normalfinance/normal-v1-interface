@@ -7,9 +7,9 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { Box } from '@mui/material';
 
 import PageHeader from '@/components/page-header';
+import { LogoLoader } from '@/components/_async/logo-loader';
 import { WalletGate } from '@/components/_common/wallet-gate';
 import { PositionsTable } from '@/components/_positions-page-components/positions-table';
-import { LogoLoader } from '@/components/_async/logo-loader';
 
 export default function PositionsView() {
   const { t } = useTranslate();

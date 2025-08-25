@@ -4,17 +4,15 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { Theme, SxProps } from '@mui/material/styles';
 
-import Skeleton from 'react-loading-skeleton';
-
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
 import { alpha, useTheme } from '@mui/material/styles';
 
+import { Spinner } from '@/components/_async/spinner';
 import { Scrollbar } from '@/components/template/scrollbar'; // ⬅ adjust the path if yours is different
 
 import { ExploreStat } from './explore-stat';
-import { Spinner } from '@/components/_async/spinner';
 
 /* -------------------------------------------------- */
 /* types                                               */

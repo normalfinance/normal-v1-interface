@@ -16,9 +16,9 @@ import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
 
 import { StatCard } from '@/components/_common/stat-card';
+import { LogoLoader } from '@/components/_async/logo-loader';
 import { StakeBalance } from '@/components/_insurance-page-components/stake-balance-card';
 import { InsuranceActionsTable } from '@/components/_insurance-page-components/insurance-actions-table-card';
-import { LogoLoader } from '@/components/_async/logo-loader';
 
 export default function InsuranceView() {
   const { t } = useTranslate();
