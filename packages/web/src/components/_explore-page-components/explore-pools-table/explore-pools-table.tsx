@@ -5,7 +5,7 @@ import type { TableHeadCellProps } from '@/components/template/table';
 
 import { useSetState } from 'minimal-shared/hooks';
 
-import { Card, Table, TableBody } from '@mui/material';
+import { Box, Card, Table, TableBody, TableCell, TableRow } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import { Scrollbar } from '@/components/template/scrollbar';
@@ -23,6 +23,7 @@ import { ExplorePoolsTableRow } from './components/explore-pools-table-row';
 import { ExplorePoolsTableToolbar } from './components/explore-pools-toolbar';
 
 import type { ExplorePoolsRow } from './components/explore-pools-table-row';
+import { Spinner } from '@/components/_async/spinner';
 
 /* ------------------------------------------------------------------ */
 /* columns                                                             */
@@ -107,10 +108,19 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
               onSort={table.onSort}
             />
 
-            {/* body ── unchanged */}
             <TableBody>
               {loading ? (
-                <TableSkeleton rowCount={10} cellCount={8} />
+                <>
+                  <TableRow>
+                    <TableCell colSpan={TABLE_HEAD.length} sx={{ py: 6 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        <Spinner size={40} />
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+
+                  <TableSkeleton rowCount={9} cellCount={8} />
+                </>
               ) : (
                 <>
                   {dataFiltered

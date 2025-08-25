@@ -12,7 +12,7 @@ import { useSwapVolume, useTokenPrice } from '@/hooks';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Grid2 from '@mui/material/Grid2';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 
 import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
 import {
@@ -22,6 +22,7 @@ import {
 } from '@/components/_explore-page-components';
 import { AsyncGuard } from '@/components/_async/async-guard';
 import { useExploreStatsState } from '@/hooks/use-explore-stats-state';
+import { AsyncState } from '@/types/async';
 
 export default function ExploreView() {
   const { t } = useTranslate();
@@ -44,8 +45,6 @@ export default function ExploreView() {
     () => pools.map((p) => formatPool(p, xlmPrice ?? 0)),
     [pools, xlmPrice]
   );
-
-  const totalTvl = formattedPools.reduce((acc, p) => acc.plus(p.tvl), new BigNumber(0));
 
   function placeholderStats() {
     return [
@@ -70,6 +69,19 @@ export default function ExploreView() {
     };
     refreshTokens();
   }, []);
+
+  const poolsState: AsyncState<ExplorePoolsRow[]> = useMemo(
+    () => ({
+      data: formattedPools,
+      isLoading: globalIsLoading,
+      error: null,
+      isEmpty: !globalIsLoading && formattedPools.length === 0,
+      refetch: () => {
+        void getAllTokens();
+      },
+    }),
+    [formattedPools, globalIsLoading, getAllTokens]
+  );
 
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
@@ -101,7 +113,23 @@ export default function ExploreView() {
           </Grid2>
         </Grid2>
         <Grid2 sx={{ mt: 3 }}>
-          <ExplorePoolsTable pools={formattedPools} loading={globalIsLoading} />
+          <AsyncGuard
+            state={poolsState}
+            loading={<ExplorePoolsTable pools={[]} loading />}
+            empty={<ExplorePoolsTable pools={[]} loading={false} />}
+            error={(err, refetch) => (
+              <Box role="alert" sx={{ p: 2, color: 'error.main' }}>
+                Failed to load pools{(err as any)?.message ? `: ${(err as any).message}` : '.'}
+                {refetch && (
+                  <Button onClick={refetch} sx={{ ml: 2 }}>
+                    Retry
+                  </Button>
+                )}
+              </Box>
+            )}
+          >
+            {(rows) => <ExplorePoolsTable pools={rows} loading={false} />}
+          </AsyncGuard>
         </Grid2>
       </DashboardContent>
     </Box>

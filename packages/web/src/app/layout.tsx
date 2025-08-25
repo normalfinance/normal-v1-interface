@@ -123,9 +123,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                             <ProgressBar />
                             <SettingsDrawer defaultSettings={defaultSettings} />
                             <AnnouncementProvider>
-                              <InviteCodeGate enforceInDev>
-                                <DashboardLayout>{children}</DashboardLayout>
-                              </InviteCodeGate>
+                              {/*<InviteCodeGate enforceInDev>*/}
+                              <DashboardLayout>{children}</DashboardLayout>
+                              {/*</InviteCodeGate>*/}
                             </AnnouncementProvider>
                           </SnackbarProvider>
                         </MotionLazy>
