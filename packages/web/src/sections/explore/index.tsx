@@ -20,6 +20,7 @@ import type { AsyncState } from '@/types/async';
 import { useExploreStatsState } from '@/hooks/use-explore-stats-state';
 import { combineAsync } from '@/types/combine-async';
 import type { PoolRouterContract } from '@normalfinance/contracts';
+import { LogoLoader } from '@/components/_async/logo-loader';
 
 export default function ExploreView() {
   const { t } = useTranslate();
@@ -64,20 +65,7 @@ export default function ExploreView() {
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
       <AsyncGuard
         state={pageState}
-        loading={
-          <Box
-            sx={{
-              position: 'fixed',
-              inset: 0,
-              display: 'grid',
-              placeItems: 'center',
-              zIndex: (t) => t.zIndex.modal + 2,
-              bgcolor: 'background.default',
-            }}
-          >
-            <Spinner size={48} />
-          </Box>
-        }
+        loading={<LogoLoader fullScreen size={420} />}
         error={(err, refetch) => (
           <Box
             role="alert"
