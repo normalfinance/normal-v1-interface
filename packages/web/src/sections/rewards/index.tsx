@@ -21,6 +21,9 @@ import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
 
+import ProtocolPointsSection from './protocol-points-section';
+import ProtocolPointsDevSection from './dev/ProtocolPointsDevSection';
+
 interface User {
   id: string;
   displayName: string;
@@ -173,6 +176,21 @@ export function RewardsView() {
 
       {selectedTab === 'protocol' && (
         <WalletGate buttonText={t('Connect Wallet to view Protocol Points')} fullWidth>
+          <ProtocolPointsSection walletAddress={walletAddress} />
+          {/* If you want to override (tests / mainnet later), pass options:
+        <ProtocolPointsSection
+          walletAddress={walletAddress}
+          options={{
+            tableName: 'normal_contract_events_testnet',
+            routerAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
+            insuranceAddress: constants.StellarConfig.INSURANCE_FUND_ADDRESS,
+            indexAddress: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
+          }}
+        />
+    */}
+
+          <ProtocolPointsDevSection />
+
           <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
         </WalletGate>
       )}
