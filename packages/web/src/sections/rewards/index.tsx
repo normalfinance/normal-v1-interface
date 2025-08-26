@@ -23,6 +23,7 @@ import { RewardsOverview } from './rewards-overview';
 
 import ProtocolPointsSection from './protocol-points-section';
 import ProtocolPointsDevSection from './dev/ProtocolPointsDevSection';
+import ProtocolPointsLeaderboard from './tmp-render-leaderboards';
 
 interface User {
   id: string;
@@ -188,6 +189,10 @@ export function RewardsView() {
           }}
         />
     */}
+
+          <Box mt={3}>
+            <ProtocolPointsLeaderboard />
+          </Box>
 
           <ProtocolPointsDevSection />
 
