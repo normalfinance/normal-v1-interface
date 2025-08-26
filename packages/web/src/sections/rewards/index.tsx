@@ -18,11 +18,9 @@ import { WalletGate } from '@/components/_common/wallet-gate';
 
 import { ProfileCover } from './profile-cover';
 import { ZealyProgress } from './zealy-progress';
-import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
 
 import ProtocolPointsSection from './protocol-points-section';
-import ProtocolPointsDevSection from './dev/ProtocolPointsDevSection';
 import ProtocolPointsLeaderboard from './tmp-render-leaderboards';
 
 interface User {
@@ -72,15 +70,6 @@ const REWARDS_OVERVIEW = {
     // { id: '1', address: '0xA1...C4', joined: '2025-06-01', points: 120 },
     // { id: '2', address: '0xB2...D5', joined: '2025-06-03', points: 90 },
     // { id: '3', address: '0xC3...E6', joined: '2025-06-07', points: 60 },
-  ],
-};
-
-const POINTS_DATA = {
-  totalPoints: 0,
-  history: [
-    // { date: '2025-07-08', points: 150, action: 'Swap' },
-    // { date: '2025-07-07', points: 75, action: 'Provide Liquidity' },
-    // { date: '2025-07-05', points: 200, action: 'Stake LP' },
   ],
 };
 
@@ -193,10 +182,6 @@ export function RewardsView() {
           <Box mt={3}>
             <ProtocolPointsLeaderboard />
           </Box>
-
-          <ProtocolPointsDevSection />
-
-          <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
         </WalletGate>
       )}
     </DashboardContent>
