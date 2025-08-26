@@ -21,6 +21,8 @@ import { ZealyProgress } from './zealy-progress';
 import { RewardsOverview } from './rewards-overview';
 import ProtocolPointsSection from './protocol-points-section';
 
+import { useProtocolPoints } from './hooks/use-protocol-points';
+
 interface User {
   id: string;
   displayName: string;
@@ -78,6 +80,8 @@ export function RewardsView() {
   const searchParams = useSearchParams();
   const selectedTab = searchParams.get(TAB_PARAM) ?? '';
   const walletAddress = usePersistStore((s) => s.wallet.address);
+  const { loading: ppLoading, totalPoints: ppTotal } = useProtocolPoints(walletAddress);
+
   const { t } = useTranslate();
 
   const createRedirectPath = (currentPath: string, query: string) => {
@@ -131,7 +135,7 @@ export function RewardsView() {
             referralsCount={REWARDS_OVERVIEW.referralsCount}
             zealyUrl={REWARDS_OVERVIEW.zealyUrl}
             zealyXP={REWARDS_OVERVIEW.zealyXP}
-            protocolPoints={REWARDS_OVERVIEW.protocolPoints}
+            protocolPoints={ppTotal}
             referrals={REWARDS_OVERVIEW.referrals}
           />
         </WalletGate>
