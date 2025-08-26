@@ -100,9 +100,8 @@ export function parseEvent(
           outAmount: parseBigInt(parsedData[2]),
           feeAmount: parseBigInt(parsedData[3]),
           lpFee: parseBigInt(parsedData[4]),
-          bufferFee: parseBigInt(parsedData[5]),
-          ifPremium: parseBigInt(parsedData[6]),
-          revenueFee: parseBigInt(parsedData[7]),
+          ifPremium: parseBigInt(parsedData[5]),
+          revenueFee: parseBigInt(parsedData[6]),
           txHash,
           timestamp: undefined,
         };
@@ -134,50 +133,6 @@ export function parseEvent(
         newReserveA: parseBigInt(parsedData[2]),
         newReserveB: parseBigInt(parsedData[3]),
         deltaA: parseBigInt(parsedData[4]),
-        txHash,
-        timestamp: undefined,
-      };
-
-    // ─── Buffer Events ───────────────────────────────────────────
-
-    case 'deposit':
-      return {
-        type,
-        token: parseAddress(topics[1]),
-        user: parseAddress(parsedData[0]),
-        amount: parseBigInt(parsedData[1]),
-        txHash,
-        timestamp: undefined,
-      };
-
-    case 'resolve_liquidity_deficit':
-      return {
-        type,
-        pool: parseAddress(topics[1]),
-        token: parseAddress(topics[2]),
-        user: parseAddress(parsedData[0]),
-        amount: parseBigInt(parsedData[1]),
-        paid: parseBigInt(parsedData[2]),
-        txHash,
-        timestamp: undefined,
-      };
-
-    case 'withdraw_surplus':
-      return {
-        type,
-        token: parseAddress(topics[1]),
-        user: parseAddress(parsedData[0]),
-        amount: parseBigInt(parsedData[1]),
-        txHash,
-        timestamp: undefined,
-      };
-
-    case 'skim':
-      return {
-        type,
-        token: parseAddress(topics[1]),
-        user: parseAddress(parsedData[0]),
-        amount: parseBigInt(parsedData[1]),
         txHash,
         timestamp: undefined,
       };
