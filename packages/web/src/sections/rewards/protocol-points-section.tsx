@@ -1,12 +1,16 @@
 'use client';
 
-import Alert from '@mui/material/Alert';
-import Card from '@mui/material/Card';
-import CircularProgress from '@mui/material/CircularProgress';
+import { useTranslate } from '@/locales';
+
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import { ProtocolPoints } from './protocol-points';
-import { useProtocolPoints, UseProtocolPointsOptions } from '../rewards/hooks/use-protocol-points';
+import { useProtocolPoints } from '../rewards/hooks/use-protocol-points';
+
+import type { UseProtocolPointsOptions } from '../rewards/hooks/use-protocol-points';
 
 type Props = {
   walletAddress?: string;
@@ -14,10 +18,11 @@ type Props = {
 };
 
 export default function ProtocolPointsSection({ walletAddress, options }: Props) {
+  const { t } = useTranslate();
   const { loading, error, totalPoints, history } = useProtocolPoints(walletAddress, options);
 
   if (!walletAddress) {
-    return <Alert severity="info">Connect your wallet to see Protocol Points.</Alert>;
+    return <Alert severity="info">{t('Connect your wallet to see Protocol Points.')}</Alert>;
   }
 
   if (loading) {
@@ -25,14 +30,18 @@ export default function ProtocolPointsSection({ walletAddress, options }: Props)
       <Card sx={{ p: 3 }}>
         <Box display="flex" alignItems="center" gap={2}>
           <CircularProgress size={20} />
-          Loading protocol points...
+          {t('Loading protocol points…')}
         </Box>
       </Card>
     );
   }
 
   if (error) {
-    return <Alert severity="error">{error}</Alert>;
+    return (
+      <Alert severity="error">
+        {t('Something went wrong')}: {error}
+      </Alert>
+    );
   }
 
   return <ProtocolPoints totalPoints={totalPoints} history={history} />;
