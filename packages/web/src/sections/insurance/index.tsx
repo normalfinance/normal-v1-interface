@@ -9,8 +9,8 @@ import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { useTokenPrice, useInsuranceFund } from '@/hooks';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
-import { useBuffer, useTokenPrice, useInsuranceFund } from '@/hooks';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
@@ -27,8 +27,6 @@ export default function InsuranceView() {
 
   const { balance: insuranceFundBalance, insuranceFund, stake } = useInsuranceFund();
 
-  const { buffer } = useBuffer();
-
   const { price: xlmPrice } = useTokenPrice('XLM');
 
   // Insurance Fund USD value
@@ -40,16 +38,6 @@ export default function InsuranceView() {
     }
     return BigNumber(0);
   }, [xlmPrice, insuranceFundBalance]);
-
-  // Buffer USD value
-  const bufferValue = useMemo(() => {
-    if (xlmPrice && buffer && buffer.reserve) {
-      const reserve_balance = BigNumber(format.formatTokenAmount(buffer.reserve.balance));
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return reserve_balance.multipliedBy(xlm_price);
-    }
-    return BigNumber(0);
-  }, [xlmPrice, buffer]);
 
   // Connected user's stake USD value
   const stakeValue = useMemo(() => {
@@ -63,20 +51,6 @@ export default function InsuranceView() {
 
   // Stat card data array
   const statCardsData: StatCardData[] = [
-    {
-      title: 'Normal Buffer',
-      description: 'Minor-loss cushion',
-      percent: 0,
-      total: bufferValue.toNumber(),
-      formatter: fCurrency,
-      chartType: 'line',
-      displayChart: true,
-      chart: {
-        colors: ['#4BABFF', '#4BABFF'],
-        categories: ['Current'],
-        series: [0],
-      },
-    },
     {
       title: 'Normal Insurance Fund',
       description: 'Claims coverage pool',

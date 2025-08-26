@@ -36,38 +36,6 @@ export interface RebalanceEvent {
   deltaA: bigint;
 }
 
-// ─── Buffer Events ───────────────────────────────────────────
-
-export interface DepositEvent {
-  type: 'deposit';
-  token: string;
-  user: string;
-  amount: bigint;
-}
-
-export interface ResolveLiquidityDeficitEvent {
-  type: 'resolve_liquidity_deficit';
-  pool: string;
-  token: string;
-  user: string;
-  amount: bigint;
-  paid: bigint;
-}
-
-export interface WithdrawSurplusEvent {
-  type: 'withdraw_surplus';
-  token: string;
-  user: string;
-  amount: bigint;
-}
-
-export interface SkimEvent {
-  type: 'skim';
-  token: string;
-  user: string;
-  amount: bigint;
-}
-
 // ─── Insurance Fund Events ──────────────────────────────────
 
 export interface IfStakeRecordEvent {
@@ -100,7 +68,6 @@ export interface FeeSwapEvent {
   outAmount: bigint;
   feeAmount: bigint;
   lpFee: bigint;
-  bufferFee: bigint;
   ifPremium: bigint;
   revenueFee: bigint;
 }
@@ -179,16 +146,6 @@ export type PoolEvent = (
   txHash: string;
 };
 
-export type BufferEvent = (
-  | DepositEvent
-  | ResolveLiquidityDeficitEvent
-  | WithdrawSurplusEvent
-  | SkimEvent
-) & {
-  timestamp?: number;
-  txHash: string;
-};
-
 export type InsuranceFundEvent = IfStakeRecordEvent & {
   timestamp?: number;
   txHash: string;
@@ -223,7 +180,6 @@ export type UserActivityEvent = (
 
 export type NormalContractEvent =
   | PoolEvent
-  | BufferEvent
   | InsuranceFundEvent
   | PoolSwapFeeEvent
   | PoolRouterEvent;

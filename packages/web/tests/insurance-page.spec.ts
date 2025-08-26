@@ -10,9 +10,6 @@ test.describe('InsurancePage', () => {
   });
 
   test('renders the StatCard components and their values', async ({ page }) => {
-    await expect(page.getByTestId('stat-card-normal-buffer')).toBeVisible();
-    await expect(page.getByTestId('stat-card-total-normal-buffer')).not.toBeEmpty();
-
     await expect(page.getByTestId('stat-card-normal-insurance-fund')).toBeVisible();
     await expect(page.getByTestId('stat-card-total-normal-insurance-fund')).not.toBeEmpty();
 
@@ -35,8 +32,8 @@ test.describe('InsurancePage', () => {
   test('renders the InsuranceActionsTable component and switches tabs', async ({ page }) => {
     await expect(page.getByTestId('insurance-actions-table')).toBeVisible();
 
-    await page.getByTestId('insurance-actions-tab-buffer').click();
-    await expect(page.getByTestId('buffer-events-table')).toBeVisible();
+    // await page.getByTestId('insurance-actions-tab-buffer').click();
+    // await expect(page.getByTestId('buffer-events-table')).toBeVisible();
 
     await page.getByTestId('insurance-actions-tab-user').click();
   });

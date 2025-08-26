@@ -10,7 +10,6 @@ export interface NetworkConfig {
   // contracts
   POOL_ROUTER_ADDRESS: string;
   POOL_SWAP_FEE_ADDRESS: string;
-  BUFFER_ADDRESS: string;
   INSURANCE_FUND_ADDRESS: string;
   ORACLE_REGISTRY_ADDRESS: string;
   LIQUIDITY_CALCULATOR_ADDRESS: string;
