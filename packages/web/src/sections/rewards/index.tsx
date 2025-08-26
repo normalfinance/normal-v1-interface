@@ -178,10 +178,6 @@ export function RewardsView() {
           }}
         />
     */}
-
-          <Box mt={3}>
-            <ProtocolPointsLeaderboard />
-          </Box>
         </WalletGate>
       )}
     </DashboardContent>
