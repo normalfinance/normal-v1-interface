@@ -34,7 +34,7 @@ const bucketCounts: Record<ChartTimeframeKey, number> = {
 
 // ----------------------------------------------------------------------
 
-export function usePoolPriceChart(poolAddress: string): ReturnType {
+export function usePoolPriceChart(poolAddress: string | undefined): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 

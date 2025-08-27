@@ -1,11 +1,9 @@
 'use client';
 
-import type { PoolRouterContract } from '@normalfinance/contracts';
-
 import { constants } from '@normalfinance/utils';
 import { captureException } from '@sentry/nextjs';
-import { PoolContract } from '@normalfinance/contracts';
 import { useState, useEffect, useCallback } from 'react';
+import { PoolRouterContract } from '@normalfinance/contracts';
 
 // ----------------------------------------------------------------------
 
@@ -19,7 +17,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export function usePool(poolAddress: string): ReturnType {
+export function usePool(asset: string): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,23 +29,17 @@ export function usePool(poolAddress: string): ReturnType {
       setError(null);
       setLoading(true);
 
-      const Pool = new PoolContract.Client({
-        contractId: poolAddress,
+      const PoolRouter = new PoolRouterContract.Client({
+        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
-      const poolInfo = await Pool.get_info();
+      const poolInfo = await PoolRouter.query_pool_details({ asset });
 
       if (poolInfo.result) {
         const data = poolInfo.result as PoolRouterContract.PoolInfo;
         setPool(data);
-
-        // const PoolRouter = new PoolRouterContract.Client({
-        //   contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
-        //   networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-        //   rpcUrl: constants.StellarConfig.RPC_URL,
-        // });
 
         // const liquidityInfo = await PoolRouter.get_liquidity({
         //   asset: data.pool_response.pool.base_asset,

@@ -24,7 +24,7 @@ export const paths = {
   // main
   explore: '/explore',
   pools: {
-    details: (poolAddress: string) => `/pools/${poolAddress}`,
+    details: (asset: string) => `/pools/${asset}`,
   },
   positions: {
     root: '/positions',

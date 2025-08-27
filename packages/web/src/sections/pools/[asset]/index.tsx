@@ -18,22 +18,22 @@ import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
 import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-transactions-table';
 
-export default function PoolView({ poolAddress }: { poolAddress: string }) {
+export default function PoolView({ asset }: { asset: string }) {
   const theme = useTheme();
   const { t } = useTranslate();
   const { tokens } = useAppStore();
 
   // Load the pool
-  const { loading: poolLoading, error: poolError, pool } = usePool(poolAddress);
+  const { loading: poolLoading, error: poolError, pool } = usePool(asset);
 
   // Load XLM price
   const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
 
   // Load price and volume chart data
-  const { chartData } = usePoolPriceChart(poolAddress);
+  const { chartData } = usePoolPriceChart(pool?.pool_address);
 
   // Load recent pool events
-  const { events } = usePoolEvents(poolAddress, 20);
+  const { events } = usePoolEvents(pool?.pool_address, 20);
 
   // Format the pool events
   const rows = events
@@ -46,7 +46,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const [past24hVolume, setPast24hVolume] = useState<BigNumber | undefined>(undefined);
 
   useEffect(() => {
-    getSwapVolume({ timeframe: '24h', poolAddress }).then((res) =>
+    getSwapVolume({ timeframe: '24h', poolAddress: pool?.pool_address }).then((res) =>
       setPast24hVolume(BigNumber(res['24h'].volume))
     );
   }, []);
@@ -81,18 +81,18 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
     }
   }, [pool, xlmPrice]);
 
-  if (!poolAddress || pool == undefined) {
-    return (
-      <DashboardContent maxWidth="xl">
-        <Alert severity="info">{t("The pool you're looking for doesn't exist.")}</Alert>
-      </DashboardContent>
-    );
-  }
-
   if (poolError != null) {
     return (
       <DashboardContent maxWidth="xl">
         <Alert severity="info">{t('There was an error loading this pool.')}</Alert>
+      </DashboardContent>
+    );
+  }
+
+  if (!pool || pool == undefined) {
+    return (
+      <DashboardContent maxWidth="xl">
+        <Alert severity="info">{t("The pool you're looking for doesn't exist.")}</Alert>
       </DashboardContent>
     );
   }
