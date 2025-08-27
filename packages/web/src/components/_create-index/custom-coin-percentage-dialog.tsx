@@ -1,17 +1,20 @@
 'use client';
 
+import type { IndexCoin } from '@/types/indexes';
+
+import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
+
 import {
+  Box,
   Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   TextField,
   Typography,
-  Box,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
-import { IndexCoin } from '@/types/indexes';
 
 type CustomCoinPercentageDialogProps = {
   open: boolean;
@@ -26,12 +29,11 @@ export default function CustomCoinPercentageDialog({
   onClose,
   onSave,
 }: CustomCoinPercentageDialogProps) {
+  const { t } = useTranslate();
   const [localCoins, setLocalCoins] = useState<IndexCoin[]>([]);
 
-  // On open, copy props.coins into local state so user can edit
   useEffect(() => {
     if (open) {
-      // Make a fresh copy
       setLocalCoins(coins.map((c) => ({ ...c })));
     }
   }, [open, coins]);
@@ -43,7 +45,6 @@ export default function CustomCoinPercentageDialog({
   };
 
   const handleSave = () => {
-    // Return these updated coins
     onSave(localCoins);
   };
 
@@ -65,7 +66,9 @@ export default function CustomCoinPercentageDialog({
         },
       }}
     >
-      <DialogTitle>Enter Custom Percentages</DialogTitle>
+      <DialogTitle>
+        {t('createIndex.customPercentages.title', 'Enter Custom Percentages')}
+      </DialogTitle>
       <DialogContent sx={{ width: '100%' }}>
         {localCoins.map((coin) => (
           <Box key={coin.id} sx={{ mt: 2, width: '100%' }}>
@@ -78,16 +81,16 @@ export default function CustomCoinPercentageDialog({
               onChange={(e) => handlePercentageChange(coin.id, Number(e.target.value))}
               fullWidth
               InputProps={{ inputProps: { min: 0, max: 100 } }}
-              label="Weight (%)"
+              label={t('createIndex.customPercentages.weightLabel', 'Weight (%)')}
               sx={{ mt: 1 }}
             />
           </Box>
         ))}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('common.cancel', 'Cancel')}</Button>
         <Button onClick={handleSave} variant="contained">
-          Save
+          {t('common.save', 'Save')}
         </Button>
       </DialogActions>
     </Dialog>

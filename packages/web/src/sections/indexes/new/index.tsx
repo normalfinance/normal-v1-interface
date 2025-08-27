@@ -1,12 +1,17 @@
 'use client';
 
-import Grid2 from '@mui/material/Grid2';
+import type { IndexCoin } from '@/types/indexes';
+
+import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
+
+import Grid2 from '@mui/material/Grid2';
 import { Stack, Typography } from '@mui/material';
+
 import { NewIndexForm } from '@/components/_create-index/new-index-form';
-import { IndexCoin } from '@/types/indexes';
 
 export default function CreateAnIndexView() {
+  const { t } = useTranslate();
   const availableCoins: IndexCoin[] = [
     {
       id: 1,
@@ -62,10 +67,13 @@ export default function CreateAnIndexView() {
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
         <Typography variant="h4" color="text.primary">
-          Create a Crypto Index
+          {t('createIndex.title', 'Create a Crypto Index')}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Automate or diversify your crypto investing by creating a custom crypto index token.
+          {t(
+            'createIndex.subtitle',
+            'Automate or diversify your crypto investing by creating a custom crypto index token.'
+          )}
         </Typography>
       </Stack>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>

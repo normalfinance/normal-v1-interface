@@ -1,9 +1,12 @@
 'use client';
 
+import type { IndexCoin } from '@/types/indexes';
+
 import React from 'react';
+
 import Box from '@mui/material/Box';
+
 import { IndexCoinStorageOverview } from './index-coin-storage-overview';
-import { IndexCoin } from '@/types/indexes';
 
 // Define a constant for storage calculation
 const PERCENT = 100;

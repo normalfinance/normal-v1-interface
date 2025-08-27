@@ -1,21 +1,25 @@
 'use client';
 
+import type { IndexCoin } from '@/types/indexes';
+
 import React, { useState } from 'react';
+import { useTranslate } from '@/locales';
+import { fShortenNumber, fCurrencyTwoDecimals } from '@/utils/format-number';
+
+import { useTheme } from '@mui/material/styles';
 import {
+  Box,
   Dialog,
+  Button,
+  TextField,
+  Typography,
+  IconButton,
   DialogTitle,
   DialogContent,
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  TextField,
   InputAdornment,
 } from '@mui/material';
-import { IndexCoin } from '@/types/indexes';
+
 import { Iconify } from '../template/iconify';
-import { useTheme } from '@mui/material/styles';
-import { fCurrencyTwoDecimals, fShortenNumber } from '@/utils/format-number';
 
 type Props = {
   open: boolean;
@@ -31,6 +35,7 @@ export default function IndexCoinPickerDialog({
   availableCoins,
 }: Props) {
   const theme = useTheme();
+  const { t } = useTranslate();
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -42,7 +47,6 @@ export default function IndexCoinPickerDialog({
     );
   });
 
-  // When a user clicks on a coin, immediately return it as the "selected" one
   const handleSelectCoin = (coin: IndexCoin) => {
     onSelectCoins([coin]);
     onClose();
@@ -69,7 +73,7 @@ export default function IndexCoinPickerDialog({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div">
-            Select a token
+            {t('createIndex.selectToken', 'Select a token')}
           </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
@@ -91,13 +95,12 @@ export default function IndexCoinPickerDialog({
           scrollbarColor: `${theme.palette.divider} transparent`,
         }}
       >
-        {/* Search Bar */}
         <Box sx={{ mb: 2, display: 'flex', gap: 1, height: '48px' }}>
           <TextField
             variant="outlined"
             fullWidth
             size="small"
-            placeholder="Search tokens"
+            placeholder={t('createIndex.searchTokens', 'Search tokens')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             slotProps={{
@@ -118,14 +121,15 @@ export default function IndexCoinPickerDialog({
         </Box>
 
         {searchTerm.length > 0 ? (
-          <Box width={'100%'}>
+          <Box width="100%">
             <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <Iconify icon="eva:search-fill" width={14} />
-
-              <Typography variant="caption">Search results</Typography>
+              <Typography variant="caption">
+                {t('createIndex.searchResults', 'Search results')}
+              </Typography>
             </Box>
             {filteredTokens.length > 0 ? (
-              <Box sx={{ mt: '12px' }} width={'100%'}>
+              <Box sx={{ mt: '12px' }} width="100%">
                 <Box
                   sx={{
                     display: 'flex',
@@ -148,12 +152,7 @@ export default function IndexCoinPickerDialog({
                       }}
                       onClick={() => handleSelectCoin(token)}
                     >
-                      <Box
-                        display={'flex'}
-                        alignItems={'center'}
-                        justifyContent={'center'}
-                        gap={'10px'}
-                      >
+                      <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
                           src={token.url}
@@ -222,7 +221,7 @@ export default function IndexCoinPickerDialog({
                               fontSize: '12px',
                             }}
                           >
-                            {fShortenNumber(token.marketCap)} MKap
+                            {fShortenNumber(token.marketCap)} {t('common.marketCapAbbrev', 'MKap')}
                           </Typography>
                         </Box>
                       </Box>
@@ -231,15 +230,18 @@ export default function IndexCoinPickerDialog({
                 </Box>
               </Box>
             ) : (
-              <Typography>No tokens match your search.</Typography>
+              <Typography>
+                {t('createIndex.noTokensMatch', 'No tokens match your search.')}
+              </Typography>
             )}
           </Box>
         ) : (
-          <Box sx={{ mt: '12px' }} width={'100%'}>
+          <Box sx={{ mt: '12px' }} width="100%">
             <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <Iconify icon="eva:star-outline" width={14} />
-
-              <Typography variant="caption">Available Tokens</Typography>
+              <Typography variant="caption">
+                {t('createIndex.availableTokens', 'Available Tokens')}
+              </Typography>
             </Box>
             <Box
               sx={{
@@ -263,12 +265,7 @@ export default function IndexCoinPickerDialog({
                   }}
                   onClick={() => handleSelectCoin(token)}
                 >
-                  <Box
-                    display={'flex'}
-                    alignItems={'center'}
-                    justifyContent={'center'}
-                    gap={'10px'}
-                  >
+                  <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
                       src={token.url}
@@ -337,7 +334,7 @@ export default function IndexCoinPickerDialog({
                           fontSize: '12px',
                         }}
                       >
-                        {fShortenNumber(token.marketCap)} MKap
+                        {fShortenNumber(token.marketCap)} {t('common.marketCapAbbrev', 'MKap')}
                       </Typography>
                     </Box>
                   </Box>

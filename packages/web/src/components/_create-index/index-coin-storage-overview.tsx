@@ -1,14 +1,19 @@
 'use client';
 
+import type { IndexCoin } from '@/types/indexes';
 import type { CardProps } from '@mui/material/Card';
-import type { ChartOptions } from '../template/chart';
+
+import { useTranslate } from '@/locales';
+import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+
 import Box from '@mui/material/Box';
+import { Button } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
+
 import { Chart, useChart } from '../template/chart';
-import { IndexCoin } from '@/types/indexes';
-import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
-import { Button } from '@mui/material';
+
+import type { ChartOptions } from '../template/chart';
 
 type ChartConfig = {
   colors?: string[];
@@ -33,17 +38,15 @@ export function IndexCoinStorageOverview({
   ...other
 }: Props) {
   const theme = useTheme();
+  const { t } = useTranslate();
 
-  // If colors are provided, use them; otherwise default to two theme-based colors
   const chartColors = chart?.colors ?? [
     theme.palette.secondary.main,
     theme.palette.secondary.light,
   ];
 
-  // Sum all coin percentages for the radial bar chart
   const sumOfIndexPercentages = data.reduce((acc, coin) => acc + (coin.indexPercentage ?? 0), 0);
 
-  // Merge optional chart config
   const chartOptions = useChart({
     chart: { sparkline: { enabled: true } },
     stroke: { width: 0 },
@@ -67,8 +70,7 @@ export function IndexCoinStorageOverview({
           name: { offsetY: 8 },
           value: { offsetY: -36 },
           total: {
-            // We'll just display "Used of 100% allocation"
-            label: `Used of 100% allocation`,
+            label: t('createIndex.chart.usedOfAllocation', 'Used of 100% allocation'),
             color: theme.vars.palette.text.disabled,
             fontSize: theme.typography.caption.fontSize as string,
             fontWeight: theme.typography.caption.fontWeight,
@@ -76,13 +78,11 @@ export function IndexCoinStorageOverview({
         },
       },
     },
-    // Spread any additional chart options
     ...(chart?.options || {}),
   });
 
   return (
     <Box sx={sx} {...other}>
-      {/* Radial bar uses sumOfIndexPercentages as the data series */}
       <Chart
         type="radialBar"
         series={[sumOfIndexPercentages]}
@@ -114,7 +114,7 @@ export function IndexCoinStorageOverview({
           >
             <Box sx={{ width: 36, height: 36 }} component="img" src={coin.url} alt={coin.name} />
 
-            <Stack flex="1 1 auto" textAlign={'left'}>
+            <Stack flex="1 1 auto" textAlign="left">
               <div>{coin.name}</div>
               <Box component="span" sx={{ typography: 'caption', color: 'text.disabled' }}>
                 {coin.shortName}
@@ -139,7 +139,7 @@ export function IndexCoinStorageOverview({
                   onRemoveCoin?.(coin.id);
                 }}
               >
-                Remove
+                {t('common.remove', 'Remove')}
               </Button>
             </Box>
           </Button>

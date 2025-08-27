@@ -1,26 +1,31 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import type { NativeToken } from '@normalfinance/types';
+
+import { useTranslate } from '@/locales';
+import { useFormContext } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+
+import { useTheme } from '@mui/material/styles';
+import LoadingButton from '@mui/lab/LoadingButton';
 import {
+  Box,
+  Stack,
   Dialog,
+  Accordion,
+  Typography,
+  IconButton,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Typography,
-  Box,
-  IconButton,
-  Stack,
-  Accordion,
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
-import LoadingButton from '@mui/lab/LoadingButton';
-import { useFormContext } from 'react-hook-form';
-import { NewIndexSchemaType } from './new-index-form';
+
 import { Iconify } from '../template/iconify';
-import { fCurrencyTwoDecimals, fRawPercent } from '@/utils/format-number';
-import { useTheme } from '@mui/material/styles';
-import { NativeToken } from '@normalfinance/types';
+
+import type { NewIndexSchemaType } from './new-index-form';
 
 type NewIndexSubmissionDialogProps = {
   open: boolean;
@@ -35,6 +40,7 @@ export default function NewIndexSubmissionDialog({
   onSubmit,
   tokenSymbol,
 }: NewIndexSubmissionDialogProps) {
+  const { t } = useTranslate();
   const { watch, formState } = useFormContext<NewIndexSchemaType>();
   const { isSubmitting } = formState;
 
@@ -45,50 +51,35 @@ export default function NewIndexSubmissionDialog({
 
   const [avatarPreview, setAvatarPreview] = useState<string>('');
 
-  // 3) On each render, detect if `avatarUrl` is a File or string
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
     const avatarValue = allFields.avatarUrl;
 
     if (!avatarValue) {
-      // No file or string
       setAvatarPreview('');
-      return;
-    }
-
-    // If it's a string, maybe user has an existing hosted avatar URL
-    if (typeof avatarValue === 'string') {
+    } else if (typeof avatarValue === 'string') {
       setAvatarPreview(avatarValue);
-      return;
-    }
-
-    // If it's a File, create an object URL to preview
-    if (avatarValue instanceof File) {
+    } else if (avatarValue instanceof File) {
       const objectUrl = URL.createObjectURL(avatarValue);
       setAvatarPreview(objectUrl);
-
-      // Clean up the object URL when component unmounts or changes
-      return () => {
-        URL.revokeObjectURL(objectUrl);
-      };
+      cleanup = () => URL.revokeObjectURL(objectUrl);
+    } else {
+      setAvatarPreview('');
     }
 
-    // If it’s something else, fallback
-    setAvatarPreview('');
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, [allFields.avatarUrl]);
 
-  // Submit handler for the button
   const handleSubmitClick = async () => {
-    // If all good, call the parent's onSubmit
     try {
       await onSubmit();
       onClose();
     } catch (error) {
-      // If there's an API error or something, handle here
       console.error(error);
     }
   };
-
-  // Build error messages if fields are invalid
 
   return (
     <Dialog
@@ -112,7 +103,7 @@ export default function NewIndexSubmissionDialog({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div" color="text.primary">
-            Confirm Submission
+            {t('createIndex.confirmSubmission', 'Confirm Submission')}
           </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
@@ -146,7 +137,7 @@ export default function NewIndexSubmissionDialog({
             >
               <Box sx={{ width: 36, height: 36 }} component="img" src={coin.url} alt={coin.name} />
 
-              <Stack flex="1 1 auto" textAlign={'left'}>
+              <Stack flex="1 1 auto" textAlign="left">
                 <div>{coin.name}</div>
                 <Box component="span" sx={{ typography: 'caption', color: 'text.disabled' }}>
                   {coin.shortName}
@@ -211,7 +202,7 @@ export default function NewIndexSubmissionDialog({
                     fontSize: '12px',
                   }}
                 >
-                  Show less
+                  {t('common.showLess', 'Show less')}
                 </Typography>
                 <Iconify
                   icon="carbon:chevron-sort"
@@ -273,7 +264,7 @@ export default function NewIndexSubmissionDialog({
                         fontSize: '12px',
                       }}
                     >
-                      Index Name
+                      {t('createIndex.review.indexName', 'Index Name')}
                     </Typography>
                   </Box>
 
@@ -312,7 +303,7 @@ export default function NewIndexSubmissionDialog({
                         fontSize: '12px',
                       }}
                     >
-                      Index Symbol
+                      {t('createIndex.review.indexSymbol', 'Index Symbol')}
                     </Typography>
                   </Box>
 
@@ -351,7 +342,7 @@ export default function NewIndexSubmissionDialog({
                         fontSize: '12px',
                       }}
                     >
-                      Weighting Method
+                      {t('createIndex.review.weightingMethod', 'Weighting Method')}
                     </Typography>
                   </Box>
 
@@ -390,7 +381,7 @@ export default function NewIndexSubmissionDialog({
                         fontSize: '12px',
                       }}
                     >
-                      Initial Price
+                      {t('createIndex.review.initialPrice', 'Initial Price')}
                     </Typography>
                   </Box>
 
@@ -429,7 +420,7 @@ export default function NewIndexSubmissionDialog({
                         fontSize: '12px',
                       }}
                     >
-                      Initial Deposit
+                      {t('createIndex.review.initialDeposit', 'Initial Deposit')}
                     </Typography>
                   </Box>
 
@@ -451,7 +442,7 @@ export default function NewIndexSubmissionDialog({
                       sx={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }}
                       component="img"
                       src={avatarPreview}
-                      alt="Avatar Preview"
+                      alt={t('createIndex.avatar.previewAlt', 'Avatar Preview')}
                     />
                   </Box>
                 )}
@@ -468,7 +459,7 @@ export default function NewIndexSubmissionDialog({
           color="success"
           onClick={handleSubmitClick}
         >
-          Submit
+          {t('common.submit', 'Submit')}
         </LoadingButton>
       </DialogActions>
     </Dialog>
