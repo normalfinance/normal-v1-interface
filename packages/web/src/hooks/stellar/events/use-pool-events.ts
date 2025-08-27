@@ -19,7 +19,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export function usePoolEvents(poolAddress: string, limit: number): ReturnType {
+export function usePoolEvents(poolAddress: string | undefined, limit: number): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,6 +27,8 @@ export function usePoolEvents(poolAddress: string, limit: number): ReturnType {
 
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!poolAddress) return;
+
       setError(null);
       setLoading(true);
 
@@ -107,7 +109,7 @@ export function usePoolEvents(poolAddress: string, limit: number): ReturnType {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [poolAddress]);
 
   return {
     error,

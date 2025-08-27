@@ -26,7 +26,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push(paths.pools.details(position.poolAddress));
+    router.push(paths.pools.details(position.tokenA.symbol));
   };
   return (
     <Button
@@ -41,7 +41,6 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
         borderColor: alpha(theme.palette.grey[500], 0.32),
         bgcolor: 'white',
       }}
-      // href={paths.pools.details(position.poolAddress)}
       onClick={handleCardClick}
     >
       <Stack direction="row" width={1} alignItems="center">
