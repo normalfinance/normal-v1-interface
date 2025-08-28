@@ -32,6 +32,7 @@ const LINKS = [
     children: [
       { name: 'About', href: paths.core.about },
       { name: 'Blog', href: paths.blog },
+      { name: 'Roadmap', href: paths.core.roadmap },
       { name: 'Brand assets', href: 'https://brandfetch.com/normalfinance.io' },
     ],
   },

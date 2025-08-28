@@ -143,6 +143,15 @@ export const NormalNavbarDefaults: Props = {
                 title: 'Contact',
                 description: 'Get in touch with the team.',
               },
+              {
+                url: paths.core.roadmap,
+                image: {
+                  src: '/assets/icons/normal-navbar/positions.svg',
+                  alt: 'Roadmap',
+                },
+                title: 'Roadmap',
+                description: 'See where Normal is going.',
+              },
             ],
           },
         ],
