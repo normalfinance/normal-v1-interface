@@ -177,6 +177,7 @@ function WalletDisconnected({
             sx={{ mb: 2 }}
           >
             {t('Need help creating a wallet?')}
+            <ZealyHighlight questId={ZEALY_QUEST_IDS.createWallet} position={{ right: 10 }} />
           </Button>
           <Box
             gap={2}
@@ -290,6 +291,7 @@ function WalletConnected({ address }: { address: string }) {
         disabled={faucetOff}
       >
         {t('Get testnet XLM')}
+        <ZealyHighlight questId={ZEALY_QUEST_IDS.receiveFaucet} position={{ right: 20 }} />
       </Button>
       <ConnectedWallet
         balance={totalBalance}
