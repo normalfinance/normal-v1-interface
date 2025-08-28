@@ -36,6 +36,7 @@ export function useInsuranceFundEvents(limit: number): ReturnType {
         .eq('contract_id', constants.StellarConfig.INSURANCE_FUND_ADDRESS)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
+        .eq('transaction_successful', true)
         .order('id', { ascending: false })
         .limit(limit);
 

@@ -38,6 +38,7 @@ export function usePoolEvents(poolAddress: string | undefined, limit: number): R
         .eq('contract_id', constants.StellarConfig.POOL_ROUTER_ADDRESS)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
+        .eq('transaction_successful', true)
         .ilike('topics', `%${poolAddress}%`)
         .or(`topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%`)
         .order('id', { ascending: false })

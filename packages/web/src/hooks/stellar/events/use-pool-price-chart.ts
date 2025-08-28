@@ -34,7 +34,10 @@ const bucketCounts: Record<ChartTimeframeKey, number> = {
 
 // ----------------------------------------------------------------------
 
-export function usePoolPriceChart(poolAddress: string | undefined): ReturnType {
+export function usePoolPriceChart(
+  asset: string,
+  swapHistory: events.RouterSwapEvent[] = []
+): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,7 +63,13 @@ export function usePoolPriceChart(poolAddress: string | undefined): ReturnType {
   });
 
   useEffect(() => {
-    if (!poolAddress) return;
+    if (!swapHistory || swapHistory.length === 0) {
+      // TODO: get swaps
+    }
+  }, [swapHistory]);
+
+  useEffect(() => {
+    if (!asset) return;
 
     const now = Date.now();
 
@@ -72,9 +81,10 @@ export function usePoolPriceChart(poolAddress: string | undefined): ReturnType {
       const { data, error: e } = await supabase
         .from(constants.StellarConfig.EVENTS_TABLENAME)
         .select('*')
-        .eq('contract_id', poolAddress)
+        .eq('contract_id', constants.StellarConfig.POOL_ROUTER_ADDRESS)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
+        .eq('transaction_successful', true)
         .ilike('topics', `%rebalance%`)
         .gte('ledger_sequence', ledgerOneYearAgo)
         .order('id', { ascending: true });
@@ -137,9 +147,10 @@ export function usePoolPriceChart(poolAddress: string | undefined): ReturnType {
       const { data, error: e } = await supabase
         .from(constants.StellarConfig.EVENTS_TABLENAME)
         .select('*')
-        .eq('contract_id', poolAddress)
+        .eq('contract_id', constants.StellarConfig.POOL_ROUTER_ADDRESS)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
+        .eq('transaction_successful', true)
         .ilike('topics', `%swap%`)
         .gte('ledger_sequence', ledgerOneYearAgo)
         .order('id', { ascending: true });
@@ -178,7 +189,7 @@ export function usePoolPriceChart(poolAddress: string | undefined): ReturnType {
               row.transaction_hash
             ) as events.SwapEvent;
 
-            const volume = parsed.direction === 'buy' ? parsed.inAmount : parsed.outAmount;
+            const volume = parsed.direction === 'Buy' ? parsed.inAmount : parsed.outAmount;
             // volumeBuckets[bucketIndex] += volumeUsd;
 
             // const price = parsed.newReserveB / parsed.newReserveA;
@@ -198,7 +209,7 @@ export function usePoolPriceChart(poolAddress: string | undefined): ReturnType {
 
     fetchPriceData();
     fetchVolumeData();
-  }, [poolAddress]);
+  }, [asset]);
 
   return {
     error,

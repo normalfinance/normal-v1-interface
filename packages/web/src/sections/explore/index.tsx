@@ -1,5 +1,6 @@
 'use client';
 
+import type { events } from '@normalfinance/types';
 import type { PoolRouterContract } from '@normalfinance/contracts';
 
 import { useTranslate } from '@/locales';
@@ -26,27 +27,37 @@ export default function ExploreView() {
 
   const { globalIsLoading, setGlobalIsLoading, getAllTokens, pools } = useAppStore();
 
-  // const { totalTVL } = useTotalTVL();
-  const { getSwapVolume } = useSwapVolume();
+  const { loading: loadingSwaps, error: swapsError, allSwaps, getSwapVolume } = useSwapVolume();
 
   // Load XLM price
   const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
 
-  const [volume, setVolume] = useState<number | undefined>(undefined);
+  const [volume, setVolume] = useState<BigNumber>(BigNumber(0));
 
   useEffect(() => {
-    getSwapVolume({ timeframe: '24h' }).then((res) => setVolume(res['24h'].volume));
+    getSwapVolume().then((res) => setVolume(res['24h'].volume));
   }, []);
 
-  const formattedPools = useMemo(
-    () => pools.map((p) => formatPool(p, xlmPrice ?? 0)),
-    [pools, xlmPrice]
-  );
+  const formattedPools = useMemo(() => {
+    // TODO:
+    const dTime = 0;
+    const mTime = 0;
+
+    return pools.map((p) => {
+      const poolSwaps = allSwaps.filter((s) => s.asset === p.pool_response.pool.base_asset);
+      return formatPool(p, xlmPrice, poolSwaps, dTime, mTime);
+    });
+  }, [pools, xlmPrice]);
 
   const totalTvl = formattedPools.reduce((acc, p) => acc.plus(p.tvl), new BigNumber(0));
 
+  const dailyVolume = useMemo(
+    () => format.formatTokenAmount(volume.multipliedBy(xlmPrice)),
+    [pools, xlmPrice]
+  );
+
   const stats: SingleStat[] = [
-    { title: '1D Volume', total: volume ?? 0, percent: 0, formatter: fCurrency },
+    { title: '1D Volume', total: Number(dailyVolume), percent: 0, formatter: fCurrency },
     { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
     {
       title: 'Total Pools',
@@ -91,31 +102,71 @@ export default function ExploreView() {
   );
 }
 
-const formatPool = (pool_info: PoolRouterContract.PoolInfo, xlmPrice: number): ExplorePoolsRow => {
+const formatPool = (
+  pool_info: PoolRouterContract.PoolInfo,
+  xlmPrice: BigNumber,
+  swaps: events.RouterSwapEvent[],
+  dailyCutoff: number,
+  monthlyCutoff: number
+): ExplorePoolsRow => {
   const {
     pool_address: address,
     pool_response: { pool, token_a, token_b },
   } = pool_info;
 
-  const reserve_a = BigNumber(format.formatTokenAmount(token_a.amount));
-  const reserve_b = BigNumber(format.formatTokenAmount(token_b.amount));
+  const normalTokenName = format.formatNormalToken(pool.base_asset, 'with-n');
 
-  const pool_price = reserve_b.div(reserve_a);
+  const reserveA = BigNumber(format.formatTokenAmount(token_a.amount));
+  const reserveB = BigNumber(format.formatTokenAmount(token_b.amount));
 
-  const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
+  if (reserveA.eq(0) || reserveB.eq(0)) {
+    return {
+      tokenAName: normalTokenName,
+      tokenBName: pool.quote_asset,
+      address,
+      fee: pool.fee_fraction,
+      tvl: Number(0),
+      apr: 0,
+      volume1d: 0,
+      volume30d: 0,
+      ratio: 0,
+    };
+  }
 
-  const reserve_b_value = reserve_b.multipliedBy(xlm_price);
-  const reserve_a_value = pool_price.multipliedBy(reserve_a).multipliedBy(xlm_price);
+  // Volume
+  let volume1d = BigNumber(0);
+  let volume30d = BigNumber(0);
+
+  // swaps.forEach((s) => {
+  //   const swapTime = new Date(s.ledger_closed_at);
+
+  //   if (swapTime < dailyCutoff) {
+  //     volume1d = volume1d.plus(0);
+  //   } else if (swapTime < monthlyCutoff) {
+  //     volume30d = volume30d.plus(0);
+  //   }
+  // });
+
+  const volume1dValue = volume1d.multipliedBy(xlmPrice);
+  const volume30dValue = volume30d.multipliedBy(xlmPrice);
+
+  const pool_price = reserveB.div(reserveA);
+
+  const reserveBValue = reserveB.multipliedBy(xlmPrice);
+  const reserveAValue = pool_price.multipliedBy(reserveA).multipliedBy(xlmPrice);
+
+  const tvl = reserveAValue.plus(reserveBValue);
+  const ratio = volume1d.dividedBy(tvl);
 
   return {
-    tokenAName: `n${pool.base_asset}`,
+    tokenAName: normalTokenName,
     tokenBName: pool.quote_asset,
     address,
     fee: pool.fee_fraction,
-    tvl: Number(reserve_a_value.plus(reserve_b_value).toFixed(2)),
+    tvl: Number(tvl.toFixed(2)),
     apr: 0,
-    volume1d: 0,
-    volume30d: 0,
-    ratio: 0,
+    volume1d: Number(volume1dValue.toFixed(2)),
+    volume30d: Number(volume30dValue.toFixed(2)),
+    ratio: Number(ratio.toFixed(4)),
   };
 };

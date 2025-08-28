@@ -350,7 +350,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setLoadingSimulate(true);
       try {
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        const direction = buyToken.symbol !== 'XLM' ? BuyDirection : SellDirection;
+        const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
 
         onEstimateSwap({
           asset,
@@ -372,12 +372,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         if (!allowed) return;
         // Now call the client-side onSwap (sign and submit)
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        const direction = buyToken.symbol === 'XLM' ? BuyDirection : SellDirection;
+        const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
         await onSwap({
-          asset,
+          asset: asset.startsWith('n') ? asset.slice(1) : asset,
           direction,
           in_amount: Number(amount),
-          out_min: Number(buyAmount),
+          out_min: Number(0), //buyAmount
         });
         setTimeout(async () => {
           await appStore.fetchNativeTokenInfo();

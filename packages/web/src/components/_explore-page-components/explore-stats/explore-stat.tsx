@@ -3,7 +3,6 @@ import { fPercent } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
@@ -18,7 +17,6 @@ type Props = {
 };
 
 export function ExploreStat({ title, total, percent, formatter }: Props) {
-  const theme = useTheme();
   const { t } = useTranslate('auto');
 
   return (

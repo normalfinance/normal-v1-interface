@@ -10,11 +10,8 @@ interface ReturnType {
   error: any | null;
   loading: boolean;
   oracleRegistry: OracleRegistryContract.Client | undefined;
-  getPrice: (asset: string, cached: boolean) => Promise<OracleRegistryContract.OraclePriceData>;
-  getLastPrice: (
-    asset: string,
-    cached: boolean
-  ) => Promise<OracleRegistryContract.HistoricalOracleData>;
+  getPrice: (asset: string) => Promise<OracleRegistryContract.OraclePriceData>;
+  getLastPrice: (asset: string) => Promise<OracleRegistryContract.HistoricalOracleData>;
   getOracle: (asset: string) => Promise<OracleRegistryContract.OracleInfo>;
 }
 
@@ -26,11 +23,6 @@ export function useOracleRegistry(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const storePersist = usePersistStore();
-
-  const defaultAction: OracleRegistryContract.NormalAction = {
-    tag: 'UpdateTwap',
-    values: undefined,
-  };
 
   const fetchOracleRegistry = useCallback(() => {
     try {
@@ -71,7 +63,7 @@ export function useOracleRegistry(): ReturnType {
     }
   };
 
-  const getPrice = useCallback(async (asset: string, cached: boolean) => {
+  const getPrice = useCallback(async (asset: string) => {
     try {
       setError(null);
       setLoading(true);
@@ -85,9 +77,6 @@ export function useOracleRegistry(): ReturnType {
 
       const oraclePriceData = await oracleRegistry.get_price({
         asset,
-        cached,
-        action: defaultAction,
-        skip_validation: true,
       });
 
       if (oraclePriceData?.result) {

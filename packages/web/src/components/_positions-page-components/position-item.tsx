@@ -26,8 +26,9 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push(paths.pools.details(position.tokenA.symbol));
+    router.push(paths.pools.details(format.formatNormalToken(position.tokenA.symbol, 'with-n')));
   };
+
   return (
     <Button
       sx={{

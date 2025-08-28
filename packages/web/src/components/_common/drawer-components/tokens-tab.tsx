@@ -5,7 +5,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fPercent, fCurrency, fTokenAmount } from '@/utils/format-number';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -84,8 +84,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                     variant="body2"
                     sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                   >
-                    {/* toFixed(4) */}
-                    {fTokenAmount(token.balance, token.decimals ?? 18)}
+                    {token.balance}
                   </Typography>
                   <Typography
                     variant="body2"
@@ -100,52 +99,6 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                 </Box>
               </Box>
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Typography
-                    variant="body2"
-                    sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                  >
-                    {fCurrency(token.usdValue * token.balance)}
-                  </Typography>
-                  <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        gap: '4px',
-                        alignItems: 'flex-start',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
-                        {token.balance}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
-                        {token.symbol}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Box>
                 <Box>
                   <Box
                     sx={{

@@ -18,7 +18,7 @@ export interface WithdrawLiquidityEvent {
 
 export interface SwapEvent {
   type: 'swap';
-  direction: 'buy' | 'sell';
+  direction: 'Buy' | 'Sell';
   tokenIn: string;
   tokenOut: string;
   user: string;
@@ -38,16 +38,17 @@ export interface RebalanceEvent {
 
 // ─── Insurance Fund Events ──────────────────────────────────
 
-export interface IfStakeRecordEvent {
-  type: 'if_stake_record';
+export interface InsuranceStakeRecordEvent {
+  type: 'insurance_stake_record';
   user: string;
+  token: string;
   action: string; // Assuming StakeAction is symbol (e.g., "stake" / "unstake")
   amount: bigint;
-  insuranceVaultAmountBefore: bigint;
-  ifSharesBefore: bigint;
-  totalIfSharesBefore: bigint;
-  ifSharesAfter: bigint;
-  totalIfSharesAfter: bigint;
+  reserveAmountBefore: bigint;
+  stakeSharesBefore: bigint;
+  totalSharesBefore: bigint;
+  stakeSharesAfter: bigint;
+  totalSharesAfter: bigint;
 }
 
 export interface CollectPremiumEvent {
@@ -146,7 +147,7 @@ export type PoolEvent = (
   txHash: string;
 };
 
-export type InsuranceFundEvent = IfStakeRecordEvent & {
+export type InsuranceFundEvent = InsuranceStakeRecordEvent & {
   timestamp?: number;
   txHash: string;
 };
@@ -172,7 +173,7 @@ export type UserActivityEvent = (
   | RouterDepositLiquidityEvent
   | RouterSwapEvent
   | RouterWithdrawLiquidityEvent
-  | IfStakeRecordEvent
+  | InsuranceStakeRecordEvent
 ) & {
   timestamp?: number;
   txHash: string;

@@ -12,7 +12,7 @@ import { formatDuration } from '@/utils/format-time';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTokenPrice, useInsuranceFund } from '@/hooks';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { format, getCryptoIconUrl } from '@normalfinance/utils';
+import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
@@ -168,9 +168,8 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
 
   const fiatValue = useMemo(() => {
     if (xlmPrice && amount) {
-      // const shares = format.formatTokenAmount(stake.if_shares);
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return xlm_price.multipliedBy(amount);
+      // const shares = format.formatTokenAmount(stake.shares);
+      return xlmPrice.multipliedBy(amount);
     }
     return BigNumber(0);
   }, [xlmPrice, amount]);
@@ -180,7 +179,7 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
     //   label: 'Manage Stake',
     //   location: 'Insurance',
     // });
-    onDeposit({ amount });
+    onDeposit({ amount, token: constants.StellarConfig.XLM_ADDRESS });
   };
 
   const handleUnstakeButtonClick = () => {
@@ -196,14 +195,14 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
     } else if (label === 'Unstake') {
       onWithdraw();
     } else {
-      onRequestWithdraw({ amount });
+      onRequestWithdraw({ amount, token: constants.StellarConfig.XLM_ADDRESS });
     }
   };
 
   const getButtonLabel = (): string => {
     if (stake === undefined) return 'Failed to load stake';
 
-    if (BigNumber(stake.if_shares).isEqualTo(0)) {
+    if (BigNumber(stake.shares).isEqualTo(0)) {
       return 'No funds to unstake';
     }
 
@@ -382,7 +381,7 @@ export const Content: React.FC<ContentProps> = ({ onClose, queryParams, unstakin
                       fontSize: '12px',
                     }}
                   >
-                    {format.formatTokenAmount(stake ? stake.if_shares : 0)} XLM
+                    {format.formatTokenAmount(stake ? stake.shares : 0)} XLM
                   </Typography>
                 </Box>
 

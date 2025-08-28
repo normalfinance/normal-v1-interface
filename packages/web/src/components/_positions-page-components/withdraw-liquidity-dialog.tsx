@@ -121,8 +121,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
   const fiatValue = useMemo(() => {
     if (xlmPrice && amount) {
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return xlm_price.multipliedBy(amount);
+      return xlmPrice.multipliedBy(amount);
     }
     return new BigNumber(0);
   }, [xlmPrice, amount]);

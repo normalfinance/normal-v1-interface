@@ -112,7 +112,7 @@ export function parseEvent(
           asset: parseSymbol(topics[1]),
           pool: parseAddress(topics[2]),
           user: parseAddress(topics[3]),
-          direction: parseSymbol(parsedData[0]),
+          direction: parseSymbol(parseVec(parsedData[0])[0]),
           inAmount: parseBigInt(parsedData[1]),
           outAmount: parseBigInt(parsedData[2]),
           txHash,
@@ -139,17 +139,18 @@ export function parseEvent(
 
     // ─── Insurance Fund Events ──────────────────────────────────
 
-    case 'if_stake_record':
+    case 'insurance_stake_record':
       return {
         type,
         user: parseAddress(topics[1]),
-        action: parseSymbol(parseVec(topics[2])[0]),
+        token: parseAddress(topics[2]),
+        action: parseSymbol(parseVec(topics[3])[0]),
         amount: parseBigInt(parsedData[0]),
-        insuranceVaultAmountBefore: parseBigInt(parsedData[1]),
-        ifSharesBefore: parseBigInt(parsedData[2]),
-        totalIfSharesBefore: parseBigInt(parsedData[3]),
-        ifSharesAfter: parseBigInt(parsedData[4]),
-        totalIfSharesAfter: parseBigInt(parsedData[5]),
+        reserveAmountBefore: parseBigInt(parsedData[1]),
+        stakeSharesBefore: parseBigInt(parsedData[2]),
+        totalSharesBefore: parseBigInt(parsedData[3]),
+        stakeSharesAfter: parseBigInt(parsedData[4]),
+        totalSharesAfter: parseBigInt(parsedData[5]),
         txHash,
         timestamp: undefined,
       };

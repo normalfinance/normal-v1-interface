@@ -14,13 +14,13 @@ import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
   PoolContract,
+  LpTokenContract,
   PoolRouterContract,
   PoolSwapFeeContract,
+  SorobanTokenContract,
   InsuranceFundContract,
   OracleRegistryContract,
   LiquidityCalculatorContract,
-  LpTokenContract,
-  SorobanTokenContract,
 } from '@normalfinance/contracts';
 
 import Box from '@mui/material/Box';
