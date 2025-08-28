@@ -177,6 +177,30 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
+        src: '/assets/images/about/jay.webp',
+        alt: 'Jay Malve',
+      },
+      name: 'Jay Malve',
+      jobTitle: 'Full-Stack Developer',
+      description:
+        'Passionate full-stack developer with 5+ years of experience building impactful products across Dubai and US startups, fueled by a love for code and great conversations—especially over music and coffee.',
+      socialLinks: [
+        {
+          href: 'https://x.com/jaydotdev',
+          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
+        },
+        {
+          href: 'https://www.linkedin.com/in/jay-malave/',
+          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
+        },
+        {
+          href: 'https://github.com/jaymalave',
+          icon: <GitHubIcon sx={{ color: BRAND.github }} />,
+        },
+      ],
+    },
+    {
+      image: {
         src: '/assets/images/about/anth.webp',
         alt: 'Anthony Benjamin',
       },

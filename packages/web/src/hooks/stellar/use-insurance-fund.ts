@@ -1,6 +1,10 @@
 'use client';
 
-import type { Stake, Client } from '@normalfinance/contracts/build/insurance_fund';
+import type {
+  Stake,
+  Client,
+  InsuranceFundReserve,
+} from '@normalfinance/contracts/build/insurance_fund';
 
 import { BigNumber } from 'bignumber.js';
 import { getTokenBalance } from '@/lib/token';
@@ -14,7 +18,7 @@ import { InsuranceFundContract } from '@normalfinance/contracts';
 import { useContractTransaction } from './use-contract-transaction';
 
 export type InsuranceFundInfo = {
-  total_shares: BigNumber;
+  reserve: InsuranceFundReserve;
   optimal_insurance: BigNumber;
   unstaking_period: BigNumber;
   current_rate: BigNumber;
@@ -80,24 +84,22 @@ export function useInsuranceFund(): ReturnType {
         rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
-      const [total_shares, optimal_insurance, unstaking_period, current_rate, current_utilization] =
+      const [reserve, optimal_insurance, unstaking_period, current_rate, current_utilization] =
         await Promise.all([
-          InsuranceFund.get_total_shares(),
+          InsuranceFund.get_reserve({ token: constants.StellarConfig.XLM_ADDRESS }),
           InsuranceFund.get_optimal_insurance(),
           InsuranceFund.get_unstaking_period(),
           InsuranceFund.get_rate(),
           InsuranceFund.get_utilization(),
         ]);
 
-      // if (total_shares.result) {
       setInsuranceFund({
-        total_shares: BigNumber(total_shares.result),
+        reserve: reserve.result as InsuranceFundReserve,
         optimal_insurance: BigNumber(optimal_insurance.result),
         unstaking_period: BigNumber(unstaking_period.result),
         current_rate: BigNumber(current_rate.result),
         current_utilization: BigNumber(current_utilization.result),
       });
-      // }
     } catch (e: any) {
       captureException(e);
       console.log(e);
@@ -120,7 +122,10 @@ export function useInsuranceFund(): ReturnType {
           rpcUrl: constants.StellarConfig.RPC_URL,
         });
 
-        const user_stake = await InsuranceFund.get_stake({ user: storePersist.wallet.address });
+        const user_stake = await InsuranceFund.get_stake({
+          user: storePersist.wallet.address,
+          token: constants.StellarConfig.XLM_ADDRESS,
+        });
 
         if (user_stake?.result) {
           setStake(user_stake.result as Stake);
@@ -167,6 +172,7 @@ export function useInsuranceFund(): ReturnType {
   const onDeposit = async (args: DepositArgs) => {
     const processedArgs = {
       user: storePersist.wallet.address!,
+      token: constants.StellarConfig.XLM_ADDRESS,
       amount: BigInt((args.amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
     };
 
@@ -205,6 +211,7 @@ export function useInsuranceFund(): ReturnType {
   const onRequestWithdraw = async (args: RequestWithdrawArgs) => {
     const processedArgs = {
       user: storePersist.wallet.address!,
+      token: constants.StellarConfig.XLM_ADDRESS,
       amount: BigInt((args.amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
     };
 
@@ -237,6 +244,7 @@ export function useInsuranceFund(): ReturnType {
   const onCancelRequestWithdraw = async () => {
     const processedArgs = {
       user: storePersist.wallet.address!,
+      token: constants.StellarConfig.XLM_ADDRESS,
     };
 
     await executeContractTransaction({
@@ -267,6 +275,7 @@ export function useInsuranceFund(): ReturnType {
   const onWithdraw = async () => {
     const processedArgs = {
       user: storePersist.wallet.address!,
+      token: constants.StellarConfig.XLM_ADDRESS,
     };
 
     await executeContractTransaction({

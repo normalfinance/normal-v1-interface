@@ -1,26 +1,22 @@
+import { BigNumber } from 'bignumber.js';
 import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
-import { constants, getOraclePrice } from '@normalfinance/utils';
+import { format, constants, getOraclePrice } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
 interface ReturnType {
   error: any | null;
   loading: boolean;
-  price: number | undefined;
+  price: BigNumber;
 }
 
 // ----------------------------------------------------------------------
 
-// const defaultAction: OracleRegistryContract.NormalAction = {
-//   tag: 'UpdateTwap',
-//   values: undefined,
-// };
-
 export const useTokenPrice = (asset: string): ReturnType => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [price, setPrice] = useState<number | undefined>(undefined);
+  const [price, setPrice] = useState<BigNumber>(BigNumber(0));
 
   const getPrice = useCallback(async () => {
     try {
@@ -30,24 +26,8 @@ export const useTokenPrice = (asset: string): ReturnType => {
       const data = await getOraclePrice(constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS, asset);
 
       if (data && data.price) {
-        setPrice(Number(data.price));
+        setPrice(BigNumber(format.formatTokenAmount(data.price, 14)));
       }
-      // const OracleRegistry = new OracleRegistryContract.Client({
-      //   contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
-      //   networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-      //   rpcUrl: constants.StellarConfig.RPC_URL,
-      // });
-
-      // const oraclePriceData = await OracleRegistry.get_price({
-      //   asset,
-      //   cached: false,
-      //   action: defaultAction,
-      //   skip_validation: true,
-      // });
-
-      // if (oraclePriceData.result) {
-      //   setPrice(oraclePriceData.result.price);
-      // }
     } catch (e: any) {
       captureException(e);
       console.log(e);

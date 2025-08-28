@@ -39,7 +39,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const storePersist = usePersistStore();
   const appStore = useAppStore();
 
-  const { trustlineButtonActive, handleTrustLine, addTrustLine } = useTrustLine();
+  const { trustlineButtonActive, addTrustLine } = useTrustLine();
   const { onEstimateSwap, onSwap } = useSwap();
 
   const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
@@ -154,22 +154,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setIsLoading(true);
 
     doSimulateSwap();
-
-    // Find pool for token
-    const normalToken = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-    const pool = appStore.pools.find((p) => p.pool_response.pool.base_asset === normalToken);
-
-    if (pool) {
-      setPoolFee(pool.pool_response.pool.fee_fraction);
-    }
-
-    // const buyTokenContractID = appStore.tokens.find(
-    //   (token: Token) => token.name === buyToken.name
-    // )?.id;
-
-    // if (storePersist.wallet.address) {
-    //   if (buyTokenContractID) handleTrustLine(buyTokenContractID);
-    // }
 
     // Simulate an async fetch with a 1s delay
     const timer = setTimeout(() => {
@@ -316,11 +300,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       return;
     } else if (label.startsWith('Insufficient')) {
       return;
-    }
-    // else if (label === 'Add trustline') {
-    //   addTrustLine();
-    // }
-    else if (label === 'Review') {
+    } else if (label === 'Add trustline') {
+      addTrustLine(buyToken?.id || '');
+    } else if (label === 'Review') {
       // open a review popup
       setReviewOpen(true);
     }
@@ -368,7 +350,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setLoadingSimulate(true);
       try {
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        const direction = buyToken.symbol !== 'XLM' ? BuyDirection : SellDirection;
+        const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
 
         onEstimateSwap({
           asset,
@@ -390,12 +372,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         if (!allowed) return;
         // Now call the client-side onSwap (sign and submit)
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        const direction = buyToken.symbol === 'XLM' ? BuyDirection : SellDirection;
+        const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
         await onSwap({
-          asset,
+          asset: asset.startsWith('n') ? asset.slice(1) : asset,
           direction,
           in_amount: Number(amount),
-          out_min: Number(buyAmount),
+          out_min: Number(0), //buyAmount
         });
         setTimeout(async () => {
           await appStore.fetchNativeTokenInfo();

@@ -5,7 +5,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
-import { constants, getCryptoIconUrl } from '@normalfinance/utils';
+import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { PoolRouterContract, SorobanTokenContract } from '@normalfinance/contracts';
 
 // ----------------------------------------------------------------------
@@ -43,11 +43,6 @@ export function useLiquidityPositions(): ReturnType {
     // eslint-disable-next-line prefer-const
     let position: PoolPosition | undefined;
 
-    // Check if account, server, and network passphrase are set
-    // if (!getState().server || !getState().networkPassphrase) {
-    //   throw new Error('Missing account, server, or network passphrase');
-    // }
-
     const tokenAddress = poolInfo.pool_response.token_share.address;
 
     const TokenContract = new SorobanTokenContract.Client({
@@ -79,15 +74,22 @@ export function useLiquidityPositions(): ReturnType {
     // DECIMALS
     const decimals = Number((await TokenContract.decimals()).result);
 
+    const normalTokenSymbol = format.formatNormalToken(
+      poolInfo.pool_response.pool.base_asset,
+      'with-n'
+    );
+
     position = {
       poolAddress: poolInfo.pool_address,
       tokenAddress: poolInfo.pool_response.token_share.address,
       tokenA: {
         id: poolInfo.pool_response.token_a.address,
         decimals,
-        symbol,
-        name: `n${poolInfo.pool_response.pool.base_asset}`,
-        icon: getCryptoIconUrl(poolInfo.pool_response.pool.base_asset),
+        symbol: normalTokenSymbol,
+        name: normalTokenSymbol,
+        icon: getCryptoIconUrl(
+          format.formatNormalToken(poolInfo.pool_response.pool.base_asset, 'without-n')
+        ),
         balance: 0,
         usdValue: 0,
         featured: false,
@@ -96,7 +98,7 @@ export function useLiquidityPositions(): ReturnType {
       tokenB: {
         id: poolInfo.pool_response.token_b.address,
         decimals,
-        symbol,
+        symbol: 'XLM',
         name: poolInfo.pool_response.pool.quote_asset,
         icon: getCryptoIconUrl(poolInfo.pool_response.pool.quote_asset),
         balance: 0,

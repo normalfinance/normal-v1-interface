@@ -68,10 +68,10 @@ export function InsuranceFundEventsTableCard({ events }: Props) {
                   <TableCell>{event.action}</TableCell>
                   <TableCell>{format.formatTokenAmount(event.amount.toString())} XLM</TableCell>
                   <TableCell>
-                    {format.formatTokenAmount(event.totalIfSharesBefore.toString())}
+                    {format.formatTokenAmount(event.totalSharesBefore.toString())}
                   </TableCell>
                   <TableCell>
-                    {format.formatTokenAmount(event.totalIfSharesAfter.toString())}
+                    {format.formatTokenAmount(event.totalSharesAfter.toString())}
                   </TableCell>
                   <TableCell>{fTruncate(event.user, 15)}</TableCell>
                   <TableCell>{event.timestamp ? fDateTime(event.timestamp) : ''}</TableCell>

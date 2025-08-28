@@ -14,7 +14,7 @@ import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
   PoolContract,
-  BufferContract,
+  LpTokenContract,
   PoolRouterContract,
   PoolSwapFeeContract,
   SorobanTokenContract,
@@ -45,9 +45,9 @@ const contractClients = {
   pool_swap_fee: PoolSwapFeeContract.Client,
   pool: PoolContract.Client,
   pool_router: PoolRouterContract.Client,
-  buffer: BufferContract.Client,
   insurance_fund: InsuranceFundContract.Client,
   liquidity_calculator: LiquidityCalculatorContract.Client,
+  lp_token: LpTokenContract.Client,
   token: SorobanTokenContract.Client,
 };
 
@@ -59,12 +59,12 @@ type ContractClientType<T extends ContractType> = T extends 'oracle_registry'
       ? PoolContract.Client
       : T extends 'pool_router'
         ? PoolRouterContract.Client
-        : T extends 'buffer'
-          ? BufferContract.Client
-          : T extends 'insurance_fund'
-            ? InsuranceFundContract.Client
-            : T extends 'liquidity_calculator'
-              ? LiquidityCalculatorContract.Client
+        : T extends 'insurance_fund'
+          ? InsuranceFundContract.Client
+          : T extends 'liquidity_calculator'
+            ? LiquidityCalculatorContract.Client
+            : T extends 'lp_token'
+              ? LpTokenContract.Client
               : T extends 'token'
                 ? SorobanTokenContract.Client
                 : never;

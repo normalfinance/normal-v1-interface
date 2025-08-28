@@ -1,0 +1,198 @@
+{
+  "maintenance": {
+    "enabled": false,
+    "message": "Service temporarily unavailable for maintenance. Please try again later."
+  },
+  "features": {
+    "pools": true,
+    "tokens": true,
+    "swap": true,
+    "liquidity": true,
+    "staking": true,
+    "oracle": true,
+    "send": true,
+    "transaction": true,
+    "referrals": true,
+    "analytics": true
+  },
+  "api": {
+    "stellar": {
+      "enabled": true,
+      "timeout": 30000,
+      "cacheControl": "public, max-age=3600",
+      "additionalHeaders": {}
+    },
+    "pools": {
+      "enabled": true,
+      "timeout": 30000,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "tokens": {
+      "enabled": true,
+      "timeout": 30000,
+      "priceRefreshInterval": 30000,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "liquidity": {
+      "enabled": true,
+      "timeout": 30000,
+      "slippageTolerance": 0.005,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "oracle": {
+      "enabled": true,
+      "timeout": 30000,
+      "refreshInterval": 60000,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "send": {
+      "enabled": true,
+      "timeout": 30000,
+      "maxAmount": "1000000",
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "staking": {
+      "enabled": true,
+      "timeout": 30000,
+      "rewardsRefreshInterval": 300000,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "swap": {
+      "enabled": true,
+      "timeout": 30000,
+      "slippageTolerance": 0.01,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "transaction": {
+      "enabled": true,
+      "timeout": 60000,
+      "maxRetries": 3,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "referral-actions": {
+      "enabled": true,
+      "timeout": 30000,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "referral-activate": {
+      "enabled": true,
+      "timeout": 30000,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "referral-codes": {
+      "enabled": true,
+      "timeout": 30000,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "referral-stats": {
+      "enabled": true,
+      "timeout": 30000,
+      "refreshInterval": 300000,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    },
+    "referral-user": {
+      "enabled": true,
+      "timeout": 30000,
+      "rateLimitOverride": null,
+      "additionalHeaders": {}
+    }
+  },
+  "rateLimit": {
+    "pools": {
+      "requests": 100,
+      "windowMs": 60000
+    },
+    "tokens": {
+      "requests": 200,
+      "windowMs": 60000
+    },
+    "liquidity": {
+      "requests": 50,
+      "windowMs": 60000
+    },
+    "oracle": {
+      "requests": 150,
+      "windowMs": 60000
+    },
+    "send": {
+      "requests": 20,
+      "windowMs": 60000
+    },
+    "staking": {
+      "requests": 50,
+      "windowMs": 60000
+    },
+    "swap": {
+      "requests": 100,
+      "windowMs": 60000
+    },
+    "transaction": {
+      "requests": 30,
+      "windowMs": 60000
+    },
+    "referral-actions": {
+      "requests": 100,
+      "windowMs": 60000
+    },
+    "referral-activate": {
+      "requests": 10,
+      "windowMs": 60000
+    },
+    "referral-codes": {
+      "requests": 50,
+      "windowMs": 60000
+    },
+    "referral-stats": {
+      "requests": 100,
+      "windowMs": 60000
+    },
+    "referral-user": {
+      "requests": 50,
+      "windowMs": 60000
+    }
+  },
+  "security": {
+    "enableCors": true,
+    "allowedOrigins": ["*"],
+    "enableRateLimiting": true,
+    "maxPayloadSize": "10mb"
+  },
+  "environment": {
+    "development": {
+      "debug": true,
+      "logLevel": "info",
+      "enableMetrics": false
+    },
+    "production": {
+      "debug": false,
+      "logLevel": "error",
+      "enableMetrics": true
+    }
+  },
+  "circuitBreaker": {
+    "stellar": {
+      "enabled": true,
+      "failureThreshold": 5,
+      "timeout": 60000,
+      "resetTimeout": 30000
+    },
+    "oracle": {
+      "enabled": true,
+      "failureThreshold": 3,
+      "timeout": 30000,
+      "resetTimeout": 60000
+    }
+  }
+}

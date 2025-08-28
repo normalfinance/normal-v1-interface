@@ -1,6 +1,6 @@
 {
   "name": "@normalfinance/web",
-  "version": "1.0.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "i18n:extract": "npx i18next-parser && node ./scripts/fix-empty-i18n-values.js",
@@ -75,6 +75,7 @@
     "@stellar/stellar-sdk": "14.0.0-rc.3",
     "@supabase/supabase-js": "^2.51.0",
     "@types/qrcode": "^1.5.5",
+    "@vercel/edge-config": "^1.4.0",
     "apexcharts": "^4.3.0",
     "autosuggest-highlight": "^3.3.4",
     "axios": "^1.7.9",
@@ -156,6 +157,7 @@
     "semantic-release": "^24.0.0",
     "semantic-release-yarn": "^3.0.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.4",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.19.0"
   },

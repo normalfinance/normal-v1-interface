@@ -1,0 +1,3 @@
+export default [
+  { ignores: ['**/dist/**', '**/build/**', '**/node_modules/**', '**/types/**', '**/*.test.{js,jsx,ts,tsx}', '**/*.spec.{js,jsx,ts,tsx}', '**/config-overrides.js', '**/.eslintrc.js'] },
+];

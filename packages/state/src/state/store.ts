@@ -8,7 +8,7 @@ import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
 import { constants } from '@normalfinance/utils';
 import { createReferralActions } from './persist/createReferralActions';
-import { createErrorActions } from './error/actions';
+import { createInviteCodeActions } from './persist/createInviteCodeActions';
 import { createPoolActions } from './pool/actions';
 
 //@ts-ignore
@@ -22,9 +22,6 @@ export const useAppStore = create<AppStore>()((set, get) => {
   // Create a loading state
   const loading = createLoadingActions(set, get);
 
-  // Create an error state
-  const error = createErrorActions(set, get);
-
   // Create
   const pool = createPoolActions(set, get);
 
@@ -33,7 +30,6 @@ export const useAppStore = create<AppStore>()((set, get) => {
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
     ...wallet,
     ...loading,
-    ...error,
     ...pool,
   };
 });
@@ -53,12 +49,16 @@ export const usePersistStore = create<AppStorePersist>()(
       // Create referral actions
       const referralActions = createReferralActions();
 
+      // Create invite code actions
+      const inviteCodeActions = createInviteCodeActions();
+
       return {
         server,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         ...walletPersist,
         ...disclaimer,
         ...referralActions,
+        ...inviteCodeActions,
       };
     },
     {

@@ -9,8 +9,8 @@ import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { useTokenPrice, useInsuranceFund } from '@/hooks';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
-import { useBuffer, useTokenPrice, useInsuranceFund } from '@/hooks';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
@@ -25,63 +25,47 @@ export default function InsuranceView() {
   // Get insurance query params
   const { params: insuranceParams } = useQueryParams<InsuranceQueryParams>();
 
-  const { balance: insuranceFundBalance, insuranceFund, stake } = useInsuranceFund();
-
-  const { buffer } = useBuffer();
+  const { insuranceFund, stake } = useInsuranceFund();
 
   const { price: xlmPrice } = useTokenPrice('XLM');
 
   // Insurance Fund USD value
   const insuranceFundValue = useMemo(() => {
-    if (xlmPrice && insuranceFundBalance) {
-      const balance = format.formatTokenAmount(insuranceFundBalance);
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return xlm_price.multipliedBy(balance);
-    }
-    return BigNumber(0);
-  }, [xlmPrice, insuranceFundBalance]);
-
-  // Buffer USD value
-  const bufferValue = useMemo(() => {
-    if (xlmPrice && buffer && buffer.reserve) {
-      const reserve_balance = BigNumber(format.formatTokenAmount(buffer.reserve.balance));
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return reserve_balance.multipliedBy(xlm_price);
-    }
-    return BigNumber(0);
-  }, [xlmPrice, buffer]);
+    if (xlmPrice && insuranceFund) {
+      const balance = format.formatTokenAmount(insuranceFund.reserve.balance);
+      return xlmPrice.multipliedBy(balance);
+    } else return BigNumber(0);
+  }, [xlmPrice, insuranceFund]);
 
   // Connected user's stake USD value
   const stakeValue = useMemo(() => {
     if (xlmPrice && stake) {
-      const shares = format.formatTokenAmount(stake.if_shares);
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return xlm_price.multipliedBy(shares);
-    }
-    return BigNumber(0);
+      const shares = format.formatTokenAmount(stake.shares);
+      return xlmPrice.multipliedBy(shares);
+    } else return BigNumber(0);
   }, [xlmPrice, stake]);
 
   // Stat card data array
   const statCardsData: StatCardData[] = [
     {
-      title: 'Normal Buffer',
-      description: 'Minor-loss cushion',
+      title: 'Normal Insurance Fund',
+      description: 'Claims coverage pool',
       percent: 0,
-      total: bufferValue.toNumber(),
+      total: insuranceFundValue.toNumber(),
       formatter: fCurrency,
       chartType: 'line',
       displayChart: true,
       chart: {
-        colors: ['#4BABFF', '#4BABFF'],
+        colors: ['#FF4BE1', '#FF4BE1'],
         categories: ['Current'],
         series: [0],
       },
     },
     {
-      title: 'Normal Insurance Fund',
-      description: 'Claims coverage pool',
+      title: 'Optimal Insurance',
+      description: 'Max coverage needed',
       percent: 0,
-      total: insuranceFundValue.toNumber(),
+      total: insuranceFund ? Number(insuranceFund.optimal_insurance) : 0,
       formatter: fCurrency,
       chartType: 'line',
       displayChart: true,
@@ -141,7 +125,7 @@ export default function InsuranceView() {
             <StakeBalance
               title={t('Staked balance')}
               yieldPercent={insuranceFund?.current_rate.toNumber() || 0}
-              staked={BigNumber(stake ? stake.if_shares : 0)}
+              staked={BigNumber(stake ? stake.shares : 0)}
               currentBalance={Number(stakeValue.toFixed(2))}
               queryParams={insuranceParams}
               unstakingPeriod={insuranceFund ? Number(insuranceFund.unstaking_period) : 1123200}

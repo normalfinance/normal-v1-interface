@@ -2,7 +2,6 @@ import { AppStorePersist } from './persist';
 import { Horizon } from '@stellar/stellar-sdk';
 import { WalletActions } from './wallet';
 import { LoadingActions } from './loading';
-import { ErrorActions } from './error';
 import { PoolActions } from './pool';
 
 interface GeneralStore {
@@ -10,7 +9,7 @@ interface GeneralStore {
   networkPassphrase: string;
 }
 
-export type AppStore = WalletActions & GeneralStore & LoadingActions & ErrorActions & PoolActions;
+export type AppStore = WalletActions & GeneralStore & LoadingActions & PoolActions;
 
 export { AppStorePersist };
 

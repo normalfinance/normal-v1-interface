@@ -10,11 +10,13 @@ export const paths = {
     root: 'https://www.normalfinance.io/',
     about: '/about',
     contact: '/contact',
+    roadmap: '/roadmap',
   },
   socials: {
     twitter: 'https://x.com/normalfi',
     discord: 'https://discord.com/invite/xQMvceZjeS',
     github: 'https://github.com/normalfinance/',
+    telegram: 'https://t.me/normalfinance',
   },
   blog: 'https://blog.normalfinance.io/',
   // docs: 'https://docs.normalfinance.io',
@@ -22,7 +24,7 @@ export const paths = {
   // main
   explore: '/explore',
   pools: {
-    details: (poolAddress: string) => `/pools/${poolAddress}`,
+    details: (asset: string) => `/pools/${asset}`,
   },
   positions: {
     root: '/positions',

@@ -3,6 +3,7 @@
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
+import { format } from '@normalfinance/utils';
 import { fPercent, fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Stack from '@mui/material/Stack';
@@ -40,13 +41,15 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
 
   const router = useRouter();
 
-  const onClickRow = () => router.push(paths.pools.details(row.address));
+  const normalTokenSymbol = format.formatNormalToken(row.tokenAName, 'with-n');
+
+  const onClickRow = () => router.push(paths.pools.details(normalTokenSymbol));
 
   return (
     <TableRow
       hover
       sx={{ cursor: 'pointer' }}
-      onClick={() => router.push(paths.pools.details(row.address))}
+      onClick={() => router.push(paths.pools.details(normalTokenSymbol))}
       data-testid={`explore-pools-table-row-${index}`}
     >
       {/* Rank (#) ---------------------------------------------------- */}

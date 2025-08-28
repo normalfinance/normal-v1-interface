@@ -81,7 +81,7 @@ export function StakeBalance({
   // Define default rows if none are provided via props.
   const defaultRows: BalanceRow[] = [
     { label: 'Staked', value: staked.toNumber(), formatter: format.formatTokenAmount },
-    { label: 'Earned', value: yieldPercent, formatter: fCurrency },
+    { label: 'Earned', value: 0, formatter: fCurrency },
   ];
 
   const rowsToRender = defaultRows;

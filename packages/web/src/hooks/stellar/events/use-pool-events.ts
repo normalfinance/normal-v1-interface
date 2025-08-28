@@ -19,7 +19,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export function usePoolEvents(poolAddress: string, limit: number): ReturnType {
+export function usePoolEvents(poolAddress: string | undefined, limit: number): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,6 +27,8 @@ export function usePoolEvents(poolAddress: string, limit: number): ReturnType {
 
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!poolAddress) return;
+
       setError(null);
       setLoading(true);
 
@@ -36,6 +38,7 @@ export function usePoolEvents(poolAddress: string, limit: number): ReturnType {
         .eq('contract_id', constants.StellarConfig.POOL_ROUTER_ADDRESS)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
+        .eq('transaction_successful', true)
         .ilike('topics', `%${poolAddress}%`)
         .or(`topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%`)
         .order('id', { ascending: false })
@@ -107,7 +110,7 @@ export function usePoolEvents(poolAddress: string, limit: number): ReturnType {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [poolAddress]);
 
   return {
     error,

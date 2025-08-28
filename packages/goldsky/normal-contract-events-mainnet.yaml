@@ -25,18 +25,10 @@ transforms:
         AND contract_id IN (
           '',         -- Pool Router
           '',         -- Oracle Registry
-          '',         -- Buffer
           '',         -- Insurance Fund
           '',         -- Pool Swap Fee
           '',         -- Pool Plane
           '',         -- Liquidity Calc.
-          '', -- Pool Router
-          '', -- Oracle Registry
-          '', -- Buffer
-          '', -- Insurance Fund
-          '', -- Pool Swap Fee
-          '', -- Pool Plane
-          ''  -- Liquidity Calc.
         )
 sinks:
   sink_1:

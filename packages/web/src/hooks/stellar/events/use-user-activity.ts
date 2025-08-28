@@ -47,6 +47,7 @@ export function useUserActivity(): ReturnType {
         .eq('transaction_account', userAddress)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
+        .eq('transaction_successful', true)
         .order('id', { ascending: false });
 
       if (e) {
@@ -173,7 +174,7 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
           amount: Number(format.formatTokenAmount(event.amount.toString())),
         },
       };
-    case 'if_stake_record': {
+    case 'insurance_stake_record': {
       if (event.action == 'stake' || event.action == 'unstake') {
         return {
           id,
