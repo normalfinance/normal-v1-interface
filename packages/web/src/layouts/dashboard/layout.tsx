@@ -4,6 +4,7 @@ import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { useBoolean } from 'minimal-shared/hooks';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 import { allLangs, useTranslate } from '@/locales';
 import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
 
@@ -12,6 +13,7 @@ import { useTheme } from '@mui/material/styles';
 import { Alert, Button, AlertTitle } from '@mui/material';
 
 import { useSettingsContext } from '@/components/template/settings';
+import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 
 import { FooterSection } from '../core';
 import { NavVertical } from './nav-vertical';
@@ -162,8 +164,13 @@ export function DashboardLayout({
             'You are using a testnet version of the Normal Protocol. All tokens are NOT real. You WILL experience bugs. Please report all bugs and feedback to our team. Thank you!'
           )}
           <br />
+          {/* <Box sx={{ position: 'relative' }}> */}
           <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={handleGiveFeedback}>
             {t('Give feedback / Report bug')}
+            <ZealyHighlight
+              questId={ZEALY_QUEST_IDS.giveFeedback}
+              position={{ top: -10, right: -12 }}
+            />
           </Button>
         </Alert>
 
