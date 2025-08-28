@@ -134,8 +134,8 @@ const formatPool = (
   }
 
   // Volume
-  let volume1d = BigNumber(0);
-  let volume30d = BigNumber(0);
+  const volume1d = BigNumber(0);
+  const volume30d = BigNumber(0);
 
   // swaps.forEach((s) => {
   //   const swapTime = new Date(s.ledger_closed_at);
