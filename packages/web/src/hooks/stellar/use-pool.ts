@@ -1,7 +1,7 @@
 'use client';
 
-import { constants } from '@normalfinance/utils';
 import { captureException } from '@sentry/nextjs';
+import { format, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
 
@@ -11,7 +11,6 @@ interface ReturnType {
   error: any | null;
   loading: boolean;
   pool: PoolRouterContract.PoolInfo | undefined;
-  // tvl: BigNumber | undefined;
   fetchPool: () => void;
 }
 
@@ -22,7 +21,6 @@ export function usePool(asset: string): ReturnType {
   const [loading, setLoading] = useState(true);
 
   const [pool, setPool] = useState<PoolRouterContract.PoolInfo | undefined>(undefined);
-  // const [tvl, setTvl] = useState<BigNumber | undefined>(undefined);
 
   const fetchPool = useCallback(async () => {
     try {
@@ -35,19 +33,13 @@ export function usePool(asset: string): ReturnType {
         rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
-      const poolInfo = await PoolRouter.query_pool_details({ asset });
+      const poolInfo = await PoolRouter.query_pool_details({
+        asset: format.formatNormalToken(asset, 'without-n'),
+      });
 
       if (poolInfo.result) {
         const data = poolInfo.result as PoolRouterContract.PoolInfo;
         setPool(data);
-
-        // const liquidityInfo = await PoolRouter.get_liquidity({
-        //   asset: data.pool_response.pool.base_asset,
-        // });
-
-        // if (liquidityInfo.result) {
-        //   setTvl(BigNumber(liquidityInfo.result));
-        // }
       }
     } catch (e: any) {
       captureException(e);
@@ -66,7 +58,6 @@ export function usePool(asset: string): ReturnType {
     error,
     loading,
     pool,
-    // tvl,
     fetchPool,
   };
 }

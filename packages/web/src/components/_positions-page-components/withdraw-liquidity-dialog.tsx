@@ -144,8 +144,8 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
     if (label === 'Withdraw') {
       withdrawLiquidity({
-        asset: position.tokenA.name,
-        share_amount: 0,
+        asset: format.formatNormalToken(position.tokenA.name, 'without-n'),
+        share_amount: amount,
       });
     }
   };
