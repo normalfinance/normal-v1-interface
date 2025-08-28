@@ -151,10 +151,10 @@ export default function PoolDetailsView({ asset, pool }: { asset: string; pool: 
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 12 }}>
           <PoolTransactionsTable
-            baseTokenSymbol={`n${pool.pool_response.pool.base_asset}`}
+            baseTokenSymbol={format.formatNormalToken(pool.pool_response.pool.base_asset, 'with-n')}
             quoteTokenSymbol={pool.pool_response.pool.quote_asset}
             rows={rows}
-            xlmPrice={xlmPrice ? Number(format.formatTokenAmount(xlmPrice, 14)) : 0}
+            xlmPrice={xlmPrice}
           />
         </Grid2>
       </Grid2>
@@ -167,8 +167,8 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
     case 'deposit_liquidity':
       return {
         type: 'Deposit',
-        tokenAAmount: 0,
-        tokenBAmount: Number(format.formatTokenAmount(event.amount)),
+        tokenAAmount: BigNumber(event.delta_a),
+        tokenBAmount: BigNumber(event.amount),
         user: event.user,
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
@@ -177,8 +177,8 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
     case 'withdraw_liquidity':
       return {
         type: 'Withdraw',
-        tokenAAmount: 0,
-        tokenBAmount: Number(format.formatTokenAmount(event.amount)),
+        tokenAAmount: BigNumber(event.delta_a),
+        tokenBAmount: BigNumber(event.amount),
         user: event.user,
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
@@ -188,12 +188,8 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
       const isBuy = event.direction === 'Buy';
       return {
         type: isBuy ? 'Buy' : 'Sell',
-        tokenAAmount: isBuy
-          ? Number(format.formatTokenAmount(event.outAmount))
-          : Number(format.formatTokenAmount(event.inAmount)),
-        tokenBAmount: isBuy
-          ? Number(format.formatTokenAmount(event.inAmount))
-          : Number(format.formatTokenAmount(event.outAmount)),
+        tokenAAmount: BigNumber(isBuy ? event.outAmount : event.inAmount),
+        tokenBAmount: BigNumber(isBuy ? event.inAmount : event.outAmount),
         user: event.user,
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
