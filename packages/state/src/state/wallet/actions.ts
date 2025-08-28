@@ -8,10 +8,15 @@ import {
 } from '@normalfinance/types';
 import axios from 'axios';
 import { captureException } from '@sentry/nextjs';
-import { BigNumber } from 'bignumber.js';
-import { PoolRouterContract, SorobanTokenContract } from '@normalfinance/contracts';
+import { PoolRouterContract } from '@normalfinance/contracts';
 import { usePersistStore } from '../store';
-import { constants, format, getCryptoIconUrl, getOraclePrice } from '@normalfinance/utils';
+import {
+  constants,
+  format,
+  getCryptoIconUrl,
+  getOraclePrice,
+  getTokenBalance,
+} from '@normalfinance/utils';
 
 export const createWalletActions = (
   setState: SetStateType,
@@ -26,7 +31,9 @@ export const createWalletActions = (
 
       // Load Normal tokens
       const pools = await getState().getAllPools();
-      const normalTokens = pools.map(async (pool) => await getState().fetchNormalTokenInfo(pool, xlm?.usdValue ?? 0));
+      const normalTokens = pools.map(
+        async (pool) => await getState().fetchNormalTokenInfo(pool, xlm?.usdValue ?? 0)
+      );
       await Promise.all(normalTokens);
 
       // Load API tokens
@@ -223,25 +230,4 @@ export const createWalletActions = (
       }
     },
   };
-};
-
-const getTokenBalance = async (tokenAddress: string, userAddress: string): Promise<bigint> => {
-  const TokenContract = new SorobanTokenContract.Client({
-    contractId: tokenAddress,
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-    rpcUrl: constants.StellarConfig.RPC_URL,
-  });
-
-  let balance: bigint;
-  try {
-    balance = (
-      await TokenContract.balance({
-        id: userAddress,
-      })
-    ).result;
-  } catch (e) {
-    balance = BigInt(0);
-  }
-
-  return balance;
 };
