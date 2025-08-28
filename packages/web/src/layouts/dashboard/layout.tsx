@@ -4,6 +4,7 @@ import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { useBoolean } from 'minimal-shared/hooks';
+import { ZEALY_QUEST_IDS } from '@/global-config';
 import { allLangs, useTranslate } from '@/locales';
 import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
 
@@ -12,6 +13,7 @@ import { useTheme } from '@mui/material/styles';
 import { Alert, Button, AlertTitle } from '@mui/material';
 
 import { useSettingsContext } from '@/components/template/settings';
+import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 
 import { FooterSection } from '../core';
 import { NavVertical } from './nav-vertical';
@@ -29,8 +31,6 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
-import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
-import { ZEALY_QUEST_IDS } from '@/global-config';
 
 // ----------------------------------------------------------------------
 
