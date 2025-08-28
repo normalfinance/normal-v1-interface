@@ -136,18 +136,22 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
   switch (event.type) {
     case 'swap': {
       const buy = event.direction == 'Buy';
+      const normalTokenSymbol = format.formatNormalToken(event.asset, 'with-n');
       return {
         id,
         type: 'Swapped',
         timestamp: event.timestamp ?? 0,
+        asset: normalTokenSymbol,
         sell: {
-          token: buy ? constants.StellarConfig.XLM_ADDRESS : event.pool,
-          iconUrl: getCryptoIconUrl(buy ? 'XLM' : `n${event.asset}`),
+          address: buy ? constants.StellarConfig.XLM_ADDRESS : event.pool,
+          symbol: buy ? 'XLM' : normalTokenSymbol,
+          iconUrl: getCryptoIconUrl(buy ? 'XLM' : normalTokenSymbol),
           amount: Number(format.formatTokenAmount(event.inAmount.toString())),
         },
         buy: {
-          token: buy ? event.pool : constants.StellarConfig.XLM_ADDRESS,
-          iconUrl: getCryptoIconUrl(buy ? `n${event.asset}` : 'XLM'),
+          address: buy ? event.pool : constants.StellarConfig.XLM_ADDRESS,
+          symbol: buy ? normalTokenSymbol : 'XLM',
+          iconUrl: getCryptoIconUrl(buy ? normalTokenSymbol : 'XLM'),
           amount: Number(format.formatTokenAmount(event.outAmount.toString())),
         },
       };
@@ -157,8 +161,10 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
         id,
         type: 'Add Liquidity',
         timestamp: event.timestamp ?? 0,
+        asset: format.formatNormalToken(event.asset, 'with-n'),
         tokenB: {
-          token: constants.StellarConfig.XLM_ADDRESS,
+          address: constants.StellarConfig.XLM_ADDRESS,
+          symbol: 'XLM',
           iconUrl: getCryptoIconUrl('XLM'),
           amount: Number(format.formatTokenAmount(event.amount.toString())),
         },
@@ -168,8 +174,10 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
         id,
         type: 'Remove Liquidity',
         timestamp: event.timestamp ?? 0,
+        asset: format.formatNormalToken(event.asset, 'with-n'),
         tokenB: {
-          token: constants.StellarConfig.XLM_ADDRESS,
+          address: constants.StellarConfig.XLM_ADDRESS,
+          symbol: 'XLM',
           iconUrl: getCryptoIconUrl('XLM'),
           amount: Number(format.formatTokenAmount(event.amount.toString())),
         },
@@ -180,8 +188,9 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
           id,
           type: event.action == 'stake' ? 'Stake' : 'Unstake',
           timestamp: event.timestamp ?? 0,
-          asset: {
-            token: constants.StellarConfig.XLM_ADDRESS,
+          token: {
+            address: constants.StellarConfig.XLM_ADDRESS,
+            symbol: 'XLM',
             iconUrl: getCryptoIconUrl('XLM'),
             amount: Number(format.formatTokenAmount(event.amount.toString())),
           },
