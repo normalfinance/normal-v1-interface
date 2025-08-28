@@ -28,6 +28,7 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
+import { paths } from '@/routes/paths';
 
 // ----------------------------------------------------------------------
 
@@ -67,7 +68,7 @@ export function DashboardLayout({
     //   label: 'Give feedback / Report bug',
     //   location: '',
     // });
-    window.open(' https://forms.fillout.com/t/cumVTceVQeus', '_blank', 'noopener');
+    window.open(paths.help.feedbackForm, '_blank', 'noopener');
   };
 
   const HEADER_H = { xs: 64, lg: 72 };

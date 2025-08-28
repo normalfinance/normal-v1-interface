@@ -23,8 +23,9 @@ const LINKS = [
     headline: 'App',
     children: [
       { name: 'Trade', href: paths.swap },
-      { name: 'Explore', href: paths.explore },
-      { name: 'Pool', href: paths.positions.root },
+      { name: 'Pools', href: paths.explore },
+      { name: 'Indexes', href: paths.explore },
+      { name: 'Positions', href: paths.positions.root },
     ],
   },
   {
@@ -41,11 +42,15 @@ const LINKS = [
     children: [
       { name: 'Governance', href: paths.socials.discord },
       { name: 'Developers', href: paths.docs },
+      { name: 'Contract Tracker', href: paths.help.contractTracker },
     ],
   },
   {
     headline: 'Need help?',
-    children: [{ name: 'Contact us', href: paths.core.contact }],
+    children: [
+      { name: 'Contact us', href: paths.core.contact },
+      { name: 'Report bugs', href: paths.help.feedbackForm },
+    ],
   },
 ];
 
@@ -56,19 +61,37 @@ export const _socials = [
     value: 'twitter',
     label: 'Twitter',
     path: paths.socials.twitter,
-    icon: <Iconify width={32} icon="carbon:logo-x" />,
+    icon: <Iconify width={28} icon="bxl:twitter" />,
   },
   {
     value: 'discord',
     label: 'Discord',
     path: paths.socials.discord,
-    icon: <Iconify width={32} icon="bxl:discord-alt" />,
+    icon: <Iconify width={28} icon="bxl:discord-alt" />,
+  },
+  {
+    value: 'telegram',
+    label: 'Telegram',
+    path: paths.socials.telegram,
+    icon: <Iconify width={28} icon="bxl:telegram" />,
   },
   {
     value: 'github',
     label: 'Github',
     path: paths.socials.github,
-    icon: <Iconify width={32} icon="bxl:github" />,
+    icon: <Iconify width={28} icon="bxl:github" />,
+  },
+  {
+    value: 'tiktok',
+    label: 'TikTok',
+    path: paths.socials.tiktok,
+    icon: <Iconify width={28} icon="bxl:tiktok" />,
+  },
+  {
+    value: 'instagram',
+    label: 'Instagram',
+    path: paths.socials.instagram,
+    icon: <Iconify width={28} icon="bxl:instagram" />,
   },
 ];
 

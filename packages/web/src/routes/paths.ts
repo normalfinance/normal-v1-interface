@@ -17,9 +17,10 @@ export const paths = {
     discord: 'https://discord.com/invite/xQMvceZjeS',
     github: 'https://github.com/normalfinance/',
     telegram: 'https://t.me/normalfinance',
+    tiktok: 'https://www.tiktok.com/@normalfinance.io',
+    instagram: 'https://www.instagram.com/normalfinance.io',
   },
   blog: 'https://blog.normalfinance.io/',
-  // docs: 'https://docs.normalfinance.io',
   docs: 'https://normalfinance.gitbook.io/docs',
   // main
   explore: '/explore',
@@ -35,5 +36,7 @@ export const paths = {
   rewards: '/rewards',
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready
+    feedbackForm: 'https://forms.fillout.com/t/cumVTceVQeus',
+    contractTracker: 'https://normalfinance.notion.site/mainnet-v1',
   },
 };
