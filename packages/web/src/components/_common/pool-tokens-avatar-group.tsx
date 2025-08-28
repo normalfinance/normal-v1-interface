@@ -19,7 +19,11 @@ const PoolTokensAvatarGroup: React.FC<PoolTokensAvatarGroupProps> = ({
       justifyContent: 'flex-start',
     }}
   >
-    <Avatar src={getCryptoIconUrl(tokenAName)} alt="Token A" sx={{ width: 27, height: 27 }} />
+    <Avatar
+      src={getCryptoIconUrl(tokenAName)}
+      alt="Token A"
+      sx={{ width: 27, height: 27, zIndex: 1 }}
+    />
 
     <Avatar
       src={getCryptoIconUrl(tokenBName)}
@@ -28,7 +32,6 @@ const PoolTokensAvatarGroup: React.FC<PoolTokensAvatarGroupProps> = ({
         width: 27,
         height: 27,
         ml: '-12px',
-        zIndex: 1,
       }}
     />
   </Box>
