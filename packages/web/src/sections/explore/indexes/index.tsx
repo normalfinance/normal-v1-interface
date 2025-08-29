@@ -32,10 +32,10 @@ const makeToken = (
   countstatus: 0,
   pricestatus: 0,
   address: '',
-  usdValue,
+  usdValue, // <- price per token
 });
 
-/* Base tokens */
+/* Base tokens (with usdValue as price) */
 const BTC = makeToken(
   1,
   'Bitcoin',
@@ -64,7 +64,6 @@ const XRP = makeToken(
   'https://s2.coinmarketcap.com/static/img/coins/64x64/52.png',
   0.55
 );
-
 const UNI = makeToken(
   5,
   'Uniswap',
@@ -72,7 +71,6 @@ const UNI = makeToken(
   'https://s2.coinmarketcap.com/static/img/coins/64x64/7083.png',
   7.5
 );
-
 const AAVE = makeToken(
   6,
   'Aave',
@@ -80,7 +78,6 @@ const AAVE = makeToken(
   'https://s2.coinmarketcap.com/static/img/coins/64x64/7278.png',
   95
 );
-
 const CRV = makeToken(
   7,
   'Curve DAO Token',
@@ -88,7 +85,6 @@ const CRV = makeToken(
   'https://s2.coinmarketcap.com/static/img/coins/64x64/6538.png',
   0.42
 );
-
 const MKR = makeToken(
   8,
   'Maker',
@@ -96,7 +92,6 @@ const MKR = makeToken(
   'https://s2.coinmarketcap.com/static/img/coins/64x64/1518.png',
   3100
 );
-
 const SNX = makeToken(
   9,
   'Synthetix',
@@ -104,7 +99,6 @@ const SNX = makeToken(
   'https://s2.coinmarketcap.com/static/img/coins/64x64/2586.png',
   2.9
 );
-
 const GRT = makeToken(
   10,
   'The Graph',
@@ -112,7 +106,6 @@ const GRT = makeToken(
   'https://s2.coinmarketcap.com/static/img/coins/64x64/6719.png',
   0.21
 );
-
 const FIL = makeToken(
   11,
   'Filecoin',
@@ -120,7 +113,6 @@ const FIL = makeToken(
   'https://s2.coinmarketcap.com/static/img/coins/64x64/2280.png',
   4.8
 );
-
 const RNDR = makeToken(
   12,
   'Render',
@@ -128,7 +120,6 @@ const RNDR = makeToken(
   'https://s2.coinmarketcap.com/static/img/coins/64x64/5690.png',
   6.2
 );
-
 const NEAR = makeToken(
   13,
   'NEAR Protocol',
@@ -137,8 +128,16 @@ const NEAR = makeToken(
   4.1
 );
 
-/* Helper to merge weight */
+/* Helpers */
 const w = (tok: Token, weightPct: number): WeightedToken => ({ ...tok, weightPct });
+
+// WeightedToken + runtime marketCapUsd (kept as extra prop for the form mapper)
+const wCap = (tok: Token, weightPct: number, marketCapUsd: number): WeightedToken =>
+  ({
+    ...(tok as any),
+    weightPct,
+    marketCapUsd,
+  }) as any;
 
 export const INDEXES: IndexDetails[] = [
   {
@@ -146,7 +145,6 @@ export const INDEXES: IndexDetails[] = [
     avatar: '/assets/images/index/index-avatar-example.webp',
     name: 'Blue-Chip Top 10',
     slug: 'blue-chip-10',
-
     url: '/index/blue-chip-10',
 
     priceUsd: 125.37,
@@ -166,7 +164,13 @@ export const INDEXES: IndexDetails[] = [
       description: 'Weights each asset according to its circulating-market-cap share.',
     },
 
-    constituents: [w(BTC, 48.0), w(ETH, 25.5), w(SOL, 15.0), w(XRP, 11.5)],
+    // attach caps so Market Cap mode in the form can use them
+    constituents: [
+      wCap(BTC, 48.0, 1_245_000_000_000),
+      wCap(ETH, 25.5, 385_000_000_000),
+      wCap(SOL, 15.0, 65_000_000_000),
+      wCap(XRP, 11.5, 30_000_000_000),
+    ],
 
     methodologyUrl: 'https://normal.finance/methodology/blue-chip-10',
 
@@ -186,7 +190,6 @@ export const INDEXES: IndexDetails[] = [
     avatar: '/assets/images/index/index-avatar-defi.webp',
     name: 'DeFi Leaders 5',
     slug: 'defi',
-
     url: '/index/defi',
 
     priceUsd: 42.89,
@@ -206,7 +209,13 @@ export const INDEXES: IndexDetails[] = [
       description: 'Each asset has the same share of the index.',
     },
 
-    constituents: [w(UNI, 20.0), w(AAVE, 20.0), w(CRV, 20.0), w(MKR, 20.0), w(SNX, 20.0)],
+    constituents: [
+      wCap(UNI, 20.0, 4_700_000_000),
+      wCap(AAVE, 20.0, 1_400_000_000),
+      wCap(CRV, 20.0, 480_000_000),
+      wCap(MKR, 20.0, 2_900_000_000),
+      wCap(SNX, 20.0, 900_000_000),
+    ],
 
     methodologyUrl: 'https://normal.finance/methodology/defi-leaders-5',
 
@@ -222,7 +231,6 @@ export const INDEXES: IndexDetails[] = [
     avatar: '/assets/images/index/index-avatar-ai.webp',
     name: 'AI & Infrastructure',
     slug: 'ai',
-
     url: '/index/ai',
 
     priceUsd: 15.73,
@@ -242,7 +250,12 @@ export const INDEXES: IndexDetails[] = [
       description: 'Weighted according to each project’s circulating market cap.',
     },
 
-    constituents: [w(GRT, 40.0), w(FIL, 30.0), w(RNDR, 20.0), w(NEAR, 10.0)],
+    constituents: [
+      wCap(GRT, 40.0, 2_100_000_000),
+      wCap(FIL, 30.0, 2_400_000_000),
+      wCap(RNDR, 20.0, 2_700_000_000),
+      wCap(NEAR, 10.0, 4_300_000_000),
+    ],
 
     methodologyUrl: 'https://normal.finance/methodology/ai-infra',
 
@@ -254,6 +267,7 @@ export const INDEXES: IndexDetails[] = [
     createdByUser: true,
   },
 ];
+
 export const buildStats = (idx: IndexDetails): SingleStat[] => [
   {
     title: 'Index Price',
@@ -283,7 +297,7 @@ export default function ExploreIndexesView() {
     const result: number[] = [];
 
     for (let i = 0; i < points; i += 1) {
-      const progress = i / (points - 1); // 0..1
+      const progress = i / (points - 1);
       const base = then + (priceNow - then) * progress;
       const wiggle =
         1 + 0.004 * Math.sin(progress * Math.PI * 2) + 0.003 * Math.sin(progress * 5.2);
@@ -305,6 +319,7 @@ export default function ExploreIndexesView() {
             {t('Explore Indexes')}
           </Typography>
         </Stack>
+
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
             <IndexCard index={INDEXES[0]} highlightType="staff-pick" chartSeries={spark0} />

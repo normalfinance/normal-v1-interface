@@ -140,8 +140,8 @@ export function indexDetailsToForm(details: DomainIndexDetails | Record<string, 
       url: c.imageUrl ?? c.icon ?? '',
       name: c.name,
       shortName: c.shortName ?? c.shortname ?? '',
-      price: c.priceUsd ?? 0,
-      marketCap: c.marketCapUsd ?? 0,
+      price: c.priceUsd ?? c.usdValue ?? 0,
+      marketCap: c.marketCapUsd ?? c.marketCap ?? 0,
       indexPercentage: c.weightPct ?? 0,
     })) ?? [];
 
