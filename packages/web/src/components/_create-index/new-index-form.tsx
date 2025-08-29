@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { Icon } from '@iconify/react';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { fData } from '@/utils/format-number';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch, Controller } from 'react-hook-form';
@@ -124,9 +124,37 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
   const [duplicateMessage, setDuplicateMessage] = useState('');
   const handleCloseSnackbar = () => setDuplicateMessage('');
 
+  const didMountRef = useRef(false);
+
   useEffect(() => {
-    setValue('indexCoinList', []);
-  }, [weightingMethod, setValue]);
+    // Skip on first render so edit-mode prefill stays intact.
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    const list = coinList ?? [];
+    if (list.length === 0) return;
+
+    if (weightingMethod === 'Constant') {
+      const each = 100 / list.length;
+      setValue(
+        'indexCoinList',
+        list.map((c) => ({ ...c, indexPercentage: each }))
+      );
+    } else if (weightingMethod === 'Market Cap') {
+      const totalCap = list.reduce((acc, c) => acc + (c.marketCap ?? 0), 0);
+      setValue(
+        'indexCoinList',
+        list.map((c) => ({
+          ...c,
+          indexPercentage: totalCap ? ((c.marketCap ?? 0) / totalCap) * 100 : 0,
+        }))
+      );
+    } else {
+      // Custom: keep existing percentages as-is
+      setValue('indexCoinList', list);
+    }
+  }, [weightingMethod, coinList, setValue]);
 
   const handleSelectCoins = (selectedCoins: IndexCoin[]) => {
     if (coinIdToReplace !== null && selectedCoins.length > 0) {
@@ -336,10 +364,9 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
           variant: 'success',
         }
       );
-       
+
       console.info('Submitted data', data);
     } catch (error) {
-       
       console.error(error);
     }
   });
