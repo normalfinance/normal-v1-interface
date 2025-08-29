@@ -185,7 +185,7 @@ export function indexDetailsToForm(details: IndexDetails | DomainIndexDetails): 
   return {
     indexName: (details as any).name ?? '',
     indexSymbol: firstNonEmpty(
-      slug.toUpperCase(),
+      slug.toUpperCase().slice(0, 6), // ⬅️ ensure at most 6 chars
       ((details as any).name ?? '').slice(0, 6).toUpperCase()
     ),
     indexDescription: (details as any).description ?? '',
@@ -193,7 +193,7 @@ export function indexDetailsToForm(details: IndexDetails | DomainIndexDetails): 
     initialPrice: (details as any).priceUsd ?? 1,
     initialDeposit: 0,
     isPublic: true,
-    avatarUrl: (details as any).avatar ?? null,
+    avatarUrl: (details as any).avatar ?? null, // keep as string; form converts to File for preview
     indexCoinList,
   };
 }

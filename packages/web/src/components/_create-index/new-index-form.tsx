@@ -32,6 +32,8 @@ import { Form, Field, schemaHelper } from '../template/hook-form';
 import NewIndexSubmissionDialog from './new-index-submission-dialog';
 import CustomCoinPercentageDialog from './custom-coin-percentage-dialog';
 
+// ---------------------- Schemas ----------------------
+
 const IndexCoinSchema = z.object({
   id: z.number(),
   url: z.string(),
@@ -42,8 +44,13 @@ const IndexCoinSchema = z.object({
   indexPercentage: z.number().optional(),
 });
 
+// Accept string OR File so edit mode can hydrate from an existing URL.
+// Keep it required (no .nullable()) so create flow still enforces an avatar.
 export const NewIndexSchema = z.object({
-  avatarUrl: schemaHelper.file({ message: 'Avatar is required!' }),
+  avatarUrl: z.union([
+    schemaHelper.file({ message: 'Avatar is required!' }),
+    z.string().min(1, { message: 'Avatar is required!' }),
+  ]),
   indexName: z
     .string()
     .min(1, { message: 'Index name is required!' })
@@ -72,45 +79,13 @@ export const NewIndexSchema = z.object({
 
 export type NewIndexSchemaType = z.infer<typeof NewIndexSchema>;
 
-type Props = {
-  currentIndex?: IIndexItem;
-  tokenSymbol: NativeToken;
-  availableCoins: IndexCoin[];
-};
+// ---------------------- Helpers: weights & rounding ----------------------
 
-// ---------- weight helpers (rounding + exact 100%) ----------
 function round2(n: number) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-// normalize an array of coins that already has indexPercentage set (or 0)
-// makes sum exactly 100 by fixing the last item after rounding
-function normalizeAndRound(list: IndexCoin[]): IndexCoin[] {
-  if (list.length === 0) return list;
-
-  const raw = list.map((c) => ({ ...c, indexPercentage: c.indexPercentage ?? 0 }));
-  const sum = raw.reduce((a, c) => a + (c.indexPercentage ?? 0), 0);
-
-  if (sum <= 0) {
-    const each = 100 / raw.length;
-    const out = raw.map((c) => ({ ...c, indexPercentage: each }));
-    return finalizeTo100(out);
-  }
-
-  const scale = 100 / sum;
-  const scaled = raw.map((c) => ({ ...c, indexPercentage: (c.indexPercentage ?? 0) * scale }));
-  return finalizeTo100(scaled);
-}
-
-// equal split with rounding and exact 100 correction
-function equalize(list: IndexCoin[]): IndexCoin[] {
-  if (list.length === 0) return list;
-  const each = 100 / list.length;
-  const provisional = list.map((c) => ({ ...c, indexPercentage: each }));
-  return finalizeTo100(provisional);
-}
-
-// after percentages have been computed, round to 2dp and force exact 100
+// after percentages computed, round to 2dp and force exact 100 by adjusting last
 function finalizeTo100(list: IndexCoin[]): IndexCoin[] {
   if (list.length === 0) return list;
 
@@ -122,7 +97,7 @@ function finalizeTo100(list: IndexCoin[]): IndexCoin[] {
   const sumExceptLast = roundedExceptLast.reduce((a, c) => a + (c.indexPercentage ?? 0), 0);
   let last = 100 - sumExceptLast;
 
-  // in case of tiny float drift like 100.0000000001 -> clamp after rounding
+  // clamp tiny drift
   last = round2(last);
   if (last < 0) last = 0;
   if (last > 100) last = 100;
@@ -135,20 +110,43 @@ function finalizeTo100(list: IndexCoin[]): IndexCoin[] {
     },
   ];
 
-  // final tiny clamp to fix rare -0.01 or 100.01
+  // final minuscule correction if needed
   const total = round2(final.reduce((a, c) => a + (c.indexPercentage ?? 0), 0));
   if (Math.abs(total - 100) > 0.01) {
-    // Adjust last coin by the delta
     const delta = round2(100 - total);
     final[final.length - 1].indexPercentage = round2(
       (final[final.length - 1].indexPercentage ?? 0) + delta
     );
   }
-
   return final;
 }
 
-// --- Market cap smart recalc (handles none/partial/all caps and preserves ratios) ---
+// equal split with rounding and exact 100 correction
+function equalize(list: IndexCoin[]): IndexCoin[] {
+  if (list.length === 0) return list;
+  const each = 100 / list.length;
+  const provisional = list.map((c) => ({ ...c, indexPercentage: each }));
+  return finalizeTo100(provisional);
+}
+
+// normalize an array of coins that already has indexPercentage set (or 0)
+// makes sum exactly 100 by scaling then rounding
+function normalizeAndRound(list: IndexCoin[]): IndexCoin[] {
+  if (list.length === 0) return list;
+
+  const raw = list.map((c) => ({ ...c, indexPercentage: c.indexPercentage ?? 0 }));
+  const sum = raw.reduce((a, c) => a + (c.indexPercentage ?? 0), 0);
+
+  if (sum <= 0) {
+    return equalize(raw);
+  }
+
+  const scale = 100 / sum;
+  const scaled = raw.map((c) => ({ ...c, indexPercentage: (c.indexPercentage ?? 0) * scale }));
+  return finalizeTo100(scaled);
+}
+
+// Market cap recalc that handles: none/partial/all caps gracefully
 function recalcMarketCapSmart(list: IndexCoin[]): IndexCoin[] {
   if (list.length === 0) return list;
 
@@ -169,9 +167,32 @@ function recalcMarketCapSmart(list: IndexCoin[]): IndexCoin[] {
     return normalizeAndRound(byCap);
   }
 
-  // Partial caps: preserve whatever weights exist and normalize
+  // Partial caps: preserve existing weights and normalize
   return normalizeAndRound(list);
 }
+
+// Compare two weight arrays to avoid redundant setValue loops
+function weightsEqual(a: IndexCoin[], b: IndexCoin[], eps = 1e-6) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    const sameId = a[i].id != null && b[i].id != null && a[i].id === b[i].id;
+    const sameShort = (a[i].shortName ?? '').toUpperCase() === (b[i].shortName ?? '').toUpperCase();
+    if (!sameId && !sameShort) return false;
+
+    const aw = a[i].indexPercentage ?? 0;
+    const bw = b[i].indexPercentage ?? 0;
+    if (Math.abs(aw - bw) > eps) return false;
+  }
+  return true;
+}
+
+// ---------------------- Component ----------------------
+
+type Props = {
+  currentIndex?: IIndexItem;
+  tokenSymbol: NativeToken;
+  availableCoins: IndexCoin[];
+};
 
 export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Props) {
   const { t } = useTranslate();
@@ -179,7 +200,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
   const { enqueueSnackbar } = useSnackbar();
 
   const defaultValues: NewIndexSchemaType = {
-    avatarUrl: null,
+    avatarUrl: '', // keep non-null; validation enforces required
     indexName: '',
     indexSymbol: '',
     indexDescription: '',
@@ -208,26 +229,58 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
   const [duplicateMessage, setDuplicateMessage] = useState('');
   const handleCloseSnackbar = () => setDuplicateMessage('');
 
-  const didMountRef = useRef(false);
+  // ---------- Avatar: convert string URL -> File so UploadAvatar previews it ----------
+  useEffect(() => {
+    const v = methods.getValues('avatarUrl');
 
-  // Recalculate when the method changes, but don't clobber edit-mode initial load
+    if (typeof v === 'string' && v.trim().length > 0) {
+      fetch(v)
+        .then(async (res) => {
+          if (!res.ok) {
+            console.warn('[avatarUrl] Failed to fetch avatar URL:', v, res.status);
+            return;
+          }
+          const blob = await res.blob();
+          const filename = v.split('/').pop() || 'avatar.webp';
+          const file = new File([blob], filename, { type: blob.type || 'image/webp' });
+
+          methods.setValue('avatarUrl', file, { shouldDirty: false, shouldValidate: false });
+        })
+        .catch((err) => {
+          console.warn('[avatarUrl] Could not fetch avatar URL:', v, err);
+        });
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Recalculate when the method changes (not on every list change) to avoid loops
+  const didMountRef = useRef(false);
   useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true;
       return;
     }
-    const list = coinList ?? [];
+
+    const list = (methods.getValues('indexCoinList') ?? []) as IndexCoin[];
     if (list.length === 0) return;
 
+    let next: IndexCoin[] = list;
+
     if (weightingMethod === 'Constant') {
-      setValue('indexCoinList', equalize(list));
+      next = equalize(list);
     } else if (weightingMethod === 'Market Cap') {
-      setValue('indexCoinList', recalcMarketCapSmart(list));
+      next = recalcMarketCapSmart(list);
     } else {
-      // Custom: keep as-is
-      setValue('indexCoinList', normalizeAndRound(list));
+      // Custom: keep user intent but normalize any drift
+      next = normalizeAndRound(list);
     }
-  }, [weightingMethod, coinList, setValue]);
+
+    if (!weightsEqual(list, next)) {
+      methods.setValue('indexCoinList', next, { shouldDirty: false, shouldValidate: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weightingMethod]);
 
   const handleOpenCoinPicker = () => setOpenCoinPicker(true);
   const handleCloseCoinPicker = () => setOpenCoinPicker(false);
@@ -332,44 +385,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
 
     // Market Cap smart handling
     if (weightingMethod === 'Market Cap') {
-      // Preserve existing ratios for old coins; give new coins provisional avg, then normalize
-      const newlyAddedSet = new Set(
-        selectedCoins
-          .filter((c) => !duplicates.includes(c.name))
-          .map((c) => c.shortName.toUpperCase())
-      );
-
-      // If there was some prior distribution, keep it; otherwise equalize, then normalize
-      const base =
-        currentList.length > 0
-          ? newList.map((c) => ({
-              ...c,
-              indexPercentage: currentList.find(
-                (e) => e.shortName.toUpperCase() === c.shortName.toUpperCase()
-              )
-                ? (currentList.find((e) => e.shortName.toUpperCase() === c.shortName.toUpperCase())!
-                    .indexPercentage ?? 0)
-                : 0,
-            }))
-          : newList.map((c) => ({ ...c, indexPercentage: 0 }));
-
-      const prevSum = base.reduce((a, c) => a + (c.indexPercentage ?? 0), 0);
-      let withNew = base;
-
-      if (newlyAddedSet.size > 0) {
-        const remaining = Math.max(0, 100 - prevSum);
-        const addEach = newlyAddedSet.size > 0 ? remaining / newlyAddedSet.size : 0;
-
-        withNew = base.map((c) => {
-          const isNew = newlyAddedSet.has(c.shortName.toUpperCase());
-          return {
-            ...c,
-            indexPercentage: (c.indexPercentage ?? 0) + (isNew ? addEach : 0),
-          };
-        });
-      }
-
-      // If all caps known, prefer strict cap-based; else normalize preserved ratios
+      // If all caps known, strictly use caps
       const caps = newList.map((c) => c.marketCap ?? 0);
       const numWithCaps = caps.filter((v) => v > 0).length;
 
@@ -383,6 +399,36 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
       } else if (numWithCaps === 0) {
         setValue('indexCoinList', equalize(newList));
       } else {
+        // Partial caps: preserve existing weights for existing coins,
+        // give the remaining equally among the actually newly-added
+        const existingMap = new Map(
+          currentList.map((c) => [c.shortName.toUpperCase(), c.indexPercentage ?? 0])
+        );
+
+        const addedShorts = new Set(
+          selectedCoins
+            .filter((c) => !duplicates.includes(c.name))
+            .map((c) => c.shortName.toUpperCase())
+        );
+
+        const base = newList.map((c) => {
+          const key = c.shortName.toUpperCase();
+          return {
+            ...c,
+            indexPercentage: existingMap.has(key) ? existingMap.get(key)! : 0,
+          };
+        });
+
+        const prevSum = base.reduce((a, c) => a + (c.indexPercentage ?? 0), 0);
+        const newCount = Array.from(addedShorts).length;
+        const remaining = Math.max(0, 100 - prevSum);
+        const addEach = newCount > 0 ? remaining / newCount : 0;
+
+        const withNew = base.map((c) => {
+          const isNew = addedShorts.has(c.shortName.toUpperCase());
+          return { ...c, indexPercentage: (c.indexPercentage ?? 0) + (isNew ? addEach : 0) };
+        });
+
         setValue('indexCoinList', normalizeAndRound(withNew));
       }
       return;
@@ -433,7 +479,6 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
 
     if (weightingMethod === 'Custom') {
       const totalPct = (coinList ?? []).reduce((acc, c) => acc + (c.indexPercentage ?? 0), 0);
-      // allow tiny float drift tolerance
       if (Math.abs(totalPct - 100) > 0.01) {
         setValidationError(
           t(
@@ -471,11 +516,21 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
     }
   });
 
+  // Force UploadAvatar to re-mount when value switches string -> File, so it re-previews correctly
+  const avatarVal = useWatch({ control, name: 'avatarUrl' });
+
   return (
     <Form methods={methods} onSubmit={onSubmit}>
       <Card sx={{ p: 3 }}>
         <Box sx={{ mt: 3, mb: 5 }}>
           <Field.UploadAvatar
+            key={
+              typeof avatarVal === 'string'
+                ? `str:${avatarVal}`
+                : avatarVal && (avatarVal as File).name
+                  ? `file:${(avatarVal as File).name}-${(avatarVal as File).size}`
+                  : 'no-avatar'
+            }
             name="avatarUrl"
             maxSize={MAX_AVATAR_SIZE}
             helperText={
@@ -724,7 +779,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
             onReplaceCoin={handleReplaceCoin}
           />
           <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="outlined" sx={{ mt: 0 }} onClick={() => setOpenCoinPicker(true)}>
+            <Button variant="outlined" sx={{ mt: 0 }} onClick={handleOpenCoinPicker}>
               {t('createIndex.indexCoinList.addCoin', 'Add Coin')}
             </Button>
           </Box>
