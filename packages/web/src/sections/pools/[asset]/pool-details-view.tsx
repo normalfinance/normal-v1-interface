@@ -24,11 +24,10 @@ export default function PoolDetailsView({ asset, pool }: { asset: string; pool: 
   const { t } = useTranslate();
   const { tokens } = useAppStore();
 
+  const normalTokenSymbol = format.formatNormalToken(pool.pool_response.pool.base_asset, 'with-n');
+
   // Load XLM price
   const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
-
-  // Load price and volume chart data
-  const { chartData } = usePoolPriceChart(asset);
 
   // Load recent pool events
   const { events } = usePoolEvents(pool.pool_address, 20);
@@ -39,22 +38,28 @@ export default function PoolDetailsView({ asset, pool }: { asset: string; pool: 
     .sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
 
   // Load the past 24h volume
-  const { getSwapVolume } = useSwapVolume();
+  const { getSwapVolume, allSwaps } = useSwapVolume();
+
+  // Load price and volume chart data
+  const { chartData } = usePoolPriceChart(asset, allSwaps);
+
+  // Load pool price and exchange rate info
+  const [poolPrice, setPoolPrice] = useState<BigNumber>(BigNumber(0));
+  const [tokenUSDValue, setTokenUSDValue] = useState<BigNumber>(BigNumber(0));
+  const [reserveFiatValues, setReserveFiatValues] = useState<{
+    token_a: BigNumber;
+    token_b: BigNumber;
+  }>({ token_a: BigNumber(0), token_b: BigNumber(0) });
+  const [tvl, setTvl] = useState<BigNumber>(BigNumber(0));
 
   const [past24hVolume, setPast24hVolume] = useState<BigNumber>(BigNumber(0));
 
+  // Fetch volume
   useEffect(() => {
     getSwapVolume({ asset }).then((res) => setPast24hVolume(BigNumber(res['24h'].volume)));
   }, []);
 
-  // Load pool price and exchange rate info
-  const [poolPrice, setPoolPrice] = useState<BigNumber | undefined>(undefined);
-  const [tokenUSDValue, setTokenUSDValue] = useState<BigNumber | undefined>(undefined);
-  const [reserveFiatValues, setReserveFiatValues] = useState<
-    { token_a: BigNumber; token_b: BigNumber } | undefined
-  >(undefined);
-  const [tvl, setTvl] = useState<BigNumber | undefined>(undefined);
-
+  // Calculate pool info
   useEffect(() => {
     if (pool && xlmPrice) {
       const reserve_a = BigNumber(format.formatTokenAmount(pool.pool_response.token_a.amount));
@@ -94,7 +99,7 @@ export default function PoolDetailsView({ asset, pool }: { asset: string; pool: 
           <PoolChart
             pairInfo={{
               tokenA: {
-                name: `n${pool.pool_response.pool.base_asset}`,
+                name: normalTokenSymbol,
                 iconUrl: getCryptoIconUrl(pool.pool_response.pool.base_asset),
               },
               tokenB: {
@@ -108,11 +113,11 @@ export default function PoolDetailsView({ asset, pool }: { asset: string; pool: 
               feeTier: fPercent(pool.pool_response.pool.fee_fraction / 100),
             }}
             exchangeRate={{
-              label: `1 n${pool.pool_response.pool.base_asset} = ${poolPrice?.toFixed(4)} ${pool.pool_response.pool.quote_asset}`,
-              usdEquivalent: fCurrency(tokenUSDValue ? tokenUSDValue.toFixed(2) : 0),
-              tokenSymbol: `n${pool.pool_response.pool.base_asset}`,
-              tokenRate: `${poolPrice?.toFixed(4)} ${pool.pool_response.pool.quote_asset}`,
-              tokenUSDValue: fCurrency(tokenUSDValue ? tokenUSDValue.toFixed(2) : 0),
+              label: `1 ${normalTokenSymbol} = ${poolPrice.toFixed(4)} ${pool.pool_response.pool.quote_asset}`,
+              usdEquivalent: fCurrency(tokenUSDValue.toFixed(2)),
+              tokenSymbol: normalTokenSymbol,
+              tokenRate: `${poolPrice.toFixed(4)} ${pool.pool_response.pool.quote_asset}`,
+              tokenUSDValue: fCurrency(tokenUSDValue.toFixed(2)),
             }}
             performance={{ percentageChange: 0 }}
             chart={chartData}
@@ -124,24 +129,22 @@ export default function PoolDetailsView({ asset, pool }: { asset: string; pool: 
             totalAprPercentage={0}
             poolBalances={[
               {
-                tokenSymbol: `n${pool.pool_response.pool.base_asset}`,
+                tokenSymbol: normalTokenSymbol,
                 amount: BigNumber(pool.pool_response.token_a.amount),
-                fiatValue: reserveFiatValues ? reserveFiatValues.token_a : BigNumber(0),
+                fiatValue: reserveFiatValues.token_a,
               },
               {
                 tokenSymbol: pool.pool_response.pool.quote_asset,
                 amount: BigNumber(pool.pool_response.token_b.amount),
-                fiatValue: reserveFiatValues ? reserveFiatValues.token_b : BigNumber(0),
+                fiatValue: reserveFiatValues.token_b,
               },
             ]}
             stats={[
-              { statName: 'TVL', value: tvl ?? BigNumber(0) },
-              { statName: '24h Volume', value: past24hVolume ?? BigNumber(0) },
+              { statName: 'TVL', value: tvl },
+              { statName: '24h Volume', value: past24hVolume },
               {
                 statName: '24h Fees',
-                value: past24hVolume
-                  ? past24hVolume.multipliedBy(300 / 10000).dividedBy(2)
-                  : BigNumber(0),
+                value: past24hVolume.multipliedBy(300 / 10000).dividedBy(2),
               },
             ]}
             tokens={tokens}
@@ -167,8 +170,9 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
     case 'deposit_liquidity':
       return {
         type: 'Deposit',
-        tokenAAmount: BigNumber(event.delta_a),
+        tokenAAmount: BigNumber(0),
         tokenBAmount: BigNumber(event.amount),
+        deltaA: BigNumber(event.delta_a),
         user: event.user,
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
@@ -177,8 +181,9 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
     case 'withdraw_liquidity':
       return {
         type: 'Withdraw',
-        tokenAAmount: BigNumber(event.delta_a),
+        tokenAAmount: BigNumber(0),
         tokenBAmount: BigNumber(event.amount),
+        deltaA: BigNumber(event.delta_a),
         user: event.user,
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
@@ -190,6 +195,7 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
         type: isBuy ? 'Buy' : 'Sell',
         tokenAAmount: BigNumber(isBuy ? event.outAmount : event.inAmount),
         tokenBAmount: BigNumber(isBuy ? event.inAmount : event.outAmount),
+        deltaA: BigNumber(event.delta_a_prior + event.delta_a_post),
         user: event.user,
         timestamp: event.timestamp || 0,
         txHash: event.txHash,
