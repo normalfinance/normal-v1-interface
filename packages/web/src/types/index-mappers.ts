@@ -1,62 +1,38 @@
-import type {
-  IndexDetails as DomainIndexDetails,
-  WeightingStrategy as DomainWeightingStrategy,
-} from '@normalfinance/types';
+import type { IndexDetails as DomainIndexDetails } from '@normalfinance/types';
+import type { IIndexItem, IndexCoin } from '@/types/indexes';
 
-export type IndexCoin = {
-  id: number;
-  url: string;
-  name: string;
-  shortName: string;
-  price: number;
-  marketCap: number;
-  indexPercentage?: number;
-};
-
-export type IIndexItem = {
-  indexName: string;
-  indexSymbol: string;
-  indexDescription: string;
-  weightingMethod: 'Constant' | 'Custom' | 'Market Cap';
-  initialPrice: number;
-  initialDeposit: number;
-  isPublic: boolean;
-  avatarUrl: File | string | null; // allow string for prefill
-  indexCoinList: IndexCoin[];
-};
-
-// ----- Existing Domain/Display Types -----
-export type WeightingStrategyType = 'MARKET_CAP' | 'EQUAL' | 'CUSTOM';
-
-export interface IndexEvent {
-  type: 'CREATION' | 'ADD' | 'REMOVE' | 'REBALANCE';
-  assetName?: string;
-  assetShortname?: string;
-  percent?: number;
-  timestamp: string;
+// If you prefer this enum elsewhere, feel free to move it into '@/types/indexes' and import.
+export enum WeightingKind {
+  EQUAL = 'EQUAL',
+  CUSTOM = 'CUSTOM',
+  MARKET_CAP = 'MARKET_CAP',
 }
 
-// If your real Token has more fields, extend here as needed.
-export interface Token {
+const domainToFormWeighting: Record<WeightingKind, IIndexItem['weightingMethod']> = {
+  [WeightingKind.EQUAL]: 'Constant',
+  [WeightingKind.CUSTOM]: 'Custom',
+  [WeightingKind.MARKET_CAP]: 'Market Cap',
+};
+
+// A minimal UI-side IndexDetails (not the domain one). If you don’t need this,
+// you can remove it and just use the domain type where appropriate.
+export interface UiWeightedToken {
   id?: number;
   name: string;
   shortName: string;
   imageUrl?: string;
   priceUsd?: number;
   marketCapUsd?: number;
+  weightPct: number;
 }
 
-export interface WeightingStrategy {
-  type: WeightingStrategyType;
+export interface UiWeightingStrategy {
+  type: WeightingKind | string; // tolerate domain strings
   label: string;
   description: string;
 }
 
-export interface WeightedToken extends Token {
-  weightPct: number;
-}
-
-export interface IndexDetails {
+export interface UiIndexDetails {
   id: number;
   name: string;
   slug: string;
@@ -70,26 +46,13 @@ export interface IndexDetails {
   creationDate: string;
   updatedAt: string;
   methodologyUrl?: string;
-  weighting: WeightingStrategy;
-  constituents: WeightedToken[];
-  events?: IndexEvent[];
-  // optional extras your domain might carry:
+  weighting: UiWeightingStrategy;
+  constituents: UiWeightedToken[];
+  events?: any[];
   avatar?: string;
 }
 
-export enum WeightingKind {
-  EQUAL = 'EQUAL',
-  CUSTOM = 'CUSTOM',
-  MARKET_CAP = 'MARKET_CAP',
-}
-
-const domainToFormWeighting: Record<WeightingKind, IIndexItem['weightingMethod']> = {
-  [WeightingKind.EQUAL]: 'Constant',
-  [WeightingKind.CUSTOM]: 'Custom',
-  [WeightingKind.MARKET_CAP]: 'Market Cap',
-};
-
-// 1) Form -> Domain
+// ---- Form -> UI IndexDetails (helper, only if you need it) ----
 export function formToIndexDetails(
   form: IIndexItem,
   opts?: {
@@ -102,17 +65,17 @@ export function formToIndexDetails(
     tvlChangePct24h?: number;
     coinCountChangePct24h?: number;
     methodologyUrl?: string;
-    events?: IndexEvent[];
+    events?: any[];
   }
-): IndexDetails {
-  const weightingType =
+): UiIndexDetails {
+  const weightingType: WeightingKind =
     form.weightingMethod === 'Constant'
       ? WeightingKind.EQUAL
       : form.weightingMethod === 'Market Cap'
         ? WeightingKind.MARKET_CAP
         : WeightingKind.CUSTOM;
 
-  const constituents = form.indexCoinList.map((c) => ({
+  const constituents: UiWeightedToken[] = form.indexCoinList.map((c) => ({
     id: c.id,
     name: c.name,
     shortName: c.shortName,
@@ -153,14 +116,16 @@ export function formToIndexDetails(
     },
     constituents,
     events: opts?.events ?? [],
+    avatar: typeof form.avatarUrl === 'string' ? form.avatarUrl : undefined,
   };
 }
 
-// 2) Domain -> Form (accept both local and domain IndexDetails shapes)
-export function indexDetailsToForm(details: IndexDetails | DomainIndexDetails): IIndexItem {
+// ---- Domain -> Form ----
+// Accepts domain IndexDetails or any compatible shape; returns the canonical form type.
+export function indexDetailsToForm(details: DomainIndexDetails | Record<string, any>): IIndexItem {
   const rawType = (details as any).weighting?.type as string;
 
-  const weightingMethod =
+  const weightingMethod: IIndexItem['weightingMethod'] =
     rawType === 'EQUAL'
       ? 'Constant'
       : rawType === 'MARKET_CAP'
@@ -181,19 +146,18 @@ export function indexDetailsToForm(details: IndexDetails | DomainIndexDetails): 
     })) ?? [];
 
   const slug = (details as any).slug ?? toSlug((details as any).name ?? '');
+  const symbol = (slug || (details as any).name || '').toString().toUpperCase().slice(0, 6);
 
   return {
     indexName: (details as any).name ?? '',
-    indexSymbol: firstNonEmpty(
-      slug.toUpperCase().slice(0, 6), // ⬅️ ensure at most 6 chars
-      ((details as any).name ?? '').slice(0, 6).toUpperCase()
-    ),
+    indexSymbol: firstNonEmpty(symbol, ((details as any).name ?? '').slice(0, 6).toUpperCase()),
     indexDescription: (details as any).description ?? '',
     weightingMethod,
     initialPrice: (details as any).priceUsd ?? 1,
     initialDeposit: 0,
     isPublic: true,
-    avatarUrl: (details as any).avatar ?? null, // keep as string; form converts to File for preview
+    // string is allowed; the form will convert string -> File for preview
+    avatarUrl: (details as any).avatar ?? null,
     indexCoinList,
   };
 }

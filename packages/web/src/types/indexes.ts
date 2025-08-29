@@ -16,6 +16,6 @@ export type IIndexItem = {
   initialPrice: number;
   initialDeposit: number;
   isPublic: boolean;
-  avatarUrl: File | null;
+  avatarUrl: File | string | null;
   indexCoinList: IndexCoin[];
 };
