@@ -1,5 +1,5 @@
+import type { IndexCoin, IIndexItem } from '@/types/indexes';
 import type { IndexDetails as DomainIndexDetails } from '@normalfinance/types';
-import type { IIndexItem, IndexCoin } from '@/types/indexes';
 
 // If you prefer this enum elsewhere, feel free to move it into '@/types/indexes' and import.
 export enum WeightingKind {

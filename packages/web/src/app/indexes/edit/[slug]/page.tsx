@@ -3,17 +3,16 @@
 import type { IndexCoin } from '@/types/indexes';
 
 import { useMemo } from 'react';
-import { useParams } from 'next/navigation';
 import { useTranslate } from '@/locales';
+import { useParams } from 'next/navigation';
+import { INDEXES } from '@/sections/explore/indexes';
 import { DashboardContent } from '@/layouts/dashboard';
-
-import Grid2 from '@mui/material/Grid2';
-import { Stack, Typography, Box, Button } from '@mui/material';
-
-import { NewIndexForm } from '@/components/_create-index/new-index-form';
 import { indexDetailsToForm } from '@/types/index-mappers';
 
-import { INDEXES } from '@/sections/explore/indexes';
+import Grid2 from '@mui/material/Grid2';
+import { Box, Stack, Button, Typography } from '@mui/material';
+
+import { NewIndexForm } from '@/components/_create-index/new-index-form';
 
 export default function EditIndexPage() {
   const { t } = useTranslate();
