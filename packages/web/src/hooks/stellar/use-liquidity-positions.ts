@@ -62,11 +62,6 @@ export function useLiquidityPositions(): ReturnType {
       'with-n'
     );
 
-    const normalTokenSymbol = format.formatNormalToken(
-      poolInfo.pool_response.pool.base_asset,
-      'with-n'
-    );
-
     position = {
       poolAddress: poolInfo.pool_address,
       tokenAddress: poolInfo.pool_response.token_share.address,
