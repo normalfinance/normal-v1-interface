@@ -94,28 +94,26 @@ export default function EditIndexPage() {
             </Button>
           </Stack>
         ) : (
-          <>
-            <Stack spacing={1} maxWidth={600}>
-              <Typography variant="h4" color="text.primary">
-                {t('Edit Crypto Index')}
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                {t(
-                  'Update your index details, weights, and constituents. Changes apply after you submit.'
-                )}
-              </Typography>
-            </Stack>
+          <Grid2 container spacing={3} sx={{ mt: 3 }} justifyContent="center">
+            <Grid2 size={{ xs: 12, md: 8, lg: 7 }}>
+              <Stack spacing={1} alignItems="flex-start" textAlign="left" sx={{ mb: 2 }}>
+                <Typography variant="h4" color="text.primary">
+                  {t('Edit Crypto Index')}
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  {t(
+                    'Update your index details, weights, and constituents. Changes apply after you submit.'
+                  )}
+                </Typography>
+              </Stack>
 
-            <Grid2 container spacing={3} sx={{ mt: 3 }} justifyContent="center">
-              <Grid2 size={{ xs: 12, md: 8, lg: 7 }}>
-                <NewIndexForm
-                  currentIndex={currentIndexForm}
-                  tokenSymbol="SOL"
-                  availableCoins={availableCoins}
-                />
-              </Grid2>
+              <NewIndexForm
+                currentIndex={currentIndexForm}
+                tokenSymbol="SOL"
+                availableCoins={availableCoins}
+              />
             </Grid2>
-          </>
+          </Grid2>
         )}
       </DashboardContent>
     </Box>

@@ -95,17 +95,7 @@ export const INDEXES: IndexDetails[] = [
     },
 
     /* Only four assets for the demo; others 0 % */
-    constituents: [
-      w(BTC, 48.0),
-      w(ETH, 25.5),
-      w(SOL, 15.0),
-      w(XRP, 7.5),
-      w(XRP, 7.5),
-      w(XRP, 7.5),
-      w(XRP, 7.5),
-      w(XRP, 7.5),
-      w(XRP, 7.5),
-    ],
+    constituents: [w(BTC, 48.0), w(ETH, 25.5), w(SOL, 15.0), w(XRP, 11.5)],
 
     methodologyUrl: 'https://normal.finance/methodology/blue-chip-10',
 
