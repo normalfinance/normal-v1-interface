@@ -9,6 +9,7 @@ import { fCurrency } from '@/utils/format-number';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 
 import Box from '@mui/material/Box';
+import { Chip } from '@mui/material';
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -73,7 +74,13 @@ export function StakeBalance({
         {t(label)}
       </Box>
       <Box component="span">
-        {formatter(value)} {label === 'Staked' && 'XLM'}
+        {label === 'Earned' ? (
+          <Chip label="Coming soon" color="info" size="small" />
+        ) : (
+          <>
+            {formatter(value)} {label === 'Staked' && 'XLM'}
+          </>
+        )}
       </Box>
     </Box>
   );

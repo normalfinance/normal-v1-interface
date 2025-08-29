@@ -28,18 +28,6 @@ import Button from '@mui/material/Button';
 
 import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
 
-const logToFile = async (message: string) => {
-  try {
-    await fetch('/api/log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
-    });
-  } catch (error) {
-    console.error('Failed to log to file:', error);
-  }
-};
-
 const contractClients = {
   oracle_registry: OracleRegistryContract.Client,
   pool_swap_fee: PoolSwapFeeContract.Client,
@@ -163,8 +151,6 @@ export const useContractTransaction = () => {
             const timestamp = new Date().toISOString();
             const transactionType = transactionDetails.type || 'unknown';
             const walletAddress = publicKey || 'unknown';
-            const logMessage = `[${timestamp}], ${transactionType}, ${txHash}, ${walletAddress}`;
-            await logToFile(logMessage);
           }
 
           trackEvent('transaction_successful', {

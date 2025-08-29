@@ -1,34 +1,7 @@
 //! Utilities for interacting with token contracts
 
-import { constants, scValToJs, addressToScVal } from '@normalfinance/utils';
 import { rpc, Contract, scValToNative, TransactionBuilder } from '@stellar/stellar-sdk';
-
-// export async function getToken(tokenAddress?: string | undefined): Promise<Token | undefined> {
-//   if (!tokenAddress || tokenAddress === '') return undefined;
-
-//   let name, symbol, decimals, logo;
-
-//   try {
-//     const formattedAddress = isAddress(tokenAddress);
-//     if (!formattedAddress) return;
-//     name = await getTokenName(formattedAddress);
-//     symbol = await getTokenSymbol(formattedAddress);
-//     decimals = await getTokenDecimals(formattedAddress);
-//     logo = await getCryptoIconUrl(symbol);
-
-//     const token: Token = {
-//       contract: formattedAddress,
-//       name: name as string,
-//       code: symbol as string,
-//       decimals,
-//       icon: logo,
-//     };
-
-//     return token;
-//   } catch (error) {
-//     console.log('🚀 « error:', error);
-//   }
-// }
+import { addressToScVal, constants, scValToJs } from '..';
 
 export const getTokenName = async (tokenAddress: string): Promise<string> => {
   const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {

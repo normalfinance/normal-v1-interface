@@ -43,6 +43,7 @@ export function parseEvent(
           user: parseAddress(topics[3]),
           amount: parseBigInt(parsedData[0]),
           shareAmount: parseBigInt(parsedData[1]),
+          delta_a: parseBigInt(parsedData[2]),
           txHash,
           timestamp: undefined,
         };
@@ -70,6 +71,7 @@ export function parseEvent(
           user: parseAddress(topics[3]),
           shareAmount: parseBigInt(parsedData[0]),
           amount: parseBigInt(parsedData[1]),
+          delta_a: parseBigInt(parsedData[2]),
           txHash,
           timestamp: undefined,
         };
@@ -115,6 +117,8 @@ export function parseEvent(
           direction: parseSymbol(parseVec(parsedData[0])[0]),
           inAmount: parseBigInt(parsedData[1]),
           outAmount: parseBigInt(parsedData[2]),
+          delta_a_prior: parseBigInt(parsedData[2]),
+          delta_a_post: parseBigInt(parsedData[3]),
           txHash,
           timestamp: undefined,
         };

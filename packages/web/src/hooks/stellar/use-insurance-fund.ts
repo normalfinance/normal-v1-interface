@@ -7,13 +7,12 @@ import type {
 } from '@normalfinance/contracts/build/insurance_fund';
 
 import { BigNumber } from 'bignumber.js';
-import { getTokenBalance } from '@/lib/token';
-import { constants } from '@normalfinance/utils';
 import { captureException } from '@sentry/nextjs';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { InsuranceFundContract } from '@normalfinance/contracts';
+import { constants, getTokenBalance } from '@normalfinance/utils';
 
 import { useContractTransaction } from './use-contract-transaction';
 
@@ -57,10 +56,18 @@ export function useInsuranceFund(): ReturnType {
       setError(null);
       setLoading(true);
 
-      const xlmBalance = await getTokenBalance(
-        constants.StellarConfig.XLM_ADDRESS,
-        constants.StellarConfig.INSURANCE_FUND_ADDRESS
-      );
+      let xlmBalance: bigint;
+      try {
+        xlmBalance = await getTokenBalance(
+          constants.StellarConfig.XLM_ADDRESS,
+          constants.StellarConfig.INSURANCE_FUND_ADDRESS
+        );
+      } catch (e: any) {
+        captureException(e);
+        console.log(e);
+        setError(e.toString());
+        xlmBalance = BigInt(0);
+      }
 
       if (xlmBalance) setBalance(BigNumber(xlmBalance));
     } catch (e: any) {

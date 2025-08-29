@@ -38,7 +38,6 @@ export function ConnectWallet({
   const [disallowedConnectors, setDisallowedConnectors] = useState<Connector[]>([]);
   const [loadingConnectors, setLoadingConnectors] = useState(true);
   const { t } = useTranslate();
-  console.log(allowedConnectors);
 
   useEffect(() => {
     const checkConnectors = async () => {

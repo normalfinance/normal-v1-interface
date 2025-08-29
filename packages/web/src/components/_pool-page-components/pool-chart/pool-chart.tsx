@@ -15,7 +15,7 @@ import Card from '@mui/material/Card';
 import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Tab, Stack, Avatar } from '@mui/material';
+import { Box, Tab, Chip, Stack, Avatar } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { Chart, useChart, ChartSelect } from '@/components/template/chart';
@@ -397,6 +397,7 @@ export function PoolChart({
           ))}
         </CustomTabsSwapSend>
         <div style={{ display: 'flex', gap: 8 }}>
+          <Chip label="Coming soon" color="info" size="small" />
           <ChartSelect
             options={['price', 'volume']}
             value={selectedMetric}

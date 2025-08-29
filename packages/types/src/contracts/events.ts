@@ -89,6 +89,7 @@ export interface RouterDepositLiquidityEvent {
   user: string;
   amount: bigint;
   shareAmount: bigint;
+  delta_a: bigint;
 }
 
 export interface RouterSwapEvent {
@@ -99,6 +100,8 @@ export interface RouterSwapEvent {
   direction: string;
   inAmount: bigint;
   outAmount: bigint;
+  delta_a_prior: bigint;
+  delta_a_post: bigint;
 }
 
 export interface RouterWithdrawLiquidityEvent {
@@ -108,6 +111,7 @@ export interface RouterWithdrawLiquidityEvent {
   user: string;
   shareAmount: bigint;
   amount: bigint;
+  delta_a: bigint;
 }
 
 export interface AddPoolEvent {

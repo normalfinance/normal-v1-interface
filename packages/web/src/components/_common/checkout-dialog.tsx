@@ -8,6 +8,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
   List,
+  Chip,
   Dialog,
   Avatar,
   Typography,
@@ -118,6 +119,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, token, amount, on
           scrollbarColor: `${theme.palette.divider} transparent`,
         }}
       >
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
         <List disablePadding>
           {DEFAULT_CHECKOUTS.map((checkout) => (
             <ListItemButton

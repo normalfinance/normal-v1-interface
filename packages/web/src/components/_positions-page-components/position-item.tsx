@@ -4,23 +4,29 @@ import type { PoolPosition } from '@/hooks';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
 import { format } from '@normalfinance/utils';
 import { fPercent } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Stack, Button, Typography, IconButton } from '@mui/material';
+import { Chip, Stack, Button, Typography, IconButton } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
 import PoolTokensAvatarGroup from '../_common/pool-tokens-avatar-group';
 
 interface PositionItemProps {
   position: PoolPosition;
+  xlmPrice?: BigNumber;
   onWithdraw: () => void;
 }
 
-export default function PositionItem({ position, onWithdraw }: PositionItemProps) {
+export default function PositionItem({
+  position,
+  xlmPrice = BigNumber(0),
+  onWithdraw,
+}: PositionItemProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const router = useRouter();
@@ -28,6 +34,9 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
   const handleCardClick = () => {
     router.push(paths.pools.details(format.formatNormalToken(position.tokenA.symbol, 'with-n')));
   };
+
+  const positionFiatValue = xlmPrice.multipliedBy(format.formatTokenAmount(position.balance));
+  const feesFiatValue = xlmPrice.multipliedBy(format.formatTokenAmount(0)); // TODO: finish position fees
 
   return (
     <Button
@@ -124,18 +133,19 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
       <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
-            {/* {fCurrency(pool.performance?.position)} */}
-            {format.formatTokenAmount(position.balance)} XLM
+            {/* eslint-disable-next-line i18next/no-literal-string */}
+            {format.formatTokenAmount(position.balance)} XLM (
+            {format.fCurrency(positionFiatValue.toFixed(2))})
           </Typography>
           <Typography color="text.secondary" variant="caption">
-            {t('Position')}
+            {t('Liquidity Provided')}
           </Typography>
         </Stack>
 
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
-            {/* {fCurrency(pool.performance?.fees)} */}
-            {t('Coming soon')}
+            {/* {format.formatTokenAmount(0)} XLM ({format.fCurrency(feesFiatValue.toFixed(2))}) */}
+            <Chip label="Coming soon" color="info" size="small" />
           </Typography>
           <Typography color="text.secondary" variant="caption">
             {t('Fees')}

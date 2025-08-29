@@ -1,5 +1,7 @@
 'use client';
 
+import { paths } from '@/routes/paths';
+
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import type { Props } from './normal-navbar';
@@ -29,7 +31,7 @@ export const NormalNavbarDefaults: Props = {
                 description: 'Browse markets and pools.',
               },
               {
-                url: '/swap',
+                url: paths.swap,
                 image: {
                   src: '/assets/icons/normal-navbar/swap.svg',
                   alt: 'Swap',
@@ -60,7 +62,7 @@ export const NormalNavbarDefaults: Props = {
             title: 'Liquidity',
             links: [
               {
-                url: '/positions',
+                url: paths.positions.root,
                 image: {
                   src: '/assets/icons/normal-navbar/positions.svg',
                   alt: 'Positions',
@@ -69,7 +71,7 @@ export const NormalNavbarDefaults: Props = {
                 description: 'View & manage LP positions.',
               },
               {
-                url: '/positions/create',
+                url: paths.positions.create,
                 image: {
                   src: '/assets/icons/normal-navbar/provide-liquidity.svg',
                   alt: 'Provide',
@@ -83,7 +85,7 @@ export const NormalNavbarDefaults: Props = {
             title: 'Safety & Rewards',
             links: [
               {
-                url: '/insurance',
+                url: paths.insurance,
                 image: {
                   src: '/assets/icons/normal-navbar/insurance.svg',
                   alt: 'Insurance',
@@ -92,7 +94,7 @@ export const NormalNavbarDefaults: Props = {
                 description: 'Protect your positions.',
               },
               {
-                url: '/rewards',
+                url: paths.rewards,
                 image: {
                   src: '/assets/icons/normal-navbar/rewards.svg',
                   alt: 'Rewards',
@@ -106,7 +108,7 @@ export const NormalNavbarDefaults: Props = {
             title: 'Support',
             links: [
               {
-                url: '/contact',
+                url: paths.help.feedbackForm,
                 image: {
                   src: '/assets/icons/normal-navbar/help.svg',
                   alt: 'Help',
@@ -115,7 +117,7 @@ export const NormalNavbarDefaults: Props = {
                 description: 'Report bugs, request features.',
               },
               {
-                url: 'https://normalfinance.gitbook.io/docs',
+                url: paths.docs,
                 image: {
                   src: '/assets/icons/normal-navbar/docs.svg',
                   alt: 'Docs',
@@ -126,7 +128,7 @@ export const NormalNavbarDefaults: Props = {
                 rel: 'noopener noreferrer',
               },
               {
-                url: '/about',
+                url: paths.core.about,
                 image: {
                   src: '/assets/icons/normal-navbar/about.svg',
                   alt: 'About us',
@@ -135,13 +137,22 @@ export const NormalNavbarDefaults: Props = {
                 description: 'Mission, team & roadmap.',
               },
               {
-                url: '/contact',
+                url: paths.core.contact,
                 image: {
                   src: '/assets/icons/normal-navbar/contact.svg',
                   alt: 'Contact',
                 },
                 title: 'Contact',
                 description: 'Get in touch with the team.',
+              },
+              {
+                url: paths.core.roadmap,
+                image: {
+                  src: '/assets/icons/normal-navbar/positions.svg',
+                  alt: 'Roadmap',
+                },
+                title: 'Roadmap',
+                description: 'See where Normal is going.',
               },
             ],
           },
@@ -176,7 +187,7 @@ export const NormalNavbarDefaults: Props = {
           variant: 'text',
           size: 'small',
           endIcon: <ChevronRightIcon />,
-          href: 'https://normalfinance.gitbook.io/docs',
+          href: paths.docs,
           target: '_blank',
           rel: 'noopener noreferrer',
         },
@@ -184,7 +195,7 @@ export const NormalNavbarDefaults: Props = {
     },
     {
       title: 'Docs',
-      url: 'https://normalfinance.gitbook.io/docs',
+      url: paths.docs,
       target: '_blank',
       rel: 'noopener noreferrer',
     },

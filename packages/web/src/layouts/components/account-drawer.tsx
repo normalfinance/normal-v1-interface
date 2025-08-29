@@ -166,18 +166,24 @@ function WalletDisconnected({
         <CircularProgress />
       ) : (
         <>
-          {/* How to create a wallet? */}
-          <Button
-            fullWidth
-            variant="soft"
-            color="secondary"
-            size="large"
-            startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
-            onClick={handleWalletHelp}
-            sx={{ mb: 2 }}
-          >
-            {t('Need help creating a wallet?')}
-          </Button>
+          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+            {/* How to create a wallet? */}
+            <Button
+              fullWidth
+              variant="soft"
+              color="secondary"
+              size="large"
+              startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
+              onClick={handleWalletHelp}
+              sx={{ mb: 2 }}
+            >
+              {t('Need help creating a wallet?')}
+            </Button>
+            <ZealyHighlight
+              questId={ZEALY_QUEST_IDS.createWallet}
+              position={{ top: -10, right: -10 }}
+            />
+          </Box>
           <Box
             gap={2}
             width="100%"
@@ -278,19 +284,22 @@ function WalletConnected({ address }: { address: string }) {
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
-      <Button
-        fullWidth
-        variant="soft"
-        color="info"
-        size="large"
-        startIcon={<Iconify icon="eva:droplet-fill" />}
-        onClick={handleFaucetRequest}
-        sx={{ my: 1 }}
-        loading={faucetLoading}
-        disabled={faucetOff}
-      >
-        {t('Get testnet XLM')}
-      </Button>
+      <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+        <Button
+          fullWidth
+          variant="soft"
+          color="info"
+          size="large"
+          startIcon={<Iconify icon="eva:droplet-fill" />}
+          onClick={handleFaucetRequest}
+          sx={{ my: 1 }}
+          loading={faucetLoading}
+          disabled={faucetOff}
+        >
+          {t('Get testnet XLM')}
+        </Button>
+        <ZealyHighlight questId={ZEALY_QUEST_IDS.receiveFaucet} position={{ right: -10 }} />
+      </Box>
       <ConnectedWallet
         balance={totalBalance}
         percentageChange={0}

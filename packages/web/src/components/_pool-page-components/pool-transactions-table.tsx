@@ -1,9 +1,11 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
+import type { BigNumber } from 'bignumber.js';
 import type { TxType, PoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
 import { ago } from '@/utils/format-time';
+import { format } from '@normalfinance/utils';
 import React, { useMemo, useState } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { fTruncate } from '@normalfinance/utils/build/format';
@@ -48,7 +50,7 @@ export const PoolTransactionsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
   rows: PoolTxRow[];
-  xlmPrice: number;
+  xlmPrice: BigNumber;
   loading?: boolean;
 }> = ({ baseTokenSymbol, quoteTokenSymbol, rows, xlmPrice, loading }) => {
   const theme = useTheme();
@@ -188,9 +190,11 @@ export const PoolTransactionsTable: React.FC<{
                 ordered.map((row, idx) => {
                   const stellarExpertUrl = createStellarExpertUrl('tx', row.txHash);
 
-                  const poolPrice = row.tokenBAmount / row.tokenAAmount;
-                  const baseFiatValue = poolPrice * row.tokenAAmount * xlmPrice;
-                  const quoteFiatValue = row.tokenBAmount * xlmPrice;
+                  const poolPrice = row.tokenBAmount.dividedBy(row.tokenAAmount);
+                  const baseFiatValue = poolPrice
+                    .multipliedBy(row.tokenAAmount)
+                    .multipliedBy(xlmPrice);
+                  const quoteFiatValue = row.tokenBAmount.multipliedBy(xlmPrice);
 
                   return (
                     <TableRow
@@ -206,10 +210,12 @@ export const PoolTransactionsTable: React.FC<{
                         <Chip label={row.type} color={typeColor[row.type]} size="small" />
                       </TableCell>
                       <TableCell>
-                        {row.tokenAAmount} ({fCurrency(baseFiatValue)})
+                        {format.formatTokenAmount(row.tokenAAmount)} (
+                        {fCurrency(format.formatTokenAmount(baseFiatValue))})
                       </TableCell>
                       <TableCell>
-                        {row.tokenBAmount} ({fCurrency(quoteFiatValue)})
+                        {format.formatTokenAmount(row.tokenBAmount)} (
+                        {fCurrency(format.formatTokenAmount(quoteFiatValue))})
                       </TableCell>
                       <TableCell>{fTruncate(row.user, 15)}</TableCell>
                     </TableRow>

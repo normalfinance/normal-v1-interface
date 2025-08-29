@@ -2,9 +2,9 @@ export type TxType = 'Buy' | 'Sell' | 'Deposit' | 'Withdraw';
 
 export interface PoolTxRow {
   type: TxType;
-  // usdValue: number; // coming soon
-  tokenAAmount: number;
-  tokenBAmount: number;
+  tokenAAmount: BigNumber;
+  tokenBAmount: BigNumber;
+  deltaA: BigNumber;
   user: string;
   timestamp: number;
   txHash: string;

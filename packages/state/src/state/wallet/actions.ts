@@ -8,10 +8,15 @@ import {
 } from '@normalfinance/types';
 import axios from 'axios';
 import { captureException } from '@sentry/nextjs';
-import { BigNumber } from 'bignumber.js';
-import { PoolRouterContract, SorobanTokenContract } from '@normalfinance/contracts';
+import { PoolRouterContract } from '@normalfinance/contracts';
 import { usePersistStore } from '../store';
-import { constants, format, getCryptoIconUrl, getOraclePrice } from '@normalfinance/utils';
+import {
+  constants,
+  format,
+  getCryptoIconUrl,
+  getOraclePrice,
+  getTokenBalance,
+} from '@normalfinance/utils';
 
 export const createWalletActions = (
   setState: SetStateType,
@@ -26,7 +31,10 @@ export const createWalletActions = (
 
       // Load Normal tokens
       const pools = await getState().getAllPools();
-      const normalTokens = pools.map(async (pool) => await getState().fetchNormalTokenInfo(pool, xlm?.usdValue ?? 0));
+
+      const normalTokens = pools.map(
+        async (pool) => await getState().fetchNormalTokenInfo(pool, xlm?.usdValue ?? 0)
+      );
       await Promise.all(normalTokens);
 
       // Load API tokens
@@ -53,10 +61,12 @@ export const createWalletActions = (
 
         const tokenAddress = constants.StellarConfig.XLM_ADDRESS;
 
-        const balance = await getTokenBalance(
-          tokenAddress,
-          usePersistStore.getState().wallet.address!
-        );
+        let balance: bigint;
+        try {
+          balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+        } catch (error) {
+          balance = BigInt(0);
+        }
 
         const { price } = await getOraclePrice(
           constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS,
@@ -111,10 +121,12 @@ export const createWalletActions = (
 
         const tokenAddress = pool.pool_response.token_a.address;
 
-        const balance = await getTokenBalance(
-          tokenAddress,
-          usePersistStore.getState().wallet.address!
-        );
+        let balance: bigint;
+        try {
+          balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+        } catch (error) {
+          balance = BigInt(0);
+        }
 
         const reserve_a = BigInt(pool.pool_response.token_a.amount);
         const reserve_b = BigInt(pool.pool_response.token_b.amount);
@@ -156,7 +168,6 @@ export const createWalletActions = (
           updatedTokenInfo = updatedTokens.find((token: Token) => token.id === tokenAddress);
           return { tokens: updatedTokens };
         });
-
         // eslint-disable-next-line consistent-return
         return updatedTokenInfo;
       } catch (error) {
@@ -171,10 +182,12 @@ export const createWalletActions = (
 
         const tokenAddress = apiToken.contract.toString();
 
-        const balance = await getTokenBalance(
-          tokenAddress,
-          usePersistStore.getState().wallet.address!
-        );
+        let balance: bigint;
+        try {
+          balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+        } catch (error) {
+          balance = BigInt(0);
+        }
 
         const { price } = await getOraclePrice(
           constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS,
@@ -223,25 +236,4 @@ export const createWalletActions = (
       }
     },
   };
-};
-
-const getTokenBalance = async (tokenAddress: string, userAddress: string): Promise<bigint> => {
-  const TokenContract = new SorobanTokenContract.Client({
-    contractId: tokenAddress,
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-    rpcUrl: constants.StellarConfig.RPC_URL,
-  });
-
-  let balance: bigint;
-  try {
-    balance = (
-      await TokenContract.balance({
-        id: userAddress,
-      })
-    ).result;
-  } catch (e) {
-    balance = BigInt(0);
-  }
-
-  return balance;
 };

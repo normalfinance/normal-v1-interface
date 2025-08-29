@@ -6,6 +6,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { paths } from '@/routes/paths';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
@@ -213,7 +214,12 @@ export default function ConnectedWallet({
 
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'tokens' && <TokensTab tokens={tokens?.filter((tkn) => tkn.balance > 0)} />}
-      {tabs.value === 'pools' && <PositioinsTab positions={positions ?? []} />}
+      {tabs.value === 'positions' && (
+        <PositioinsTab
+          positions={positions ?? []}
+          xlmPrice={BigNumber(tokens?.find((tkn) => tkn.symbol === 'XLM')?.usdValue || 0)}
+        />
+      )}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
 
       <ReceiveModal
