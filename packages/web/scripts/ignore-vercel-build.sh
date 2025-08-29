@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Allow builds only on staging and master branches
-if [ "$VERCEL_GIT_BRANCH" == "staging" ] || [ "$VERCEL_GIT_BRANCH" == "master" ]; then
+# Allow builds only on testnet and master branches
+if [ "$VERCEL_GIT_BRANCH" == "testnet" ] || [ "$VERCEL_GIT_BRANCH" == "master" ]; then
   echo "✅ Proceeding with build on branch: $VERCEL_GIT_BRANCH"
   exit 1  # Do NOT ignore build
 else
