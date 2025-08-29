@@ -14,8 +14,8 @@ import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import { Button } from '@mui/material';
 import Stack from '@mui/material/Stack';
+import { Chip, Button } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
@@ -207,8 +207,10 @@ export function PoolOverview({
           {t('Total APR')}
         </Typography>
         <Typography variant="h3" color="text.primary">
-          {totalAprPercentage}
-          {t('%')}
+          <Chip label="Coming soon" color="info" size="small" />
+          {/* TODO: */}
+          {/* {totalAprPercentage}
+          {t('%')} */}
         </Typography>
       </Stack>
       {/* —— Stats list ———————————————————— */}

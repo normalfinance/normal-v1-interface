@@ -12,6 +12,7 @@ import { useBoolean } from 'minimal-shared/hooks';
 import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
+import { Chip } from '@mui/material';
 import SvgIcon from '@mui/material/SvgIcon';
 import MenuList from '@mui/material/MenuList';
 import { useTheme } from '@mui/material/styles';
@@ -168,6 +169,8 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
         },
       }}
     >
+      <Chip label="Coming soon" color="info" size="small" />
+
       {dataFiltered.map((item) => {
         const partsTitle = parse(item.name, match(item.name, searchQuery));
         const partsPath = parse(item.symbol, match(item.symbol, searchQuery));

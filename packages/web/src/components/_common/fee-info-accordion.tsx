@@ -3,10 +3,17 @@ import type { StateToken as Token } from '@normalfinance/types';
 // fee-info-accordion.tsx
 import React from 'react';
 import { useTranslate } from '@/locales';
-import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+import { fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Accordion, Typography, AccordionSummary, AccordionDetails } from '@mui/material';
+import {
+  Box,
+  Chip,
+  Accordion,
+  Typography,
+  AccordionSummary,
+  AccordionDetails,
+} from '@mui/material';
 
 import { Iconify } from '../template/iconify';
 
@@ -210,7 +217,9 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {fCurrencyTwoDecimals(networkCost)}
+                <Chip label="Coming soon" color="info" size="small" />
+                {/* TODO: finish */}
+                {/* {fCurrencyTwoDecimals(networkCost)} */}
               </Typography>
             </Box>
             <Box
@@ -253,7 +262,9 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {fRawPercent(priceImpact)}
+                <Chip label="Coming soon" color="info" size="small" />
+                {/* TODO: finish */}
+                {/* {fRawPercent(priceImpact)} */}
               </Typography>
             </Box>
             <Box
@@ -296,7 +307,9 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {fRawPercent(maxSlippage)}
+                <Chip label="Coming soon" color="info" size="small" />
+                {/* TODO: finish */}
+                {/* {fRawPercent(maxSlippage)} */}
               </Typography>
             </Box>
           </Box>
