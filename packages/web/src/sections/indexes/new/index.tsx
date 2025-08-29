@@ -6,7 +6,7 @@ import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Grid2 from '@mui/material/Grid2';
-import { Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 
 import { NewIndexForm } from '@/components/_create-index/new-index-form';
 
@@ -64,23 +64,25 @@ export default function CreateAnIndexView() {
   ];
 
   return (
-    <DashboardContent maxWidth="xl">
-      <Grid2 container spacing={3} sx={{ mt: 3 }} justifyContent="center">
-        <Grid2 size={{ xs: 12, md: 8, lg: 7 }}>
-          <Stack spacing={1} alignItems="flex-start" textAlign="left" sx={{ mb: 2 }}>
-            <Typography variant="h4" color="text.primary">
-              {t('createIndex.title', 'Create a Crypto Index')}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {t(
-                'createIndex.subtitle',
-                'Automate or diversify your crypto investing by creating a custom crypto index token.'
-              )}
-            </Typography>
-          </Stack>
-          <NewIndexForm tokenSymbol="SOL" availableCoins={availableCoins} />
+    <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
+      <DashboardContent maxWidth="xl">
+        <Grid2 container spacing={3} sx={{ mt: 3 }} justifyContent="center">
+          <Grid2 size={{ xs: 12, md: 8, lg: 7 }}>
+            <Stack spacing={1} alignItems="flex-start" textAlign="left" sx={{ mb: 2 }}>
+              <Typography variant="h4" color="text.primary">
+                {t('createIndex.title', 'Create a Crypto Index')}
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                {t(
+                  'createIndex.subtitle',
+                  'Automate or diversify your crypto investing by creating a custom crypto index token.'
+                )}
+              </Typography>
+            </Stack>
+            <NewIndexForm tokenSymbol="SOL" availableCoins={availableCoins} />
+          </Grid2>
         </Grid2>
-      </Grid2>
-    </DashboardContent>
+      </DashboardContent>
+    </Box>
   );
 }
