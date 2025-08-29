@@ -5,8 +5,8 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
-import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
-import { PoolRouterContract, SorobanTokenContract } from '@normalfinance/contracts';
+import { PoolRouterContract } from '@normalfinance/contracts';
+import { format, constants, getTokenBalance, getCryptoIconUrl } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -44,35 +44,9 @@ export function useLiquidityPositions(): ReturnType {
     let position: PoolPosition | undefined;
 
     const tokenAddress = poolInfo.pool_response.token_share.address;
+    const balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
 
-    const TokenContract = new SorobanTokenContract.Client({
-      contractId: tokenAddress.toString(),
-      networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-      rpcUrl: constants.StellarConfig.RPC_URL,
-    });
-
-    // BALANCE
-    let balance: bigint;
-    try {
-      balance = (
-        await TokenContract.balance({
-          id: usePersistStore.getState().wallet.address!,
-        })
-      ).result;
-    } catch (e) {
-      balance = BigInt(0);
-    }
-
-    // SYMBOL
-    let symbol: string;
-    try {
-      symbol = (await TokenContract.symbol()).result;
-    } catch (e) {
-      return position;
-    }
-
-    // DECIMALS
-    const decimals = Number((await TokenContract.decimals()).result);
+    if (Number(balance) == 0) return position;
 
     const normalTokenSymbol = format.formatNormalToken(
       poolInfo.pool_response.pool.base_asset,
@@ -84,7 +58,7 @@ export function useLiquidityPositions(): ReturnType {
       tokenAddress: poolInfo.pool_response.token_share.address,
       tokenA: {
         id: poolInfo.pool_response.token_a.address,
-        decimals,
+        decimals: 7,
         symbol: normalTokenSymbol,
         name: normalTokenSymbol,
         icon: getCryptoIconUrl(
@@ -97,7 +71,7 @@ export function useLiquidityPositions(): ReturnType {
       },
       tokenB: {
         id: poolInfo.pool_response.token_b.address,
-        decimals,
+        decimals: 7,
         symbol: 'XLM',
         name: poolInfo.pool_response.pool.quote_asset,
         icon: getCryptoIconUrl(poolInfo.pool_response.pool.quote_asset),
@@ -140,7 +114,9 @@ export function useLiquidityPositions(): ReturnType {
         : [];
 
       const data = await Promise.all(allPositions);
-      setPostions(data as PoolPosition[]);
+
+      const userPositions = data.filter((e) => e !== undefined);
+      setPostions(userPositions as PoolPosition[]);
     } catch (e: any) {
       captureException(e);
       setError(e);
