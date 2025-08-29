@@ -44,7 +44,16 @@ export function useLiquidityPositions(): ReturnType {
     let position: PoolPosition | undefined;
 
     const tokenAddress = poolInfo.pool_response.token_share.address;
-    const balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+
+    let balance: bigint;
+    try {
+      balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+    } catch (e: any) {
+      captureException(e);
+      console.log(e);
+      setError(e.toString());
+      balance = BigInt(0);
+    }
 
     if (Number(balance) == 0) return position;
 

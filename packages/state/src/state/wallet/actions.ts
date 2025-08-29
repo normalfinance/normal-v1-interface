@@ -31,6 +31,7 @@ export const createWalletActions = (
 
       // Load Normal tokens
       const pools = await getState().getAllPools();
+
       const normalTokens = pools.map(
         async (pool) => await getState().fetchNormalTokenInfo(pool, xlm?.usdValue ?? 0)
       );
@@ -60,10 +61,12 @@ export const createWalletActions = (
 
         const tokenAddress = constants.StellarConfig.XLM_ADDRESS;
 
-        const balance = await getTokenBalance(
-          tokenAddress,
-          usePersistStore.getState().wallet.address!
-        );
+        let balance: bigint;
+        try {
+          balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+        } catch (error) {
+          balance = BigInt(0);
+        }
 
         const { price } = await getOraclePrice(
           constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS,
@@ -118,10 +121,12 @@ export const createWalletActions = (
 
         const tokenAddress = pool.pool_response.token_a.address;
 
-        const balance = await getTokenBalance(
-          tokenAddress,
-          usePersistStore.getState().wallet.address!
-        );
+        let balance: bigint;
+        try {
+          balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+        } catch (error) {
+          balance = BigInt(0);
+        }
 
         const reserve_a = BigInt(pool.pool_response.token_a.amount);
         const reserve_b = BigInt(pool.pool_response.token_b.amount);
@@ -163,7 +168,6 @@ export const createWalletActions = (
           updatedTokenInfo = updatedTokens.find((token: Token) => token.id === tokenAddress);
           return { tokens: updatedTokens };
         });
-
         // eslint-disable-next-line consistent-return
         return updatedTokenInfo;
       } catch (error) {
@@ -178,10 +182,12 @@ export const createWalletActions = (
 
         const tokenAddress = apiToken.contract.toString();
 
-        const balance = await getTokenBalance(
-          tokenAddress,
-          usePersistStore.getState().wallet.address!
-        );
+        let balance: bigint;
+        try {
+          balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+        } catch (error) {
+          balance = BigInt(0);
+        }
 
         const { price } = await getOraclePrice(
           constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS,

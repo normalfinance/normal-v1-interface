@@ -56,10 +56,18 @@ export function useInsuranceFund(): ReturnType {
       setError(null);
       setLoading(true);
 
-      const xlmBalance = await getTokenBalance(
-        constants.StellarConfig.XLM_ADDRESS,
-        constants.StellarConfig.INSURANCE_FUND_ADDRESS
-      );
+      let xlmBalance: bigint;
+      try {
+        xlmBalance = await getTokenBalance(
+          constants.StellarConfig.XLM_ADDRESS,
+          constants.StellarConfig.INSURANCE_FUND_ADDRESS
+        );
+      } catch (e: any) {
+        captureException(e);
+        console.log(e);
+        setError(e.toString());
+        xlmBalance = BigInt(0);
+      }
 
       if (xlmBalance) setBalance(BigNumber(xlmBalance));
     } catch (e: any) {

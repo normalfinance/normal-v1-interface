@@ -4,12 +4,12 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { format } from '@normalfinance/utils';
-import { fPercent, fCurrency, fShortenNumber } from '@/utils/format-number';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Stack from '@mui/material/Stack';
-import { IconButton } from '@mui/material';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
+import { Chip, IconButton } from '@mui/material';
 import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
@@ -73,16 +73,25 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
 
       {/* APR % ------------------------------------------------------- */}
       <TableCell>
-        {t('Coming soon')}
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
         {/* {fPercent(row.apr)} */}
       </TableCell>
 
       {/* Volume ---------------------------------------------- */}
-      <TableCell>{fCurrency(row.volume1d)}</TableCell>
-      <TableCell>{fCurrency(row.volume30d)}</TableCell>
+      <TableCell>
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        {/* {fCurrency(row.volume1d)} */}
+      </TableCell>
+      <TableCell>
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        {/* {fCurrency(row.volume30d)} */}
+      </TableCell>
 
       {/* Ratio -------------------------------------------------- */}
-      <TableCell>{fShortenNumber(row.ratio)}</TableCell>
+      <TableCell>
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        {/* {fShortenNumber(row.ratio)} */}
+      </TableCell>
 
       <TableCell align="right" sx={{ pr: 1 }}>
         <IconButton color="default" onClick={onClickRow}>
