@@ -1,3 +1,9 @@
+import type {
+  IndexDetails as DomainIndexDetails,
+  WeightedToken as DomainWeightedToken,
+  WeightingStrategy as DomainWeightingStrategy,
+} from '@normalfinance/types';
+
 export type IndexCoin = {
   id: number;
   url: string;
@@ -167,32 +173,65 @@ export function formToIndexDetails(
 }
 
 // 2) Domain -> Form
-export function indexDetailsToForm(details: IndexDetails): IIndexItem {
-  const weightingMethod = domainToFormWeighting[details.weighting.type as WeightingKind];
+// Accept BOTH your local IndexDetails AND the domain IndexDetails from @normalfinance/types
+export function indexDetailsToForm(details: IndexDetails | DomainIndexDetails): IIndexItem {
+  // Normalize weighting type across both shapes
+  const rawType =
+    // your local type: details.weighting.type is WeightingKind
+    (details as IndexDetails).weighting?.type ??
+    // domain type (string union like 'EQUAL' | 'MARKET_CAP' | 'CUSTOM')
+    (details as DomainIndexDetails).weighting?.type;
 
-  const indexCoinList: IndexCoin[] = details.constituents.map((c) => ({
+  // Reuse your existing enum mapping via an adapter
+  const weightingMethod = (() => {
+    switch (rawType) {
+      case 'EQUAL':
+        return 'Constant';
+      case 'MARKET_CAP':
+        return 'Market Cap';
+      case 'CUSTOM':
+        return 'Custom';
+      default:
+        // If rawType is already your WeightingKind enum value
+        // map via domainToFormWeighting safely
+        try {
+          return domainToFormWeighting[rawType as WeightingKind];
+        } catch {
+          return 'Custom';
+        }
+    }
+  })();
+
+  // Normalize constituents across both shapes
+  // - your local: uses shortName, imageUrl, priceUsd, marketCapUsd, weightPct
+  // - domain: uses shortname, icon/imageUrl, priceUsd, marketCapUsd, weightPct
+  const indexCoinList: IndexCoin[] = (details.constituents || []).map((c: any) => ({
     id: c.id ?? 0,
-    url: c.imageUrl ?? '',
+    url: c.imageUrl ?? c.icon ?? '',
     name: c.name,
-    shortName: c.shortName,
+    shortName: c.shortName ?? c.shortname ?? '',
     price: c.priceUsd ?? 0,
     marketCap: c.marketCapUsd ?? 0,
-    indexPercentage: c.weightPct,
+    indexPercentage: c.weightPct ?? 0,
   }));
 
+  const slugUpper =
+    (details as any).slug?.toUpperCase?.() ??
+    (details as any).name?.slice?.(0, 6)?.toUpperCase?.() ??
+    '';
+
   return {
-    indexName: details.name,
-    indexSymbol: firstNonEmpty(details.slug?.toUpperCase(), details.name.slice(0, 6).toUpperCase()),
-    indexDescription: details.description ?? '',
+    indexName: (details as any).name,
+    indexSymbol: firstNonEmpty(slugUpper, (details as any).name?.slice?.(0, 6)?.toUpperCase?.()),
+    indexDescription: (details as any).description ?? '',
     weightingMethod,
-    initialPrice: details.priceUsd,
-    initialDeposit: 0, // not present in domain; set or override upstream
-    isPublic: true, // not present in domain; set according to your rules
-    avatarUrl: null, // domain doesn’t carry file blobs
+    initialPrice: (details as any).priceUsd,
+    initialDeposit: 0, // not present in either domain, set as needed
+    isPublic: true, // not present in either domain, set as needed
+    avatarUrl: null, // no blob in domain
     indexCoinList,
   };
 }
-
 // ----- Small helpers -----
 function toSlug(input: string): string {
   return input

@@ -117,6 +117,8 @@ export const INDEXES: IndexDetails[] = [
       { type: 'ADD', assetShortname: 'ADA', timestamp: '2025-06-18T08:15:00Z' },
       { type: 'REMOVE', assetShortname: 'DOT', timestamp: '2025-07-22T11:45:00Z' },
     ],
+
+    createdByUser: true,
   },
 ];
 

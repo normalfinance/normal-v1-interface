@@ -112,6 +112,16 @@ export function IndexCard({ index, highlightType, onClick, chartSeries }: IndexC
         gap: '48px',
       }}
     >
+      <Stack direction="row" spacing={2} justifyContent="flex-end">
+        {index.createdByUser && (
+          <Button component={NextLink} href={`/indexes/edit/${index.slug}`} variant="outlined">
+            {t('Edit Index')}
+          </Button>
+        )}
+        <Button component={NextLink} href={targetHref} variant="contained" disableElevation>
+          {t('Invest')}
+        </Button>
+      </Stack>
       {/* Header */}
       <Stack
         direction="row"
