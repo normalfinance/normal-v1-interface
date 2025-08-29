@@ -1,9 +1,10 @@
 'use client';
 
+import { paths } from '@/routes/paths';
+
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import type { Props } from './normal-navbar';
-import { paths } from '@/routes/paths';
 
 export const NormalNavbarDefaults: Props = {
   logo: {

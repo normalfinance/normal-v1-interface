@@ -1,10 +1,11 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
+import type { BigNumber } from 'bignumber.js';
 import type { TxType, PoolTxRow } from '@/types/pools';
 
-import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { ago } from '@/utils/format-time';
+import { format } from '@normalfinance/utils';
 import React, { useMemo, useState } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { fTruncate } from '@normalfinance/utils/build/format';
@@ -29,7 +30,6 @@ import {
 } from '@mui/material';
 
 import { TableSkeleton } from '@/components/template/table';
-import { format } from '@normalfinance/utils';
 
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Buy: 'success',

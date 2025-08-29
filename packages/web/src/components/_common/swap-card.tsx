@@ -33,7 +33,6 @@ interface SwapCardProps extends CardProps {
 const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
-  // console.log(tokensList)
 
   // Using the store
   const storePersist = usePersistStore();
