@@ -65,6 +65,78 @@ const XRP = makeToken(
   0.55
 );
 
+const UNI = makeToken(
+  5,
+  'Uniswap',
+  'UNI',
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/7083.png',
+  7.5
+);
+
+const AAVE = makeToken(
+  6,
+  'Aave',
+  'AAVE',
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/7278.png',
+  95
+);
+
+const CRV = makeToken(
+  7,
+  'Curve DAO Token',
+  'CRV',
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/6538.png',
+  0.42
+);
+
+const MKR = makeToken(
+  8,
+  'Maker',
+  'MKR',
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/1518.png',
+  3100
+);
+
+const SNX = makeToken(
+  9,
+  'Synthetix',
+  'SNX',
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/2586.png',
+  2.9
+);
+
+const GRT = makeToken(
+  10,
+  'The Graph',
+  'GRT',
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/6719.png',
+  0.21
+);
+
+const FIL = makeToken(
+  11,
+  'Filecoin',
+  'FIL',
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/2280.png',
+  4.8
+);
+
+const RNDR = makeToken(
+  12,
+  'Render',
+  'RNDR',
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/5690.png',
+  6.2
+);
+
+const NEAR = makeToken(
+  13,
+  'NEAR Protocol',
+  'NEAR',
+  'https://s2.coinmarketcap.com/static/img/coins/64x64/6535.png',
+  4.1
+);
+
 /* Helper to merge weight */
 const w = (tok: Token, weightPct: number): WeightedToken => ({ ...tok, weightPct });
 
@@ -90,11 +162,10 @@ export const INDEXES: IndexDetails[] = [
 
     weighting: {
       type: 'CUSTOM',
-      label: 'Market Cap Weighted',
+      label: 'Custom Weighted',
       description: 'Weights each asset according to its circulating-market-cap share.',
     },
 
-    /* Only four assets for the demo; others 0 % */
     constituents: [w(BTC, 48.0), w(ETH, 25.5), w(SOL, 15.0), w(XRP, 11.5)],
 
     methodologyUrl: 'https://normal.finance/methodology/blue-chip-10',
@@ -110,8 +181,79 @@ export const INDEXES: IndexDetails[] = [
 
     createdByUser: true,
   },
-];
+  {
+    id: 2,
+    avatar: '/assets/images/index/index-avatar-defi.webp',
+    name: 'DeFi Leaders 5',
+    slug: 'defi',
 
+    url: '/index/defi',
+
+    priceUsd: 42.89,
+    priceChangePct24h: -0.87,
+    tvlUsd: 12_340_000,
+    tvlChangePct24h: 2.1,
+    coinCount: 5,
+    coinCountChangePct24h: 0,
+
+    description: 'Top decentralized finance tokens.',
+    creationDate: '2025-02-01T00:00:00Z',
+    updatedAt: '2025-08-20T08:45:00Z',
+
+    weighting: {
+      type: 'EQUAL',
+      label: 'Equal Weight',
+      description: 'Each asset has the same share of the index.',
+    },
+
+    constituents: [w(UNI, 20.0), w(AAVE, 20.0), w(CRV, 20.0), w(MKR, 20.0), w(SNX, 20.0)],
+
+    methodologyUrl: 'https://normal.finance/methodology/defi-leaders-5',
+
+    events: [
+      { type: 'CREATION', assetName: 'DeFi Leaders 5', timestamp: '2025-02-01T00:00:00Z' },
+      { type: 'REBALANCE', assetShortname: 'UNI', percent: 20, timestamp: '2025-06-01T00:00:00Z' },
+    ],
+
+    createdByUser: true,
+  },
+  {
+    id: 3,
+    avatar: '/assets/images/index/index-avatar-ai.webp',
+    name: 'AI & Infrastructure',
+    slug: 'ai',
+
+    url: '/index/ai',
+
+    priceUsd: 15.73,
+    priceChangePct24h: 3.25,
+    tvlUsd: 7_890_000,
+    tvlChangePct24h: 1.5,
+    coinCount: 4,
+    coinCountChangePct24h: 0,
+
+    description: 'Focuses on AI-related and infrastructure.',
+    creationDate: '2025-03-10T00:00:00Z',
+    updatedAt: '2025-08-27T14:20:00Z',
+
+    weighting: {
+      type: 'MARKET_CAP',
+      label: 'Market Cap',
+      description: 'Weighted according to each project’s circulating market cap.',
+    },
+
+    constituents: [w(GRT, 40.0), w(FIL, 30.0), w(RNDR, 20.0), w(NEAR, 10.0)],
+
+    methodologyUrl: 'https://normal.finance/methodology/ai-infra',
+
+    events: [
+      { type: 'CREATION', assetName: 'AI & Infrastructure', timestamp: '2025-03-10T00:00:00Z' },
+      { type: 'ADD', assetShortname: 'RNDR', timestamp: '2025-04-22T10:00:00Z' },
+    ],
+
+    createdByUser: true,
+  },
+];
 export const buildStats = (idx: IndexDetails): SingleStat[] => [
   {
     title: 'Index Price',
@@ -168,10 +310,10 @@ export default function ExploreIndexesView() {
             <IndexCard index={INDEXES[0]} highlightType="staff-pick" chartSeries={spark0} />
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-            <IndexCard index={INDEXES[0]} highlightType="trending" chartSeries={spark0} />
+            <IndexCard index={INDEXES[1]} highlightType="trending" chartSeries={spark0} />
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-            <IndexCard index={INDEXES[0]} highlightType="gainer" chartSeries={spark0} />
+            <IndexCard index={INDEXES[2]} highlightType="gainer" chartSeries={spark0} />
           </Grid2>
         </Grid2>
 

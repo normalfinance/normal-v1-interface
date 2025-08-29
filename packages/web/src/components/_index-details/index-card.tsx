@@ -112,17 +112,6 @@ export function IndexCard({ index, highlightType, onClick, chartSeries }: IndexC
         gap: '48px',
       }}
     >
-      <Stack direction="row" spacing={2} justifyContent="flex-end">
-        {index.createdByUser && (
-          <Button component={NextLink} href={`/indexes/edit/${index.slug}`} variant="outlined">
-            {t('Edit Index')}
-          </Button>
-        )}
-        <Button component={NextLink} href={targetHref} variant="contained" disableElevation>
-          {t('Invest')}
-        </Button>
-      </Stack>
-      {/* Header */}
       <Stack
         direction="row"
         flexWrap="wrap"
@@ -330,29 +319,47 @@ export function IndexCard({ index, highlightType, onClick, chartSeries }: IndexC
           </Stack>
         </Stack>
       </Stack>
-      <Button
-        component={NextLink}
-        href={targetHref}
-        variant="contained"
-        disableElevation
-        sx={(theme) => ({
-          bgcolor: 'text.primary',
-          color: 'common.white',
-          whiteSpace: 'nowrap',
-          '&:hover': {
-            bgcolor: theme.vars
-              ? `rgba(${theme.vars.palette.text.primaryChannel} / 0.92)`
-              : alpha(theme.palette.text.primary, 0.92),
-          },
-          '&:active': {
-            bgcolor: theme.vars
-              ? `rgba(${theme.vars.palette.text.primaryChannel} / 0.86)`
-              : alpha(theme.palette.text.primary, 0.86),
-          },
-        })}
-      >
-        {t('Invest')}
-      </Button>
+      <Stack>
+        <Button
+          component={NextLink}
+          href={targetHref}
+          variant="contained"
+          disableElevation
+          sx={(theme) => ({
+            bgcolor: 'text.primary',
+            color: 'common.white',
+            whiteSpace: 'nowrap',
+            '&:hover': {
+              bgcolor: theme.vars
+                ? `rgba(${theme.vars.palette.text.primaryChannel} / 0.92)`
+                : alpha(theme.palette.text.primary, 0.92),
+            },
+            '&:active': {
+              bgcolor: theme.vars
+                ? `rgba(${theme.vars.palette.text.primaryChannel} / 0.86)`
+                : alpha(theme.palette.text.primary, 0.86),
+            },
+          })}
+        >
+          {t('Invest')}
+        </Button>
+        {index.createdByUser && (
+          <Box mt={1}>
+            <Button
+              component={NextLink}
+              href={`/indexes/edit/${index.slug}`}
+              variant="outlined"
+              fullWidth
+              sx={{
+                textTransform: 'none',
+                justifyContent: 'center',
+              }}
+            >
+              {t('Edit Index')}
+            </Button>
+          </Box>
+        )}
+      </Stack>
     </Card>
   );
 }

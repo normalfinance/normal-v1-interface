@@ -13,7 +13,6 @@ import { Stack, Typography, Box, Button } from '@mui/material';
 import { NewIndexForm } from '@/components/_create-index/new-index-form';
 import { indexDetailsToForm } from '@/types/index-mappers';
 
-// 🔁 Point this to your actual mock data export
 import { INDEXES } from '@/sections/explore/indexes';
 
 export default function EditIndexPage() {
@@ -75,7 +74,7 @@ export default function EditIndexPage() {
   const currentIndexForm = useMemo(() => {
     if (!slug) return null;
     const idx = INDEXES.find((i) => i.slug === slug);
-    return idx ? indexDetailsToForm(idx) : null; // ✅ works with domain type now
+    return idx ? indexDetailsToForm(idx) : null;
   }, [slug]);
 
   return (

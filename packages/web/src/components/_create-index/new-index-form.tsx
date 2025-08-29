@@ -78,10 +78,104 @@ type Props = {
   availableCoins: IndexCoin[];
 };
 
+// ---------- weight helpers (rounding + exact 100%) ----------
+function round2(n: number) {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+// normalize an array of coins that already has indexPercentage set (or 0)
+// makes sum exactly 100 by fixing the last item after rounding
+function normalizeAndRound(list: IndexCoin[]): IndexCoin[] {
+  if (list.length === 0) return list;
+
+  const raw = list.map((c) => ({ ...c, indexPercentage: c.indexPercentage ?? 0 }));
+  const sum = raw.reduce((a, c) => a + (c.indexPercentage ?? 0), 0);
+
+  if (sum <= 0) {
+    const each = 100 / raw.length;
+    const out = raw.map((c) => ({ ...c, indexPercentage: each }));
+    return finalizeTo100(out);
+  }
+
+  const scale = 100 / sum;
+  const scaled = raw.map((c) => ({ ...c, indexPercentage: (c.indexPercentage ?? 0) * scale }));
+  return finalizeTo100(scaled);
+}
+
+// equal split with rounding and exact 100 correction
+function equalize(list: IndexCoin[]): IndexCoin[] {
+  if (list.length === 0) return list;
+  const each = 100 / list.length;
+  const provisional = list.map((c) => ({ ...c, indexPercentage: each }));
+  return finalizeTo100(provisional);
+}
+
+// after percentages have been computed, round to 2dp and force exact 100
+function finalizeTo100(list: IndexCoin[]): IndexCoin[] {
+  if (list.length === 0) return list;
+
+  const roundedExceptLast: IndexCoin[] = list.slice(0, -1).map((c) => ({
+    ...c,
+    indexPercentage: round2(Math.max(0, Math.min(100, c.indexPercentage ?? 0))),
+  }));
+
+  const sumExceptLast = roundedExceptLast.reduce((a, c) => a + (c.indexPercentage ?? 0), 0);
+  let last = 100 - sumExceptLast;
+
+  // in case of tiny float drift like 100.0000000001 -> clamp after rounding
+  last = round2(last);
+  if (last < 0) last = 0;
+  if (last > 100) last = 100;
+
+  const final = [
+    ...roundedExceptLast,
+    {
+      ...list[list.length - 1],
+      indexPercentage: last,
+    },
+  ];
+
+  // final tiny clamp to fix rare -0.01 or 100.01
+  const total = round2(final.reduce((a, c) => a + (c.indexPercentage ?? 0), 0));
+  if (Math.abs(total - 100) > 0.01) {
+    // Adjust last coin by the delta
+    const delta = round2(100 - total);
+    final[final.length - 1].indexPercentage = round2(
+      (final[final.length - 1].indexPercentage ?? 0) + delta
+    );
+  }
+
+  return final;
+}
+
+// --- Market cap smart recalc (handles none/partial/all caps and preserves ratios) ---
+function recalcMarketCapSmart(list: IndexCoin[]): IndexCoin[] {
+  if (list.length === 0) return list;
+
+  const caps = list.map((c) => c.marketCap ?? 0);
+  const numWithCaps = caps.filter((v) => v > 0).length;
+
+  if (numWithCaps === 0) {
+    return equalize(list);
+  }
+
+  if (numWithCaps === list.length) {
+    const totalCap = caps.reduce((a, b) => a + b, 0);
+    if (totalCap <= 0) return equalize(list);
+    const byCap = list.map((c) => ({
+      ...c,
+      indexPercentage: ((c.marketCap ?? 0) / totalCap) * 100,
+    }));
+    return normalizeAndRound(byCap);
+  }
+
+  // Partial caps: preserve whatever weights exist and normalize
+  return normalizeAndRound(list);
+}
+
 export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Props) {
   const { t } = useTranslate();
   const MAX_AVATAR_SIZE = 3145728;
-
   const { enqueueSnackbar } = useSnackbar();
 
   const defaultValues: NewIndexSchemaType = {
@@ -106,19 +200,9 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
   const { reset, handleSubmit, control, setValue, trigger, watch } = methods;
 
   const coinList = (useWatch({ control, name: 'indexCoinList' }) ?? []) as IndexCoin[];
-
   const weightingMethod = watch('weightingMethod');
 
   const [openCoinPicker, setOpenCoinPicker] = useState(false);
-
-  const handleOpenCoinPicker = () => {
-    setOpenCoinPicker(true);
-  };
-
-  const handleCloseCoinPicker = () => {
-    setOpenCoinPicker(false);
-  };
-
   const [openCustomPercentageDialog, setOpenCustomPercentageDialog] = useState(false);
   const [tempCoins, setTempCoins] = useState<IndexCoin[]>([]);
   const [duplicateMessage, setDuplicateMessage] = useState('');
@@ -126,8 +210,8 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
 
   const didMountRef = useRef(false);
 
+  // Recalculate when the method changes, but don't clobber edit-mode initial load
   useEffect(() => {
-    // Skip on first render so edit-mode prefill stays intact.
     if (!didMountRef.current) {
       didMountRef.current = true;
       return;
@@ -136,46 +220,64 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
     if (list.length === 0) return;
 
     if (weightingMethod === 'Constant') {
-      const each = 100 / list.length;
-      setValue(
-        'indexCoinList',
-        list.map((c) => ({ ...c, indexPercentage: each }))
-      );
+      setValue('indexCoinList', equalize(list));
     } else if (weightingMethod === 'Market Cap') {
-      const totalCap = list.reduce((acc, c) => acc + (c.marketCap ?? 0), 0);
-      setValue(
-        'indexCoinList',
-        list.map((c) => ({
-          ...c,
-          indexPercentage: totalCap ? ((c.marketCap ?? 0) / totalCap) * 100 : 0,
-        }))
-      );
+      setValue('indexCoinList', recalcMarketCapSmart(list));
     } else {
-      // Custom: keep existing percentages as-is
-      setValue('indexCoinList', list);
+      // Custom: keep as-is
+      setValue('indexCoinList', normalizeAndRound(list));
     }
   }, [weightingMethod, coinList, setValue]);
 
+  const handleOpenCoinPicker = () => setOpenCoinPicker(true);
+  const handleCloseCoinPicker = () => setOpenCoinPicker(false);
+
+  const [coinIdToReplace, setCoinIdToReplace] = useState<number | null>(null);
+  const handleReplaceCoin = (id: number) => {
+    setCoinIdToReplace(id);
+    setOpenCoinPicker(true);
+  };
+
+  function replaceCoinInList(list: IndexCoin[], idToReplace: number, newCoin: IndexCoin) {
+    const newShort = newCoin.shortName.toUpperCase();
+    const coinAlreadyInList = list.some(
+      (c) => c.id !== idToReplace && c.shortName.toUpperCase() === newShort
+    );
+
+    if (coinAlreadyInList) {
+      setDuplicateMessage(
+        t('createIndex.messages.coinAlreadyInList', 'Coin {{name}} is already in the list!', {
+          name: newCoin.name,
+        })
+      );
+      return list;
+    }
+
+    return list.map((c) => {
+      if (c.id === idToReplace) {
+        return {
+          ...newCoin,
+          indexPercentage: c.indexPercentage,
+        };
+      }
+      return c;
+    });
+  }
+
   const handleSelectCoins = (selectedCoins: IndexCoin[]) => {
+    // Replace flow
     if (coinIdToReplace !== null && selectedCoins.length > 0) {
       const [newCoin] = selectedCoins;
       const replacedList = replaceCoinInList(coinList, coinIdToReplace, newCoin);
-      setValue('indexCoinList', replacedList);
       setCoinIdToReplace(null);
       setOpenCoinPicker(false);
 
       if (weightingMethod === 'Constant') {
-        const each = replacedList.length > 0 ? 100 / replacedList.length : 0;
-        const updated = replacedList.map((c) => ({ ...c, indexPercentage: each }));
-        setValue('indexCoinList', updated);
+        setValue('indexCoinList', equalize(replacedList));
       } else if (weightingMethod === 'Market Cap') {
-        const totalCap = replacedList.reduce((acc, c) => acc + c.marketCap, 0);
-        const updated = replacedList.map((c) => {
-          if (totalCap === 0) return { ...c, indexPercentage: 0 };
-          return { ...c, indexPercentage: (c.marketCap / totalCap) * 100 };
-        });
-        setValue('indexCoinList', updated);
-      } else if (weightingMethod === 'Custom') {
+        setValue('indexCoinList', recalcMarketCapSmart(replacedList));
+      } else {
+        // Custom: zero out the replaced coin and let user set value
         const replacedCoin = replacedList.find((c) => c.id === newCoin.id);
         if (replacedCoin) {
           replacedCoin.indexPercentage = 0;
@@ -187,12 +289,15 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
       return;
     }
 
+    // Add flow
     const currentList = coinList || [];
     const newList = [...currentList];
 
     const duplicates: string[] = [];
     selectedCoins.forEach((coin) => {
-      const alreadyInList = newList.some((existing) => existing.id === coin.id);
+      const alreadyInList = newList.some(
+        (existing) => existing.shortName.toUpperCase() === coin.shortName.toUpperCase()
+      );
       if (alreadyInList) {
         duplicates.push(coin.name);
       } else {
@@ -208,113 +313,110 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
       );
     }
 
-    setValue('indexCoinList', newList);
     setOpenCoinPicker(false);
 
     if (weightingMethod === 'Custom') {
+      setValue('indexCoinList', newList);
       const newlyAddedCoins = selectedCoins.filter((coin) => !duplicates.includes(coin.name));
       if (newlyAddedCoins.length > 0) {
         setTempCoins(newlyAddedCoins);
         setOpenCustomPercentageDialog(true);
       }
-    } else if (weightingMethod === 'Constant') {
-      const each = 100 / newList.length;
-      const updated = newList.map((c) => ({ ...c, indexPercentage: each }));
-      setValue('indexCoinList', updated);
-    } else if (weightingMethod === 'Market Cap') {
-      const totalCap = newList.reduce((acc, c) => acc + c.marketCap, 0);
-      const updated = newList.map((c) => {
-        if (totalCap === 0) return { ...c, indexPercentage: 0 };
-        return { ...c, indexPercentage: (c.marketCap / totalCap) * 100 };
-      });
-      setValue('indexCoinList', updated);
+      return;
+    }
+
+    if (weightingMethod === 'Constant') {
+      setValue('indexCoinList', equalize(newList));
+      return;
+    }
+
+    // Market Cap smart handling
+    if (weightingMethod === 'Market Cap') {
+      // Preserve existing ratios for old coins; give new coins provisional avg, then normalize
+      const newlyAddedSet = new Set(
+        selectedCoins
+          .filter((c) => !duplicates.includes(c.name))
+          .map((c) => c.shortName.toUpperCase())
+      );
+
+      // If there was some prior distribution, keep it; otherwise equalize, then normalize
+      const base =
+        currentList.length > 0
+          ? newList.map((c) => ({
+              ...c,
+              indexPercentage: currentList.find(
+                (e) => e.shortName.toUpperCase() === c.shortName.toUpperCase()
+              )
+                ? (currentList.find((e) => e.shortName.toUpperCase() === c.shortName.toUpperCase())!
+                    .indexPercentage ?? 0)
+                : 0,
+            }))
+          : newList.map((c) => ({ ...c, indexPercentage: 0 }));
+
+      const prevSum = base.reduce((a, c) => a + (c.indexPercentage ?? 0), 0);
+      let withNew = base;
+
+      if (newlyAddedSet.size > 0) {
+        const remaining = Math.max(0, 100 - prevSum);
+        const addEach = newlyAddedSet.size > 0 ? remaining / newlyAddedSet.size : 0;
+
+        withNew = base.map((c) => {
+          const isNew = newlyAddedSet.has(c.shortName.toUpperCase());
+          return {
+            ...c,
+            indexPercentage: (c.indexPercentage ?? 0) + (isNew ? addEach : 0),
+          };
+        });
+      }
+
+      // If all caps known, prefer strict cap-based; else normalize preserved ratios
+      const caps = newList.map((c) => c.marketCap ?? 0);
+      const numWithCaps = caps.filter((v) => v > 0).length;
+
+      if (numWithCaps === newList.length) {
+        const totalCap = caps.reduce((a, b) => a + b, 0);
+        const byCap =
+          totalCap > 0
+            ? newList.map((c) => ({ ...c, indexPercentage: ((c.marketCap ?? 0) / totalCap) * 100 }))
+            : equalize(newList);
+        setValue('indexCoinList', normalizeAndRound(byCap));
+      } else if (numWithCaps === 0) {
+        setValue('indexCoinList', equalize(newList));
+      } else {
+        setValue('indexCoinList', normalizeAndRound(withNew));
+      }
+      return;
     }
   };
 
-  function replaceCoinInList(list: IndexCoin[], idToReplace: number, newCoin: IndexCoin) {
-    const coinAlreadyInList = list.some((c) => c.id === newCoin.id && c.id !== idToReplace);
-    if (coinAlreadyInList) {
-      setDuplicateMessage(
-        t('createIndex.messages.coinAlreadyInList', 'Coin {{name}} is already in the list!', {
-          name: newCoin.name,
-        })
-      );
-      return list;
-    }
-    return list.map((c) => {
-      if (c.id === idToReplace) {
-        return {
-          ...newCoin,
-          indexPercentage: c.indexPercentage,
-        };
-      }
-      return c;
-    });
-  }
-
   const handleSaveCustomPercentages = (coinsWithPercentages: IndexCoin[]) => {
     const finalList = (coinList || []).map((c) => {
-      const updatedCoin = coinsWithPercentages.find((nc) => nc.id === c.id);
-      return updatedCoin ? { ...updatedCoin } : c;
+      const updated = coinsWithPercentages.find(
+        (nc) => nc.shortName.toUpperCase() === c.shortName.toUpperCase()
+      );
+      return updated ? { ...updated } : c;
     });
 
-    let totalPercentage = finalList.reduce((acc, coin) => acc + (coin.indexPercentage ?? 0), 0);
-
-    if (totalPercentage > 100) {
-      const difference = totalPercentage - 100;
-      const lastUpdatedCoin = coinsWithPercentages[coinsWithPercentages.length - 1];
-      if (lastUpdatedCoin) {
-        const indexOfLastUpdated = finalList.findIndex((c) => c.id === lastUpdatedCoin.id);
-        if (indexOfLastUpdated !== -1) {
-          const oldValue = finalList[indexOfLastUpdated].indexPercentage ?? 0;
-          const newValue = Math.max(0, oldValue - difference);
-          finalList[indexOfLastUpdated] = {
-            ...finalList[indexOfLastUpdated],
-            indexPercentage: newValue,
-          };
-          totalPercentage = finalList.reduce((acc, coin) => acc + (coin.indexPercentage ?? 0), 0);
-          setDuplicateMessage(
-            t(
-              'createIndex.messages.totalExceededAdjusted',
-              "Total exceeded 100%. {{name}}'s percentage was adjusted to {{value}}%",
-              { name: lastUpdatedCoin.name, value: newValue.toFixed(2) }
-            )
-          );
-        }
-      }
-    }
-
-    setValue('indexCoinList', finalList);
+    const normalized = normalizeAndRound(finalList);
+    setValue('indexCoinList', normalized);
     setOpenCustomPercentageDialog(false);
   };
 
   const handleRemoveCoin = (id: number) => {
     const updatedList = coinList.filter((c) => c.id !== id);
 
-    if (weightingMethod === 'Constant') {
-      const each = updatedList.length > 0 ? 100 / updatedList.length : 0;
-      const recalculated = updatedList.map((c) => ({
-        ...c,
-        indexPercentage: each,
-      }));
-      setValue('indexCoinList', recalculated);
-    } else if (weightingMethod === 'Market Cap') {
-      const totalCap = updatedList.reduce((acc, c) => acc + c.marketCap, 0);
-      const recalculated = updatedList.map((c) => {
-        if (totalCap === 0) return { ...c, indexPercentage: 0 };
-        return { ...c, indexPercentage: (c.marketCap / totalCap) * 100 };
-      });
-      setValue('indexCoinList', recalculated);
-    } else {
-      setValue('indexCoinList', updatedList);
+    if (updatedList.length === 0) {
+      setValue('indexCoinList', []);
+      return;
     }
-  };
 
-  const [coinIdToReplace, setCoinIdToReplace] = useState<number | null>(null);
-
-  const handleReplaceCoin = (id: number) => {
-    setCoinIdToReplace(id);
-    setOpenCoinPicker(true);
+    if (weightingMethod === 'Constant') {
+      setValue('indexCoinList', equalize(updatedList));
+    } else if (weightingMethod === 'Market Cap') {
+      setValue('indexCoinList', recalcMarketCapSmart(updatedList));
+    } else {
+      setValue('indexCoinList', normalizeAndRound(updatedList));
+    }
   };
 
   const [openSubmissionDialog, setOpenSubmissionDialog] = useState(false);
@@ -330,18 +432,19 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
     }
 
     if (weightingMethod === 'Custom') {
-      const totalPct = coinList.reduce((acc, c) => acc + (c.indexPercentage ?? 0), 0);
-      if (Math.round(totalPct) !== 100) {
+      const totalPct = (coinList ?? []).reduce((acc, c) => acc + (c.indexPercentage ?? 0), 0);
+      // allow tiny float drift tolerance
+      if (Math.abs(totalPct - 100) > 0.01) {
         setValidationError(
           t(
             'createIndex.validation.customMustBe100',
             'For Custom weighting, total must be 100%. Currently it is {{value}}%.',
-            { value: totalPct.toFixed(2) }
+            { value: round2(totalPct).toFixed(2) }
           )
         );
         return;
       }
-    } else if (coinList.length === 0) {
+    } else if ((coinList ?? []).length === 0) {
       setValidationError(
         t('createIndex.validation.selectAtLeastOne', 'Please select at least one coin.')
       );
@@ -360,11 +463,8 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
         currentIndex
           ? t('createIndex.toast.updateSuccess', 'Update success!')
           : t('createIndex.toast.createSuccess', 'Create success!'),
-        {
-          variant: 'success',
-        }
+        { variant: 'success' }
       );
-
       console.info('Submitted data', data);
     } catch (error) {
       console.error(error);
@@ -535,10 +635,10 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
                   <TextField
                     value={field.value}
                     onChange={(e) => {
-                      let newValue = Number(e.target.value);
-                      if (newValue > 1000) newValue = 1000;
-                      if (newValue < 1 || isNaN(newValue)) newValue = 1;
-                      field.onChange(newValue);
+                      let v = Number(e.target.value);
+                      if (v > 1000) v = 1000;
+                      if (v < 1 || isNaN(v)) v = 1;
+                      field.onChange(v);
                     }}
                     type="number"
                     slotProps={{
@@ -590,8 +690,8 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
                 <TextField
                   value={field.value}
                   onChange={(e) => {
-                    const newValue = parseFloat(e.target.value);
-                    field.onChange(isNaN(newValue) ? 0 : newValue);
+                    const v = parseFloat(e.target.value);
+                    field.onChange(isNaN(v) ? 0 : v);
                   }}
                   type="number"
                   slotProps={{
@@ -624,7 +724,7 @@ export function NewIndexForm({ currentIndex, tokenSymbol, availableCoins }: Prop
             onReplaceCoin={handleReplaceCoin}
           />
           <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="outlined" sx={{ mt: 0 }} onClick={handleOpenCoinPicker}>
+            <Button variant="outlined" sx={{ mt: 0 }} onClick={() => setOpenCoinPicker(true)}>
               {t('createIndex.indexCoinList.addCoin', 'Add Coin')}
             </Button>
           </Box>

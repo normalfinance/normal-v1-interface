@@ -1,6 +1,5 @@
 import type {
   IndexDetails as DomainIndexDetails,
-  WeightedToken as DomainWeightedToken,
   WeightingStrategy as DomainWeightingStrategy,
 } from '@normalfinance/types';
 
@@ -22,7 +21,7 @@ export type IIndexItem = {
   initialPrice: number;
   initialDeposit: number;
   isPublic: boolean;
-  avatarUrl: File | null;
+  avatarUrl: File | string | null; // allow string for prefill
   indexCoinList: IndexCoin[];
 };
 
@@ -74,21 +73,15 @@ export interface IndexDetails {
   weighting: WeightingStrategy;
   constituents: WeightedToken[];
   events?: IndexEvent[];
+  // optional extras your domain might carry:
+  avatar?: string;
 }
 
-// ----- Shared enum (optional, but nice) -----
 export enum WeightingKind {
   EQUAL = 'EQUAL',
   CUSTOM = 'CUSTOM',
   MARKET_CAP = 'MARKET_CAP',
 }
-
-// Map between form wording and domain enum
-const formToDomainWeighting: Record<IIndexItem['weightingMethod'], WeightingKind> = {
-  Constant: WeightingKind.EQUAL,
-  Custom: WeightingKind.CUSTOM,
-  'Market Cap': WeightingKind.MARKET_CAP,
-};
 
 const domainToFormWeighting: Record<WeightingKind, IIndexItem['weightingMethod']> = {
   [WeightingKind.EQUAL]: 'Constant',
@@ -96,33 +89,10 @@ const domainToFormWeighting: Record<WeightingKind, IIndexItem['weightingMethod']
   [WeightingKind.MARKET_CAP]: 'Market Cap',
 };
 
-// Simple label/description generator (tweak or localize as needed)
-function weightingMeta(kind: WeightingKind): Pick<WeightingStrategy, 'label' | 'description'> {
-  switch (kind) {
-    case WeightingKind.EQUAL:
-      return {
-        label: 'Equal Weight',
-        description: 'Every asset has the same weight (1/n).',
-      };
-    case WeightingKind.CUSTOM:
-      return {
-        label: 'Custom',
-        description: 'Weights are set manually and must total 100%.',
-      };
-    case WeightingKind.MARKET_CAP:
-      return {
-        label: 'Market Cap',
-        description: 'Weights proportional to each asset’s market cap.',
-      };
-  }
-}
-
-// ----- Mappers -----
 // 1) Form -> Domain
 export function formToIndexDetails(
   form: IIndexItem,
   opts?: {
-    // allow callers to pass system-generated values you don’t have in the form
     id?: number;
     slug?: string;
     creationDate?: string;
@@ -135,10 +105,14 @@ export function formToIndexDetails(
     events?: IndexEvent[];
   }
 ): IndexDetails {
-  const kind = formToDomainWeighting[form.weightingMethod];
-  const { label, description } = weightingMeta(kind);
+  const weightingType =
+    form.weightingMethod === 'Constant'
+      ? WeightingKind.EQUAL
+      : form.weightingMethod === 'Market Cap'
+        ? WeightingKind.MARKET_CAP
+        : WeightingKind.CUSTOM;
 
-  const constituents: WeightedToken[] = form.indexCoinList.map((c) => ({
+  const constituents = form.indexCoinList.map((c) => ({
     id: c.id,
     name: c.name,
     shortName: c.shortName,
@@ -163,75 +137,67 @@ export function formToIndexDetails(
     updatedAt: opts?.updatedAt ?? new Date().toISOString(),
     methodologyUrl: opts?.methodologyUrl,
     weighting: {
-      type: kind,
-      label,
-      description,
+      type: weightingType,
+      label:
+        weightingType === WeightingKind.EQUAL
+          ? 'Equal Weight'
+          : weightingType === WeightingKind.MARKET_CAP
+            ? 'Market Cap'
+            : 'Custom',
+      description:
+        weightingType === WeightingKind.EQUAL
+          ? 'Every asset has the same weight (1/n).'
+          : weightingType === WeightingKind.MARKET_CAP
+            ? 'Weights proportional to each asset’s market cap.'
+            : 'Weights are set manually and must total 100%.',
     },
     constituents,
     events: opts?.events ?? [],
   };
 }
 
-// 2) Domain -> Form
-// Accept BOTH your local IndexDetails AND the domain IndexDetails from @normalfinance/types
+// 2) Domain -> Form (accept both local and domain IndexDetails shapes)
 export function indexDetailsToForm(details: IndexDetails | DomainIndexDetails): IIndexItem {
-  // Normalize weighting type across both shapes
-  const rawType =
-    // your local type: details.weighting.type is WeightingKind
-    (details as IndexDetails).weighting?.type ??
-    // domain type (string union like 'EQUAL' | 'MARKET_CAP' | 'CUSTOM')
-    (details as DomainIndexDetails).weighting?.type;
+  const rawType = (details as any).weighting?.type as string;
 
-  // Reuse your existing enum mapping via an adapter
-  const weightingMethod = (() => {
-    switch (rawType) {
-      case 'EQUAL':
-        return 'Constant';
-      case 'MARKET_CAP':
-        return 'Market Cap';
-      case 'CUSTOM':
-        return 'Custom';
-      default:
-        // If rawType is already your WeightingKind enum value
-        // map via domainToFormWeighting safely
-        try {
-          return domainToFormWeighting[rawType as WeightingKind];
-        } catch {
-          return 'Custom';
-        }
-    }
-  })();
+  const weightingMethod =
+    rawType === 'EQUAL'
+      ? 'Constant'
+      : rawType === 'MARKET_CAP'
+        ? 'Market Cap'
+        : rawType === 'CUSTOM'
+          ? 'Custom'
+          : (domainToFormWeighting[rawType as WeightingKind] ?? 'Custom');
 
-  // Normalize constituents across both shapes
-  // - your local: uses shortName, imageUrl, priceUsd, marketCapUsd, weightPct
-  // - domain: uses shortname, icon/imageUrl, priceUsd, marketCapUsd, weightPct
-  const indexCoinList: IndexCoin[] = (details.constituents || []).map((c: any) => ({
-    id: c.id ?? 0,
-    url: c.imageUrl ?? c.icon ?? '',
-    name: c.name,
-    shortName: c.shortName ?? c.shortname ?? '',
-    price: c.priceUsd ?? 0,
-    marketCap: c.marketCapUsd ?? 0,
-    indexPercentage: c.weightPct ?? 0,
-  }));
+  const indexCoinList: IndexCoin[] =
+    (details as any).constituents?.map((c: any) => ({
+      id: c.id ?? 0,
+      url: c.imageUrl ?? c.icon ?? '',
+      name: c.name,
+      shortName: c.shortName ?? c.shortname ?? '',
+      price: c.priceUsd ?? 0,
+      marketCap: c.marketCapUsd ?? 0,
+      indexPercentage: c.weightPct ?? 0,
+    })) ?? [];
 
-  const slugUpper =
-    (details as any).slug?.toUpperCase?.() ??
-    (details as any).name?.slice?.(0, 6)?.toUpperCase?.() ??
-    '';
+  const slug = (details as any).slug ?? toSlug((details as any).name ?? '');
 
   return {
-    indexName: (details as any).name,
-    indexSymbol: firstNonEmpty(slugUpper, (details as any).name?.slice?.(0, 6)?.toUpperCase?.()),
+    indexName: (details as any).name ?? '',
+    indexSymbol: firstNonEmpty(
+      slug.toUpperCase(),
+      ((details as any).name ?? '').slice(0, 6).toUpperCase()
+    ),
     indexDescription: (details as any).description ?? '',
     weightingMethod,
-    initialPrice: (details as any).priceUsd,
-    initialDeposit: 0, // not present in either domain, set as needed
-    isPublic: true, // not present in either domain, set as needed
-    avatarUrl: null, // no blob in domain
+    initialPrice: (details as any).priceUsd ?? 1,
+    initialDeposit: 0,
+    isPublic: true,
+    avatarUrl: (details as any).avatar ?? null,
     indexCoinList,
   };
 }
+
 // ----- Small helpers -----
 function toSlug(input: string): string {
   return input
