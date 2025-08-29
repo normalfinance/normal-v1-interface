@@ -32,7 +32,7 @@ const makeToken = (
   countstatus: 0,
   pricestatus: 0,
   address: '',
-  usdValue, // <- price per token
+  usdValue,
 });
 
 /* Base tokens (with usdValue as price) */
@@ -164,7 +164,6 @@ export const INDEXES: IndexDetails[] = [
       description: 'Weights each asset according to its circulating-market-cap share.',
     },
 
-    // attach caps so Market Cap mode in the form can use them
     constituents: [
       wCap(BTC, 48.0, 1_245_000_000_000),
       wCap(ETH, 25.5, 385_000_000_000),

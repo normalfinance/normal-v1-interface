@@ -7,7 +7,8 @@ import { useTranslate } from '@/locales';
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
-import { Button } from '@mui/material';
+import Button from '@mui/material/Button';
+import ButtonBase from '@mui/material/ButtonBase';
 import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
 
@@ -102,19 +103,34 @@ export function IndexCoinStorageOverview({
         }}
       >
         {data.map((coin) => (
-          <Button
+          <ButtonBase
             key={coin.id}
+            component="div"
+            role="button"
+            tabIndex={0}
+            onClick={() => onReplaceCoin?.(coin.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onReplaceCoin?.(coin.id);
+              }
+            }}
             sx={{
               gap: 2,
+              width: '100%',
               display: 'flex',
               alignItems: 'center',
               typography: 'subtitle2',
+              textAlign: 'left',
+              py: 1.5,
+              px: 0,
+              borderRadius: 1,
+              '&:hover': { bgcolor: 'action.hover' },
             }}
-            onClick={() => onReplaceCoin?.(coin.id)}
           >
             <Box sx={{ width: 36, height: 36 }} component="img" src={coin.url} alt={coin.name} />
 
-            <Stack flex="1 1 auto" textAlign="left">
+            <Stack flex="1 1 auto">
               <div>{coin.name}</div>
               <Box component="span" sx={{ typography: 'caption', color: 'text.disabled' }}>
                 {coin.shortName}
@@ -128,11 +144,9 @@ export function IndexCoinStorageOverview({
                   {fCurrencyTwoDecimals(coin.price)}
                 </Box>
               </Stack>
+
               <Button
-                sx={{
-                  color: theme.vars.palette.error.main,
-                  fontSize: '12px',
-                }}
+                sx={{ color: theme.vars.palette.error.main, fontSize: '12px' }}
                 size="small"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -142,7 +156,7 @@ export function IndexCoinStorageOverview({
                 {t('common.remove', 'Remove')}
               </Button>
             </Box>
-          </Button>
+          </ButtonBase>
         ))}
       </Stack>
     </Box>
