@@ -81,7 +81,7 @@ export function ExploreIndexesTable({ indexes, loading }: ExploreIndexesTablePro
       <ExploreIndexesTableToolbar
         filters={filters}
         onResetPage={table.onResetPage}
-        createHref="/indexes/create"
+        createHref="/indexes/new/"
         createLabel={t('Create index')}
         placeholder={t('Search indexes...')}
       />

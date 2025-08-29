@@ -5,7 +5,7 @@ import type { IMarketTableFilters } from '@/types/marketTable';
 
 import Link from 'next/link';
 import { useTranslate } from '@/locales';
-import { forwardRef, useCallback } from 'react';
+import { useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -19,7 +19,7 @@ type Props = {
   filters: UseSetStateReturn<IMarketTableFilters>;
   onResetPage: () => void;
   onCreateIndex?: () => void;
-  createHref?: string;
+  createHref?: string; // e.g. "/indexes/new/"
   createLabel?: string;
   placeholder?: string;
 };
@@ -43,13 +43,6 @@ export const ExploreIndexesTableToolbar = ({
     [onResetPage, updateFilters]
   );
 
-  // Button as Link when createHref is provided
-  const ButtonComponent = createHref
-    ? forwardRef<HTMLAnchorElement, any>((props, ref) => (
-        <Button ref={ref} component={Link} href={createHref} {...props} />
-      ))
-    : Button;
-
   return (
     <Box
       sx={{
@@ -62,16 +55,28 @@ export const ExploreIndexesTableToolbar = ({
     >
       {/* Left: Create index */}
       <Box sx={{ flexShrink: 0 }}>
-        <ButtonComponent
-          variant="contained"
-          color="secondary"
-          startIcon={<Iconify icon="solar:add-square-bold" />}
-          onClick={createHref ? undefined : onCreateIndex}
-          sx={{ borderRadius: 2 }}
-          href=""
-        >
-          {createLabel ?? t('Create index')}
-        </ButtonComponent>
+        {createHref ? (
+          <Button
+            component={Link}
+            href={createHref}
+            variant="contained"
+            color="secondary"
+            startIcon={<Iconify icon="solar:add-square-bold" />}
+            sx={{ borderRadius: 2 }}
+          >
+            {createLabel ?? t('Create index')}
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<Iconify icon="solar:add-square-bold" />}
+            onClick={onCreateIndex}
+            sx={{ borderRadius: 2 }}
+          >
+            {createLabel ?? t('Create index')}
+          </Button>
+        )}
       </Box>
 
       {/* Right: Search */}
