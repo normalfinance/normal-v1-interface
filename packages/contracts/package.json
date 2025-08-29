@@ -5,8 +5,8 @@
     "build/**/*"
   ],
   "dependencies": {
-    "@stellar/freighter-api": "3.0.0",
-    "bigint-conversion": "2.4.1",
+    "@stellar/freighter-api": "5.0.0",
+    "bigint-conversion": "2.4.3",
     "buffer": "6.0.3"
   },
   "scripts": {
@@ -17,6 +17,6 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "devDependencies": {
-    "typescript": "5.0.4"
+    "typescript": "5.9.2"
   }
 }
