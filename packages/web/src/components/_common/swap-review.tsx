@@ -19,6 +19,7 @@ import {
   DialogActions,
   AccordionSummary,
   AccordionDetails,
+  Chip,
 } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
@@ -368,7 +369,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fCurrencyTwoDecimals(networkCost)}
+                      <Chip label="Coming soon" color="info" size="small" />
+                      {/* {fCurrencyTwoDecimals(networkCost)} */}
                     </Typography>
                   </Box>
 
@@ -458,7 +460,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fRawPercent(priceImpact)}
+                      <Chip label="Coming soon" color="info" size="small" />
+                      {/* {fRawPercent(priceImpact)} */}
                     </Typography>
                   </Box>
 
@@ -503,7 +506,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fRawPercent(maxSlippage)}
+                      <Chip label="Coming soon" color="info" size="small" />
+                      {/* {fRawPercent(maxSlippage)} */}
                     </Typography>
                   </Box>
                 </Box>
