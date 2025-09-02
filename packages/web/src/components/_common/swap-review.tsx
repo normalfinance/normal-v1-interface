@@ -3,12 +3,13 @@ import type { StateToken as Token } from '@normalfinance/types';
 import React from 'react';
 import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fCurrencyTwoDecimals } from '@/utils/format-number';
 import { getSwapConversionText } from '@/utils/conversion-helpers';
-import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
 import {
   Box,
+  Chip,
   Dialog,
   Button,
   Accordion,
@@ -19,7 +20,6 @@ import {
   DialogActions,
   AccordionSummary,
   AccordionDetails,
-  Chip,
 } from '@mui/material';
 
 import { Iconify } from '../template/iconify';

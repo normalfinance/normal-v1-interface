@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import copy from 'copy-to-clipboard';
 import { useTranslate } from '@/locales';
-import { ReferralAPI, getReferralAPIErrorMessage } from '@/lib/referral-api';
+import { useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
+import { ReferralAPI, getReferralAPIErrorMessage } from '@/lib/referral-api';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import Tooltip from '@mui/material/Tooltip';
-import { Grid2, Paper, Button, CircularProgress, Alert } from '@mui/material';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -18,6 +17,7 @@ import TableHead from '@mui/material/TableHead';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import TableContainer from '@mui/material/TableContainer';
+import { Grid2, Paper, Alert, Button, CircularProgress } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 
