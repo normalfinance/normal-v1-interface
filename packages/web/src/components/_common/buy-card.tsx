@@ -17,6 +17,9 @@ import CheckoutDialog from './checkout-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
+import { runDepositFlow } from '@/lib/mgi/client';
+import { useSnackbar } from 'notistack';
+
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];
   cashBalance?: number;
@@ -160,8 +163,37 @@ const BuyCard: React.FC<BuyCardProps> = ({
   };
 
   // Main button with multiple states
+  const { enqueueSnackbar } = useSnackbar();
   const persist = usePersistStore();
-  const isConnected = !!persist.wallet.address;
+  const userAddress = persist.wallet.address;
+  const isConnected = !!userAddress;
+
+  const [mgiLoading, setMgiLoading] = useState(false);
+
+  const ensureUSDCSelected = () => {
+    if (buyToken?.symbol?.toUpperCase() !== 'USDC') {
+      const usdc = tokensList.find((t) => t.symbol.toUpperCase() === 'USDC');
+      if (usdc) setBuyToken(usdc);
+    }
+  };
+
+  const handleBuyWithMoneyGram = async () => {
+    if (!isConnected) {
+      enqueueSnackbar('Connect your wallet to continue', { variant: 'warning' });
+      return;
+    }
+    try {
+      setMgiLoading(true);
+      ensureUSDCSelected(); // purely UI nicety
+      await runDepositFlow(userAddress!, () => {
+        enqueueSnackbar('MoneyGram ready — awaiting USDC deposit', { variant: 'info' });
+      });
+    } catch (e: any) {
+      enqueueSnackbar(e?.message || 'MoneyGram deposit failed', { variant: 'error' });
+    } finally {
+      setMgiLoading(false);
+    }
+  };
 
   return (
     <Stack sx={{ gap: '2px' }}>
@@ -180,6 +212,19 @@ const BuyCard: React.FC<BuyCardProps> = ({
             overflow: 'hidden',
           }}
         >
+          <Box sx={{ mt: 1 }}>
+            <Button
+              fullWidth
+              variant="soft"
+              color="info"
+              size="large"
+              onClick={handleBuyWithMoneyGram}
+              disabled={!isConnected}
+              sx={{ borderRadius: 2.5 }}
+            >
+              {mgiLoading ? 'Opening MoneyGram…' : 'Buy with MoneyGram (USDC)'}
+            </Button>
+          </Box>
           <Box sx={{ height: '82px' }}>
             <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
               {t("You're buying")}
