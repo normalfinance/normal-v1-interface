@@ -1,22 +1,25 @@
-NETWORK_PASSPHRASE = "Public Global Stellar Network ; September 2015"
-FEDERATION_SERVER = "https://api.domain.com/federation"
-AUTH_SERVER = "https://api.domain.com/auth"
-TRANSFER_SERVER = "https://api.domain.com"
+NETWORK_PASSPHRASE = "Test SDF Network ; September 2015"
 SIGNING_KEY = "GDV2ULP4SMV7HB67ADWZZ42N7JBQCTZB5OK3ARKMCELSHFEMM66GSDVB"
-HORIZON_URL = "https://horizon.domain.com"
-ACCOUNTS = [""]
+ACCOUNTS = [
+    "GBGU6PNDO35JNHVZE3LHTBKYKJ55M4NQK6Q3P4NSIP2PV3O4VHCHCXRR", # deployer
+    "GBL35GJWSHZH7HZRVRAFSVVWNGIYJ33ZK3OQLUNVWD77DU74QXRBCUYT", # distributor
+    "GBOAGSWIPMJO4CRMSIAK47HOPCYBKOMTPSFSGS2NGVJL3FVX5XUL63CV", # issuer
+    "GBD44GOARZX763JSJSYDSGMKXRTFXDLLKDWMLFK45YSXB7IDGZE3YUJO", # admin
+    "GD3442CO5RX6JBKYQF3ZUOGPL7EBHDF2WOK2LX3DGGSZP322XZ5HZLXK", # protocol owned liquidity (POL)
+    "CCBKGNF4JRHXK2OPTTURS2UJIGB4TSQBW2L2SHTWZFSBDLQ7FD46KR4Z", # pool router
+]
 VERSION = "1.0.0"
 
 [DOCUMENTATION]
 ORG_NAME = "Normal"
 ORG_DBA = "Normal"
 ORG_URL = "https://www.normalfinance.io"
-ORG_LOGO = "https://testnet.normalfinance.io/logo/logo-full.png"
+ORG_LOGO = "https://www.normalfinance.io/logo/logo-full.png"
 ORG_DESCRIPTION = "Synthetic asset and index fund protocol"
-ORG_PHYSICAL_ADDRESS = "254 Chapman Rd Ste 208 #7553 Newark Delaware, 19702, United States"
-ORG_PHYSICAL_ADDRESS_ATTESTATION = ""
-ORG_PHONE_NUMBER = "1 (827)-274-3151"
-ORG_PHONE_NUMBER_ATTESTATION = ""
+ORG_PHYSICAL_ADDRESS = "254 Chapman Rd, Ste 208 #7553, Newark, Delaware, 19702, United States"
+ORG_PHYSICAL_ADDRESS_ATTESTATION = "https://www.normalfinance.io/address_attestation.jpg" # coming soon
+ORG_PHONE_NUMBER = "+18272743151"
+ORG_PHONE_NUMBER_ATTESTATION = "https://www.normalfinance.io/phone_attestation.jpg" # coming soon
 ORG_KEYBASE = "normalfi"
 ORG_TWITTER = "normalfi"
 ORG_GITHUB = "normalfinance"
@@ -46,7 +49,7 @@ display_decimals = 7
 name = "Normal Bitcoin"
 desc = "A synthethic Solana token"
 conditions = "Token supply is controlled by the Normal nBTC/XLM liquidity pool"
-image = "https://testnet.normalfinance.io/assets/icons/crypto-icons/nBTC.webp"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nBTC.webp"
 
 [[CURRENCIES]]
 code = "nETH"
@@ -56,7 +59,7 @@ display_decimals = 7
 name = "Normal Ethereum"
 desc = "A synthethic Solana token"
 conditions = "Token supply is controlled by the Normal nETH/XLM liquidity pool"
-image = "https://testnet.normalfinance.io/assets/icons/crypto-icons/nETH.webp"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nETH.webp"
 
 [[CURRENCIES]]
 code = "nSOL"
@@ -66,7 +69,7 @@ display_decimals = 7
 name = "Normal Solana"
 desc = "A synthethic Solana token"
 conditions = "Token supply is controlled by the Normal nSOL/XLM liquidity pool"
-image = "https://testnet.normalfinance.io/assets/icons/crypto-icons/nSOL.webp"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nSOL.webp"
 
 [[CURRENCIES]]
 code = "nXRP"
@@ -76,7 +79,7 @@ display_decimals = 7
 name = "Normal Ripple"
 desc = "A synthethic Solana token"
 conditions = "Token supply is controlled by the Normal nXRP/XLM liquidity pool"
-image = "https://testnet.normalfinance.io/assets/icons/crypto-icons/nXRP.webp"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nXRP.webp"
 
 [[CURRENCIES]]
 code = "nLINK"
@@ -86,7 +89,7 @@ display_decimals = 7
 name = "Normal Chainlink"
 desc = "A synthethic Solana token"
 conditions = "Token supply is controlled by the Normal nLINK/XLM liquidity pool"
-image = "https://testnet.normalfinance.io/assets/icons/crypto-icons/nLINK.webp"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nLINK.webp"
 
 [[CURRENCIES]]
 code = "nADA"
@@ -96,7 +99,7 @@ display_decimals = 7
 name = "Normal Cardano"
 desc = "A synthethic Solana token"
 conditions = "Token supply is controlled by the Normal nADA/XLM liquidity pool"
-image = "https://testnet.normalfinance.io/assets/icons/crypto-icons/nADA.webp"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nADA.webp"
 
 [[CURRENCIES]]
 code = "nAVAX"
@@ -106,7 +109,7 @@ display_decimals = 7
 name = "Normal Avalanche"
 desc = "A synthethic Solana token"
 conditions = "Token supply is controlled by the Normal nAVAX/XLM liquidity pool"
-image = "https://testnet.normalfinance.io/assets/icons/crypto-icons/nAVAX.webp"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nAVAX.webp"
 
 [[CURRENCIES]]
 code = "nPOL"
@@ -116,4 +119,4 @@ display_decimals = 7
 name = "Normal Polygon"
 desc = "A synthethic Solana token"
 conditions = "Token supply is controlled by the Normal nPOL/XLM liquidity pool"
-image = "https://testnet.normalfinance.io/assets/icons/crypto-icons/nPOL.webp"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nPOL.webp"
