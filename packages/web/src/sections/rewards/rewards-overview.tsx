@@ -127,101 +127,122 @@ export function RewardsOverview({
               </Alert>
             )}
 
-            {isLoading ? (
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'grey.100',
-                  borderRadius: 3,
-                }}
-              >
-                <CircularProgress size={24} />
-                <Typography variant="subtitle2" sx={{ ml: 2 }}>
-                  {t('Loading referral links...')}
-                </Typography>
-              </Paper>
-            ) : (
-              <Stack spacing={2}>
-                {/* Existing Referral Codes */}
-                {existingReferrals.map((referral, index) => {
-                  const referralLink = `${window.location.origin}?ref=${referral.code}`;
-                  const isCopied = copied === referral.code;
-
-                  return (
-                    <Paper
-                      key={referral.id}
-                      variant="outlined"
-                      sx={{
-                        p: 3,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        backgroundColor: 'grey.100',
-                        borderRadius: 3,
-                      }}
-                    >
-                      <Stack sx={{ flexGrow: 1 }}>
-                        <Typography variant="subtitle2" sx={{ wordBreak: 'break-all' }}>
-                          {referralLink}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('Code')}: {referral.code} • {t('Created')}:{' '}
-                          {new Date(referral.createdAt).toLocaleDateString()}
-                          {referral.isUsed && ` • ${t('Used')}`}
-                        </Typography>
-                      </Stack>
-                      <Tooltip title={isCopied ? t('Copied!') : t('Copy')}>
-                        <IconButton onClick={() => handleCopy(referral.code)} color="primary">
-                          <Iconify
-                            icon={isCopied ? 'solar:check-circle-bold' : 'solar:copy-bold'}
-                            width={24}
-                          />
-                        </IconButton>
-                      </Tooltip>
-                    </Paper>
-                  );
-                })}
-
-                {/* Generate New Referral Link Button */}
-                <Paper
-                  variant="outlined"
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: 'grey.100',
+                borderRadius: 3,
+                height: 'fit-content',
+                minHeight: 135, // Match approximate height of stats boxes
+              }}
+            >
+              {isLoading ? (
+                <Stack
                   sx={{
-                    p: 3,
-                    display: 'flex',
-                    flexDirection: 'column',
+                    flex: 1,
                     alignItems: 'center',
-                    gap: 2,
-                    backgroundColor: existingReferrals.length > 0 ? 'grey.50' : 'grey.100',
-                    borderRadius: 3,
-                    borderStyle: existingReferrals.length > 0 ? 'dashed' : 'solid',
+                    justifyContent: 'center',
+                    minHeight: 120,
                   }}
                 >
-                  <Typography variant="subtitle2" color="text.secondary" textAlign="center">
-                    {existingReferrals.length > 0
-                      ? t('Generate another referral link')
-                      : t('Generate a referral link to start earning rewards')}
+                  <CircularProgress size={24} />
+                  <Typography variant="subtitle2" sx={{ mt: 1 }}>
+                    {t('Loading...')}
                   </Typography>
-                  <Button
-                    variant={existingReferrals.length > 0 ? 'outlined' : 'contained'}
-                    onClick={handleGenerateReferralCode}
-                    disabled={isGenerating || !walletAddress}
-                    startIcon={
-                      isGenerating ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        <Iconify icon="solar:add-circle-bold" width={20} />
-                      )
-                    }
+                </Stack>
+              ) : (
+                <Stack spacing={1} sx={{ flex: 1, height: 'content' }}>
+                  {/* Existing Referral Codes */}
+                  {existingReferrals.length > 0 && (
+                    <Stack spacing={0.5} sx={{ maxHeight: 120, padding: 0 }}>
+                      {existingReferrals
+                        .filter((referral) => referral.isUsed === false)
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .slice(0, 2)
+                        .map((referral) => {
+                          console.log(referral, 'referral object');
+                          // const referralLink = `${window.location.origin}?ref=${referral.code}`;
+                          const referralLink = `https://testnet.normal.finance?ref=${referral.code}`;
+                          const isCopied = copied === referral.code;
+
+                          return (
+                            <Stack
+                              key={referral.id}
+                              direction="row"
+                              alignItems="center"
+                              spacing={1}
+                              sx={{
+                                px: 1.5,
+                                py: 0.2,
+                                backgroundColor: 'background.paper',
+                                borderRadius: 2,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                              }}
+                            >
+                              <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    wordBreak: 'break-all',
+                                    fontSize: '0.65rem',
+                                    fontFamily: 'monospace',
+                                  }}
+                                >
+                                  {referralLink}
+                                </Typography>
+                              </Stack>
+                              <Tooltip title={isCopied ? t('Copied!') : t('Copy')}>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleCopy(referral.code)}
+                                  color="primary"
+                                >
+                                  <Iconify
+                                    icon={isCopied ? 'solar:check-circle-bold' : 'solar:copy-bold'}
+                                    width={18}
+                                  />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          );
+                        })}
+                    </Stack>
+                  )}
+
+                  {/* Generate Button Section */}
+                  <Stack
+                    spacing={1}
+                    alignItems="center"
+                    sx={{
+                      mt: 'auto',
+                      pt: existingReferrals.length > 0 ? 1 : 0,
+                      borderTop: existingReferrals.length > 0 ? '1px dashed' : 'none',
+                      borderColor: 'divider',
+                    }}
                   >
-                    {isGenerating ? t('Generating...') : t('Generate New Link')}
-                  </Button>
-                </Paper>
-              </Stack>
-            )}
+                    <Button
+                      size="small"
+                      variant={existingReferrals.length > 0 ? 'outlined' : 'contained'}
+                      onClick={handleGenerateReferralCode}
+                      disabled={isGenerating || !walletAddress}
+                      startIcon={
+                        isGenerating ? (
+                          <CircularProgress size={16} />
+                        ) : (
+                          <Iconify icon="solar:add-circle-bold" width={16} />
+                        )
+                      }
+                    >
+                      {isGenerating ? t('Generating...') : t('Generate New Link')}
+                    </Button>
+                  </Stack>
+                </Stack>
+              )}
+            </Paper>
           </Stack>
         </Grid2>
         <Grid2 size={{ xs: 12, md: 8 }}>
