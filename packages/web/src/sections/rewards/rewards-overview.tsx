@@ -160,7 +160,10 @@ export function RewardsOverview({
                     <Stack spacing={0.5} sx={{ maxHeight: 120, padding: 0 }}>
                       {existingReferrals
                         .filter((referral) => referral.isUsed === false)
-                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .sort(
+                          (a, b) =>
+                            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                        )
                         .slice(0, 2)
                         .map((referral) => {
                           console.log(referral, 'referral object');
