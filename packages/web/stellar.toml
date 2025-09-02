@@ -1,12 +1,12 @@
-NETWORK_PASSPHRASE = "Public Global Stellar Network ; September 2015"
+NETWORK_PASSPHRASE = "Test SDF Network ; September 2015"
 FEDERATION_SERVER = "https://api.domain.com/federation"
 AUTH_SERVER = "https://api.domain.com/auth"
 TRANSFER_SERVER = "https://api.domain.com"
-SIGNING_KEY = "GBBHQ7H4V6RRORKYLHTCAWP6MOHNORRFJSDPXDFYDGJB2LPZUFPXUEW3"
+SIGNING_KEY = "GDV2ULP4SMV7HB67ADWZZ42N7JBQCTZB5OK3ARKMCELSHFEMM66GSDVB"
 HORIZON_URL = "https://horizon.domain.com"
 ACCOUNTS = [""]
 VERSION = "1.0.0"
-
+ 
 [DOCUMENTATION]
 ORG_NAME = "Normal"
 ORG_DBA = "Normal"
