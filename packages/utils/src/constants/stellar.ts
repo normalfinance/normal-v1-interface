@@ -12,6 +12,9 @@ const TESTNET: NetworkConfig = {
     ? `https://testnet.stellar.validationcloud.io/v1/${RPC_API_KEY}`
     : 'https://soroban-testnet.stellar.org',
 
+  // accounts
+  NORMAL_TOKEN_ISSUER: 'GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H',
+
   // contracts
   POOL_ROUTER_ADDRESS: 'CCYQV4LBUROO7IPWMQHGPRSNYM3BXEAHJYU5RAO52TJRG7KP23TY2C63',
   ORACLE_REGISTRY_ADDRESS: 'CB4OHJ5KAEY2O5ZOFWOFYOCP6WL5FSZEPO4GVJLW4PBJZRWM4IID7QDF',
@@ -38,6 +41,9 @@ const MAINNET: NetworkConfig = {
   RPC_URL: RPC_API_KEY
     ? `https://mainnet.stellar.validationcloud.io/v1/${RPC_API_KEY}`
     : 'https://soroban.stellar.org',
+
+  // accounts
+  NORMAL_TOKEN_ISSUER: '',
 
   // contracts
   POOL_ROUTER_ADDRESS: '...',
