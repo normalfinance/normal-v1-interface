@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import copy from 'copy-to-clipboard';
 import { useTranslate } from '@/locales';
+import { ReferralAPI, getReferralAPIErrorMessage } from '@/lib/referral-api';
+import { usePersistStore } from '@normalfinance/state';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import Tooltip from '@mui/material/Tooltip';
-import { Grid2, Paper } from '@mui/material';
+import { Grid2, Paper, Button, CircularProgress, Alert } from '@mui/material';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -27,7 +29,6 @@ export interface Referral {
 }
 
 export interface RewardsOverviewProps {
-  referralLink: string;
   referralsCount: number;
   zealyUrl?: string;
   zealyXP: number;
@@ -36,23 +37,83 @@ export interface RewardsOverviewProps {
 }
 
 export function RewardsOverview({
-  referralLink,
   referralsCount,
   zealyXP,
   protocolPoints,
   referrals,
 }: RewardsOverviewProps) {
   const { t } = useTranslate();
-  const [copied, setCopied] = useState(false);
+  const walletAddress = usePersistStore((s) => s.wallet.address);
 
-  const handleCopy = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
+  const [copied, setCopied] = useState<string | null>(null); // Track which code was copied
+  const [existingReferrals, setExistingReferrals] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch existing referral codes when component mounts or wallet changes
+  useEffect(() => {
+    if (walletAddress) {
+      fetchExistingReferrals();
+    } else {
+      setExistingReferrals([]);
+    }
+  }, [walletAddress]);
+
+  const fetchExistingReferrals = async () => {
+    if (!walletAddress) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await ReferralAPI.getUserReferrals(walletAddress);
+      setExistingReferrals(response.user?.referralsGiven || []);
+      console.log(
+        '[referral] Loaded existing referrals:',
+        response.user?.referralsGiven?.length || 0
+      );
+    } catch (err: any) {
+      console.error('[referral] Error fetching existing referrals:', err);
+      // Don't show error for user not found (new users)
+      if (!err?.response?.data?.error?.includes('User not found')) {
+        setError(getReferralAPIErrorMessage(err));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateReferralCode = async () => {
+    if (!walletAddress) {
+      setError('Please connect your wallet first');
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      const response = await ReferralAPI.createReferralCode({
+        referrerWalletAddress: walletAddress,
+      });
+
+      // Add the new referral to the existing list
+      setExistingReferrals((prev) => [response.referral, ...prev]);
+      console.log('[referral] Generated referral code:', response.referral.code);
+    } catch (err) {
+      console.error('[referral] Error generating code:', err);
+      setError(getReferralAPIErrorMessage(err));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCopy = (code: string) => {
+    const referralLink = `${window.location.origin}?ref=${code}`;
     copy(referralLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopied(code);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   return (
@@ -60,26 +121,107 @@ export function RewardsOverview({
       <Grid2 container columnSpacing={3} rowSpacing={3} alignItems="flex-start">
         <Grid2 size={{ xs: 12, md: 4 }}>
           <Stack spacing={2}>
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 3,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                backgroundColor: 'grey.100',
-                borderRadius: 3,
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ flexGrow: 1, wordBreak: 'break-all' }}>
-                {referralLink}
-              </Typography>
-              <Tooltip title={copied ? 'Copied!' : 'Copy'}>
-                <IconButton onClick={handleCopy} color="primary">
-                  <Iconify icon="solar:copy-bold" width={24} />
-                </IconButton>
-              </Tooltip>
-            </Paper>
+            {error && (
+              <Alert severity="error" onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+
+            {isLoading ? (
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'grey.100',
+                  borderRadius: 3,
+                }}
+              >
+                <CircularProgress size={24} />
+                <Typography variant="subtitle2" sx={{ ml: 2 }}>
+                  {t('Loading referral links...')}
+                </Typography>
+              </Paper>
+            ) : (
+              <Stack spacing={2}>
+                {/* Existing Referral Codes */}
+                {existingReferrals.map((referral, index) => {
+                  const referralLink = `${window.location.origin}?ref=${referral.code}`;
+                  const isCopied = copied === referral.code;
+
+                  return (
+                    <Paper
+                      key={referral.id}
+                      variant="outlined"
+                      sx={{
+                        p: 3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        backgroundColor: 'grey.100',
+                        borderRadius: 3,
+                      }}
+                    >
+                      <Stack sx={{ flexGrow: 1 }}>
+                        <Typography variant="subtitle2" sx={{ wordBreak: 'break-all' }}>
+                          {referralLink}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('Code')}: {referral.code} • {t('Created')}:{' '}
+                          {new Date(referral.createdAt).toLocaleDateString()}
+                          {referral.isUsed && ` • ${t('Used')}`}
+                        </Typography>
+                      </Stack>
+                      <Tooltip title={isCopied ? t('Copied!') : t('Copy')}>
+                        <IconButton onClick={() => handleCopy(referral.code)} color="primary">
+                          <Iconify
+                            icon={isCopied ? 'solar:check-circle-bold' : 'solar:copy-bold'}
+                            width={24}
+                          />
+                        </IconButton>
+                      </Tooltip>
+                    </Paper>
+                  );
+                })}
+
+                {/* Generate New Referral Link Button */}
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
+                    backgroundColor: existingReferrals.length > 0 ? 'grey.50' : 'grey.100',
+                    borderRadius: 3,
+                    borderStyle: existingReferrals.length > 0 ? 'dashed' : 'solid',
+                  }}
+                >
+                  <Typography variant="subtitle2" color="text.secondary" textAlign="center">
+                    {existingReferrals.length > 0
+                      ? t('Generate another referral link')
+                      : t('Generate a referral link to start earning rewards')}
+                  </Typography>
+                  <Button
+                    variant={existingReferrals.length > 0 ? 'outlined' : 'contained'}
+                    onClick={handleGenerateReferralCode}
+                    disabled={isGenerating || !walletAddress}
+                    startIcon={
+                      isGenerating ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <Iconify icon="solar:add-circle-bold" width={20} />
+                      )
+                    }
+                  >
+                    {isGenerating ? t('Generating...') : t('Generate New Link')}
+                  </Button>
+                </Paper>
+              </Stack>
+            )}
           </Stack>
         </Grid2>
         <Grid2 size={{ xs: 12, md: 8 }}>
