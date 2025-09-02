@@ -73,12 +73,14 @@ export function useReferralTracking(): UseReferralTrackingReturn {
       const referralData = await ReferralAPI.getReferralByCode(referralState.referralCode);
 
       if (referralData.referral) {
+        let wasReferralJustActivated = false;
         if (!referralData.referral.isUsed && wallet.address) {
           await ReferralAPI.activateReferral({
             code: referralState.referralCode,
             refereeWalletAddress: wallet.address,
           });
           console.log('[referral] Activated referral in database');
+          wasReferralJustActivated = true;
         }
 
         const actionsData = await ReferralAPI.getUserActions(
@@ -91,6 +93,21 @@ export function useReferralTracking(): UseReferralTrackingReturn {
             markReferralUsed(action.action);
           }
         });
+
+        if (wasReferralJustActivated && !hasUsedAction('signup')) {
+          try {
+            await ReferralAPI.recordAction({
+              userWalletAddress: wallet.address,
+              referralCode: referralState.referralCode,
+              action: 'signup',
+            });
+
+            markReferralUsed('signup');
+            console.log('[referral] Automatically recorded signup action');
+          } catch (signupError) {
+            console.warn('[referral] Failed to auto-record signup action:', signupError);
+          }
+        }
       }
     } catch (err) {
       console.error('[referral] Database sync error:', err);
