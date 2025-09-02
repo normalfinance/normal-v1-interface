@@ -19,6 +19,7 @@ import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
 import { runDepositFlow } from '@/lib/mgi/client';
 import { useSnackbar } from 'notistack';
+import Image from 'next/image';
 
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];
@@ -212,24 +213,50 @@ const BuyCard: React.FC<BuyCardProps> = ({
             overflow: 'hidden',
           }}
         >
-          <Box sx={{ mt: 1 }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            width={1}
+            mb={'48px'}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
+                {t("You're buying")}
+              </Typography>
+            </Box>
+
             <Button
-              fullWidth
-              variant="soft"
-              color="info"
-              size="large"
+              variant="outlined"
               onClick={handleBuyWithMoneyGram}
-              disabled={!isConnected}
-              sx={{ borderRadius: 2.5 }}
+              disabled={!isConnected || mgiLoading}
+              sx={{
+                border: `1px solid ${theme.palette.divider}`,
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.grey[500], 0.16),
+                  border: `1px solid ${theme.palette.divider}`,
+                },
+                gap: 1,
+                borderRadius: '32px',
+                px: '12px',
+                py: '6px',
+                minWidth: 0,
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
             >
-              {mgiLoading ? 'Opening MoneyGram…' : 'Buy with MoneyGram (USDC)'}
+              <Image
+                src="/assets/images/token-action-card/mgi.webp"
+                alt="MoneyGram"
+                width={20}
+                height={20}
+              />
+              {mgiLoading ? 'Opening…' : 'Buy with MoneyGram'}
             </Button>
-          </Box>
-          <Box sx={{ height: '82px' }}>
-            <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-              {t("You're buying")}
-            </Typography>
-          </Box>
+          </Stack>
           <Box
             sx={{
               display: 'flex',
