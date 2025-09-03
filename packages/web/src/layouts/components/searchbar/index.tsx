@@ -4,31 +4,29 @@ import type { BoxProps } from '@mui/material/Box';
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
-import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
 import { useBoolean } from 'minimal-shared/hooks';
-import { useState, useEffect, useCallback } from 'react';
+import { fCurrency } from '@/utils/format-number';
 import { useAppStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fCurrency } from '@/utils/format-number';
+import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
-import { Chip } from '@mui/material';
+import Avatar from '@mui/material/Avatar';
 import SvgIcon from '@mui/material/SvgIcon';
 import MenuList from '@mui/material/MenuList';
 import { useTheme } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+import ListItemText from '@mui/material/ListItemText';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import InputAdornment from '@mui/material/InputAdornment';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemAvatar from '@mui/material/ListItemAvatar';
 import Dialog, { dialogClasses } from '@mui/material/Dialog';
 import MenuItem, { menuItemClasses } from '@mui/material/MenuItem';
 import InputBase, { inputBaseClasses } from '@mui/material/InputBase';
-import Typography from '@mui/material/Typography';
-import Avatar from '@mui/material/Avatar';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemAvatar from '@mui/material/ListItemAvatar';
 
 import { Label } from '@/components/template/label';
 import { Iconify } from '@/components/template/iconify';
@@ -36,7 +34,6 @@ import { Scrollbar } from '@/components/template/scrollbar';
 import { SearchNotFound } from '@/components/template/search-not-found';
 
 import { applyFilter } from './utils';
-import { ResultItem } from './result-item';
 
 // ----------------------------------------------------------------------
 
@@ -53,7 +50,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
 
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Get tokens from the app store
   const { tokens, getAllTokens, globalIsLoading } = useAppStore();
 
@@ -220,7 +217,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
 
           return (
             <MenuItem disableRipple key={item.symbol}>
-              <ListItemButton 
+              <ListItemButton
                 onClick={handleClose}
                 sx={{
                   borderWidth: 1,
@@ -235,14 +232,11 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
                 }}
               >
                 <ListItemAvatar>
-                  <Avatar 
-                    src={getCryptoIconUrl(item.symbol)} 
-                    sx={{ width: 32, height: 32 }}
-                  >
+                  <Avatar src={getCryptoIconUrl(item.symbol)} sx={{ width: 32, height: 32 }}>
                     {item.symbol.substring(0, 2)}
                   </Avatar>
                 </ListItemAvatar>
-                
+
                 <ListItemText
                   primary={
                     <Box component="span">
@@ -250,10 +244,10 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
                         <Box
                           key={index}
                           component="span"
-                          sx={{ 
-                            color: part.highlight 
+                          sx={{
+                            color: part.highlight
                               ? theme.vars?.palette.primary.main || theme.palette.primary.main
-                              : theme.vars?.palette.text.primary || theme.palette.text.primary 
+                              : theme.vars?.palette.text.primary || theme.palette.text.primary,
                           }}
                         >
                           {part.text}
@@ -267,10 +261,10 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
                         <Box
                           key={index}
                           component="span"
-                          sx={{ 
-                            color: part.highlight 
+                          sx={{
+                            color: part.highlight
                               ? theme.vars?.palette.primary.main || theme.palette.primary.main
-                              : theme.vars?.palette.text.secondary || theme.palette.text.secondary
+                              : theme.vars?.palette.text.secondary || theme.palette.text.secondary,
                           }}
                         >
                           {part.text}
