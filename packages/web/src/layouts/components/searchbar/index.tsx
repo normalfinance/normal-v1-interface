@@ -10,6 +10,9 @@ import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useState, useEffect, useCallback } from 'react';
+import { useAppStore } from '@normalfinance/state';
+import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { Chip } from '@mui/material';
@@ -21,6 +24,11 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Dialog, { dialogClasses } from '@mui/material/Dialog';
 import MenuItem, { menuItemClasses } from '@mui/material/MenuItem';
 import InputBase, { inputBaseClasses } from '@mui/material/InputBase';
+import Typography from '@mui/material/Typography';
+import Avatar from '@mui/material/Avatar';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import ListItemAvatar from '@mui/material/ListItemAvatar';
 
 import { Label } from '@/components/template/label';
 import { Iconify } from '@/components/template/iconify';
@@ -45,6 +53,9 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
 
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Get tokens from the app store
+  const { tokens, getAllTokens, globalIsLoading } = useAppStore();
 
   const handleClose = useCallback(() => {
     // trackEvent('button_clicked', {
@@ -73,12 +84,19 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
     };
   }, [handleKeyDown]);
 
+  // Fetch tokens when dialog opens
+  useEffect(() => {
+    if (open && tokens.length === 0) {
+      getAllTokens();
+    }
+  }, [open, getAllTokens, tokens.length]);
+
   const handleSearch = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSearchQuery(event.target.value);
   }, []);
 
   const dataFiltered = applyFilter({
-    inputData: [], // TODO: CONFIG.tokenList
+    inputData: tokens,
     query: searchQuery,
   });
 
@@ -158,37 +176,129 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
     </Box>
   );
 
-  const renderList = () => (
-    <MenuList
-      disablePadding
-      sx={{
-        [`& .${menuItemClasses.root}`]: {
-          p: 0,
-          mb: 0,
-          '&:hover': { bgcolor: 'transparent' },
-        },
-      }}
-    >
-      <Chip label="Coming soon" color="info" size="small" />
+  const renderList = () => {
+    // Show loading state when tokens are being fetched
+    if (globalIsLoading && tokens.length === 0) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('Loading tokens...')}
+          </Typography>
+        </Box>
+      );
+    }
 
-      {dataFiltered.map((item) => {
-        const partsTitle = parse(item.name, match(item.name, searchQuery));
-        const partsPath = parse(item.symbol, match(item.symbol, searchQuery));
+    // Show empty state when no tokens are available
+    if (!globalIsLoading && tokens.length === 0) {
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+          <Iconify icon="eva:search-fill" width={48} sx={{ color: 'text.disabled', mb: 2 }} />
+          <Typography variant="body2" color="text.secondary" align="center">
+            {t('No tokens available')}
+          </Typography>
+          <Typography variant="caption" color="text.disabled" align="center">
+            {t('Try refreshing the page or check your connection')}
+          </Typography>
+        </Box>
+      );
+    }
 
-        return (
-          <MenuItem disableRipple key={item.symbol}>
-            <ResultItem
-              path={partsPath}
-              title={partsTitle}
-              href={paths.pools.details(item.symbol)}
-              labels={item.name.split('.')}
-              onClick={handleClose}
-            />
-          </MenuItem>
-        );
-      })}
-    </MenuList>
-  );
+    return (
+      <MenuList
+        disablePadding
+        sx={{
+          [`& .${menuItemClasses.root}`]: {
+            p: 0,
+            mb: 0,
+            '&:hover': { bgcolor: 'transparent' },
+          },
+        }}
+      >
+        {dataFiltered.map((item) => {
+          const partsTitle = parse(item.name, match(item.name, searchQuery));
+          const partsSymbol = parse(item.symbol, match(item.symbol, searchQuery));
+
+          return (
+            <MenuItem disableRipple key={item.symbol}>
+              <ListItemButton 
+                onClick={handleClose}
+                sx={{
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: 'transparent',
+                  borderBottomColor: theme.vars?.palette.divider || theme.palette.divider,
+                  '&:hover': {
+                    borderRadius: 1,
+                    borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
+                    backgroundColor: theme.vars?.palette.action.hover || theme.palette.action.hover,
+                  },
+                }}
+              >
+                <ListItemAvatar>
+                  <Avatar 
+                    src={getCryptoIconUrl(item.symbol)} 
+                    sx={{ width: 32, height: 32 }}
+                  >
+                    {item.symbol.substring(0, 2)}
+                  </Avatar>
+                </ListItemAvatar>
+                
+                <ListItemText
+                  primary={
+                    <Box component="span">
+                      {partsTitle.map((part, index) => (
+                        <Box
+                          key={index}
+                          component="span"
+                          sx={{ 
+                            color: part.highlight 
+                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                              : theme.vars?.palette.text.primary || theme.palette.text.primary 
+                          }}
+                        >
+                          {part.text}
+                        </Box>
+                      ))}
+                    </Box>
+                  }
+                  secondary={
+                    <Box component="span">
+                      {partsSymbol.map((part, index) => (
+                        <Box
+                          key={index}
+                          component="span"
+                          sx={{ 
+                            color: part.highlight 
+                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                              : theme.vars?.palette.text.secondary || theme.palette.text.secondary
+                          }}
+                        >
+                          {part.text}
+                        </Box>
+                      ))}
+                    </Box>
+                  }
+                />
+
+                <Box sx={{ textAlign: 'right', minWidth: 80 }}>
+                  {item.balance > 0 && (
+                    <Typography variant="body2" color="text.primary">
+                      {fCurrency(item.balance)}
+                    </Typography>
+                  )}
+                  {item.usdValue > 0 && (
+                    <Typography variant="caption" color="text.secondary">
+                      ${fCurrency(item.usdValue)}
+                    </Typography>
+                  )}
+                </Box>
+              </ListItemButton>
+            </MenuItem>
+          );
+        })}
+      </MenuList>
+    );
+  };
 
   return (
     <>
