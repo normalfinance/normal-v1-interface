@@ -7,7 +7,6 @@ import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/event
 
 import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
-import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import { format, constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
@@ -51,7 +50,6 @@ export function useUserActivity(): ReturnType {
         .order('id', { ascending: false });
 
       if (e) {
-        captureException(e);
         setError(e.toString() as any);
       } else {
         const rows = data as GoldskyTableRow[];

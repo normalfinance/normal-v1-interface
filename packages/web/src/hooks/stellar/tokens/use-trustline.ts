@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
 import { fetchAndIssueTrustline } from '@normalfinance/utils';
 
@@ -42,7 +41,6 @@ export function useTrustLine(): ReturnType {
         await fetchAndIssueTrustline(storePersist.wallet.address!, assetCode, assetIssuer);
         setTrustlineButtonActive(false);
       } catch (e: any) {
-        captureException(e);
         console.log(e);
         setError(e);
       }

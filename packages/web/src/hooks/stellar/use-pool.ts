@@ -1,6 +1,5 @@
 'use client';
 
-import { captureException } from '@sentry/nextjs';
 import { format, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
@@ -42,7 +41,6 @@ export function usePool(asset: string): ReturnType {
         setPool(data);
       }
     } catch (e: any) {
-      captureException(e);
       setError(e);
     } finally {
       setLoading(false);

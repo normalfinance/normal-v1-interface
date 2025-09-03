@@ -5,7 +5,6 @@ import type { ChartTimeframeKey } from '@/components/_pool-page-components';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
 import { BigNumber } from 'bignumber.js';
-import * as Sentry from '@sentry/nextjs';
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 import { constants, parseEvent } from '@normalfinance/utils';
@@ -118,7 +117,6 @@ export function useSwapVolume(): ReturnType {
       const { data, error: e } = await query;
 
       if (e) {
-        Sentry.captureException(e);
         setError(e as any);
         console.error('Error fetching swap volume:', e);
         return emptyStats();

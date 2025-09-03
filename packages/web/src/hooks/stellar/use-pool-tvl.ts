@@ -2,7 +2,6 @@
 
 import BigNumber from 'bignumber.js';
 import { constants } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
 
@@ -36,7 +35,6 @@ export function usePoolTVL(asset: string): ReturnType {
         setTotalTVl(BigNumber(tvl.result));
       }
     } catch (e: any) {
-      captureException(e);
       console.log(e);
       setError(e);
     }

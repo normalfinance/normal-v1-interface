@@ -1,6 +1,6 @@
 {
   "name": "@normalfinance/state",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -29,7 +29,6 @@
     "@lobstrco/signer-extension-api": "^1.0.0-beta.0",
     "@normalfinance/contracts": "workspace:^",
     "@normalfinance/utils": "workspace:^",
-    "@sentry/nextjs": "^9.35.0",
     "@stellar/freighter-api": "3.0.0",
     "axios": "^1.7.9",
     "bignumber.js": "^9.1.1",

@@ -7,7 +7,6 @@ import type {
 } from '@normalfinance/contracts/build/insurance_fund';
 
 import { BigNumber } from 'bignumber.js';
-import { captureException } from '@sentry/nextjs';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
@@ -63,7 +62,6 @@ export function useInsuranceFund(): ReturnType {
           constants.StellarConfig.INSURANCE_FUND_ADDRESS
         );
       } catch (e: any) {
-        captureException(e);
         console.log(e);
         setError(e.toString());
         xlmBalance = BigInt(0);
@@ -71,7 +69,6 @@ export function useInsuranceFund(): ReturnType {
 
       if (xlmBalance) setBalance(BigNumber(xlmBalance));
     } catch (e: any) {
-      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -108,7 +105,6 @@ export function useInsuranceFund(): ReturnType {
         current_utilization: BigNumber(current_utilization.result),
       });
     } catch (e: any) {
-      captureException(e);
       console.log(e);
       setError(e.toString());
     }
@@ -138,7 +134,6 @@ export function useInsuranceFund(): ReturnType {
           setStake(user_stake.result as Stake);
         }
       } catch (e: any) {
-        captureException(e);
         console.log(e);
         setError(e.toString());
       } finally {

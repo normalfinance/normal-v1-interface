@@ -5,7 +5,6 @@ import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
 import { useState, useEffect } from 'react';
-import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
 import { constants, rpcServer, parseEvent } from '@normalfinance/utils';
 
@@ -45,7 +44,6 @@ export function usePoolEvents(poolAddress: string | undefined, limit: number): R
         .limit(limit);
 
       if (e) {
-        captureException(e);
         setError(e.toString() as any);
       } else {
         const rows = data as GoldskyTableRow[];

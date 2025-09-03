@@ -8,7 +8,6 @@ import posthog from 'posthog-js';
 import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
-import * as Sentry from '@sentry/nextjs';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
@@ -250,7 +249,6 @@ function WalletConnected({ address }: { address: string }) {
         await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
-        Sentry.captureException(e);
         console.error(e);
       } finally {
         setGlobalIsLoading(false);
@@ -326,7 +324,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const connectors: Connector[] = [freighter(), xbull(), lobstr(), hana(), new WalletConnect(true)];
 
   const connect = (c: Connector) => persist.connectWallet(c.id);
-  const disconnect = () => persist.disconnectWallet();
+  const disconnect = () => {
+    persist.disconnectWallet();
+    posthog.reset();
+  };
 
   /* ↓ drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
@@ -341,14 +342,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   useEffect(() => {
     if (connectedAddress) {
-      Sentry.setUser({ id: connectedAddress });
       posthog.identify(
         connectedAddress,
         { last_login: new Date() }, // updates every time
         { signup_date: new Date() } // sets only once
       );
-    } else {
-      Sentry.setUser(null);
     }
   }, [connectedAddress]);
 

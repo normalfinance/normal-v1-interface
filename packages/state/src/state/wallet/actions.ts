@@ -7,7 +7,6 @@ import {
   WalletActions,
 } from '@normalfinance/types';
 import axios from 'axios';
-import { captureException } from '@sentry/nextjs';
 import { PoolRouterContract } from '@normalfinance/contracts';
 import { usePersistStore } from '../store';
 import {
@@ -110,7 +109,6 @@ export const createWalletActions = (
         // eslint-disable-next-line consistent-return
         return updatedTokenInfo;
       } catch (error) {
-        captureException(error);
         return undefined;
       }
     },
@@ -171,7 +169,6 @@ export const createWalletActions = (
         // eslint-disable-next-line consistent-return
         return updatedTokenInfo;
       } catch (error) {
-        captureException(error);
         return undefined;
       }
     },
@@ -231,7 +228,6 @@ export const createWalletActions = (
         // eslint-disable-next-line consistent-return
         return updatedTokenInfo;
       } catch (error) {
-        captureException(error);
         return undefined;
       }
     },

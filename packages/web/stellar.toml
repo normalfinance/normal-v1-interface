@@ -46,7 +46,7 @@ issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Bitcoin"
-desc = "A synthethic Solana token"
+desc = "A synthethic token backed by XLM tracking the value of Bitcoin"
 conditions = "Token supply is controlled by the Normal nBTC/XLM liquidity pool"
 image = "https://www.normalfinance.io/assets/icons/crypto-icons/nBTC.webp"
 
@@ -56,7 +56,7 @@ issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Ethereum"
-desc = "A synthethic Solana token"
+desc = "A synthethic token backed by XLM tracking the value of Ethereum"
 conditions = "Token supply is controlled by the Normal nETH/XLM liquidity pool"
 image = "https://www.normalfinance.io/assets/icons/crypto-icons/nETH.webp"
 
@@ -66,7 +66,7 @@ issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Solana"
-desc = "A synthethic Solana token"
+desc = "A synthethic token backed by XLM tracking the value of Solana"
 conditions = "Token supply is controlled by the Normal nSOL/XLM liquidity pool"
 image = "https://www.normalfinance.io/assets/icons/crypto-icons/nSOL.webp"
 
@@ -76,7 +76,7 @@ issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Ripple"
-desc = "A synthethic Solana token"
+desc = "A synthethic token backed by XLM tracking the value of Ripple"
 conditions = "Token supply is controlled by the Normal nXRP/XLM liquidity pool"
 image = "https://www.normalfinance.io/assets/icons/crypto-icons/nXRP.webp"
 
@@ -86,7 +86,7 @@ issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Chainlink"
-desc = "A synthethic Solana token"
+desc = "A synthethic token backed by XLM tracking the value of Chainlink"
 conditions = "Token supply is controlled by the Normal nLINK/XLM liquidity pool"
 image = "https://www.normalfinance.io/assets/icons/crypto-icons/nLINK.webp"
 
@@ -96,7 +96,7 @@ issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Cardano"
-desc = "A synthethic Solana token"
+desc = "A synthethic token backed by XLM tracking the value of Cardano"
 conditions = "Token supply is controlled by the Normal nADA/XLM liquidity pool"
 image = "https://www.normalfinance.io/assets/icons/crypto-icons/nADA.webp"
 
@@ -106,7 +106,7 @@ issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Avalanche"
-desc = "A synthethic Solana token"
+desc = "A synthethic token backed by XLM tracking the value of Avalanche"
 conditions = "Token supply is controlled by the Normal nAVAX/XLM liquidity pool"
 image = "https://www.normalfinance.io/assets/icons/crypto-icons/nAVAX.webp"
 
@@ -116,6 +116,6 @@ issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Polygon"
-desc = "A synthethic Solana token"
+desc = "A synthethic token backed by XLM tracking the value of Polygon"
 conditions = "Token supply is controlled by the Normal nPOL/XLM liquidity pool"
 image = "https://www.normalfinance.io/assets/icons/crypto-icons/nPOL.webp"

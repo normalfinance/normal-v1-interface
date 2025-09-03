@@ -7,7 +7,6 @@ import { useEffect } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
@@ -33,7 +32,6 @@ export default function CreatePositionView() {
         await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
-        captureException(e);
         console.error(e);
       } finally {
         setGlobalIsLoading(false);
