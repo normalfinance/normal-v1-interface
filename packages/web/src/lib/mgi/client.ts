@@ -145,9 +145,23 @@ export async function completeMgiAuth(userSignedXDR: string): Promise<string> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userSignedXDR }),
   });
-  const data = await r.json();
-  if (!r.ok || !data?.token) throw new Error(data?.error || 'MGI auth failed');
-  return data.token as string;
+
+  const text = await r.text();
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
+
+  if (!r.ok) {
+    // surface the exact server/MGI error
+    throw new Error(typeof data === 'string' ? data : JSON.stringify(data));
+  }
+
+  const token = (typeof data === 'string' ? undefined : data?.token) ?? data?.access_token ?? data;
+  if (!token) throw new Error('MGI auth returned no token');
+  return token as string;
 }
 
 export async function getMgiAuthToken(userAccount: string) {
