@@ -12,6 +12,7 @@ import { fCurrency } from '@/utils/format-number';
 import { useAppStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from '@/routes/hooks';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -33,6 +34,8 @@ import { Iconify } from '@/components/template/iconify';
 import { Scrollbar } from '@/components/template/scrollbar';
 import { SearchNotFound } from '@/components/template/search-not-found';
 
+import { paths } from '@/routes/paths';
+
 import { applyFilter } from './utils';
 
 // ----------------------------------------------------------------------
@@ -46,6 +49,7 @@ const breakpoint: Breakpoint = 'sm';
 export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps) {
   const { t } = useTranslate('auto');
   const theme = useTheme();
+  const router = useRouter();
   const smUp = useMediaQuery(theme.breakpoints.up(breakpoint));
 
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
@@ -87,6 +91,19 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
       getAllTokens();
     }
   }, [open, getAllTokens, tokens.length]);
+
+  const handleTokenClick = useCallback(
+    (token: any) => {
+      const isNormalToken = token.symbol.toLowerCase().startsWith('n');
+      const destination = isNormalToken
+        ? paths.pools.details(token.symbol)
+        : `${paths.swap}?token_in=${token.symbol}`;
+
+      setTimeout(() => handleClose(), 50); 
+      router.push(destination);
+    },
+    [router, handleClose]
+  );
 
   const handleSearch = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSearchQuery(event.target.value);
@@ -218,7 +235,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           return (
             <MenuItem disableRipple key={item.symbol}>
               <ListItemButton
-                onClick={handleClose}
+                onClick={() => handleTokenClick(item)}
                 sx={{
                   borderWidth: 1,
                   borderStyle: 'dashed',
@@ -282,7 +299,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
                   )}
                   {item.usdValue > 0 && (
                     <Typography variant="caption" color="text.secondary">
-                      ${fCurrency(item.usdValue)}
+                      {fCurrency(item.usdValue)}
                     </Typography>
                   )}
                 </Box>
