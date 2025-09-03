@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 
-import PostHogClient from './lib/posthog';
+// import PostHogClient from './lib/posthog';
 
 const BLOCKED_COUNTRIES = new Set([
   'AG', // Antigua and Barbuda
@@ -39,7 +39,7 @@ const REFERRAL_COOKIE_NAME = 'referral_code';
 const REFERRAL_TIMESTAMP_COOKIE_NAME = 'referral_timestamp';
 const REFERRAL_PARAM_NAMES = ['ref', 'referral', 'referrer', 'invite'];
 
-const posthog = PostHogClient();
+// const posthog = PostHogClient();
 
 async function lookup(ip: string) {
   //   Always include the scheme (https) to avoid 403s
@@ -136,6 +136,9 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
+    // const flagEnabled = await posthog.isFeatureEnabled('ip-filtering');
+
+    // if (flagEnabled) {
     const { country, isVpn } = await lookup(ip);
     console.log('[geo] lookup result:', country, 'vpn?', isVpn);
 
@@ -145,12 +148,13 @@ export async function middleware(req: NextRequest) {
       url.search = '';
       return NextResponse.redirect(url);
     }
+    // }
   } catch (e) {
     // If the API fails, default to *allow* so legit users aren't locked out
     console.error('Geo lookup error', e);
-    posthog.captureException(e, '', {
-      type: 'Geo lookup error',
-    });
+    // posthog.captureException(e, '', {
+    //   type: 'Geo lookup error',
+    // });
   }
 
   return referralResponse || NextResponse.next();
