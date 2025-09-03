@@ -4,7 +4,9 @@ import type { BoxProps } from '@mui/material/Box';
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useRouter } from '@/routes/hooks';
 import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -12,7 +14,6 @@ import { fCurrency } from '@/utils/format-number';
 import { useAppStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from '@/routes/hooks';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -33,8 +34,6 @@ import { Label } from '@/components/template/label';
 import { Iconify } from '@/components/template/iconify';
 import { Scrollbar } from '@/components/template/scrollbar';
 import { SearchNotFound } from '@/components/template/search-not-found';
-
-import { paths } from '@/routes/paths';
 
 import { applyFilter } from './utils';
 
@@ -99,7 +98,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
         ? paths.pools.details(token.symbol)
         : `${paths.swap}?token_in=${token.symbol}`;
 
-      setTimeout(() => handleClose(), 50); 
+      setTimeout(() => handleClose(), 50);
       router.push(destination);
     },
     [router, handleClose]
