@@ -1,0 +1,7 @@
+export const POINTS = {
+  SWAP_PER_1000: 25,
+  ADD_LIQ_PER_1000: 50,
+  STAKE_PER_1000: 10,
+  CREATE_INDEX_FLAT: 50,
+  MINT_INDEX_PER_1000: 25,
+} as const;

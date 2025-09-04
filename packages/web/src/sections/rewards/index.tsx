@@ -18,8 +18,10 @@ import { WalletGate } from '@/components/_common/wallet-gate';
 
 import { ProfileCover } from './profile-cover';
 import { ZealyProgress } from './zealy-progress';
-import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
+import ProtocolPointsSection from './protocol-points-section';
+
+import { useProtocolPoints } from './hooks/use-protocol-points';
 
 interface User {
   id: string;
@@ -71,15 +73,6 @@ const REWARDS_OVERVIEW = {
   ],
 };
 
-const POINTS_DATA = {
-  totalPoints: 0,
-  history: [
-    // { date: '2025-07-08', points: 150, action: 'Swap' },
-    // { date: '2025-07-07', points: 75, action: 'Provide Liquidity' },
-    // { date: '2025-07-05', points: 200, action: 'Stake LP' },
-  ],
-};
-
 // ----------------------------------------------------------------------
 
 export function RewardsView() {
@@ -87,6 +80,8 @@ export function RewardsView() {
   const searchParams = useSearchParams();
   const selectedTab = searchParams.get(TAB_PARAM) ?? '';
   const walletAddress = usePersistStore((s) => s.wallet.address);
+  const { loading: ppLoading, totalPoints: ppTotal } = useProtocolPoints(walletAddress);
+
   const { t } = useTranslate();
 
   const createRedirectPath = (currentPath: string, query: string) => {
@@ -140,7 +135,7 @@ export function RewardsView() {
             referralsCount={REWARDS_OVERVIEW.referralsCount}
             zealyUrl={REWARDS_OVERVIEW.zealyUrl}
             zealyXP={REWARDS_OVERVIEW.zealyXP}
-            protocolPoints={REWARDS_OVERVIEW.protocolPoints}
+            protocolPoints={ppTotal}
             referrals={REWARDS_OVERVIEW.referrals}
           />
         </WalletGate>
@@ -173,7 +168,7 @@ export function RewardsView() {
 
       {selectedTab === 'protocol' && (
         <WalletGate buttonText={t('Connect Wallet to view Protocol Points')} fullWidth>
-          <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
+          <ProtocolPointsSection walletAddress={walletAddress} />
         </WalletGate>
       )}
     </DashboardContent>
