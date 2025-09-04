@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
 import { fetchAndIssueTrustline } from '@normalfinance/utils';
 
@@ -12,7 +11,7 @@ interface ReturnType {
   loading: boolean;
   txBroadcasting: boolean;
   trustlineButtonActive: boolean;
-  addTrustLine: (assetContractAddress: string) => Promise<void>;
+  addTrustLine: (assetCode: string, assetIssuer: string) => Promise<void>;
 }
 
 // ----------------------------------------------------------------------
@@ -33,16 +32,15 @@ export function useTrustLine(): ReturnType {
    * @async
    */
   const addTrustLine = useCallback(
-    async (assetContractAddress: string): Promise<void> => {
+    async (assetCode: string, assetIssuer: string): Promise<void> => {
       try {
         setError(null);
         setLoading(true);
 
         setTxBroadcasting(true);
-        await fetchAndIssueTrustline(storePersist.wallet.address!, assetContractAddress);
+        await fetchAndIssueTrustline(storePersist.wallet.address!, assetCode, assetIssuer);
         setTrustlineButtonActive(false);
       } catch (e: any) {
-        captureException(e);
         console.log(e);
         setError(e);
       }

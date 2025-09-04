@@ -1,9 +1,5 @@
-import { Wallet } from "./types";
-import {
-  getPublicKey,
-  isConnected,
-  signTransaction,
-} from "@lobstrco/signer-extension-api";
+import { Wallet } from './types';
+import { getPublicKey, isConnected, signTransaction } from '@lobstrco/signer-extension-api';
 
 /**
  * Lobstr wallet implementation
@@ -44,8 +40,7 @@ export class lobstr implements Wallet {
       throw new Error(`Lobstr is not connected`);
     }
 
-    const pubKey =
-      getAddressFromLocalStorageByKey("app-storage") || (await getPublicKey());
+    const pubKey = getAddressFromLocalStorageByKey('app-storage') || (await getPublicKey());
     return { address: pubKey };
   }
 
@@ -96,7 +91,7 @@ export class lobstr implements Wallet {
     signedAuthEntry: Buffer | null;
     signerAddress: string;
   }> {
-    throw new Error("Lobstr does not support signing authorization entries");
+    throw new Error('Lobstr does not support signing authorization entries');
   }
 }
 
@@ -108,7 +103,7 @@ export class lobstr implements Wallet {
  * @instance getAddressFromLocalStorageByKey
  */
 function getAddressFromLocalStorageByKey(key: string): string | undefined {
-  const localStorageData = JSON.parse(localStorage.getItem(key) || "{}");
+  const localStorageData = JSON.parse(localStorage.getItem(key) || '{}');
   if (
     localStorageData &&
     localStorageData.state &&

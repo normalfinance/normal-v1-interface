@@ -86,7 +86,6 @@ export function usePoolPriceChart(
   //       .order('id', { ascending: true });
 
   //     if (e) {
-  //       captureException(e);
   //       setError(e as any);
   //       return;
   //     }
@@ -152,7 +151,6 @@ export function usePoolPriceChart(
   //       .order('id', { ascending: true });
 
   //     if (e) {
-  //       captureException(e);
   //       setError(e as any);
   //       return;
   //     }

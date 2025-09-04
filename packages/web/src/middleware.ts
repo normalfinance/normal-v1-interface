@@ -1,7 +1,8 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
-import { captureException } from '@sentry/nextjs';
+
+// import PostHogClient from './lib/posthog';
 
 const BLOCKED_COUNTRIES = new Set([
   'AG', // Antigua and Barbuda

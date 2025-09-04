@@ -5,7 +5,6 @@ import type { TokenActionQueryParams } from '@/types/query-params';
 import type { TokenActionKey } from '@/components/_common/token-action-card';
 
 import React, { useEffect } from 'react';
-import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
@@ -68,7 +67,6 @@ export default function SwapView() {
 
       getAllTokens()
         .catch((error) => {
-          captureException(error);
           console.error(error);
         })
         .finally(() => {

@@ -1,4 +1,4 @@
-import { withSentryConfig } from '@sentry/nextjs';
+import { withPostHogConfig } from '@posthog/nextjs-config';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -77,17 +77,14 @@ const nextConfig = {
   }),
 };
 
-export default withSentryConfig(
-  nextConfig,
-  {
-    silent: true,
-    org: process.env.SENTRY_ORG,
-    project: process.env.SENTRY_PROJECT,
+export default withPostHogConfig(nextConfig, {
+  personalApiKey: process.env.POSTHOG_API_KEY,
+  envId: process.env.POSTHOG_ENV_ID,
+  host: process.env.NEXT_PUBLIC_POSTHOG_HOST, // (optional), defaults to https://us.posthog.com
+  sourcemaps: {
+    enabled: process.env.VERCEL_GIT_BRANCH !== 'develop', // (optional) Enable sourcemaps generation and upload, default to true on production builds
+    project: `Normal - ${process.env.VERCEL_GIT_BRANCH === 'develop' ? 'development' : 'Testnet'}`, // (optional) Project name, defaults to repository name
+    version: version, // (optional) Release version, defaults to current git commit
+    deleteAfterUpload: true, // (optional) Delete sourcemaps after upload, defaults to true
   },
-  {
-    widenClientFileUpload: true,
-    hideSourceMaps: true,
-    disableLogger: true,
-    automaticVercelMonitors: true,
-  }
-);
+});

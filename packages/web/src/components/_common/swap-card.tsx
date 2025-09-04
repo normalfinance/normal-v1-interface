@@ -5,11 +5,11 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
-import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -191,6 +191,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // 9) handle token selection from popup, are we picking a sell token or a buy token?
   const handleTokenSelect = (token: Token) => {
+    if (token.symbol !== 'XLM') {
+      addTrustLine(token.symbol, constants.StellarConfig.NORMAL_TOKEN_ISSUER);
+    }
+
     if (activeButton === 'sell') {
       // User selecting the sell token
       if (buyToken && buyToken.id === token.id) {
@@ -300,7 +304,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     } else if (label.startsWith('Insufficient')) {
       return;
     } else if (label === 'Add trustline') {
-      addTrustLine(buyToken?.id || '');
+      addTrustLine(buyToken?.symbol || '', constants.StellarConfig.NORMAL_TOKEN_ISSUER);
     } else if (label === 'Review') {
       // open a review popup
       setReviewOpen(true);
@@ -352,7 +356,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
 
         onEstimateSwap({
-          asset,
+          asset: format.formatNormalToken(asset, 'without-n'),
           direction,
           in_amount: amount,
         });
@@ -373,7 +377,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
         const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
         await onSwap({
-          asset: asset.startsWith('n') ? asset.slice(1) : asset,
+          asset: format.formatNormalToken(asset, 'without-n'),
           direction,
           in_amount: Number(amount),
           out_min: Number(0), //buyAmount
