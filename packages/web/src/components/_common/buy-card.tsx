@@ -20,6 +20,7 @@ import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { useSnackbar } from 'notistack';
 import Image from 'next/image';
+import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];

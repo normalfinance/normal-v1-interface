@@ -46,6 +46,7 @@ import ConnectedWallet from '@/components/_common/drawer-components/connected-wa
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
+import AddUsdcTrustlineButton from './add-trustline-button';
 
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
@@ -300,6 +301,7 @@ function WalletConnected({ address }: { address: string }) {
         </Button>
         <ZealyHighlight questId={ZEALY_QUEST_IDS.receiveFaucet} position={{ right: -10 }} />
       </Box>
+      <AddUsdcTrustlineButton />
       <ConnectedWallet
         balance={totalBalance}
         percentageChange={0}
@@ -317,24 +319,24 @@ function WalletConnected({ address }: { address: string }) {
 export type AccountDrawerProps = IconButtonProps;
 
 export function AccountDrawer(props: AccountDrawerProps) {
-  /* ↓ stores ------------------------------------------------------ */
+  /*  stores ------------------------------------------------------ */
   const persist = usePersistStore();
 
   const { t } = useTranslate();
 
-  /* ↓ connectors -------------------------------------------------- */
+  /*  connectors -------------------------------------------------- */
   const connectors: Connector[] = [freighter(), xbull(), lobstr(), hana(), new WalletConnect(true)];
 
   const connect = (c: Connector) => persist.connectWallet(c.id);
   const disconnect = () => persist.disconnectWallet();
 
-  /* ↓ drawer UI toggle ------------------------------------------- */
+  /*  drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
-  /* ↓ main button uses dummy avatar ------------------------------ */
+  /*  main button uses dummy avatar ------------------------------ */
   const avatarURL = '/assets/icons/navbar/logo.webp';
 
-  /* ↓ derived state ---------------------------------------------- */
+  /*  derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address;
 
   const isConnected = !!connectedAddress;
