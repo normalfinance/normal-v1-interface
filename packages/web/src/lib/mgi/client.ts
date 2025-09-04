@@ -174,19 +174,35 @@ export async function getMgiAuthToken(userAccount: string) {
   return await completeMgiAuth(userSignedXDR);
 }
 
-export async function startMgiDeposit(token: string, userAccount: string) {
+export async function startMgiDeposit(token: string, userAccount: string, amount: number) {
   const r = await fetch(`/api/mgi/sep24/deposit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, account: userAccount }),
+    body: JSON.stringify({ token, account: userAccount, amount }),
   });
-  const data = await r.json();
-  if (!r.ok || !data?.url) throw new Error(data?.error || 'deposit start failed');
-  return data as { url: string; id: string };
+
+  const raw = await r.text();
+  let data: any = null;
+  try {
+    data = JSON.parse(raw);
+  } catch {}
+
+  if (!r.ok || !data?.url) {
+    // nice surfaced error
+    const pretty = JSON.stringify(data ?? { raw }, null, 2);
+    throw new Error(`Deposit start failed (HTTP ${r.status}): ${pretty}`);
+  }
+
+  return data as { url: string; id: string | null };
 }
 
-export async function runDepositFlow(userAccount: string, onReady?: (tx: any) => void) {
+// and use it in your flow:
+export async function runDepositFlow(
+  userAccount: string,
+  amount: string | number,
+  onReady?: (tx: any) => void
+) {
   const token = await getMgiAuthToken(userAccount);
-  const { url } = await startMgiDeposit(token, userAccount);
+  const { url } = await startMgiDeposit(token, userAccount, Number(amount));
   openMoneyGram(url, (tx) => onReady?.(tx));
 }

@@ -21,6 +21,7 @@ import { runDepositFlow } from '@/lib/mgi/client';
 import { useSnackbar } from 'notistack';
 import Image from 'next/image';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
+import AmountDialog from '../deposit-amount-dialog';
 
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];
@@ -172,6 +173,9 @@ const BuyCard: React.FC<BuyCardProps> = ({
 
   const [mgiLoading, setMgiLoading] = useState(false);
 
+  // NEW: control the amount popup
+  const [amountDialogOpen, setAmountDialogOpen] = useState(false);
+
   const ensureUSDCSelected = () => {
     if (buyToken?.symbol?.toUpperCase() !== 'USDC') {
       const usdc = tokensList.find((t) => t.symbol.toUpperCase() === 'USDC');
@@ -179,15 +183,27 @@ const BuyCard: React.FC<BuyCardProps> = ({
     }
   };
 
+  // UPDATED: on click, open amount dialog (don’t start flow yet)
   const handleBuyWithMoneyGram = async () => {
     if (!isConnected) {
       enqueueSnackbar('Connect your wallet to continue', { variant: 'warning' });
       return;
     }
+    setAmountDialogOpen(true);
+  };
+
+  // NEW: called when user submits amount in the dialog
+  const startMgiAfterAmount = async (usdcAmount: string) => {
     try {
       setMgiLoading(true);
-      ensureUSDCSelected(); // purely UI nicety
-      await runDepositFlow(userAddress!, () => {
+
+      // Optional – sanity preflight (gives user actionable errors)
+      const env = await detectWalletEnv();
+      assertTestnetAndAccountMatch(env, userAddress!);
+
+      ensureUSDCSelected();
+
+      await runDepositFlow(userAddress!, usdcAmount, () => {
         enqueueSnackbar('MoneyGram ready — awaiting USDC deposit', { variant: 'info' });
       });
     } catch (e: any) {
@@ -447,6 +463,21 @@ const BuyCard: React.FC<BuyCardProps> = ({
             onClose={handleReviewClose}
           />
         )}
+
+        <AmountDialog
+          open={amountDialogOpen}
+          onCancel={() => setAmountDialogOpen(false)}
+          onConfirm={(val) => {
+            setAmountDialogOpen(false);
+            // Kick off the actual flow with the provided amount
+            startMgiAfterAmount(val);
+          }}
+          // optional: prefill with the large "$" input (if you want)
+          // defaultAmount={amount && amount !== '0' ? amount : '10'}
+          // sandbox guard
+          min={10}
+          max={20}
+        />
       </Stack>
     </Stack>
   );
