@@ -56,7 +56,7 @@ export function hana(): Connector {
     async getNetworkDetails(): Promise<NetworkDetails> {
       return {
         network:
-          (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET'
+          (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? '').toUpperCase() === 'TESTNET'
             ? 'testnet'
             : 'public',
         networkUrl: constants.StellarConfig.HORIZON_URL,
