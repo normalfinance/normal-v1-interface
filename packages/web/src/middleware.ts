@@ -71,8 +71,7 @@ async function lookup(ip: string) {
 
   const data = await res.json();
 
-  const isDangerous =
-    data.security?.is_abuser || data.security?.is_attacker || data.security?.is_threat || false;
+  const isDangerous = data.security?.is_bogon || data.security?.is_threat || false;
 
   return {
     country: data.location?.country?.code, // "US", "IR"
