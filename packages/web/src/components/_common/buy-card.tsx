@@ -469,14 +469,10 @@ const BuyCard: React.FC<BuyCardProps> = ({
           onCancel={() => setAmountDialogOpen(false)}
           onConfirm={(val) => {
             setAmountDialogOpen(false);
-            // Kick off the actual flow with the provided amount
             startMgiAfterAmount(val);
           }}
-          // optional: prefill with the large "$" input (if you want)
-          // defaultAmount={amount && amount !== '0' ? amount : '10'}
-          // sandbox guard
-          min={10}
-          max={20}
+          min={1}
+          max={900}
         />
       </Stack>
     </Stack>

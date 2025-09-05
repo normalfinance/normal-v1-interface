@@ -1,11 +1,25 @@
+// src/components/account/AddUsdcTrustlineButton.tsx
 import React, { useState } from 'react';
-import { Button } from '@mui/material';
+import { Button, ButtonProps } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { addUSDCTrustline, hasUSDCTrustline } from '@/lib/mgi/trustlines';
 import { usePersistStore } from '@normalfinance/state';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
-export default function AddUsdcTrustlineButton() {
+type Props = {
+  /** Forwarded to inner Button */
+  fullWidth?: boolean;
+  size?: ButtonProps['size'];
+  variant?: ButtonProps['variant'];
+  sx?: ButtonProps['sx'];
+};
+
+export default function AddUsdcTrustlineButton({
+  fullWidth = true,
+  size = 'large',
+  variant = 'outlined',
+  sx,
+}: Props) {
   const { enqueueSnackbar } = useSnackbar();
   const state = usePersistStore();
   const userAddress = state.wallet.address as string | undefined;
@@ -41,12 +55,15 @@ export default function AddUsdcTrustlineButton() {
       setLoading(false);
     }
   };
+
   return (
     <Button
-      variant="outlined"
+      fullWidth={fullWidth}
+      size={size}
+      variant={variant}
       onClick={handleClick}
       disabled={disabled}
-      sx={{ textTransform: 'none' }}
+      sx={{ borderRadius: 2, height: '100%', textTransform: 'none', ...sx }}
     >
       {loading ? 'Adding trustline…' : 'Add USDC trustline'}
     </Button>

@@ -206,3 +206,34 @@ export async function runDepositFlow(
   const { url } = await startMgiDeposit(token, userAccount, Number(amount));
   openMoneyGram(url, (tx) => onReady?.(tx));
 }
+
+export async function startMgiWithdraw(token: string, userAccount: string, amount: number) {
+  const r = await fetch(`/api/mgi/sep24/withdraw`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, account: userAccount, amount }),
+  });
+
+  const raw = await r.text();
+  let data: any = null;
+  try {
+    data = JSON.parse(raw);
+  } catch {}
+
+  if (!r.ok || !data?.url) {
+    const pretty = JSON.stringify(data ?? { raw }, null, 2);
+    throw new Error(`Withdraw start failed (HTTP ${r.status}): ${pretty}`);
+  }
+
+  return data as { url: string; id: string | null };
+}
+
+export async function runWithdrawFlow(
+  userAccount: string,
+  amount: string | number,
+  onReady?: (tx: any) => void
+) {
+  const token = await getMgiAuthToken(userAccount);
+  const { url } = await startMgiWithdraw(token, userAccount, Number(amount));
+  openMoneyGram(url, (tx) => onReady?.(tx));
+}

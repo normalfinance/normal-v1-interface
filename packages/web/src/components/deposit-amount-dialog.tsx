@@ -8,16 +8,19 @@ import {
   TextField,
   Stack,
   Typography,
+  InputAdornment,
+  Avatar,
+  Box,
 } from '@mui/material';
+import Image from 'next/image';
 
 type Props = {
   open: boolean;
   onCancel: () => void;
-  onConfirm: (amount: string) => void; // pass as string to avoid float quirks
-  defaultAmount?: string; // optional prefill
-  // If you're on sandbox/testnet, MoneyGram demo usually wants 10–20 USDC
-  min?: number; // default 10
-  max?: number; // default 20
+  onConfirm: (amount: string) => void;
+  defaultAmount?: string;
+  min?: number;
+  max?: number;
 };
 
 export default function AmountDialog({
@@ -25,8 +28,8 @@ export default function AmountDialog({
   onCancel,
   onConfirm,
   defaultAmount = '',
-  min = 10,
-  max = 20,
+  min = 1,
+  max = 900,
 }: Props) {
   const [val, setVal] = React.useState<string>(defaultAmount);
   const [err, setErr] = React.useState<string>('');
@@ -42,8 +45,7 @@ export default function AmountDialog({
     const n = Number(s);
     if (!Number.isFinite(n)) return 'Amount must be a number';
     if (n <= 0) return 'Amount must be > 0';
-    // Helpful guard for MoneyGram sandbox thresholds:
-    if (n < min || n > max) return `Sandbox amount must be between ${min} and ${max} USDC`;
+    if (n < min || n > max) return `Amount must be between ${min} and ${max} USDC`;
     return '';
   };
 
@@ -57,30 +59,83 @@ export default function AmountDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onCancel}>
-      <DialogTitle>Buy with MoneyGram</DialogTitle>
-      <DialogContent>
-        <Stack spacing={1} sx={{ pt: 1 }}>
-          <Typography variant="body2">
-            Enter how much USDC you want to purchase (sandbox typically requires 10–20 USDC).
+    <Dialog
+      open={open}
+      onClose={onCancel}
+      PaperProps={{
+        sx: { borderRadius: 3, p: 1.5, minWidth: 360 },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          fontWeight: 600,
+          textAlign: 'center',
+          pb: 2,
+          alignItems: 'center',
+          justifyContent: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <Avatar sx={{ width: 56, height: 56, bgcolor: 'transparent', mb: 1 }}>
+          <Image
+            src="/assets/images/token-action-card/usdc.webp"
+            alt="USDC"
+            width={48}
+            height={48}
+          />
+        </Avatar>
+        Buy USDC with MoneyGram
+      </DialogTitle>
+
+      <DialogContent sx={{ pt: 2 }}>
+        <Stack spacing={2} alignItems="center">
+          <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
+            Enter how much <strong>USDC</strong> you’d like to purchase.
           </Typography>
+
           <TextField
+            fullWidth
             autoFocus
             type="number"
-            label="Amount (USDC)"
+            placeholder="0"
             value={val}
             onChange={(e) => setVal(e.target.value)}
             inputProps={{ min, max, step: '1' }}
             error={!!err}
             helperText={err || ' '}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Box
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Image
+                      src="/assets/images/token-action-card/usdc.webp"
+                      alt="USDC"
+                      width={20}
+                      height={20}
+                      style={{ objectFit: 'contain' }}
+                    />
+                  </Box>
+                </InputAdornment>
+              ),
+            }}
           />
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel} color="inherit">
+
+      <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
+        <Button onClick={onCancel} variant="outlined" sx={{ borderRadius: 2 }}>
           Cancel
         </Button>
-        <Button onClick={handleOk} variant="contained">
+        <Button onClick={handleOk} variant="contained" sx={{ borderRadius: 2 }}>
           Continue
         </Button>
       </DialogActions>

@@ -1,62 +1,83 @@
 import { NextResponse } from 'next/server';
-import { Wallet } from '@stellar/typescript-wallet-sdk';
 
+function j(status: number, payload: any) {
+  return NextResponse.json(payload, { status });
+}
+
+/**
+ * POST /api/mgi/sep24/withdraw
+ * Body: { token: string; account: string; amount: string|number; lang?: string }
+ */
 export async function POST(req: Request) {
   try {
-    const { token, account, amount } = (await req.json()) as {
+    const {
+      token,
+      account,
+      amount,
+      lang = 'en',
+    } = (await req.json()) as {
       token?: string;
       account?: string;
       amount?: string | number;
+      lang?: string;
     };
-    if (!token) {
-      return NextResponse.json({ error: 'Missing token' }, { status: 400 });
-    }
-    if (!account) {
-      return NextResponse.json({ error: 'Missing account' }, { status: 400 });
-    }
 
-    const homeDomain = process.env.MGI_ACCESS_HOST; // e.g. "extstellar.moneygram.com" or "stellar.moneygram.com"
-    if (!homeDomain) {
-      return NextResponse.json({ error: 'Server missing MGI_ACCESS_HOST' }, { status: 500 });
-    }
+    if (!token) return j(400, { error: 'Missing token' });
+    if (!account) return j(400, { error: 'Missing account' });
 
-    const wallet = Wallet.TestNet(); // Use Wallet.Public() for MoneyGram production env
-    const anchor = wallet.anchor({ homeDomain });
+    const n = Number(amount);
+    if (!Number.isFinite(n)) return j(400, { error: 'Amount must be a valid number' });
 
-    // Fetch anchor info for asset details
-    const info = await anchor.getInfo();
-    const currency = info.currencies.find(({ code }) => code === 'USDC');
-    if (!currency?.issuer) {
-      throw new Error('Anchor does not support USDC asset or issuer not found');
-    }
+    const host = process.env.MGI_ACCESS_HOST;
+    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
-    // Prepare withdrawal request parameters
-    const withdrawParams: any = {
-      authToken: token as any, // Bearer token from SEP-10 auth
-      assetCode: 'USDC',
-      assetIssuer: currency.issuer, // USDC issuer on the network:contentReference[oaicite:8]{index=8}
-      withdrawalAccount: account, // Source account for withdrawal (must match SEP-10 auth account for non-custodial):contentReference[oaicite:9]{index=9}
-      lang: 'en',
+    const endpoint = `https://${host}/stellaradapterservice/sep24/transactions/withdraw/interactive`;
+
+    const payload = {
+      asset_code: 'USDC',
+      withdrawal_account: account,
+      account, // keep both for compatibility
+      amount: String(n),
+      lang,
     };
-    if (amount) {
-      // Include amount if specified (optional for non-custodial, required for custodial):contentReference[oaicite:10]{index=10}
-      withdrawParams.extraFields = { amount: String(amount) };
+
+    const r = await fetch(endpoint, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/plain, */*',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const ct = (r.headers.get('content-type') || '').toLowerCase();
+
+    if (r.status === 302 || r.status === 303) {
+      const loc = r.headers.get('location');
+      if (!loc) return j(502, { error: 'Redirected without Location', status: r.status });
+      return NextResponse.json({ url: loc, id: null });
     }
 
-    // Initiate interactive withdrawal transaction
-    const { url, id } = await anchor.sep24().withdraw(withdrawParams);
-    if (!url) {
-      return NextResponse.json(
-        { error: 'MoneyGram did not return an interactive URL', details: { id: id ?? null } },
-        { status: 502 }
-      );
+    if (r.ok && ct.includes('application/json')) {
+      const data = await r.json().catch(() => ({}));
+      const url = data?.url ?? data?.location ?? null;
+      const id = data?.id ?? data?.transaction_id ?? null;
+      if (!url) return j(502, { error: 'JSON response lacked url', details: data });
+      return NextResponse.json({ url, id });
     }
-    // Return the interactive web URL and transaction ID
-    return NextResponse.json({ url, id: id ?? null });
+
+    const text = await r.text();
+    return j(502, {
+      error: 'Unexpected response from anchor',
+      status: r.status,
+      contentType: ct || null,
+      bodySnippet: text.slice(0, 2000),
+      sentTo: endpoint,
+      sentBody: payload,
+    });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || 'Server error', stack: e?.stack },
-      { status: 500 }
-    );
+    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
   }
 }
