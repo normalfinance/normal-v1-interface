@@ -235,7 +235,7 @@ export default function ConnectedWallet({
             disabled={mgiBusy}
             sx={{ borderRadius: 2, height: '100%', textTransform: 'none' }}
           >
-            {t('Buy crypto with fiat')}
+            {t('Buy USDC')}
           </Button>
         </Box>
 
@@ -250,7 +250,7 @@ export default function ConnectedWallet({
             disabled={mgiBusy}
             sx={{ borderRadius: 2, height: '100%', textTransform: 'none' }}
           >
-            {t('Withdraw to cash')}
+            {t('Sell USDC')}
           </Button>
         </Box>
       </Stack>

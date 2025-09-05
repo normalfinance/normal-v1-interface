@@ -89,7 +89,7 @@ export default function PositioinsTab({ positions = [], xlmPrice = BigNumber(0) 
           );
         })
       ) : (
-        <Typography>{t('No tokens match your search.')}</Typography>
+        <Typography>{t('No positions found.')}</Typography>
       )}
     </Box>
   );

@@ -269,7 +269,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
                 width={20}
                 height={20}
               />
-              {mgiLoading ? 'Opening…' : 'Buy with MoneyGram'}
+              {mgiLoading ? 'Opening…' : 'Buy USDC with MoneyGram'}
             </Button>
           </Stack>
           <Box
