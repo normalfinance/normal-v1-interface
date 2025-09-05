@@ -48,10 +48,6 @@ import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-o
 import { AccountButton } from './account-button';
 import AddUsdcTrustlineButton from './add-trustline-button';
 
-import AmountDialog from '@/components/deposit-amount-dialog';
-import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import { runDepositFlow, runWithdrawFlow } from '@/lib/mgi/client'; // make sure withdraw exists
-
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
 /* ------------------------------------------------------------------ */
@@ -270,44 +266,6 @@ function WalletConnected({ address }: { address: string }) {
     return acc + holdings;
   }, 0);
 
-  const [buyDialogOpen, setBuyDialogOpen] = useState(false);
-  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
-  const [mgiBusy, setMgiBusy] = useState(false);
-
-  const openBuyDialog = () => setBuyDialogOpen(true);
-  const openWithdrawDialog = () => setWithdrawDialogOpen(true);
-  const closeBuyDialog = () => setBuyDialogOpen(false);
-  const closeWithdrawDialog = () => setWithdrawDialogOpen(false);
-
-  // common start (preflight + flow wrapper)
-  async function startMgi(kind: 'deposit' | 'withdraw', addr: string, amountStr: string) {
-    setMgiBusy(true);
-    try {
-      const env = await detectWalletEnv();
-      assertTestnetAndAccountMatch(env, addr);
-
-      const amount = Number(amountStr);
-      if (!Number.isFinite(amount) || amount <= 0) {
-        enqueueSnackbar('Enter a valid USDC amount', { variant: 'warning' });
-        return;
-      }
-
-      if (kind === 'deposit') {
-        await runDepositFlow(addr, amount, () => {
-          enqueueSnackbar('MoneyGram ready — awaiting your cash deposit', { variant: 'info' });
-        });
-      } else {
-        await runWithdrawFlow(addr, amount, () => {
-          enqueueSnackbar('MoneyGram ready — send USDC when prompted', { variant: 'info' });
-        });
-      }
-    } catch (e: any) {
-      enqueueSnackbar(e?.message || `MoneyGram ${kind} failed`, { variant: 'error' });
-    } finally {
-      setMgiBusy(false);
-    }
-  }
-
   if (!address) {
     return null;
   }
@@ -356,70 +314,13 @@ function WalletConnected({ address }: { address: string }) {
         </Box>
       </Stack>
 
-      <Stack direction="row" width={1} spacing={1} alignItems="stretch" py={1}>
-        <Box sx={{ flex: 1, display: 'flex' }}>
-          <Button
-            fullWidth
-            variant="contained"
-            color="secondary"
-            size="large"
-            startIcon={<Iconify icon="mdi:cash-plus" />}
-            onClick={openBuyDialog}
-            disabled={mgiBusy}
-            sx={{ borderRadius: 2, height: '100%', textTransform: 'none' }}
-          >
-            Buy crypto with fiat
-          </Button>
-        </Box>
-
-        <Box sx={{ flex: 1, display: 'flex' }}>
-          <Button
-            fullWidth
-            variant="outlined"
-            color="secondary"
-            size="large"
-            startIcon={<Iconify icon="mdi:cash-minus" />}
-            onClick={openWithdrawDialog}
-            disabled={mgiBusy}
-            sx={{ borderRadius: 2, height: '100%', textTransform: 'none' }}
-          >
-            Withdraw to cash
-          </Button>
-        </Box>
-      </Stack>
-
       <ConnectedWallet
+        address={address}
         balance={totalBalance}
         percentageChange={0}
         tokens={tokens}
         positions={positions}
         activity={recentActivity}
-      />
-
-      {/* Buy (Deposit) dialog */}
-      <AmountDialog
-        open={buyDialogOpen}
-        onCancel={closeBuyDialog}
-        onConfirm={async (val) => {
-          closeBuyDialog();
-          await startMgi('deposit', address, val);
-        }}
-        defaultAmount=""
-        min={1}
-        max={900}
-      />
-
-      {/* Withdraw dialog */}
-      <AmountDialog
-        open={withdrawDialogOpen}
-        onCancel={closeWithdrawDialog}
-        onConfirm={async (val) => {
-          closeWithdrawDialog();
-          await startMgi('withdraw', address, val);
-        }}
-        defaultAmount=""
-        min={1}
-        max={900}
       />
     </Box>
   );
