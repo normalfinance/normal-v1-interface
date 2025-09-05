@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
+
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 
 export default function WalletDiag() {
   const [info, setInfo] = useState<any>(null);
+  const { t } = useTranslate();
 
   useEffect(() => {
     const w: any = window;
@@ -29,12 +34,14 @@ export default function WalletDiag() {
   }, []);
 
   return (
-    <div style={{ padding: 24 }}>
-      <h3>Wallet Diagnostics</h3>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h6">{t('Wallet Diagnostics')}</Typography>
       <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(info, null, 2)}</pre>
-      <p>
-        If your wallet is installed but not detected, open the wallet once and refresh this page.
-      </p>
-    </div>
+      <Typography variant="body2" color="text.secondary">
+        {t(
+          'If your wallet is installed but not detected, open the wallet once and refresh this page.'
+        )}
+      </Typography>
+    </Box>
   );
 }

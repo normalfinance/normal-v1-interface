@@ -49,7 +49,9 @@ export async function POST(req: Request) {
     let data: any = raw;
     try {
       data = JSON.parse(raw);
-    } catch {}
+    } catch (err) {
+      data = raw;
+    }
 
     if (!r.ok) {
       return NextResponse.json(

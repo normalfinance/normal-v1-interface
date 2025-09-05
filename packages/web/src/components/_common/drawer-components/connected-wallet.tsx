@@ -9,9 +9,12 @@ import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
+import { enqueueSnackbar } from 'notistack';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
+import { runDepositFlow, runWithdrawFlow } from '@/lib/mgi/client';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -21,17 +24,13 @@ import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
+import AmountDialog from '@/components/deposit-amount-dialog';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
 import ReceiveModal from '../receive-modal';
 import PositioinsTab from './positions-tab';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
-
-import { enqueueSnackbar, useSnackbar } from 'notistack';
-import AmountDialog from '@/components/deposit-amount-dialog';
-import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import { runDepositFlow, runWithdrawFlow } from '@/lib/mgi/client';
 
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {
@@ -61,10 +60,6 @@ export default function ConnectedWallet({
       label: 'Send',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => {
-        // trackEvent('button_clicked', {
-        //   label: 'Manage Stake',
-        //   location: 'Insurance',
-        // });
         router.push(`${paths.swap}?tab=send`);
       },
     },
@@ -72,10 +67,6 @@ export default function ConnectedWallet({
       label: 'Receive',
       icon: 'mingcute:add-line',
       onClick: () => {
-        // trackEvent('button_clicked', {
-        //   label: 'Manage Stake',
-        //   location: 'Insurance',
-        // });
         setShowReceiveModal(true);
       },
     },
@@ -107,21 +98,21 @@ export default function ConnectedWallet({
 
       const amount = Number(amountStr);
       if (!Number.isFinite(amount) || amount <= 0) {
-        enqueueSnackbar('Enter a valid USDC amount', { variant: 'warning' });
+        enqueueSnackbar(t('Enter a valid USDC amount'), { variant: 'warning' });
         return;
       }
 
       if (kind === 'deposit') {
         await runDepositFlow(addr, amount, () => {
-          enqueueSnackbar('MoneyGram ready — awaiting your cash deposit', { variant: 'info' });
+          enqueueSnackbar(t('MoneyGram ready — awaiting your cash deposit'), { variant: 'info' });
         });
       } else {
         await runWithdrawFlow(addr, amount, () => {
-          enqueueSnackbar('MoneyGram ready — send USDC when prompted', { variant: 'info' });
+          enqueueSnackbar(t('MoneyGram ready — send USDC when prompted'), { variant: 'info' });
         });
       }
     } catch (e: any) {
-      enqueueSnackbar(e?.message || `MoneyGram ${kind} failed`, { variant: 'error' });
+      enqueueSnackbar(t('MoneyGram {{kind}} failed', { kind }), { variant: 'error' });
     } finally {
       setMgiBusy(false);
     }
@@ -225,7 +216,7 @@ export default function ConnectedWallet({
                     rotate: '-90deg',
                   }}
                 />
-                {btn.label}
+                {t(btn.label)}
               </Box>
             </Button>
           ))}
@@ -244,7 +235,7 @@ export default function ConnectedWallet({
             disabled={mgiBusy}
             sx={{ borderRadius: 2, height: '100%', textTransform: 'none' }}
           >
-            Buy crypto with fiat
+            {t('Buy crypto with fiat')}
           </Button>
         </Box>
 
@@ -259,7 +250,7 @@ export default function ConnectedWallet({
             disabled={mgiBusy}
             sx={{ borderRadius: 2, height: '100%', textTransform: 'none' }}
           >
-            Withdraw to cash
+            {t('Withdraw to cash')}
           </Button>
         </Box>
       </Stack>
@@ -328,10 +319,6 @@ export default function ConnectedWallet({
       <ReceiveModal
         open={showReceiveModal}
         onClose={() => {
-          // trackEvent('button_clicked', {
-          //   label: 'Learn more',
-          //   location: 'Home',
-          // });
           setShowReceiveModal(false);
         }}
       />

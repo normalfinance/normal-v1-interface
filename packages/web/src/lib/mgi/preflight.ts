@@ -20,45 +20,58 @@ export async function detectWalletEnv(): Promise<WalletEnvInfo> {
     if (!info.network && w.xbull?.getNetwork) {
       try {
         info.network = await w.xbull.getNetwork();
-      } catch {}
+      } catch (err) {
+        // ignore
+      }
     }
     if (!info.publicKey && w.xbull?.getPublicKey) {
       try {
         info.publicKey = await w.xbull.getPublicKey();
-      } catch {}
+      } catch (err) {
+        // ignore
+      }
     }
     if (!info.network && w.xBull?.getNetwork) {
       try {
         info.network = await w.xBull.getNetwork();
-      } catch {}
+      } catch (err) {
+        // ignore
+      }
     }
     if (!info.publicKey && w.xBull?.getPublicKey) {
       try {
         info.publicKey = await w.xBull.getPublicKey();
-      } catch {}
+      } catch (err) {
+        // ignore
+      }
     }
 
     // Lobstr
     if (!info.publicKey && w.lobstr?.getPublicKey) {
       try {
         info.publicKey = await w.lobstr.getPublicKey();
-      } catch {}
+      } catch (err) {
+        // ignore
+      }
     }
 
     // Hana / Wallet Standard
     if (w.hana?.stellar?.request) {
-      // Some wallets expose a generic request interface
       if (!info.publicKey) {
         try {
           const r = await w.hana.stellar.request({ method: 'getPublicKey' });
           if (r?.publicKey) info.publicKey = r.publicKey;
-        } catch {}
+        } catch (err) {
+          // ignore
+        }
       }
       if (!info.network) {
         try {
           const r = await w.hana.stellar.request({ method: 'getNetwork' });
-          if (r?.network) info.network = r.network; // 'PUBLIC' | 'TESTNET'
-        } catch {}
+          if (r?.network) info.network = r.network;
+        } catch (err) {
+          // ignore
+        }
       }
     }
 
@@ -68,17 +81,21 @@ export async function detectWalletEnv(): Promise<WalletEnvInfo> {
         try {
           const r = await w.stellar.request({ method: 'stellar_getPublicKey' });
           if (r?.publicKey) info.publicKey = r.publicKey;
-        } catch {}
+        } catch (err) {
+          // ignore
+        }
       }
       if (!info.network) {
         try {
           const r = await w.stellar.request({ method: 'stellar_getNetwork' });
           if (r?.network) info.network = r.network;
-        } catch {}
+        } catch (err) {
+          // ignore
+        }
       }
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    // ignore outer failures
   }
 
   return info;

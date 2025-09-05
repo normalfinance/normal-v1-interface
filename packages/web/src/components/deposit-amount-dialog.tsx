@@ -1,18 +1,20 @@
 import * as React from 'react';
+import Image from 'next/image';
+import { useTranslate } from '@/locales';
+
 import {
+  Box,
+  Stack,
   Dialog,
+  Button,
+  Avatar,
+  TextField,
+  Typography,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
-  TextField,
-  Stack,
-  Typography,
   InputAdornment,
-  Avatar,
-  Box,
 } from '@mui/material';
-import Image from 'next/image';
 
 type Props = {
   open: boolean;
@@ -31,6 +33,8 @@ export default function AmountDialog({
   min = 1,
   max = 900,
 }: Props) {
+  const { t } = useTranslate();
+
   const [val, setVal] = React.useState<string>(defaultAmount);
   const [err, setErr] = React.useState<string>('');
 
@@ -41,11 +45,13 @@ export default function AmountDialog({
   }, [open, defaultAmount]);
 
   const validate = (s: string) => {
-    if (!s?.trim()) return 'Enter an amount';
+    if (!s?.trim()) return t('Enter an amount');
     const n = Number(s);
-    if (!Number.isFinite(n)) return 'Amount must be a number';
-    if (n <= 0) return 'Amount must be > 0';
-    if (n < min || n > max) return `Amount must be between ${min} and ${max} USDC`;
+    if (!Number.isFinite(n)) return t('Amount must be a number');
+    if (n <= 0) return t('Amount must be > 0');
+    if (n < min || n > max) {
+      return t('Amount must be between {{min}} and {{max}} USDC', { min, max });
+    }
     return '';
   };
 
@@ -80,18 +86,18 @@ export default function AmountDialog({
         <Avatar sx={{ width: 56, height: 56, bgcolor: 'transparent', mb: 1 }}>
           <Image
             src="/assets/images/token-action-card/usdc.webp"
-            alt="USDC"
+            alt={t('USDC')}
             width={48}
             height={48}
           />
         </Avatar>
-        Buy USDC with MoneyGram
+        {t('Buy USDC with MoneyGram')}
       </DialogTitle>
 
       <DialogContent sx={{ pt: 2 }}>
         <Stack spacing={2} alignItems="center">
           <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-            Enter how much <strong>USDC</strong> you’d like to purchase.
+            {t('Enter how much {{token}} you’d like to purchase.', { token: 'USDC' })}{' '}
           </Typography>
 
           <TextField
@@ -103,7 +109,7 @@ export default function AmountDialog({
             onChange={(e) => setVal(e.target.value)}
             inputProps={{ min, max, step: '1' }}
             error={!!err}
-            helperText={err || ' '}
+            helperText={err || <span aria-hidden="true">&nbsp;</span>}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -118,7 +124,7 @@ export default function AmountDialog({
                   >
                     <Image
                       src="/assets/images/token-action-card/usdc.webp"
-                      alt="USDC"
+                      alt={t('USDC')}
                       width={20}
                       height={20}
                       style={{ objectFit: 'contain' }}
@@ -133,10 +139,10 @@ export default function AmountDialog({
 
       <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
         <Button onClick={onCancel} variant="outlined" sx={{ borderRadius: 2 }}>
-          Cancel
+          {t('Cancel')}
         </Button>
         <Button onClick={handleOk} variant="contained" sx={{ borderRadius: 2 }}>
-          Continue
+          {t('Continue')}
         </Button>
       </DialogActions>
     </Dialog>

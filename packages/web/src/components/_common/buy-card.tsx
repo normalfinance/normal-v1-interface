@@ -2,11 +2,15 @@ import type { CardProps } from '@mui/material';
 import type { BuyQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
+import Image from 'next/image';
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
+import { runDepositFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { convertFiatToCoin } from '@/utils/conversion-helpers';
+import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
@@ -14,14 +18,9 @@ import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
 import PickToken from './pick-token';
 import { WalletGate } from './wallet-gate';
 import CheckoutDialog from './checkout-dialog';
+import AmountDialog from '../deposit-amount-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-
-import { runDepositFlow } from '@/lib/mgi/client';
-import { useSnackbar } from 'notistack';
-import Image from 'next/image';
-import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import AmountDialog from '../deposit-amount-dialog';
 
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];
@@ -178,11 +177,10 @@ const BuyCard: React.FC<BuyCardProps> = ({
 
   const ensureUSDCSelected = () => {
     if (buyToken?.symbol?.toUpperCase() !== 'USDC') {
-      const usdc = tokensList.find((t) => t.symbol.toUpperCase() === 'USDC');
+      const usdc = tokensList.find((token) => token.symbol.toUpperCase() === 'USDC');
       if (usdc) setBuyToken(usdc);
     }
   };
-
   // UPDATED: on click, open amount dialog (don’t start flow yet)
   const handleBuyWithMoneyGram = async () => {
     if (!isConnected) {
@@ -235,7 +233,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
             justifyContent="space-between"
             alignItems="center"
             width={1}
-            mb={'48px'}
+            mb="48px"
           >
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>

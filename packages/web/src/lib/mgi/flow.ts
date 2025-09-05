@@ -10,7 +10,9 @@ export function openMoneyGram(url: string, onReadyToTransfer: (tx: any) => void)
       window.removeEventListener('message', onMsg);
       try {
         w?.close();
-      } catch {}
+      } catch (err) {
+        // ignore
+      }
       onReadyToTransfer(tx);
     }
   }

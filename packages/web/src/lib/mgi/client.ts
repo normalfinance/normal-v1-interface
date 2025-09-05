@@ -1,14 +1,14 @@
-import { openMoneyGram } from './flow'; // adjust if flow.ts lives elsewhere
-
 // Pull your connector factories + store
 import {
-  freighter,
+  hana,
   xbull,
   lobstr,
-  hana,
-  WalletConnect as WalletConnectConnector,
+  freighter,
   usePersistStore,
+  WalletConnect as WalletConnectConnector,
 } from '@normalfinance/state';
+
+import { openMoneyGram } from './flow'; // adjust if flow.ts lives elsewhere
 
 // ---------- Resolve active connector from store ----------
 function resolveActiveConnector() {
@@ -185,7 +185,9 @@ export async function startMgiDeposit(token: string, userAccount: string, amount
   let data: any = null;
   try {
     data = JSON.parse(raw);
-  } catch {}
+  } catch (err) {
+    data = raw;
+  }
 
   if (!r.ok || !data?.url) {
     // nice surfaced error
@@ -218,7 +220,9 @@ export async function startMgiWithdraw(token: string, userAccount: string, amoun
   let data: any = null;
   try {
     data = JSON.parse(raw);
-  } catch {}
+  } catch (err) {
+    data = raw;
+  }
 
   if (!r.ok || !data?.url) {
     const pretty = JSON.stringify(data ?? { raw }, null, 2);

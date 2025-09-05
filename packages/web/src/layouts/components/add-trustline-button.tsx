@@ -1,10 +1,13 @@
+import type { ButtonProps } from '@mui/material';
+
 // src/components/account/AddUsdcTrustlineButton.tsx
 import React, { useState } from 'react';
-import { Button, ButtonProps } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import { addUSDCTrustline, hasUSDCTrustline } from '@/lib/mgi/trustlines';
 import { usePersistStore } from '@normalfinance/state';
+import { addUSDCTrustline, hasUSDCTrustline } from '@/lib/mgi/trustlines';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
+
+import { Button } from '@mui/material';
 
 type Props = {
   /** Forwarded to inner Button */
