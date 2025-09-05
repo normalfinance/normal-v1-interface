@@ -20,7 +20,7 @@ export function freighter(): Connector {
       return {
         // ...(await freighterApi.getNetworkDetails()),
         network:
-          (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET'
+          (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? '').toUpperCase() === 'TESTNET'
             ? 'testnet'
             : 'public',
         networkUrl: constants.StellarConfig.HORIZON_URL,

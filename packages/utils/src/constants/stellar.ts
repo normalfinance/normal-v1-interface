@@ -64,5 +64,5 @@ const MAINNET: NetworkConfig = {
 };
 
 // Decide based on env
-const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'TESTNET'; // or use NEXT_PUBLIC_NETWORK for Next.js
+const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || 'TESTNET'; // or use NEXT_PUBLIC_NETWORK for Next.js
 export const StellarConfig: NetworkConfig = NETWORK === 'MAINNET' ? MAINNET : TESTNET;
