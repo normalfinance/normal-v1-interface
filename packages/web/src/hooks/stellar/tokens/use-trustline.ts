@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
-import { fetchAndIssueTrustline } from '@normalfinance/utils';
+import { createTrustline } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -35,15 +35,28 @@ export function useTrustLine(): ReturnType {
     async (assetCode: string, assetIssuer: string): Promise<void> => {
       try {
         setError(null);
+
         setLoading(true);
 
         setTxBroadcasting(true);
-        await fetchAndIssueTrustline(storePersist.wallet.address!, assetCode, assetIssuer);
+
+        // Force check if we're using the right version
+
+        try {
+          const result = await createTrustline(
+            storePersist.wallet.address!,
+            assetCode,
+            assetIssuer
+          );
+        } catch (fetchError) {
+          throw fetchError; // Re-throw so the outer catch handles it
+        }
+
         setTrustlineButtonActive(false);
       } catch (e: any) {
-        console.log(e);
         setError(e);
       }
+
       setTxBroadcasting(false);
 
       setLoading(false);

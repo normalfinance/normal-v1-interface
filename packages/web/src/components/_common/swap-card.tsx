@@ -11,6 +11,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
+import { checkTrustline } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
@@ -38,11 +39,19 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const storePersist = usePersistStore();
   const appStore = useAppStore();
 
-  const { trustlineButtonActive, addTrustLine } = useTrustLine();
+  const {
+    trustlineButtonActive,
+    addTrustLine,
+    loading: trustlineLoading,
+    txBroadcasting,
+    error: trustlineError,
+  } = useTrustLine();
+
   const { onEstimateSwap, onSwap } = useSwap();
 
   const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
   const [swapError, setSwapError] = useState<string | null>(null);
+  const [creatingTrustline, setCreatingTrustline] = useState<boolean>(false);
 
   const [maxSlippage, setMaxSlippage] = useState<number>(10_000); // bps
   const [exchangeRate, setExchangeRate] = useState<string>('');
@@ -119,17 +128,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // 6) Open/close the token picker
   const handleOpen = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
     setOpen(true);
   };
   const handleClose = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
     setOpen(false);
   };
 
@@ -140,9 +141,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setQuoteFetched(false);
     setInsufficientBalance(false);
     setBuyAmount(0);
+    setSwapError(null);
+    setCreatingTrustline(false);
 
     // Make sure we have both tokens
-    if (!sellToken || !buyToken) return;
+    if (!sellToken || !buyToken) {
+      return;
+    }
 
     // If user hasn't typed anything or typed 0
     if (!amount || sellVal <= 0) {
@@ -169,7 +174,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
     // Cleanup if user changes input quickly
     // eslint-disable-next-line consistent-return
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [sellToken, buyToken, amount, sellVal]);
 
   // 8) handle input changes, dont allow negative numbers as input
@@ -280,6 +287,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     if (isLoading) {
       return 'Finalizing quote...';
     }
+    if (creatingTrustline) {
+      return 'Creating trustline...';
+    }
     if (quoteFetched) {
       if (insufficientBalance) {
         return `Insufficient ${sellToken.symbol}`;
@@ -313,10 +323,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // Max the sell token
   const handleMaxClick = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Max',
-    //   location: 'Swap',
-    // });
     if (sellToken) {
       setAmount(sellToken.balance.toString());
     }
@@ -355,13 +361,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
         const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
 
-        onEstimateSwap({
+        await onEstimateSwap({
           asset: format.formatNormalToken(asset, 'without-n'),
           direction,
           in_amount: amount,
         });
       } catch (e) {
-        console.log(e);
+        // Simulation error handled silently
       }
       setLoadingSimulate(false);
     }
@@ -372,23 +378,76 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     if (sellToken && buyToken && sellToken.id && buyToken.id) {
       try {
         const allowed = await checkIfSwapAllowed();
-        if (!allowed) return;
+        if (!allowed) {
+          return;
+        }
+
+        // Check if trustline exists for the buy token (if it's not XLM)
+        if (buyToken.symbol !== 'XLM') {
+          setSwapError(null);
+
+          try {
+            // First check if trustline already exists
+            const trustlineStatus = await checkTrustline(
+              storePersist.wallet.address!,
+              buyToken.symbol,
+              constants.StellarConfig.NORMAL_TOKEN_ISSUER
+            );
+
+            if (!trustlineStatus.exists) {
+              // Create trustline if it doesn't exist
+              setCreatingTrustline(true);
+
+              try {
+                await addTrustLine(buyToken.symbol, constants.StellarConfig.NORMAL_TOKEN_ISSUER);
+              } catch (addTrustlineError) {
+                throw addTrustlineError; // Re-throw to be caught by outer catch
+              }
+
+              // Wait longer for network confirmation
+              await new Promise((resolve) => setTimeout(resolve, 10000));
+
+              // Verify trustline exists before proceeding
+              const finalCheck = await checkTrustline(
+                storePersist.wallet.address!,
+                buyToken.symbol,
+                constants.StellarConfig.NORMAL_TOKEN_ISSUER
+              );
+
+              if (!finalCheck.exists) {
+                setCreatingTrustline(false);
+                setSwapError(
+                  'Trustline creation is taking longer than expected. Please try the swap again in a moment.'
+                );
+                return;
+              }
+
+              setCreatingTrustline(false);
+            }
+          } catch (trustlineError) {
+            setCreatingTrustline(false);
+            setSwapError('Failed to add trustline for target token');
+            return;
+          }
+        }
+
         // Now call the client-side onSwap (sign and submit)
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
         const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
+
         await onSwap({
           asset: format.formatNormalToken(asset, 'without-n'),
           direction,
           in_amount: Number(amount),
           out_min: Number(0), //buyAmount
         });
+
         setTimeout(async () => {
           await appStore.fetchNativeTokenInfo();
           // await appStore.fetchNormalTokenInfo(pool);
         }, 7000);
       } catch (error) {
         setSwapError('Error during swap transaction');
-        console.log('Error during swap transaction', error);
       }
     }
   };
@@ -775,6 +834,30 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           </Box>
         </Box>
       </Box>
+      {/* Display swap error if exists */}
+      {swapError && (
+        <Box
+          sx={{
+            padding: theme.spacing(1.5),
+            backgroundColor: alpha(theme.palette.error.main, 0.1),
+            border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+            borderRadius: '12px',
+            mb: 1,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: theme.palette.error.main,
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            {swapError}
+          </Typography>
+        </Box>
+      )}
+
       {/* Main button with multiple states */}
       {isConnected ? (
         <Button
@@ -782,7 +865,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           variant="contained" // use a supported variant
           size="large"
           onClick={handleMainButtonClick}
-          disabled={isLoading}
+          disabled={isLoading || creatingTrustline}
           sx={{
             backgroundColor: 'rgba(148,123,255,0.29)',
             color: '#6E4BFF',
