@@ -9,9 +9,8 @@ import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
-import { checkTrustline } from '@normalfinance/utils';
+import { format, constants, checkTrustline, getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
@@ -44,7 +43,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     addTrustLine,
     loading: trustlineLoading,
     txBroadcasting,
-    error: trustlineError,
+    error: _,
   } = useTrustLine();
 
   const { onEstimateSwap, onSwap } = useSwap();
@@ -398,11 +397,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
               // Create trustline if it doesn't exist
               setCreatingTrustline(true);
 
-              try {
-                await addTrustLine(buyToken.symbol, constants.StellarConfig.NORMAL_TOKEN_ISSUER);
-              } catch (addTrustlineError) {
-                throw addTrustlineError; // Re-throw to be caught by outer catch
-              }
+              await addTrustLine(buyToken.symbol, constants.StellarConfig.NORMAL_TOKEN_ISSUER);
 
               // Wait longer for network confirmation
               await new Promise((resolve) => setTimeout(resolve, 10000));

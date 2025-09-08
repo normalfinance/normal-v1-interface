@@ -40,17 +40,7 @@ export function useTrustLine(): ReturnType {
 
         setTxBroadcasting(true);
 
-        // Force check if we're using the right version
-
-        try {
-          const result = await createTrustline(
-            storePersist.wallet.address!,
-            assetCode,
-            assetIssuer
-          );
-        } catch (fetchError) {
-          throw fetchError; // Re-throw so the outer catch handles it
-        }
+        await createTrustline(storePersist.wallet.address!, assetCode, assetIssuer);
 
         setTrustlineButtonActive(false);
       } catch (e: any) {
