@@ -18,6 +18,7 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
@@ -26,11 +27,13 @@ import ConnectedWallet from '@/components/_common/drawer-components/connected-wa
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 interface WalletGateProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   buttonText?: string;
   fullWidth?: boolean;
   variant?: 'contained' | 'soft' | 'outlined';
   color?: 'info' | 'success' | 'primary' | 'secondary' | 'error' | 'warning';
+  size?: 'small' | 'medium' | 'large';
+  sx?: SxProps<Theme>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -173,6 +176,8 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   fullWidth = true,
   variant = 'contained',
   color = 'info',
+  size = 'medium',
+  sx,
 }) => {
   const persist = usePersistStore();
   const { t } = useTranslate();
@@ -225,6 +230,8 @@ export const WalletGate: React.FC<WalletGateProps> = ({
         color={color}
         onClick={handleMainButtonClick}
         data-testid="wallet-gate-connect-btn"
+        size={size}
+        sx={sx}
       >
         {t(buttonText)}
       </Button>

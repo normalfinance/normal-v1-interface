@@ -354,9 +354,14 @@ const BuyCard: React.FC<BuyCardProps> = ({
               {getButtonLabel()}
             </Button>
           ) : (
-            <WalletGate buttonText="Connect Wallet to Buy" fullWidth variant="soft">
-              {null}
-            </WalletGate>
+            <WalletGate
+              buttonText="Connect Wallet to Buy"
+              fullWidth
+              variant="soft"
+              color="secondary"
+              size="large"
+              sx={{ borderRadius: 2.5 }}
+            />
           )}
         </Box>
         <PickToken

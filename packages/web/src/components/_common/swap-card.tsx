@@ -397,6 +397,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
 
+  const canReview =
+    !!sellToken && !!buyToken && sellVal > 0 && quoteFetched && !isLoading && !insufficientBalance;
+
   const getFilteredTokens = (): Token[] => {
     if (activeButton === 'sell') {
       // Filtering options for the sell token selection
@@ -782,7 +785,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           variant="contained" // use a supported variant
           size="large"
           onClick={handleMainButtonClick}
-          disabled={isLoading}
+          disabled={!canReview}
           sx={{
             backgroundColor: 'rgba(148,123,255,0.29)',
             color: '#6E4BFF',
@@ -795,9 +798,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           {getButtonLabel()}
         </Button>
       ) : (
-        <WalletGate buttonText="Connect Wallet to Swap" fullWidth variant="contained">
-          {null}
-        </WalletGate>
+        <WalletGate
+          buttonText="Connect Wallet to Swap"
+          fullWidth
+          variant="soft"
+          color="secondary"
+          size="large"
+          sx={{ borderRadius: 2.5 }}
+        />
       )}
 
       {/* Additional box with fee info */}
