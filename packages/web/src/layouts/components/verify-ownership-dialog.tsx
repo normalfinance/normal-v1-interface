@@ -1,20 +1,22 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useTranslate } from '@/locales';
+import { useState, useEffect, useCallback } from 'react';
+import { runProofOfOwnership } from '@/auth/proof-of-ownership';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
+
 import {
+  Stack,
   Dialog,
+  Button,
+  Typography,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
-  Stack,
-  Typography,
   CircularProgress,
 } from '@mui/material';
-import { useTranslate } from '@/locales';
+
 import { Iconify } from '@/components/template/iconify';
-import { usePersistStore, useAppStore } from '@normalfinance/state';
-import { runProofOfOwnership } from '@/auth/proof-of-ownership';
 
 type Props = {
   open: boolean;

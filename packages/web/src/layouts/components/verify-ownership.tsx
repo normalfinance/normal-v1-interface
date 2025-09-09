@@ -1,12 +1,21 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { useTranslate } from '@/locales';
-import { Iconify } from '@/components/template/iconify';
-import { usePersistStore, useAppStore } from '@normalfinance/state';
+import { useState, useEffect, useCallback } from 'react';
 import { runProofOfOwnership } from '@/auth/proof-of-ownership';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import {
+  useAppStore,
+  usePersistStore,
+  freighter,
+  xbull,
+  lobstr,
+  hana,
+  WalletConnect,
+} from '@normalfinance/state';
+import { Box, Stack, Button, Typography, CircularProgress } from '@mui/material';
+
+import { Iconify } from '@/components/template/iconify';
 
 type Props = {
   onContinue?: () => void; // <-- tell parent to render connected wallet
@@ -37,29 +46,20 @@ export default function VerifyOwnershipCard({ onContinue }: Props) {
   const signTransaction = useCallback(
     async (xdr: string, opts?: { networkPassphrase?: string; accountToSign?: string }) => {
       if (!walletType) throw new Error('Missing wallet type');
+
       switch (walletType) {
         case 'freighter':
-          return (
-            await (await import('../../../../state/src/state/wallet/freighter')).freighter()
-          ).signTransaction(xdr, opts);
+          return freighter().signTransaction(xdr, opts);
         case 'xbull':
-          return (
-            await (await import('../../../../state/src/state/wallet/xbull')).xbull()
-          ).signTransaction(xdr, opts);
+          return xbull().signTransaction(xdr, opts);
         case 'lobstr':
-          return (
-            await (await import('../../../../state/src/state/wallet/lobstr')).lobstr()
-          ).signTransaction(xdr, opts);
+          return lobstr().signTransaction(xdr, opts);
         case 'hana':
-          return (
-            await (await import('../../../../state/src/state/wallet/hana')).hana()
-          ).signTransaction(xdr, opts);
+          return hana().signTransaction(xdr, opts);
         case 'wallet-connect': {
+          // prefer existing instance if available
           const instance = app.walletConnectInstance;
           if (instance) return instance.signTransaction(xdr, opts);
-          const { WalletConnect } = await import(
-            '../../../../state/src/state/wallet/wallet-connect'
-          );
           const client = new WalletConnect();
           return client.signTransaction(xdr, opts);
         }

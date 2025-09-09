@@ -10,10 +10,11 @@ import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import {
   hana,
   xbull,
@@ -45,7 +46,6 @@ import ConnectedWallet from '@/components/_common/drawer-components/connected-wa
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
-import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import VerifyOwnershipCard from './verify-ownership';
 
 /* ------------------------------------------------------------------ */
