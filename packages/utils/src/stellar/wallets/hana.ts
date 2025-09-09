@@ -69,8 +69,9 @@ export class hana implements Wallet {
    */
   async isConnected(): Promise<boolean> {
     try {
+      stellarKit.setWallet(HANA_ID);
       const publicKey = await stellarKit.getAddress();
-      return !!publicKey;
+      return !!publicKey?.address;
     } catch {
       return false;
     }
@@ -94,8 +95,11 @@ export class hana implements Wallet {
    */
   async getAddress(): Promise<{ address?: string }> {
     try {
-      const address = await stellarKit.getAddress();
-      return { address: address.address };
+      // Ensure wallet is set
+      stellarKit.setWallet(HANA_ID);
+      
+      const addressResult = await stellarKit.getAddress();
+      return { address: addressResult.address };
     } catch (error) {
       console.error('Error getting address from Hana Stellar Kit:', error);
       throw new Error('Hana Stellar Kit is not connected');
@@ -118,23 +122,45 @@ export class hana implements Wallet {
       accountToSign?: string;
     }
   ): Promise<{ signedTxXdr: string; signerAddress: string }> {
-    if (!(await this.isConnected())) {
-      throw new Error(`hana is not connected`);
+    console.log('[HANA STELLAR KIT UTILS] Checking if connected...');
+    
+    try {
+      const connected = await this.isConnected();
+      console.log('[HANA STELLAR KIT UTILS] Connection check result:', connected);
+      
+      if (!connected) {
+        throw new Error(`hana is not connected`);
+      }
+    } catch (connectionError) {
+      console.error('[HANA STELLAR KIT UTILS] Error checking connection:', connectionError);
+      throw connectionError;
     }
 
     console.log('[HANA STELLAR KIT UTILS] Signing transaction with opts:', opts);
 
     try {
-      console.log('[HANA STELLAR KIT UTILS] Signing without explicit networkPassphrase - letting kit handle it');
+      console.log('[HANA STELLAR KIT UTILS] About to ensure wallet is set to Hana');
+      console.log('[HANA STELLAR KIT UTILS] HANA_ID:', HANA_ID);
+      console.log('[HANA STELLAR KIT UTILS] stellarKit object:', stellarKit);
       
-      // Don't pass networkPassphrase - let the Stellar Wallets Kit handle it based on its initialization
-      const { signedTxXdr } = await stellarKit.signTransaction(tx);
-
-      const signerAddress = (await this.getAddress()).address!;
+      // Ensure the wallet is set to Hana before signing
+      stellarKit.setWallet(HANA_ID);
+      console.log('[HANA STELLAR KIT UTILS] Successfully set wallet to Hana');
+      
+      // Get the public key to ensure we're connected
+      const publicKey = await stellarKit.getAddress();
+      console.log('[HANA STELLAR KIT UTILS] Connected with address:', publicKey);
+      
+      console.log('[HANA STELLAR KIT UTILS] Attempting to sign transaction');
+      
+      // Sign the transaction - the kit should handle network automatically
+      const { signedTxXdr } = await stellarKit.signTransaction(tx, {
+        networkPassphrase: opts?.networkPassphrase || undefined,
+      });
 
       return {
         signedTxXdr,
-        signerAddress,
+        signerAddress: publicKey.address!,
       };
     } catch (error) {
       console.error('[HANA STELLAR KIT UTILS] Error signing transaction:', error);

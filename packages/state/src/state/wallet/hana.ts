@@ -84,6 +84,9 @@ export function hana(): Connector {
     },
     async getPublicKey(): Promise<string> {
       try {
+        // Ensure wallet is set
+        stellarKit.setWallet(HANA_ID);
+        
         const result = await stellarKit.getAddress();
         return result.address;
       } catch (error) {
@@ -105,11 +108,16 @@ export function hana(): Connector {
         accountToSign?: string;
       }
     ): Promise<string> {
-      console.log('[HANA STELLAR KIT] Signing transaction with opts:', opts);
+      console.log('[HANA STELLAR KIT STATE] Signing transaction with opts:', opts);
 
       try {
+        // Ensure wallet is set
+        stellarKit.setWallet(HANA_ID);
+        
+        console.log('[HANA STELLAR KIT STATE] Attempting to sign transaction');
+        
         const { signedTxXdr } = await stellarKit.signTransaction(xdr, {
-          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+          networkPassphrase: opts?.networkPassphrase || undefined,
         });
         return signedTxXdr;
       } catch (error) {
