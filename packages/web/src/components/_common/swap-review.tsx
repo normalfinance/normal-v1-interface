@@ -21,7 +21,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
-
+import LoadingButton from '@mui/lab/LoadingButton';
 import { Iconify } from '../template/iconify';
 
 export interface SwapReviewProps {
@@ -37,6 +37,8 @@ export interface SwapReviewProps {
   maxSlippage: number;
   sellFiatValue: number;
   onSubmit: () => void;
+  isSubmitting: boolean;
+  submitError?: string | null;
 }
 
 const SwapReview: React.FC<SwapReviewProps> = ({
@@ -52,6 +54,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
   maxSlippage,
   sellFiatValue,
   onSubmit,
+  isSubmitting,
+  submitError,
 }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
@@ -518,10 +522,11 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button
+          <LoadingButton
             fullWidth
             variant="contained"
             size="large"
+            loading={isSubmitting}
             onClick={onSubmit}
             sx={{
               backgroundColor: 'rgba(148,123,255,0.29)',
@@ -532,8 +537,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
               borderRadius: '20px',
             }}
           >
-            {t('Swap')}
-          </Button>
+            {t(submitError ? 'Try again' : 'Swap')}
+          </LoadingButton>
         </Box>
       </DialogActions>
     </Dialog>

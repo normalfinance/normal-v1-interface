@@ -64,8 +64,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // 4) State for review dialog
   const [reviewOpen, setReviewOpen] = useState(false);
-  const handleReviewClose = () => setReviewOpen(false);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const handleReviewClose = () => {
+    setReviewOpen(false);
+    setIsSubmitting(false);
+    setSubmitError(null);
+  };
   // 4) Quote states
   const [isLoading, setIsLoading] = useState(false);
   const [quoteFetched, setQuoteFetched] = useState(false);
@@ -307,6 +312,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       addTrustLine(buyToken?.symbol || '', constants.StellarConfig.NORMAL_TOKEN_ISSUER);
     } else if (label === 'Review') {
       // open a review popup
+      setSubmitError(null);
+      setIsSubmitting(false);
       setReviewOpen(true);
     }
   };
@@ -371,8 +378,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const doSwap = async (): Promise<void> => {
     if (sellToken && buyToken && sellToken.id && buyToken.id) {
       try {
+        setSubmitError(null);
+        setIsSubmitting(true);
         const allowed = await checkIfSwapAllowed();
-        if (!allowed) return;
+        if (!allowed) {
+          setIsSubmitting(false);
+          return;
+        }
         // Now call the client-side onSwap (sign and submit)
         const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
         const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
@@ -382,12 +394,16 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           in_amount: Number(amount),
           out_min: Number(0), //buyAmount
         });
+        setIsSubmitting(false);
+        setReviewOpen(false);
         setTimeout(async () => {
           await appStore.fetchNativeTokenInfo();
           // await appStore.fetchNormalTokenInfo(pool);
         }, 7000);
       } catch (error) {
         setSwapError('Error during swap transaction');
+        setSubmitError('swap_failed');
+        setIsSubmitting(false);
         console.log('Error during swap transaction', error);
       }
     }
@@ -835,6 +851,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           maxSlippage={maxSlippage}
           sellFiatValue={sellFiatValue}
           onSubmit={() => doSwap()}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
         />
       )}
       {/* Token Picker Popup */}
