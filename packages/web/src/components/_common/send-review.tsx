@@ -1,6 +1,6 @@
 import type { StateToken as Token } from '@normalfinance/types';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useContractTransaction } from '@/hooks';
@@ -21,7 +21,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-
+import LoadingButton from '@mui/lab/LoadingButton';
 import { Iconify } from '../template/iconify';
 
 export interface SendReviewProps {
@@ -48,6 +48,8 @@ const SendReview: React.FC<SendReviewProps> = ({
   const { enqueueSnackbar } = useSnackbar();
   const store = usePersistStore();
   const { executeContractTransaction } = useContractTransaction();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const executeSend = async (
     signedTransactionXDR: string,
@@ -77,6 +79,7 @@ const SendReview: React.FC<SendReviewProps> = ({
   };
 
   const onSubmit = async () => {
+    if (isSubmitting) return;
     if (!store.wallet.address || !sendToken) {
       enqueueSnackbar(t('Cannot send token without wallet or token'), { variant: 'error' });
       return;
@@ -88,35 +91,43 @@ const SendReview: React.FC<SendReviewProps> = ({
       amount: BigInt((tokenValue * 10 ** (sendToken?.decimals || 7)).toFixed(0)),
     };
 
-    await executeContractTransaction({
-      contractType: 'token',
-      contractAddress: sendToken.id,
-      transactionDetails: {
-        type: TransactionType.SEND,
-        token1: { name: sendToken.symbol, amount: tokenValue.toString() },
-      },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.transfer(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+    try {
+      setSubmitError(null);
+      setIsSubmitting(true);
 
-          if (signedXDR) {
-            const apiRes = await executeSend(signedXDR, 'Send Token');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
+      await executeContractTransaction({
+        contractType: 'token',
+        contractAddress: sendToken.id,
+        transactionDetails: {
+          type: TransactionType.SEND,
+          token1: { name: sendToken.symbol, amount: tokenValue.toString() },
+        },
+        transactionFunction: async (client, restore) => {
+          const tx = await client.transfer(processedArgs, { simulate: !restore });
+          if (restore) {
+            await tx.simulate({ restore: true });
+            return tx;
+          } else {
+            await tx.sign();
+            const signedXDR = tx.signed?.toXDR();
+            if (signedXDR) {
+              const apiRes = await executeSend(signedXDR, 'Send Token');
+              if (apiRes?.transactionHash) {
+                (tx as any).hash = apiRes.transactionHash;
+              }
             }
+            return tx;
           }
+        },
+      });
 
-          return tx;
-        }
-      },
-    });
-
-    onClose();
+      onClose();
+    } catch (err) {
+      setSubmitError('send_failed');
+      enqueueSnackbar(t('Send failed. Please try again.'), { variant: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -278,9 +289,17 @@ const SendReview: React.FC<SendReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>
-            {t('Send')}
-          </Button>
+          <LoadingButton
+            fullWidth
+            variant="soft"
+            color="success"
+            size="large"
+            loading={isSubmitting}
+            onClick={onSubmit}
+            sx={{ borderRadius: 2 }}
+          >
+            {t(submitError ? 'Try again' : 'Send')}
+          </LoadingButton>
         </Box>
       </DialogActions>
     </Dialog>
