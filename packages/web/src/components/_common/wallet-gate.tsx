@@ -1,3 +1,4 @@
+import type { Theme, SxProps } from '@mui/material';
 import type { Connector } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
@@ -18,7 +19,6 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material';
-import type { SxProps, Theme } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
