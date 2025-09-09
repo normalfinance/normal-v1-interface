@@ -111,11 +111,19 @@ export function hana(): Connector {
         // Ensure wallet is set
         stellarKit.setWallet(HANA_ID);
 
-        console.log('[HANA STELLAR KIT STATE] Attempting to sign transaction');
+        console.log('[HANA STELLAR KIT STATE] Attempting to sign transaction with opts:', opts);
+        console.log('[HANA STELLAR KIT STATE] About to call stellarKit.signTransaction');
+
+        // Get the current address if not provided
+        const currentAddress = opts?.accountToSign || (await stellarKit.getAddress()).address;
+        console.log('[HANA STELLAR KIT STATE] Using address for signing:', currentAddress);
 
         const { signedTxXdr } = await stellarKit.signTransaction(xdr, {
+          address: currentAddress,
           networkPassphrase: 'Test SDF Network ; September 2015',
         });
+
+        console.log('[HANA STELLAR KIT STATE] Successfully signed transaction, got result:', signedTxXdr);
         return signedTxXdr;
       } catch (error) {
         console.error('[HANA STELLAR KIT] Error signing transaction:', error);

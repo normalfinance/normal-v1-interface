@@ -72,8 +72,10 @@ export function hanaStellarKit(): Connector {
       console.log('[HANA STELLAR KIT] Signing transaction with opts:', opts);
 
       try {
+        const { address } = await stellarKit.getAddress();
         const { signedTxXdr } = await stellarKit.signTransaction(xdr, {
-          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+          networkPassphrase: WalletNetwork.TESTNET,
+          address: address,
         });
         return signedTxXdr;
       } catch (error) {

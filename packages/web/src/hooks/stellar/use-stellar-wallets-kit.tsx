@@ -28,7 +28,7 @@ export const useStellarWalletsKit = () => {
           console.log('Connected account:', address.address);
 
           const signature = await kit.signMessage('Hello world', {
-            networkPassphrase: Networks.PUBLIC,
+            networkPassphrase: Networks.TESTNET,
             address: address.address,
           });
 
@@ -44,9 +44,11 @@ export const useStellarWalletsKit = () => {
   };
 
   const signTransaction = async (xdr: string) => {
+    console.log('Signing transaction with address:', publicKey);
     try {
       const { signedTxXdr } = await kit.signTransaction(xdr, {
-        networkPassphrase: WalletNetwork.TESTNET, // This should match your network
+        networkPassphrase: Networks.TESTNET, 
+        address: publicKey || '',
       });
       return signedTxXdr;
     } catch (error) {

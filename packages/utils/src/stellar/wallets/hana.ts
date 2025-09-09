@@ -7,7 +7,10 @@ import {
 } from '@creit.tech/stellar-wallets-kit';
 
 // Initialize the Stellar Wallets Kit for Hana
-console.log('[HANA STELLAR KIT] Environment variable NEXT_PUBLIC_STELLAR_NETWORK:', process.env.NEXT_PUBLIC_STELLAR_NETWORK);
+console.log(
+  '[HANA STELLAR KIT] Environment variable NEXT_PUBLIC_STELLAR_NETWORK:',
+  process.env.NEXT_PUBLIC_STELLAR_NETWORK
+);
 console.log('[HANA STELLAR KIT] Forcing TESTNET network');
 
 const stellarKit = new StellarWalletsKit({
@@ -97,7 +100,7 @@ export class hana implements Wallet {
     try {
       // Ensure wallet is set
       stellarKit.setWallet(HANA_ID);
-      
+
       const addressResult = await stellarKit.getAddress();
       return { address: addressResult.address };
     } catch (error) {
@@ -123,11 +126,11 @@ export class hana implements Wallet {
     }
   ): Promise<{ signedTxXdr: string; signerAddress: string }> {
     console.log('[HANA STELLAR KIT UTILS] Checking if connected...');
-    
+
     try {
       const connected = await this.isConnected();
       console.log('[HANA STELLAR KIT UTILS] Connection check result:', connected);
-      
+
       if (!connected) {
         throw new Error(`hana is not connected`);
       }
@@ -142,20 +145,25 @@ export class hana implements Wallet {
       console.log('[HANA STELLAR KIT UTILS] About to ensure wallet is set to Hana');
       console.log('[HANA STELLAR KIT UTILS] HANA_ID:', HANA_ID);
       console.log('[HANA STELLAR KIT UTILS] stellarKit object:', stellarKit);
-      
+
       // Ensure the wallet is set to Hana before signing
       stellarKit.setWallet(HANA_ID);
       console.log('[HANA STELLAR KIT UTILS] Successfully set wallet to Hana');
-      
+
       // Get the public key to ensure we're connected
       const publicKey = await stellarKit.getAddress();
       console.log('[HANA STELLAR KIT UTILS] Connected with address:', publicKey);
-      
+
       console.log('[HANA STELLAR KIT UTILS] Attempting to sign transaction');
-      
-      // Sign the transaction - the kit should handle network automatically
+
+      console.log('[HANA STELLAR KIT UTILS] Calling stellarKit.signTransaction with just XDR...');
+
+      const { address } = await stellarKit.getAddress();
+      console.log('[HANA STELLAR KIT UTILS] Address:', address);
+      console.log('[HANA STELLAR KIT UTILS] Network passphrase:', WalletNetwork.TESTNET);
       const { signedTxXdr } = await stellarKit.signTransaction(tx, {
-        networkPassphrase: 'Test SDF Network ; September 2015',
+        address: address,
+        networkPassphrase: WalletNetwork.TESTNET,
       });
 
       return {
