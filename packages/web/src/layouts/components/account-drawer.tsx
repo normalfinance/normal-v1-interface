@@ -10,7 +10,7 @@ import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
@@ -45,6 +45,8 @@ import ConnectedWallet from '@/components/_common/drawer-components/connected-wa
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
+import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import VerifyOwnershipCard from './verify-ownership';
 
 /* ------------------------------------------------------------------ */
 /* tiny wallet tile (re-used in the grid)                              */
@@ -340,6 +342,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   const isConnected = !!connectedAddress;
 
+  const [verifyBump, setVerifyBump] = useState(0);
+
+  const isVerified = useMemo(
+    () => isWalletVerifiedForSession(connectedAddress),
+    // include bump so we recalc after clicking Continue
+    [connectedAddress, verifyBump]
+  );
+
   useEffect(() => {
     if (connectedAddress) {
       posthog.identify(
@@ -455,17 +465,17 @@ export function AccountDrawer(props: AccountDrawerProps) {
         </Box>
         <Scrollbar>
           {isConnected && connectedAddress ? (
-            <WalletConnected address={connectedAddress} />
+            isVerified ? (
+              <WalletConnected address={connectedAddress} />
+            ) : (
+              <VerifyOwnershipCard onContinue={() => setVerifyBump((x) => x + 1)} />
+            )
           ) : (
             <WalletDisconnected
               connectors={connectors}
               onSelect={async (c) => {
-                // trackEvent('button_clicked', {
-                //   label: 'Manage Stake',
-                //   location: 'Insurance',
-                // });
                 await connect(c);
-                onClose();
+                // keep drawer open; verify card shows automatically
               }}
             />
           )}
