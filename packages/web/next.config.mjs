@@ -82,7 +82,8 @@ export default withPostHogConfig(nextConfig, {
   envId: process.env.POSTHOG_ENV_ID,
   host: process.env.NEXT_PUBLIC_POSTHOG_HOST, // (optional), defaults to https://us.posthog.com
   sourcemaps: {
-    enabled: process.env.VERCEL_GIT_BRANCH !== 'develop', // (optional) Enable sourcemaps generation and upload, default to true on production builds
+    // enabled: process.env.VERCEL_GIT_BRANCH !== 'develop', // (optional) Enable sourcemaps generation and upload, default to true on production builds
+    enabled: false,
     project: `Normal - ${process.env.VERCEL_GIT_BRANCH === 'develop' ? 'development' : 'Testnet'}`, // (optional) Project name, defaults to repository name
     version: version, // (optional) Release version, defaults to current git commit
     deleteAfterUpload: true, // (optional) Delete sourcemaps after upload, defaults to true

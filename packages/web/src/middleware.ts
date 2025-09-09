@@ -335,7 +335,7 @@ export async function middleware(req: NextRequest) {
     const totalDuration = Date.now() - startTime;
 
     console.error(`[${requestId}] API ERROR after ${apiDuration}ms:`, e);
-    captureException(e);
+    // captureException(e);
 
     // If we have stale cached data, use it as fallback
     if (cachedGeoData) {

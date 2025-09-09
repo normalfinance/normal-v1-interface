@@ -1,5 +1,21 @@
 import { Connector, NetworkDetails } from '@normalfinance/types';
 import { constants } from '@normalfinance/utils';
+import {
+  StellarWalletsKit,
+  WalletNetwork,
+  HanaModule,
+  HANA_ID,
+} from '@creit.tech/stellar-wallets-kit';
+
+// Initialize the Stellar Wallets Kit for Hana
+console.log('[HANA STELLAR KIT STATE] Environment variable NEXT_PUBLIC_STELLAR_NETWORK:', process.env.NEXT_PUBLIC_STELLAR_NETWORK);
+console.log('[HANA STELLAR KIT STATE] Forcing TESTNET network');
+
+const stellarKit = new StellarWalletsKit({
+  network: WalletNetwork.TESTNET, // Force testnet
+  selectedWalletId: HANA_ID,
+  modules: [new HanaModule()],
+});
 
 interface SignTransactionProps {
   xdr: string;
@@ -25,7 +41,7 @@ interface SignMessageProps {
 declare const window: Window & {
   hanaWallet?: {
     stellar?: {
-      getPublicKey(): Promise<string>;
+      getPublicKey(): Promise<{ address: string }>;
       signTransaction({
         xdr,
         accountToSign,
@@ -41,7 +57,7 @@ declare const window: Window & {
 export function hana(): Connector {
   return {
     id: 'hana',
-    name: 'Hana Wallet',
+    name: 'Hana Wallet (Stellar Kit)',
     iconUrl: '/assets/icons/wallets/hana.png',
     iconBackground: '#fff',
     installed: true,
@@ -67,7 +83,19 @@ export function hana(): Connector {
       return typeof window !== 'undefined' && !!window.hanaWallet?.stellar;
     },
     async getPublicKey(): Promise<string> {
-      return await window.hanaWallet!.stellar!.getPublicKey();
+      try {
+        const result = await stellarKit.getAddress();
+        return result.address;
+      } catch (error) {
+        // If not connected, open the wallet selection modal
+        await stellarKit.openModal({
+          onWalletSelected: async (option) => {
+            stellarKit.setWallet(option.id);
+          },
+        });
+        const result = await stellarKit.getAddress();
+        return result.address;
+      }
     },
     async signTransaction(
       xdr: string,
@@ -77,12 +105,17 @@ export function hana(): Connector {
         accountToSign?: string;
       }
     ): Promise<string> {
-      const signedTx = await window.hanaWallet!.stellar!.signTransaction({
-        xdr,
-        accountToSign: opts?.accountToSign,
-        networkPassphrase: opts?.networkPassphrase,
-      });
-      return signedTx;
+      console.log('[HANA STELLAR KIT] Signing transaction with opts:', opts);
+
+      try {
+        const { signedTxXdr } = await stellarKit.signTransaction(xdr, {
+          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        });
+        return signedTxXdr;
+      } catch (error) {
+        console.error('[HANA STELLAR KIT] Error signing transaction:', error);
+        throw error;
+      }
     },
   };
 }

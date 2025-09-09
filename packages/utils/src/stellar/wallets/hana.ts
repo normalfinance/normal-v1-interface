@@ -1,4 +1,20 @@
-import { Wallet } from "./types";
+import { Wallet } from './types';
+import {
+  HANA_ID,
+  HanaModule,
+  StellarWalletsKit,
+  WalletNetwork,
+} from '@creit.tech/stellar-wallets-kit';
+
+// Initialize the Stellar Wallets Kit for Hana
+console.log('[HANA STELLAR KIT] Environment variable NEXT_PUBLIC_STELLAR_NETWORK:', process.env.NEXT_PUBLIC_STELLAR_NETWORK);
+console.log('[HANA STELLAR KIT] Forcing TESTNET network');
+
+const stellarKit = new StellarWalletsKit({
+  network: WalletNetwork.TESTNET, // Force testnet
+  selectedWalletId: HANA_ID,
+  modules: [new HanaModule()],
+});
 
 interface SignTransactionProps {
   xdr: string;
@@ -31,14 +47,8 @@ declare const window: Window & {
         networkPassphrase,
       }: SignTransactionProps): Promise<string>;
       signBlob({ blob, accountToSign }: SignBlobProps): Promise<string>;
-      signAuthEntry({
-        xdr,
-        accountToSign,
-      }: SignAuthEntryProps): Promise<string>;
-      signMessage({
-        message,
-        accountToSign,
-      }: SignMessageProps): Promise<string>;
+      signAuthEntry({ xdr, accountToSign }: SignAuthEntryProps): Promise<string>;
+      signMessage({ message, accountToSign }: SignMessageProps): Promise<string>;
     };
   };
 };
@@ -58,7 +68,12 @@ export class hana implements Wallet {
    * @instance isConnected
    */
   async isConnected(): Promise<boolean> {
-    return window.hanaWallet!.stellar!.getPublicKey() !== undefined;
+    try {
+      const publicKey = await stellarKit.getAddress();
+      return !!publicKey;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -78,14 +93,13 @@ export class hana implements Wallet {
    * @instance getUserInfo
    */
   async getAddress(): Promise<{ address?: string }> {
-    if (!(await this.isConnected())) {
-      throw new Error(`hana is not connected`);
+    try {
+      const address = await stellarKit.getAddress();
+      return { address: address.address };
+    } catch (error) {
+      console.error('Error getting address from Hana Stellar Kit:', error);
+      throw new Error('Hana Stellar Kit is not connected');
     }
-
-    const pubKey =
-      getAddressFromLocalStorageByKey("app-storage") ||
-      (await window.hanaWallet!.stellar!.getPublicKey());
-    return { address: pubKey };
   }
 
   /**
@@ -108,14 +122,24 @@ export class hana implements Wallet {
       throw new Error(`hana is not connected`);
     }
 
-    return {
-      signedTxXdr: await window.hanaWallet!.stellar!.signTransaction({
-        xdr: tx,
-        accountToSign: opts?.accountToSign,
-        networkPassphrase: opts?.networkPassphrase,
-      }),
-      signerAddress: (await this.getAddress()).address!,
-    };
+    console.log('[HANA STELLAR KIT UTILS] Signing transaction with opts:', opts);
+
+    try {
+      console.log('[HANA STELLAR KIT UTILS] Signing without explicit networkPassphrase - letting kit handle it');
+      
+      // Don't pass networkPassphrase - let the Stellar Wallets Kit handle it based on its initialization
+      const { signedTxXdr } = await stellarKit.signTransaction(tx);
+
+      const signerAddress = (await this.getAddress()).address!;
+
+      return {
+        signedTxXdr,
+        signerAddress,
+      };
+    } catch (error) {
+      console.error('[HANA STELLAR KIT UTILS] Error signing transaction:', error);
+      throw error;
+    }
   }
 
   /**
@@ -139,7 +163,7 @@ export class hana implements Wallet {
     signedAuthEntry: Buffer | null;
     signerAddress: string;
   }> {
-    throw new Error("hana does not support signing authorization entries");
+    throw new Error('hana does not support signing authorization entries');
   }
 }
 
@@ -151,7 +175,7 @@ export class hana implements Wallet {
  * @instance getAddressFromLocalStorageByKey
  */
 function getAddressFromLocalStorageByKey(key: string): string | undefined {
-  const localStorageData = JSON.parse(localStorage.getItem(key) || "{}");
+  const localStorageData = JSON.parse(localStorage.getItem(key) || '{}');
   if (
     localStorageData &&
     localStorageData.state &&
