@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["./src"],
+  "include": ["./src", "../web/src/app/stores/wallet-verify.ts"],
   "compilerOptions": {
     "jsx": "react",
     "outDir": "./build",
