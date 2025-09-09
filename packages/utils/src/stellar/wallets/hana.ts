@@ -155,7 +155,7 @@ export class hana implements Wallet {
       
       // Sign the transaction - the kit should handle network automatically
       const { signedTxXdr } = await stellarKit.signTransaction(tx, {
-        networkPassphrase: opts?.networkPassphrase || undefined,
+        networkPassphrase: 'Test SDF Network ; September 2015',
       });
 
       return {

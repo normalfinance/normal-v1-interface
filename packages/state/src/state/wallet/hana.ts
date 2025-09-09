@@ -8,7 +8,10 @@ import {
 } from '@creit.tech/stellar-wallets-kit';
 
 // Initialize the Stellar Wallets Kit for Hana
-console.log('[HANA STELLAR KIT STATE] Environment variable NEXT_PUBLIC_STELLAR_NETWORK:', process.env.NEXT_PUBLIC_STELLAR_NETWORK);
+console.log(
+  '[HANA STELLAR KIT STATE] Environment variable NEXT_PUBLIC_STELLAR_NETWORK:',
+  process.env.NEXT_PUBLIC_STELLAR_NETWORK
+);
 console.log('[HANA STELLAR KIT STATE] Forcing TESTNET network');
 
 const stellarKit = new StellarWalletsKit({
@@ -83,22 +86,16 @@ export function hana(): Connector {
       return typeof window !== 'undefined' && !!window.hanaWallet?.stellar;
     },
     async getPublicKey(): Promise<string> {
-      try {
-        // Ensure wallet is set
-        stellarKit.setWallet(HANA_ID);
-        
-        const result = await stellarKit.getAddress();
-        return result.address;
-      } catch (error) {
-        // If not connected, open the wallet selection modal
-        await stellarKit.openModal({
-          onWalletSelected: async (option) => {
-            stellarKit.setWallet(option.id);
-          },
-        });
-        const result = await stellarKit.getAddress();
-        return result.address;
-      }
+      // Always open the wallet selection modal first for user consent
+      await stellarKit.openModal({
+        onWalletSelected: async (option) => {
+          stellarKit.setWallet(option.id);
+        },
+      });
+
+      // After user selects wallet, get the address
+      const result = await stellarKit.getAddress();
+      return result.address;
     },
     async signTransaction(
       xdr: string,
@@ -113,11 +110,11 @@ export function hana(): Connector {
       try {
         // Ensure wallet is set
         stellarKit.setWallet(HANA_ID);
-        
+
         console.log('[HANA STELLAR KIT STATE] Attempting to sign transaction');
-        
+
         const { signedTxXdr } = await stellarKit.signTransaction(xdr, {
-          networkPassphrase: opts?.networkPassphrase || undefined,
+          networkPassphrase: 'Test SDF Network ; September 2015',
         });
         return signedTxXdr;
       } catch (error) {
