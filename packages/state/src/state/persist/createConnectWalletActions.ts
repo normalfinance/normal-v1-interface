@@ -8,6 +8,7 @@ import { lobstr } from '../wallet/lobstr';
 import { WalletConnect } from '../wallet/wallet-connect';
 import { hana } from '../wallet/hana';
 import { constants } from '@normalfinance/utils';
+import { clearWalletVerifiedForSession } from '../../../../web/src/utils/wallet-proof';
 
 // Maintain a single WalletConnect instance
 let walletConnectInstance: WalletConnect | null = null;
@@ -124,6 +125,12 @@ export const createConnectWalletActions = () => {
 
     // Disconnect the wallet
     disconnectWallet: () => {
+      // Clear verification for current address
+      try {
+        const current = usePersistStore.getState().wallet?.address;
+        if (current) clearWalletVerifiedForSession(current);
+      } catch {}
+
       // Update the state
       usePersistStore.setState((state: AppStorePersist) => ({
         ...state,
