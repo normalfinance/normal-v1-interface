@@ -5,14 +5,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { runProofOfOwnership } from '@/auth/proof-of-ownership';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import {
-  useAppStore,
-  usePersistStore,
-  freighter,
+  hana,
   xbull,
   lobstr,
-  hana,
+  freighter,
+  useAppStore,
   WalletConnect,
+  usePersistStore,
 } from '@normalfinance/state';
+
 import { Box, Stack, Button, Typography, CircularProgress } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
