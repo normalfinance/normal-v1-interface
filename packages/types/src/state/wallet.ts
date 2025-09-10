@@ -37,7 +37,18 @@ export type Wallet = {
   address: string | undefined;
   activeChain: WalletChain | undefined;
   server: Horizon.Server | undefined;
-  walletType: 'freighter' | 'xbull' | 'lobstr' | 'wallet-connect' | 'hana' | undefined;
+  walletType: 
+    | 'freighter' 
+    | 'xbull' 
+    | 'lobstr' 
+    | 'wallet-connect' 
+    | 'hana'
+    | 'hana-stellar-kit'
+    | 'xbull-stellar-kit'
+    | 'freighter-stellar-kit'
+    | 'lobster-stellar-kit'
+    | 'stellar-wallets-kit'
+    | undefined;
 };
 
 export interface WalletActions {

@@ -7,10 +7,6 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import { constants, horizonServer, rpcServer } from '..';
-import { xBull } from './wallets/xbull';
-import { lobstr } from './wallets/lobstr';
-import { hana } from './wallets/hana';
-import { Wallet } from './wallets/types';
 
 /**
  * Fetches and returns details about an account on the Stellar network.
@@ -36,18 +32,6 @@ export async function fetchAccount(publicKey: string) {
   }
 }
 
-function getWalletType(): string {
-  const appStorageValue = localStorage.getItem('app-storage');
-  if (appStorageValue !== null) {
-    try {
-      const parsedValue = JSON.parse(appStorageValue);
-      const walletType = parsedValue?.state?.wallet?.walletType;
-      return walletType;
-    } catch (error) {}
-  } else {
-  }
-  return '';
-}
 
 export async function checkTrustline(publicKey: string, assetCode: string, assetIssuer: string) {
   // Fetch Account
@@ -83,57 +67,10 @@ export async function checkTrustline(publicKey: string, assetCode: string, asset
   return result;
 }
 
+// NOTE: Trustline creation is now handled through the Stellar Wallets Kit
+// This function is kept for compatibility but should use the kit for signing
 export async function createTrustline(publicKey: string, assetCode: string, assetIssuer: string) {
-  try {
-    // Issue trustline
-    const account = await rpcServer.getAccount(publicKey);
-
-    const transaction = new TransactionBuilder(account, {
-      fee: '100000',
-      networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-    })
-      .addOperation(
-        Operation.changeTrust({
-          asset: new Asset(assetCode, assetIssuer),
-        })
-      )
-      .setTimeout(0)
-      .build();
-
-    // Get Wallet type
-    const walletType = getWalletType();
-
-    // Set wallet to sign
-    let wallet: Wallet;
-
-    switch (walletType) {
-      case 'xbull':
-        wallet = new xBull();
-        break;
-      case 'lobstr':
-        wallet = new lobstr();
-        break;
-      case 'hana':
-        wallet = new hana();
-        break;
-      default:
-        wallet = (await import('@stellar/freighter-api')).default;
-    }
-
-    const signature = await wallet.signTransaction(transaction.toXDR());
-
-    const signed = TransactionBuilder.fromXDR(
-      signature.signedTxXdr.toString(),
-      constants.StellarConfig.NETWORK_PASSPHRASE
-    );
-
-    const result = await rpcServer.sendTransaction(signed);
-
-    const waitResult = await waitForTrustline(publicKey, assetCode, assetIssuer);
-    return waitResult;
-  } catch (error) {
-    throw error;
-  }
+  throw new Error('createTrustline should now use Stellar Wallets Kit for signing. This function needs to be updated.');
 }
 
 export async function fetchAndIssueTrustline(

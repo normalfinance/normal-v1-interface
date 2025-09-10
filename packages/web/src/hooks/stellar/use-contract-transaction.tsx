@@ -6,10 +6,10 @@ import type { AppStore, ContractType, AppStorePersist } from '@normalfinance/typ
 
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
-import { Signer } from '@normalfinance/utils/build/stellar';
 import { constants, trackEvent } from '@normalfinance/utils';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { usePersistStore } from '@normalfinance/state';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
@@ -71,32 +71,20 @@ interface ExecuteContractTransactionParams<T extends ContractType>
   contractType: T;
 }
 
-const getSigner = (storePersist: AppStorePersist, appStore: AppStore) =>
-  storePersist.wallet.walletType === 'wallet-connect'
-    ? appStore.walletConnectInstance
-    : new Signer();
-
-const getSignerFunction = (signer: any, storePersist: any) => (tx: string) =>
-  storePersist.wallet.walletType === 'wallet-connect'
-    ? signer.signTransaction(tx)
-    : signer.sign(tx);
-
 const getContractClient = <T extends ContractType>(
   contractType: T,
   contractAddress: string,
-  signer: any,
+  signTransaction: (xdr: string) => Promise<string>,
   networkPassphrase: string,
   rpcUrl: string,
-  publicKey: string,
-  storePersist: any
+  publicKey: string
 ): ContractClientType<T> => {
-  const signTransaction = getSignerFunction(signer, storePersist);
   const commonOptions = {
     publicKey,
     contractId: contractAddress,
     networkPassphrase,
     rpcUrl,
-    signTransaction: signTransaction.bind(signer),
+    signTransaction,
   };
 
   const ClientConstructor = contractClients[contractType] as any;
@@ -105,7 +93,7 @@ const getContractClient = <T extends ContractType>(
 
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
-  const appStore = useAppStore();
+  const { signTransaction } = useStellarWalletsKit();
   const { t } = useTranslate();
 
   const { openRestoreModal, closeRestoreModal } = useRestoreModal();
@@ -117,10 +105,11 @@ export const useContractTransaction = () => {
       transactionFunction,
       transactionDetails,
     }: ExecuteContractTransactionParams<T>) => {
-      const signer = getSigner(storePersist, appStore);
       const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
       const rpcUrl = constants.StellarConfig.RPC_URL;
       const publicKey = storePersist.wallet.address!;
+
+      console.log('[USE CONTRACT TRANSACTION] Network passphrase:', networkPassphrase);
 
       const run = async (
         restore: boolean = false
@@ -128,11 +117,10 @@ export const useContractTransaction = () => {
         const contractClient = getContractClient(
           contractType,
           contractAddress,
-          signer,
+          signTransaction,
           networkPassphrase,
           rpcUrl,
-          publicKey,
-          storePersist
+          publicKey
         );
 
         const transaction = await transactionFunction(contractClient, restore);
@@ -260,7 +248,7 @@ export const useContractTransaction = () => {
           throw error;
         });
     },
-    [storePersist, appStore, openRestoreModal, closeRestoreModal]
+    [storePersist, signTransaction, openRestoreModal, closeRestoreModal, t]
   );
 
   return {
