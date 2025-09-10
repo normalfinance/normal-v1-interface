@@ -46,7 +46,7 @@ function WalletDisconnected({ onConnectClick }: { onConnectClick: () => void }) 
 
   const handleWalletHelp = () => {
     trackEvent('button_clicked', {
-      label: 'Manage Stake', 
+      label: 'Manage Stake',
       location: 'Insurance',
     });
     window.open(`${paths.docs}/getting-started/guides`, '_blank', 'noopener');
@@ -76,7 +76,7 @@ function WalletDisconnected({ onConnectClick }: { onConnectClick: () => void }) 
           position={{ top: -22, right: -32 }}
         />
       </Box>
-      
+
       <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
         {/* How to create a wallet? */}
         <Button
@@ -147,21 +147,30 @@ function WalletConnected({ address }: { address: string }) {
     }
   }, [address, enqueueSnackbar, t]);
 
-  // Effect hook to fetch all tokens once the component mounts
+  // Effect hook to fetch all tokens when the component mounts or address changes
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
+      if (!address) return; // Don't fetch tokens if no address
+
+      console.log('[WALLET CONNECTED] Refreshing tokens for address:', address);
       setGlobalIsLoading(true);
       try {
         await getAllTokens();
+        console.log('[WALLET CONNECTED] Tokens fetched successfully');
         setGlobalIsLoading(false);
       } catch (e) {
-        console.error(e);
+        console.error('[WALLET CONNECTED] Error fetching tokens:', e);
       } finally {
         setGlobalIsLoading(false);
       }
     };
-    refreshTokens();
-  }, []);
+
+    const timer = setTimeout(() => {
+      refreshTokens();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [address, getAllTokens]); 
 
   // Total balance
   const totalBalance = tokens.reduce((acc, tkn) => {
@@ -269,11 +278,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
     try {
       await connectWallet();
-      
-      // After successful connection, store the wallet info in our state
-      if (publicKey) {
-        await persist.connectWallet(publicKey, 'stellar-wallets-kit');
-      }
       onClose(); // Close the drawer after connecting
     } catch (error) {
       console.error('Error connecting wallet:', error);

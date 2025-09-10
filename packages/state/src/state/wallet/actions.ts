@@ -60,10 +60,19 @@ export const createWalletActions = (
 
         const tokenAddress = constants.StellarConfig.XLM_ADDRESS;
 
+        // Get wallet address from persist store
+        const walletAddress = usePersistStore.getState().wallet.address;
+        
+        if (!walletAddress) {
+          console.warn('[WALLET ACTIONS] No wallet address found, skipping native token fetch');
+          return undefined;
+        }
+
         let balance: bigint;
         try {
-          balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+          balance = await getTokenBalance(tokenAddress, walletAddress);
         } catch (error) {
+          console.warn('[WALLET ACTIONS] Error getting token balance:', error);
           balance = BigInt(0);
         }
 
@@ -124,10 +133,19 @@ export const createWalletActions = (
         // Use token_a address from the pool response (this is the actual token contract)
         const tokenAddress = pool.pool_response.token_a.address;
 
+        // Get wallet address from persist store
+        const walletAddress = usePersistStore.getState().wallet.address;
+        
+        if (!walletAddress) {
+          console.warn('[WALLET ACTIONS] No wallet address found, skipping normal token fetch');
+          return undefined;
+        }
+
         let balance: bigint;
         try {
-          balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+          balance = await getTokenBalance(tokenAddress, walletAddress);
         } catch (error) {
+          console.warn('[WALLET ACTIONS] Error getting normal token balance:', error);
           balance = BigInt(0);
         }
 
@@ -194,10 +212,19 @@ export const createWalletActions = (
 
         const tokenAddress = apiToken.contract;
 
+        // Get wallet address from persist store
+        const walletAddress = usePersistStore.getState().wallet.address;
+        
+        if (!walletAddress) {
+          console.warn('[WALLET ACTIONS] No wallet address found, skipping API token fetch');
+          return undefined;
+        }
+
         let balance: bigint;
         try {
-          balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+          balance = await getTokenBalance(tokenAddress, walletAddress);
         } catch (error) {
+          console.warn('[WALLET ACTIONS] Error getting API token balance:', error);
           balance = BigInt(0);
         }
 

@@ -13,6 +13,7 @@ import {
   ISupportedWallet,
 } from '@creit.tech/stellar-wallets-kit';
 import { Networks } from '@stellar/stellar-sdk';
+import { usePersistStore } from '@normalfinance/state';
 
 // Initialize the Stellar Wallets Kit with all supported wallets
 const kit = new StellarWalletsKit({
@@ -20,7 +21,6 @@ const kit = new StellarWalletsKit({
     process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
       ? WalletNetwork.PUBLIC
       : WalletNetwork.TESTNET,
-  selectedWalletId: HANA_ID, // Default to Hana, but users can select any wallet
   modules: [
     new HanaModule(),
     new xBullModule(),
@@ -33,11 +33,43 @@ export const useStellarWalletsKit = () => {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
+  const persistStore = usePersistStore();
 
   // Check for existing connection on mount
   useEffect(() => {
     const checkConnection = async () => {
       try {
+        const storedWalletType = persistStore.wallet.walletType;
+        let walletId: string | null = null;
+        
+        // Map wallet types to kit IDs
+        if (storedWalletType) {
+          switch (storedWalletType) {
+            case 'hana':
+            case 'hana-stellar-kit':
+              walletId = HANA_ID;
+              break;
+            case 'xbull':
+            case 'xbull-stellar-kit':
+              walletId = XBULL_ID;
+              break;
+            case 'freighter':
+            case 'freighter-stellar-kit':
+              walletId = FREIGHTER_ID;
+              break;
+            case 'lobstr':
+            case 'lobster-stellar-kit':
+              walletId = LOBSTR_ID;
+              break;
+          }
+        }
+
+        if (walletId) {
+          console.log('[STELLAR WALLETS KIT] Restoring wallet:', walletId);
+          kit.setWallet(walletId);
+          setSelectedWallet(walletId);
+        }
+
         const address = await kit.getAddress();
         if (address?.address) {
           setPublicKey(address.address);
@@ -45,12 +77,12 @@ export const useStellarWalletsKit = () => {
           console.log('[STELLAR WALLETS KIT] Existing connection found:', address.address);
         }
       } catch (error) {
-        console.log('[STELLAR WALLETS KIT] No existing connection found');
+        console.log('[STELLAR WALLETS KIT] No existing connection found:', error);
       }
     };
 
     checkConnection();
-  }, []);
+  }, [persistStore.wallet.walletType]);
 
   const connectWallet = async () => {
     try {
@@ -69,9 +101,29 @@ export const useStellarWalletsKit = () => {
           setPublicKey(address.address);
           setIsConnected(true);
 
+          // Map wallet ID to wallet type for storage
+          let walletType: string = 'stellar-wallets-kit';
+          switch (wallet.id) {
+            case HANA_ID:
+              walletType = 'hana-stellar-kit';
+              break;
+            case XBULL_ID:
+              walletType = 'xbull-stellar-kit';
+              break;
+            case FREIGHTER_ID:
+              walletType = 'freighter-stellar-kit';
+              break;
+            case LOBSTR_ID:
+              walletType = 'lobster-stellar-kit';
+              break;
+          }
+
+          // Store the wallet connection in persist store
+          await persistStore.connectWallet(address.address, walletType);
+
           // Test message signing for verification
           try {
-            const signature = await kit.signMessage('Hello world', {
+            const signature = await kit.signMessage('Welcome to Normal Finance', {
               networkPassphrase: 
                 process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
                   ? Networks.PUBLIC
