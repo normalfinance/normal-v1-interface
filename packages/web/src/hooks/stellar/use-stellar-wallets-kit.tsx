@@ -15,14 +15,21 @@ import {
 import { Networks } from '@stellar/stellar-sdk';
 import { usePersistStore } from '@normalfinance/state';
 
-// Initialize the Stellar Wallets Kit with all supported wallets
-const kit = new StellarWalletsKit({
-  network:
-    process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
-      ? WalletNetwork.PUBLIC
-      : WalletNetwork.TESTNET,
-  modules: [new HanaModule(), new xBullModule(), new FreighterModule(), new LobstrModule()],
-});
+// Initialize the Stellar Wallets Kit only on client-side
+let kit: StellarWalletsKit | null = null;
+
+const initializeKit = () => {
+  if (typeof window !== 'undefined' && !kit) {
+    kit = new StellarWalletsKit({
+      network:
+        process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
+          ? WalletNetwork.PUBLIC
+          : WalletNetwork.TESTNET,
+      modules: [new HanaModule(), new xBullModule(), new FreighterModule(), new LobstrModule()],
+    });
+  }
+  return kit;
+};
 
 export const useStellarWalletsKit = () => {
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -34,6 +41,12 @@ export const useStellarWalletsKit = () => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
+        // Only run on client-side
+        if (typeof window === 'undefined') return;
+
+        const walletKit = initializeKit();
+        if (!walletKit) return;
+
         const storedWalletType = persistStore.wallet.walletType;
         let walletId: string | null = null;
 
@@ -61,14 +74,14 @@ export const useStellarWalletsKit = () => {
 
         if (walletId) {
           console.log('[STELLAR WALLETS KIT] Restoring wallet:', walletId);
-          kit.setWallet(walletId);
+          walletKit.setWallet(walletId);
           setSelectedWallet(walletId);
 
           // Add a small delay to ensure the wallet is properly set
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
 
-        const address = await kit.getAddress();
+        const address = await walletKit.getAddress();
         if (address?.address) {
           setPublicKey(address.address);
           setIsConnected(true);
@@ -84,16 +97,26 @@ export const useStellarWalletsKit = () => {
 
   const connectWallet = async () => {
     try {
+      // Only run on client-side
+      if (typeof window === 'undefined') {
+        throw new Error('Wallet connection not available on server-side');
+      }
+
+      const walletKit = initializeKit();
+      if (!walletKit) {
+        throw new Error('Failed to initialize wallet kit');
+      }
+
       console.log('[STELLAR WALLETS KIT] Opening wallet selection modal...');
 
-      kit.openModal({
+      walletKit.openModal({
         onWalletSelected: async (wallet: ISupportedWallet) => {
           console.log('[STELLAR WALLETS KIT] Wallet selected:', wallet.name, 'ID:', wallet.id);
 
-          kit.setWallet(wallet.id);
+          walletKit.setWallet(wallet.id);
           setSelectedWallet(wallet.id);
 
-          const address = await kit.getAddress();
+          const address = await walletKit.getAddress();
           console.log('[STELLAR WALLETS KIT] Connected account:', address.address);
 
           setPublicKey(address.address);
@@ -121,7 +144,7 @@ export const useStellarWalletsKit = () => {
 
           // Test message signing for verification
           try {
-            const signature = await kit.signMessage('Welcome to Normal Finance', {
+            const signature = await walletKit.signMessage('Welcome to Normal Finance', {
               networkPassphrase:
                 process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
                   ? Networks.PUBLIC
@@ -151,7 +174,18 @@ export const useStellarWalletsKit = () => {
   const signTransaction = async (xdr: string) => {
     console.log('[STELLAR WALLETS KIT] Signing transaction with address:', publicKey);
     console.log('[STELLAR WALLETS KIT] Selected wallet:', selectedWallet);
-    console.log('[STELLAR WALLETS KIT] Kit instance:', kit);
+
+    // Only run on client-side
+    if (typeof window === 'undefined') {
+      throw new Error('Transaction signing not available on server-side');
+    }
+
+    const walletKit = initializeKit();
+    if (!walletKit) {
+      throw new Error('Failed to initialize wallet kit');
+    }
+
+    console.log('[STELLAR WALLETS KIT] Kit instance:', walletKit);
 
     if (!publicKey) {
       throw new Error('No wallet connected');
@@ -162,7 +196,7 @@ export const useStellarWalletsKit = () => {
     }
 
     try {
-      const { signedTxXdr } = await kit.signTransaction(xdr, {
+      const { signedTxXdr } = await walletKit.signTransaction(xdr, {
         networkPassphrase:
           process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
             ? Networks.PUBLIC
@@ -183,9 +217,13 @@ export const useStellarWalletsKit = () => {
     try {
       console.log('[STELLAR WALLETS KIT] Disconnecting wallet...');
 
-      // Call kit's disconnect if available
-      if (kit.disconnect) {
-        await kit.disconnect();
+      // Only run on client-side
+      if (typeof window !== 'undefined') {
+        const walletKit = initializeKit();
+        // Call kit's disconnect if available
+        if (walletKit?.disconnect) {
+          await walletKit.disconnect();
+        }
       }
 
       setPublicKey(null);
@@ -204,7 +242,17 @@ export const useStellarWalletsKit = () => {
 
   const getSupportedWallets = async () => {
     try {
-      const wallets = await kit.getSupportedWallets();
+      // Only run on client-side
+      if (typeof window === 'undefined') {
+        return [];
+      }
+
+      const walletKit = initializeKit();
+      if (!walletKit) {
+        return [];
+      }
+
+      const wallets = await walletKit.getSupportedWallets();
       console.log('[STELLAR WALLETS KIT] Supported wallets:', wallets);
       return wallets;
     } catch (error) {
@@ -214,7 +262,7 @@ export const useStellarWalletsKit = () => {
   };
 
   return {
-    kit,
+    kit: kit || null,
     publicKey,
     isConnected,
     selectedWallet,

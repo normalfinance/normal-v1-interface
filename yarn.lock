@@ -3366,12 +3366,12 @@ __metadata:
   linkType: hard
 
 "@jridgewell/trace-mapping@npm:^0.3.12, @jridgewell/trace-mapping@npm:^0.3.18, @jridgewell/trace-mapping@npm:^0.3.24, @jridgewell/trace-mapping@npm:^0.3.28":
-  version: 0.3.30
-  resolution: "@jridgewell/trace-mapping@npm:0.3.30"
+  version: 0.3.31
+  resolution: "@jridgewell/trace-mapping@npm:0.3.31"
   dependencies:
     "@jridgewell/resolve-uri": ^3.1.0
     "@jridgewell/sourcemap-codec": ^1.4.14
-  checksum: 26edb94faf6f02df346e3657deff9df3f2f083195cbda62a6cf60204d548a0a6134454cbc3af8437392206a89dfb3e72782eaf78f49cbd8924400e55a6575e72
+  checksum: af8fda2431348ad507fbddf8e25f5d08c79ecc94594061ce402cf41bc5aba1a7b3e59bf0fd70a619b35f33983a3f488ceeba8faf56bff784f98bb5394a8b7d47
   languageName: node
   linkType: hard
 
@@ -4703,7 +4703,7 @@ __metadata:
     "@emotion/react": ^11.14.0
     "@emotion/styled": ^11.14.0
     "@fontsource/figtree": ^5.2.8
-    "@stellar/stellar-sdk": 14.1.1
+    "@stellar/stellar-sdk": ^14.1.1
     "@tsconfig/recommended": ^1.0.2
     "@types/jest": ^29.5.2
     "@upstash/ratelimit": ^2.0.5
@@ -4889,7 +4889,6 @@ __metadata:
     semantic-release-yarn: ^3.0.2
     simplebar-react: ^3.3.0
     sonner: ^1.7.1
-    stellar-sdk: ^13.3.0
     stylis: ^4.3.4
     stylis-plugin-rtl: ^2.1.1
     swr: ^2.3.0
@@ -5320,8 +5319,8 @@ __metadata:
   linkType: hard
 
 "@prisma/client@npm:^6.11.1":
-  version: 6.15.0
-  resolution: "@prisma/client@npm:6.15.0"
+  version: 6.16.0
+  resolution: "@prisma/client@npm:6.16.0"
   peerDependencies:
     prisma: "*"
     typescript: ">=5.1.0"
@@ -5330,7 +5329,7 @@ __metadata:
       optional: true
     typescript:
       optional: true
-  checksum: c8d1b56185b7ccadc58409858d3a13f5628f656ea17ce7e7606153537fc6fa3984d3f388c69f42f36ec5d6f1711249da2a97c84210e44e4fe4957742f0055a42
+  checksum: db69e23927907d7f4a1787160e18b4a2774bdf53019f28490d5f85364a64bdc65b27907c04d778265344c91570ab430b2a837ca491ce0859773f27ba96b4099f
   languageName: node
   linkType: hard
 
@@ -7247,7 +7246,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@stellar/stellar-sdk@npm:14.1.1":
+"@stellar/stellar-sdk@npm:14.1.1, @stellar/stellar-sdk@npm:^14.1.1":
   version: 14.1.1
   resolution: "@stellar/stellar-sdk@npm:14.1.1"
   dependencies:
@@ -10154,9 +10153,14 @@ __metadata:
   linkType: hard
 
 "b4a@npm:^1.6.4":
-  version: 1.6.7
-  resolution: "b4a@npm:1.6.7"
-  checksum: afe4e239b49c0ef62236fe0d788ac9bd9d7eac7e9855b0d1835593cd0efcc7be394f9cc28a747a2ed2cdcb0a48c3528a551a196f472eb625457c711169c9efa2
+  version: 1.7.0
+  resolution: "b4a@npm:1.7.0"
+  peerDependencies:
+    react-native-b4a: ^0.0.0
+  peerDependenciesMeta:
+    react-native-b4a:
+      optional: true
+  checksum: 5997ff3e37505ab0c8c9d841f068cafbfcdbf8a36b49ae707291ce04df4aff3b653a646d21ea4baf56fda103edf176d59b49b1d15d7e0607ca46b4251458d09d
   languageName: node
   linkType: hard
 
@@ -11700,9 +11704,9 @@ __metadata:
   linkType: hard
 
 "country-flag-icons@npm:^1.5.17":
-  version: 1.5.19
-  resolution: "country-flag-icons@npm:1.5.19"
-  checksum: bb9666fb0ddbedd76fcede911f969bfb1c5b14454049a08db22aded1f48b6201f3dfb9832fa904581b9fd788ee02feb946ae4c5fb322f7a866d328a0357630f9
+  version: 1.5.20
+  resolution: "country-flag-icons@npm:1.5.20"
+  checksum: 984ba5fd8f08df4e46eab6f2bd1a58115751e0526b4ec18bf92f0afc3b258b9c8402fc112144e0f055037f473f8add0c8c72c314749e94fcd48876a864231ce4
   languageName: node
   linkType: hard
 
@@ -14185,9 +14189,9 @@ __metadata:
   linkType: hard
 
 "get-east-asian-width@npm:^1.0.0, get-east-asian-width@npm:^1.3.1":
-  version: 1.3.1
-  resolution: "get-east-asian-width@npm:1.3.1"
-  checksum: a65927415e0690dda1f790f075566aa02bf81d649ddfed6e85585f228c89e6bf8a9e6582c06e120597a632b40b18db2f7cef7424073bad931d713e71fd5ede27
+  version: 1.4.0
+  resolution: "get-east-asian-width@npm:1.4.0"
+  checksum: 1d9a81a8004f4217ebef5d461875047d269e4b57e039558fd65130877cd4da8e3f61e1c4eada0c8b10e2816c7baf7d5fddb7006f561da13bc6f6dd19c1e964a4
   languageName: node
   linkType: hard
 
@@ -14834,10 +14838,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hook-std@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "hook-std@npm:3.0.0"
-  checksum: f1f0ca88bbbca2306b9c2c342f45fbecb318ad5496bcbde1fcfc2a64dab0feabd50278a613f683edf07225c4b8b75b3c64ad3f1fca090dd0cae426fdec374a56
+"hook-std@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "hook-std@npm:4.0.0"
+  checksum: 82a3becad2e7ec3a9da25eb26dbfa584015f5bfabaddc6c999f079e6c65166e6902f37783819b996be4621cec30945cc6468c539134184e7b265196964488467
   languageName: node
   linkType: hard
 
@@ -18912,9 +18916,9 @@ __metadata:
   linkType: hard
 
 "normalize-url@npm:^8.0.0":
-  version: 8.0.2
-  resolution: "normalize-url@npm:8.0.2"
-  checksum: 66a0d42ae9e360654d8547a73f8c94fc8a39a975c7d3ae0b95e5927bd3bffc6dc4e20282afd6797c4a7ce6cf3847c37ce47125fde7b1a9e83d802c0e74830dee
+  version: 8.1.0
+  resolution: "normalize-url@npm:8.1.0"
+  checksum: 3800983919a973ab127c59c63706dee60b4b46649fdfb277aa571951795fecffab43e05893f621764adb15a0ed85d3fb880fdeb179e605d1afffc8d7f48d21d2
   languageName: node
   linkType: hard
 
@@ -20916,12 +20920,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"regenerate-unicode-properties@npm:^10.2.0":
-  version: 10.2.0
-  resolution: "regenerate-unicode-properties@npm:10.2.0"
+"regenerate-unicode-properties@npm:^10.2.2":
+  version: 10.2.2
+  resolution: "regenerate-unicode-properties@npm:10.2.2"
   dependencies:
     regenerate: ^1.4.2
-  checksum: d5c5fc13f8b8d7e16e791637a4bfef741f8d70e267d51845ee7d5404a32fa14c75b181c4efba33e4bff8b0000a2f13e9773593713dfe5b66597df4259275ce63
+  checksum: 7ae4c1c32460c4360e3118c45eec0621424908f430fdd6f162c9172067786bf2b1682fbc885a33b26bc85e76e06f4d3f398b52425e801b0bb0cbae147dafb0b2
   languageName: node
   linkType: hard
 
@@ -20947,16 +20951,16 @@ __metadata:
   linkType: hard
 
 "regexpu-core@npm:^6.2.0":
-  version: 6.2.0
-  resolution: "regexpu-core@npm:6.2.0"
+  version: 6.3.1
+  resolution: "regexpu-core@npm:6.3.1"
   dependencies:
     regenerate: ^1.4.2
-    regenerate-unicode-properties: ^10.2.0
+    regenerate-unicode-properties: ^10.2.2
     regjsgen: ^0.8.0
     regjsparser: ^0.12.0
     unicode-match-property-ecmascript: ^2.0.0
-    unicode-match-property-value-ecmascript: ^2.1.0
-  checksum: 67d3c4a3f6c99bc80b5d690074a27e6f675be1c1739f8a9acf028fbc36f1a468472574ea65e331e217995198ba4404d7878f3cb3739a73552dd3c70d3fb7f8e6
+    unicode-match-property-value-ecmascript: ^2.2.1
+  checksum: 601a8298bca4d074c239e3b989b3b5f7532e4c8bde4e6d45690d4ba01d4f331869df3899a260a0fd88ecdb8902082725845447b0e2a3e1b0a1364131970489cb
   languageName: node
   linkType: hard
 
@@ -21607,8 +21611,8 @@ __metadata:
   linkType: hard
 
 "semantic-release@npm:^24.0.0":
-  version: 24.2.7
-  resolution: "semantic-release@npm:24.2.7"
+  version: 24.2.8
+  resolution: "semantic-release@npm:24.2.8"
   dependencies:
     "@semantic-release/commit-analyzer": ^13.0.0-beta.1
     "@semantic-release/error": ^4.0.0
@@ -21624,7 +21628,7 @@ __metadata:
     find-versions: ^6.0.0
     get-stream: ^6.0.0
     git-log-parser: ^1.2.0
-    hook-std: ^3.0.0
+    hook-std: ^4.0.0
     hosted-git-info: ^8.0.0
     import-from-esm: ^2.0.0
     lodash-es: ^4.17.21
@@ -21641,7 +21645,7 @@ __metadata:
     yargs: ^17.5.1
   bin:
     semantic-release: bin/semantic-release.js
-  checksum: e42b287a6609bc276e2a435c1fd86c2bd5c1f3bcc0646c4c44733723540023b9dda8892f3bfd36fe59a50eed4f2fee65f5c23acf4d38d06502620d883008f39a
+  checksum: 7450db14a6345739af124d4188a034a9a1915fbca4f1b6314b6072f5ed5551f8e2953330bd6a521c8d1613b388289263043d4e9af17c095c1410bccfd3f8b753
   languageName: node
   linkType: hard
 
@@ -22311,22 +22315,6 @@ __metadata:
     sodium-native:
       optional: true
   checksum: 92b00bf5ba681fa7a33ee8fd9b19ef9bfe37380634e721b5656e02802b94fc0415faf370f35e4876c4b3efbcae1ed25cc332d7eb173a054fa456465e0eac0a66
-  languageName: node
-  linkType: hard
-
-"stellar-sdk@npm:^13.3.0":
-  version: 13.3.0
-  resolution: "stellar-sdk@npm:13.3.0"
-  dependencies:
-    "@stellar/stellar-base": ^13.1.0
-    axios: ^1.8.4
-    bignumber.js: ^9.3.0
-    eventsource: ^2.0.2
-    feaxios: ^0.0.23
-    randombytes: ^2.1.0
-    toml: ^3.0.0
-    urijs: ^1.19.1
-  checksum: 5736b13e15039c74143e8816f8b2d16c02ab235519d3531bdc6d939e05e6e203b50efa486922cd8559776b5a2467ffbdb1b03787997872b124f28766ee2db98b
   languageName: node
   linkType: hard
 
@@ -23836,7 +23824,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"unicode-match-property-value-ecmascript@npm:^2.1.0":
+"unicode-match-property-value-ecmascript@npm:^2.2.1":
   version: 2.2.1
   resolution: "unicode-match-property-value-ecmascript@npm:2.2.1"
   checksum: e6c73e07bb4dc4aa399797a14b170e84a30ed290bcf97cc4305cf67dde8744119721ce17cef03f4f9d4ff48654bfa26eadc7fe1e8dd4b71b8f3b2e9a9742f013
