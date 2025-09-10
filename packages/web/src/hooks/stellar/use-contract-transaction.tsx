@@ -93,7 +93,7 @@ const getContractClient = <T extends ContractType>(
 
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
-  const { signTransaction } = useStellarWalletsKit();
+  const { signTransaction, publicKey } = useStellarWalletsKit();
   const { t } = useTranslate();
 
   const { openRestoreModal, closeRestoreModal } = useRestoreModal();
@@ -107,20 +107,44 @@ export const useContractTransaction = () => {
     }: ExecuteContractTransactionParams<T>) => {
       const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
       const rpcUrl = constants.StellarConfig.RPC_URL;
-      const publicKey = storePersist.wallet.address!;
+      const walletAddress = publicKey || storePersist.wallet.address;
+
+      if (!walletAddress) {
+        throw new Error('No wallet connected');
+      }
+
+      console.log('[USE CONTRACT TRANSACTION] Wallet address:', walletAddress);
+      console.log('[USE CONTRACT TRANSACTION] PublicKey from kit:', publicKey);
+      console.log('[USE CONTRACT TRANSACTION] Address from persist:', storePersist.wallet.address);
 
       console.log('[USE CONTRACT TRANSACTION] Network passphrase:', networkPassphrase);
 
       const run = async (
         restore: boolean = false
       ): Promise<{ txHash?: string; notify: boolean }> => {
+        // Add safety check for signTransaction function
+        const safeSignTransaction = async (xdr: string) => {
+          try {
+            console.log('[USE CONTRACT TRANSACTION] Attempting to sign transaction...');
+            if (!signTransaction) {
+              throw new Error('Sign transaction function not available');
+            }
+            const result = await signTransaction(xdr);
+            console.log('[USE CONTRACT TRANSACTION] Transaction signed successfully');
+            return result;
+          } catch (error) {
+            console.error('[USE CONTRACT TRANSACTION] Error during transaction signing:', error);
+            throw error;
+          }
+        };
+
         const contractClient = getContractClient(
           contractType,
           contractAddress,
-          signTransaction,
+          safeSignTransaction,
           networkPassphrase,
           rpcUrl,
-          publicKey
+          walletAddress
         );
 
         const transaction = await transactionFunction(contractClient, restore);
@@ -138,7 +162,13 @@ export const useContractTransaction = () => {
           if (txHash) {
             const timestamp = new Date().toISOString();
             const transactionType = transactionDetails.type || 'unknown';
-            const walletAddress = publicKey || 'unknown';
+            console.log('[USE CONTRACT TRANSACTION] Transactionn hash:', txHash);
+            console.log('[USE CONTRACT TRANSACTION] Transactionn type:', transactionType);
+            console.log('[USE CONTRACT TRANSACTION] Transactionn Time:', timestamp);
+
+            console.log(
+              `[${timestamp}] Transaction ${transactionType} completed for ${walletAddress}: ${txHash}`
+            );
           }
 
           trackEvent('transaction_successful', {
@@ -237,6 +267,7 @@ export const useContractTransaction = () => {
           return result;
         })
         .catch((error) => {
+          console.error('Error during contract transaction: ', error);
           if (loadingKey) closeSnackbar(loadingKey);
 
           enqueueSnackbar(messages.error, {

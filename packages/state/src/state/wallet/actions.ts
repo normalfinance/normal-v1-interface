@@ -67,6 +67,8 @@ export const createWalletActions = (
           console.warn('[WALLET ACTIONS] No wallet address found, skipping native token fetch');
           return undefined;
         }
+        
+        console.log('[WALLET ACTIONS] Fetching native token for address:', walletAddress);
 
         let balance: bigint;
         try {
@@ -140,6 +142,8 @@ export const createWalletActions = (
           console.warn('[WALLET ACTIONS] No wallet address found, skipping normal token fetch');
           return undefined;
         }
+        
+        console.log('[WALLET ACTIONS] Fetching normal token for address:', walletAddress, 'token:', tokenAddress);
 
         let balance: bigint;
         try {
@@ -219,6 +223,8 @@ export const createWalletActions = (
           console.warn('[WALLET ACTIONS] No wallet address found, skipping API token fetch');
           return undefined;
         }
+        
+        console.log('[WALLET ACTIONS] Fetching API token for address:', walletAddress, 'token:', tokenAddress);
 
         let balance: bigint;
         try {

@@ -10,6 +10,7 @@ import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { format, constants, checkTrustline, getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -37,6 +38,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   // Using the store
   const storePersist = usePersistStore();
   const appStore = useAppStore();
+  const { publicKey } = useStellarWalletsKit();
 
   const {
     trustlineButtonActive,
@@ -387,8 +389,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
           try {
             // First check if trustline already exists
+            const walletAddress = publicKey || storePersist.wallet.address;
+            if (!walletAddress) {
+              setSwapError('No wallet connected');
+              return;
+            }
+            
             const trustlineStatus = await checkTrustline(
-              storePersist.wallet.address!,
+              walletAddress,
               buyToken.symbol,
               constants.StellarConfig.NORMAL_TOKEN_ISSUER
             );
@@ -404,7 +412,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
               // Verify trustline exists before proceeding
               const finalCheck = await checkTrustline(
-                storePersist.wallet.address!,
+                walletAddress,
                 buyToken.symbol,
                 constants.StellarConfig.NORMAL_TOKEN_ISSUER
               );

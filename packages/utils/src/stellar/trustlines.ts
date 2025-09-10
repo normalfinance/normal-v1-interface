@@ -1,4 +1,5 @@
 import {
+  Account,
   Asset,
   Horizon,
   Operation,
@@ -31,7 +32,6 @@ export async function fetchAccount(publicKey: string) {
     throw new Error('invalid public key');
   }
 }
-
 
 export async function checkTrustline(publicKey: string, assetCode: string, assetIssuer: string) {
   // Fetch Account
@@ -68,9 +68,52 @@ export async function checkTrustline(publicKey: string, assetCode: string, asset
 }
 
 // NOTE: Trustline creation is now handled through the Stellar Wallets Kit
-// This function is kept for compatibility but should use the kit for signing
-export async function createTrustline(publicKey: string, assetCode: string, assetIssuer: string) {
-  throw new Error('createTrustline should now use Stellar Wallets Kit for signing. This function needs to be updated.');
+// This function creates a trustline transaction that needs to be signed by the wallet
+export async function createTrustline(
+  publicKey: string,
+  assetCode: string,
+  assetIssuer: string,
+  signTransaction?: (xdr: string) => Promise<string>
+) {
+  // Fetch Account
+  const account = await fetchAccount(publicKey);
+
+  if (!account) {
+    throw new Error('Account not found');
+  }
+
+  // Create Asset
+  const asset = new Asset(assetCode, assetIssuer);
+
+  // Build transaction
+  const stellarAccount = new Account(account.account_id, account.sequence);
+  const transaction = new TransactionBuilder(stellarAccount, {
+    fee: await horizonServer.feeStats().then((fs) => fs.fee_charged.p90),
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      Operation.changeTrust({
+        asset: asset,
+      })
+    )
+    .setTimeout(30)
+    .build();
+
+  if (signTransaction) {
+    // If signTransaction is provided, sign and submit the transaction
+    const signedXDR = await signTransaction(transaction.toXDR());
+    const signedTransaction = TransactionBuilder.fromXDR(
+      signedXDR,
+      constants.StellarConfig.NETWORK_PASSPHRASE
+    );
+
+    const result = await horizonServer.submitTransaction(signedTransaction);
+    console.log('[TRUSTLINE] Trustline created successfully:', result.hash);
+    return result;
+  } else {
+    // Return the unsigned transaction XDR for external signing
+    return transaction.toXDR();
+  }
 }
 
 export async function fetchAndIssueTrustline(

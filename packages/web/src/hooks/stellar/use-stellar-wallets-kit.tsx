@@ -17,16 +17,11 @@ import { usePersistStore } from '@normalfinance/state';
 
 // Initialize the Stellar Wallets Kit with all supported wallets
 const kit = new StellarWalletsKit({
-  network: 
+  network:
     process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
       ? WalletNetwork.PUBLIC
       : WalletNetwork.TESTNET,
-  modules: [
-    new HanaModule(),
-    new xBullModule(),
-    new FreighterModule(),
-    new LobstrModule(),
-  ],
+  modules: [new HanaModule(), new xBullModule(), new FreighterModule(), new LobstrModule()],
 });
 
 export const useStellarWalletsKit = () => {
@@ -41,7 +36,7 @@ export const useStellarWalletsKit = () => {
       try {
         const storedWalletType = persistStore.wallet.walletType;
         let walletId: string | null = null;
-        
+
         // Map wallet types to kit IDs
         if (storedWalletType) {
           switch (storedWalletType) {
@@ -68,6 +63,9 @@ export const useStellarWalletsKit = () => {
           console.log('[STELLAR WALLETS KIT] Restoring wallet:', walletId);
           kit.setWallet(walletId);
           setSelectedWallet(walletId);
+
+          // Add a small delay to ensure the wallet is properly set
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
 
         const address = await kit.getAddress();
@@ -87,17 +85,17 @@ export const useStellarWalletsKit = () => {
   const connectWallet = async () => {
     try {
       console.log('[STELLAR WALLETS KIT] Opening wallet selection modal...');
-      
+
       kit.openModal({
         onWalletSelected: async (wallet: ISupportedWallet) => {
           console.log('[STELLAR WALLETS KIT] Wallet selected:', wallet.name, 'ID:', wallet.id);
-          
+
           kit.setWallet(wallet.id);
           setSelectedWallet(wallet.id);
-          
+
           const address = await kit.getAddress();
           console.log('[STELLAR WALLETS KIT] Connected account:', address.address);
-          
+
           setPublicKey(address.address);
           setIsConnected(true);
 
@@ -124,7 +122,7 @@ export const useStellarWalletsKit = () => {
           // Test message signing for verification
           try {
             const signature = await kit.signMessage('Welcome to Normal Finance', {
-              networkPassphrase: 
+              networkPassphrase:
                 process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
                   ? Networks.PUBLIC
                   : Networks.TESTNET,
@@ -137,7 +135,11 @@ export const useStellarWalletsKit = () => {
           }
         },
         onClosed: (error) => {
-          console.log('[STELLAR WALLETS KIT] Modal closed', error ? 'with error:' : 'by user', error);
+          console.log(
+            '[STELLAR WALLETS KIT] Modal closed',
+            error ? 'with error:' : 'by user',
+            error
+          );
         },
       });
     } catch (error) {
@@ -149,24 +151,30 @@ export const useStellarWalletsKit = () => {
   const signTransaction = async (xdr: string) => {
     console.log('[STELLAR WALLETS KIT] Signing transaction with address:', publicKey);
     console.log('[STELLAR WALLETS KIT] Selected wallet:', selectedWallet);
-    
+    console.log('[STELLAR WALLETS KIT] Kit instance:', kit);
+
     if (!publicKey) {
       throw new Error('No wallet connected');
     }
 
+    if (!selectedWallet) {
+      throw new Error('No wallet selected. Please connect your wallet first.');
+    }
+
     try {
       const { signedTxXdr } = await kit.signTransaction(xdr, {
-        networkPassphrase: 
+        networkPassphrase:
           process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
             ? Networks.PUBLIC
             : Networks.TESTNET,
         address: publicKey,
       });
-      
+
       console.log('[STELLAR WALLETS KIT] Transaction signed successfully');
       return signedTxXdr;
     } catch (error) {
       console.error('[STELLAR WALLETS KIT] Error signing transaction:', error);
+      console.error('[STELLAR WALLETS KIT] Error details:', JSON.stringify(error, null, 2));
       throw error;
     }
   };
@@ -174,16 +182,16 @@ export const useStellarWalletsKit = () => {
   const disconnectWallet = async () => {
     try {
       console.log('[STELLAR WALLETS KIT] Disconnecting wallet...');
-      
+
       // Call kit's disconnect if available
       if (kit.disconnect) {
         await kit.disconnect();
       }
-      
+
       setPublicKey(null);
       setIsConnected(false);
       setSelectedWallet(null);
-      
+
       console.log('[STELLAR WALLETS KIT] Wallet disconnected successfully');
     } catch (error) {
       console.error('[STELLAR WALLETS KIT] Error during disconnect:', error);
