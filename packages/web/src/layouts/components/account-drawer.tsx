@@ -227,6 +227,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
+  const {
+    value: isDisconnecting,
+    onTrue: startDisconnecting,
+    onFalse: stopDisconnecting,
+  } = useBoolean();
+
   /* ↓ main button uses dummy avatar ------------------------------ */
   const avatarURL = '/assets/icons/navbar/logo.webp';
 
@@ -235,13 +241,26 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const isWalletConnected = !!connectedAddress || isConnected;
 
   const handleDisconnect = async () => {
+    if (isDisconnecting) {
+      return;
+    }
+
     try {
-      await disconnectWallet();
+      startDisconnecting();
+
       persist.disconnectWallet();
+
+      await disconnectWallet();
+
       posthog.reset();
+
       onClose();
     } catch (error) {
       console.error('Error disconnecting wallet:', error);
+
+      onClose();
+    } finally {
+      stopDisconnecting();
     }
   };
 
@@ -345,10 +364,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
           </Tooltip>
 
           {isWalletConnected && (
-            <Tooltip title="Disconnect">
+            <Tooltip title={isDisconnecting ? 'Disconnecting...' : 'Disconnect'}>
               <IconButton
                 onClick={handleDisconnect}
                 sx={{ ml: 'auto' }}
+                disabled={isDisconnecting}
                 data-testid="disconnect-wallet-button"
               >
                 <Iconify icon="solar:power-bold" />
