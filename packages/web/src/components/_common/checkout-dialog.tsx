@@ -23,6 +23,7 @@ import {
 import { Iconify } from '@/components/template/iconify';
 
 import GetHelpButton from './get-help-button';
+import { enqueueSnackbar } from 'notistack';
 
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------
@@ -62,41 +63,38 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   };
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 
-  // ----------------------------------------------------------------------
-  // DEFAULT DATA ----------------------------------------------------------
-
   const onramperUrl = createOnramperURL(CONFIG.onramper.apiKey, {
     amountUsd: amount,
     tokenSymbol: token,
-    walletAddress: walletAddress,
+    walletAddress,
     fiat: 'USD',
   });
 
-  async function handleCoinbaseClick() {
-    // Get a session token from your server
+  const handleCoinbaseClick = async () => {
+    if (!walletAddress) {
+      enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
+      return;
+    }
     const r = await fetch('/api/coinbase/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        address: walletAddress, // Stellar G...
-        asset: token, // 'XLM' (or whatever was selected)
-      }),
+      body: JSON.stringify({ address: walletAddress, asset: token }),
     });
     const { token: sessionToken, error } = await r.json();
     if (error || !sessionToken) {
-      // surface a toast/snackbar for the user
+      enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
       return;
     }
-
     const url = createCoinbasePayURL({
       amountUsd: amount,
       assetSymbol: token,
       sessionToken,
       fiat: 'USD',
+      sandbox: true,
+      path: 'buy/select-asset',
     });
-
-    window.open(url, '_blank', 'noopener');
-  }
+    openExternal(url);
+  };
 
   const CHECKOUTS: CheckoutOption[] = [
     {
@@ -112,10 +110,9 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
       avatar: 'https://avatars.githubusercontent.com/u/1885080?s=200&v=4',
       heading: 'Coinbase',
       description: t('Debit Card, ACH, Apple Pay, Coinbase Cash Balance'),
-      onClick: handleCoinbaseClick, // <-- key change
+      onClick: handleCoinbaseClick,
     },
   ];
-
   const disableButtons = !amount || Number(amount) <= 0 || !token || !walletAddress;
 
   return (
@@ -157,18 +154,13 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
           '&::-webkit-scrollbar-thumb': { backgroundColor: theme.palette.divider, borderRadius: 4 },
         }}
       >
-        {/* Remove "Coming soon" since both are active */}
         <List disablePadding>
           {CHECKOUTS.map((checkout) => (
             <ListItemButton
               key={checkout.id}
-              disabled={disableButtons}
               onClick={() => {
-                if (checkout.onClick) {
-                  checkout.onClick();
-                } else if (checkout.url) {
-                  openExternal(checkout.url);
-                }
+                if (checkout.onClick) return checkout.onClick();
+                if (checkout.url) return openExternal(checkout.url);
               }}
               sx={{
                 borderRadius: 1,

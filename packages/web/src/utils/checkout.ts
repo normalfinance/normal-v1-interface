@@ -70,21 +70,31 @@ export function createOnramperURL(
 
 export type CreateCoinbaseUrlOpts = {
   amountUsd: number | string;
-  assetSymbol: string; // e.g., 'XLM'
-  sessionToken: string; // returned from /api/coinbase/session
-  fiat?: string; // default 'USD'
+  assetSymbol: string;
+  sessionToken: string;
+  fiat?: string;
   path?: 'buy' | 'buy/select-asset'; // default 'buy'
-  redirectUrl?: string; // must be allowlisted in CDP
+  redirectUrl?: string;
+  sandbox?: boolean;
 };
 
 export function createCoinbasePayURL(opts: CreateCoinbaseUrlOpts): string {
-  const { amountUsd, assetSymbol, sessionToken, fiat = 'USD', path = 'buy', redirectUrl } = opts;
+  const {
+    amountUsd,
+    assetSymbol,
+    sessionToken,
+    fiat = 'USD',
+    path = 'buy',
+    redirectUrl,
+    sandbox = true, // default to sandbox while testing
+  } = opts;
 
-  const base = 'https://pay.coinbase.com';
+  const base = sandbox ? 'https://pay-sandbox.coinbase.com' : 'https://pay.coinbase.com';
+
   const params = new URLSearchParams({
     presetFiatAmount: String(amountUsd),
     fiatCurrency: fiat,
-    defaultAsset: assetSymbol,
+    defaultAsset: assetSymbol, // e.g., 'XLM'
     sessionToken,
   });
 
