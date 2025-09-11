@@ -55,6 +55,7 @@
   },
   "packageManager": "yarn@3.6.4",
   "dependencies": {
+    "@coinbase/cdp-sdk": "^1.38.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/figtree": "^5.2.8",
@@ -66,6 +67,7 @@
     "@walletconnect/types": "^2.13.1",
     "clsx": "^2.1.1",
     "copy-to-clipboard": "^3.3.3",
+    "jose": "^6.1.0",
     "motion": "^10",
     "next": "15.0.3",
     "simplex-noise": "^4.0.3",
