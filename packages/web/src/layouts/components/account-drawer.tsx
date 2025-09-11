@@ -16,18 +16,7 @@ import { useUserActivity, useLiquidityPositions } from '@/hooks';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
-import { useTheme } from '@mui/material/styles';
-import {
-  Box,
-  Paper,
-  Stack,
-  Button,
-  Drawer,
-  Tooltip,
-  IconButton,
-  Typography,
-  CircularProgress,
-} from '@mui/material';
+import { Box, Stack, Button, Drawer, Tooltip, IconButton, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
@@ -170,7 +159,7 @@ function WalletConnected({ address }: { address: string }) {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [address, getAllTokens]); 
+  }, [address, getAllTokens]);
 
   // Total balance
   const totalBalance = tokens.reduce((acc, tkn) => {

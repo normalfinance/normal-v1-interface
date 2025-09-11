@@ -116,7 +116,6 @@ async function transactionHandler(req: NextRequest) {
 
       console.log('[Transaction API] Stellar Server: ', server);
 
-
       // Submit the signed transaction
       const result = await server.sendTransaction(
         new Transaction(signedTransactionXDR, constants.StellarConfig.NETWORK_PASSPHRASE)

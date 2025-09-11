@@ -1,22 +1,12 @@
+import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
-import React, { useState } from 'react';
-import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { usePersistStore } from '@normalfinance/state';
+import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
-import {
-  Box,
-  Paper,
-  Stack,
-  Button,
-  Drawer,
-  Tooltip,
-  Typography,
-  IconButton,
-  CircularProgress,
-} from '@mui/material';
+import { Box, Stack, Button, Drawer, Tooltip, Typography, IconButton } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
@@ -31,7 +21,6 @@ interface WalletGateProps {
   variant?: 'contained' | 'soft' | 'outlined';
   color?: 'info' | 'success' | 'primary' | 'secondary' | 'error' | 'warning';
 }
-
 
 /* ------------------------------------------------------------------ */
 /* ② Connected: simple summary / logout                               */
@@ -87,7 +76,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
 
     try {
       await connectWallet();
-      
+
       // After successful connection, store the wallet info in our state
       if (publicKey) {
         await persist.connectWallet(publicKey, 'stellar-wallets-kit');

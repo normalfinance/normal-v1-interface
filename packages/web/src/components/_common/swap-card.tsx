@@ -394,7 +394,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
               setSwapError('No wallet connected');
               return;
             }
-            
+
             const trustlineStatus = await checkTrustline(
               walletAddress,
               buyToken.symbol,

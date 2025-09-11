@@ -1,14 +1,14 @@
 'use client';
 
+import type { ContractType } from '@normalfinance/types';
 import type { SnackbarKey } from '@/components/template/snackbar';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
-import type { AppStore, ContractType, AppStorePersist } from '@normalfinance/types';
 
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
 import { constants, trackEvent } from '@normalfinance/utils';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
-import { usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';

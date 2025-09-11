@@ -1,19 +1,20 @@
+import type { ISupportedWallet } from '@creit.tech/stellar-wallets-kit';
+
 import { useState, useEffect } from 'react';
-import {
-  StellarWalletsKit,
-  WalletNetwork,
-  HanaModule,
-  xBullModule,
-  FreighterModule,
-  LobstrModule,
-  HANA_ID,
-  XBULL_ID,
-  FREIGHTER_ID,
-  LOBSTR_ID,
-  ISupportedWallet,
-} from '@creit.tech/stellar-wallets-kit';
 import { Networks } from '@stellar/stellar-sdk';
 import { usePersistStore } from '@normalfinance/state';
+import {
+  HANA_ID,
+  XBULL_ID,
+  LOBSTR_ID,
+  HanaModule,
+  xBullModule,
+  LobstrModule,
+  FREIGHTER_ID,
+  WalletNetwork,
+  FreighterModule,
+  StellarWalletsKit,
+} from '@creit.tech/stellar-wallets-kit';
 
 // Initialize the Stellar Wallets Kit only on client-side
 let kit: StellarWalletsKit | null = null;
@@ -68,6 +69,9 @@ export const useStellarWalletsKit = () => {
             case 'lobstr':
             case 'lobster-stellar-kit':
               walletId = LOBSTR_ID;
+              break;
+            default:
+              walletId = null;
               break;
           }
         }
@@ -136,6 +140,9 @@ export const useStellarWalletsKit = () => {
               break;
             case LOBSTR_ID:
               walletType = 'lobster-stellar-kit';
+              break;
+            default:
+              walletType = 'stellar-wallets-kit';
               break;
           }
 

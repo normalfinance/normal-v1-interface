@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { createTrustline } from '@normalfinance/utils';
+
 import { useStellarWalletsKit } from '../use-stellar-wallets-kit';
 
 // ----------------------------------------------------------------------
@@ -41,11 +42,11 @@ export function useTrustLine(): ReturnType {
         setTxBroadcasting(true);
 
         const walletAddress = publicKey || storePersist.wallet.address;
-        
+
         if (!walletAddress) {
           throw new Error('No wallet connected');
         }
-        
+
         console.log('[TRUSTLINE] Creating trustline for:', assetCode, 'with issuer:', assetIssuer);
 
         await createTrustline(walletAddress, assetCode, assetIssuer, signTransaction);
