@@ -53,6 +53,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
   const [swapError, setSwapError] = useState<string | null>(null);
   const [creatingTrustline, setCreatingTrustline] = useState<boolean>(false);
+  const [needsTrustline, setNeedsTrustline] = useState<boolean>(false);
+  const [checkingTrustline, setCheckingTrustline] = useState<boolean>(false);
 
   const [maxSlippage, setMaxSlippage] = useState<number>(10_000); // bps
   const [exchangeRate, setExchangeRate] = useState<string>('');
@@ -135,6 +137,45 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setOpen(false);
   };
 
+  // Function to check if trustline is needed for the buy token
+  const checkTrustlineStatus = useCallback(async () => {
+    console.log('[TRUSTLINE CHECK] Starting check for token:', buyToken?.symbol);
+
+    if (!buyToken || buyToken.symbol === 'XLM') {
+      console.log('[TRUSTLINE CHECK] No check needed - XLM or no token');
+      setNeedsTrustline(false);
+      return;
+    }
+
+    const walletAddress = publicKey || storePersist.wallet.address;
+    if (!walletAddress) {
+      console.log('[TRUSTLINE CHECK] No wallet address available');
+      setNeedsTrustline(false);
+      return;
+    }
+
+    console.log('[TRUSTLINE CHECK] Checking for wallet:', walletAddress);
+    setCheckingTrustline(true);
+    try {
+      const trustlineStatus = await checkTrustline(
+        walletAddress,
+        buyToken.symbol,
+        constants.StellarConfig.NORMAL_TOKEN_ISSUER
+      );
+      console.log('[TRUSTLINE CHECK] Result:', trustlineStatus);
+      setNeedsTrustline(!trustlineStatus.exists);
+    } catch (error) {
+      console.error('[TRUSTLINE CHECK] Error checking trustline:', error);
+      setNeedsTrustline(false);
+    }
+    setCheckingTrustline(false);
+  }, [buyToken, publicKey, storePersist.wallet.address]);
+
+  // Check trustline status when buy token changes
+  useEffect(() => {
+    checkTrustlineStatus();
+  }, [checkTrustlineStatus]);
+
   // 7) Auto-fetch quote whenever relevant fields change: sellToken, buyToken, amount
   useEffect(() => {
     // Clear old quote state each time we start a new calculation
@@ -144,6 +185,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setBuyAmount(0);
     setSwapError(null);
     setCreatingTrustline(false);
+    setNeedsTrustline(false);
+    setCheckingTrustline(false);
 
     // Make sure we have both tokens
     if (!sellToken || !buyToken) {
@@ -199,10 +242,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // 9) handle token selection from popup, are we picking a sell token or a buy token?
   const handleTokenSelect = (token: Token) => {
-    if (token.symbol !== 'XLM') {
-      addTrustLine(token.symbol, constants.StellarConfig.NORMAL_TOKEN_ISSUER);
-    }
-
     if (activeButton === 'sell') {
       // User selecting the sell token
       if (buyToken && buyToken.id === token.id) {
@@ -279,8 +318,31 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // 10) Derive the main button's label
   const getButtonLabel = (): string => {
+    console.log('[BUTTON LABEL] State check:', {
+      sellToken: sellToken?.symbol,
+      buyToken: buyToken?.symbol,
+      checkingTrustline,
+      creatingTrustline,
+      needsTrustline,
+      sellVal,
+      isLoading,
+      quoteFetched,
+      insufficientBalance,
+    });
+
     if (!sellToken || !buyToken) {
       return 'Select a token';
+    }
+    if (checkingTrustline) {
+      return 'Checking trustline...';
+    }
+    if (creatingTrustline) {
+      return 'Creating trustline...';
+    }
+    // Check trustline first, before amount validation
+    if (needsTrustline && buyToken.symbol !== 'XLM') {
+      console.log('[BUTTON LABEL] Returning Create Trustline');
+      return 'Create Trustline';
     }
     if (sellVal <= 0) {
       return 'Enter an amount';
@@ -288,16 +350,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     if (isLoading) {
       return 'Finalizing quote...';
     }
-    if (creatingTrustline) {
-      return 'Creating trustline...';
-    }
     if (quoteFetched) {
       if (insufficientBalance) {
         return `Insufficient ${sellToken.symbol}`;
       }
-      // if (trustlineButtonActive) {
-      //   return 'Add trustline';
-      // }
       return 'Review';
     }
     return 'Enter an amount';
@@ -314,11 +370,30 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       return;
     } else if (label.startsWith('Insufficient')) {
       return;
-    } else if (label === 'Add trustline') {
-      addTrustLine(buyToken?.symbol || '', constants.StellarConfig.NORMAL_TOKEN_ISSUER);
+    } else if (label === 'Create Trustline') {
+      handleCreateTrustline();
     } else if (label === 'Review') {
       // open a review popup
       setReviewOpen(true);
+    }
+  };
+
+  // Separate function to handle trustline creation
+  const handleCreateTrustline = async () => {
+    if (!buyToken || buyToken.symbol === 'XLM') return;
+
+    setCreatingTrustline(true);
+    setSwapError(null);
+
+    try {
+      await addTrustLine(buyToken.symbol, constants.StellarConfig.NORMAL_TOKEN_ISSUER);
+      // After successful trustline creation, check status again
+      await checkTrustlineStatus();
+    } catch (error) {
+      setSwapError('Failed to create trustline');
+      console.error('Trustline creation error:', error);
+    } finally {
+      setCreatingTrustline(false);
     }
   };
 
@@ -374,7 +449,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     }
   }, [sellToken?.name, buyToken, amount, buyAmount]);
 
-  // New: doSwap function for use in onSubmit
+  // New: doSwap function for use in onSubmit (simplified - no trustline creation)
   const doSwap = async (): Promise<void> => {
     if (sellToken && buyToken && sellToken.id && buyToken.id) {
       try {
@@ -385,51 +460,20 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
         // Check if trustline exists for the buy token (if it's not XLM)
         if (buyToken.symbol !== 'XLM') {
-          setSwapError(null);
+          const walletAddress = publicKey || storePersist.wallet.address;
+          if (!walletAddress) {
+            setSwapError('No wallet connected');
+            return;
+          }
 
-          try {
-            // First check if trustline already exists
-            const walletAddress = publicKey || storePersist.wallet.address;
-            if (!walletAddress) {
-              setSwapError('No wallet connected');
-              return;
-            }
+          const trustlineStatus = await checkTrustline(
+            walletAddress,
+            buyToken.symbol,
+            constants.StellarConfig.NORMAL_TOKEN_ISSUER
+          );
 
-            const trustlineStatus = await checkTrustline(
-              walletAddress,
-              buyToken.symbol,
-              constants.StellarConfig.NORMAL_TOKEN_ISSUER
-            );
-
-            if (!trustlineStatus.exists) {
-              // Create trustline if it doesn't exist
-              setCreatingTrustline(true);
-
-              await addTrustLine(buyToken.symbol, constants.StellarConfig.NORMAL_TOKEN_ISSUER);
-
-              // Wait longer for network confirmation
-              await new Promise((resolve) => setTimeout(resolve, 10000));
-
-              // Verify trustline exists before proceeding
-              const finalCheck = await checkTrustline(
-                walletAddress,
-                buyToken.symbol,
-                constants.StellarConfig.NORMAL_TOKEN_ISSUER
-              );
-
-              if (!finalCheck.exists) {
-                setCreatingTrustline(false);
-                setSwapError(
-                  'Trustline creation is taking longer than expected. Please try the swap again in a moment.'
-                );
-                return;
-              }
-
-              setCreatingTrustline(false);
-            }
-          } catch (trustlineError) {
-            setCreatingTrustline(false);
-            setSwapError('Failed to add trustline for target token');
+          if (!trustlineStatus.exists) {
+            setSwapError('Trustline required before swap. Please create trustline first.');
             return;
           }
         }
@@ -868,7 +912,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           variant="contained" // use a supported variant
           size="large"
           onClick={handleMainButtonClick}
-          disabled={isLoading || creatingTrustline}
+          disabled={isLoading || creatingTrustline || checkingTrustline}
           sx={{
             backgroundColor: 'rgba(148,123,255,0.29)',
             color: '#6E4BFF',
