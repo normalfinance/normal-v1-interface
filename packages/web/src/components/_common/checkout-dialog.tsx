@@ -2,13 +2,13 @@ import React from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { CONFIG } from '@/global-config';
+import { enqueueSnackbar } from 'notistack';
 import { createOnramperURL, createCoinbasePayURL } from '@/utils/checkout';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
   List,
-  Chip,
   Dialog,
   Avatar,
   Typography,
@@ -23,7 +23,6 @@ import {
 import { Iconify } from '@/components/template/iconify';
 
 import GetHelpButton from './get-help-button';
-import { enqueueSnackbar } from 'notistack';
 
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------
@@ -58,9 +57,6 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   const theme = useTheme();
   const { t } = useTranslate();
 
-  const handleCheckoutClick = (wallet: CheckoutOption) => {
-    window.open(wallet.url, '_blank', 'noopener');
-  };
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 
   const onramperUrl = createOnramperURL(CONFIG.onramper.apiKey, {
@@ -159,8 +155,11 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
             <ListItemButton
               key={checkout.id}
               onClick={() => {
-                if (checkout.onClick) return checkout.onClick();
-                if (checkout.url) return openExternal(checkout.url);
+                if (checkout.onClick) {
+                  checkout.onClick();
+                } else if (checkout.url) {
+                  openExternal(checkout.url);
+                }
               }}
               sx={{
                 borderRadius: 1,
