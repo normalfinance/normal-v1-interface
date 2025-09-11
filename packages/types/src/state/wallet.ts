@@ -46,7 +46,7 @@ export type Wallet = {
     | 'hana-stellar-kit'
     | 'xbull-stellar-kit'
     | 'freighter-stellar-kit'
-    | 'lobster-stellar-kit'
+    | 'lobstr-stellar-kit'
     | 'stellar-wallets-kit'
     | undefined;
 };

@@ -1,6 +1,6 @@
 import type { ISupportedWallet } from '@creit.tech/stellar-wallets-kit';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Networks } from '@stellar/stellar-sdk';
 import { usePersistStore } from '@normalfinance/state';
 import {
@@ -16,19 +16,40 @@ import {
   StellarWalletsKit,
 } from '@creit.tech/stellar-wallets-kit';
 
-// Initialize the Stellar Wallets Kit only on client-side
+let globalIsConnecting = false;
+let globalIsModalOpen = false;
+let globalConnectionPromise: Promise<void> | null = null;
+let modalOpenCalls = 0;
+
 let kit: StellarWalletsKit | null = null;
+let kitInitialized = false;
 
 const initializeKit = () => {
-  if (typeof window !== 'undefined' && !kit) {
-    kit = new StellarWalletsKit({
-      network:
-        process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
-          ? WalletNetwork.PUBLIC
-          : WalletNetwork.TESTNET,
-      modules: [new HanaModule(), new xBullModule(), new FreighterModule(), new LobstrModule()],
-    });
+  if (typeof window === 'undefined') {
+    return null;
   }
+
+  if (kitInitialized && kit) {
+    return kit;
+  }
+
+  if (!kit && !kitInitialized) {
+    kitInitialized = true;
+
+    try {
+      kit = new StellarWalletsKit({
+        network:
+          process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
+            ? WalletNetwork.PUBLIC
+            : WalletNetwork.TESTNET,
+        modules: [new HanaModule(), new xBullModule(), new FreighterModule(), new LobstrModule()],
+      });
+    } catch (error) {
+      kitInitialized = false;
+      kit = null;
+    }
+  }
+
   return kit;
 };
 
@@ -36,153 +57,271 @@ export const useStellarWalletsKit = () => {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const persistStore = usePersistStore();
 
-  // Check for existing connection on mount
+  const connectWalletCalled = useRef(false);
+  const connectionChecked = useRef(false);
+
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        // Only run on client-side
         if (typeof window === 'undefined') return;
+
+        if (connectionChecked.current) {
+          return;
+        }
+
+        if (globalIsConnecting || isConnecting) {
+          return;
+        }
+
+        if (isConnected && publicKey) {
+          return;
+        }
+
+        connectionChecked.current = true;
+
+        if (persistStore.wallet.address) {
+          setPublicKey(persistStore.wallet.address);
+          setIsConnected(true);
+
+          const storedWalletType = persistStore.wallet.walletType;
+          if (storedWalletType) {
+            let walletId: string | null = null;
+            switch (storedWalletType) {
+              case 'hana':
+              case 'hana-stellar-kit':
+                walletId = HANA_ID;
+                break;
+              case 'xbull':
+              case 'xbull-stellar-kit':
+                walletId = XBULL_ID;
+                break;
+              case 'freighter':
+              case 'freighter-stellar-kit':
+                walletId = FREIGHTER_ID;
+                break;
+              case 'lobstr':
+              case 'lobstr-stellar-kit':
+                walletId = LOBSTR_ID;
+                break;
+              default:
+                walletId = null;
+                break;
+            }
+            if (walletId) {
+              setSelectedWallet(walletId);
+
+              const walletKit = initializeKit();
+              if (walletKit) {
+                try {
+                  walletKit.setWallet(walletId);
+                } catch (setWalletError) {
+                  // Silent fail
+                }
+              }
+            }
+          }
+          return;
+        }
 
         const walletKit = initializeKit();
         if (!walletKit) return;
 
         const storedWalletType = persistStore.wallet.walletType;
-        let walletId: string | null = null;
 
-        // Map wallet types to kit IDs
-        if (storedWalletType) {
-          switch (storedWalletType) {
-            case 'hana':
-            case 'hana-stellar-kit':
-              walletId = HANA_ID;
-              break;
-            case 'xbull':
-            case 'xbull-stellar-kit':
-              walletId = XBULL_ID;
-              break;
-            case 'freighter':
-            case 'freighter-stellar-kit':
-              walletId = FREIGHTER_ID;
-              break;
-            case 'lobstr':
-            case 'lobster-stellar-kit':
-              walletId = LOBSTR_ID;
-              break;
-            default:
-              walletId = null;
-              break;
-          }
+        if (!storedWalletType) {
+          return;
+        }
+
+        let walletId: string | null = null;
+        switch (storedWalletType) {
+          case 'hana':
+          case 'hana-stellar-kit':
+            walletId = HANA_ID;
+            break;
+          case 'xbull':
+          case 'xbull-stellar-kit':
+            walletId = XBULL_ID;
+            break;
+          case 'freighter':
+          case 'freighter-stellar-kit':
+            walletId = FREIGHTER_ID;
+            break;
+          case 'lobstr':
+          case 'lobstr-stellar-kit':
+            walletId = LOBSTR_ID;
+            break;
+          default:
+            walletId = null;
+            break;
         }
 
         if (walletId) {
-          console.log('[STELLAR WALLETS KIT] Restoring wallet:', walletId);
-          walletKit.setWallet(walletId);
-          setSelectedWallet(walletId);
+          try {
+            walletKit.setWallet(walletId);
+            setSelectedWallet(walletId);
 
-          // Add a small delay to ensure the wallet is properly set
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
+            await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const address = await walletKit.getAddress();
-        if (address?.address) {
-          setPublicKey(address.address);
-          setIsConnected(true);
-          console.log('[STELLAR WALLETS KIT] Existing connection found:', address.address);
+            const address = await walletKit.getAddress();
+            if (address?.address) {
+              setPublicKey(address.address);
+              setIsConnected(true);
+
+              if (address.address !== persistStore.wallet.address) {
+                await persistStore.connectWallet(address.address, storedWalletType);
+              }
+            }
+          } catch (restoreError) {
+            // Silent fail
+          }
         }
       } catch (error) {
-        console.log('[STELLAR WALLETS KIT] No existing connection found:', error);
+        // Silent fail
       }
     };
 
-    checkConnection();
-  }, [persistStore.wallet.walletType]);
+    if (
+      (persistStore.wallet.walletType || persistStore.wallet.address) &&
+      !isConnected &&
+      !isConnecting
+    ) {
+      checkConnection();
+    }
+  }, [
+    persistStore.wallet.walletType,
+    persistStore.wallet.address,
+    isConnected,
+    isConnecting,
+    publicKey,
+  ]);
 
   const connectWallet = async () => {
     try {
-      // Only run on client-side
       if (typeof window === 'undefined') {
         throw new Error('Wallet connection not available on server-side');
       }
+
+      if (connectWalletCalled.current) {
+        return;
+      }
+
+      if (globalIsModalOpen || globalIsConnecting) {
+        if (globalConnectionPromise) {
+          await globalConnectionPromise;
+        }
+        return;
+      }
+
+      if (isModalOpen || isConnecting) {
+        return;
+      }
+
+      connectWalletCalled.current = true;
+      globalIsConnecting = true;
+      globalIsModalOpen = true;
+      setIsConnecting(true);
+      setIsModalOpen(true);
 
       const walletKit = initializeKit();
       if (!walletKit) {
         throw new Error('Failed to initialize wallet kit');
       }
 
-      console.log('[STELLAR WALLETS KIT] Opening wallet selection modal...');
+      modalOpenCalls++;
 
-      walletKit.openModal({
-        onWalletSelected: async (wallet: ISupportedWallet) => {
-          console.log('[STELLAR WALLETS KIT] Wallet selected:', wallet.name, 'ID:', wallet.id);
+      globalConnectionPromise = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          walletKit.openModal({
+            onWalletSelected: async (wallet: ISupportedWallet) => {
+              try {
+                walletKit.setWallet(wallet.id);
+                setSelectedWallet(wallet.id);
 
-          walletKit.setWallet(wallet.id);
-          setSelectedWallet(wallet.id);
+                const address = await walletKit.getAddress();
 
-          const address = await walletKit.getAddress();
-          console.log('[STELLAR WALLETS KIT] Connected account:', address.address);
+                setPublicKey(address.address);
+                setIsConnected(true);
 
-          setPublicKey(address.address);
-          setIsConnected(true);
+                let walletType: string = 'stellar-wallets-kit';
+                switch (wallet.id) {
+                  case HANA_ID:
+                    walletType = 'hana-stellar-kit';
+                    break;
+                  case XBULL_ID:
+                    walletType = 'xbull-stellar-kit';
+                    break;
+                  case FREIGHTER_ID:
+                    walletType = 'freighter-stellar-kit';
+                    break;
+                  case LOBSTR_ID:
+                    walletType = 'lobstr-stellar-kit';
+                    break;
+                  default:
+                    walletType = 'stellar-wallets-kit';
+                    break;
+                }
 
-          // Map wallet ID to wallet type for storage
-          let walletType: string = 'stellar-wallets-kit';
-          switch (wallet.id) {
-            case HANA_ID:
-              walletType = 'hana-stellar-kit';
-              break;
-            case XBULL_ID:
-              walletType = 'xbull-stellar-kit';
-              break;
-            case FREIGHTER_ID:
-              walletType = 'freighter-stellar-kit';
-              break;
-            case LOBSTR_ID:
-              walletType = 'lobster-stellar-kit';
-              break;
-            default:
-              walletType = 'stellar-wallets-kit';
-              break;
-          }
+                await persistStore.connectWallet(address.address, walletType);
 
-          // Store the wallet connection in persist store
-          await persistStore.connectWallet(address.address, walletType);
+                try {
+                  await walletKit.signMessage('Welcome to Normal Finance', {
+                    networkPassphrase:
+                      process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
+                        ? Networks.PUBLIC
+                        : Networks.TESTNET,
+                    address: address.address,
+                  });
+                } catch (signError) {
+                  // Silent fail
+                }
 
-          // Test message signing for verification
-          try {
-            const signature = await walletKit.signMessage('Welcome to Normal Finance', {
-              networkPassphrase:
-                process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
-                  ? Networks.PUBLIC
-                  : Networks.TESTNET,
-              address: address.address,
-            });
+                resolve();
+              } catch (error) {
+                reject(error);
+              } finally {
+                connectWalletCalled.current = false;
+                globalIsConnecting = false;
+                globalIsModalOpen = false;
+                globalConnectionPromise = null;
+                setIsConnecting(false);
+                setIsModalOpen(false);
+              }
+            },
+            onClosed: (error) => {
+              connectWalletCalled.current = false;
+              globalIsConnecting = false;
+              globalIsModalOpen = false;
+              globalConnectionPromise = null;
+              setIsConnecting(false);
+              setIsModalOpen(false);
 
-            console.log('[STELLAR WALLETS KIT] Message signing test successful');
-          } catch (signError) {
-            console.warn('[STELLAR WALLETS KIT] Message signing test failed:', signError);
-          }
-        },
-        onClosed: (error) => {
-          console.log(
-            '[STELLAR WALLETS KIT] Modal closed',
-            error ? 'with error:' : 'by user',
-            error
-          );
-        },
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
+            },
+          });
+        }, 100);
       });
+
+      await globalConnectionPromise;
     } catch (error) {
-      console.error('[STELLAR WALLETS KIT] Error connecting wallet:', error);
+      connectWalletCalled.current = false;
+      globalIsConnecting = false;
+      globalIsModalOpen = false;
+      globalConnectionPromise = null;
+      setIsConnecting(false);
+      setIsModalOpen(false);
       throw error;
     }
   };
 
   const signTransaction = async (xdr: string) => {
-    console.log('[STELLAR WALLETS KIT] Signing transaction with address:', publicKey);
-    console.log('[STELLAR WALLETS KIT] Selected wallet:', selectedWallet);
-
-    // Only run on client-side
     if (typeof window === 'undefined') {
       throw new Error('Transaction signing not available on server-side');
     }
@@ -191,8 +330,6 @@ export const useStellarWalletsKit = () => {
     if (!walletKit) {
       throw new Error('Failed to initialize wallet kit');
     }
-
-    console.log('[STELLAR WALLETS KIT] Kit instance:', walletKit);
 
     if (!publicKey) {
       throw new Error('No wallet connected');
@@ -211,45 +348,47 @@ export const useStellarWalletsKit = () => {
         address: publicKey,
       });
 
-      console.log('[STELLAR WALLETS KIT] Transaction signed successfully');
       return signedTxXdr;
     } catch (error) {
-      console.error('[STELLAR WALLETS KIT] Error signing transaction:', error);
-      console.error('[STELLAR WALLETS KIT] Error details:', JSON.stringify(error, null, 2));
       throw error;
     }
   };
 
   const disconnectWallet = async () => {
     try {
-      console.log('[STELLAR WALLETS KIT] Disconnecting wallet...');
-
-      // Only run on client-side
       if (typeof window !== 'undefined') {
         const walletKit = initializeKit();
-        // Call kit's disconnect if available
         if (walletKit?.disconnect) {
           await walletKit.disconnect();
         }
       }
 
+      connectWalletCalled.current = false;
+      connectionChecked.current = false;
+      globalIsConnecting = false;
+      globalIsModalOpen = false;
+      globalConnectionPromise = null;
       setPublicKey(null);
       setIsConnected(false);
       setSelectedWallet(null);
-
-      console.log('[STELLAR WALLETS KIT] Wallet disconnected successfully');
+      setIsConnecting(false);
+      setIsModalOpen(false);
     } catch (error) {
-      console.error('[STELLAR WALLETS KIT] Error during disconnect:', error);
-      // Still update local state even if disconnect fails
+      connectWalletCalled.current = false;
+      connectionChecked.current = false;
+      globalIsConnecting = false;
+      globalIsModalOpen = false;
+      globalConnectionPromise = null;
       setPublicKey(null);
       setIsConnected(false);
       setSelectedWallet(null);
+      setIsConnecting(false);
+      setIsModalOpen(false);
     }
   };
 
   const getSupportedWallets = async () => {
     try {
-      // Only run on client-side
       if (typeof window === 'undefined') {
         return [];
       }
@@ -260,10 +399,8 @@ export const useStellarWalletsKit = () => {
       }
 
       const wallets = await walletKit.getSupportedWallets();
-      console.log('[STELLAR WALLETS KIT] Supported wallets:', wallets);
       return wallets;
     } catch (error) {
-      console.error('[STELLAR WALLETS KIT] Error getting supported wallets:', error);
       return [];
     }
   };
@@ -273,6 +410,8 @@ export const useStellarWalletsKit = () => {
     publicKey,
     isConnected,
     selectedWallet,
+    isConnecting,
+    isModalOpen,
     connectWallet,
     signTransaction,
     disconnectWallet,
