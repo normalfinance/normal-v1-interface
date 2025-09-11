@@ -162,6 +162,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
+  const connectedAddress = persist.wallet.address;
 
   return (
     <Stack sx={{ gap: '2px' }}>
@@ -372,6 +373,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
             token={buyToken?.symbol ?? 'USDC'}
             amount={amount}
             onClose={handleReviewClose}
+            walletAddress={connectedAddress}
           />
         )}
       </Stack>
