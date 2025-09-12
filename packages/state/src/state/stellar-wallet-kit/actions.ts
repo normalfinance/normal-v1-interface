@@ -22,6 +22,7 @@ import {
 import { LedgerModule, LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
 
 import { Networks } from '@stellar/stellar-sdk';
+import { enqueueSnackbar } from 'notistack';
 
 export interface StellarWalletKitState {
   kit: StellarWalletsKit | null;
@@ -149,10 +150,6 @@ export function createStellarWalletKitActions(
                   break;
               }
 
-              if (persistStore?.connectWallet) {
-                await persistStore.connectWallet(address.address, walletType);
-              }
-
               try {
                 await kit.signMessage('Welcome to Normal Finance', {
                   networkPassphrase:
@@ -162,7 +159,26 @@ export function createStellarWalletKitActions(
                   address: address.address,
                 });
               } catch (signError) {
-                console.error('Failed to sign message:', signError);
+                console.error('Signature rejected or failed:', signError);
+                enqueueSnackbar('Please sign the message to connect your wallet.', {
+                  variant: 'error',
+                  autoHideDuration: 5000,
+                });
+                set({
+                  publicKey: null,
+                  isConnected: false,
+                  selectedWallet: null,
+                });
+                reject(
+                  new Error(
+                    'Wallet connection requires signature verification. Please sign the message to proceed.'
+                  )
+                );
+                return;
+              }
+
+              if (persistStore?.connectWallet) {
+                await persistStore.connectWallet(address.address, walletType);
               }
 
               resolve();
