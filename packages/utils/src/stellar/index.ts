@@ -8,10 +8,5 @@ export * from './prices';
 export * from './trustlines';
 export * from './address';
 export * from './events';
-import Signer from './wallets/Signer';
 export * from './oracle';
 export * from './token';
-
-export { WalletConnect } from './wallets/wallet-connect';
-
-export { Signer };

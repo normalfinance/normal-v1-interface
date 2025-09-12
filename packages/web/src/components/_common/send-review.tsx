@@ -101,10 +101,13 @@ const SendReview: React.FC<SendReviewProps> = ({
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             const apiRes = await executeSend(signedXDR, 'Send Token');
             if (apiRes?.transactionHash) {
               (tx as any).hash = apiRes.transactionHash;

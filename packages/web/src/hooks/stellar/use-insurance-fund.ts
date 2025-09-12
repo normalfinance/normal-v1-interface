@@ -191,12 +191,15 @@ export function useInsuranceFund(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          console.log('txtxtx', tx, tx.signed, signedXDR);
+          console.log('txtxtx', tx, tx.built, unsignedXDR);
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             const apiRes = await executeInsurance(signedXDR, 'Insurance Fund Deposit');
             console.log('API result:', apiRes);
             if (apiRes?.transactionHash) {
@@ -230,10 +233,13 @@ export function useInsuranceFund(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             await executeInsurance(signedXDR, 'Insurance Fund Request Withdraw');
           }
 
@@ -261,10 +267,13 @@ export function useInsuranceFund(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             await executeInsurance(signedXDR, 'Insurance Fund Cancel Request Withdraw');
           }
 
@@ -292,10 +301,13 @@ export function useInsuranceFund(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             await executeInsurance(signedXDR, 'Insurance Fund Withdraw');
           }
 

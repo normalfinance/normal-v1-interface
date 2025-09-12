@@ -6,9 +6,6 @@ export * from './time';
 export * from './ui';
 export * from './analytics';
 
-// tacky, i know
-import { WalletConnectAllowedMethods } from './stellar/wallets/wallet-connect';
-export { WalletConnectAllowedMethods };
 
 export function splitByPredicate<T>(array: T[], predicate: (element: T) => boolean): [T[], T[]] {
   return array.reduce<[T[], T[]]>(

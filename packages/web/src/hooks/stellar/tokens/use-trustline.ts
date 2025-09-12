@@ -2,7 +2,9 @@
 
 import { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
-import { fetchAndIssueTrustline } from '@normalfinance/utils';
+import { createTrustline } from '@normalfinance/utils';
+
+import { useStellarWalletsKit } from '../use-stellar-wallets-kit';
 
 // ----------------------------------------------------------------------
 
@@ -18,6 +20,7 @@ interface ReturnType {
 
 export function useTrustLine(): ReturnType {
   const storePersist = usePersistStore();
+  const { signTransaction, publicKey } = useStellarWalletsKit();
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
@@ -36,19 +39,29 @@ export function useTrustLine(): ReturnType {
       try {
         setError(null);
         setLoading(true);
-
         setTxBroadcasting(true);
-        await fetchAndIssueTrustline(storePersist.wallet.address!, assetCode, assetIssuer);
+
+        const walletAddress = publicKey || storePersist.wallet.address;
+
+        if (!walletAddress) {
+          throw new Error('No wallet connected');
+        }
+
+        console.log('[TRUSTLINE] Creating trustline for:', assetCode, 'with issuer:', assetIssuer);
+
+        await createTrustline(walletAddress, assetCode, assetIssuer, signTransaction);
+
+        console.log('[TRUSTLINE] Trustline created successfully');
         setTrustlineButtonActive(false);
       } catch (e: any) {
-        console.log(e);
+        console.error('[TRUSTLINE] Error creating trustline:', e);
         setError(e);
       }
-      setTxBroadcasting(false);
 
+      setTxBroadcasting(false);
       setLoading(false);
     },
-    [storePersist.wallet.address]
+    [storePersist.wallet.address, publicKey, signTransaction]
   );
 
   return {
