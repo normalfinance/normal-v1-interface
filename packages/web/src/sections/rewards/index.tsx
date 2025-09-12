@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { RouterLink } from '@/routes/components';
@@ -15,13 +16,12 @@ import { Button } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { WalletGate } from '@/components/_common/wallet-gate';
+import MoneyGramTransactionsTable from '@/components/_common/moneygram-history-table';
 
 import { ProfileCover } from './profile-cover';
 import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
-import MoneyGramTransactionsTable from '@/components/_common/moneygram-history-table';
-import React from 'react';
 
 interface User {
   id: string;

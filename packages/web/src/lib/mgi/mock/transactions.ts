@@ -1,4 +1,4 @@
-import type { Sep24Transaction, Amount } from '../types';
+import type { Amount, Sep24Transaction } from '../types';
 
 const USDC = (v: string): Amount => ({ amount: v, asset: 'USDC' });
 

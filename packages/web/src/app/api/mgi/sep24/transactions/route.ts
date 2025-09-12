@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
 import type { Sep24ListResponse } from '@/lib/mgi/types';
+
+import { NextResponse } from 'next/server';
 import { MOCK_TX } from '@/lib/mgi/mock/transactions';
 
 export async function GET(req: Request) {

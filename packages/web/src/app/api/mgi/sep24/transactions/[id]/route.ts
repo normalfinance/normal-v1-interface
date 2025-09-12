@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
 import type { Sep24SingleResponse } from '@/lib/mgi/types';
+
+import { NextResponse } from 'next/server';
 import { MOCK_TX } from '@/lib/mgi/mock/transactions';
 
 type Params = { params: { id: string } };
