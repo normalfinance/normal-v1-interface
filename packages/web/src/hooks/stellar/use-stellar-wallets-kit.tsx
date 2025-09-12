@@ -1,6 +1,4 @@
-import type { ISupportedWallet } from '@creit.tech/stellar-wallets-kit';
-
-import { useEffect, useRef, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { HANA_ID, XBULL_ID, LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 
@@ -152,21 +150,11 @@ export const useStellarWalletsKit = () => {
   ]);
 
   const connectWallet = useCallback(async () => {
-    try {
-      await walletKitStore.connectWallet(persistStore);
-    } catch (error) {
-      throw error;
-    }
+    await walletKitStore.connectWallet(persistStore);
   }, [walletKitStore, persistStore]);
 
   const signTransaction = useCallback(
-    async (xdr: string) => {
-      try {
-        return await walletKitStore.signTransaction(xdr);
-      } catch (error) {
-        throw error;
-      }
-    },
+    async (xdr: string) => await walletKitStore.signTransaction(xdr),
     [walletKitStore]
   );
 
