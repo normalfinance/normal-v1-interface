@@ -20,6 +20,8 @@ import { ProfileCover } from './profile-cover';
 import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
+import MoneyGramTransactionsTable from '@/components/_common/moneygram-history-table';
+import React from 'react';
 
 interface User {
   id: string;
@@ -54,6 +56,7 @@ const NAV_ITEMS = [
     label: 'Protocol',
     icon: <Iconify width={24} icon="eva:more-horizontal-fill" />,
   },
+  { value: 'moneygram', label: 'MoneyGram', icon: <Iconify width={24} icon="mdi:bank-outline" /> }, // ← NEW
 ];
 
 const TAB_PARAM = 'tab';
@@ -88,6 +91,30 @@ export function RewardsView() {
   const selectedTab = searchParams.get(TAB_PARAM) ?? '';
   const walletAddress = usePersistStore((s) => s.wallet.address);
   const { t } = useTranslate();
+
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    let on = true;
+    (async () => {
+      if (selectedTab !== 'moneygram' || !walletAddress) return;
+      setLoading(true);
+      try {
+        // MOCK path uses your /api/mgi/sep24/transactions (mock)
+        // REAL path goes via /proxy/ with Authorization header (handled in lib)
+        const tx = await import('@/lib/mgi/history').then((m) =>
+          m.listTransactions({ account: walletAddress })
+        );
+        if (on) setRows(tx as any[]);
+      } finally {
+        if (on) setLoading(false);
+      }
+    })();
+    return () => {
+      on = false;
+    };
+  }, [selectedTab, walletAddress]);
 
   const createRedirectPath = (currentPath: string, query: string) => {
     const q = new URLSearchParams({ [TAB_PARAM]: query }).toString();
@@ -176,6 +203,12 @@ export function RewardsView() {
       {selectedTab === 'protocol' && (
         <WalletGate buttonText={t('Connect Wallet to view Protocol Points')} fullWidth>
           <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
+        </WalletGate>
+      )}
+
+      {selectedTab === 'moneygram' && (
+        <WalletGate buttonText={t('Connect Wallet to view MoneyGram history')} fullWidth>
+          <MoneyGramTransactionsTable rows={rows} loading={loading} />
         </WalletGate>
       )}
     </DashboardContent>
