@@ -241,3 +241,44 @@ export async function runWithdrawFlow(
   const { url } = await startMgiWithdraw(token, userAccount, Number(amount));
   openMoneyGram(url, (tx) => onReady?.(tx));
 }
+
+export async function startWithdrawCancel(token: string, txId: string) {
+  const r = await fetch(`/api/mgi/sep24/withdraw/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, id: txId, lang: 'en' }),
+  });
+
+  const text = await r.text();
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
+
+  if (!r.ok || !data?.url) {
+    // surface clear diagnostics
+    throw new Error(
+      `Cancel start failed (HTTP ${r.status}): ${JSON.stringify(
+        typeof data === 'string' ? { error: data } : data
+      )}`
+    );
+  }
+  return data as { url: string; id: string };
+}
+
+export async function runWithdrawCancelFlow(
+  userAccount: string,
+  txId: string,
+  onClosed?: (tx: any) => void
+) {
+  // We re-use your existing SEP-10 auth helper
+  const token = await getMgiAuthToken(userAccount);
+  const { url } = await startWithdrawCancel(token, txId);
+
+  openMoneyGram(url, (tx) => {
+    // When MoneyGram UI closes after cancel, status should become 'refunded' eventually
+    onClosed?.(tx);
+  });
+}

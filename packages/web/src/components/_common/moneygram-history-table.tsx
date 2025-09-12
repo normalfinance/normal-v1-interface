@@ -2,7 +2,10 @@
 
 import * as React from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Box, Chip, Stack, Typography, Link } from '@mui/material';
+import { Box, Chip, Stack, Typography, Link, Button, Tooltip } from '@mui/material';
+import { enqueueSnackbar } from 'notistack';
+import { usePersistStore } from '@normalfinance/state';
+import { runWithdrawCancelFlow } from '@/lib/mgi/client';
 
 // ---- Shared types (compatible with your mocks & real) ----------------
 export type Sep24Kind = 'deposit' | 'withdrawal';
@@ -82,82 +85,147 @@ function StatusChip({ status }: { status: Sep24Status }) {
   return <Chip size="small" color={statusColor(status)} label={pretty(status)} />;
 }
 
-// ---- Columns ---------------------------------------------------------
-const columns: GridColDef<Sep24Row>[] = [
-  {
-    field: 'kind',
-    headerName: 'Type',
-    width: 120,
-    renderCell: ({ value }) => (String(value) === 'withdrawal' ? 'Withdraw' : 'Deposit'),
-  },
-  {
-    field: 'status',
-    headerName: 'Status',
-    width: 210,
-    renderCell: ({ value }) => <StatusChip status={String(value) as Sep24Status} />,
-  },
-  {
-    field: 'external_transaction_id',
-    headerName: 'Reference #',
-    width: 180,
-    renderCell: ({ row }) => (row.kind === 'withdrawal' ? row.external_transaction_id || '—' : '—'),
-  },
-  {
-    field: 'amount_in',
-    headerName: 'Amount In (Wallet / Agent)',
-    flex: 1,
-    minWidth: 180,
-    renderCell: ({ row }) => fmtAmt(row.amount_in),
-  },
-  {
-    field: 'amount_fee',
-    headerName: 'Fees',
-    width: 120,
-    renderCell: ({ row }) => fmtAmt(row.amount_fee),
-  },
-  // For deposit: "Received in Wallet" (USDC); For withdrawal: "Payout (Local)"
-  {
-    field: 'amount_out',
-    headerName: 'Received (Deposit) / Payout (Withdraw)',
-    flex: 1.1,
-    minWidth: 220,
-    renderCell: ({ row }) =>
-      row.kind === 'deposit'
-        ? fmtAmt(row.amount_out, 'USDC')
-        : fmtAmt(row.amount_out /* anchor may set local currency asset */),
-  },
-  {
-    field: 'started_at',
-    headerName: 'Started',
-    width: 190,
-    renderCell: ({ row }) => fmtDate(row.started_at),
-  },
-  {
-    field: 'updated_at',
-    headerName: 'Updated',
-    width: 190,
-    renderCell: ({ row }) => fmtDate(row.updated_at || row.completed_at || row.refunded_at),
-  },
-  {
-    field: 'more_info_url',
-    headerName: 'More Info',
-    width: 120,
-    sortable: false,
-    renderCell: ({ value }) =>
-      value ? (
-        <Link href={String(value)} target="_blank" rel="noopener">
-          Open
-        </Link>
-      ) : (
-        '—'
-      ),
-  },
-  {
-    field: 'id',
-    headerName: 'Transaction ID',
-    width: 240,
-  },
-];
+function canCancel(row: Sep24Row) {
+  if (row.kind !== 'withdrawal') return false;
+  const terminal: Sep24Status[] = [
+    'completed',
+    'refunded',
+    'expired',
+    'no_market',
+    'too_small',
+    'too_large',
+    'error',
+  ];
+  return !terminal.includes(row.status);
+}
+
+// ---- Columns (built as a factory so we can capture handlers) --------
+function buildColumns() {
+  const columns: GridColDef<Sep24Row>[] = [
+    {
+      field: 'kind',
+      headerName: 'Type',
+      width: 120,
+      renderCell: ({ value }) => (String(value) === 'withdrawal' ? 'Withdraw' : 'Deposit'),
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 210,
+      renderCell: ({ value }) => <StatusChip status={String(value) as Sep24Status} />,
+    },
+    {
+      field: 'external_transaction_id',
+      headerName: 'Reference #',
+      width: 180,
+      renderCell: ({ row }) =>
+        row.kind === 'withdrawal' ? row.external_transaction_id || '—' : '—',
+    },
+    {
+      field: 'amount_in',
+      headerName: 'Amount In (Wallet / Agent)',
+      flex: 1,
+      minWidth: 180,
+      renderCell: ({ row }) => fmtAmt(row.amount_in),
+    },
+    {
+      field: 'amount_fee',
+      headerName: 'Fees',
+      width: 120,
+      renderCell: ({ row }) => fmtAmt(row.amount_fee),
+    },
+    {
+      field: 'amount_out',
+      headerName: 'Received (Deposit) / Payout (Withdraw)',
+      flex: 1.1,
+      minWidth: 220,
+      renderCell: ({ row }) =>
+        row.kind === 'deposit'
+          ? fmtAmt(row.amount_out, 'USDC')
+          : fmtAmt(row.amount_out /* may be local currency */),
+    },
+    {
+      field: 'started_at',
+      headerName: 'Started',
+      width: 190,
+      renderCell: ({ row }) => fmtDate(row.started_at),
+    },
+    {
+      field: 'updated_at',
+      headerName: 'Updated',
+      width: 190,
+      renderCell: ({ row }) => fmtDate(row.updated_at || row.completed_at || row.refunded_at),
+    },
+    {
+      field: 'more_info_url',
+      headerName: 'More Info',
+      width: 120,
+      sortable: false,
+      renderCell: ({ value }) =>
+        value ? (
+          <Link href={String(value)} target="_blank" rel="noopener">
+            Open
+          </Link>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      field: 'id',
+      headerName: 'Transaction ID',
+      width: 240,
+    },
+    // ---- NEW: Actions (Cancel/Refund) --------------------------------
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 140,
+      sortable: false,
+      renderCell: ({ row }) => {
+        const disabled = !canCancel(row);
+        const title =
+          row.kind !== 'withdrawal'
+            ? 'Cancel available only for withdrawals'
+            : disabled
+              ? 'This transaction cannot be canceled'
+              : 'Open MoneyGram Cancel UI';
+        return (
+          <Tooltip title={title}>
+            <span>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={disabled}
+                onClick={async () => {
+                  try {
+                    const address = usePersistStore.getState().wallet.address as string | undefined;
+                    if (!address) {
+                      enqueueSnackbar('Connect your wallet first', { variant: 'warning' });
+                      return;
+                    }
+                    enqueueSnackbar('Opening MoneyGram cancel…', { variant: 'info' });
+
+                    await runWithdrawCancelFlow(address, row.id, () => {
+                      enqueueSnackbar(
+                        'Cancel flow finished. Status will update shortly (refunded).',
+                        { variant: 'success' }
+                      );
+                    });
+                  } catch (e: any) {
+                    enqueueSnackbar(e?.message || 'Cancel failed', { variant: 'error' });
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+            </span>
+          </Tooltip>
+        );
+      },
+    },
+  ];
+  return columns;
+}
 
 // ---- Component -------------------------------------------------------
 export default function MoneyGramTransactionsTable({
@@ -169,6 +237,8 @@ export default function MoneyGramTransactionsTable({
   loading?: boolean;
   title?: string;
 }) {
+  const columns = React.useMemo(() => buildColumns(), []);
+
   return (
     <Stack spacing={1} sx={{ width: '100%' }}>
       <Typography variant="h6">{title}</Typography>
