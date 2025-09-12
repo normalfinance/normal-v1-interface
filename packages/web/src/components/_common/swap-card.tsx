@@ -25,6 +25,25 @@ import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
+enum ButtonState {
+  SELECT_TOKEN = 'SELECT_TOKEN',
+  ENTER_AMOUNT = 'ENTER_AMOUNT',
+  CHECKING_TRUSTLINE = 'CHECKING_TRUSTLINE',
+  CREATE_TRUSTLINE = 'CREATE_TRUSTLINE',
+  CREATING_TRUSTLINE = 'CREATING_TRUSTLINE',
+  FINALIZING_QUOTE = 'FINALIZING_QUOTE',
+  INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
+  REVIEW = 'REVIEW',
+}
+
+interface ButtonConfig {
+  label: string;
+  disabled: boolean;
+  action: () => void;
+  variant?: 'contained' | 'outlined' | 'text';
+  color?: 'primary' | 'secondary' | 'error';
+}
+
 interface SwapCardProps extends CardProps {
   tokensList?: Token[];
   swapFeeInfo?: SwapFeeInfo;
@@ -316,9 +335,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setBuyAmount(0);
   };
 
-  // 10) Derive the main button's label
-  const getButtonLabel = (): string => {
-    console.log('[BUTTON LABEL] State check:', {
+  const getButtonState = (): ButtonState => {
+    console.log('[BUTTON STATE] State check:', {
       sellToken: sellToken?.symbol,
       buyToken: buyToken?.symbol,
       checkingTrustline,
@@ -331,51 +349,88 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     });
 
     if (!sellToken || !buyToken) {
-      return 'Select a token';
+      return ButtonState.SELECT_TOKEN;
     }
     if (checkingTrustline) {
-      return 'Checking trustline...';
+      return ButtonState.CHECKING_TRUSTLINE;
     }
     if (creatingTrustline) {
-      return 'Creating trustline...';
+      return ButtonState.CREATING_TRUSTLINE;
     }
     // Check trustline first, before amount validation
     if (needsTrustline && buyToken.symbol !== 'XLM') {
-      console.log('[BUTTON LABEL] Returning Create Trustline');
-      return 'Create Trustline';
+      console.log('[BUTTON STATE] Returning CREATE_TRUSTLINE');
+      return ButtonState.CREATE_TRUSTLINE;
     }
     if (sellVal <= 0) {
-      return 'Enter an amount';
+      return ButtonState.ENTER_AMOUNT;
     }
     if (isLoading) {
-      return 'Finalizing quote...';
+      return ButtonState.FINALIZING_QUOTE;
     }
     if (quoteFetched) {
       if (insufficientBalance) {
-        return `Insufficient ${sellToken.symbol}`;
+        return ButtonState.INSUFFICIENT_BALANCE;
       }
-      return 'Review';
+      return ButtonState.REVIEW;
     }
-    return 'Enter an amount';
+    return ButtonState.ENTER_AMOUNT;
   };
 
-  // Different button states have different actions
+  const getButtonConfig = (state: ButtonState): ButtonConfig => {
+    const configs: Record<ButtonState, ButtonConfig> = {
+      [ButtonState.SELECT_TOKEN]: {
+        label: 'Select a token',
+        disabled: true,
+        action: () => {},
+      },
+      [ButtonState.ENTER_AMOUNT]: {
+        label: 'Enter an amount',
+        disabled: true,
+        action: () => {},
+      },
+      [ButtonState.CHECKING_TRUSTLINE]: {
+        label: 'Checking trustline...',
+        disabled: true,
+        action: () => {},
+      },
+      [ButtonState.CREATING_TRUSTLINE]: {
+        label: 'Creating trustline...',
+        disabled: true,
+        action: () => {},
+      },
+      [ButtonState.FINALIZING_QUOTE]: {
+        label: 'Finalizing quote...',
+        disabled: true,
+        action: () => {},
+      },
+      [ButtonState.INSUFFICIENT_BALANCE]: {
+        label: `Insufficient ${sellToken?.symbol || ''}`,
+        disabled: true,
+        action: () => {},
+        color: 'error' as const,
+      },
+      [ButtonState.CREATE_TRUSTLINE]: {
+        label: 'Create Trustline',
+        disabled: false,
+        action: handleCreateTrustline,
+        variant: 'contained' as const,
+      },
+      [ButtonState.REVIEW]: {
+        label: 'Review',
+        disabled: false,
+        action: () => setReviewOpen(true),
+        variant: 'contained' as const,
+      },
+    };
+
+    return configs[state];
+  };
+
   const handleMainButtonClick = () => {
-    const label = getButtonLabel();
-    if (label === 'Select a token') {
-      return;
-    } else if (label === 'Enter an amount') {
-      return;
-    } else if (label === 'Finalizing quote...') {
-      return;
-    } else if (label.startsWith('Insufficient')) {
-      return;
-    } else if (label === 'Create Trustline') {
-      handleCreateTrustline();
-    } else if (label === 'Review') {
-      // open a review popup
-      setReviewOpen(true);
-    }
+    const state = getButtonState();
+    const config = getButtonConfig(state);
+    config.action();
   };
 
   // Separate function to handle trustline creation
@@ -905,25 +960,34 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         </Box>
       )}
 
-      {/* Main button with multiple states */}
       {isConnected ? (
-        <Button
-          fullWidth
-          variant="contained" // use a supported variant
-          size="large"
-          onClick={handleMainButtonClick}
-          disabled={isLoading || creatingTrustline || checkingTrustline}
-          sx={{
-            backgroundColor: 'rgba(148,123,255,0.29)',
-            color: '#6E4BFF',
-            '&:hover': {
-              backgroundColor: 'rgba(148,123,255,0.20)',
-            },
-            borderRadius: '20px',
-          }}
-        >
-          {getButtonLabel()}
-        </Button>
+        (() => {
+          const buttonState = getButtonState();
+          const buttonConfig = getButtonConfig(buttonState);
+
+          return (
+            <Button
+              fullWidth
+              variant={buttonConfig.variant || 'contained'}
+              size="large"
+              onClick={handleMainButtonClick}
+              disabled={buttonConfig.disabled}
+              color={buttonConfig.color}
+              sx={{
+                backgroundColor:
+                  buttonConfig.color === 'error' ? undefined : 'rgba(148,123,255,0.29)',
+                color: buttonConfig.color === 'error' ? undefined : '#6E4BFF',
+                '&:hover': {
+                  backgroundColor:
+                    buttonConfig.color === 'error' ? undefined : 'rgba(148,123,255,0.20)',
+                },
+                borderRadius: '20px',
+              }}
+            >
+              {buttonConfig.label}
+            </Button>
+          );
+        })()
       ) : (
         <WalletGate buttonText="Connect Wallet to Swap" fullWidth variant="contained">
           {null}
