@@ -1,68 +1,21 @@
 import type { ISupportedWallet } from '@creit.tech/stellar-wallets-kit';
 
-import { useState, useEffect, useRef } from 'react';
-import { Networks } from '@stellar/stellar-sdk';
-import { usePersistStore } from '@normalfinance/state';
-import {
-  HANA_ID,
-  XBULL_ID,
-  LOBSTR_ID,
-  HanaModule,
-  xBullModule,
-  LobstrModule,
-  FREIGHTER_ID,
-  WalletNetwork,
-  FreighterModule,
-  StellarWalletsKit,
-} from '@creit.tech/stellar-wallets-kit';
-
-let globalIsConnecting = false;
-let globalIsModalOpen = false;
-let globalConnectionPromise: Promise<void> | null = null;
-let modalOpenCalls = 0;
-
-let kit: StellarWalletsKit | null = null;
-let kitInitialized = false;
-
-const initializeKit = () => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  if (kitInitialized && kit) {
-    return kit;
-  }
-
-  if (!kit && !kitInitialized) {
-    kitInitialized = true;
-
-    try {
-      kit = new StellarWalletsKit({
-        network:
-          process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
-            ? WalletNetwork.PUBLIC
-            : WalletNetwork.TESTNET,
-        modules: [new HanaModule(), new xBullModule(), new FreighterModule(), new LobstrModule()],
-      });
-    } catch (error) {
-      kitInitialized = false;
-      kit = null;
-    }
-  }
-
-  return kit;
-};
+import { useEffect, useRef, useCallback } from 'react';
+import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
+import { HANA_ID, XBULL_ID, LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 
 export const useStellarWalletsKit = () => {
-  const [publicKey, setPublicKey] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const persistStore = usePersistStore();
+  const walletKitStore = useStellarWalletKitStore();
 
-  const connectWalletCalled = useRef(false);
   const connectionChecked = useRef(false);
+
+  // Initialize the wallet kit on first load
+  useEffect(() => {
+    if (!walletKitStore.isInitialized) {
+      walletKitStore.initializeKit();
+    }
+  }, [walletKitStore.isInitialized]);
 
   useEffect(() => {
     const checkConnection = async () => {
@@ -73,19 +26,19 @@ export const useStellarWalletsKit = () => {
           return;
         }
 
-        if (globalIsConnecting || isConnecting) {
+        if (walletKitStore.isConnecting) {
           return;
         }
 
-        if (isConnected && publicKey) {
+        if (walletKitStore.isConnected && walletKitStore.publicKey) {
           return;
         }
 
         connectionChecked.current = true;
 
         if (persistStore.wallet.address) {
-          setPublicKey(persistStore.wallet.address);
-          setIsConnected(true);
+          walletKitStore.setPublicKey(persistStore.wallet.address);
+          walletKitStore.setConnected(true);
 
           const storedWalletType = persistStore.wallet.walletType;
           if (storedWalletType) {
@@ -112,12 +65,11 @@ export const useStellarWalletsKit = () => {
                 break;
             }
             if (walletId) {
-              setSelectedWallet(walletId);
+              walletKitStore.setSelectedWallet(walletId);
 
-              const walletKit = initializeKit();
-              if (walletKit) {
+              if (walletKitStore.kit) {
                 try {
-                  walletKit.setWallet(walletId);
+                  walletKitStore.kit.setWallet(walletId);
                 } catch (setWalletError) {
                   // Silent fail
                 }
@@ -127,8 +79,7 @@ export const useStellarWalletsKit = () => {
           return;
         }
 
-        const walletKit = initializeKit();
-        if (!walletKit) return;
+        if (!walletKitStore.kit) return;
 
         const storedWalletType = persistStore.wallet.walletType;
 
@@ -161,257 +112,89 @@ export const useStellarWalletsKit = () => {
 
         if (walletId) {
           try {
-            walletKit.setWallet(walletId);
-            setSelectedWallet(walletId);
+            walletKitStore.kit.setWallet(walletId);
+            walletKitStore.setSelectedWallet(walletId);
 
             await new Promise((resolve) => setTimeout(resolve, 500));
 
-            const address = await walletKit.getAddress();
+            const address = await walletKitStore.kit.getAddress();
             if (address?.address) {
-              setPublicKey(address.address);
-              setIsConnected(true);
+              walletKitStore.setPublicKey(address.address);
+              walletKitStore.setConnected(true);
 
               if (address.address !== persistStore.wallet.address) {
                 await persistStore.connectWallet(address.address, storedWalletType);
               }
             }
           } catch (restoreError) {
-            // Silent fail
+            console.error('Failed to restore wallet:', restoreError);
           }
         }
       } catch (error) {
-        // Silent fail
+        console.error('Failed to check connection:', error);
       }
     };
 
     if (
       (persistStore.wallet.walletType || persistStore.wallet.address) &&
-      !isConnected &&
-      !isConnecting
+      !walletKitStore.isConnected &&
+      !walletKitStore.isConnecting
     ) {
       checkConnection();
     }
   }, [
     persistStore.wallet.walletType,
     persistStore.wallet.address,
-    isConnected,
-    isConnecting,
-    publicKey,
+    walletKitStore.isConnected,
+    walletKitStore.isConnecting,
+    walletKitStore.publicKey,
+    walletKitStore.kit,
   ]);
 
-  const connectWallet = async () => {
+  const connectWallet = useCallback(async () => {
     try {
-      if (typeof window === 'undefined') {
-        throw new Error('Wallet connection not available on server-side');
-      }
-
-      if (connectWalletCalled.current) {
-        return;
-      }
-
-      if (globalIsModalOpen || globalIsConnecting) {
-        if (globalConnectionPromise) {
-          await globalConnectionPromise;
-        }
-        return;
-      }
-
-      if (isModalOpen || isConnecting) {
-        return;
-      }
-
-      connectWalletCalled.current = true;
-      globalIsConnecting = true;
-      globalIsModalOpen = true;
-      setIsConnecting(true);
-      setIsModalOpen(true);
-
-      const walletKit = initializeKit();
-      if (!walletKit) {
-        throw new Error('Failed to initialize wallet kit');
-      }
-
-      modalOpenCalls++;
-
-      globalConnectionPromise = new Promise((resolve, reject) => {
-        setTimeout(() => {
-          walletKit.openModal({
-            onWalletSelected: async (wallet: ISupportedWallet) => {
-              try {
-                walletKit.setWallet(wallet.id);
-                setSelectedWallet(wallet.id);
-
-                const address = await walletKit.getAddress();
-
-                setPublicKey(address.address);
-                setIsConnected(true);
-
-                let walletType: string = 'stellar-wallets-kit';
-                switch (wallet.id) {
-                  case HANA_ID:
-                    walletType = 'hana-stellar-kit';
-                    break;
-                  case XBULL_ID:
-                    walletType = 'xbull-stellar-kit';
-                    break;
-                  case FREIGHTER_ID:
-                    walletType = 'freighter-stellar-kit';
-                    break;
-                  case LOBSTR_ID:
-                    walletType = 'lobstr-stellar-kit';
-                    break;
-                  default:
-                    walletType = 'stellar-wallets-kit';
-                    break;
-                }
-
-                await persistStore.connectWallet(address.address, walletType);
-
-                try {
-                  await walletKit.signMessage('Welcome to Normal Finance', {
-                    networkPassphrase:
-                      process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
-                        ? Networks.PUBLIC
-                        : Networks.TESTNET,
-                    address: address.address,
-                  });
-                } catch (signError) {
-                  // Silent fail
-                }
-
-                resolve();
-              } catch (error) {
-                reject(error);
-              } finally {
-                connectWalletCalled.current = false;
-                globalIsConnecting = false;
-                globalIsModalOpen = false;
-                globalConnectionPromise = null;
-                setIsConnecting(false);
-                setIsModalOpen(false);
-              }
-            },
-            onClosed: (error) => {
-              connectWalletCalled.current = false;
-              globalIsConnecting = false;
-              globalIsModalOpen = false;
-              globalConnectionPromise = null;
-              setIsConnecting(false);
-              setIsModalOpen(false);
-
-              if (error) {
-                reject(error);
-              } else {
-                resolve();
-              }
-            },
-          });
-        }, 100);
-      });
-
-      await globalConnectionPromise;
-    } catch (error) {
-      connectWalletCalled.current = false;
-      globalIsConnecting = false;
-      globalIsModalOpen = false;
-      globalConnectionPromise = null;
-      setIsConnecting(false);
-      setIsModalOpen(false);
-      throw error;
-    }
-  };
-
-  const signTransaction = async (xdr: string) => {
-    if (typeof window === 'undefined') {
-      throw new Error('Transaction signing not available on server-side');
-    }
-
-    const walletKit = initializeKit();
-    if (!walletKit) {
-      throw new Error('Failed to initialize wallet kit');
-    }
-
-    if (!publicKey) {
-      throw new Error('No wallet connected');
-    }
-
-    if (!selectedWallet) {
-      throw new Error('No wallet selected. Please connect your wallet first.');
-    }
-
-    try {
-      const { signedTxXdr } = await walletKit.signTransaction(xdr, {
-        networkPassphrase:
-          process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
-            ? Networks.PUBLIC
-            : Networks.TESTNET,
-        address: publicKey,
-      });
-
-      return signedTxXdr;
+      await walletKitStore.connectWallet(persistStore);
     } catch (error) {
       throw error;
     }
-  };
+  }, [walletKitStore, persistStore]);
 
-  const disconnectWallet = async () => {
-    try {
-      if (typeof window !== 'undefined') {
-        const walletKit = initializeKit();
-        if (walletKit?.disconnect) {
-          await walletKit.disconnect();
-        }
+  const signTransaction = useCallback(
+    async (xdr: string) => {
+      try {
+        return await walletKitStore.signTransaction(xdr);
+      } catch (error) {
+        throw error;
       }
+    },
+    [walletKitStore]
+  );
 
-      connectWalletCalled.current = false;
+  const disconnectWallet = useCallback(async () => {
+    try {
       connectionChecked.current = false;
-      globalIsConnecting = false;
-      globalIsModalOpen = false;
-      globalConnectionPromise = null;
-      setPublicKey(null);
-      setIsConnected(false);
-      setSelectedWallet(null);
-      setIsConnecting(false);
-      setIsModalOpen(false);
+      await walletKitStore.disconnectWallet();
     } catch (error) {
-      connectWalletCalled.current = false;
       connectionChecked.current = false;
-      globalIsConnecting = false;
-      globalIsModalOpen = false;
-      globalConnectionPromise = null;
-      setPublicKey(null);
-      setIsConnected(false);
-      setSelectedWallet(null);
-      setIsConnecting(false);
-      setIsModalOpen(false);
+      // Let the store handle the error state
     }
-  };
+  }, [walletKitStore]);
 
-  const getSupportedWallets = async () => {
+  const getSupportedWallets = useCallback(async () => {
     try {
-      if (typeof window === 'undefined') {
-        return [];
-      }
-
-      const walletKit = initializeKit();
-      if (!walletKit) {
-        return [];
-      }
-
-      const wallets = await walletKit.getSupportedWallets();
-      return wallets;
+      return await walletKitStore.getSupportedWallets();
     } catch (error) {
       return [];
     }
-  };
+  }, [walletKitStore]);
 
   return {
-    kit: kit || null,
-    publicKey,
-    isConnected,
-    selectedWallet,
-    isConnecting,
-    isModalOpen,
+    kit: walletKitStore.kit,
+    publicKey: walletKitStore.publicKey,
+    isConnected: walletKitStore.isConnected,
+    selectedWallet: walletKitStore.selectedWallet,
+    isConnecting: walletKitStore.isConnecting,
+    isModalOpen: walletKitStore.isModalOpen,
     connectWallet,
     signTransaction,
     disconnectWallet,
