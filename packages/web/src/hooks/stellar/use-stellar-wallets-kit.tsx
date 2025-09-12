@@ -2,6 +2,10 @@ import { useRef, useEffect, useCallback } from 'react';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { HANA_ID, XBULL_ID, LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 
+import { WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
+
+import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
+
 export const useStellarWalletsKit = () => {
   const persistStore = usePersistStore();
   const walletKitStore = useStellarWalletKitStore();
@@ -58,6 +62,14 @@ export const useStellarWalletsKit = () => {
               case 'lobstr-stellar-kit':
                 walletId = LOBSTR_ID;
                 break;
+              case 'wallet-connect':
+              case 'wallet-connect-stellar-kit':
+                walletId = WALLET_CONNECT_ID;
+                break;
+              case 'ledger':
+              case 'ledger-stellar-kit':
+                walletId = LEDGER_ID;
+                break;
               default:
                 walletId = null;
                 break;
@@ -102,6 +114,14 @@ export const useStellarWalletsKit = () => {
           case 'lobstr':
           case 'lobstr-stellar-kit':
             walletId = LOBSTR_ID;
+            break;
+          case 'wallet-connect':
+          case 'wallet-connect-stellar-kit':
+            walletId = WALLET_CONNECT_ID;
+            break;
+          case 'ledger':
+          case 'ledger-stellar-kit':
+            walletId = LEDGER_ID;
             break;
           default:
             walletId = null;

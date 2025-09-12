@@ -12,6 +12,15 @@ import {
   WalletNetwork,
   FreighterModule,
 } from '@creit.tech/stellar-wallets-kit';
+
+import {
+  WalletConnectAllowedMethods,
+  WalletConnectModule,
+  WALLET_CONNECT_ID,
+} from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
+
+import { LedgerModule, LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
+
 import { Networks } from '@stellar/stellar-sdk';
 
 export interface StellarWalletKitState {
@@ -52,7 +61,25 @@ export function createStellarWalletKitActions(
           process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
             ? WalletNetwork.PUBLIC
             : WalletNetwork.TESTNET,
-        modules: [new HanaModule(), new xBullModule(), new FreighterModule(), new LobstrModule()],
+        modules: [
+          new HanaModule(),
+          new xBullModule(),
+          new FreighterModule(),
+          new LobstrModule(),
+          new WalletConnectModule({
+            url: 'https://normalfinance.io',
+            projectId: 'c23b8cc582d9a0db289b74ddda7bfc6e',
+            method: WalletConnectAllowedMethods.SIGN,
+            description: 'Crypto Indexes',
+            name: 'Normal Finance',
+            icons: ['https://normalfinance.io/favicon.ico'],
+            network:
+              process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
+                ? WalletNetwork.PUBLIC
+                : WalletNetwork.TESTNET,
+          }),
+          new LedgerModule(),
+        ],
       });
 
       set({ kit, isInitialized: true });
@@ -110,6 +137,12 @@ export function createStellarWalletKitActions(
                   break;
                 case LOBSTR_ID:
                   walletType = 'lobstr-stellar-kit';
+                  break;
+                case WALLET_CONNECT_ID:
+                  walletType = 'wallet-connect-stellar-kit';
+                  break;
+                case LEDGER_ID:
+                  walletType = 'ledger-stellar-kit';
                   break;
                 default:
                   walletType = 'stellar-wallets-kit';
