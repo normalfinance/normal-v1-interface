@@ -65,6 +65,18 @@ const hasPHKeys =
   !!process.env.POSTHOG_ENV_ID && // env id (project env)
   !!process.env.NEXT_PUBLIC_POSTHOG_HOST; // host (or default to US if you prefer)
 
+//mock for now
+  const getPostHogProjectName = () => {
+  const network = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() || 'testnet';
+  const branch = process.env.VERCEL_GIT_BRANCH;
+
+  if (branch === 'develop') {
+    return 'Normal - Development';
+  }
+
+  return network === 'mainnet' ? 'Normal - Mainnet' : 'Normal - Testnet';
+};
+
 const posthogOptions = {
   personalApiKey: process.env.POSTHOG_API_KEY,
   envId: process.env.POSTHOG_ENV_ID,
@@ -72,7 +84,7 @@ const posthogOptions = {
   sourcemaps: {
     // Only upload on production builds, and only when keys are present
     enabled: isProd && hasPHKeys,
-    project: `Normal - ${process.env.VERCEL_GIT_BRANCH === 'develop' ? 'development' : 'Testnet'}`,
+    project: getPostHogProjectName(),
     version,
     deleteAfterUpload: true,
   },

@@ -1,9 +1,10 @@
 import { NetworkConfig } from '@normalfinance/types';
 import { Account, Networks } from '@stellar/stellar-sdk';
+import { getCurrentNetwork, getNetworkTableName } from '../network';
 
 const RPC_API_KEY = process.env.RPC_API_KEY ?? '';
 
-const TESTNET: NetworkConfig = {
+const TESTNET_CONFIG: NetworkConfig = {
   // network
   TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
   NETWORK_PASSPHRASE: Networks.TESTNET,
@@ -30,10 +31,10 @@ const TESTNET: NetworkConfig = {
   REFLECTOR_ORACLE_ADDRESS: 'CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63',
 
   // supabase
-  EVENTS_TABLENAME: 'normal_contract_events',
+  EVENTS_TABLENAME: getNetworkTableName('normal_contract_events'),
 };
 
-const MAINNET: NetworkConfig = {
+const MAINNET_CONFIG: NetworkConfig = {
   // network
   TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
   NETWORK_PASSPHRASE: Networks.PUBLIC,
@@ -43,14 +44,14 @@ const MAINNET: NetworkConfig = {
     : 'https://soroban.stellar.org',
 
   // accounts
-  NORMAL_TOKEN_ISSUER: '',
+  NORMAL_TOKEN_ISSUER: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ISSUER || '',
 
   // contracts
-  POOL_ROUTER_ADDRESS: '...',
-  POOL_SWAP_FEE_ADDRESS: '...',
-  INSURANCE_FUND_ADDRESS: '...',
-  ORACLE_REGISTRY_ADDRESS: '...',
-  LIQUIDITY_CALCULATOR_ADDRESS: '...',
+  POOL_ROUTER_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_POOL_ROUTER || '',
+  POOL_SWAP_FEE_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_POOL_SWAP_FEE || '',
+  INSURANCE_FUND_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_INSURANCE_FUND || '',
+  ORACLE_REGISTRY_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_ORACLE_REGISTRY || '',
+  LIQUIDITY_CALCULATOR_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_LIQUIDITY_CALCULATOR || '',
 
   // stellar
   XLM_ADDRESS: 'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA',
@@ -60,9 +61,16 @@ const MAINNET: NetworkConfig = {
   REFLECTOR_ORACLE_ADDRESS: 'CAFJZQWSED6YAWZU3GWRTOCNPPCGBN32L7QV43XX5LZLFTK6JLN34DLN',
 
   // supabase
-  EVENTS_TABLENAME: 'normal_contract_events',
+  EVENTS_TABLENAME: getNetworkTableName('normal_contract_events'),
 };
 
-// Decide based on env
-const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || 'TESTNET'; // or use NEXT_PUBLIC_NETWORK for Next.js
-export const StellarConfig: NetworkConfig = NETWORK === 'MAINNET' ? MAINNET : TESTNET;
+/**
+ * Get the current network configuration based on NEXT_PUBLIC_NETWORK environment variable
+ */
+function getStellarConfig(): NetworkConfig {
+  const network = getCurrentNetwork();
+  return network === 'mainnet' ? MAINNET_CONFIG : TESTNET_CONFIG;
+}
+
+// Export the current stellar configuration
+export const StellarConfig: NetworkConfig = getStellarConfig();

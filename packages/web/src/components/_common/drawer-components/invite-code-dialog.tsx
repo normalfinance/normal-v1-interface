@@ -101,9 +101,7 @@ export default function InviteCodeDialog({ open, walletAddress, onClose }: Invit
         ) : (
           <>
             <Typography variant="body1" sx={{ mb: 3 }}>
-              {t(
-                'Normal is currently in private testnet. Please enter your invite code to continue.'
-              )}
+              {t('Normal is currently in private beta. Please enter your invite code to continue.')}
             </Typography>
 
             <TextField
