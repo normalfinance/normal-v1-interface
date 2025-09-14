@@ -23,6 +23,11 @@ import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
 
+import { listTransactions } from '@/lib/mgi/history';
+import { getMgiAuthToken } from '@/lib/mgi/client';
+
+const MOCK_MODE = process.env.NEXT_PUBLIC_MGI_MOCK === '1';
+
 interface User {
   id: string;
   displayName: string;
@@ -94,6 +99,55 @@ export function RewardsView() {
 
   const [rows, setRows] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let on = true;
+    (async () => {
+      if (selectedTab !== 'moneygram' || !walletAddress) return;
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Mock: no token needed
+        if (MOCK_MODE) {
+          const tx = await listTransactions({ account: walletAddress });
+          if (on) setRows(tx as any[]);
+          return;
+        }
+
+        // Live: need SEP-10 token
+        let token = await getMgiAuthToken(walletAddress);
+        try {
+          const tx = await listTransactions({ account: walletAddress, authToken: token });
+          if (on) setRows(tx as any[]);
+        } catch (e: any) {
+          const msg = String(e?.message || '');
+          const is401 =
+            /401/.test(msg) ||
+            /unauthorized/i.test(msg) ||
+            /expired/i.test(msg) ||
+            /invalid/i.test(msg);
+
+          if (is401) {
+            // Re-auth once if expired
+            token = await getMgiAuthToken(walletAddress);
+            const tx = await listTransactions({ account: walletAddress, authToken: token });
+            if (on) setRows(tx as any[]);
+          } else {
+            throw e;
+          }
+        }
+      } catch (e: any) {
+        if (on) setError(e?.message || 'Failed to load MoneyGram history');
+      } finally {
+        if (on) setLoading(false);
+      }
+    })();
+    return () => {
+      on = false;
+    };
+  }, [selectedTab, walletAddress]);
 
   React.useEffect(() => {
     let on = true;
@@ -208,6 +262,7 @@ export function RewardsView() {
 
       {selectedTab === 'moneygram' && (
         <WalletGate buttonText={t('Connect Wallet to view MoneyGram history')} fullWidth>
+          {error && <Box sx={{ color: 'error.main', fontSize: 13, mb: 1 }}>{error}</Box>}
           <MoneyGramTransactionsTable rows={rows} loading={loading} />
         </WalletGate>
       )}
