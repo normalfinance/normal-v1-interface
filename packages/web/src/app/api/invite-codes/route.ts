@@ -1,8 +1,8 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
-import { InviteCodeService } from '@/lib/invite-code-service';
 import { constants } from '@normalfinance/utils';
+import { InviteCodeService } from '@/lib/invite-code-service';
 
 export async function GET(request: NextRequest) {
   try {

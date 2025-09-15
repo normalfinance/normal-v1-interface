@@ -1,8 +1,8 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
-import { getApiConfig, logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 import { constants } from '@normalfinance/utils';
+import { getApiConfig, logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 async function stellarHandler(req: NextRequest) {
   try {
