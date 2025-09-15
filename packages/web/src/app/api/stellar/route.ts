@@ -41,23 +41,24 @@ function generateStellarToml(): string {
   const isMainnet = constants.getCurrentNetwork() === 'mainnet';
 
   const networkPassphrase = constants.getNetworkConfig(
-    'Test SDF Network ; September 2015',
-    'Public Global Stellar Network ; September 2015'
+    process.env.NEXT_PUBLIC_TESTNET_NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015',
+    process.env.NEXT_PUBLIC_MAINNET_NETWORK_PASSPHRASE ||
+      'Public Global Stellar Network ; September 2015'
   );
 
   const signingKey = constants.getNetworkConfig(
-    'GDV2ULP4SMV7HB67ADWZZ42N7JBQCTZB5OK3ARKMCELSHFEMM66GSDVB',
+    process.env.NEXT_PUBLIC_TESTNET_SIGNING_KEY || '',
     process.env.NEXT_PUBLIC_MAINNET_SIGNING_KEY || ''
   );
 
   const accounts = constants.getNetworkConfig(
     [
-      'GBCSMMXFXVKUYHPUN4BMSSN4QTCH7CNJPBV3S4MXJ4TFH6D5M55F7JWK', // deployer
-      'GDON6QOT37KT4C4RKZON4AOTSAUZYKT5WBKQ5FE65R64IMK2U3YL3M44', // distributor
-      'GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H', // issuer
-      'GCSP3QHYLZMDKZ3LBGDDEXF6DCPEIHZWFNXBEDSQBALSJKSETGTOS3PQ', // admin
-      'GDUGVTIBMIJB3AET7KV6ZI7M4SNSPTXHIGI65IFJOTNICAC6OXTMKIME', // protocol owned liquidity (POL)
-    ],
+      process.env.NEXT_PUBLIC_TESTNET_DEPLOYER || '', // deployer
+      process.env.NEXT_PUBLIC_TESTNET_DISTRIBUTOR || '', // distributor
+      constants.StellarConfig.NORMAL_TOKEN_ISSUER, // issuer
+      process.env.NEXT_PUBLIC_TESTNET_ADMIN || '', // admin
+      process.env.NEXT_PUBLIC_TESTNET_POL || '', // protocol owned liquidity (POL)
+    ].filter(Boolean),
     [
       process.env.NEXT_PUBLIC_MAINNET_DEPLOYER || '',
       process.env.NEXT_PUBLIC_MAINNET_DISTRIBUTOR || '',

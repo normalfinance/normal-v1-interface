@@ -32,3 +32,4 @@ export function getNetworkApiPath(basePath: string): string {
 export function getNetworkDisplayName(): string {
   return isMainnet() ? 'Mainnet' : 'Testnet';
 }
+

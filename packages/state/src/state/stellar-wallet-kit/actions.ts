@@ -59,7 +59,7 @@ export function createStellarWalletKitActions(
     try {
       const kit = new StellarWalletsKit({
         network:
-          process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
+          process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
             ? WalletNetwork.PUBLIC
             : WalletNetwork.TESTNET,
         modules: [
@@ -75,7 +75,7 @@ export function createStellarWalletKitActions(
             name: 'Normal',
             icons: ['https://normalfinance.io/favicon.ico'],
             network:
-              process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
+              process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
                 ? WalletNetwork.PUBLIC
                 : WalletNetwork.TESTNET,
           }),
@@ -153,7 +153,7 @@ export function createStellarWalletKitActions(
               try {
                 await kit.signMessage('Welcome to Normal Finance', {
                   networkPassphrase:
-                    process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
+                    process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
                       ? Networks.PUBLIC
                       : Networks.TESTNET,
                   address: address.address,
@@ -234,7 +234,7 @@ export function createStellarWalletKitActions(
     try {
       const { signedTxXdr } = await kit.signTransaction(xdr, {
         networkPassphrase:
-          process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'MAINNET'
+          process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
             ? Networks.PUBLIC
             : Networks.TESTNET,
         address: publicKey,

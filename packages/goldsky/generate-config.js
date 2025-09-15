@@ -1,19 +1,18 @@
 const fs = require('fs')
 const path = require('path')
 
-
 const NETWORKS = {
   testnet: {
     name: 'normal-contracts-events-testnet',
     dataset: 'stellar_testnet.events_v2',
     table: 'normal_contract_events_testnet',
     contracts: {
-      poolRouter: 'CC7BAPX2HYU76CDGCWLLVZT5O7CTTT5VHRC4H6VZUXLJ7PKHPKDT3PS3',
-      oracleRegistry: 'CDB6MTYST4WQMQZB2ES4UVS6KMIHE2TAHWCONOIJQZ2HMH6NT2C77H3X',
-      insuranceFund: 'CDRVNXARMUM6IGTLMXBCMSBZ7DCI4Y3AANA7HQCZCP6XMXNCOXT7HKDZ',
-      poolSwapFee: 'CBY6HH7FFNBLARQYSKJAK6O2AGPTM5VYGOYHTQQPTFLUTS2DNOXPT5QD',
-      poolPlane: 'CBFZY3TUS4NGJRTBJ3Y3NONTNL25WOPOQ5HRVTBVROMQVEB2XMWBEPK2',
-      liquidityCalc: 'CB5TC2DCKGHMHOREAKXCKEE2Z5LRY7G66RR2ZZBVJBRPA5DVHEF326LA',
+      poolRouter: process.env.NEXT_PUBLIC_TESTNET_POOL_ROUTER || '',
+      oracleRegistry: process.env.NEXT_PUBLIC_TESTNET_ORACLE_REGISTRY || '',
+      insuranceFund: process.env.NEXT_PUBLIC_TESTNET_INSURANCE_FUND || '',
+      poolSwapFee: process.env.NEXT_PUBLIC_TESTNET_POOL_SWAP_FEE || '',
+      poolPlane: process.env.NEXT_PUBLIC_TESTNET_POOL_PLANE || '',
+      liquidityCalc: process.env.NEXT_PUBLIC_TESTNET_LIQUIDITY_CALCULATOR || '',
     },
   },
   mainnet: {
@@ -39,8 +38,8 @@ function generateConfig(network) {
 
   const contracts = Object.values(config.contracts).filter((addr) => addr.length > 0)
 
-  if (network === 'mainnet' && contracts.length === 0) {
-    console.warn('Warning: No mainnet contract addresses found. Make sure environment variables are set.')
+  if (contracts.length === 0) {
+    console.warn(`Warning: No ${network} contract addresses found. Make sure environment variables are set.`)
   }
 
   const yaml = `name: ${config.name}
@@ -100,9 +99,7 @@ function main() {
     fs.writeFileSync(filepath, config)
     console.log(`Generated ${filename} for ${network} network`)
 
-    if (network === 'mainnet') {
-      console.log('Note: Make sure all mainnet contract addresses are properly set in environment variables')
-    }
+    console.log(`Note: Make sure all ${network} contract addresses are properly set in environment variables`)
   } catch (error) {
     console.error('Error generating config:', error.message)
     process.exit(1)
