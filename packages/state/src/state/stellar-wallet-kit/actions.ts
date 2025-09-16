@@ -234,9 +234,7 @@ export function createStellarWalletKitActions(
     try {
       const { signedTxXdr } = await kit.signTransaction(xdr, {
         networkPassphrase:
-          process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
-            ? Networks.PUBLIC
-            : Networks.TESTNET,
+          process.env.NEXT_PUBLIC_NETWORK === 'MAINNET' ? Networks.PUBLIC : Networks.TESTNET,
         address: publicKey,
       });
 

@@ -60,27 +60,45 @@ const nextConfig = {
 
 // ---- PostHog guard --------------------------------------------------
 const isProd = process.env.NODE_ENV === 'production';
-const hasPHKeys =
-  !!process.env.POSTHOG_API_KEY && // personal API key for uploads
-  !!process.env.POSTHOG_ENV_ID && // env id (project env)
-  !!process.env.NEXT_PUBLIC_POSTHOG_HOST; // host (or default to US if you prefer)
+const network = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() || 'testnet';
 
-//mock for now
-  const getPostHogProjectName = () => {
-  const network = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() || 'testnet';
+const getPostHogConfig = () => {
+  const isMainnet = network === 'mainnet';
+
+  return {
+    projectName: isMainnet
+      ? process.env.NEXT_PUBLIC_POSTHOG_MAINNET_PROJECT_NAME
+      : process.env.NEXT_PUBLIC_POSTHOG_TESTNET_PROJECT_NAME,
+    key: isMainnet
+      ? process.env.NEXT_PUBLIC_POSTHOG_MAINNET_KEY
+      : process.env.NEXT_PUBLIC_POSTHOG_TESTNET_KEY,
+    host: isMainnet
+      ? process.env.NEXT_PUBLIC_POSTHOG_MAINNET_HOST
+      : process.env.NEXT_PUBLIC_POSTHOG_TESTNET_HOST,
+    envId: isMainnet ? process.env.POSTHOG_MAINNET_ENV_ID : process.env.POSTHOG_TESTNET_ENV_ID,
+    apiKey: isMainnet ? process.env.POSTHOG_MAINNET_API_KEY : process.env.POSTHOG_TESTNET_API_KEY,
+  };
+};
+
+const posthogConfig = getPostHogConfig();
+const hasPHKeys = !!posthogConfig.apiKey && !!posthogConfig.envId && !!posthogConfig.host;
+
+const getPostHogProjectName = () => {
   const branch = process.env.VERCEL_GIT_BRANCH;
 
   if (branch === 'develop') {
     return 'Normal - Development';
   }
 
-  return network === 'mainnet' ? 'Normal - Mainnet' : 'Normal - Testnet';
+  return (
+    posthogConfig.projectName || (network === 'mainnet' ? 'Normal - mainnet' : 'Normal - Testnet')
+  );
 };
 
 const posthogOptions = {
-  personalApiKey: process.env.POSTHOG_API_KEY,
-  envId: process.env.POSTHOG_ENV_ID,
-  host: process.env.NEXT_PUBLIC_POSTHOG_HOST, // defaults to https://us.posthog.com if omitted
+  personalApiKey: posthogConfig.apiKey,
+  envId: posthogConfig.envId,
+  host: posthogConfig.host,
   sourcemaps: {
     // Only upload on production builds, and only when keys are present
     enabled: isProd && hasPHKeys,
