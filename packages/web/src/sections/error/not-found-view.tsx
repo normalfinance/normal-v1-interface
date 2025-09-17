@@ -38,7 +38,7 @@ export function NotFoundView() {
         </m.div>
 
         <m.div variants={varBounce('in')}>
-          <Image 
+          <Image
             src="/assets/illustrations/placeholders/404.svg"
             alt="404 - Page not found"
             width={400}

@@ -36,7 +36,7 @@ export function View500() {
         </m.div>
 
         <m.div variants={varBounce('in')}>
-          <Image 
+          <Image
             src="/assets/illustrations/placeholders/server-error.svg"
             alt="500 - Server error"
             width={400}

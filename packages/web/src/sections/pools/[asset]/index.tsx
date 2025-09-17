@@ -24,7 +24,6 @@ export default function PoolView({ asset }: { asset: string }) {
 
   if (!pool || pool == undefined) {
     return <SpecificNotFound type="pool" />;
-    
   }
 
   return <PoolDetailsView asset={asset} pool={pool} />;
