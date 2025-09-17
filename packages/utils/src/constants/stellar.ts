@@ -69,8 +69,11 @@ const MAINNET_CONFIG: NetworkConfig = {
  */
 function getStellarConfig(): NetworkConfig {
   const network = getCurrentNetwork();
+  console.log('[getStellarConfig] network', network);
   return network === 'mainnet' ? MAINNET_CONFIG : TESTNET_CONFIG;
 }
 
 // Export the current stellar configuration
 export const StellarConfig: NetworkConfig = getStellarConfig();
+
+console.log('[StellarConfig] StellarConfig', StellarConfig);
