@@ -1,6 +1,6 @@
 import { NetworkConfig } from '@normalfinance/types';
 import { Account, Networks } from '@stellar/stellar-sdk';
-import { getCurrentNetwork, getNetworkTableName } from '../network';
+import { getCurrentNetwork } from '../network';
 
 const RPC_API_KEY = process.env.RPC_API_KEY ?? '';
 
@@ -31,7 +31,7 @@ const TESTNET_CONFIG: NetworkConfig = {
   REFLECTOR_ORACLE_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_REFLECTOR_ORACLE || '',
 
   // supabase
-  EVENTS_TABLENAME: getNetworkTableName('normal_contract_events'),
+  EVENTS_TABLENAME: 'normal_contract_events',
 };
 
 const MAINNET_CONFIG: NetworkConfig = {
@@ -61,7 +61,7 @@ const MAINNET_CONFIG: NetworkConfig = {
   REFLECTOR_ORACLE_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_REFLECTOR_ORACLE || '',
 
   // supabase
-  EVENTS_TABLENAME: getNetworkTableName('normal_contract_events'),
+  EVENTS_TABLENAME: 'normal_contract_events',
 };
 
 /**

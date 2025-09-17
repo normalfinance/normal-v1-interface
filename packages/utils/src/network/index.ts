@@ -19,9 +19,6 @@ export function getNetworkConfig<T>(testnetValue: T, mainnetValue: T): T {
   return isMainnet() ? mainnetValue : testnetValue;
 }
 
-export function getNetworkTableName(baseName: string): string {
-  return isMainnet() ? baseName : `${baseName}_testnet`;
-}
 
 
 export function getNetworkApiPath(basePath: string): string {
