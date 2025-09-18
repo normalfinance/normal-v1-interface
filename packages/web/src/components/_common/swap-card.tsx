@@ -203,7 +203,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
-  const handleReviewClose = () => setReviewOpen(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const handleReviewClose = () => {
+    setReviewOpen(false);
+    setIsSubmitting(false);
+    setSubmitError(null);
+  };
 
   // Trustline check (only for non-XLM buy token)
   const checkTrustlineStatus = useCallback(async (): Promise<void> => {
@@ -391,8 +397,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
     if (!sellToken || !buyToken || !sellToken.id || !buyToken.id) return;
 
     try {
+      setSubmitError(null);
+      setIsSubmitting(true);
       const allowed = await checkIfSwapAllowed();
-      if (!allowed) return;
+
+      if (!allowed) {
+        setIsSubmitting(false);
+        return;
+      }
 
       if (buyToken.symbol !== 'XLM') {
         const walletAddress = connectedAddress;
@@ -423,11 +435,16 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
         out_min: Number(0),
       });
 
+      setIsSubmitting(false);
+      setReviewOpen(false);
+
       setTimeout(async () => {
         await appStore.fetchNativeTokenInfo();
       }, 7000);
     } catch (_err) {
       setSwapError(t('Error during swap transaction'));
+      setSubmitError('swap_failed');
+      setIsSubmitting(false);
     }
   };
 
@@ -477,7 +494,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
         return {
           label: t('Review'),
           disabled: false,
-          action: () => setReviewOpen(true),
+          action: () => {
+            setSubmitError(null);
+            setIsSubmitting(false);
+            setReviewOpen(true);
+          },
           variant: 'contained',
         };
       default:
@@ -931,6 +952,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
           maxSlippage={maxSlippage}
           sellFiatValue={sellFiatValue}
           onSubmit={() => void doSwap()}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
         />
       )}
 
