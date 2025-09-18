@@ -73,7 +73,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
   const [open, setOpen] = useState(false);
   const [activeButton, setActiveButton] = useState<'sell' | 'buy' | ''>('');
   const [reviewOpen, setReviewOpen] = useState(false);
-  const handleReviewClose = () => setReviewOpen(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [quoteFetched, setQuoteFetched] = useState(false);
@@ -84,13 +83,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
   const [needsTrustline, setNeedsTrustline] = useState<boolean>(false);
   const [checkingTrustline, setCheckingTrustline] = useState<boolean>(false);
 
-  const maxSlippage = 10_000;
-  const priceImpact = 0;
-  const networkFee = '0';
-
-  const sellVal = parseFloat(amount) || 0;
-  const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.usdValue : 0;
-
   const [buyAmount, setBuyAmount] = useState<number>(0);
 
   const connectedAddress = storePersist.wallet.address || publicKey || null;
@@ -100,6 +92,21 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
   const { ensureOpen, close } = useProofDialogStore();
   const proofOpenedOnceRef = useRef(false);
 
+  // Keep onEstimateSwap stable via ref so effects don't loop
+  const estimateRef = useRef(onEstimateSwap);
+  useEffect(() => {
+    estimateRef.current = onEstimateSwap;
+  }, [onEstimateSwap]);
+
+  // constants used by UI
+  const maxSlippage = 10_000;
+  const priceImpact = 0;
+  const networkFee = '0';
+
+  const sellVal = parseFloat(amount) || 0;
+  const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.usdValue : 0;
+
+  // Proof dialog auto-open on connect but not verified
   useEffect(() => {
     if (!connectedAddress) return;
     if (isVerified) {
@@ -112,25 +119,26 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
     }
   }, [connectedAddress, isVerified, ensureOpen]);
 
+  // Reset everything on disconnect
   useEffect(() => {
-    if (!isConnected) {
-      proofOpenedOnceRef.current = false;
-      close?.();
-      setTokens([]);
-      setSellToken(null);
-      setBuyToken(null);
-      setAmount('0');
-      setIsLoading(false);
-      setQuoteFetched(false);
-      setInsufficientBalance(false);
-      setBuyAmount(0);
-      setSwapError(null);
-      setCreatingTrustline(false);
-      setNeedsTrustline(false);
-      setCheckingTrustline(false);
-    }
+    if (isConnected) return;
+    proofOpenedOnceRef.current = false;
+    close?.();
+    setTokens([]);
+    setSellToken(null);
+    setBuyToken(null);
+    setAmount('0');
+    setIsLoading(false);
+    setQuoteFetched(false);
+    setInsufficientBalance(false);
+    setBuyAmount(0);
+    setSwapError(null);
+    setCreatingTrustline(false);
+    setNeedsTrustline(false);
+    setCheckingTrustline(false);
   }, [isConnected, close]);
 
+  // Refresh tokens after wallet verification
   useEffect(() => {
     const onVerified = (e: any) => {
       if (!connectedAddress || e?.detail?.address !== connectedAddress) return;
@@ -142,6 +150,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
     return () => window.removeEventListener('nf:walletVerified', onVerified);
   }, [connectedAddress, appStore]);
 
+  // Load tokens & set default sell token
   useEffect(() => {
     if (!isVerified) {
       setTokens([]);
@@ -169,6 +178,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
     }
   }, [isVerified, tokensList, storeTokens, sellToken]);
 
+  // Apply initial query params (token_in/out & in_amount)
   useEffect(() => {
     if (!queryParams || tokens.length === 0) return;
 
@@ -193,98 +203,92 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
+  const handleReviewClose = () => setReviewOpen(false);
 
-  const checkTrustlineStatus = useCallback(async () => {
-    if (!buyToken || buyToken.symbol === 'XLM') {
+  // Trustline check (only for non-XLM buy token)
+  const checkTrustlineStatus = useCallback(async (): Promise<void> => {
+    if (!buyToken || buyToken.symbol === 'XLM' || !connectedAddress) {
       setNeedsTrustline(false);
       return;
     }
-
-    const walletAddress = connectedAddress;
-    if (!walletAddress) {
-      setNeedsTrustline(false);
-      return;
-    }
-
     setCheckingTrustline(true);
     try {
       const trustlineStatus = await checkTrustline(
-        walletAddress,
+        connectedAddress,
         buyToken.symbol,
         constants.StellarConfig.NORMAL_TOKEN_ISSUER
       );
       setNeedsTrustline(!trustlineStatus.exists);
-    } catch (err) {
+    } catch {
       setNeedsTrustline(false);
+    } finally {
+      setCheckingTrustline(false);
     }
-    setCheckingTrustline(false);
   }, [buyToken, connectedAddress]);
 
   useEffect(() => {
     if (!isVerified) return;
-    checkTrustlineStatus();
+    void checkTrustlineStatus();
   }, [checkTrustlineStatus, isVerified]);
 
-  const doSimulateSwap = useCallback(async (): Promise<void> => {
-    if (sellToken && buyToken) {
-      if (amount === '0') {
-        setAmount('0');
-        setBuyAmount(0);
-        return;
-      }
-
-      try {
-        const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
-
-        await onEstimateSwap({
-          asset: format.formatNormalToken(asset, 'without-n'),
-          direction,
-          in_amount: amount,
-        });
-      } catch {
-        // ignore simulate errors
-      }
-    }
-  }, [sellToken, buyToken, amount, onEstimateSwap]);
+  // Debounced quote calculation WITHOUT depending on unstable functions
+  const quoteDebounceRef = useRef<number | null>(null);
 
   useEffect(() => {
-    setIsLoading(false);
-    setQuoteFetched(false);
-    setInsufficientBalance(false);
-    setBuyAmount(0);
-    setSwapError(null);
-    setCreatingTrustline(false);
-    setNeedsTrustline(false);
-    setCheckingTrustline(false);
+    const val = parseFloat(amount) || 0;
+    const hasTokens = Boolean(sellToken && buyToken);
 
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (quoteDebounceRef.current) {
+      clearTimeout(quoteDebounceRef.current);
+      quoteDebounceRef.current = null;
+    }
 
-    const hasTokens = !!sellToken && !!buyToken;
-    const validAmount = !!amount && sellVal > 0;
-
-    if (hasTokens && validAmount) {
+    if (!hasTokens || val <= 0) {
+      setIsLoading(false);
+      setQuoteFetched(false);
+      setInsufficientBalance(false);
+      setBuyAmount(0);
+      setSwapError(null);
+    } else {
       setIsLoading(true);
-      void doSimulateSwap();
+      setQuoteFetched(false);
+      setSwapError(null);
 
-      timer = setTimeout(() => {
-        setIsLoading(false);
-        setQuoteFetched(true);
+      quoteDebounceRef.current = window.setTimeout(async () => {
+        try {
+          // Non-null assertions are safe here because of hasTokens branch.
+          const asset = buyToken!.symbol === 'XLM' ? sellToken!.symbol : buyToken!.symbol;
+          const direction = sellToken!.symbol === 'XLM' ? BuyDirection : SellDirection;
 
-        const potentialBuyAmount = sellVal * (sellToken!.usdValue / buyToken!.usdValue);
-        setBuyAmount(potentialBuyAmount);
+          await estimateRef.current({
+            asset: format.formatNormalToken(asset, 'without-n'),
+            direction,
+            in_amount: amount,
+          });
 
-        if (sellVal > (sellToken!.balance ?? 0)) {
-          setInsufficientBalance(true);
+          // temporary display calc
+          const potentialBuyAmount = val * (sellToken!.usdValue / buyToken!.usdValue);
+          setBuyAmount(potentialBuyAmount);
+
+          setInsufficientBalance(val > (sellToken!.balance ?? 0));
+          setQuoteFetched(true);
+        } catch {
+          setQuoteFetched(false);
+        } finally {
+          setIsLoading(false);
         }
-      }, 1000);
+      }, 400);
     }
 
     return () => {
-      if (timer) clearTimeout(timer);
+      if (quoteDebounceRef.current) {
+        clearTimeout(quoteDebounceRef.current);
+        quoteDebounceRef.current = null;
+      }
     };
-  }, [sellToken, buyToken, amount, sellVal, doSimulateSwap]);
+  }, [sellToken?.id, buyToken?.id, amount]);
 
+  // Handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(sanitizeAmountInput(e.target.value));
   };
@@ -324,7 +328,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
         if (sellToken && !sellToken.symbol.startsWith('n')) setSellToken(null);
       }
     }
-
     handleClose();
   };
 
@@ -347,18 +350,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
     setBuyAmount(0);
   };
 
-  const getButtonState = (): ButtonState => {
-    if (!sellToken || !buyToken) return ButtonState.SELECT_TOKEN;
-    if (checkingTrustline) return ButtonState.CHECKING_TRUSTLINE;
-    if (creatingTrustline) return ButtonState.CREATING_TRUSTLINE;
-    if (needsTrustline && buyToken.symbol !== 'XLM') return ButtonState.CREATE_TRUSTLINE;
-    if (sellVal <= 0) return ButtonState.ENTER_AMOUNT;
-    if (isLoading) return ButtonState.FINALIZING_QUOTE;
-    if (quoteFetched) {
-      if (insufficientBalance) return ButtonState.INSUFFICIENT_BALANCE;
-      return ButtonState.REVIEW;
+  const handleMaxClick = () => {
+    if (sellToken) {
+      setAmount((sellToken.balance ?? 0).toString());
     }
-    return ButtonState.ENTER_AMOUNT;
   };
 
   const handleCreateTrustline = async () => {
@@ -378,59 +373,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
     }
   };
 
-  const getButtonConfig = (state: ButtonState): ButtonConfig => {
-    const configs: Record<ButtonState, ButtonConfig> = {
-      [ButtonState.SELECT_TOKEN]: { label: t('Select a token'), disabled: true, action: () => {} },
-      [ButtonState.ENTER_AMOUNT]: { label: t('Enter an amount'), disabled: true, action: () => {} },
-      [ButtonState.CHECKING_TRUSTLINE]: {
-        label: t('Checking trustline...'),
-        disabled: true,
-        action: () => {},
-      },
-      [ButtonState.CREATING_TRUSTLINE]: {
-        label: t('Creating trustline...'),
-        disabled: true,
-        action: () => {},
-      },
-      [ButtonState.FINALIZING_QUOTE]: {
-        label: t('Finalizing quote...'),
-        disabled: true,
-        action: () => {},
-      },
-      [ButtonState.INSUFFICIENT_BALANCE]: {
-        label: `${t('Insufficient')} ${sellToken?.symbol || ''}`,
-        disabled: true,
-        action: () => {},
-        color: 'error' as const,
-      },
-      [ButtonState.CREATE_TRUSTLINE]: {
-        label: t('Create Trustline'),
-        disabled: false,
-        action: handleCreateTrustline,
-        variant: 'contained' as const,
-      },
-      [ButtonState.REVIEW]: {
-        label: t('Review'),
-        disabled: false,
-        action: () => setReviewOpen(true),
-        variant: 'contained' as const,
-      },
-    };
-    return configs[state];
-  };
-
-  const handleMainButtonClick = () => {
-    const state = getButtonState();
-    const config = getButtonConfig(state);
-    config.action();
-  };
-
-  const handleMaxClick = () => {
-    if (sellToken) {
-      setAmount(sellToken.balance.toString());
-    }
-  };
-
   const checkIfSwapAllowed = async () => {
     setSwapError(null);
     if (!sellToken || !buyToken) return false;
@@ -446,62 +388,123 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
   };
 
   const doSwap = async (): Promise<void> => {
-    if (sellToken && buyToken && sellToken.id && buyToken.id) {
-      try {
-        const allowed = await checkIfSwapAllowed();
-        if (!allowed) return;
+    if (!sellToken || !buyToken || !sellToken.id || !buyToken.id) return;
 
-        if (buyToken.symbol !== 'XLM') {
-          const walletAddress = connectedAddress;
-          if (!walletAddress) {
-            setSwapError(t('No wallet connected'));
-            return;
-          }
+    try {
+      const allowed = await checkIfSwapAllowed();
+      if (!allowed) return;
 
-          const trustlineStatus = await checkTrustline(
-            walletAddress,
-            buyToken.symbol,
-            constants.StellarConfig.NORMAL_TOKEN_ISSUER
-          );
-
-          if (!trustlineStatus.exists) {
-            setSwapError(t('Trustline required before swap. Please create trustline first.'));
-            return;
-          }
+      if (buyToken.symbol !== 'XLM') {
+        const walletAddress = connectedAddress;
+        if (!walletAddress) {
+          setSwapError(t('No wallet connected'));
+          return;
         }
 
-        const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
-        const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
+        const trustlineStatus = await checkTrustline(
+          walletAddress,
+          buyToken.symbol,
+          constants.StellarConfig.NORMAL_TOKEN_ISSUER
+        );
 
-        await onSwap({
-          asset: format.formatNormalToken(asset, 'without-n'),
-          direction,
-          in_amount: Number(amount),
-          out_min: Number(0),
-        });
-
-        setTimeout(async () => {
-          await appStore.fetchNativeTokenInfo();
-        }, 7000);
-      } catch (_err) {
-        setSwapError(t('Error during swap transaction'));
+        if (!trustlineStatus.exists) {
+          setSwapError(t('Trustline required before swap. Please create trustline first.'));
+          return;
+        }
       }
+
+      const asset = buyToken.symbol === 'XLM' ? sellToken.symbol : buyToken.symbol;
+      const direction = sellToken.symbol === 'XLM' ? BuyDirection : SellDirection;
+
+      await onSwap({
+        asset: format.formatNormalToken(asset, 'without-n'),
+        direction,
+        in_amount: Number(amount),
+        out_min: Number(0),
+      });
+
+      setTimeout(async () => {
+        await appStore.fetchNativeTokenInfo();
+      }, 7000);
+    } catch (_err) {
+      setSwapError(t('Error during swap transaction'));
     }
   };
 
+  // Button state machine
+  const getButtonState = (): ButtonState => {
+    if (!sellToken || !buyToken) return ButtonState.SELECT_TOKEN;
+    if (checkingTrustline) return ButtonState.CHECKING_TRUSTLINE;
+    if (creatingTrustline) return ButtonState.CREATING_TRUSTLINE;
+    if (needsTrustline && buyToken.symbol !== 'XLM') return ButtonState.CREATE_TRUSTLINE;
+    if (sellVal <= 0) return ButtonState.ENTER_AMOUNT;
+    if (isLoading) return ButtonState.FINALIZING_QUOTE;
+    if (quoteFetched) {
+      if (insufficientBalance) return ButtonState.INSUFFICIENT_BALANCE;
+      return ButtonState.REVIEW;
+    }
+    return ButtonState.ENTER_AMOUNT;
+  };
+
+  const getButtonConfig = (state: ButtonState): ButtonConfig => {
+    const noop = () => {};
+    switch (state) {
+      case ButtonState.SELECT_TOKEN:
+        return { label: t('Select a token'), disabled: true, action: noop };
+      case ButtonState.ENTER_AMOUNT:
+        return { label: t('Enter an amount'), disabled: true, action: noop };
+      case ButtonState.CHECKING_TRUSTLINE:
+        return { label: t('Checking trustline...'), disabled: true, action: noop };
+      case ButtonState.CREATING_TRUSTLINE:
+        return { label: t('Creating trustline...'), disabled: true, action: noop };
+      case ButtonState.FINALIZING_QUOTE:
+        return { label: t('Finalizing quote...'), disabled: true, action: noop };
+      case ButtonState.INSUFFICIENT_BALANCE:
+        return {
+          label: `${t('Insufficient')} ${sellToken?.symbol || ''}`,
+          disabled: true,
+          action: noop,
+          color: 'error',
+        };
+      case ButtonState.CREATE_TRUSTLINE:
+        return {
+          label: t('Create Trustline'),
+          disabled: false,
+          action: handleCreateTrustline,
+          variant: 'contained',
+        };
+      case ButtonState.REVIEW:
+        return {
+          label: t('Review'),
+          disabled: false,
+          action: () => setReviewOpen(true),
+          variant: 'contained',
+        };
+      default:
+        return { label: t('Enter an amount'), disabled: true, action: noop };
+    }
+  };
+
+  const handleMainButtonClick = () => {
+    const state = getButtonState();
+    const config = getButtonConfig(state);
+    config.action();
+  };
+
+  // Token list filtering with XLM <-> n* pairing rule
   const filteredTokens = useMemo((): Token[] => {
+    const onlyAllowed = (tok: Token) => tok.symbol === 'XLM' || tok.symbol.startsWith('n');
+
     if (activeButton === 'sell') {
-      if (!buyToken)
-        return tokens.filter((tok) => tok.symbol === 'XLM' || tok.symbol.startsWith('n'));
+      if (!buyToken) return tokens.filter(onlyAllowed);
       if (buyToken.symbol === 'XLM') return tokens.filter((tok) => tok.symbol.startsWith('n'));
       if (buyToken.symbol.startsWith('n')) return tokens.filter((tok) => tok.symbol === 'XLM');
     } else if (activeButton === 'buy') {
-      if (!sellToken)
-        return tokens.filter((tok) => tok.symbol === 'XLM' || tok.symbol.startsWith('n'));
+      if (!sellToken) return tokens.filter(onlyAllowed);
       if (sellToken.symbol === 'XLM') return tokens.filter((tok) => tok.symbol.startsWith('n'));
       if (sellToken.symbol.startsWith('n')) return tokens.filter((tok) => tok.symbol === 'XLM');
     }
-    return tokens.filter((tok) => tok.symbol === 'XLM' || tok.symbol.startsWith('n'));
+    return tokens.filter(onlyAllowed);
   }, [activeButton, tokens, sellToken, buyToken]);
 
   const buttonState = getButtonState();
@@ -510,6 +513,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
       <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {/* invert */}
         <Box
           onClick={handleInvertTokens}
           sx={{
@@ -559,6 +563,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
           </Box>
         </Box>
 
+        {/* SELL */}
         <Box
           sx={{
             display: 'flex',
@@ -585,13 +590,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
             }}
           >
             <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-                flexGrow: 1,
-                minWidth: 0,
-              }}
+              sx={{ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1, minWidth: 0 }}
             >
               <Typography variant="body1" noWrap data-testid="sell-token-picker">
                 {t('Sell')}
@@ -749,6 +748,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
           </Box>
         </Box>
 
+        {/* BUY */}
         <Box
           sx={{
             display: 'flex',
@@ -843,6 +843,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
         </Box>
       </Box>
 
+      {/* error */}
       {swapError && (
         <Box
           sx={{
@@ -866,6 +867,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
         </Box>
       )}
 
+      {/* main button / connect gate */}
       {isConnected ? (
         <Button
           fullWidth
@@ -892,6 +894,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
         </WalletGate>
       )}
 
+      {/* fees */}
       {quoteFetched && !isLoading && (
         <FeeInfoAccordion
           conversionText={sellToken && buyToken ? getConversionText(sellToken, buyToken) : ''}
@@ -905,6 +908,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
         />
       )}
 
+      {/* review */}
       {reviewOpen && sellToken && buyToken && (
         <SwapReview
           open={reviewOpen}
@@ -922,6 +926,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
         />
       )}
 
+      {/* token picker */}
       <PickToken
         open={open}
         onClose={handleClose}
