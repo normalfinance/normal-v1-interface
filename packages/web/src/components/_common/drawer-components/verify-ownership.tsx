@@ -1,33 +1,54 @@
 'use client';
 
+import { useEffect, useState, useCallback } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Stack,
+  Typography,
+  CircularProgress,
+  Paper,
+} from '@mui/material';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
-import { useState, useEffect, useCallback } from 'react';
 import { runProofOfOwnership } from '@/auth/proof-of-ownership';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
-import { Box, Stack, Button, Typography, CircularProgress } from '@mui/material';
-
-import { Iconify } from '@/components/template/iconify';
-
-type Props = { onContinue?: () => void };
-
 type KitSignResult = string | { signedXDR?: string; xdr?: string };
 
-export default function VerifyOwnershipCard({ onContinue }: Props) {
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  onVerified?: () => void;
+  message?: string;
+};
+
+export default function VerifyOwnershipDialog({
+  open,
+  onClose,
+  onVerified,
+  message = 'i love normal',
+}: Props) {
   const { t } = useTranslate();
   const persist = usePersistStore();
-  const { signTransaction: kitSignTx, isConnected, connectWallet } = useStellarWalletsKit();
+  const {
+    signTransaction: kitSignTx,
+    isConnected,
+    connectWallet,
+    disconnectWallet,
+  } = useStellarWalletsKit();
 
   const address = persist.wallet.address;
   const networkPassphrase = persist.wallet.activeChain?.networkPassphrase;
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [verifiedNow, setVerifiedNow] = useState<boolean>(() =>
-    isWalletVerifiedForSession(address)
-  );
+  const [phase, setPhase] = useState<'idle' | 'signing' | 'success' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const alreadyVerified = isWalletVerifiedForSession(address);
 
   const signTransaction = useCallback(
     async (xdr: string) => {
@@ -41,80 +62,124 @@ export default function VerifyOwnershipCard({ onContinue }: Props) {
   );
 
   const start = useCallback(async () => {
-    if (!address || !networkPassphrase) return;
+    if (!open) return;
+    if (!address || !networkPassphrase) return; // wait until store is populated
     if (isWalletVerifiedForSession(address)) {
-      setVerifiedNow(true);
+      setPhase('success');
       return;
     }
-    setLoading(true);
-    setError(null);
+
+    setPhase('signing');
+    setErrorMsg(null);
     try {
-      await runProofOfOwnership({
-        address,
-        signTransaction,
-        networkPassphrase,
-        message: 'i love normal',
-      });
-      setVerifiedNow(true);
+      await runProofOfOwnership({ address, signTransaction, networkPassphrase, message });
+      setPhase('success');
+      onVerified?.();
     } catch (e: any) {
-      setError(e?.message || 'Verification failed.');
-      setVerifiedNow(false);
-    } finally {
-      setLoading(false);
+      setErrorMsg(e?.message || t('Verification failed.'));
+      setPhase('error');
     }
-  }, [address, networkPassphrase, signTransaction]);
+  }, [open, address, networkPassphrase, signTransaction, onVerified, message, t]);
+
+  // Kick off when opened; also retry when address/chain arrives
+  useEffect(() => {
+    if (open) void start();
+  }, [open, address, networkPassphrase, start]);
 
   useEffect(() => {
-    void start();
-  }, [start]);
+    if (!open) {
+      setPhase('idle');
+      setErrorMsg(null);
+    }
+  }, [open]);
+
+  const handleCancel = async () => {
+    try {
+      persist.disconnectWallet();
+      await disconnectWallet();
+    } finally {
+      onClose();
+    }
+  };
+
+  const handleCloseSuccess = () => {
+    onVerified?.();
+    onClose();
+  };
 
   return (
-    <Box sx={{ p: 2, pt: 10, display: 'flex', flexDirection: 'column', alignItems: 'start' }}>
-      <Typography variant="subtitle1" sx={{ mb: 1 }}>
-        {t('Verify wallet ownership')}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {t('Please approve the signature in your wallet to confirm you own this address.')}
-      </Typography>
-
-      {loading && (
-        <Stack direction="row" spacing={1} alignItems="center">
-          <CircularProgress size={20} />
-          <Typography variant="body2">{t('Waiting for your signature...')}</Typography>
+    <Dialog open={open} maxWidth="sm" fullWidth onClose={() => {}}>
+      <DialogTitle>{t('Verify Wallet Ownership')}</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2}>
+          {alreadyVerified ? (
+            <Typography variant="body2" color="text.secondary">
+              {t('This wallet is already verified for this session.')}
+            </Typography>
+          ) : phase === 'signing' ? (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                {t('Please approve the signature in your wallet to confirm you own this address.')}
+              </Typography>
+              <Paper variant="outlined" sx={{ p: 2, fontFamily: 'monospace', fontSize: 14 }}>
+                {message}
+              </Paper>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CircularProgress size={20} />
+                <Typography variant="body2">{t('Waiting for your signature...')}</Typography>
+              </Stack>
+            </>
+          ) : phase === 'error' ? (
+            <>
+              <Typography variant="body2" color="error">
+                {errorMsg}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('You can retry the signature or cancel to disconnect the wallet.')}
+              </Typography>
+            </>
+          ) : phase === 'success' ? (
+            <>
+              <Typography variant="body2" color="success.main">
+                {t('Wallet ownership verified successfully.')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('You may now continue using the app.')}
+              </Typography>
+            </>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              {t('Preparing verification...')}
+            </Typography>
+          )}
         </Stack>
-      )}
+      </DialogContent>
 
-      {!loading && error && !verifiedNow && (
-        <Stack spacing={1}>
-          <Typography variant="body2" color="error">
-            {error}
-          </Typography>
-          <Button
-            variant="contained"
-            color="info"
-            startIcon={<Iconify icon="solar:pen-2-bold-duotone" />}
-            onClick={start}
-          >
-            {t('Retry signing')}
-          </Button>
-        </Stack>
-      )}
-
-      {!loading && verifiedNow && (
-        <Stack spacing={1}>
-          <Typography variant="body2" color="success.main">
-            {t('Signature verified. You can continue.')}
-          </Typography>
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<Iconify icon="solar:check-circle-bold-duotone" />}
-            onClick={() => onContinue?.()}
-          >
+      <DialogActions>
+        {phase !== 'success' ? (
+          <>
+            {phase === 'error' && (
+              <Button
+                onClick={() => {
+                  setPhase('idle');
+                  void start();
+                }}
+                variant="contained"
+                color="primary"
+              >
+                {t('Retry')}
+              </Button>
+            )}
+            <Button onClick={handleCancel} color="inherit">
+              {t('Cancel')}
+            </Button>
+          </>
+        ) : (
+          <Button onClick={handleCloseSuccess} variant="contained" color="success">
             {t('Continue')}
           </Button>
-        </Stack>
-      )}
-    </Box>
+        )}
+      </DialogActions>
+    </Dialog>
   );
 }

@@ -3,6 +3,20 @@ import { AppStorePersist } from '@normalfinance/types';
 import { usePersistStore } from '../store';
 import { constants } from '@normalfinance/utils';
 
+/** Session helper: remove a single address from the verified map */
+function clearSessionProof(address?: string | null) {
+  if (typeof window === 'undefined' || !address) return;
+  try {
+    const KEY = 'nf_verified_addrs';
+    const raw = sessionStorage.getItem(KEY);
+    if (!raw) return;
+    const map = JSON.parse(raw) as Record<string, boolean>;
+    if (map[address]) {
+      delete map[address];
+      sessionStorage.setItem(KEY, JSON.stringify(map));
+    }
+  } catch {}
+}
 
 export const createConnectWalletActions = () => {
   return {
@@ -13,15 +27,15 @@ export const createConnectWalletActions = () => {
       walletType: undefined,
     },
 
-    // This function stores wallet connection details after the Stellar Wallets Kit
-    // has already handled the connection process
     connectWallet: async (walletAddress: string, walletType?: string) => {
-      console.log('[WALLET ACTIONS] Storing wallet connection details:', { walletAddress, walletType });
-      
-      // Get the network details
-      const network = (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET' 
-        ? 'testnet' 
-        : 'public';
+      const prevAddress = usePersistStore.getState().wallet.address;
+      if (prevAddress && prevAddress !== walletAddress) {
+        clearSessionProof(prevAddress);
+      }
+      clearSessionProof(walletAddress);
+
+      const network =
+        (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET' ? 'testnet' : 'public';
 
       const activeChain = {
         id: network,
@@ -29,38 +43,28 @@ export const createConnectWalletActions = () => {
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
       };
 
-      // Create a server object to connect to the blockchain
+      // Horizon server
       const server = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
         allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
       });
 
-      // Update the state to store the wallet address and server
+      // Persist
       usePersistStore.setState((state: AppStorePersist) => ({
         ...state,
-        wallet: { 
-          address: walletAddress, 
-          activeChain, 
-          server, 
-          walletType: (walletType as any) || 'stellar-wallets-kit' 
+        wallet: {
+          address: walletAddress,
+          activeChain,
+          server,
+          walletType: (walletType as any) || 'stellar-wallets-kit',
         },
       }));
-
-      console.log('[WALLET ACTIONS] Wallet state updated successfully');
-
-      // Check invite code status for this wallet address
-      try {
-        const persistStore = usePersistStore.getState();
-        await persistStore.checkWalletInviteStatus(walletAddress);
-      } catch (error) {
-        console.error('Error checking wallet invite status:', error);
-      }
-
       return;
     },
 
-    // Disconnect the wallet
     disconnectWallet: () => {
-      // Update the state
+      const current = usePersistStore.getState().wallet.address;
+      clearSessionProof(current);
+
       usePersistStore.setState((state: AppStorePersist) => ({
         ...state,
         wallet: {
