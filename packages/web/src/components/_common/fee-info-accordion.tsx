@@ -51,6 +51,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
         boxShadow: 'none !important',
         width: '100%',
         padding: '0px !important',
+        pb: '12px !important',
         '::before': { display: 'none' },
       }}
     >
