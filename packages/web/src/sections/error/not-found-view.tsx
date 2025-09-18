@@ -4,7 +4,7 @@ import { m } from 'framer-motion';
 import { useTranslate } from '@/locales';
 import { SimpleLayout } from '@/layouts/simple';
 import { RouterLink } from '@/routes/components';
-import { PageNotFoundIllustration } from '@/assets/illustrations';
+import Image from 'next/image';
 
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
@@ -38,7 +38,13 @@ export function NotFoundView() {
         </m.div>
 
         <m.div variants={varBounce('in')}>
-          <PageNotFoundIllustration sx={{ my: { xs: 5, sm: 10 } }} />
+          <Image
+            src="/assets/illustrations/placeholders/404.svg"
+            alt="404 - Page not found"
+            width={400}
+            height={300}
+            style={{ margin: '40px 0 80px 0' }}
+          />
         </m.div>
 
         <Button component={RouterLink} href="/" size="large" variant="contained">
