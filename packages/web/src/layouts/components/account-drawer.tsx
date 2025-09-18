@@ -9,7 +9,7 @@ import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
@@ -26,6 +26,9 @@ import ConnectedWallet from '@/components/_common/drawer-components/connected-wa
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
+
+import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import VerifyOwnershipCard from '@/components/_common/drawer-components/verify-ownership';
 
 /* ------------------------------------------------------------------ */
 /* ① Disconnected: Show connect wallet button                         */
@@ -239,6 +242,13 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address || publicKey;
   const isWalletConnected = !!connectedAddress || isConnected;
+  const [verifyBump, setVerifyBump] = useState(0);
+
+  const isVerified = useMemo(
+    () => isWalletVerifiedForSession(connectedAddress),
+    // include bump so we recalc after clicking Continue
+    [connectedAddress, verifyBump]
+  );
 
   const handleDisconnect = async () => {
     if (isDisconnecting) {
@@ -378,7 +388,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
         </Box>
         <Scrollbar>
           {isWalletConnected && connectedAddress ? (
-            <WalletConnected address={connectedAddress} />
+            isVerified ? (
+              <WalletConnected address={connectedAddress} />
+            ) : (
+              <VerifyOwnershipCard onContinue={() => setVerifyBump((x) => x + 1)} />
+            )
           ) : (
             <WalletDisconnected onConnectClick={handleConnectClick} />
           )}
