@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -17,6 +17,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { runProofOfOwnership } from '@/auth/proof-of-ownership';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { useProofDialogStore } from '@/stores/proof-dialog-store';
 
 type KitSignResult = string | { signedXDR?: string; xdr?: string };
 
@@ -35,6 +36,8 @@ export default function VerifyOwnershipDialog({
 }: Props) {
   const { t } = useTranslate();
   const persist = usePersistStore();
+  const { startProof, busy } = useProofDialogStore();
+
   const {
     signTransaction: kitSignTx,
     isConnected,
@@ -42,56 +45,85 @@ export default function VerifyOwnershipDialog({
     disconnectWallet,
   } = useStellarWalletsKit();
 
-  const address = persist.wallet.address;
-  const networkPassphrase = persist.wallet.activeChain?.networkPassphrase;
+  const address = persist.wallet.address || null;
+  const networkPassphrase = persist.wallet.activeChain?.networkPassphrase || null;
 
   const [phase, setPhase] = useState<'idle' | 'signing' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const alreadyVerified = isWalletVerifiedForSession(address);
-
-  const signTransaction = useCallback(
-    async (xdr: string) => {
-      if (!isConnected) {
-        await connectWallet();
-      }
-      const res = (await kitSignTx(xdr)) as KitSignResult;
-      return typeof res === 'string' ? res : (res?.signedXDR ?? res?.xdr ?? '');
-    },
-    [isConnected, connectWallet, kitSignTx]
+  const verified = useMemo(
+    () => (address ? isWalletVerifiedForSession(address) : false),
+    [address]
   );
 
-  const start = useCallback(async () => {
-    if (!open) return;
-    if (!address || !networkPassphrase) return; // wait until store is populated
-    if (isWalletVerifiedForSession(address)) {
-      setPhase('success');
-      return;
-    }
+  const launchedRef = useRef(false);
 
-    setPhase('signing');
-    setErrorMsg(null);
-    try {
-      await runProofOfOwnership({ address, signTransaction, networkPassphrase, message });
+  const runOnce = useCallback(async () => {
+    if (!address || !networkPassphrase) return;
+
+    await startProof(async () => {
+      if (verified) {
+        setPhase('success');
+        onVerified?.();
+        return;
+      }
+
+      setPhase('signing');
+      setErrorMsg(null);
+
+      const signTransaction = async (xdr: string) => {
+        if (!isConnected) {
+          await connectWallet();
+        }
+        const res = (await kitSignTx(xdr)) as KitSignResult;
+        return typeof res === 'string' ? res : (res?.signedXDR ?? res?.xdr ?? '');
+      };
+
+      await runProofOfOwnership({
+        address,
+        signTransaction,
+        networkPassphrase,
+        message,
+      });
+
       setPhase('success');
       onVerified?.();
-    } catch (e: any) {
+    }).catch((e: any) => {
       setErrorMsg(e?.message || t('Verification failed.'));
       setPhase('error');
-    }
-  }, [open, address, networkPassphrase, signTransaction, onVerified, message, t]);
-
-  // Kick off when opened; also retry when address/chain arrives
-  useEffect(() => {
-    if (open) void start();
-  }, [open, address, networkPassphrase, start]);
+    });
+  }, [
+    address,
+    networkPassphrase,
+    verified,
+    startProof,
+    onVerified,
+    message,
+    t,
+    isConnected,
+    connectWallet,
+    kitSignTx,
+  ]);
 
   useEffect(() => {
     if (!open) {
+      launchedRef.current = false;
       setPhase('idle');
       setErrorMsg(null);
+      return;
     }
-  }, [open]);
+    if (launchedRef.current) return;
+    if (!address || !networkPassphrase) return;
+    launchedRef.current = true;
+    void runOnce();
+  }, [open, address, networkPassphrase, runOnce]);
+
+  const handleRetry = () => {
+    setPhase('idle');
+    setErrorMsg(null);
+    launchedRef.current = false;
+    void runOnce();
+  };
 
   const handleCancel = async () => {
     try {
@@ -108,15 +140,17 @@ export default function VerifyOwnershipDialog({
   };
 
   return (
-    <Dialog open={open} maxWidth="sm" fullWidth onClose={() => {}}>
+    <Dialog open={open} maxWidth="sm" fullWidth onClose={() => {}} disableEscapeKeyDown>
       <DialogTitle>{t('Verify Wallet Ownership')}</DialogTitle>
       <DialogContent>
         <Stack spacing={2}>
-          {alreadyVerified ? (
+          {verified && (
             <Typography variant="body2" color="text.secondary">
               {t('This wallet is already verified for this session.')}
             </Typography>
-          ) : phase === 'signing' ? (
+          )}
+
+          {!verified && phase === 'signing' && (
             <>
               <Typography variant="body2" color="text.secondary">
                 {t('Please approve the signature in your wallet to confirm you own this address.')}
@@ -129,7 +163,9 @@ export default function VerifyOwnershipDialog({
                 <Typography variant="body2">{t('Waiting for your signature...')}</Typography>
               </Stack>
             </>
-          ) : phase === 'error' ? (
+          )}
+
+          {!verified && phase === 'error' && (
             <>
               <Typography variant="body2" color="error">
                 {errorMsg}
@@ -138,7 +174,15 @@ export default function VerifyOwnershipDialog({
                 {t('You can retry the signature or cancel to disconnect the wallet.')}
               </Typography>
             </>
-          ) : phase === 'success' ? (
+          )}
+
+          {!verified && phase === 'idle' && (
+            <Typography variant="body2" color="text.secondary">
+              {t('Preparing verification...')}
+            </Typography>
+          )}
+
+          {phase === 'success' && (
             <>
               <Typography variant="body2" color="success.main">
                 {t('Wallet ownership verified successfully.')}
@@ -147,10 +191,6 @@ export default function VerifyOwnershipDialog({
                 {t('You may now continue using the app.')}
               </Typography>
             </>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              {t('Preparing verification...')}
-            </Typography>
           )}
         </Stack>
       </DialogContent>
@@ -159,18 +199,11 @@ export default function VerifyOwnershipDialog({
         {phase !== 'success' ? (
           <>
             {phase === 'error' && (
-              <Button
-                onClick={() => {
-                  setPhase('idle');
-                  void start();
-                }}
-                variant="contained"
-                color="primary"
-              >
+              <Button onClick={handleRetry} variant="contained" color="primary" disabled={busy}>
                 {t('Retry')}
               </Button>
             )}
-            <Button onClick={handleCancel} color="inherit">
+            <Button onClick={handleCancel} color="inherit" disabled={busy}>
               {t('Cancel')}
             </Button>
           </>
