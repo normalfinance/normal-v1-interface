@@ -1,7 +1,6 @@
 import type { CardProps } from '@mui/material';
 import type { SendQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
-
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
@@ -12,16 +11,12 @@ import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { isValidStellarAddress } from '@/utils/address-validator';
 import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
-
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
-
-// 1) verification helpers
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import { useProofDialogStore } from '@/stores/proof-dialog-store';
 
@@ -38,7 +33,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
 
-  // 2) stores + connection/verification state
   const appStore = useAppStore();
   const persist = usePersistStore();
   const { publicKey } = useStellarWalletsKit();
@@ -47,12 +41,11 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
   const isVerified = !!connectedAddress && isWalletVerifiedForSession(connectedAddress);
   const isConnected = !!connectedAddress;
   const { ensureOpen } = useProofDialogStore();
+  const proofOpenedOnceRef = useRef(false);
 
-  // 3) local tokens + chosen token
   const [tokens, setTokens] = useState<Token[]>([]);
   const [sendToken, setSendToken] = useState<Token | null>(null);
 
-  // 4) amount/destination and UI state
   const [destination, setDestination] = useState<string>(DEFAULT_DESTINATION);
   const [amount, setAmount] = useState<string>('0');
   const [isFiatMode, setIsFiatMode] = useState<boolean>(true);
@@ -61,11 +54,9 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
   const [reviewOpen, setReviewOpen] = useState(false);
   const handleReviewClose = () => setReviewOpen(false);
 
-  // 5) width measurement for the big input
   const [inputWidth, setInputWidth] = useState<number>(0);
   const spanRef = useRef<HTMLSpanElement>(null);
 
-  // 6) derived coin/fiat values
   const [coinValue, setCoinValue] = useState<number>(0);
   const [fiatValue, setFiatValue] = useState<number>(0);
 
@@ -86,13 +77,17 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
     if (spanRef.current) setInputWidth(spanRef.current.offsetWidth + 8);
   }, [amount]);
 
-  // 7) auto-open proof dialog when a wallet connects but is not verified
   useEffect(() => {
     if (!connectedAddress) return;
-    if (!isVerified) ensureOpen('drawer');
+    if (!isVerified && !proofOpenedOnceRef.current) {
+      ensureOpen('drawer');
+      proofOpenedOnceRef.current = true;
+    }
+    if (isVerified) {
+      proofOpenedOnceRef.current = false;
+    }
   }, [connectedAddress, isVerified, ensureOpen]);
 
-  // 8) refresh tokens after verification event
   useEffect(() => {
     const onVerified = (e: any) => {
       if (!connectedAddress || e?.detail?.address !== connectedAddress) return;
@@ -105,7 +100,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
     return () => window.removeEventListener('nf:walletVerified', onVerified);
   }, [connectedAddress, appStore]);
 
-  // 9) adopt tokens only when verified + set default send token (prefer XLM)
   useEffect(() => {
     if (!isVerified) {
       setTokens([]);
@@ -122,7 +116,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
     }
   }, [isVerified, tokensList, appStore.tokens, sendToken, verifiedTick]);
 
-  // 10) initialize from query params (wait for tokens)
   useEffect(() => {
     if (!queryParams || tokens.length === 0) return;
 
@@ -136,7 +129,18 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
     if (queryParams.destination) setDestination(queryParams.destination);
   }, [queryParams, tokens]);
 
-  // 11) input handlers
+  useEffect(() => {
+    if (isConnected) return;
+    proofOpenedOnceRef.current = false;
+    setTokens([]);
+    setSendToken(null);
+    setAmount('0');
+    setIsFiatMode(true);
+    setDestination(DEFAULT_DESTINATION);
+    setOpen(false);
+    setReviewOpen(false);
+  }, [isConnected]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(sanitizeAmountInput(e.target.value));
   };
@@ -165,7 +169,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
     setIsFiatMode(!isFiatMode);
   };
 
-  // 12) computed button state
   const coinAmount = sendToken
     ? isFiatMode
       ? (parseFloat(amount) || 0) / sendToken.usdValue
@@ -182,13 +185,15 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
     return 'Send';
   };
 
-  // 13) send flow + proof gate
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
     if (label !== 'Send') return;
 
     if (!isVerified) {
-      ensureOpen('drawer');
+      if (!proofOpenedOnceRef.current) {
+        ensureOpen('drawer');
+        proofOpenedOnceRef.current = true;
+      }
       return;
     }
 
@@ -313,7 +318,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
           </Box>
         </Box>
 
-        {/* 14) Pick token */}
         <Button
           onClick={() => {
             setActiveButton('send');
@@ -389,7 +393,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
         </Button>
       </Box>
 
-      {/* 15) Destination */}
       <Box
         sx={{
           display: 'flex',
@@ -430,7 +433,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
         />
       </Box>
 
-      {/* 16) Main Button */}
       <Box>
         {isConnected ? (
           <Button
@@ -463,7 +465,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
         />
       )}
 
-      {/* 17) Token Picker */}
       <PickToken
         open={open}
         onClose={() => setOpen(false)}

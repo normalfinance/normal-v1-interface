@@ -2,7 +2,6 @@ import type { CardProps } from '@mui/material';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
-
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
@@ -12,20 +11,15 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { format, constants, checkTrustline, getCryptoIconUrl } from '@normalfinance/utils';
-
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
-
 import { Iconify } from '@/components/template/iconify';
-
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
 import { WalletGate } from './wallet-gate';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-
-// 10) NEW: verification imports (gate tokens + open proof dialog on connect)
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import { useProofDialogStore } from '@/stores/proof-dialog-store';
 
@@ -115,15 +109,40 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
   const isVerified = !!connectedAddress && isWalletVerifiedForSession(connectedAddress);
   const isConnected = !!connectedAddress;
 
-  // 12) NEW: open the proof dialog as soon as a wallet connects but is not verified
-  const { ensureOpen } = useProofDialogStore();
+  // ensure proof dialog on connect when unverified
+  const { ensureOpen, close } = useProofDialogStore();
+  const proofOpenedOnceRef = React.useRef(false);
   useEffect(() => {
     if (!connectedAddress) return;
-    if (!isVerified) {
-      // tell global proof modal to open; using same source tag as drawer for consistency
+    if (isVerified) {
+      proofOpenedOnceRef.current = false;
+      return;
+    }
+    if (!proofOpenedOnceRef.current) {
       ensureOpen('drawer');
+      proofOpenedOnceRef.current = true;
     }
   }, [connectedAddress, isVerified, ensureOpen]);
+
+  // reset UI when wallet disconnects
+  useEffect(() => {
+    if (!isConnected) {
+      proofOpenedOnceRef.current = false;
+      close?.();
+      setTokens([]);
+      setSellToken(null);
+      setBuyToken(null);
+      setAmount('0');
+      setIsLoading(false);
+      setQuoteFetched(false);
+      setInsufficientBalance(false);
+      setBuyAmount(0);
+      setSwapError(null);
+      setCreatingTrustline(false);
+      setNeedsTrustline(false);
+      setCheckingTrustline(false);
+    }
+  }, [isConnected, close]);
 
   // 13) NEW: when verification completes for this wallet, refetch tokens
   useEffect(() => {
@@ -141,7 +160,18 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
   // 14) NEW: only adopt tokens (from props or store) when the wallet is verified
   useEffect(() => {
     if (!isVerified) {
-      setTokens([]); // hide balances/tokens until verified
+      setTokens([]);
+      setSellToken(null);
+      setBuyToken(null);
+      setAmount('0');
+      setIsLoading(false);
+      setQuoteFetched(false);
+      setInsufficientBalance(false);
+      setBuyAmount(0);
+      setSwapError(null);
+      setCreatingTrustline(false);
+      setNeedsTrustline(false);
+      setCheckingTrustline(false);
       return;
     }
     const source = tokensList && tokensList.length ? tokensList : storeTokens;
@@ -149,7 +179,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
 
     setTokens(source);
 
-    // default the sell token once (prefer XLM)
     if (!sellToken) {
       const xlm = source.find((t) => t.symbol === 'XLM');
       setSellToken(xlm || source[0]);
@@ -185,22 +214,17 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
 
   // Function to check if trustline is needed for the buy token
   const checkTrustlineStatus = useCallback(async () => {
-    console.log('[TRUSTLINE CHECK] Starting check for token:', buyToken?.symbol);
-
     if (!buyToken || buyToken.symbol === 'XLM') {
-      console.log('[TRUSTLINE CHECK] No check needed - XLM or no token');
       setNeedsTrustline(false);
       return;
     }
 
     const walletAddress = connectedAddress;
     if (!walletAddress) {
-      console.log('[TRUSTLINE CHECK] No wallet address available');
       setNeedsTrustline(false);
       return;
     }
 
-    console.log('[TRUSTLINE CHECK] Checking for wallet:', walletAddress);
     setCheckingTrustline(true);
     try {
       const trustlineStatus = await checkTrustline(
@@ -208,10 +232,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
         buyToken.symbol,
         constants.StellarConfig.NORMAL_TOKEN_ISSUER
       );
-      console.log('[TRUSTLINE CHECK] Result:', trustlineStatus);
       setNeedsTrustline(!trustlineStatus.exists);
-    } catch (error) {
-      console.error('[TRUSTLINE CHECK] Error checking trustline:', error);
+    } catch {
       setNeedsTrustline(false);
     }
     setCheckingTrustline(false);
@@ -219,13 +241,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
 
   // Check trustline status when buy token changes
   useEffect(() => {
-    if (!isVerified) return; // trustline checks only make sense after verification
+    if (!isVerified) return;
     checkTrustlineStatus();
   }, [checkTrustlineStatus, isVerified]);
 
   // 7) Auto-fetch quote whenever relevant fields change: sellToken, buyToken, amount
   useEffect(() => {
-    // Clear old quote state each time we start a new calculation
     setIsLoading(false);
     setQuoteFetched(false);
     setInsufficientBalance(false);
@@ -235,13 +256,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
     setNeedsTrustline(false);
     setCheckingTrustline(false);
 
-    // Make sure we have both tokens
     if (!sellToken || !buyToken) return;
-
-    // If user hasn't typed anything or typed 0
     if (!amount || sellVal <= 0) return;
 
-    // Start "fetching" quote
     setIsLoading(true);
 
     doSimulateSwap();
@@ -327,18 +344,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
   };
 
   const getButtonState = (): ButtonState => {
-    console.log('[BUTTON STATE] State check:', {
-      sellToken: sellToken?.symbol,
-      buyToken: buyToken?.symbol,
-      checkingTrustline,
-      creatingTrustline,
-      needsTrustline,
-      sellVal,
-      isLoading,
-      quoteFetched,
-      insufficientBalance,
-    });
-
     if (!sellToken || !buyToken) return ButtonState.SELECT_TOKEN;
     if (checkingTrustline) return ButtonState.CHECKING_TRUSTLINE;
     if (creatingTrustline) return ButtonState.CREATING_TRUSTLINE;
@@ -431,7 +436,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
     if (!sellToken || !buyToken) return false;
     if (!isVerified) {
       setSwapError('Please verify wallet ownership first.');
-      ensureOpen('drawer');
+      if (!proofOpenedOnceRef.current) {
+        ensureOpen('drawer');
+        proofOpenedOnceRef.current = true;
+      }
       return false;
     }
     return true;
@@ -500,7 +508,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
           asset: format.formatNormalToken(asset, 'without-n'),
           direction,
           in_amount: Number(amount),
-          out_min: Number(0), // TODO: wire slippage/buyAmount
+          out_min: Number(0),
         });
 
         setTimeout(async () => {
@@ -933,7 +941,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
           conversionText={sellToken && buyToken ? getConversionText(sellToken, buyToken) : ''}
           insufficientBalance={insufficientBalance}
           sellToken={sellToken || undefined}
-          poolFee={0.3} // TODO: fix
+          poolFee={0.3}
           networkCost={0}
           priceImpact={priceImpact ?? 0}
           maxSlippage={maxSlippage}
@@ -948,7 +956,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
           buyToken={buyToken!}
           sellAmount={amount}
           buyAmount={buyAmount}
-          feePercentage="0.3" // TODO: fix
+          feePercentage="0.3"
           networkCost={networkFee ?? '0'}
           priceImpact={priceImpact ?? 0}
           maxSlippage={maxSlippage}

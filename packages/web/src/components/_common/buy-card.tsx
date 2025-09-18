@@ -4,7 +4,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useRef as useReactRef } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { convertFiatToCoin } from '@/utils/conversion-helpers';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
@@ -18,7 +18,6 @@ import CheckoutDialog from './checkout-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
-// 1) verification helpers
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import { useProofDialogStore } from '@/stores/proof-dialog-store';
 
@@ -38,7 +37,6 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
   const theme = useTheme();
   const { t } = useTranslate();
 
-  // 2) stores + connection/verification state
   const appStore = useAppStore();
   const persist = usePersistStore();
   const { publicKey } = useStellarWalletsKit();
@@ -47,37 +45,37 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
   const isVerified = !!connectedAddress && isWalletVerifiedForSession(connectedAddress);
   const isConnected = !!connectedAddress;
   const { ensureOpen } = useProofDialogStore();
+  const proofOpenedOnceRef = useReactRef(false);
 
-  // 3) local tokens + chosen token
   const [tokens, setTokens] = useState<Token[]>([]);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
 
-  // 4) amount + popup state
   const [amount, setAmount] = useState<string>('0');
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
-  // 5) width measurement
   const [inputWidth, setInputWidth] = useState<number>(0);
   const spanRef = useRef<HTMLSpanElement>(null);
 
-  // 6) derived values
   const fiatValue = parseFloat(amount) || 0;
   const buyableAmt =
     buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.usdValue) : 0;
 
-  // 7) review dialog
   const [reviewOpen, setReviewOpen] = useState(false);
   const handleReviewClose = () => setReviewOpen(false);
 
-  // 8) auto-open proof dialog when a wallet connects but is not verified
   useEffect(() => {
     if (!connectedAddress) return;
-    if (!isVerified) ensureOpen('drawer');
-  }, [connectedAddress, isVerified, ensureOpen]);
+    if (!isVerified && !proofOpenedOnceRef.current) {
+      ensureOpen('drawer');
+      proofOpenedOnceRef.current = true;
+    }
+    if (isVerified) {
+      proofOpenedOnceRef.current = false;
+    }
+  }, [connectedAddress, isVerified, ensureOpen, proofOpenedOnceRef]);
 
-  // 9) refresh tokens after verification event
   useEffect(() => {
     const onVerified = (e: any) => {
       if (!connectedAddress || e?.detail?.address !== connectedAddress) return;
@@ -90,7 +88,6 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
     return () => window.removeEventListener('nf:walletVerified', onVerified);
   }, [connectedAddress, appStore]);
 
-  // 10) adopt tokens only when verified + set default buy token (prefer XLM)
   useEffect(() => {
     if (!isVerified) {
       setTokens([]);
@@ -107,7 +104,6 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
     }
   }, [isVerified, tokensList, appStore.tokens, buyToken, verifiedTick]);
 
-  // 11) initialize from query params (wait for tokens)
   useEffect(() => {
     if (!queryParams || tokens.length === 0) return;
 
@@ -120,10 +116,19 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
     if (queryParams.amount) setAmount(queryParams.amount);
   }, [queryParams, tokens]);
 
-  // 12) input handlers
   useEffect(() => {
     if (spanRef.current) setInputWidth(spanRef.current.offsetWidth + 8);
   }, [amount]);
+
+  useEffect(() => {
+    if (isConnected) return;
+    proofOpenedOnceRef.current = false;
+    setTokens([]);
+    setBuyToken(null);
+    setAmount('0');
+    setOpen(false);
+    setReviewOpen(false);
+  }, [isConnected, proofOpenedOnceRef]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(sanitizeAmountInput(e.target.value));
@@ -138,7 +143,6 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
     if (e.key === '-') e.preventDefault();
   };
 
-  // 13) buy flow + proof gate
   const getButtonLabel = (): string => {
     if (!buyToken) return 'Select a token';
     const amt = parseFloat(amount) || 0;
@@ -151,7 +155,10 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
     if (label !== 'Buy') return;
 
     if (!isVerified) {
-      ensureOpen('drawer');
+      if (!proofOpenedOnceRef.current) {
+        ensureOpen('drawer');
+        proofOpenedOnceRef.current = true;
+      }
       return;
     }
 
@@ -352,7 +359,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
             token={buyToken?.symbol ?? 'USDC'}
             amount={amount}
             onClose={handleReviewClose}
-            walletAddress={connectedAddr}
+            walletAddress={persist.wallet.address}
           />
         )}
       </Stack>
