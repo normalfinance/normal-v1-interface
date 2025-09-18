@@ -3,9 +3,9 @@
 import type { ReferralQueryParams } from '@/types/query-params';
 
 import { useState, useEffect } from 'react';
+import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { ReferralAPI, getReferralAPIErrorMessage } from '@/lib/referral-api';
-import { logger } from '@normalfinance/utils';
 
 import { useQueryParams } from './use-query-params';
 

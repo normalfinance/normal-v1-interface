@@ -11,7 +11,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { format, constants, checkTrustline, getCryptoIconUrl, logger } from '@normalfinance/utils';
+import { format, logger, constants, checkTrustline, getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';

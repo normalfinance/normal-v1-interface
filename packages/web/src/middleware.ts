@@ -255,18 +255,14 @@ export async function middleware(req: NextRequest) {
         // Use cached data for blocking decisions
         if (BLOCKED_COUNTRIES.has(cachedGeoData.country) || cachedGeoData.isDangerous) {
           const blockReason = BLOCKED_COUNTRIES.has(cachedGeoData.country) ? 'country' : 'security';
-          logger.log(
-            `[${requestId}] BLOCKED via cache (${blockReason}): ${cachedGeoData.country}`
-          );
+          logger.log(`[${requestId}] BLOCKED via cache (${blockReason}): ${cachedGeoData.country}`);
           const url = req.nextUrl.clone();
           url.pathname = '/blocked';
           url.search = '';
           return NextResponse.redirect(url);
         }
 
-        logger.log(
-          `✅ [${requestId}] ALLOWED via cache - Request completed in ${totalDuration}ms`
-        );
+        logger.log(`✅ [${requestId}] ALLOWED via cache - Request completed in ${totalDuration}ms`);
         return referralResponse || NextResponse.next();
       } else {
         logger.log(`❌ [${requestId}] Cache expired, will fetch fresh data`);

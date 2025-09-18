@@ -1,7 +1,7 @@
 'use client';
 
-import { constants, logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
+import { logger, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
 

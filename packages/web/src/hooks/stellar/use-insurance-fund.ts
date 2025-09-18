@@ -11,7 +11,7 @@ import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { InsuranceFundContract } from '@normalfinance/contracts';
-import { constants, getTokenBalance, logger } from '@normalfinance/utils';
+import { logger, constants, getTokenBalance } from '@normalfinance/utils';
 
 import { useContractTransaction } from './use-contract-transaction';
 

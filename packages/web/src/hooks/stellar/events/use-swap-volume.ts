@@ -7,7 +7,7 @@ import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/event
 import { BigNumber } from 'bignumber.js';
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
-import { constants, parseEvent, logger } from '@normalfinance/utils';
+import { logger, constants, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 

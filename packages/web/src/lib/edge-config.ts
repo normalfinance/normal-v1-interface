@@ -1,5 +1,5 @@
-import { createClient } from '@vercel/edge-config';
 import { logger } from '@normalfinance/utils';
+import { createClient } from '@vercel/edge-config';
 
 const edgeConfig = createClient(process.env.EDGE_CONFIG);
 

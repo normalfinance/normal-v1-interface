@@ -3,9 +3,9 @@
 import { paths } from '@/routes/paths';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { useUrlInviteCode } from '@/hooks/use-url-invite-code';
-import { logger } from '@normalfinance/utils';
 
 import InviteCodeDialog from './drawer-components/invite-code-dialog';
 

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useReferralTracking } from '@/hooks/use-referral-tracking';
 import { logger } from '@normalfinance/utils';
+import { useReferralTracking } from '@/hooks/use-referral-tracking';
 
 interface ReferralProviderProps {
   children: React.ReactNode;

@@ -3,9 +3,9 @@
 import copy from 'copy-to-clipboard';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
+import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { ReferralAPI, getReferralAPIErrorMessage } from '@/lib/referral-api';
-import { logger } from '@normalfinance/utils';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';

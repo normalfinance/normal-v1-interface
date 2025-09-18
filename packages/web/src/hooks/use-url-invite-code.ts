@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
+import { logger } from '@normalfinance/utils';
 import { useSearchParams } from 'next/navigation';
 import { usePersistStore } from '@normalfinance/state';
-import { logger } from '@normalfinance/utils';
 
 const URL_INVITE_CODE_KEY = 'normal_url_invite_code';
 

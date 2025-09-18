@@ -2,11 +2,11 @@
 
 import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
-import { logger } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {

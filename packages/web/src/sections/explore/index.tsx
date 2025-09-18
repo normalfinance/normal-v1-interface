@@ -5,9 +5,9 @@ import type { PoolRouterContract } from '@normalfinance/contracts';
 
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
-import { format, logger } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
 import { useMemo, useState, useEffect } from 'react';
+import { format, logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useSwapVolume, useTokenPrice } from '@/hooks';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';

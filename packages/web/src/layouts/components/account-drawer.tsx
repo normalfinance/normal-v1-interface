@@ -10,9 +10,9 @@ import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
-import { format, trackEvent, logger } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
+import { format, logger, trackEvent } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 

@@ -6,9 +6,9 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
 import Skeleton from 'react-loading-skeleton';
+import { logger } from '@normalfinance/utils';
 import { useTabs } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { logger } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';

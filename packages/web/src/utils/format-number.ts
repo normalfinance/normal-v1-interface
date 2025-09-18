@@ -1,5 +1,5 @@
-import { formatNumberLocale } from '@/locales';
 import { logger } from '@normalfinance/utils';
+import { formatNumberLocale } from '@/locales';
 
 // ----------------------------------------------------------------------
 

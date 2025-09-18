@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { format, logger } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
+import { format, logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';

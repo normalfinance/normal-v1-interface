@@ -3,9 +3,10 @@
 import { usePool } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
-import { SpecificNotFound } from '@/components/_common/specific-not-found';
 
 import { Alert } from '@mui/material';
+
+import { SpecificNotFound } from '@/components/_common/specific-not-found';
 
 import PoolDetailsView from './pool-details-view';
 

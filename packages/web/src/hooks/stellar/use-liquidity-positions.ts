@@ -5,7 +5,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
-import { format, constants, getTokenBalance, getCryptoIconUrl, logger } from '@normalfinance/utils';
+import { format, logger, constants, getTokenBalance, getCryptoIconUrl } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 

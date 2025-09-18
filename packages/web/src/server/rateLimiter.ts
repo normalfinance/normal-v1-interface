@@ -1,6 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
-import { constants, logger } from '@normalfinance/utils';
+import { logger, constants } from '@normalfinance/utils';
 
 function getUpstashConfig() {
   const network = constants.getCurrentNetwork();
@@ -15,6 +15,11 @@ function getUpstashConfig() {
       return {
         url: process.env.MAINNET_UPSTASH_REDIS_REST_URL!,
         token: process.env.MAINNET_UPSTASH_REDIS_REST_TOKEN!,
+      };
+    default:
+      return {
+        url: process.env.TESTNET_UPSTASH_REDIS_REST_URL!,
+        token: process.env.TESTNET_UPSTASH_REDIS_REST_TOKEN!,
       };
   }
 }

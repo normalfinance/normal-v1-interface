@@ -6,11 +6,11 @@ import { useEffect } from 'react';
 // mui
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
-import { logger } from '@normalfinance/utils';
 
 import { Box, Grid2 } from '@mui/material';
 

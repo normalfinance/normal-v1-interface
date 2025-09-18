@@ -1,6 +1,6 @@
 import { BigNumber } from 'bignumber.js';
 import { useState, useEffect, useCallback } from 'react';
-import { format, constants, getOraclePrice, logger } from '@normalfinance/utils';
+import { format, logger, constants, getOraclePrice } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 

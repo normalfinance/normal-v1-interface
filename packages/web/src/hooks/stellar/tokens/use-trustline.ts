@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
-import { createTrustline, logger } from '@normalfinance/utils';
+import { logger, createTrustline } from '@normalfinance/utils';
 
 import { useStellarWalletsKit } from '../use-stellar-wallets-kit';
 

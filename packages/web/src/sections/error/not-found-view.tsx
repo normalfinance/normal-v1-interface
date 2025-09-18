@@ -1,10 +1,10 @@
 'use client';
 
+import Image from 'next/image';
 import { m } from 'framer-motion';
 import { useTranslate } from '@/locales';
 import { SimpleLayout } from '@/layouts/simple';
 import { RouterLink } from '@/routes/components';
-import Image from 'next/image';
 
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';

@@ -1,6 +1,6 @@
 'use client';
 
-import { constants, logger } from '@normalfinance/utils';
+import { logger, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract, LiquidityCalculatorContract } from '@normalfinance/contracts';
 

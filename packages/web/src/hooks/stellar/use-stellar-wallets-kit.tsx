@@ -1,9 +1,9 @@
+import { logger } from '@normalfinance/utils';
 import { useRef, useEffect, useCallback } from 'react';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
 import { HANA_ID, XBULL_ID, LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
-import { logger } from '@normalfinance/utils';
 
 export const useStellarWalletsKit = () => {
   const persistStore = usePersistStore();

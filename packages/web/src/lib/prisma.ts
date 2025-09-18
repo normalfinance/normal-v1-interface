@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { constants, logger } from '@normalfinance/utils';
+import { logger, constants } from '@normalfinance/utils';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

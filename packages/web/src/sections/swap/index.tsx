@@ -5,10 +5,10 @@ import type { TokenActionQueryParams } from '@/types/query-params';
 import type { TokenActionKey } from '@/components/_common/token-action-card';
 
 import React, { useEffect } from 'react';
+import { logger } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
-import { logger } from '@normalfinance/utils';
 
 import { Box } from '@mui/material';
 
