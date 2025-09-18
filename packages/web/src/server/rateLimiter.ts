@@ -1,6 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
-import { constants } from '@normalfinance/utils';
+import { constants, logger } from '@normalfinance/utils';
 
 function getUpstashConfig() {
   const network = constants.getCurrentNetwork();
@@ -19,7 +19,7 @@ function getUpstashConfig() {
   }
 }
 
-console.log('getUpstashConfig', getUpstashConfig());
+logger.log('getUpstashConfig', getUpstashConfig());
 
 // Create a Redis client from your .env
 const redis = new Redis(getUpstashConfig());

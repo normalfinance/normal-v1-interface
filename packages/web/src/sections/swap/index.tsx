@@ -8,6 +8,7 @@ import React, { useEffect } from 'react';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { logger } from '@normalfinance/utils';
 
 import { Box } from '@mui/material';
 
@@ -67,7 +68,7 @@ export default function SwapView() {
 
       getAllTokens()
         .catch((error) => {
-          console.error(error);
+          logger.error(error);
         })
         .finally(() => {
           setGlobalIsLoading(false);

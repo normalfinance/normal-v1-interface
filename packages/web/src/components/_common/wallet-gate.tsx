@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { format } from '@normalfinance/utils';
+import { format, logger } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { usePersistStore } from '@normalfinance/state';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
@@ -82,7 +82,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
         await persist.connectWallet(publicKey, 'stellar-wallets-kit');
       }
     } catch (error) {
-      console.error('Error connecting wallet:', error);
+      logger.error('Error connecting wallet:', error);
     }
   };
 
@@ -93,7 +93,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
       persist.disconnectWallet();
       onClose();
     } catch (error) {
-      console.error('Error disconnecting wallet:', error);
+      logger.error('Error disconnecting wallet:', error);
     }
   };
 

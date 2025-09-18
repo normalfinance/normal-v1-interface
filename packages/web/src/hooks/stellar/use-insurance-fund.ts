@@ -11,7 +11,7 @@ import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { InsuranceFundContract } from '@normalfinance/contracts';
-import { constants, getTokenBalance } from '@normalfinance/utils';
+import { constants, getTokenBalance, logger } from '@normalfinance/utils';
 
 import { useContractTransaction } from './use-contract-transaction';
 
@@ -62,14 +62,14 @@ export function useInsuranceFund(): ReturnType {
           constants.StellarConfig.INSURANCE_FUND_ADDRESS
         );
       } catch (e: any) {
-        console.log(e);
+        logger.log(e);
         setError(e.toString());
         xlmBalance = BigInt(0);
       }
 
       if (xlmBalance) setBalance(BigNumber(xlmBalance));
     } catch (e: any) {
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -105,7 +105,7 @@ export function useInsuranceFund(): ReturnType {
         current_utilization: BigNumber(current_utilization.result),
       });
     } catch (e: any) {
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -134,7 +134,7 @@ export function useInsuranceFund(): ReturnType {
           setStake(user_stake.result as Stake);
         }
       } catch (e: any) {
-        console.log(e);
+        logger.log(e);
         setError(e.toString());
       } finally {
         setLoading(false);
@@ -166,7 +166,7 @@ export function useInsuranceFund(): ReturnType {
       throw new Error(data.error || 'Insurance fund execution failed');
     }
 
-    console.log('Data from backend: ', data);
+    logger.log('Data from backend: ', data);
 
     return data;
   };
@@ -194,14 +194,14 @@ export function useInsuranceFund(): ReturnType {
           // Get the unsigned transaction XDR and manually sign it with the wallet
           const unsignedXDR = tx.built?.toXDR();
 
-          console.log('txtxtx', tx, tx.built, unsignedXDR);
+          logger.log('txtxtx', tx, tx.built, unsignedXDR);
 
           if (unsignedXDR) {
             // Use the safeSignTransaction function to sign the transaction
             const signedXDR = await client.options.signTransaction(unsignedXDR);
 
             const apiRes = await executeInsurance(signedXDR, 'Insurance Fund Deposit');
-            console.log('API result:', apiRes);
+            logger.log('API result:', apiRes);
             if (apiRes?.transactionHash) {
               (tx as any).hash = apiRes.transactionHash;
             }

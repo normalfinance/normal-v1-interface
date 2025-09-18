@@ -10,6 +10,7 @@ import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { logger } from '@normalfinance/utils';
 
 import { Box, Grid2 } from '@mui/material';
 
@@ -32,7 +33,7 @@ export default function CreatePositionView() {
         await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
-        console.error(e);
+        logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }

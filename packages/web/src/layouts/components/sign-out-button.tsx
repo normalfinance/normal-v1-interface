@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
 import { useRouter } from '@/routes/hooks';
 import { usePrivy } from '@privy-io/react-auth';
+import { logger } from '@normalfinance/utils';
 
 import Button from '@mui/material/Button';
 
@@ -29,7 +30,7 @@ export function SignOutButton({ onClose, sx, ...other }: Props) {
       onClose?.();
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       enqueueSnackbar('Unable to logout!', { variant: 'error' });
     }
   }, [logout, onClose, router]);

@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
-import { constants } from '@normalfinance/utils';
+import { constants, logger } from '@normalfinance/utils';
 import { rateLimiter } from '@/server/rateLimiter';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
@@ -11,9 +11,9 @@ async function transactionHandler(req: NextRequest) {
   try {
     const { walletAddress, signedTransactionXDR, transactionType } = await req.json();
 
-    console.log('[Transaction API] walletAddress: ', walletAddress);
-    console.log('[Transaction API] signedTransactionXDR: ', signedTransactionXDR);
-    console.log('[Transaction API] transactionType: ', transactionType);
+    logger.log('[Transaction API] walletAddress: ', walletAddress);
+    logger.log('[Transaction API] signedTransactionXDR: ', signedTransactionXDR);
+    logger.log('[Transaction API] transactionType: ', transactionType);
 
     if (!walletAddress || !signedTransactionXDR) {
       await logWithConfig('warn', 'Transaction API called without required parameters');
@@ -67,10 +67,10 @@ async function transactionHandler(req: NextRequest) {
         signedTransactionXDR,
         constants.StellarConfig.NETWORK_PASSPHRASE
       );
-      console.log('[Transaction API] transaction: ', transaction);
+      logger.log('[Transaction API] transaction: ', transaction);
       const keypair = Keypair.fromPublicKey(walletAddress);
 
-      console.log('[Transaction API] keypair: ', keypair);
+      logger.log('[Transaction API] keypair: ', keypair);
 
       // Verify that the transaction is signed by the correct wallet
       const hasValidSignature = transaction.signatures.some((sig) => {
@@ -80,7 +80,7 @@ async function transactionHandler(req: NextRequest) {
           return false;
         }
       });
-      console.log('[Transaction API] hasValidSignature: ', hasValidSignature);
+      logger.log('[Transaction API] hasValidSignature: ', hasValidSignature);
 
       if (!hasValidSignature) {
         await logWithConfig('warn', 'Invalid signature for wallet address', {
@@ -114,14 +114,14 @@ async function transactionHandler(req: NextRequest) {
         allowHttp: process.env.NODE_ENV === 'development',
       });
 
-      console.log('[Transaction API] Stellar Server: ', server);
+      logger.log('[Transaction API] Stellar Server: ', server);
 
       // Submit the signed transaction
       const result = await server.sendTransaction(
         new Transaction(signedTransactionXDR, constants.StellarConfig.NETWORK_PASSPHRASE)
       );
 
-      console.log('[Transaction API] Result server.sendTransaction: ', result);
+      logger.log('[Transaction API] Result server.sendTransaction: ', result);
 
       return NextResponse.json({
         success: true,
@@ -133,7 +133,7 @@ async function transactionHandler(req: NextRequest) {
         },
       });
     } catch (contractError: any) {
-      console.log('[Transaction API] Contract error: ', contractError);
+      logger.log('[Transaction API] Contract error: ', contractError);
       await logWithConfig('error', `${transactionType || 'Contract'} execution failed`, {
         error: contractError?.message,
         walletAddress,
@@ -146,7 +146,7 @@ async function transactionHandler(req: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.log('[Transaction API] Error: ', error);
+    logger.log('[Transaction API] Error: ', error);
     await logWithConfig('error', 'Transaction API error', {
       error: error?.message,
       transactionType: req.method,

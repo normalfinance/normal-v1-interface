@@ -3,6 +3,7 @@ import type { Connector } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@normalfinance/utils';
 
 import {
   Box,
@@ -71,7 +72,7 @@ export function ConnectWallet({
       try {
         await connect(connector);
       } catch (error) {
-        console.log('Wallet connection failed:', error);
+        logger.log('Wallet connection failed:', error);
       } finally {
         setLoading(false);
         setOpen(false);

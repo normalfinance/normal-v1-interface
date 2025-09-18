@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { constants } from '@normalfinance/utils';
+import { constants, logger } from '@normalfinance/utils';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -29,5 +29,5 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
-  console.log(`[Prisma] Connected to ${constants.getCurrentNetwork()} database`);
+  logger.log(`[Prisma] Connected to ${constants.getCurrentNetwork()} database`);
 }

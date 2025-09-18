@@ -5,7 +5,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
-import { format, constants, getTokenBalance, getCryptoIconUrl } from '@normalfinance/utils';
+import { format, constants, getTokenBalance, getCryptoIconUrl, logger } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ export function useLiquidityPositions(): ReturnType {
     try {
       balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
     } catch (e: any) {
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
       balance = BigInt(0);
     }

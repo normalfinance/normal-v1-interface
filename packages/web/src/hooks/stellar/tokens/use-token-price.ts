@@ -1,6 +1,6 @@
 import { BigNumber } from 'bignumber.js';
 import { useState, useEffect, useCallback } from 'react';
-import { format, constants, getOraclePrice } from '@normalfinance/utils';
+import { format, constants, getOraclePrice, logger } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ export const useTokenPrice = (asset: string): ReturnType => {
         setPrice(BigNumber(format.formatTokenAmount(data.price, 14)));
       }
     } catch (e: any) {
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 

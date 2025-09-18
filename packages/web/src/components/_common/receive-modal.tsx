@@ -6,6 +6,7 @@ import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
+import { logger } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -54,7 +55,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
       });
       setQrCodeUrl(qrDataUrl);
     } catch (error) {
-      console.error('Error generating QR code:', error);
+      logger.error('Error generating QR code:', error);
       enqueueSnackbar('Failed to generate QR code', { variant: 'error' });
     } finally {
       setIsGeneratingQR(false);

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 
 import {
   Box,
@@ -26,7 +27,7 @@ export const RestoreModal = ({ isOpen, onClose, onRestore }: any) => {
       await new Promise((resolve) => setTimeout(resolve, 5000));
       onClose();
     } catch (error) {
-      console.error('Error during restoration:', error);
+      logger.error('Error during restoration:', error);
     } finally {
       setIsLoading(false);
     }

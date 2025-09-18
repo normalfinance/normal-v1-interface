@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { useAppStore } from '@normalfinance/state';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { logger } from '@normalfinance/utils';
 
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
@@ -121,7 +122,7 @@ export default function LandingPage() {
         await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
-        console.error(e);
+        logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }

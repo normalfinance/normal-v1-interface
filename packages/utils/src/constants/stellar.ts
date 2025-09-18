@@ -1,6 +1,7 @@
 import { NetworkConfig } from '@normalfinance/types';
 import { Account, Networks } from '@stellar/stellar-sdk';
 import { getCurrentNetwork } from '../network';
+import { logger } from '../logger';
 
 const RPC_API_KEY = process.env.RPC_API_KEY ?? '';
 
@@ -69,11 +70,11 @@ const MAINNET_CONFIG: NetworkConfig = {
  */
 function getStellarConfig(): NetworkConfig {
   const network = getCurrentNetwork();
-  console.log('[getStellarConfig] network', network);
+  logger.log('[getStellarConfig] network', network);
   return network === 'mainnet' ? MAINNET_CONFIG : TESTNET_CONFIG;
 }
 
 // Export the current stellar configuration
 export const StellarConfig: NetworkConfig = getStellarConfig();
 
-console.log('[StellarConfig] StellarConfig', StellarConfig);
+logger.log('[StellarConfig] StellarConfig', StellarConfig);

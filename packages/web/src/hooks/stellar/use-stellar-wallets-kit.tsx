@@ -3,6 +3,7 @@ import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state'
 import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
 import { HANA_ID, XBULL_ID, LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
+import { logger } from '@normalfinance/utils';
 
 export const useStellarWalletsKit = () => {
   const persistStore = usePersistStore();
@@ -143,11 +144,11 @@ export const useStellarWalletsKit = () => {
               }
             }
           } catch (restoreError) {
-            console.error('Failed to restore wallet:', restoreError);
+            logger.error('Failed to restore wallet:', restoreError);
           }
         }
       } catch (error) {
-        console.error('Failed to check connection:', error);
+        logger.error('Failed to check connection:', error);
       }
     };
 

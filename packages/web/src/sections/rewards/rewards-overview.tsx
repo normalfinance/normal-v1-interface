@@ -5,6 +5,7 @@ import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { ReferralAPI, getReferralAPIErrorMessage } from '@/lib/referral-api';
+import { logger } from '@normalfinance/utils';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
@@ -69,12 +70,12 @@ export function RewardsOverview({
     try {
       const response = await ReferralAPI.getUserReferrals(walletAddress);
       setExistingReferrals(response.user?.referralsGiven || []);
-      console.log(
+      logger.log(
         '[referral] Loaded existing referrals:',
         response.user?.referralsGiven?.length || 0
       );
     } catch (err: any) {
-      console.error('[referral] Error fetching existing referrals:', err);
+      logger.error('[referral] Error fetching existing referrals:', err);
       // Don't show error for user not found (new users)
       if (!err?.response?.data?.error?.includes('User not found')) {
         setError(getReferralAPIErrorMessage(err));
@@ -100,9 +101,9 @@ export function RewardsOverview({
 
       // Add the new referral to the existing list
       setExistingReferrals((prev) => [response.referral, ...prev]);
-      console.log('[referral] Generated referral code:', response.referral.code);
+      logger.log('[referral] Generated referral code:', response.referral.code);
     } catch (err) {
-      console.error('[referral] Error generating code:', err);
+      logger.error('[referral] Error generating code:', err);
       setError(getReferralAPIErrorMessage(err));
     } finally {
       setIsGenerating(false);
@@ -166,7 +167,7 @@ export function RewardsOverview({
                         )
                         .slice(0, 2)
                         .map((referral) => {
-                          console.log(referral, 'referral object');
+                          logger.log(referral, 'referral object');
                           // const referralLink = `${window.location.origin}?ref=${referral.code}`;
                           const referralLink = `https://testnet.normal.finance?ref=${referral.code}`;
                           const isCopied = copied === referral.code;

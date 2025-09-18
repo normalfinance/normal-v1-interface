@@ -1,7 +1,7 @@
 'use client';
 
 import BigNumber from 'bignumber.js';
-import { constants } from '@normalfinance/utils';
+import { constants, logger } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract } from '@normalfinance/contracts';
 
@@ -35,7 +35,7 @@ export function usePoolTVL(asset: string): ReturnType {
         setTotalTVl(BigNumber(tvl.result));
       }
     } catch (e: any) {
-      console.log(e);
+      logger.log(e);
       setError(e);
     }
     return;

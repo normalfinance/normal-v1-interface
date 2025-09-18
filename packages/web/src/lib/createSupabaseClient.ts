@@ -1,4 +1,4 @@
-import { constants } from '@normalfinance/utils';
+import { constants, logger } from '@normalfinance/utils';
 // lib/supabaseClient.ts
 import { createClient } from '@supabase/supabase-js';
 
@@ -15,5 +15,5 @@ const supabaseAnonKey = constants.getNetworkConfig(
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 if (typeof window !== 'undefined') {
-  console.log(`[Supabase] Connected to ${constants.getCurrentNetwork()} database`);
+  logger.log(`[Supabase] Connected to ${constants.getCurrentNetwork()} database`);
 }

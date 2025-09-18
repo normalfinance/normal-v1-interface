@@ -11,7 +11,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useSwap, BuyDirection, useTrustLine, SellDirection } from '@/hooks';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { format, constants, checkTrustline, getCryptoIconUrl } from '@normalfinance/utils';
+import { format, constants, checkTrustline, getCryptoIconUrl, logger } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
@@ -158,22 +158,22 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // Function to check if trustline is needed for the buy token
   const checkTrustlineStatus = useCallback(async () => {
-    console.log('[TRUSTLINE CHECK] Starting check for token:', buyToken?.symbol);
+    logger.log('[TRUSTLINE CHECK] Starting check for token:', buyToken?.symbol);
 
     if (!buyToken || buyToken.symbol === 'XLM') {
-      console.log('[TRUSTLINE CHECK] No check needed - XLM or no token');
+      logger.log('[TRUSTLINE CHECK] No check needed - XLM or no token');
       setNeedsTrustline(false);
       return;
     }
 
     const walletAddress = publicKey || storePersist.wallet.address;
     if (!walletAddress) {
-      console.log('[TRUSTLINE CHECK] No wallet address available');
+      logger.log('[TRUSTLINE CHECK] No wallet address available');
       setNeedsTrustline(false);
       return;
     }
 
-    console.log('[TRUSTLINE CHECK] Checking for wallet:', walletAddress);
+    logger.log('[TRUSTLINE CHECK] Checking for wallet:', walletAddress);
     setCheckingTrustline(true);
     try {
       const trustlineStatus = await checkTrustline(
@@ -181,10 +181,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         buyToken.symbol,
         constants.StellarConfig.NORMAL_TOKEN_ISSUER
       );
-      console.log('[TRUSTLINE CHECK] Result:', trustlineStatus);
+      logger.log('[TRUSTLINE CHECK] Result:', trustlineStatus);
       setNeedsTrustline(!trustlineStatus.exists);
     } catch (error) {
-      console.error('[TRUSTLINE CHECK] Error checking trustline:', error);
+      logger.error('[TRUSTLINE CHECK] Error checking trustline:', error);
       setNeedsTrustline(false);
     }
     setCheckingTrustline(false);
@@ -336,7 +336,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   };
 
   const getButtonState = (): ButtonState => {
-    console.log('[BUTTON STATE] State check:', {
+    logger.log('[BUTTON STATE] State check:', {
       sellToken: sellToken?.symbol,
       buyToken: buyToken?.symbol,
       checkingTrustline,
@@ -359,7 +359,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     }
     // Check trustline first, before amount validation
     if (needsTrustline && buyToken.symbol !== 'XLM') {
-      console.log('[BUTTON STATE] Returning CREATE_TRUSTLINE');
+      logger.log('[BUTTON STATE] Returning CREATE_TRUSTLINE');
       return ButtonState.CREATE_TRUSTLINE;
     }
     if (sellVal <= 0) {
@@ -446,7 +446,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       await checkTrustlineStatus();
     } catch (error) {
       setSwapError('Failed to create trustline');
-      console.error('Trustline creation error:', error);
+      logger.error('Trustline creation error:', error);
     } finally {
       setCreatingTrustline(false);
     }

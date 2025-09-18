@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePersistStore } from '@normalfinance/state';
+import { logger } from '@normalfinance/utils';
 
 const URL_INVITE_CODE_KEY = 'normal_url_invite_code';
 
@@ -12,29 +13,29 @@ export function useUrlInviteCode() {
   const urlInviteCode = usePersistStore((s) => s.inviteCode.urlInviteCode);
 
   useEffect(() => {
-    console.log('[invite-debug] useUrlInviteCode effect running');
+    logger.log('[invite-debug] useUrlInviteCode effect running');
 
     // First, check if there's a code in localStorage from previous visit
     const storedCode = localStorage.getItem(URL_INVITE_CODE_KEY);
-    console.log('[invite-debug] Stored code from localStorage:', storedCode);
+    logger.log('[invite-debug] Stored code from localStorage:', storedCode);
 
     if (storedCode && !urlInviteCode) {
-      console.log('[invite-debug] Setting stored code to state:', storedCode);
+      logger.log('[invite-debug] Setting stored code to state:', storedCode);
       setUrlInviteCode(storedCode);
     }
 
     // Then check URL parameters
     const inviteParam = searchParams.get('invite');
-    console.log('[invite-debug] URL invite param:', inviteParam);
+    logger.log('[invite-debug] URL invite param:', inviteParam);
 
     if (inviteParam) {
       // Validate invite code format (NF + 6 hex chars)
       const isValidFormat = /^NF[A-F0-9]{6}$/i.test(inviteParam);
-      console.log('[invite-debug] Is valid format:', isValidFormat);
+      logger.log('[invite-debug] Is valid format:', isValidFormat);
 
       if (isValidFormat) {
         const upperCaseCode = inviteParam.toUpperCase();
-        console.log('[invite-debug] Setting URL code to state:', upperCaseCode);
+        logger.log('[invite-debug] Setting URL code to state:', upperCaseCode);
         setUrlInviteCode(upperCaseCode);
         // Persist to localStorage so it survives refreshes
         localStorage.setItem(URL_INVITE_CODE_KEY, upperCaseCode);
