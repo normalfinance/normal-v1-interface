@@ -18,6 +18,8 @@
     "refresh": "yarn run clean && yarn run setup",
     "invite:generate": "node get-unused-invite-code.js",
     "invite:seed": "node generate-invite-codes.js",
+    "goldsky:testnet": "NEXT_PUBLIC_NETWORK=testnet node packages/goldsky/generate-config.js testnet",
+    "goldsky:mainnet": "NEXT_PUBLIC_NETWORK=mainnet node packages/goldsky/generate-config.js mainnet",
     "prepare": "husky"
   },
   "repository": {
