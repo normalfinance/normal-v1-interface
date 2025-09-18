@@ -23,7 +23,7 @@ import { SnackbarProvider } from '@/components/template/snackbar';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
-
+import ProofOfOwnershipPortal from '@/components/_common/drawer-components/proof-of-ownership-portal';
 // ----------------------------------------------------------------------
 
 export const viewport: Viewport = {
@@ -124,7 +124,10 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                             <SettingsDrawer defaultSettings={defaultSettings} />
                             <AnnouncementProvider>
                               {/* <InviteCodeGate enforceInDev> */}
-                              <DashboardLayout>{children}</DashboardLayout>
+                              <DashboardLayout>
+                                {children}
+                                <ProofOfOwnershipPortal />
+                              </DashboardLayout>
                               {/* </InviteCodeGate> */}
                             </AnnouncementProvider>
                           </SnackbarProvider>

@@ -24,9 +24,8 @@ import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
-import VerifyOwnershipDialog from '@/components/_common/drawer-components/verify-ownership';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
-
+import { useProofDialogStore } from '@/stores/proof-dialog-store';
 import { AccountButton } from './account-button';
 
 /* ------------------------------------------------------------------ */
@@ -236,13 +235,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const connectedAddress = persist.wallet.address || publicKey;
   const isWalletConnected = !!connectedAddress || isConnected;
 
-  const [verifyBump, setVerifyBump] = useState(0);
-  const isVerified = useMemo(
-    () => isWalletVerifiedForSession(connectedAddress),
-    [connectedAddress, verifyBump]
-  );
+  const [verifiedTick, setVerifiedTick] = useState(0);
+  const isVerified = isWalletVerifiedForSession(connectedAddress);
 
-  const [verifyOpen, setVerifyOpen] = useState(false);
+  const { ensureOpen } = useProofDialogStore();
 
   const handleDisconnect = async () => {
     if (isDisconnecting) return;
@@ -266,6 +262,16 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
   }, [connectedAddress]);
 
+  useEffect(() => {
+    const onVerified = (e: any) => {
+      if (!connectedAddress || e?.detail?.address !== connectedAddress) return;
+      setVerifiedTick((x) => x + 1); // re-render is enough
+      // onOpen(); // ← comment this out if you don't want auto-open
+    };
+    window.addEventListener('nf:walletVerified', onVerified);
+    return () => window.removeEventListener('nf:walletVerified', onVerified);
+  }, [connectedAddress]);
+
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
 
@@ -276,7 +282,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
     try {
       await connectWallet();
-      setVerifyOpen(true);
+      const addr = persist.wallet.address || publicKey;
+      if (addr && !isWalletVerifiedForSession(addr)) {
+        ensureOpen('drawer');
+      }
       onClose();
     } catch (error) {
       console.error('Error connecting wallet:', error);
@@ -286,7 +295,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const handleMainButtonClick = () => {
     if (isWalletConnected) {
       onOpen();
-      if (!isVerified) setVerifyOpen(true);
+      if (!isVerified) ensureOpen('drawer');
     } else {
       void handleConnectClick();
     }
@@ -369,7 +378,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 <Typography variant="subtitle1" color="text.secondary">
                   {t('Wallet connected. Verification required — a popup will guide you.')}
                 </Typography>
-                <Button sx={{ mt: 2 }} variant="contained" onClick={() => setVerifyOpen(true)}>
+                <Button sx={{ mt: 2 }} variant="contained" onClick={() => ensureOpen('drawer')}>
                   {t('Verify now')}
                 </Button>
               </Box>
@@ -379,18 +388,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
           )}
         </Scrollbar>
       </Drawer>
-
-      <VerifyOwnershipDialog
-        open={Boolean(verifyOpen && !isVerified)}
-        onClose={() => setVerifyOpen(false)}
-        onVerified={() => {
-          setVerifyBump((x) => x + 1);
-          setVerifyOpen(false);
-          onOpen();
-        }}
-        message="i love normal"
-      />
-
       <TermsOfServiceDialog open={showTos} onClose={handleTosClose} />
     </>
   );

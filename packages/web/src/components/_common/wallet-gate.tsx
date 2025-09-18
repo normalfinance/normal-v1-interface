@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -13,6 +13,8 @@ import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
+import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import { useProofDialogStore } from '@/stores/proof-dialog-store';
 
 interface WalletGateProps {
   children: React.ReactNode;
@@ -67,6 +69,8 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
 
+  const { ensureOpen } = useProofDialogStore();
+
   /** Handle connecting wallet - show Stellar Wallets Kit popup OR ToS */
   const handleConnectClick = async () => {
     if (disclaimerVersion < CURRENT_TOS_VERSION) {
@@ -78,13 +82,25 @@ export const WalletGate: React.FC<WalletGateProps> = ({
       await connectWallet();
 
       // After successful connection, store the wallet info in our state
-      if (publicKey) {
-        await persist.connectWallet(publicKey, 'stellar-wallets-kit');
+      const addr = persist.wallet.address || publicKey;
+      if (addr && !persist.wallet.address) {
+        await persist.connectWallet(addr, 'stellar-wallets-kit');
+      }
+
+      if (addr && !isWalletVerifiedForSession(addr)) {
+        ensureOpen('wallet-gate');
       }
     } catch (error) {
       console.error('Error connecting wallet:', error);
     }
   };
+
+  useEffect(() => {
+    const addr = persist.wallet.address || publicKey;
+    if (addr && !isWalletVerifiedForSession(addr)) {
+      ensureOpen('wallet-gate');
+    }
+  }, [persist.wallet.address, publicKey, ensureOpen]);
 
   /** Handle wallet disconnect */
   const handleDisconnectClick = async () => {
