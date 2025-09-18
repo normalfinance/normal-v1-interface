@@ -24,6 +24,7 @@ import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
 import ProofOfOwnershipPortal from '@/components/_common/drawer-components/proof-of-ownership-portal';
+import WalletBootstrapper from '@/providers/wallet-bootstrapper';
 // ----------------------------------------------------------------------
 
 export const viewport: Viewport = {
@@ -127,6 +128,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                               <DashboardLayout>
                                 {children}
                                 <ProofOfOwnershipPortal />
+                                <WalletBootstrapper />
                               </DashboardLayout>
                               {/* </InviteCodeGate> */}
                             </AnnouncementProvider>
