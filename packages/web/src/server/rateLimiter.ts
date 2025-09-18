@@ -16,6 +16,11 @@ function getUpstashConfig() {
         url: process.env.MAINNET_UPSTASH_REDIS_REST_URL!,
         token: process.env.MAINNET_UPSTASH_REDIS_REST_TOKEN!,
       };
+    default:
+      return {
+        url: process.env.TESTNET_UPSTASH_REDIS_REST_URL!,
+        token: process.env.TESTNET_UPSTASH_REDIS_REST_TOKEN!,
+      };
   }
 }
 
