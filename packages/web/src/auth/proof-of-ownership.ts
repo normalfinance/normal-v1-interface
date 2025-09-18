@@ -16,7 +16,7 @@ export function buildChallengeMessage(): string {
 
 /**
  * Build a non-submitting challenge transaction that encodes our challenge as a ManageData op.
- * Source account is the user's address; sequence number "0" is the standard SEP-10 approach.
+ * Source account is the user's address; sequence number "0" is a standard SEP-10-style approach.
  */
 export function buildChallengeTransaction(params: {
   address: string;
@@ -25,7 +25,7 @@ export function buildChallengeTransaction(params: {
 }) {
   const { address, challenge, networkPassphrase } = params;
 
-  const account = new Account(address, '0'); // sequence '0' for challenge tx
+  const account = new Account(address, '0');
   const tx = new TransactionBuilder(account, {
     fee: '100',
     networkPassphrase,
@@ -33,11 +33,9 @@ export function buildChallengeTransaction(params: {
     .addOperation(
       Operation.manageData({
         name: 'normal:auth',
-        // IMPORTANT: manageData value must be string | Buffer | null (max 64 bytes)
         value: challenge,
       })
     )
-    // Make challenge fresh; 5 minutes is plenty
     .setTimeout(300)
     .build();
 
@@ -56,58 +54,65 @@ export function verifySignedChallenge(params: {
 
   // Parse the signed transaction
   const signedTx = new Transaction(signedXDR, networkPassphrase);
-  const txHash = signedTx.hash();
+
+  // Hash: Buffer in Node, Uint8Array in browser
+  const txHash: Uint8Array = (signedTx as any).hash();
   const keypair = Keypair.fromPublicKey(address);
 
+  const B = (globalThis as any).Buffer;
+  const msgBufLike = B ? B.from(txHash) : (txHash as Uint8Array);
+
   // Ensure at least one signature validates against the user's public key
-  return signedTx.signatures.some((sig) => {
-    try {
-      return keypair.verify(txHash, sig.signature());
-    } catch {
-      return false;
-    }
-  });
+  return (
+    (signedTx as any).signatures?.some((sig: any) => {
+      try {
+        // sig.signature() may return Buffer; normalize to Uint8Array
+        const raw = typeof sig.signature === 'function' ? sig.signature() : sig.signature;
+        const sigBytes: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+        const sigBufLike = B ? B.from(sigBytes) : sigBytes;
+        return (keypair as any).verify(msgBufLike as any, sigBufLike as any);
+      } catch {
+        return false;
+      }
+    }) ?? false
+  );
 }
 
 /**
- * Run the full proof flow using the provided connector:
+ * Run the full proof flow using a signer:
  *  - build challenge
- *  - sign challenge tx
+ *  - sign challenge tx via the Stellar Wallets Kit
  *  - verify signature
  *  - mark verified in sessionStorage
  *
  * Returns the challenge string on success. Throws on failure.
  */
 export async function runProofOfOwnership(params: {
-  walletType: 'freighter' | 'xbull' | 'lobstr' | 'hana' | 'wallet-connect';
   address: string;
-  signTransaction: (
-    xdr: string,
-    opts?: { networkPassphrase?: string; accountToSign?: string }
-  ) => Promise<string>;
-  networkPassphrase?: string; // defaults to constants.StellarConfig.NETWORK_PASSPHRASE
+  signTransaction: (xdr: string) => Promise<string>; // kit signer
+  networkPassphrase?: string;
+  message?: string;
 }): Promise<string> {
   const {
-    walletType,
     address,
     signTransaction,
     networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE,
+    message,
   } = params;
 
-  const challenge = buildChallengeMessage();
+  const challenge = message && message.length <= 64 ? message : buildChallengeMessage();
   const tx = buildChallengeTransaction({ address, challenge, networkPassphrase });
 
-  const signedXDR = await signTransaction(tx.toXDR(), {
-    networkPassphrase,
-    accountToSign: address,
-  });
+  const signedXDR = await signTransaction(tx.toXDR());
+  if (!signedXDR) {
+    throw new Error('Signing failed or no signature returned.');
+  }
 
   const ok = verifySignedChallenge({ address, signedXDR, networkPassphrase });
   if (!ok) {
     throw new Error('Signature verification failed.');
   }
 
-  // One-time per session
   markWalletVerifiedForSession(address);
   return challenge;
 }

@@ -4,28 +4,21 @@ import { useEffect, useState, useCallback } from 'react';
 import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { useTranslate } from '@/locales';
 import { Iconify } from '@/components/template/iconify';
-import { usePersistStore, useAppStore } from '@normalfinance/state';
+import { usePersistStore } from '@normalfinance/state';
 import { runProofOfOwnership } from '@/auth/proof-of-ownership';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
-type Props = {
-  onContinue?: () => void; // <-- tell parent to render connected wallet
-};
+type Props = { onContinue?: () => void };
+
+type KitSignResult = string | { signedXDR?: string; xdr?: string };
 
 export default function VerifyOwnershipCard({ onContinue }: Props) {
   const { t } = useTranslate();
   const persist = usePersistStore();
-  const app = useAppStore();
+  const { signTransaction: kitSignTx, isConnected, connectWallet } = useStellarWalletsKit();
 
   const address = persist.wallet.address;
-  const walletType = persist.wallet.walletType as
-    | 'freighter'
-    | 'xbull'
-    | 'lobstr'
-    | 'hana'
-    | 'wallet-connect'
-    | undefined;
-
   const networkPassphrase = persist.wallet.activeChain?.networkPassphrase;
 
   const [loading, setLoading] = useState(false);
@@ -35,57 +28,31 @@ export default function VerifyOwnershipCard({ onContinue }: Props) {
   );
 
   const signTransaction = useCallback(
-    async (xdr: string, opts?: { networkPassphrase?: string; accountToSign?: string }) => {
-      if (!walletType) throw new Error('Missing wallet type');
-      switch (walletType) {
-        case 'freighter':
-          return (
-            await (await import('../../../../state/src/state/wallet/freighter')).freighter()
-          ).signTransaction(xdr, opts);
-        case 'xbull':
-          return (
-            await (await import('../../../../state/src/state/wallet/xbull')).xbull()
-          ).signTransaction(xdr, opts);
-        case 'lobstr':
-          return (
-            await (await import('../../../../state/src/state/wallet/lobstr')).lobstr()
-          ).signTransaction(xdr, opts);
-        case 'hana':
-          return (
-            await (await import('../../../../state/src/state/wallet/hana')).hana()
-          ).signTransaction(xdr, opts);
-        case 'wallet-connect': {
-          const instance = app.walletConnectInstance;
-          if (instance) return instance.signTransaction(xdr, opts);
-          const { WalletConnect } = await import(
-            '../../../../state/src/state/wallet/wallet-connect'
-          );
-          const client = new WalletConnect();
-          return client.signTransaction(xdr, opts);
-        }
-        default:
-          throw new Error('Unsupported wallet');
+    async (xdr: string) => {
+      if (!isConnected) {
+        await connectWallet();
       }
+      const res = (await kitSignTx(xdr)) as KitSignResult;
+      return typeof res === 'string' ? res : (res?.signedXDR ?? res?.xdr ?? '');
     },
-    [walletType, app.walletConnectInstance]
+    [isConnected, connectWallet, kitSignTx]
   );
 
   const start = useCallback(async () => {
-    if (!address || !walletType) return;
+    if (!address || !networkPassphrase) return;
     if (isWalletVerifiedForSession(address)) {
       setVerifiedNow(true);
-      return; // already verified this session
+      return;
     }
     setLoading(true);
     setError(null);
     try {
       await runProofOfOwnership({
-        walletType,
         address,
         signTransaction,
         networkPassphrase,
+        message: 'i love normal',
       });
-      // runProofOfOwnership marks session verified on success
       setVerifiedNow(true);
     } catch (e: any) {
       setError(e?.message || 'Verification failed.');
@@ -93,23 +60,14 @@ export default function VerifyOwnershipCard({ onContinue }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [address, walletType, signTransaction, networkPassphrase]);
+  }, [address, networkPassphrase, signTransaction]);
 
   useEffect(() => {
-    // auto start once the component mounts
     void start();
   }, [start]);
 
   return (
-    <Box
-      sx={{
-        p: 2,
-        pt: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'start',
-      }}
-    >
+    <Box sx={{ p: 2, pt: 10, display: 'flex', flexDirection: 'column', alignItems: 'start' }}>
       <Typography variant="subtitle1" sx={{ mb: 1 }}>
         {t('Verify wallet ownership')}
       </Typography>
