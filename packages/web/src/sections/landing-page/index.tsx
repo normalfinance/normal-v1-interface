@@ -5,6 +5,7 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
+import { logger } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
 import { useQueryParams } from '@/hooks/use-query-params';
 
@@ -121,7 +122,7 @@ export default function LandingPage() {
         await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
-        console.error(e);
+        logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }

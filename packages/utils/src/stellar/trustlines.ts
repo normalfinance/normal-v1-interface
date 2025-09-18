@@ -8,6 +8,7 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import { constants, horizonServer, rpcServer } from '..';
+import { logger } from '../logger';
 
 /**
  * Fetches and returns details about an account on the Stellar network.
@@ -108,7 +109,7 @@ export async function createTrustline(
     );
 
     const result = await horizonServer.submitTransaction(signedTransaction);
-    console.log('[TRUSTLINE] Trustline created successfully:', result.hash);
+    logger.log('[TRUSTLINE] Trustline created successfully:', result.hash);
     return result;
   } else {
     // Return the unsigned transaction XDR for external signing

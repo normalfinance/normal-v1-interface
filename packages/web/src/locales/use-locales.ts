@@ -3,6 +3,7 @@
 import dayjs from 'dayjs';
 import { useCallback } from 'react';
 import { useRouter } from '@/routes/hooks';
+import { logger } from '@normalfinance/utils';
 import { useTranslation } from 'react-i18next';
 
 import { useSettingsContext } from '@/components/template/settings';
@@ -53,7 +54,7 @@ export function useTranslate(ns?: string) {
 
         router.refresh();
       } catch (error) {
-        console.error(error);
+        logger.error(error);
       }
     },
     [i18n, router, settings]

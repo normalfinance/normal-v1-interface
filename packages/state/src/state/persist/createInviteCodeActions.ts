@@ -1,5 +1,6 @@
 import { usePersistStore } from '../store';
 import { AppStorePersist } from '@normalfinance/types';
+import { logger } from '@normalfinance/utils';
 
 export const createInviteCodeActions = () => {
   return {
@@ -36,7 +37,7 @@ export const createInviteCodeActions = () => {
 
         return false;
       } catch (error) {
-        console.error('Failed to check wallet invite status:', error);
+        logger.error('Failed to check wallet invite status:', error);
         return false;
       }
     },
@@ -74,7 +75,7 @@ export const createInviteCodeActions = () => {
 
         return;
       } catch (error) {
-        console.error('Failed to verify invite code:', error);
+        logger.error('Failed to verify invite code:', error);
         throw error;
       }
     },

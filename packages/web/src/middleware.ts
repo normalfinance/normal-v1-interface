@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { logger } from '@normalfinance/utils';
 
 // import PostHogClient from './lib/posthog';
 
@@ -62,12 +63,12 @@ async function lookup(ip: string) {
   const key = process.env.GEOIP_KEY!;
   const url = `${endpoint.replace(/\/$/, '')}/${ip}?key=${key}`;
 
-  console.log('[API] Calling IPRegistry:', url);
+  logger.log('[API] Calling IPRegistry:', url);
   const fetchStart = Date.now();
 
   const res = await fetch(url, { next: { revalidate: 60 * 60 * 24 } }); // 24 h edge cache
   const fetchDuration = Date.now() - fetchStart;
-  console.log(`[API] Response status: ${res.status} (${fetchDuration}ms)`);
+  logger.log(`[API] Response status: ${res.status} (${fetchDuration}ms)`);
   if (!res.ok) throw new Error('Geo API failed');
 
   const data = await res.json();
@@ -109,7 +110,7 @@ function handleReferralTracking(req: NextRequest) {
     return null;
   }
 
-  console.log('[referral] tracking referral code:', referralCode);
+  logger.log('[referral] tracking referral code:', referralCode);
 
   // Create response with referral cookies
   const response = NextResponse.next();
@@ -148,7 +149,7 @@ function parseGeoCookie(cookieValue: string): GeoCacheData | null {
       return data;
     }
   } catch (e) {
-    console.error('[geo] Failed to parse geo cookie:', e);
+    logger.error('[geo] Failed to parse geo cookie:', e);
   }
 
   return null;
@@ -185,14 +186,14 @@ function setCacheResponse(response: NextResponse, geoData: any): void {
 export async function middleware(req: NextRequest) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
-  console.log(`\n[${requestId}] MIDDLEWARE START - Path: ${req.nextUrl.pathname}`);
-  console.log(`⏱[${requestId}] Start time: ${new Date().toISOString()}`);
+  logger.log(`\n[${requestId}] MIDDLEWARE START - Path: ${req.nextUrl.pathname}`);
+  logger.log(`⏱[${requestId}] Start time: ${new Date().toISOString()}`);
 
   // Handle referral tracking first
-  console.log(`[${requestId}] Handling referral tracking...`);
+  logger.log(`[${requestId}] Handling referral tracking...`);
   const referralResponse = handleReferralTracking(req);
   if (referralResponse) {
-    console.log(`[${requestId}] Referral response created`);
+    logger.log(`[${requestId}] Referral response created`);
   }
 
   let ip =
@@ -200,22 +201,22 @@ export async function middleware(req: NextRequest) {
     req.headers.get('X-Forwarded-For')?.split(',')[0] ||
     req.ip;
 
-  console.log(`[${requestId}] Incoming IP: ${ip}`);
-  console.log(`[${requestId}] Active requests count: ${activeRequests.size}`);
+  logger.log(`[${requestId}] Incoming IP: ${ip}`);
+  logger.log(`[${requestId}] Active requests count: ${activeRequests.size}`);
 
   // Log active requests for debugging
   if (activeRequests.size > 0) {
-    console.log(`🔄 [${requestId}] Active IPs:`, Array.from(activeRequests.keys()));
+    logger.log(`🔄 [${requestId}] Active IPs:`, Array.from(activeRequests.keys()));
   }
 
   if (process.env.NODE_ENV === 'development' && (ip === '::1' || ip === '127.0.0.1')) {
     ip = '8.8.8.8';
-    console.log(`[${requestId}] DEV MODE: Using test IP: ${ip}`);
+    logger.log(`[${requestId}] DEV MODE: Using test IP: ${ip}`);
   }
 
   if (!ip) {
     const duration = Date.now() - startTime;
-    console.log(`[${requestId}] No IP detected, skipping geo lookup (${duration}ms)`);
+    logger.log(`[${requestId}] No IP detected, skipping geo lookup (${duration}ms)`);
     return referralResponse || NextResponse.next();
   }
 
@@ -224,7 +225,7 @@ export async function middleware(req: NextRequest) {
   const geoCookie = req.cookies.get(GEO_CACHE_COOKIE_NAME);
   let cachedGeoData: GeoCacheData | null = null;
 
-  console.log(`[${requestId}] Checking cache... Cookie present: ${!!geoCookie?.value}`);
+  logger.log(`[${requestId}] Checking cache... Cookie present: ${!!geoCookie?.value}`);
 
   if (geoCookie?.value) {
     cachedGeoData = parseGeoCookie(geoCookie.value);
@@ -233,48 +234,44 @@ export async function middleware(req: NextRequest) {
       const cacheAge = Date.now() - cachedGeoData.timestamp;
       const isValid = isCacheValid(cachedGeoData.timestamp);
 
-      console.log(`[${requestId}] Cached data found:`);
-      console.log(`   • Country: ${cachedGeoData.country}`);
-      console.log(`   • VPN: ${cachedGeoData.isVpn}`);
-      console.log(`   • Dangerous: ${cachedGeoData.isDangerous}`);
-      console.log(
+      logger.log(`[${requestId}] Cached data found:`);
+      logger.log(`   • Country: ${cachedGeoData.country}`);
+      logger.log(`   • VPN: ${cachedGeoData.isVpn}`);
+      logger.log(`   • Dangerous: ${cachedGeoData.isDangerous}`);
+      logger.log(
         `   • Age: ${Math.round(cacheAge / 1000)}s (${Math.round(cacheAge / (1000 * 60))}min)`
       );
-      console.log(`   • Valid: ${isValid}`);
-      console.log(`   • Version: ${cachedGeoData.version}`);
+      logger.log(`   • Valid: ${isValid}`);
+      logger.log(`   • Version: ${cachedGeoData.version}`);
 
       if (isValid) {
         const cacheCheckDuration = Date.now() - cacheCheckStart;
         const totalDuration = Date.now() - startTime;
 
-        console.log(
+        logger.log(
           `[${requestId}] CACHE HIT! Using cached data (cache check: ${cacheCheckDuration}ms, total: ${totalDuration}ms)`
         );
 
         // Use cached data for blocking decisions
         if (BLOCKED_COUNTRIES.has(cachedGeoData.country) || cachedGeoData.isDangerous) {
           const blockReason = BLOCKED_COUNTRIES.has(cachedGeoData.country) ? 'country' : 'security';
-          console.log(
-            `[${requestId}] BLOCKED via cache (${blockReason}): ${cachedGeoData.country}`
-          );
+          logger.log(`[${requestId}] BLOCKED via cache (${blockReason}): ${cachedGeoData.country}`);
           const url = req.nextUrl.clone();
           url.pathname = '/blocked';
           url.search = '';
           return NextResponse.redirect(url);
         }
 
-        console.log(
-          `✅ [${requestId}] ALLOWED via cache - Request completed in ${totalDuration}ms`
-        );
+        logger.log(`✅ [${requestId}] ALLOWED via cache - Request completed in ${totalDuration}ms`);
         return referralResponse || NextResponse.next();
       } else {
-        console.log(`❌ [${requestId}] Cache expired, will fetch fresh data`);
+        logger.log(`❌ [${requestId}] Cache expired, will fetch fresh data`);
       }
     } else {
-      console.log(`❌ [${requestId}] Failed to parse cached data`);
+      logger.log(`❌ [${requestId}] Failed to parse cached data`);
     }
   } else {
-    console.log(`❌ [${requestId}] No cache cookie found`);
+    logger.log(`❌ [${requestId}] No cache cookie found`);
   }
 
   // Check for active request to prevent duplicate API calls
@@ -282,24 +279,24 @@ export async function middleware(req: NextRequest) {
   const apiStart = Date.now();
 
   if (lookupPromise) {
-    console.log(`🔄 [${requestId}] DEDUPLICATION: Reusing active request for IP: ${ip}`);
-    console.log(`📊 [${requestId}] Total active requests: ${activeRequests.size}`);
+    logger.log(`🔄 [${requestId}] DEDUPLICATION: Reusing active request for IP: ${ip}`);
+    logger.log(`📊 [${requestId}] Total active requests: ${activeRequests.size}`);
   } else {
-    console.log(`🌍 [${requestId}] CACHE MISS: Starting new API call for IP: ${ip}`);
+    logger.log(`🌍 [${requestId}] CACHE MISS: Starting new API call for IP: ${ip}`);
     lookupPromise = lookup(ip);
     activeRequests.set(ip, lookupPromise);
-    console.log(`📈 [${requestId}] Active requests after adding: ${activeRequests.size}`);
+    logger.log(`📈 [${requestId}] Active requests after adding: ${activeRequests.size}`);
   }
 
   try {
     const geoData = await lookupPromise;
     const apiDuration = Date.now() - apiStart;
 
-    console.log(`[${requestId}] API Response received (${apiDuration}ms):`);
-    console.log(`   • Country: ${geoData.country}`);
-    console.log(`   • VPN: ${geoData.isVpn}`);
-    console.log(`   • Dangerous: ${geoData.isDangerous}`);
-    console.log(`   • API call duration: ${apiDuration}ms`);
+    logger.log(`[${requestId}] API Response received (${apiDuration}ms):`);
+    logger.log(`   • Country: ${geoData.country}`);
+    logger.log(`   • VPN: ${geoData.isVpn}`);
+    logger.log(`   • Dangerous: ${geoData.isDangerous}`);
+    logger.log(`   • API call duration: ${apiDuration}ms`);
 
     // Create response object to set cookies
     const response = referralResponse || NextResponse.next();
@@ -309,14 +306,14 @@ export async function middleware(req: NextRequest) {
     setCacheResponse(response, geoData);
     const cacheDuration = Date.now() - cacheStart;
 
-    console.log(`[${requestId}] Data cached successfully (${cacheDuration}ms)`);
+    logger.log(`[${requestId}] Data cached successfully (${cacheDuration}ms)`);
 
     // Check for blocking conditions
     if (BLOCKED_COUNTRIES.has(geoData.country) || geoData.isDangerous) {
       const blockReason = BLOCKED_COUNTRIES.has(geoData.country) ? 'country' : 'security';
       const totalDuration = Date.now() - startTime;
 
-      console.log(
+      logger.log(
         `[${requestId}] BLOCKED via API (${blockReason}): ${geoData.country} - Total: ${totalDuration}ms`
       );
 
@@ -327,25 +324,25 @@ export async function middleware(req: NextRequest) {
     }
 
     const totalDuration = Date.now() - startTime;
-    console.log(`[${requestId}] ALLOWED via API - Total duration: ${totalDuration}ms`);
+    logger.log(`[${requestId}] ALLOWED via API - Total duration: ${totalDuration}ms`);
 
     return response;
   } catch (e) {
     const apiDuration = Date.now() - apiStart;
     const totalDuration = Date.now() - startTime;
 
-    console.error(`[${requestId}] API ERROR after ${apiDuration}ms:`, e);
+    logger.error(`[${requestId}] API ERROR after ${apiDuration}ms:`, e);
 
     // If we have stale cached data, use it as fallback
     if (cachedGeoData) {
-      console.log(`[${requestId}] Using stale cached data as fallback:`);
-      console.log(`   • Country: ${cachedGeoData.country}`);
-      console.log(`   • VPN: ${cachedGeoData.isVpn}`);
-      console.log(`   • Dangerous: ${cachedGeoData.isDangerous}`);
+      logger.log(`[${requestId}] Using stale cached data as fallback:`);
+      logger.log(`   • Country: ${cachedGeoData.country}`);
+      logger.log(`   • VPN: ${cachedGeoData.isVpn}`);
+      logger.log(`   • Dangerous: ${cachedGeoData.isDangerous}`);
 
       if (BLOCKED_COUNTRIES.has(cachedGeoData.country) || cachedGeoData.isDangerous) {
         const blockReason = BLOCKED_COUNTRIES.has(cachedGeoData.country) ? 'country' : 'security';
-        console.log(
+        logger.log(
           `[${requestId}] BLOCKED via stale cache (${blockReason}): ${cachedGeoData.country}`
         );
 
@@ -355,9 +352,9 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      console.log(`[${requestId}] ALLOWED via stale cache - Total: ${totalDuration}ms`);
+      logger.log(`[${requestId}] ALLOWED via stale cache - Total: ${totalDuration}ms`);
     } else {
-      console.log(
+      logger.log(
         `[${requestId}] No cache fallback available, allowing by default - Total: ${totalDuration}ms`
       );
     }
@@ -365,11 +362,11 @@ export async function middleware(req: NextRequest) {
     // Clean up active request
     activeRequests.delete(ip);
     const remainingActive = activeRequests.size;
-    console.log(`[${requestId}] Cleaned up request. Remaining active: ${remainingActive}`);
+    logger.log(`[${requestId}] Cleaned up request. Remaining active: ${remainingActive}`);
   }
 
   const totalDuration = Date.now() - startTime;
-  console.log(`[${requestId}] MIDDLEWARE END - Total duration: ${totalDuration}ms\n`);
+  logger.log(`[${requestId}] MIDDLEWARE END - Total duration: ${totalDuration}ms\n`);
   return referralResponse || NextResponse.next();
 }
 

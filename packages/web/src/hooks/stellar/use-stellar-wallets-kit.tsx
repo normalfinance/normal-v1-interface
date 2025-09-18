@@ -1,3 +1,4 @@
+import { logger } from '@normalfinance/utils';
 import { useRef, useEffect, useCallback } from 'react';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
@@ -143,11 +144,11 @@ export const useStellarWalletsKit = () => {
               }
             }
           } catch (restoreError) {
-            console.error('Failed to restore wallet:', restoreError);
+            logger.error('Failed to restore wallet:', restoreError);
           }
         }
       } catch (error) {
-        console.error('Failed to check connection:', error);
+        logger.error('Failed to check connection:', error);
       }
     };
 

@@ -10,9 +10,9 @@ import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
-import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
+import { format, logger, trackEvent } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
@@ -141,14 +141,14 @@ function WalletConnected({ address }: { address: string }) {
     const refreshTokens = async (): Promise<void> => {
       if (!address) return; // Don't fetch tokens if no address
 
-      console.log('[WALLET CONNECTED] Refreshing tokens for address:', address);
+      logger.log('[WALLET CONNECTED] Refreshing tokens for address:', address);
       setGlobalIsLoading(true);
       try {
         await getAllTokens();
-        console.log('[WALLET CONNECTED] Tokens fetched successfully');
+        logger.log('[WALLET CONNECTED] Tokens fetched successfully');
         setGlobalIsLoading(false);
       } catch (e) {
-        console.error('[WALLET CONNECTED] Error fetching tokens:', e);
+        logger.error('[WALLET CONNECTED] Error fetching tokens:', e);
       } finally {
         setGlobalIsLoading(false);
       }
@@ -256,7 +256,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
       onClose();
     } catch (error) {
-      console.error('Error disconnecting wallet:', error);
+      logger.error('Error disconnecting wallet:', error);
 
       onClose();
     } finally {
@@ -288,7 +288,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
       await connectWallet();
       onClose(); // Close the drawer after connecting
     } catch (error) {
-      console.error('Error connecting wallet:', error);
+      logger.error('Error connecting wallet:', error);
     }
   };
 

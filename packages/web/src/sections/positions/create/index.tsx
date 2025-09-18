@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 // mui
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
@@ -32,7 +33,7 @@ export default function CreatePositionView() {
         await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
-        console.error(e);
+        logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }

@@ -6,6 +6,7 @@ export * from './time';
 export * from './ui';
 export * from './analytics';
 export * from './network';
+export { logger } from './logger';
 
 export function splitByPredicate<T>(array: T[], predicate: (element: T) => boolean): [T[], T[]] {
   return array.reduce<[T[], T[]]>(

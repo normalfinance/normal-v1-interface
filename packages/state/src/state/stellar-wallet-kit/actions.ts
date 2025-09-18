@@ -1,6 +1,7 @@
 import { GetState, SetState } from 'zustand';
 import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit';
 import type { ISupportedWallet } from '@creit.tech/stellar-wallets-kit';
+import { logger } from '@normalfinance/utils';
 import {
   HANA_ID,
   XBULL_ID,
@@ -85,7 +86,7 @@ export function createStellarWalletKitActions(
 
       set({ kit, isInitialized: true });
     } catch (error) {
-      console.error('Failed to initialize wallet kit:', error);
+      logger.error('Failed to initialize wallet kit:', error);
       set({ isInitialized: false });
     }
   };
@@ -159,7 +160,7 @@ export function createStellarWalletKitActions(
                   address: address.address,
                 });
               } catch (signError) {
-                console.error('Signature rejected or failed:', signError);
+                logger.error('Signature rejected or failed:', signError);
                 enqueueSnackbar('Please sign the message to connect your wallet.', {
                   variant: 'error',
                   autoHideDuration: 5000,
@@ -252,7 +253,7 @@ export function createStellarWalletKitActions(
         await kit.disconnect();
       }
     } catch (error) {
-      console.error('Error disconnecting wallet:', error);
+      logger.error('Error disconnecting wallet:', error);
     }
 
     set({

@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { logger } from '@normalfinance/utils';
 import { getCdpBearerToken } from '@/utils/coinbase-auth';
 
 export async function POST(req: NextRequest) {
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     const text = await resp.text();
     if (!resp.ok) {
       // Surface error body for debugging in your logs
-      console.error('Coinbase session error:', resp.status, text);
+      logger.error('Coinbase session error:', resp.status, text);
       return NextResponse.json(
         { error: text || 'Session creation failed' },
         { status: resp.status }
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     const data = JSON.parse(text);
     return NextResponse.json(data);
   } catch (err: any) {
-    console.error('Coinbase session exception:', err);
+    logger.error('Coinbase session exception:', err);
     return NextResponse.json({ error: err?.message ?? 'Internal error' }, { status: 500 });
   }
 }

@@ -15,6 +15,7 @@ import {
   getCryptoIconUrl,
   getOraclePrice,
   getTokenBalance,
+  logger,
 } from '@normalfinance/utils';
 
 export const createWalletActions = (
@@ -64,17 +65,17 @@ export const createWalletActions = (
         const walletAddress = usePersistStore.getState().wallet.address;
         
         if (!walletAddress) {
-          console.warn('[WALLET ACTIONS] No wallet address found, skipping native token fetch');
+          logger.warn('[WALLET ACTIONS] No wallet address found, skipping native token fetch');
           return undefined;
         }
         
-        console.log('[WALLET ACTIONS] Fetching native token for address:', walletAddress);
+        logger.log('[WALLET ACTIONS] Fetching native token for address:', walletAddress);
 
         let balance: bigint;
         try {
           balance = await getTokenBalance(tokenAddress, walletAddress);
         } catch (error) {
-          console.warn('[WALLET ACTIONS] Error getting token balance:', error);
+          logger.warn('[WALLET ACTIONS] Error getting token balance:', error);
           balance = BigInt(0);
         }
 
@@ -123,7 +124,7 @@ export const createWalletActions = (
 
         return updatedTokenInfo;
       } catch (error) {
-        console.error('Error fetching native token info:', error);
+        logger.error('Error fetching native token info:', error);
         return undefined;
       }
     },
@@ -139,17 +140,17 @@ export const createWalletActions = (
         const walletAddress = usePersistStore.getState().wallet.address;
         
         if (!walletAddress) {
-          console.warn('[WALLET ACTIONS] No wallet address found, skipping normal token fetch');
+          logger.warn('[WALLET ACTIONS] No wallet address found, skipping normal token fetch');
           return undefined;
         }
         
-        console.log('[WALLET ACTIONS] Fetching normal token for address:', walletAddress, 'token:', tokenAddress);
+        logger.log('[WALLET ACTIONS] Fetching normal token for address:', walletAddress, 'token:', tokenAddress);
 
         let balance: bigint;
         try {
           balance = await getTokenBalance(tokenAddress, walletAddress);
         } catch (error) {
-          console.warn('[WALLET ACTIONS] Error getting normal token balance:', error);
+          logger.warn('[WALLET ACTIONS] Error getting normal token balance:', error);
           balance = BigInt(0);
         }
 
@@ -205,7 +206,7 @@ export const createWalletActions = (
 
         return updatedTokenInfo;
       } catch (error) {
-        console.error('Error fetching normal token info:', error);
+        logger.error('Error fetching normal token info:', error);
         return undefined;
       }
     },
@@ -220,17 +221,17 @@ export const createWalletActions = (
         const walletAddress = usePersistStore.getState().wallet.address;
         
         if (!walletAddress) {
-          console.warn('[WALLET ACTIONS] No wallet address found, skipping API token fetch');
+          logger.warn('[WALLET ACTIONS] No wallet address found, skipping API token fetch');
           return undefined;
         }
         
-        console.log('[WALLET ACTIONS] Fetching API token for address:', walletAddress, 'token:', tokenAddress);
+        logger.log('[WALLET ACTIONS] Fetching API token for address:', walletAddress, 'token:', tokenAddress);
 
         let balance: bigint;
         try {
           balance = await getTokenBalance(tokenAddress, walletAddress);
         } catch (error) {
-          console.warn('[WALLET ACTIONS] Error getting API token balance:', error);
+          logger.warn('[WALLET ACTIONS] Error getting API token balance:', error);
           balance = BigInt(0);
         }
 
@@ -287,7 +288,7 @@ export const createWalletActions = (
 
         return updatedTokenInfo;
       } catch (error) {
-        console.error('Error fetching API token info:', error);
+        logger.error('Error fetching API token info:', error);
         return undefined;
       }
     },

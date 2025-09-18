@@ -6,6 +6,7 @@ import type { SwapQueryParams } from '@/types/query-params';
 import * as React from 'react';
 import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
@@ -52,7 +53,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
       setGlobalIsLoading(true);
 
       getAllTokens()
-        .catch((error) => console.error(error))
+        .catch((error) => logger.error(error))
         .finally(() => {
           setGlobalIsLoading(false);
         });
