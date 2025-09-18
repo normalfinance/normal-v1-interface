@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 
 export function useWalletOwnership(address?: string | null) {

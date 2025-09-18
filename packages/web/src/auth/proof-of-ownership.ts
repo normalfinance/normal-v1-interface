@@ -1,6 +1,6 @@
-import { Account, Keypair, Operation, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 import { constants } from '@normalfinance/utils';
 import { markWalletVerifiedForSession } from '@/utils/wallet-proof';
+import { Account, Keypair, Operation, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 
 /**
  * Build a short, unique challenge string guaranteed <= 64 bytes.

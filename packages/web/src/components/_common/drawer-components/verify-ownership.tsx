@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { useTranslate } from '@/locales';
-import { Iconify } from '@/components/template/iconify';
 import { usePersistStore } from '@normalfinance/state';
+import { useState, useEffect, useCallback } from 'react';
 import { runProofOfOwnership } from '@/auth/proof-of-ownership';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+
+import { Box, Stack, Button, Typography, CircularProgress } from '@mui/material';
+
+import { Iconify } from '@/components/template/iconify';
 
 type Props = { onContinue?: () => void };
 

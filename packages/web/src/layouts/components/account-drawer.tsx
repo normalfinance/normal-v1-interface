@@ -9,10 +9,11 @@ import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
@@ -23,12 +24,10 @@ import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
+import VerifyOwnershipCard from '@/components/_common/drawer-components/verify-ownership';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
-
-import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
-import VerifyOwnershipCard from '@/components/_common/drawer-components/verify-ownership';
 
 /* ------------------------------------------------------------------ */
 /* ① Disconnected: Show connect wallet button                         */
