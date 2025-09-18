@@ -7,11 +7,11 @@ import { fCurrencyTwoDecimals } from '@/utils/format-number';
 import { getSwapConversionText } from '@/utils/conversion-helpers';
 
 import { useTheme } from '@mui/material/styles';
+import LoadingButton from '@mui/lab/LoadingButton';
 import {
   Box,
   Chip,
   Dialog,
-  Button,
   Accordion,
   Typography,
   IconButton,
@@ -23,8 +23,6 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
-
-import LoadingButton from '@mui/lab/LoadingButton';
 
 export interface SwapReviewProps {
   open: boolean;
