@@ -1,6 +1,6 @@
 require('ts-node/register/transpile-only');
 
-const { Address } = require('stellar-sdk');
+const { Address } = require('@stellar/stellar-sdk');
 
 function printUsage() {
   console.error('Usage: node scripts/convert-contract-address.js <contract_address>');

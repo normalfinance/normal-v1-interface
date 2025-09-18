@@ -11,6 +11,10 @@ async function transactionHandler(req: NextRequest) {
   try {
     const { walletAddress, signedTransactionXDR, transactionType } = await req.json();
 
+    console.log('[Transaction API] walletAddress: ', walletAddress);
+    console.log('[Transaction API] signedTransactionXDR: ', signedTransactionXDR);
+    console.log('[Transaction API] transactionType: ', transactionType);
+
     if (!walletAddress || !signedTransactionXDR) {
       await logWithConfig('warn', 'Transaction API called without required parameters');
       return NextResponse.json(
@@ -63,7 +67,10 @@ async function transactionHandler(req: NextRequest) {
         signedTransactionXDR,
         constants.StellarConfig.NETWORK_PASSPHRASE
       );
+      console.log('[Transaction API] transaction: ', transaction);
       const keypair = Keypair.fromPublicKey(walletAddress);
+
+      console.log('[Transaction API] keypair: ', keypair);
 
       // Verify that the transaction is signed by the correct wallet
       const hasValidSignature = transaction.signatures.some((sig) => {
@@ -73,6 +80,7 @@ async function transactionHandler(req: NextRequest) {
           return false;
         }
       });
+      console.log('[Transaction API] hasValidSignature: ', hasValidSignature);
 
       if (!hasValidSignature) {
         await logWithConfig('warn', 'Invalid signature for wallet address', {
@@ -125,6 +133,7 @@ async function transactionHandler(req: NextRequest) {
         },
       });
     } catch (contractError: any) {
+      console.log('[Transaction API] Contract error: ', contractError);
       await logWithConfig('error', `${transactionType || 'Contract'} execution failed`, {
         error: contractError?.message,
         walletAddress,
@@ -137,6 +146,7 @@ async function transactionHandler(req: NextRequest) {
       );
     }
   } catch (error: any) {
+    console.log('[Transaction API] Error: ', error);
     await logWithConfig('error', 'Transaction API error', {
       error: error?.message,
       transactionType: req.method,

@@ -104,6 +104,9 @@ model normal_contract_events {
   transaction_account         String
   transaction_fee_account     String?
   transaction_successful      Boolean
+  operation_body              String?
+  operation_result_code       String?
+  operation_type              String?
   ledger_sequence             BigInt
   ledger_hash                 String
   ledger_closed_at            DateTime @db.Timestamp(6)

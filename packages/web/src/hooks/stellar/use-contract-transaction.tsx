@@ -1,15 +1,15 @@
 'use client';
 
+import type { ContractType } from '@normalfinance/types';
 import type { SnackbarKey } from '@/components/template/snackbar';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
-import type { AppStore, ContractType, AppStorePersist } from '@normalfinance/types';
 
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
-import { Signer } from '@normalfinance/utils/build/stellar';
+import { usePersistStore } from '@normalfinance/state';
 import { constants, trackEvent } from '@normalfinance/utils';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
@@ -71,32 +71,20 @@ interface ExecuteContractTransactionParams<T extends ContractType>
   contractType: T;
 }
 
-const getSigner = (storePersist: AppStorePersist, appStore: AppStore) =>
-  storePersist.wallet.walletType === 'wallet-connect'
-    ? appStore.walletConnectInstance
-    : new Signer();
-
-const getSignerFunction = (signer: any, storePersist: any) => (tx: string) =>
-  storePersist.wallet.walletType === 'wallet-connect'
-    ? signer.signTransaction(tx)
-    : signer.sign(tx);
-
 const getContractClient = <T extends ContractType>(
   contractType: T,
   contractAddress: string,
-  signer: any,
+  signTransaction: (xdr: string) => Promise<string>,
   networkPassphrase: string,
   rpcUrl: string,
-  publicKey: string,
-  storePersist: any
+  publicKey: string
 ): ContractClientType<T> => {
-  const signTransaction = getSignerFunction(signer, storePersist);
   const commonOptions = {
     publicKey,
     contractId: contractAddress,
     networkPassphrase,
     rpcUrl,
-    signTransaction: signTransaction.bind(signer),
+    signTransaction,
   };
 
   const ClientConstructor = contractClients[contractType] as any;
@@ -105,7 +93,7 @@ const getContractClient = <T extends ContractType>(
 
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
-  const appStore = useAppStore();
+  const { signTransaction, publicKey } = useStellarWalletsKit();
   const { t } = useTranslate();
 
   const { openRestoreModal, closeRestoreModal } = useRestoreModal();
@@ -117,22 +105,46 @@ export const useContractTransaction = () => {
       transactionFunction,
       transactionDetails,
     }: ExecuteContractTransactionParams<T>) => {
-      const signer = getSigner(storePersist, appStore);
       const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
       const rpcUrl = constants.StellarConfig.RPC_URL;
-      const publicKey = storePersist.wallet.address!;
+      const walletAddress = publicKey || storePersist.wallet.address;
+
+      if (!walletAddress) {
+        throw new Error('No wallet connected');
+      }
+
+      console.log('[USE CONTRACT TRANSACTION] Wallet address:', walletAddress);
+      console.log('[USE CONTRACT TRANSACTION] PublicKey from kit:', publicKey);
+      console.log('[USE CONTRACT TRANSACTION] Address from persist:', storePersist.wallet.address);
+
+      console.log('[USE CONTRACT TRANSACTION] Network passphrase:', networkPassphrase);
 
       const run = async (
         restore: boolean = false
       ): Promise<{ txHash?: string; notify: boolean }> => {
+        // Add safety check for signTransaction function
+        const safeSignTransaction = async (xdr: string) => {
+          try {
+            console.log('[USE CONTRACT TRANSACTION] Attempting to sign transaction...');
+            if (!signTransaction) {
+              throw new Error('Sign transaction function not available');
+            }
+            const result = await signTransaction(xdr);
+            console.log('[USE CONTRACT TRANSACTION] Transaction signed successfully');
+            return result;
+          } catch (error) {
+            console.error('[USE CONTRACT TRANSACTION] Error during transaction signing:', error);
+            throw error;
+          }
+        };
+
         const contractClient = getContractClient(
           contractType,
           contractAddress,
-          signer,
+          safeSignTransaction,
           networkPassphrase,
           rpcUrl,
-          publicKey,
-          storePersist
+          walletAddress
         );
 
         const transaction = await transactionFunction(contractClient, restore);
@@ -150,7 +162,13 @@ export const useContractTransaction = () => {
           if (txHash) {
             const timestamp = new Date().toISOString();
             const transactionType = transactionDetails.type || 'unknown';
-            const walletAddress = publicKey || 'unknown';
+            console.log('[USE CONTRACT TRANSACTION] Transactionn hash:', txHash);
+            console.log('[USE CONTRACT TRANSACTION] Transactionn type:', transactionType);
+            console.log('[USE CONTRACT TRANSACTION] Transactionn Time:', timestamp);
+
+            console.log(
+              `[${timestamp}] Transaction ${transactionType} completed for ${walletAddress}: ${txHash}`
+            );
           }
 
           trackEvent('transaction_successful', {
@@ -249,6 +267,7 @@ export const useContractTransaction = () => {
           return result;
         })
         .catch((error) => {
+          console.error('Error during contract transaction: ', error);
           if (loadingKey) closeSnackbar(loadingKey);
 
           enqueueSnackbar(messages.error, {
@@ -260,7 +279,7 @@ export const useContractTransaction = () => {
           throw error;
         });
     },
-    [storePersist, appStore, openRestoreModal, closeRestoreModal]
+    [storePersist, signTransaction, openRestoreModal, closeRestoreModal, t]
   );
 
   return {

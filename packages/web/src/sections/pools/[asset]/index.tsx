@@ -6,6 +6,8 @@ import { DashboardContent } from '@/layouts/dashboard';
 
 import { Alert } from '@mui/material';
 
+import { SpecificNotFound } from '@/components/_common/specific-not-found';
+
 import PoolDetailsView from './pool-details-view';
 
 export default function PoolView({ asset }: { asset: string }) {
@@ -22,11 +24,7 @@ export default function PoolView({ asset }: { asset: string }) {
   }
 
   if (!pool || pool == undefined) {
-    return (
-      <DashboardContent maxWidth="xl">
-        <Alert severity="info">{t("The pool you're looking for doesn't exist.")}</Alert>
-      </DashboardContent>
-    );
+    return <SpecificNotFound type="pool" />;
   }
 
   return <PoolDetailsView asset={asset} pool={pool} />;
