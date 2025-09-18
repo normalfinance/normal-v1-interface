@@ -342,9 +342,14 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
               {getButtonLabel()}
             </Button>
           ) : (
-            <WalletGate buttonText={t('Connect Wallet to Buy')} fullWidth variant="soft">
-              {null}
-            </WalletGate>
+            <WalletGate
+              buttonText="Connect Wallet to Send"
+              fullWidth
+              variant="soft"
+              color="secondary"
+              size="large"
+              sx={{ borderRadius: 2.5 }}
+            />
           )}
         </Box>
 

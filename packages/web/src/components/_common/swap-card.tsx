@@ -510,6 +510,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
   const buttonState = getButtonState();
   const buttonConfig = getButtonConfig(buttonState);
 
+  const canReview =
+    !!sellToken && !!buyToken && sellVal > 0 && quoteFetched && !isLoading && !insufficientBalance;
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
       <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -874,7 +877,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
           variant={buttonConfig.variant || 'contained'}
           size="large"
           onClick={handleMainButtonClick}
-          disabled={buttonConfig.disabled}
+          disabled={!canReview}
           color={buttonConfig.color}
           sx={{
             backgroundColor: buttonConfig.color === 'error' ? undefined : 'rgba(148,123,255,0.29)',
@@ -889,9 +892,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams }) => 
           {buttonConfig.label}
         </Button>
       ) : (
-        <WalletGate buttonText={t('Connect Wallet to Swap')} fullWidth variant="contained">
-          {null}
-        </WalletGate>
+        <WalletGate
+          buttonText="Connect Wallet to Swap"
+          fullWidth
+          variant="soft"
+          color="secondary"
+          size="large"
+          sx={{ borderRadius: 2.5 }}
+        />
       )}
 
       {/* fees */}

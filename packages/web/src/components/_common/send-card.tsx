@@ -448,9 +448,14 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
             {getButtonLabel()}
           </Button>
         ) : (
-          <WalletGate buttonText={t('Connect Wallet to Send')} fullWidth variant="soft">
-            {null}
-          </WalletGate>
+          <WalletGate
+            buttonText="Connect Wallet to Send"
+            fullWidth
+            variant="soft"
+            color="secondary"
+            size="large"
+            sx={{ borderRadius: 2.5 }}
+          />
         )}
       </Box>
 
