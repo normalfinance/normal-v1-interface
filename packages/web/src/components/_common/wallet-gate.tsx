@@ -1,3 +1,5 @@
+import type { Theme, SxProps } from '@mui/material';
+
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -15,7 +17,6 @@ import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
-import type { SxProps, Theme } from '@mui/material';
 
 interface WalletGateProps {
   children?: React.ReactNode;
