@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
-import VerifyOwnershipDialog from './verify-ownership';
+import { useRef, useMemo, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
 import { useProofDialogStore } from '@/stores/proof-dialog-store';
+
+import VerifyOwnershipDialog from './verify-ownership';
 
 const PORTAL_ID = 'root-proof-portal';
 

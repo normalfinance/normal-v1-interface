@@ -12,6 +12,7 @@ import { I18nProvider } from '@/locales/i18n-provider';
 import { PostHogProvider } from '@/providers/PostHogProvider';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
+import WalletBootstrapper from '@/providers/wallet-bootstrapper';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
@@ -24,7 +25,6 @@ import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
 import ProofOfOwnershipPortal from '@/components/_common/drawer-components/proof-of-ownership-portal';
-import WalletBootstrapper from '@/providers/wallet-bootstrapper';
 // ----------------------------------------------------------------------
 
 export const viewport: Viewport = {

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
+import React, { useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
+import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import { useProofDialogStore } from '@/stores/proof-dialog-store';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import { Box, Stack, Button, Drawer, Tooltip, Typography, IconButton } from '@mui/material';
@@ -13,8 +15,6 @@ import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
-import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
-import { useProofDialogStore } from '@/stores/proof-dialog-store';
 
 interface WalletGateProps {
   children: React.ReactNode;

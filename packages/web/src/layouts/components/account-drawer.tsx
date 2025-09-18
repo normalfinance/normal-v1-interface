@@ -9,11 +9,12 @@ import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
+import { useState, useEffect, useCallback } from 'react';
 import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
-import { useMemo, useState, useEffect, useCallback } from 'react';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import { useProofDialogStore } from '@/stores/proof-dialog-store';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
@@ -25,7 +26,7 @@ import { Scrollbar } from '@/components/template/scrollbar';
 import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
-import { useProofDialogStore } from '@/stores/proof-dialog-store';
+
 import { AccountButton } from './account-button';
 
 /* ------------------------------------------------------------------ */

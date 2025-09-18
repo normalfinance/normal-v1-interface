@@ -1,7 +1,7 @@
-// packages/web/src/auth/proof-of-ownership.ts
-import { Account, Keypair, Operation, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 import { constants } from '@normalfinance/utils';
 import { markWalletVerifiedForSession } from '@/utils/wallet-proof';
+// packages/web/src/auth/proof-of-ownership.ts
+import { Account, Keypair, Operation, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 
 export function buildChallengeMessage(): string {
   const ts = Date.now().toString(36);

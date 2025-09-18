@@ -1,23 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Stack,
-  Typography,
-  CircularProgress,
-  Paper,
-} from '@mui/material';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { runProofOfOwnership } from '@/auth/proof-of-ownership';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
-import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useProofDialogStore } from '@/stores/proof-dialog-store';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+
+import {
+  Stack,
+  Paper,
+  Dialog,
+  Button,
+  Typography,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+} from '@mui/material';
 
 type KitSignResult = string | { signedXDR?: string; xdr?: string };
 

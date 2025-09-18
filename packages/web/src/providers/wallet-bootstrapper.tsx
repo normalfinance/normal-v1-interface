@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { usePersistStore, useAppStore } from '@normalfinance/state';
+import { useRef, useEffect } from 'react';
 import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 export default function WalletBootstrapper() {
   const persist = usePersistStore();

@@ -1,24 +1,27 @@
 import type { CardProps } from '@mui/material';
 import type { SendQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
+
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { isValidStellarAddress } from '@/utils/address-validator';
-import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
+import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import { useProofDialogStore } from '@/stores/proof-dialog-store';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
+
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
+
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
-import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
-import { useProofDialogStore } from '@/stores/proof-dialog-store';
 
 interface SendCardProps extends CardProps {
   tokensList?: Token[];
@@ -37,7 +40,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
   const persist = usePersistStore();
   const { publicKey } = useStellarWalletsKit();
   const connectedAddress = persist.wallet.address || publicKey || null;
-  const [verifiedTick, setVerifiedTick] = useState(0);
   const isVerified = !!connectedAddress && isWalletVerifiedForSession(connectedAddress);
   const isConnected = !!connectedAddress;
   const { ensureOpen } = useProofDialogStore();
@@ -63,10 +65,10 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
   useEffect(() => {
     if (sendToken) {
       const amt = parseFloat(amount) || 0;
-      const _coinValue = isFiatMode ? amt / sendToken.usdValue : amt;
-      const _fiatValue = _coinValue * sendToken.usdValue;
-      setCoinValue(_coinValue);
-      setFiatValue(_fiatValue);
+      const coin = isFiatMode ? amt / sendToken.usdValue : amt;
+      const fiat = coin * sendToken.usdValue;
+      setCoinValue(coin);
+      setFiatValue(fiat);
     } else {
       setCoinValue(0);
       setFiatValue(0);
@@ -91,7 +93,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
   useEffect(() => {
     const onVerified = (e: any) => {
       if (!connectedAddress || e?.detail?.address !== connectedAddress) return;
-      setVerifiedTick((x) => x + 1);
       appStore
         .getAllTokens()
         .catch((err) => console.error('[SendCard] getAllTokens after verify error:', err));
@@ -111,17 +112,17 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
 
     setTokens(source);
     if (!sendToken) {
-      const xlm = source.find((t) => t.symbol === 'XLM');
+      const xlm = source.find((tok) => tok.symbol === 'XLM');
       setSendToken(xlm || source[0]);
     }
-  }, [isVerified, tokensList, appStore.tokens, sendToken, verifiedTick]);
+  }, [isVerified, tokensList, appStore.tokens, sendToken]);
 
   useEffect(() => {
     if (!queryParams || tokens.length === 0) return;
 
     if (queryParams.token) {
       const foundToken = tokens.find(
-        (token) => token.symbol.toLowerCase() === queryParams.token?.toLowerCase()
+        (tok) => tok.symbol.toLowerCase() === queryParams.token?.toLowerCase()
       );
       if (foundToken) setSendToken(foundToken);
     }
@@ -177,17 +178,17 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
   const insufficientBalance = sendToken ? coinAmount > sendToken.balance : false;
 
   const getButtonLabel = (): string => {
-    if (destination === DEFAULT_DESTINATION) return 'Input wallet address';
-    if (!sendToken) return 'Select a token';
+    if (destination === DEFAULT_DESTINATION) return t('Input wallet address');
+    if (!sendToken) return t('Select a token');
     const amt = parseFloat(amount) || 0;
-    if (amt <= 0) return 'Enter an amount';
-    if (insufficientBalance) return `Insufficient ${sendToken.symbol}`;
-    return 'Send';
+    if (amt <= 0) return t('Enter an amount');
+    if (insufficientBalance) return `${t('Insufficient')} ${sendToken.symbol}`;
+    return t('Send');
   };
 
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
-    if (label !== 'Send') return;
+    if (label !== t('Send')) return;
 
     if (!isVerified) {
       if (!proofOpenedOnceRef.current) {
@@ -208,7 +209,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
     setReviewOpen(true);
   };
 
-  const isSendReady = getButtonLabel() === 'Send';
+  const isSendReady = getButtonLabel() === t('Send');
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1 }} width={1}>
@@ -447,7 +448,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, query
             {getButtonLabel()}
           </Button>
         ) : (
-          <WalletGate buttonText="Connect Wallet to Send" fullWidth variant="soft">
+          <WalletGate buttonText={t('Connect Wallet to Send')} fullWidth variant="soft">
             {null}
           </WalletGate>
         )}

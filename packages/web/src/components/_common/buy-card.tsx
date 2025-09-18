@@ -3,10 +3,12 @@ import type { BuyQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
-import React, { useRef, useState, useEffect, useRef as useReactRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { convertFiatToCoin } from '@/utils/conversion-helpers';
+import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import { useProofDialogStore } from '@/stores/proof-dialog-store';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -17,9 +19,6 @@ import { WalletGate } from './wallet-gate';
 import CheckoutDialog from './checkout-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-
-import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
-import { useProofDialogStore } from '@/stores/proof-dialog-store';
 
 interface BuyCardProps extends CardProps {
   tokensList?: Token[];
@@ -41,11 +40,10 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
   const persist = usePersistStore();
   const { publicKey } = useStellarWalletsKit();
   const connectedAddress = persist.wallet.address || publicKey || null;
-  const [verifiedTick, setVerifiedTick] = useState(0);
   const isVerified = !!connectedAddress && isWalletVerifiedForSession(connectedAddress);
   const isConnected = !!connectedAddress;
   const { ensureOpen } = useProofDialogStore();
-  const proofOpenedOnceRef = useReactRef(false);
+  const proofOpenedOnceRef = useRef(false);
 
   const [tokens, setTokens] = useState<Token[]>([]);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
@@ -74,12 +72,11 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
     if (isVerified) {
       proofOpenedOnceRef.current = false;
     }
-  }, [connectedAddress, isVerified, ensureOpen, proofOpenedOnceRef]);
+  }, [connectedAddress, isVerified, ensureOpen]);
 
   useEffect(() => {
     const onVerified = (e: any) => {
       if (!connectedAddress || e?.detail?.address !== connectedAddress) return;
-      setVerifiedTick((x) => x + 1);
       appStore
         .getAllTokens()
         .catch((err) => console.error('[BuyCard] getAllTokens after verify error:', err));
@@ -99,17 +96,17 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
 
     setTokens(source);
     if (!buyToken) {
-      const xlm = source.find((t) => t.symbol === 'XLM');
+      const xlm = source.find((tok) => tok.symbol === 'XLM');
       setBuyToken(xlm || source[0]);
     }
-  }, [isVerified, tokensList, appStore.tokens, buyToken, verifiedTick]);
+  }, [isVerified, tokensList, appStore.tokens, buyToken]);
 
   useEffect(() => {
     if (!queryParams || tokens.length === 0) return;
 
     if (queryParams.token) {
       const foundToken = tokens.find(
-        (token) => token.symbol.toLowerCase() === queryParams.token?.toLowerCase()
+        (tok) => tok.symbol.toLowerCase() === queryParams.token?.toLowerCase()
       );
       if (foundToken) setBuyToken(foundToken);
     }
@@ -128,7 +125,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
     setAmount('0');
     setOpen(false);
     setReviewOpen(false);
-  }, [isConnected, proofOpenedOnceRef]);
+  }, [isConnected]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(sanitizeAmountInput(e.target.value));
@@ -144,15 +141,15 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
   };
 
   const getButtonLabel = (): string => {
-    if (!buyToken) return 'Select a token';
+    if (!buyToken) return t('Select a token');
     const amt = parseFloat(amount) || 0;
-    if (amt <= 0) return 'Enter an amount';
-    return 'Buy';
+    if (amt <= 0) return t('Enter an amount');
+    return t('Buy');
   };
 
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
-    if (label !== 'Buy') return;
+    if (label !== t('Buy')) return;
 
     if (!isVerified) {
       if (!proofOpenedOnceRef.current) {
@@ -295,7 +292,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
             </Box>
           ) : (
             <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-              <SwapSendEmptyPopupButton label="Select token" onClick={handleOpen} />
+              <SwapSendEmptyPopupButton label={t('Select token')} onClick={handleOpen} />
             </Box>
           )}
 
@@ -340,12 +337,12 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
               size="large"
               sx={{ borderRadius: 2.5 }}
               onClick={handleMainButtonClick}
-              disabled={getButtonLabel() !== 'Buy'}
+              disabled={getButtonLabel() !== t('Buy')}
             >
               {getButtonLabel()}
             </Button>
           ) : (
-            <WalletGate buttonText="Connect Wallet to Buy" fullWidth variant="soft">
+            <WalletGate buttonText={t('Connect Wallet to Buy')} fullWidth variant="soft">
               {null}
             </WalletGate>
           )}
@@ -359,7 +356,7 @@ const BuyCard: React.FC<BuyCardProps> = ({ tokensList = [], cashBalance, queryPa
             token={buyToken?.symbol ?? 'USDC'}
             amount={amount}
             onClose={handleReviewClose}
-            walletAddress={persist.wallet.address}
+            walletAddress={connectedAddr}
           />
         )}
       </Stack>
