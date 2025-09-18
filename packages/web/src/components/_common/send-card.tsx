@@ -5,12 +5,13 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
-import { usePersistStore } from '@normalfinance/state';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { isValidStellarAddress } from '@/utils/address-validator';
 import { getMaxAmount, convertCoinToFiat, convertFiatToCoin } from '@/utils/conversion-helpers';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
@@ -20,6 +21,10 @@ import SendReview from './send-review';
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
 
+// 1) verification helpers
+import { isWalletVerifiedForSession } from '@/utils/wallet-proof';
+import { useProofDialogStore } from '@/stores/proof-dialog-store';
+
 interface SendCardProps extends CardProps {
   tokensList?: Token[];
   networkCost?: number;
@@ -28,64 +33,47 @@ interface SendCardProps extends CardProps {
 
 const DEFAULT_DESTINATION = 'Wallet address';
 
-const SendCard: React.FC<SendCardProps> = ({
-  tokensList = [],
-  networkCost,
-  queryParams,
-  ...other
-}) => {
+const SendCard: React.FC<SendCardProps> = ({ tokensList = [], networkCost, queryParams }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
 
-  // State declarations...
-  const [sendToken, setSendToken] = useState<Token | null>(
-    tokensList.length ? tokensList[0] : null
-  );
+  // 2) stores + connection/verification state
+  const appStore = useAppStore();
+  const persist = usePersistStore();
+  const { publicKey } = useStellarWalletsKit();
+  const connectedAddress = persist.wallet.address || publicKey || null;
+  const [verifiedTick, setVerifiedTick] = useState(0);
+  const isVerified = !!connectedAddress && isWalletVerifiedForSession(connectedAddress);
+  const isConnected = !!connectedAddress;
+  const { ensureOpen } = useProofDialogStore();
+
+  // 3) local tokens + chosen token
+  const [tokens, setTokens] = useState<Token[]>([]);
+  const [sendToken, setSendToken] = useState<Token | null>(null);
+
+  // 4) amount/destination and UI state
   const [destination, setDestination] = useState<string>(DEFAULT_DESTINATION);
   const [amount, setAmount] = useState<string>('0');
   const [isFiatMode, setIsFiatMode] = useState<boolean>(true);
   const [open, setOpen] = useState<boolean>(false);
-  const [activeButton, setActiveButton] = useState<'sell' | 'buy' | 'send' | ''>('');
-
-  // For dynamic width measurement
-  const [inputWidth, setInputWidth] = useState<number>(0);
-  const spanRef = useRef<HTMLSpanElement>(null);
-
-  // State for review dialog
+  const [activeButton, setActiveButton] = useState<'send' | ''>('');
   const [reviewOpen, setReviewOpen] = useState(false);
   const handleReviewClose = () => setReviewOpen(false);
 
+  // 5) width measurement for the big input
+  const [inputWidth, setInputWidth] = useState<number>(0);
+  const spanRef = useRef<HTMLSpanElement>(null);
+
+  // 6) derived coin/fiat values
   const [coinValue, setCoinValue] = useState<number>(0);
   const [fiatValue, setFiatValue] = useState<number>(0);
 
   useEffect(() => {
-    if (queryParams) {
-      if (queryParams.token) {
-        const foundToken = tokensList.find(
-          (token) => token.symbol.toLowerCase() === queryParams.token?.toLowerCase()
-        );
-        if (foundToken) {
-          setSendToken(foundToken);
-        }
-      }
-
-      if (queryParams.amount) {
-        setAmount(queryParams.amount);
-      }
-
-      if (queryParams.destination) {
-        setDestination(queryParams.destination);
-      }
-    }
-  }, [queryParams, tokensList]);
-
-  useEffect(() => {
     if (sendToken) {
       const amt = parseFloat(amount) || 0;
-      // When in fiat mode, the input is in dollars:
       const _coinValue = isFiatMode ? amt / sendToken.usdValue : amt;
-      const _fiatValue = sendToken ? _coinValue * sendToken.usdValue : 0;
+      const _fiatValue = _coinValue * sendToken.usdValue;
       setCoinValue(_coinValue);
       setFiatValue(_fiatValue);
     } else {
@@ -95,38 +83,72 @@ const SendCard: React.FC<SendCardProps> = ({
   }, [amount, sendToken, isFiatMode]);
 
   useEffect(() => {
-    if (spanRef.current) {
-      // Increase the extra space to account for kerning issues with characters like "."
-      setInputWidth(spanRef.current.offsetWidth + 8);
-    }
+    if (spanRef.current) setInputWidth(spanRef.current.offsetWidth + 8);
   }, [amount]);
 
-  //prevent "-" ot "," in input
+  // 7) auto-open proof dialog when a wallet connects but is not verified
+  useEffect(() => {
+    if (!connectedAddress) return;
+    if (!isVerified) ensureOpen('drawer');
+  }, [connectedAddress, isVerified, ensureOpen]);
+
+  // 8) refresh tokens after verification event
+  useEffect(() => {
+    const onVerified = (e: any) => {
+      if (!connectedAddress || e?.detail?.address !== connectedAddress) return;
+      setVerifiedTick((x) => x + 1);
+      appStore
+        .getAllTokens()
+        .catch((err) => console.error('[SendCard] getAllTokens after verify error:', err));
+    };
+    window.addEventListener('nf:walletVerified', onVerified);
+    return () => window.removeEventListener('nf:walletVerified', onVerified);
+  }, [connectedAddress, appStore]);
+
+  // 9) adopt tokens only when verified + set default send token (prefer XLM)
+  useEffect(() => {
+    if (!isVerified) {
+      setTokens([]);
+      setSendToken(null);
+      return;
+    }
+    const source = tokensList && tokensList.length ? tokensList : appStore.tokens;
+    if (!source || source.length === 0) return;
+
+    setTokens(source);
+    if (!sendToken) {
+      const xlm = source.find((t) => t.symbol === 'XLM');
+      setSendToken(xlm || source[0]);
+    }
+  }, [isVerified, tokensList, appStore.tokens, sendToken, verifiedTick]);
+
+  // 10) initialize from query params (wait for tokens)
+  useEffect(() => {
+    if (!queryParams || tokens.length === 0) return;
+
+    if (queryParams.token) {
+      const foundToken = tokens.find(
+        (token) => token.symbol.toLowerCase() === queryParams.token?.toLowerCase()
+      );
+      if (foundToken) setSendToken(foundToken);
+    }
+    if (queryParams.amount) setAmount(queryParams.amount);
+    if (queryParams.destination) setDestination(queryParams.destination);
+  }, [queryParams, tokens]);
+
+  // 11) input handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
     setAmount(sanitizeAmountInput(e.target.value));
   };
-
-  // Toggle mode, handle focus/blur, etc...
   const handleAmountFocus = () => {
-    if (amount === '0') {
-      setAmount('');
-    }
+    if (amount === '0') setAmount('');
   };
-
   const handleAmountBlur = () => {
-    if (amount.trim() === '') {
-      setAmount('0');
-    }
+    if (amount.trim() === '') setAmount('0');
   };
-
   const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === '-') e.preventDefault();
   };
-
   const toggleAmountMode = () => {
     if (sendToken) {
       const amt = parseFloat(amount) || 0;
@@ -143,57 +165,44 @@ const SendCard: React.FC<SendCardProps> = ({
     setIsFiatMode(!isFiatMode);
   };
 
-  // Calculations and getButtonLabel() ...
-
-  let coinAmount = 0;
-  if (sendToken) {
-    const amt = parseFloat(amount) || 0;
-    coinAmount = isFiatMode ? amt / sendToken.usdValue : amt;
-  }
-
+  // 12) computed button state
+  const coinAmount = sendToken
+    ? isFiatMode
+      ? (parseFloat(amount) || 0) / sendToken.usdValue
+      : parseFloat(amount) || 0
+    : 0;
   const insufficientBalance = sendToken ? coinAmount > sendToken.balance : false;
 
   const getButtonLabel = (): string => {
-    if (destination === DEFAULT_DESTINATION) {
-      return 'Input wallet address';
-    }
-    if (!sendToken) {
-      return 'Select a token';
-    }
+    if (destination === DEFAULT_DESTINATION) return 'Input wallet address';
+    if (!sendToken) return 'Select a token';
     const amt = parseFloat(amount) || 0;
-    if (amt <= 0) {
-      return 'Enter an amount';
-    }
-    if (insufficientBalance) {
-      return `Insufficient ${sendToken.symbol}`;
-    }
+    if (amt <= 0) return 'Enter an amount';
+    if (insufficientBalance) return `Insufficient ${sendToken.symbol}`;
     return 'Send';
   };
 
+  // 13) send flow + proof gate
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
+    if (label !== 'Send') return;
 
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
-
-    if (label === 'Send') {
-      if (!isValidStellarAddress(destination)) {
-        enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
-        return;
-      }
-      if (destination == persist.wallet.address) {
-        enqueueSnackbar(t('Cannot send tokens to yourself'), { variant: 'error' });
-        return;
-      }
-      setReviewOpen(true);
+    if (!isVerified) {
+      ensureOpen('drawer');
+      return;
     }
+
+    if (!isValidStellarAddress(destination)) {
+      enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
+      return;
+    }
+    if (destination === persist.wallet.address) {
+      enqueueSnackbar(t('Cannot send tokens to yourself'), { variant: 'error' });
+      return;
+    }
+    setReviewOpen(true);
   };
 
-  // Main button with multiple states
-  const persist = usePersistStore();
-  const isConnected = !!persist.wallet.address;
   const isSendReady = getButtonLabel() === 'Send';
 
   return (
@@ -260,11 +269,8 @@ const SendCard: React.FC<SendCardProps> = ({
                   lineHeight: '48px',
                 },
               }}
-              inputProps={{
-                min: 0,
-              }}
+              inputProps={{ min: 0 }}
             />
-            {/* Hidden span used for measuring text width */}
             <span
               ref={spanRef}
               style={{
@@ -301,16 +307,13 @@ const SendCard: React.FC<SendCardProps> = ({
             <Iconify
               icon="solar:transfer-horizontal-bold-duotone"
               width={14}
-              sx={{
-                color: theme.palette.text.secondary,
-                cursor: 'pointer',
-                rotate: '-90deg',
-              }}
+              sx={{ color: theme.palette.text.secondary, cursor: 'pointer', rotate: '-90deg' }}
               onClick={toggleAmountMode}
             />
           </Box>
         </Box>
-        {/* Pick token */}
+
+        {/* 14) Pick token */}
         <Button
           onClick={() => {
             setActiveButton('send');
@@ -333,12 +336,7 @@ const SendCard: React.FC<SendCardProps> = ({
             <Box
               component="img"
               src={sendToken ? getCryptoIconUrl(sendToken.symbol) : ''}
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                objectFit: 'cover',
-              }}
+              sx={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
             />
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <Typography
@@ -356,8 +354,7 @@ const SendCard: React.FC<SendCardProps> = ({
                   textAlign: 'start',
                 }}
               >
-                {t('Balance:')}
-                <Box component="span">{sendToken?.balance}</Box>{' '}
+                {t('Balance:')} <Box component="span">{sendToken?.balance}</Box>{' '}
                 <Box component="span" sx={{ color: theme.palette.text.secondary }}>
                   {t('(')}
                   {fCurrency(Number(sendToken?.balance ?? 0) * (sendToken?.usdValue ?? 0))}
@@ -366,14 +363,7 @@ const SendCard: React.FC<SendCardProps> = ({
               </Typography>
             </Box>
           </Box>
-          <Box
-            sx={{
-              height: '100%',
-              display: 'flex',
-              alignItems: 'flex-end',
-              gap: '6px',
-            }}
-          >
+          <Box sx={{ height: '100%', display: 'flex', alignItems: 'flex-end', gap: '6px' }}>
             <Button
               variant="soft"
               color="secondary"
@@ -381,10 +371,6 @@ const SendCard: React.FC<SendCardProps> = ({
               sx={{ fontWeight: 500, fontSize: '12px', p: 0, height: '24px', minWidth: '36px' }}
               onClick={(e) => {
                 e.stopPropagation();
-                // trackEvent('button_clicked', {
-                //   label: 'Max',
-                //   location: 'Swap',
-                // });
                 if (sendToken) {
                   setAmount(
                     getMaxAmount(Number(sendToken.balance), sendToken.usdValue, isFiatMode)
@@ -402,7 +388,8 @@ const SendCard: React.FC<SendCardProps> = ({
           </Box>
         </Button>
       </Box>
-      {/* Destination Input for Wallet Address/ENS */}
+
+      {/* 15) Destination */}
       <Box
         sx={{
           display: 'flex',
@@ -425,14 +412,10 @@ const SendCard: React.FC<SendCardProps> = ({
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
           onFocus={() => {
-            if (destination === DEFAULT_DESTINATION) {
-              setDestination('');
-            }
+            if (destination === DEFAULT_DESTINATION) setDestination('');
           }}
           onBlur={() => {
-            if (destination.trim() === '') {
-              setDestination(DEFAULT_DESTINATION);
-            }
+            if (destination.trim() === '') setDestination(DEFAULT_DESTINATION);
           }}
           sx={{
             width: '100%',
@@ -443,16 +426,11 @@ const SendCard: React.FC<SendCardProps> = ({
                 ? theme.palette.text.secondary
                 : theme.palette.text.primary,
           }}
-          inputProps={{
-            style: {
-              fontSize: '14px',
-              fontWeight: 400,
-              lineHeight: '22px',
-            },
-          }}
+          inputProps={{ style: { fontSize: '14px', fontWeight: 400, lineHeight: '22px' } }}
         />
       </Box>
-      {/* Main Button */}
+
+      {/* 16) Main Button */}
       <Box>
         {isConnected ? (
           <Button
@@ -472,6 +450,7 @@ const SendCard: React.FC<SendCardProps> = ({
           </WalletGate>
         )}
       </Box>
+
       {reviewOpen && (
         <SendReview
           open={reviewOpen}
@@ -483,18 +462,13 @@ const SendCard: React.FC<SendCardProps> = ({
           networkCost={networkCost ?? 0}
         />
       )}
-      {/* Token Picker Popup */}
+
+      {/* 17) Token Picker */}
       <PickToken
         open={open}
-        onClose={() => {
-          // trackEvent('button_clicked', {
-          //   label: 'Manage Stake',
-          //   location: 'Insurance',
-          // });
-          setOpen(false);
-        }}
+        onClose={() => setOpen(false)}
         buttonSource="send"
-        tokens={tokensList}
+        tokens={tokens}
         onTokenSelect={(token) => {
           setSendToken(token);
           setOpen(false);
