@@ -9,6 +9,8 @@ import {
 } from '@normalfinance/state';
 
 import { openMoneyGram } from './flow'; // adjust if flow.ts lives elsewhere
+import { getTransaction } from './history';
+import { enqueueSnackbar } from 'notistack';
 
 // ---------- Resolve active connector from store ----------
 function resolveActiveConnector() {
@@ -281,4 +283,82 @@ export async function runWithdrawCancelFlow(
     // When MoneyGram UI closes after cancel, status should become 'refunded' eventually
     onClosed?.(tx);
   });
+}
+
+async function fetchMoreInfoUrlWithSep10(token: string, txId: string): Promise<string> {
+  const r = await fetch(`/api/mgi/sep24/transactions/moreinfo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, id: txId }),
+  });
+  const data = await r.json();
+  if (!r.ok || !data?.more_info_url) {
+    throw new Error(
+      `more_info_url fetch failed (HTTP ${r.status}): ${JSON.stringify(data ?? {}, null, 2)}`
+    );
+  }
+  return data.more_info_url as string;
+}
+
+/**
+ * Open MoneyGram transaction details UI (refund/cancel is inside their UI)
+ * and poll the transaction until it becomes terminal (refunded/completed/expired/etc).
+ *
+ * onUpdate(tx) is called when a terminal update is detected so you can refresh the table.
+ */
+export async function openTxInAnchorUI(
+  userAccount: string,
+  txId: string,
+  onUpdate?: (tx: any) => void
+) {
+  // 1) SEP-10 auth (your existing helper)
+  const token = await getMgiAuthToken(userAccount);
+
+  // 2) Get a fresh more_info_url
+  const url = await fetchMoreInfoUrlWithSep10(token, txId);
+
+  // 3) Open UI in a new tab/window
+  const w = window.open(url, '_blank', 'width=420,height=800');
+  try {
+    w?.focus();
+  } catch {}
+
+  // 4) Poll the tx status (MoneyGram doesn’t postMessage() for cancel/refund)
+  //    Stop once we hit a terminal state.
+  const terminal: string[] = [
+    'completed',
+    'refunded',
+    'expired',
+    'no_market',
+    'too_small',
+    'too_large',
+    'error',
+  ];
+
+  let tries = 0;
+  const maxTries = 45; // ~3 minutes at 4s interval
+  const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+  // If you have auth required by your /proxy history calls, you can update
+  // your history helpers to accept token & pass it along. If your proxy is
+  // already attaching SEP-10 on server, you can call getTransaction(id) directly.
+  while (tries < maxTries) {
+    await sleep(4000);
+    tries += 1;
+
+    try {
+      // Re-fetch the transaction (via your `history` helper)
+      const tx = await getTransaction(txId /* , token if your proxy needs it */);
+      const status = (tx?.status || '').toLowerCase();
+
+      if (terminal.includes(status)) {
+        // Notify & let caller refresh rows
+        onUpdate?.(tx);
+        enqueueSnackbar?.(`MoneyGram: transaction is ${status}`, { variant: 'success' });
+        break;
+      }
+    } catch {
+      // swallow and keep polling a little longer
+    }
+  }
 }

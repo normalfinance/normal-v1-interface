@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { enqueueSnackbar } from 'notistack';
 import { usePersistStore } from '@normalfinance/state';
-import { runWithdrawCancelFlow } from '@/lib/mgi/client';
+import { openTxInAnchorUI, runWithdrawCancelFlow } from '@/lib/mgi/client';
 
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Chip, Link, Stack, Button, Tooltip, Typography } from '@mui/material';
@@ -209,28 +209,24 @@ function buildColumns(t: (k: string) => string): GridColDef<Sep24Row>[] {
       headerName: t('Transaction ID'),
       width: 240,
     },
-    // ----  Actions (Cancel/Refund) --------------------------------
     {
       field: 'actions',
       headerName: t('Actions'),
       width: 160,
       sortable: false,
       renderCell: ({ row }) => {
-        const disabled = !canCancel(row);
-        const title =
-          row.kind !== 'withdrawal'
-            ? t('Cancel available only for withdrawals')
-            : disabled
-              ? t('This transaction cannot be canceled')
-              : t('Open MoneyGram Cancel UI');
+        // We allow "Manage" for any row that has (or can have) a details UI
+        // For withdrawals, that UI includes the Cancel/Refund option.
+        const hasUI = !!row.more_info_url || row.kind === 'withdrawal';
+        const label = row.kind === 'withdrawal' ? t('Manage') : t('View');
 
         return (
-          <Tooltip title={title}>
+          <Tooltip title={hasUI ? t('Open MoneyGram details') : t('Not available')}>
             <span>
               <Button
                 size="small"
                 variant="outlined"
-                disabled={disabled}
+                disabled={!hasUI}
                 onClick={async () => {
                   try {
                     const address = usePersistStore.getState().wallet.address as string | undefined;
@@ -238,20 +234,22 @@ function buildColumns(t: (k: string) => string): GridColDef<Sep24Row>[] {
                       enqueueSnackbar(t('Connect your wallet first'), { variant: 'warning' });
                       return;
                     }
-                    enqueueSnackbar(t('Opening MoneyGram cancel…'), { variant: 'info' });
-
-                    await runWithdrawCancelFlow(address, row.id, () => {
-                      enqueueSnackbar(
-                        t('Cancel flow finished. Status will update shortly (refunded).'),
-                        { variant: 'success' }
-                      );
+                    // Open MGI UI and poll until terminal (e.g., refunded)
+                    await openTxInAnchorUI(address, row.id, () => {
+                      // after terminal, you can re-fetch the table in parent;
+                      // or emit an event / callback if you pass one down.
+                      enqueueSnackbar(t('Status updated — refresh if needed.'), {
+                        variant: 'info',
+                      });
                     });
                   } catch (e: any) {
-                    enqueueSnackbar(e?.message || t('Cancel failed'), { variant: 'error' });
+                    enqueueSnackbar(e?.message || t('Failed to open MoneyGram UI'), {
+                      variant: 'error',
+                    });
                   }
                 }}
               >
-                {t('Cancel')}
+                {label}
               </Button>
             </span>
           </Tooltip>
