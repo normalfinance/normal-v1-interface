@@ -266,6 +266,8 @@ export default function ConnectedWallet({
         defaultAmount=""
         min={1}
         max={900}
+        kind="deposit"
+        tokenLabel="USDC"
       />
 
       {/* Withdraw dialog */}
@@ -279,6 +281,8 @@ export default function ConnectedWallet({
         defaultAmount=""
         min={1}
         max={900}
+        kind="withdraw"
+        tokenLabel="USDC"
       />
       <CustomTabsSwapSend
         value={tabs.value}

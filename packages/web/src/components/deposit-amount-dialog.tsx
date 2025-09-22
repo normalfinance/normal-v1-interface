@@ -23,6 +23,11 @@ type Props = {
   defaultAmount?: string;
   min?: number;
   max?: number;
+
+  /** NEW: controls copy */
+  kind?: 'deposit' | 'withdraw';
+  /** OPTIONAL: token name in copy */
+  tokenLabel?: string;
 };
 
 export default function AmountDialog({
@@ -32,6 +37,8 @@ export default function AmountDialog({
   defaultAmount = '',
   min = 1,
   max = 900,
+  kind = 'deposit',
+  tokenLabel = 'USDC',
 }: Props) {
   const { t } = useTranslate();
 
@@ -50,7 +57,11 @@ export default function AmountDialog({
     if (!Number.isFinite(n)) return t('Amount must be a number');
     if (n <= 0) return t('Amount must be > 0');
     if (n < min || n > max) {
-      return t('Amount must be between {{min}} and {{max}} USDC', { min, max });
+      return t('Amount must be between {{min}} and {{max}} {{token}}', {
+        min,
+        max,
+        token: tokenLabel,
+      });
     }
     return '';
   };
@@ -63,6 +74,15 @@ export default function AmountDialog({
     }
     onConfirm(val.trim());
   };
+
+  const isWithdraw = kind === 'withdraw';
+  const title = isWithdraw
+    ? t('Sell {{token}} with MoneyGram', { token: tokenLabel })
+    : t('Buy {{token}} with MoneyGram', { token: tokenLabel });
+
+  const subtitle = isWithdraw
+    ? t('Enter how much {{token}} you’d like to cash out.', { token: tokenLabel })
+    : t('Enter how much {{token}} you’d like to purchase.', { token: tokenLabel });
 
   return (
     <Dialog
@@ -86,18 +106,18 @@ export default function AmountDialog({
         <Avatar sx={{ width: 56, height: 56, bgcolor: 'transparent', mb: 1 }}>
           <Image
             src="/assets/images/token-action-card/usdc.webp"
-            alt={t('USDC')}
+            alt={t(tokenLabel)}
             width={48}
             height={48}
           />
         </Avatar>
-        {t('Buy USDC with MoneyGram')}
+        {title}
       </DialogTitle>
 
       <DialogContent sx={{ pt: 2 }}>
         <Stack spacing={2} alignItems="center">
           <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-            {t('Enter how much {{token}} you’d like to purchase.', { token: 'USDC' })}{' '}
+            {subtitle}
           </Typography>
 
           <TextField
@@ -124,7 +144,7 @@ export default function AmountDialog({
                   >
                     <Image
                       src="/assets/images/token-action-card/usdc.webp"
-                      alt={t('USDC')}
+                      alt={t(tokenLabel)}
                       width={20}
                       height={20}
                       style={{ objectFit: 'contain' }}

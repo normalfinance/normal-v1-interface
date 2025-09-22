@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { enqueueSnackbar } from 'notistack';
 import { usePersistStore } from '@normalfinance/state';
-import { openTxInAnchorUI, runWithdrawCancelFlow } from '@/lib/mgi/client';
+import { openTxInAnchorUI } from '@/lib/mgi/client';
 
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Chip, Link, Stack, Button, Tooltip, Typography } from '@mui/material';
@@ -215,18 +215,12 @@ function buildColumns(t: (k: string) => string): GridColDef<Sep24Row>[] {
       width: 160,
       sortable: false,
       renderCell: ({ row }) => {
-        // We allow "Manage" for any row that has (or can have) a details UI
-        // For withdrawals, that UI includes the Cancel/Refund option.
-        const hasUI = !!row.more_info_url || row.kind === 'withdrawal';
-        const label = row.kind === 'withdrawal' ? t('Manage') : t('View');
-
         return (
-          <Tooltip title={hasUI ? t('Open MoneyGram details') : t('Not available')}>
+          <Tooltip title={t('Open MoneyGram details')}>
             <span>
               <Button
                 size="small"
                 variant="outlined"
-                disabled={!hasUI}
                 onClick={async () => {
                   try {
                     const address = usePersistStore.getState().wallet.address as string | undefined;
@@ -234,10 +228,7 @@ function buildColumns(t: (k: string) => string): GridColDef<Sep24Row>[] {
                       enqueueSnackbar(t('Connect your wallet first'), { variant: 'warning' });
                       return;
                     }
-                    // Open MGI UI and poll until terminal (e.g., refunded)
                     await openTxInAnchorUI(address, row.id, () => {
-                      // after terminal, you can re-fetch the table in parent;
-                      // or emit an event / callback if you pass one down.
                       enqueueSnackbar(t('Status updated — refresh if needed.'), {
                         variant: 'info',
                       });
@@ -249,7 +240,7 @@ function buildColumns(t: (k: string) => string): GridColDef<Sep24Row>[] {
                   }
                 }}
               >
-                {label}
+                {t('Manage')}
               </Button>
             </span>
           </Tooltip>
