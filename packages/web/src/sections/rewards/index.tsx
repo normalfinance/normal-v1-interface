@@ -151,20 +151,60 @@ export function RewardsView() {
 
   React.useEffect(() => {
     let on = true;
+
     (async () => {
-      if (selectedTab !== 'moneygram' || !walletAddress) return;
+      // only run on MoneyGram tab with a connected wallet
+      if (selectedTab !== 'moneygram' || !walletAddress) {
+        // optional: clear state when leaving the tab or disconnecting
+        if (on) {
+          setRows([]);
+          setError(null);
+          setLoading(false);
+        }
+        return;
+      }
+
       setLoading(true);
+      setError(null);
+
       try {
-        // MOCK path uses your /api/mgi/sep24/transactions (mock)
-        // REAL path goes via /proxy/ with Authorization header (handled in lib)
-        const tx = await import('@/lib/mgi/history').then((m) =>
-          m.listTransactions({ account: walletAddress })
-        );
-        if (on) setRows(tx as any[]);
+        if (MOCK_MODE) {
+          const tx = await listTransactions({ account: walletAddress });
+          if (on) setRows(tx as any[]);
+          return;
+        }
+
+        // 1) Try with a cached/valid SEP-10 token (no popup if still valid)
+        let token = await getMgiAuthToken(walletAddress);
+
+        try {
+          const tx = await listTransactions({ account: walletAddress, authToken: token });
+          if (on) setRows(tx as any[]);
+        } catch (e: any) {
+          const msg = String(e?.message || '');
+          const is401 =
+            /401/.test(msg) ||
+            /unauthorized/i.test(msg) ||
+            /expired/i.test(msg) ||
+            /invalid/i.test(msg);
+
+          if (!is401) throw e;
+
+          // 2) If server rejected the token, clear cache & re-auth ONCE
+          const { clearMgiToken } = await import('@/lib/mgi/client');
+          clearMgiToken(walletAddress);
+
+          token = await getMgiAuthToken(walletAddress); // will prompt once if needed
+          const tx = await listTransactions({ account: walletAddress, authToken: token });
+          if (on) setRows(tx as any[]);
+        }
+      } catch (e: any) {
+        if (on) setError(e?.message || 'Failed to load MoneyGram history');
       } finally {
         if (on) setLoading(false);
       }
     })();
+
     return () => {
       on = false;
     };

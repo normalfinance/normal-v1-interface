@@ -1,33 +1,73 @@
 'use client';
 
-import { enqueueSnackbar } from 'notistack';
+import { signXDRWithWalletKit } from './kit-signer';
 import { openMoneyGram } from './flow';
 import { getTransaction } from './history';
-import { signXDRWithWalletKit } from './kit-signer';
+import { enqueueSnackbar } from 'notistack';
 
 const DEFAULT_TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
+const LS_KEY = 'mgiAuth.v1';
+type CacheShape = Record<string, { token: string; exp: number }>;
 
-/* ------------------------------------------------------------------ */
-/* Wallet signing via Stellar Wallets Kit                              */
-/* ------------------------------------------------------------------ */
-
-export async function signXDRWithConnectedWallet(
-  challengeXdr: string,
-  networkPassphrase: string,
-  userPublicKey: string
-): Promise<string> {
-  // Delegates to your kit-signer (Zustand store .getState())
-  return await signXDRWithWalletKit(challengeXdr, networkPassphrase, userPublicKey);
+function isTestnet(passphrase?: string) {
+  return /test/i.test(passphrase || DEFAULT_TESTNET_PASSPHRASE);
+}
+function cacheKey(account: string, passphrase?: string) {
+  return `${account}:${isTestnet(passphrase) ? 'testnet' : 'public'}`;
+}
+function readAll(): CacheShape {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+function writeAll(c: CacheShape) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(LS_KEY, JSON.stringify(c));
+}
+function putToken(key: string, token: string, expMs?: number) {
+  const all = readAll();
+  const exp = typeof expMs === 'number' ? expMs : Date.now() + 15 * 60_000; // 15 min fallback
+  all[key] = { token, exp };
+  writeAll(all);
+}
+function getValidToken(key: string): string | undefined {
+  const all = readAll();
+  const entry = all[key];
+  if (!entry) return;
+  if (Date.now() >= entry.exp) return; // expired
+  return entry.token;
+}
+export function clearMgiToken(account?: string) {
+  if (typeof window === 'undefined') return;
+  if (!account) {
+    localStorage.removeItem(LS_KEY);
+    return;
+  }
+  const all = readAll();
+  Object.keys(all).forEach((k) => {
+    if (k.startsWith(`${account}:`)) delete all[k];
+  });
+  writeAll(all);
+}
+function tryParseJwtExpMs(token: string): number | undefined {
+  try {
+    const [, payloadB64] = token.split('.');
+    if (!payloadB64) return;
+    const json = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+    if (typeof json?.exp === 'number') return json.exp * 1000;
+  } catch {}
+  return;
 }
 
-/* ------------------------------------------------------------------ */
-/* MGI API wrappers (SEP-10 + SEP-24)                                  */
-/* ------------------------------------------------------------------ */
+/* ------------------------ API wrappers ------------------------ */
 
 export async function fetchMgiChallenge(userAccount: string) {
   const r = await fetch(`/api/mgi/sep10/challenge?account=${encodeURIComponent(userAccount)}`);
   if (!r.ok) throw new Error(`challenge failed: ${r.status} ${r.statusText}`);
-  return r.json(); // { transaction, network_passphrase, ... }
+  return r.json() as Promise<{ transaction: string; network_passphrase?: string }>;
 }
 
 export async function completeMgiAuth(userSignedXDR: string): Promise<string> {
@@ -45,24 +85,31 @@ export async function completeMgiAuth(userSignedXDR: string): Promise<string> {
     data = text;
   }
 
-  if (!r.ok) {
-    // surface the exact server/MGI error
-    throw new Error(typeof data === 'string' ? data : JSON.stringify(data));
-  }
+  if (!r.ok) throw new Error(typeof data === 'string' ? data : JSON.stringify(data));
 
   const token = (typeof data === 'string' ? undefined : data?.token) ?? data?.access_token ?? data;
   if (!token) throw new Error('MGI auth returned no token');
   return token as string;
 }
 
+/** Returns a valid SEP-10 token without re-signing if a cached one exists. */
 export async function getMgiAuthToken(userAccount: string) {
+  // 1) Challenge fetch (no wallet popup)
   const ch = await fetchMgiChallenge(userAccount);
-  const userSignedXDR = await signXDRWithConnectedWallet(
-    ch.transaction,
-    ch.network_passphrase || DEFAULT_TESTNET_PASSPHRASE,
-    userAccount
-  );
-  return await completeMgiAuth(userSignedXDR);
+  const passphrase = ch.network_passphrase || DEFAULT_TESTNET_PASSPHRASE;
+  const key = cacheKey(userAccount, passphrase);
+
+  // 2) Try cache
+  const cached = getValidToken(key);
+  if (cached) return cached;
+
+  // 3) Sign & exchange
+  const signed = await signXDRWithWalletKit(ch.transaction, passphrase, userAccount);
+  const token = await completeMgiAuth(signed);
+
+  // 4) Cache with real JWT exp if present
+  putToken(key, token, tryParseJwtExpMs(token));
+  return token;
 }
 
 export async function startMgiDeposit(token: string, userAccount: string, amount: number) {
