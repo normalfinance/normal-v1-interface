@@ -459,7 +459,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
             token={buyToken?.symbol ?? 'USDC'}
             amount={amount}
             onClose={handleReviewClose}
-            walletAddress={connectedAddress}
+            walletAddress={userAddress || ''}
           />
         )}
 
