@@ -5,8 +5,8 @@ import type { GridColDef } from '@mui/x-data-grid';
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { enqueueSnackbar } from 'notistack';
-import { usePersistStore } from '@normalfinance/state';
 import { openTxInAnchorUI } from '@/lib/mgi/client';
+import { usePersistStore } from '@normalfinance/state';
 
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Chip, Link, Stack, Button, Tooltip, Typography } from '@mui/material';
@@ -214,8 +214,7 @@ function buildColumns(t: (k: string) => string): GridColDef<Sep24Row>[] {
       headerName: t('Actions'),
       width: 160,
       sortable: false,
-      renderCell: ({ row }) => {
-        return (
+      renderCell: ({ row }) => (
           <Tooltip title={t('Open MoneyGram details')}>
             <span>
               <Button
@@ -244,8 +243,7 @@ function buildColumns(t: (k: string) => string): GridColDef<Sep24Row>[] {
               </Button>
             </span>
           </Tooltip>
-        );
-      },
+        ),
     },
   ];
 

@@ -4,6 +4,8 @@ import React from 'react';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { RouterLink } from '@/routes/components';
+import { getMgiAuthToken } from '@/lib/mgi/client';
+import { listTransactions } from '@/lib/mgi/history';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { usePathname, useSearchParams } from '@/routes/hooks';
@@ -22,9 +24,6 @@ import { ProfileCover } from './profile-cover';
 import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
-
-import { listTransactions } from '@/lib/mgi/history';
-import { getMgiAuthToken } from '@/lib/mgi/client';
 
 const MOCK_MODE = process.env.NEXT_PUBLIC_MGI_MOCK === '1';
 

@@ -1,13 +1,15 @@
 'use client';
 
-import { signXDRWithWalletKit } from './kit-signer';
+import { enqueueSnackbar } from 'notistack';
+
 import { openMoneyGram } from './flow';
 import { getTransaction } from './history';
-import { enqueueSnackbar } from 'notistack';
+import { signXDRWithWalletKit } from './kit-signer';
 
 const DEFAULT_TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
 const LS_KEY = 'mgiAuth.v1';
 type CacheShape = Record<string, { token: string; exp: number }>;
+const NOOP = () => {};
 
 function isTestnet(passphrase?: string) {
   return /test/i.test(passphrase || DEFAULT_TESTNET_PASSPHRASE);
@@ -36,10 +38,15 @@ function putToken(key: string, token: string, expMs?: number) {
 function getValidToken(key: string): string | undefined {
   const all = readAll();
   const entry = all[key];
-  if (!entry) return;
-  if (Date.now() >= entry.exp) return; // expired
+  if (!entry) {
+    return undefined;
+  }
+  if (Date.now() >= entry.exp) {
+    return undefined; // expired
+  }
   return entry.token;
 }
+
 export function clearMgiToken(account?: string) {
   if (typeof window === 'undefined') return;
   if (!account) {
@@ -52,14 +59,19 @@ export function clearMgiToken(account?: string) {
   });
   writeAll(all);
 }
+
 function tryParseJwtExpMs(token: string): number | undefined {
   try {
     const [, payloadB64] = token.split('.');
-    if (!payloadB64) return;
+    if (!payloadB64) {
+      return undefined;
+    }
     const json = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
-    if (typeof json?.exp === 'number') return json.exp * 1000;
-  } catch {}
-  return;
+    return typeof json?.exp === 'number' ? json.exp * 1000 : undefined;
+  } catch (_err) {
+    // Not a JWT (or malformed) — just fall back to default TTL
+    return undefined;
+  }
 }
 
 /* ------------------------ API wrappers ------------------------ */
@@ -250,7 +262,10 @@ export async function openTxInAnchorUI(
   const w = window.open(url, '_blank', 'width=420,height=800');
   try {
     w?.focus();
-  } catch {}
+  } catch (_e) {
+    // Some browsers block programmatic focus; safe to ignore.
+    NOOP();
+  }
 
   const terminal: string[] = [
     'completed',
@@ -279,8 +294,9 @@ export async function openTxInAnchorUI(
         enqueueSnackbar?.(`MoneyGram: transaction is ${status}`, { variant: 'success' });
         break;
       }
-    } catch {
-      // ignore intermittent errors while polling
+    } catch (_e) {
+      // Some browsers block programmatic focus; safe to ignore.
+      NOOP();
     }
   }
 }
