@@ -1,5 +1,6 @@
 // import { AppStore } from '@normalfinance/types';
 import axios from 'axios';
+import { logger } from '../logger';
 
 interface apiToken {
   symbol: string;
@@ -16,7 +17,7 @@ export async function fetchTokenList(): Promise<apiToken[]> {
       )
     ).data;
   } catch (error) {
-    console.log('Error fetching token list:', error);
+    logger.error('Error fetching token list:', error);
     throw error;
   }
 }

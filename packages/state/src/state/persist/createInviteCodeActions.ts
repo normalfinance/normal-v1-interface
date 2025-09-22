@@ -1,5 +1,6 @@
 import { usePersistStore } from '../store';
 import { AppStorePersist } from '@normalfinance/types';
+import { logger } from '@normalfinance/utils';
 
 export const createInviteCodeActions = () => {
   return {
@@ -13,12 +14,14 @@ export const createInviteCodeActions = () => {
     // Check if current wallet has valid invite code
     checkWalletInviteStatus: async (walletAddress: string) => {
       try {
-        const response = await fetch(`/api/testnet/invite-codes?walletAddress=${encodeURIComponent(walletAddress)}`);
-        
+        const response = await fetch(
+          `/api/invite-codes?walletAddress=${encodeURIComponent(walletAddress)}`
+        );
+
         if (response.ok) {
           const result = await response.json();
           const hasValidCode = result.hasUsedCode || false;
-          
+
           usePersistStore.setState((state: AppStorePersist) => ({
             ...state,
             inviteCode: {
@@ -34,7 +37,7 @@ export const createInviteCodeActions = () => {
 
         return false;
       } catch (error) {
-        console.error('Failed to check wallet invite status:', error);
+        logger.error('Failed to check wallet invite status:', error);
         return false;
       }
     },
@@ -42,12 +45,12 @@ export const createInviteCodeActions = () => {
     setInviteCodeAccepted: async (code: string, walletAddress?: string) => {
       try {
         // Verify and consume the code with the API, linking to wallet address
-        const response = await fetch('/api/testnet/invite-codes', {
+        const response = await fetch('/api/invite-codes', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             inviteCode: code,
             walletAddress: walletAddress,
           }),
@@ -72,7 +75,7 @@ export const createInviteCodeActions = () => {
 
         return;
       } catch (error) {
-        console.error('Failed to verify invite code:', error);
+        logger.error('Failed to verify invite code:', error);
         throw error;
       }
     },

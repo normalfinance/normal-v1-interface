@@ -1,8 +1,7 @@
 'use client';
 
-import { constants } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
+import { logger, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
 
@@ -38,8 +37,7 @@ export function useOracleRegistry(): ReturnType {
         setOracleRegistry(OracleRegistry);
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -83,8 +81,7 @@ export function useOracleRegistry(): ReturnType {
         return oraclePriceData?.result;
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -111,8 +108,7 @@ export function useOracleRegistry(): ReturnType {
         return oraclePriceData.result;
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -140,8 +136,7 @@ export function useOracleRegistry(): ReturnType {
         return oracle.result;
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 

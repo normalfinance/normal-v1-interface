@@ -50,7 +50,7 @@ export const SwapSendPopupButton: React.FC<SwapSendPopupButtonProps> = ({
       <Typography
         variant="body1"
         sx={{
-          textTransform: 'uppercase',
+          // textTransform: 'uppercase',
           flexGrow: 1,
           textAlign: 'center',
         }}

@@ -177,7 +177,6 @@ export function RewardsView() {
 
   const { user, about } = USER_DATA;
 
-  const referralLink = `https://app.normalfinance.io/ref/${walletAddress}`;
   const walletLabel =
     walletAddress && walletAddress.length > 0
       ? format.fTruncate(walletAddress, 12)
@@ -219,7 +218,6 @@ export function RewardsView() {
       {selectedTab === '' && (
         <WalletGate buttonText={t('Connect Wallet to view rewards')} fullWidth>
           <RewardsOverview
-            referralLink={referralLink}
             referralsCount={REWARDS_OVERVIEW.referralsCount}
             zealyUrl={REWARDS_OVERVIEW.zealyUrl}
             zealyXP={REWARDS_OVERVIEW.zealyXP}

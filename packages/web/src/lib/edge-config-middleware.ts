@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { logger } from '@normalfinance/utils';
 
 import {
   getApiConfig,
@@ -68,7 +69,7 @@ export async function withEdgeConfig(
 
       return response;
     } catch (error) {
-      console.error(`Edge Config middleware error for ${options.endpoint}:`, error);
+      logger.error(`Edge Config middleware error for ${options.endpoint}:`, error);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
   };

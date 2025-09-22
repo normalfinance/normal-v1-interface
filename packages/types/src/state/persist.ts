@@ -4,7 +4,7 @@ import { ReferralActions } from './referral';
 import { InviteCodeActions } from './invite-code';
 
 export interface PersistWalletActions {
-  connectWallet: (wallet: string) => Promise<void>;
+  connectWallet: (walletAddress: string, walletType?: string) => Promise<void>;
   disconnectWallet: () => void;
   wallet: Wallet;
   disclaimer: Disclaimer;

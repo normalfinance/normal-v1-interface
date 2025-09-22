@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { logger } from '@normalfinance/utils';
 
 const prisma = new PrismaClient();
 
@@ -36,7 +37,7 @@ export class InviteCodeService {
         testnetUser,
       };
     } catch (error) {
-      console.error('Error verifying invite code:', error);
+      logger.error('Error verifying invite code:', error);
       return {
         isValid: false,
         message: 'An error occurred while verifying the invite code.',
@@ -81,7 +82,7 @@ export class InviteCodeService {
         testnetUser: updatedUser,
       };
     } catch (error) {
-      console.error('Error consuming invite code:', error);
+      logger.error('Error consuming invite code:', error);
       return {
         success: false,
         message: 'An error occurred while processing the invite code.',
@@ -99,7 +100,7 @@ export class InviteCodeService {
       });
       return !!existingUser;
     } catch (error) {
-      console.error('Error checking wallet usage:', error);
+      logger.error('Error checking wallet usage:', error);
       return false;
     }
   }
@@ -113,7 +114,7 @@ export class InviteCodeService {
         where: { walletAddress },
       });
     } catch (error) {
-      console.error('Error getting wallet invite code:', error);
+      logger.error('Error getting wallet invite code:', error);
       return null;
     }
   }
@@ -155,7 +156,7 @@ export class InviteCodeService {
 
       return recentUsage;
     } catch (error) {
-      console.error('Error getting recent activity:', error);
+      logger.error('Error getting recent activity:', error);
       return [];
     }
   }

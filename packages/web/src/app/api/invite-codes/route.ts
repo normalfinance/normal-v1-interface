@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { logger, constants } from '@normalfinance/utils';
 import { InviteCodeService } from '@/lib/invite-code-service';
 
 export async function GET(request: NextRequest) {
@@ -32,7 +33,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('GET /api/testnet/invite-codes error:', error);
+    const network = constants.getNetworkDisplayName();
+    logger.error(`GET /api/invite-codes error (${network}):`, error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -67,7 +69,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result);
     }
   } catch (error) {
-    console.error('POST /api/testnet/invite-codes error:', error);
+    const network = constants.getNetworkDisplayName();
+    logger.error(`POST /api/invite-codes error (${network}):`, error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,10 +1,11 @@
+import { logger } from '@normalfinance/utils';
 import { createClient } from '@vercel/edge-config';
 
 const edgeConfig = createClient(process.env.EDGE_CONFIG);
 
 export async function getEdgeConfig<T>(key: string, fallback: T): Promise<T> {
   if (!edgeConfig) {
-    console.warn('Edge Config not initialized, returning fallback value for key:', key);
+    logger.warn('Edge Config not initialized, returning fallback value for key:', key);
     return fallback;
   }
 
@@ -12,14 +13,14 @@ export async function getEdgeConfig<T>(key: string, fallback: T): Promise<T> {
     const value = await edgeConfig.get<T>(key);
     return value ?? fallback;
   } catch (error) {
-    console.error(`Failed to get Edge Config for key ${key}:`, error);
+    logger.error(`Failed to get Edge Config for key ${key}:`, error);
     return fallback;
   }
 }
 
 export async function getEdgeConfigs(keys: string[]): Promise<Record<string, any>> {
   if (!edgeConfig) {
-    console.warn('Edge Config not initialized, returning empty object');
+    logger.warn('Edge Config not initialized, returning empty object');
     return {};
   }
 
@@ -27,7 +28,7 @@ export async function getEdgeConfigs(keys: string[]): Promise<Record<string, any
     const values = await edgeConfig.getAll(keys);
     return values || {};
   } catch (error) {
-    console.error('Failed to get batch Edge Config:', error);
+    logger.error('Failed to get batch Edge Config:', error);
     return {};
   }
 }

@@ -1,7 +1,6 @@
 import { BigNumber } from 'bignumber.js';
-import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
-import { format, constants, getOraclePrice } from '@normalfinance/utils';
+import { format, logger, constants, getOraclePrice } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -29,8 +28,7 @@ export const useTokenPrice = (asset: string): ReturnType => {
         setPrice(BigNumber(format.formatTokenAmount(data.price, 14)));
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 

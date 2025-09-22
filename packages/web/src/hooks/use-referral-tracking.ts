@@ -3,6 +3,7 @@
 import type { ReferralQueryParams } from '@/types/query-params';
 
 import { useState, useEffect } from 'react';
+import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { ReferralAPI, getReferralAPIErrorMessage } from '@/lib/referral-api';
 
@@ -46,7 +47,7 @@ export function useReferralTracking(): UseReferralTrackingReturn {
     const urlReferralCode = params.ref || params.referral || params.referrer;
 
     if (urlReferralCode && !referralState.hasReferral) {
-      console.log('[referral] New referral code detected:', urlReferralCode);
+      logger.log('[referral] New referral code detected:', urlReferralCode);
       setReferralCode(urlReferralCode);
     }
   }, [params, referralState.hasReferral, setReferralCode]);
@@ -54,7 +55,7 @@ export function useReferralTracking(): UseReferralTrackingReturn {
   useEffect(() => {
     const cookieReferralData = getReferralFromCookie();
     if (cookieReferralData.hasReferral && !referralState.hasReferral) {
-      console.log('[referral] Syncing referral from cookies:', cookieReferralData);
+      logger.log('[referral] Syncing referral from cookies:', cookieReferralData);
       setReferralCode(cookieReferralData.referralCode!);
     }
   }, [getReferralFromCookie, referralState.hasReferral, setReferralCode]);
@@ -73,12 +74,14 @@ export function useReferralTracking(): UseReferralTrackingReturn {
       const referralData = await ReferralAPI.getReferralByCode(referralState.referralCode);
 
       if (referralData.referral) {
+        let wasReferralJustActivated = false;
         if (!referralData.referral.isUsed && wallet.address) {
           await ReferralAPI.activateReferral({
             code: referralState.referralCode,
             refereeWalletAddress: wallet.address,
           });
-          console.log('[referral] Activated referral in database');
+          logger.log('[referral] Activated referral in database');
+          wasReferralJustActivated = true;
         }
 
         const actionsData = await ReferralAPI.getUserActions(
@@ -91,9 +94,24 @@ export function useReferralTracking(): UseReferralTrackingReturn {
             markReferralUsed(action.action);
           }
         });
+
+        if (wasReferralJustActivated && !hasUsedAction('signup')) {
+          try {
+            await ReferralAPI.recordAction({
+              userWalletAddress: wallet.address,
+              referralCode: referralState.referralCode,
+              action: 'signup',
+            });
+
+            markReferralUsed('signup');
+            logger.log('[referral] Automatically recorded signup action');
+          } catch (signupError) {
+            logger.warn('[referral] Failed to auto-record signup action:', signupError);
+          }
+        }
       }
     } catch (err) {
-      console.error('[referral] Database sync error:', err);
+      logger.error('[referral] Database sync error:', err);
       setError(getReferralAPIErrorMessage(err));
     } finally {
       setIsLoading(false);
@@ -115,7 +133,7 @@ export function useReferralTracking(): UseReferralTrackingReturn {
     metadata?: { amount?: string; tokenSymbol?: string }
   ): Promise<boolean> => {
     if (!wallet.address || !referralState.referralCode) {
-      console.warn('[referral] Cannot record action: no wallet or referral code');
+      logger.warn('[referral] Cannot record action: no wallet or referral code');
       return false;
     }
 
@@ -132,10 +150,10 @@ export function useReferralTracking(): UseReferralTrackingReturn {
 
       markReferralUsed(action);
 
-      console.log('[referral] Action recorded:', action);
+      logger.log('[referral] Action recorded:', action);
       return true;
     } catch (err) {
-      console.error('[referral] Error recording action:', err);
+      logger.error('[referral] Error recording action:', err);
       setError(getReferralAPIErrorMessage(err));
       return false;
     } finally {
@@ -155,7 +173,7 @@ export function useReferralTracking(): UseReferralTrackingReturn {
       const statsData = await ReferralAPI.getReferralStats(wallet.address);
       return statsData.stats;
     } catch (err) {
-      console.error('[referral] Error fetching stats:', err);
+      logger.error('[referral] Error fetching stats:', err);
       setError(getReferralAPIErrorMessage(err));
       return null;
     } finally {

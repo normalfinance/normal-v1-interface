@@ -1,3 +1,4 @@
+import { logger } from '@normalfinance/utils';
 import { formatNumberLocale } from '@/locales';
 
 // ----------------------------------------------------------------------
@@ -168,7 +169,7 @@ export function fTokenAmount(
   try {
     value = BigInt(rawAmount);
   } catch (err) {
-    console.error('fTokenAmount › invalid value:', rawAmount);
+    logger.error('fTokenAmount › invalid value:', rawAmount);
     return '';
   }
 

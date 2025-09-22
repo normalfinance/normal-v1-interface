@@ -1,7 +1,6 @@
 import { PoolRouterContract } from '@normalfinance/contracts';
 import { GetStateType, SetStateType } from '@normalfinance/types';
 import { constants } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
 
 export function createPoolActions(setState: SetStateType, getState: GetStateType) {
   const PoolRouter = new PoolRouterContract.Client({
@@ -22,7 +21,6 @@ export function createPoolActions(setState: SetStateType, getState: GetStateType
 
         return parsedResults;
       } catch (error: any) {
-        captureException(error);
         return undefined;
       }
     },
@@ -39,7 +37,6 @@ export function createPoolActions(setState: SetStateType, getState: GetStateType
           return pool.result;
         }
       } catch (error: any) {
-        captureException(error);
         return undefined;
       }
     },

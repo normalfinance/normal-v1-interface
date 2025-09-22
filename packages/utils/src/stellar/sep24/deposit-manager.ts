@@ -5,6 +5,7 @@ import { Asset, Networks } from "@stellar/stellar-sdk";
 import { sep10AuthSend, sep10AuthSign, sep10AuthStart } from "../sep10";
 import { Deposit } from "./deposit";
 import { StellarConfig } from "../../constants";
+import { logger } from "../../logger";
 
 /**
  * DepositManager class
@@ -26,14 +27,14 @@ export class DepositManager {
 
   // Method to open the transfer server
   async openTransferServer(): Promise<TransferServer> {
-    console.log("Opening transfer server", this.anchor);
+    logger.log("Opening transfer server", this.anchor);
     try {
       return await openTransferServer(this.anchor.domain, Networks.PUBLIC, {
         lang: "en",
         walletName: "Demo wallet",
       });
     } catch (error) {
-      console.log("Error opening transfer server:", error);
+      logger.error("Error opening transfer server:", error);
       throw error;
     }
   }
@@ -45,7 +46,7 @@ export class DepositManager {
     try {
       return await fetchTransferInfos(transferServer);
     } catch (error) {
-      console.log("Error fetching transfer info:", error);
+      logger.error("Error fetching transfer info:", error);
       throw error;
     }
   }
@@ -71,7 +72,7 @@ export class DepositManager {
         signedChallengeTransaction,
       });
     } catch (error) {
-      console.log("Error in SEP-10 Authentication:", error);
+      logger.error("Error in SEP-10 Authentication:", error);
       throw error;
     }
   }
@@ -95,7 +96,7 @@ export class DepositManager {
       const url = new URL(instructions.data.url);
       return open(url.toString(), "popup", "width=500,height=800");
     } catch (error) {
-      console.log("Error handling deposit:", error);
+      logger.error("Error handling deposit:", error);
       throw error;
     }
   }

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
-import { fetchAndIssueTrustline } from '@normalfinance/utils';
+import { logger, createTrustline } from '@normalfinance/utils';
+
+import { useStellarWalletsKit } from '../use-stellar-wallets-kit';
 
 // ----------------------------------------------------------------------
 
@@ -12,13 +13,14 @@ interface ReturnType {
   loading: boolean;
   txBroadcasting: boolean;
   trustlineButtonActive: boolean;
-  addTrustLine: (assetContractAddress: string) => Promise<void>;
+  addTrustLine: (assetCode: string, assetIssuer: string) => Promise<void>;
 }
 
 // ----------------------------------------------------------------------
 
 export function useTrustLine(): ReturnType {
   const storePersist = usePersistStore();
+  const { signTransaction, publicKey } = useStellarWalletsKit();
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
@@ -33,24 +35,33 @@ export function useTrustLine(): ReturnType {
    * @async
    */
   const addTrustLine = useCallback(
-    async (assetContractAddress: string): Promise<void> => {
+    async (assetCode: string, assetIssuer: string): Promise<void> => {
       try {
         setError(null);
         setLoading(true);
-
         setTxBroadcasting(true);
-        await fetchAndIssueTrustline(storePersist.wallet.address!, assetContractAddress);
+
+        const walletAddress = publicKey || storePersist.wallet.address;
+
+        if (!walletAddress) {
+          throw new Error('No wallet connected');
+        }
+
+        logger.log('[TRUSTLINE] Creating trustline for:', assetCode, 'with issuer:', assetIssuer);
+
+        await createTrustline(walletAddress, assetCode, assetIssuer, signTransaction);
+
+        logger.log('[TRUSTLINE] Trustline created successfully');
         setTrustlineButtonActive(false);
       } catch (e: any) {
-        captureException(e);
-        console.log(e);
+        logger.error('[TRUSTLINE] Error creating trustline:', e);
         setError(e);
       }
-      setTxBroadcasting(false);
 
+      setTxBroadcasting(false);
       setLoading(false);
     },
-    [storePersist.wallet.address]
+    [storePersist.wallet.address, publicKey, signTransaction]
   );
 
   return {
