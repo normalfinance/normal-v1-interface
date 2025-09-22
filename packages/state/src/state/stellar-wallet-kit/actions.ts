@@ -151,31 +151,39 @@ export function createStellarWalletKitActions(
                   break;
               }
 
-              try {
-                await kit.signMessage('Welcome to Normal Finance', {
-                  networkPassphrase:
-                    process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
-                      ? Networks.PUBLIC
-                      : Networks.TESTNET,
-                  address: address.address,
-                });
-              } catch (signError) {
-                logger.error('Signature rejected or failed:', signError);
-                enqueueSnackbar('Please sign the message to connect your wallet.', {
-                  variant: 'error',
-                  autoHideDuration: 5000,
-                });
-                set({
-                  publicKey: null,
-                  isConnected: false,
-                  selectedWallet: null,
-                });
-                reject(
-                  new Error(
-                    'Wallet connection requires signature verification. Please sign the message to proceed.'
-                  )
+              const walletsWithoutMessageSigning = [LOBSTR_ID];
+
+              if (!walletsWithoutMessageSigning.includes(wallet.id)) {
+                try {
+                  await kit.signMessage('Welcome to Normal Finance', {
+                    networkPassphrase:
+                      process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
+                        ? Networks.PUBLIC
+                        : Networks.TESTNET,
+                    address: address.address,
+                  });
+                } catch (signError) {
+                  logger.error('Signature rejected or failed:', signError);
+                  enqueueSnackbar('Please sign the message to connect your wallet.', {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                  });
+                  set({
+                    publicKey: null,
+                    isConnected: false,
+                    selectedWallet: null,
+                  });
+                  reject(
+                    new Error(
+                      'Wallet connection requires signature verification. Please sign the message to proceed.'
+                    )
+                  );
+                  return;
+                }
+              } else {
+                logger.info(
+                  `Skipping message signing for ${wallet.id} as it doesn't support signMessage`
                 );
-                return;
               }
 
               if (persistStore?.connectWallet) {
