@@ -215,35 +215,35 @@ function buildColumns(t: (k: string) => string): GridColDef<Sep24Row>[] {
       width: 160,
       sortable: false,
       renderCell: ({ row }) => (
-          <Tooltip title={t('Open MoneyGram details')}>
-            <span>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={async () => {
-                  try {
-                    const address = usePersistStore.getState().wallet.address as string | undefined;
-                    if (!address) {
-                      enqueueSnackbar(t('Connect your wallet first'), { variant: 'warning' });
-                      return;
-                    }
-                    await openTxInAnchorUI(address, row.id, () => {
-                      enqueueSnackbar(t('Status updated — refresh if needed.'), {
-                        variant: 'info',
-                      });
-                    });
-                  } catch (e: any) {
-                    enqueueSnackbar(e?.message || t('Failed to open MoneyGram UI'), {
-                      variant: 'error',
-                    });
+        <Tooltip title={t('Open MoneyGram details')}>
+          <span>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={async () => {
+                try {
+                  const address = usePersistStore.getState().wallet.address as string | undefined;
+                  if (!address) {
+                    enqueueSnackbar(t('Connect your wallet first'), { variant: 'warning' });
+                    return;
                   }
-                }}
-              >
-                {t('Manage')}
-              </Button>
-            </span>
-          </Tooltip>
-        ),
+                  await openTxInAnchorUI(address, row.id, () => {
+                    enqueueSnackbar(t('Status updated — refresh if needed.'), {
+                      variant: 'info',
+                    });
+                  });
+                } catch (e: any) {
+                  enqueueSnackbar(e?.message || t('Failed to open MoneyGram UI'), {
+                    variant: 'error',
+                  });
+                }
+              }}
+            >
+              {t('Manage')}
+            </Button>
+          </span>
+        </Tooltip>
+      ),
     },
   ];
 
