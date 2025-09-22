@@ -4,8 +4,8 @@ import type { UseSetStateReturn } from 'minimal-shared/hooks';
 import type { IMarketTableFilters } from '@/types/marketTable';
 
 import Link from 'next/link';
-import { useTranslate } from '@/locales';
 import { useCallback } from 'react';
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';

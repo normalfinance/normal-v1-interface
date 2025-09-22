@@ -11,7 +11,6 @@ import { useEffect } from 'react';
 import { useApiTokens } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
 import { ProfileCover } from '@/sections/rewards/profile-cover';
@@ -319,7 +318,6 @@ export default function IndexDetailsView() {
         await getAllTokens(apiTokens);
         setGlobalIsLoading(false);
       } catch (e) {
-        captureException(e);
         console.error(e);
       } finally {
         setGlobalIsLoading(false);
