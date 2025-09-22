@@ -1,44 +1,8 @@
 import { Horizon } from '@stellar/stellar-sdk';
-import { AppStore, AppStorePersist } from '@normalfinance/types';
-import { freighter } from '../wallet/freighter';
-import { allChains, networkToActiveChain } from '../wallet/chains';
-import { useAppStore, usePersistStore } from '../store';
-import { xbull } from '../wallet/xbull';
-import { lobstr } from '../wallet/lobstr';
-import { WalletConnect } from '../wallet/wallet-connect';
-import { hana } from '../wallet/hana';
-import { constants } from '@normalfinance/utils';
+import { AppStorePersist } from '@normalfinance/types';
+import { usePersistStore } from '../store';
+import { constants, logger } from '@normalfinance/utils';
 
-// Maintain a single WalletConnect instance
-let walletConnectInstance: WalletConnect | null = null;
-
-const initializeWalletConnect = async () => {
-  if (!walletConnectInstance) {
-    walletConnectInstance = new WalletConnect();
-    console.log('Initialized Wallet Connect');
-  }
-
-  let publicKey: string | null = null;
-
-  while (!publicKey) {
-    try {
-      publicKey = await walletConnectInstance.getPublicKey();
-    } catch (error) {
-      console.log('Waiting for wallet to connect...');
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-  }
-
-  console.log('Wallet connected', walletConnectInstance);
-
-  // Save the walletConnectInstance in the regular app state
-  useAppStore.setState((state: AppStore) => ({
-    ...state,
-    walletConnectInstance,
-  }));
-
-  return walletConnectInstance;
-};
 
 export const createConnectWalletActions = () => {
   return {
@@ -49,67 +13,47 @@ export const createConnectWalletActions = () => {
       walletType: undefined,
     },
 
-    // This function is called when the user clicks the "Connect" button
-    // in the wallet modal. It uses the Freighters SDK to get the user's
-    // address and network details, and then stores them in the app state.
-    connectWallet: async (wallet: string) => {
-      // Get the network details from the user's wallet.
-      const networkDetails = {
-        network:
-          (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET'
-            ? 'testnet'
-            : 'public',
+    // This function stores wallet connection details after the Stellar Wallets Kit
+    // has already handled the connection process
+    connectWallet: async (walletAddress: string, walletType?: string) => {
+      logger.log('[WALLET ACTIONS] Storing wallet connection details:', { walletAddress, walletType });
+      
+      // Get the network details
+      const network = (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET' 
+        ? 'testnet' 
+        : 'public';
+
+      const activeChain = {
+        id: network,
+        name: network === 'testnet' ? 'Stellar Testnet' : 'Stellar Public',
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-        networkUrl: constants.StellarConfig.HORIZON_URL, // "https://mainnet.stellar.validationcloud.io/v1/YcyPYotN_b6-_656rpr0CabDwlGgkT42NCzPVIqcZh0",
-        sorobanRpcUrl: constants.StellarConfig.RPC_URL, // "https://bitter-alpha-layer.stellar-mainnet.quiknode.pro/54b50c548864e1470fd52dbd629b647d556b983e",
       };
 
-      // Throw an error if the network is not supported.
-      if (!allChains.find((c: any) => c.networkPassphrase === networkDetails?.networkPassphrase)) {
-        const error = new Error('Your Wallet network is not supported in this app');
-        throw error;
-      }
+      // Create a server object to connect to the blockchain
+      const server = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
+        allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+      });
 
-      // Get the active chain from the network details.
-      const activeChain = networkToActiveChain(networkDetails, allChains);
-
-      // Get the user's address from the wallet.
-      let address = '';
-
-      switch (wallet) {
-        case 'freighter':
-          address = await freighter().getPublicKey();
-          break;
-        case 'xbull':
-          address = await xbull().getPublicKey();
-          break;
-        case 'lobstr':
-          address = await lobstr().getPublicKey();
-          break;
-        case 'hana':
-          address = await hana().getPublicKey();
-          break;
-        case 'wallet-connect':
-          const Client = await initializeWalletConnect();
-          address = await Client.getPublicKey();
-          break;
-        default:
-          throw new Error('Wallet not supported');
-      }
-
-      // Create a server object to connect to the blockchain.
-      let server =
-        networkDetails &&
-        new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-          allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
-        });
-
-      // Update the state to store the wallet address and server.
-      // @ts-ignore
+      // Update the state to store the wallet address and server
       usePersistStore.setState((state: AppStorePersist) => ({
         ...state,
-        wallet: { address, activeChain, server, walletType: wallet },
+        wallet: { 
+          address: walletAddress, 
+          activeChain, 
+          server, 
+          walletType: (walletType as any) || 'stellar-wallets-kit' 
+        },
       }));
+
+      logger.log('[WALLET ACTIONS] Wallet state updated successfully');
+
+      // Check invite code status for this wallet address
+      try {
+        const persistStore = usePersistStore.getState();
+        await persistStore.checkWalletInviteStatus(walletAddress);
+      } catch (error) {
+        logger.error('Error checking wallet invite status:', error);
+      }
 
       return;
     },

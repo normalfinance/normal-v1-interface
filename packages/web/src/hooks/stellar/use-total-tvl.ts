@@ -1,7 +1,6 @@
 'use client';
 
-import { constants } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
+import { logger, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PoolRouterContract, LiquidityCalculatorContract } from '@normalfinance/contracts';
 
@@ -45,8 +44,7 @@ export function useTotalTVL(): ReturnType {
         }
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e);
     }
     return;

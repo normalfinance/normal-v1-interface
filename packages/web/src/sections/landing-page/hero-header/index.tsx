@@ -4,12 +4,11 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
-import { useApiTokens } from '@/hooks';
+import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
-import { captureException } from '@sentry/nextjs';
+import { logger } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
 
-import { useTheme } from '@mui/material/styles';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 import SwapCard from '@/components/_common/swap-card';
@@ -46,27 +45,28 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   } as Props;
 
   const { t } = useTranslate();
-  const theme = useTheme();
 
-  const { tokens: apiTokens } = useApiTokens();
   const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
 
-  // Effect hook to fetch all tokens once the component mounts
-  React.useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
+  useEffect(() => {
+    if (tokens.length === 0) {
       setGlobalIsLoading(true);
-      try {
-        await getAllTokens(apiTokens);
-        setGlobalIsLoading(false);
-      } catch (e) {
-        captureException(e);
-        console.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-    refreshTokens();
+
+      getAllTokens()
+        .catch((error) => logger.error(error))
+        .finally(() => {
+          setGlobalIsLoading(false);
+        });
+    }
   }, []);
+
+  const allowedTokens = React.useMemo(
+    () =>
+      tokens.filter(
+        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
+      ),
+    [tokens]
+  );
 
   return (
     <Box
@@ -91,7 +91,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
       >
         {/* animated waves */}
         <WavyBackground
-          containerClassName="w-full h-full"
+          sizing="viewport"
+          baseline="center" // or "top"
+          yOffset={0}
           colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
           waveOpacity={0.35}
           speed="slow"
@@ -213,11 +215,15 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard tokensList={tokens} swapFeeInfo={swapFeeInfo} queryParams={swapParams} />
+              <SwapCard
+                tokensList={allowedTokens}
+                swapFeeInfo={swapFeeInfo}
+                queryParams={swapParams}
+              />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
-              {description}
+              {t(description)}
             </Typography>
             <Box
               component="img"

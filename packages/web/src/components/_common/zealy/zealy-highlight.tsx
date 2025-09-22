@@ -6,19 +6,10 @@ import { Box, Dialog, IconButton, DialogTitle, DialogContent } from '@mui/materi
 
 import { Iconify } from '@/components/template/iconify';
 
-/**
- * ZealyHighlight – resilient render version
- * ---------------------------------------------------------------------------
- * Fixes: dialog shown once → closed → reopened = blank. We now re‑invoke
- * `ZealyEmbed.parse()` each time the dialog opens (and whenever `questId`
- * changes) so the widget re‑initialises if needed.
- * ---------------------------------------------------------------------------
- */
 export type ZealyHighlightProps = {
   questId: string;
   dialogTitle?: React.ReactNode;
   sizePx?: number;
-  /** Positive or negative offsets (px) from the anchor Box sides */
   position?: Partial<Record<'top' | 'right' | 'bottom' | 'left', number>>;
   community?: string;
   color?: string;
@@ -35,18 +26,20 @@ const pulseKeyframes = keyframes`
 // Styled --------------------------------------------------------------------
 const Wrapper = styled(Box)({ position: 'absolute', zIndex: 10 });
 
-const PulseButton = styled(IconButton)<{ $diameter: number }>(({ theme, $diameter }) => ({
+const PulseButton = styled(IconButton, {
+  shouldForwardProp: (prop) => prop !== 'diameter',
+})<{ diameter: number }>(({ theme, diameter }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: $diameter,
-  height: $diameter,
+  width: diameter,
+  height: diameter,
   padding: 0,
   borderRadius: '50%',
   position: 'relative',
   backgroundColor: theme.palette.primary.main,
   color: theme.palette.common.white,
-  '& svg': { fontSize: $diameter * 0.6 },
+  '& svg': { fontSize: diameter * 0.6 },
   '&::after': {
     content: "''",
     position: 'absolute',
@@ -107,9 +100,14 @@ const ZealyHighlight: React.FC<ZealyHighlightProps> = ({
       <Wrapper sx={position}>
         <PulseButton
           title="Earn Zealy XP"
-          $diameter={sizePx}
-          onClick={() => setOpen(true)}
-          data-testid={`zealy-highlight-button-${questId}`}
+          diameter={sizePx}
+          onClick={() => {
+            // trackEvent('button_clicked', {
+            //   label: 'Manage Stake',
+            //   location: 'Insurance',
+            // });
+            setOpen(true);
+          }}
         >
           <HelpOutlineIcon />
         </PulseButton>

@@ -43,6 +43,7 @@ export function parseEvent(
           user: parseAddress(topics[3]),
           amount: parseBigInt(parsedData[0]),
           shareAmount: parseBigInt(parsedData[1]),
+          delta_a: parseBigInt(parsedData[2]),
           txHash,
           timestamp: undefined,
         };
@@ -70,6 +71,7 @@ export function parseEvent(
           user: parseAddress(topics[3]),
           shareAmount: parseBigInt(parsedData[0]),
           amount: parseBigInt(parsedData[1]),
+          delta_a: parseBigInt(parsedData[2]),
           txHash,
           timestamp: undefined,
         };
@@ -100,9 +102,8 @@ export function parseEvent(
           outAmount: parseBigInt(parsedData[2]),
           feeAmount: parseBigInt(parsedData[3]),
           lpFee: parseBigInt(parsedData[4]),
-          bufferFee: parseBigInt(parsedData[5]),
-          ifPremium: parseBigInt(parsedData[6]),
-          revenueFee: parseBigInt(parsedData[7]),
+          ifPremium: parseBigInt(parsedData[5]),
+          revenueFee: parseBigInt(parsedData[6]),
           txHash,
           timestamp: undefined,
         };
@@ -113,9 +114,11 @@ export function parseEvent(
           asset: parseSymbol(topics[1]),
           pool: parseAddress(topics[2]),
           user: parseAddress(topics[3]),
-          direction: parseSymbol(parsedData[0]),
+          direction: parseSymbol(parseVec(parsedData[0])[0]),
           inAmount: parseBigInt(parsedData[1]),
           outAmount: parseBigInt(parsedData[2]),
+          delta_a_prior: parseBigInt(parsedData[2]),
+          delta_a_post: parseBigInt(parsedData[3]),
           txHash,
           timestamp: undefined,
         };
@@ -138,63 +141,20 @@ export function parseEvent(
         timestamp: undefined,
       };
 
-    // ─── Buffer Events ───────────────────────────────────────────
-
-    case 'deposit':
-      return {
-        type,
-        token: parseAddress(topics[1]),
-        user: parseAddress(parsedData[0]),
-        amount: parseBigInt(parsedData[1]),
-        txHash,
-        timestamp: undefined,
-      };
-
-    case 'resolve_liquidity_deficit':
-      return {
-        type,
-        pool: parseAddress(topics[1]),
-        token: parseAddress(topics[2]),
-        user: parseAddress(parsedData[0]),
-        amount: parseBigInt(parsedData[1]),
-        paid: parseBigInt(parsedData[2]),
-        txHash,
-        timestamp: undefined,
-      };
-
-    case 'withdraw_surplus':
-      return {
-        type,
-        token: parseAddress(topics[1]),
-        user: parseAddress(parsedData[0]),
-        amount: parseBigInt(parsedData[1]),
-        txHash,
-        timestamp: undefined,
-      };
-
-    case 'skim':
-      return {
-        type,
-        token: parseAddress(topics[1]),
-        user: parseAddress(parsedData[0]),
-        amount: parseBigInt(parsedData[1]),
-        txHash,
-        timestamp: undefined,
-      };
-
     // ─── Insurance Fund Events ──────────────────────────────────
 
-    case 'if_stake_record':
+    case 'insurance_stake_record':
       return {
         type,
         user: parseAddress(topics[1]),
-        action: parseSymbol(parseVec(topics[2])[0]),
+        token: parseAddress(topics[2]),
+        action: parseSymbol(parseVec(topics[3])[0]),
         amount: parseBigInt(parsedData[0]),
-        insuranceVaultAmountBefore: parseBigInt(parsedData[1]),
-        ifSharesBefore: parseBigInt(parsedData[2]),
-        totalIfSharesBefore: parseBigInt(parsedData[3]),
-        ifSharesAfter: parseBigInt(parsedData[4]),
-        totalIfSharesAfter: parseBigInt(parsedData[5]),
+        reserveAmountBefore: parseBigInt(parsedData[1]),
+        stakeSharesBefore: parseBigInt(parsedData[2]),
+        totalSharesBefore: parseBigInt(parsedData[3]),
+        stakeSharesAfter: parseBigInt(parsedData[4]),
+        totalSharesAfter: parseBigInt(parsedData[5]),
         txHash,
         timestamp: undefined,
       };

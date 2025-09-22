@@ -3,12 +3,13 @@ import type { StateToken as Token } from '@normalfinance/types';
 import React from 'react';
 import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fCurrencyTwoDecimals } from '@/utils/format-number';
 import { getSwapConversionText } from '@/utils/conversion-helpers';
-import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
 import {
   Box,
+  Chip,
   Dialog,
   Button,
   Accordion,
@@ -301,7 +302,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           fontSize: '12px',
                         }}
                       >
-                        {t('Fee')}
+                        {t('Fee')}&nbsp;
                         <Box component="span">
                           {t('(')}
                           {feePercentage}
@@ -368,7 +369,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fCurrencyTwoDecimals(networkCost)}
+                      <Chip label="Coming soon" color="info" size="small" />
+                      {/* {fCurrencyTwoDecimals(networkCost)} */}
                     </Typography>
                   </Box>
 
@@ -458,7 +460,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fRawPercent(priceImpact)}
+                      <Chip label="Coming soon" color="info" size="small" />
+                      {/* {fRawPercent(priceImpact)} */}
                     </Typography>
                   </Box>
 
@@ -503,7 +506,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fRawPercent(maxSlippage)}
+                      <Chip label="Coming soon" color="info" size="small" />
+                      {/* {fRawPercent(maxSlippage)} */}
                     </Typography>
                   </Box>
                 </Box>

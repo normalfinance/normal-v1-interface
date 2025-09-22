@@ -2,7 +2,8 @@
 //  Common helpers
 // -----------------------------------------------------------------------------
 export interface TokenAmount {
-  token: string;
+  address: string;
+  symbol: string;
   iconUrl: string;
   amount: number;
 }
@@ -18,39 +19,42 @@ interface ActivityBase {
 export interface SentActivity extends ActivityBase {
   type: 'Sent';
   address: string; // ⬅ where the funds went
-  asset: TokenAmount;
+  token: TokenAmount;
 }
 
 export interface ReceivedActivity extends ActivityBase {
   type: 'Received';
   address: string; // ⬅ where the funds came from
-  asset: TokenAmount;
+  token: TokenAmount;
 }
 
 export interface SwappedActivity extends ActivityBase {
   type: 'Swapped';
+  asset: string;
   sell: TokenAmount;
   buy: TokenAmount;
 }
 
 export interface AddLiquidityActivity extends ActivityBase {
   type: 'Add Liquidity';
+  asset: string;
   tokenB: TokenAmount;
 }
 
 export interface RemoveLiquidityActivity extends ActivityBase {
   type: 'Remove Liquidity';
+  asset: string;
   tokenB: TokenAmount;
 }
 
 export interface StakeActivity extends ActivityBase {
   type: 'Stake';
-  asset: TokenAmount;
+  token: TokenAmount;
 }
 
 export interface UnstakeActivity extends ActivityBase {
   type: 'Unstake';
-  asset: TokenAmount;
+  token: TokenAmount;
 }
 
 // -----------------------------------------------------------------------------

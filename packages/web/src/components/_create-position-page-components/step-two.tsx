@@ -6,7 +6,6 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { useTokenPrice, useTokenBalance } from '@/hooks';
-import { formatTokenAmount } from '@/utils/format-stellar';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
 import { constants, getCryptoIconUrl } from '@normalfinance/utils';
@@ -45,8 +44,7 @@ export default function StepTwo() {
 
   const fiatValue = useMemo(() => {
     if (xlmPrice && amount) {
-      const xlm_price = BigNumber(formatTokenAmount(xlmPrice, 14));
-      return xlm_price.multipliedBy(amount);
+      return xlmPrice.multipliedBy(amount);
     }
     return BigNumber(0);
   }, [xlmPrice, amount]);

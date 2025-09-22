@@ -7,11 +7,9 @@ import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/event
 
 import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
-import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { formatTokenAmount } from '@/utils/format-stellar';
-import { constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
+import { format, constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -48,10 +46,10 @@ export function useUserActivity(): ReturnType {
         .eq('transaction_account', userAddress)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
+        .eq('transaction_successful', true)
         .order('id', { ascending: false });
 
       if (e) {
-        captureException(e);
         setError(e.toString() as any);
       } else {
         const rows = data as GoldskyTableRow[];
@@ -136,19 +134,23 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
   switch (event.type) {
     case 'swap': {
       const buy = event.direction == 'Buy';
+      const normalTokenSymbol = format.formatNormalToken(event.asset, 'with-n');
       return {
         id,
         type: 'Swapped',
         timestamp: event.timestamp ?? 0,
+        asset: normalTokenSymbol,
         sell: {
-          token: buy ? constants.StellarConfig.XLM_ADDRESS : event.pool,
-          iconUrl: getCryptoIconUrl(buy ? 'XLM' : `n${event.asset}`),
-          amount: Number(formatTokenAmount(event.inAmount.toString())),
+          address: buy ? constants.StellarConfig.XLM_ADDRESS : event.pool,
+          symbol: buy ? 'XLM' : normalTokenSymbol,
+          iconUrl: getCryptoIconUrl(buy ? 'XLM' : normalTokenSymbol),
+          amount: Number(format.formatTokenAmount(event.inAmount.toString())),
         },
         buy: {
-          token: buy ? event.pool : constants.StellarConfig.XLM_ADDRESS,
-          iconUrl: getCryptoIconUrl(buy ? `n${event.asset}` : 'XLM'),
-          amount: Number(formatTokenAmount(event.outAmount.toString())),
+          address: buy ? event.pool : constants.StellarConfig.XLM_ADDRESS,
+          symbol: buy ? normalTokenSymbol : 'XLM',
+          iconUrl: getCryptoIconUrl(buy ? normalTokenSymbol : 'XLM'),
+          amount: Number(format.formatTokenAmount(event.outAmount.toString())),
         },
       };
     }
@@ -157,10 +159,12 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
         id,
         type: 'Add Liquidity',
         timestamp: event.timestamp ?? 0,
+        asset: format.formatNormalToken(event.asset, 'with-n'),
         tokenB: {
-          token: constants.StellarConfig.XLM_ADDRESS,
+          address: constants.StellarConfig.XLM_ADDRESS,
+          symbol: 'XLM',
           iconUrl: getCryptoIconUrl('XLM'),
-          amount: Number(formatTokenAmount(event.amount.toString())),
+          amount: Number(format.formatTokenAmount(event.amount.toString())),
         },
       };
     case 'withdraw_liquidity':
@@ -168,22 +172,25 @@ function parseEventToActivity(id: string, event: events.UserActivityEvent): Acti
         id,
         type: 'Remove Liquidity',
         timestamp: event.timestamp ?? 0,
+        asset: format.formatNormalToken(event.asset, 'with-n'),
         tokenB: {
-          token: constants.StellarConfig.XLM_ADDRESS,
+          address: constants.StellarConfig.XLM_ADDRESS,
+          symbol: 'XLM',
           iconUrl: getCryptoIconUrl('XLM'),
-          amount: Number(formatTokenAmount(event.amount.toString())),
+          amount: Number(format.formatTokenAmount(event.amount.toString())),
         },
       };
-    case 'if_stake_record': {
+    case 'insurance_stake_record': {
       if (event.action == 'stake' || event.action == 'unstake') {
         return {
           id,
           type: event.action == 'stake' ? 'Stake' : 'Unstake',
           timestamp: event.timestamp ?? 0,
-          asset: {
-            token: constants.StellarConfig.XLM_ADDRESS,
+          token: {
+            address: constants.StellarConfig.XLM_ADDRESS,
+            symbol: 'XLM',
             iconUrl: getCryptoIconUrl('XLM'),
-            amount: Number(formatTokenAmount(event.amount.toString())),
+            amount: Number(format.formatTokenAmount(event.amount.toString())),
           },
         };
       }

@@ -6,19 +6,26 @@ import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useRouter } from '@/routes/hooks';
 import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
-import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
+import { fCurrency } from '@/utils/format-number';
+import { useAppStore } from '@normalfinance/state';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
+import Avatar from '@mui/material/Avatar';
 import SvgIcon from '@mui/material/SvgIcon';
 import MenuList from '@mui/material/MenuList';
 import { useTheme } from '@mui/material/styles';
-import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import ListItemText from '@mui/material/ListItemText';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import InputAdornment from '@mui/material/InputAdornment';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemAvatar from '@mui/material/ListItemAvatar';
 import Dialog, { dialogClasses } from '@mui/material/Dialog';
 import MenuItem, { menuItemClasses } from '@mui/material/MenuItem';
 import InputBase, { inputBaseClasses } from '@mui/material/InputBase';
@@ -29,7 +36,6 @@ import { Scrollbar } from '@/components/template/scrollbar';
 import { SearchNotFound } from '@/components/template/search-not-found';
 
 import { applyFilter } from './utils';
-import { ResultItem } from './result-item';
 
 // ----------------------------------------------------------------------
 
@@ -42,12 +48,20 @@ const breakpoint: Breakpoint = 'sm';
 export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps) {
   const { t } = useTranslate('auto');
   const theme = useTheme();
+  const router = useRouter();
   const smUp = useMediaQuery(theme.breakpoints.up(breakpoint));
 
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Get tokens from the app store
+  const { tokens, getAllTokens, globalIsLoading } = useAppStore();
+
   const handleClose = useCallback(() => {
+    // trackEvent('button_clicked', {
+    //   label: 'Manage Stake',
+    //   location: 'Insurance',
+    // });
     onClose();
     setSearchQuery('');
   }, [onClose]);
@@ -70,12 +84,32 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
     };
   }, [handleKeyDown]);
 
+  // Fetch tokens when dialog opens
+  useEffect(() => {
+    if (open && tokens.length === 0) {
+      getAllTokens();
+    }
+  }, [open, getAllTokens, tokens.length]);
+
+  const handleTokenClick = useCallback(
+    (token: any) => {
+      const isNormalToken = token.symbol.toLowerCase().startsWith('n');
+      const destination = isNormalToken
+        ? paths.pools.details(token.symbol)
+        : `${paths.swap}?token_in=${token.symbol}`;
+
+      setTimeout(() => handleClose(), 50);
+      router.push(destination);
+    },
+    [router, handleClose]
+  );
+
   const handleSearch = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSearchQuery(event.target.value);
   }, []);
 
   const dataFiltered = applyFilter({
-    inputData: [], // TODO: CONFIG.tokenList
+    inputData: tokens,
     query: searchQuery,
   });
 
@@ -85,38 +119,46 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
     <Box
       onClick={onOpen}
       sx={[
+        // Base: look like the Explore TextField on every breakpoint
         {
           display: 'flex',
           alignItems: 'center',
-          [theme.breakpoints.up(breakpoint)]: {
-            pr: 1,
-            borderRadius: 1.5,
-            cursor: 'pointer',
-            bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
-            transition: theme.transitions.create('background-color', {
-              easing: theme.transitions.easing.easeInOut,
-              duration: theme.transitions.duration.shortest,
+          gap: 1,
+          pr: 1, // space for the ⌘K label on sm+
+          pl: 0.5,
+          py: 0.25, // ~12px like your TextField input
+          borderRadius: 9999, // pill
+          cursor: 'pointer',
+          bgcolor: 'grey.250', // same background
+          border: (_theme) => `1px solid ${_theme.palette.divider}`,
+          transition: (_theme) =>
+            _theme.transitions.create('background-color', {
+              easing: _theme.transitions.easing.easeInOut,
+              duration: _theme.transitions.duration.shortest,
             }),
-            '&:hover': {
-              bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.16),
-            },
+          '&:hover': {
+            bgcolor: (_theme) =>
+              // subtle lift on hover (works with CSS vars or without)
+              _theme.vars
+                ? `color-mix(in srgb, rgba(${_theme.vars.palette.grey['500Channel']} / 1) 16%, transparent)`
+                : _theme.palette.action.hover,
           },
+          color: 'text.secondary', // placeholder-ish text color
         },
+        // Allow caller to override/extend
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
       {...other}
     >
+      {/* Left icon (same on all sizes now) */}
       <Box
-        component={smUp ? 'span' : IconButton}
+        component="span"
         sx={{
-          [theme.breakpoints.up(breakpoint)]: {
-            p: 1,
-            display: 'inline-flex',
-            color: 'action.active',
-          },
+          p: 1,
+          display: 'inline-flex',
+          color: 'text.disabled',
         }}
       >
-        {/* https://icon-sets.iconify.design/eva/search-fill/ */}
         <SvgIcon sx={{ width: 20, height: 20 }}>
           <path
             fill="currentColor"
@@ -124,53 +166,149 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           />
         </SvgIcon>
       </Box>
-      {t('Search tokens...')}
-      {/* eslint-disable i18next/no-literal-string */}
+
+      {/* “Placeholder” text */}
+      <Box component="span" sx={{ typography: 'body2', flexShrink: 0 }}>
+        {t('Search tokens...')}
+      </Box>
+
+      {/* ⌘K helper shown at sm+ 
       <Label
-        sx={{
+        sx={(t) => ({
+          ml: 'auto',
           color: 'grey.800',
           cursor: 'inherit',
           bgcolor: 'common.white',
-          fontSize: theme.typography.pxToRem(12),
-          boxShadow: theme.vars.customShadows.z1,
+          fontSize: t.typography.pxToRem(12),
+          boxShadow: t.vars.customShadows.z1,
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
-        }}
+        })}
       >
         ⌘K
-      </Label>
-      {/* eslint-enable i18next/no-literal-string */}
+      </Label>*/}
     </Box>
   );
 
-  const renderList = () => (
-    <MenuList
-      disablePadding
-      sx={{
-        [`& .${menuItemClasses.root}`]: {
-          p: 0,
-          mb: 0,
-          '&:hover': { bgcolor: 'transparent' },
-        },
-      }}
-    >
-      {dataFiltered.map((item) => {
-        const partsTitle = parse(item.name, match(item.name, searchQuery));
-        const partsPath = parse(item.symbol, match(item.symbol, searchQuery));
+  const renderList = () => {
+    // Show loading state when tokens are being fetched
+    if (globalIsLoading && tokens.length === 0) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('Loading tokens...')}
+          </Typography>
+        </Box>
+      );
+    }
 
-        return (
-          <MenuItem disableRipple key={item.symbol}>
-            <ResultItem
-              path={partsPath}
-              title={partsTitle}
-              href={paths.pools.details(item.symbol)}
-              labels={item.name.split('.')}
-              onClick={handleClose}
-            />
-          </MenuItem>
-        );
-      })}
-    </MenuList>
-  );
+    // Show empty state when no tokens are available
+    if (!globalIsLoading && tokens.length === 0) {
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+          <Iconify icon="eva:search-fill" width={48} sx={{ color: 'text.disabled', mb: 2 }} />
+          <Typography variant="body2" color="text.secondary" align="center">
+            {t('No tokens available')}
+          </Typography>
+          <Typography variant="caption" color="text.disabled" align="center">
+            {t('Try refreshing the page or check your connection')}
+          </Typography>
+        </Box>
+      );
+    }
+
+    return (
+      <MenuList
+        disablePadding
+        sx={{
+          [`& .${menuItemClasses.root}`]: {
+            p: 0,
+            mb: 0,
+            '&:hover': { bgcolor: 'transparent' },
+          },
+        }}
+      >
+        {dataFiltered.map((item) => {
+          const partsTitle = parse(item.name, match(item.name, searchQuery));
+          const partsSymbol = parse(item.symbol, match(item.symbol, searchQuery));
+
+          return (
+            <MenuItem disableRipple key={item.symbol}>
+              <ListItemButton
+                onClick={() => handleTokenClick(item)}
+                sx={{
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: 'transparent',
+                  borderBottomColor: theme.vars?.palette.divider || theme.palette.divider,
+                  '&:hover': {
+                    borderRadius: 1,
+                    borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
+                    backgroundColor: theme.vars?.palette.action.hover || theme.palette.action.hover,
+                  },
+                }}
+              >
+                <ListItemAvatar>
+                  <Avatar src={getCryptoIconUrl(item.symbol)} sx={{ width: 32, height: 32 }}>
+                    {item.symbol.substring(0, 2)}
+                  </Avatar>
+                </ListItemAvatar>
+
+                <ListItemText
+                  primary={
+                    <Box component="span">
+                      {partsTitle.map((part, index) => (
+                        <Box
+                          key={index}
+                          component="span"
+                          sx={{
+                            color: part.highlight
+                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                              : theme.vars?.palette.text.primary || theme.palette.text.primary,
+                          }}
+                        >
+                          {part.text}
+                        </Box>
+                      ))}
+                    </Box>
+                  }
+                  secondary={
+                    <Box component="span">
+                      {partsSymbol.map((part, index) => (
+                        <Box
+                          key={index}
+                          component="span"
+                          sx={{
+                            color: part.highlight
+                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                              : theme.vars?.palette.text.secondary || theme.palette.text.secondary,
+                          }}
+                        >
+                          {part.text}
+                        </Box>
+                      ))}
+                    </Box>
+                  }
+                />
+
+                <Box sx={{ textAlign: 'right', minWidth: 80 }}>
+                  {item.balance > 0 && (
+                    <Typography variant="body2" color="text.primary">
+                      {fCurrency(item.balance)}
+                    </Typography>
+                  )}
+                  {item.usdValue > 0 && (
+                    <Typography variant="caption" color="text.secondary">
+                      {fCurrency(item.usdValue)}
+                    </Typography>
+                  )}
+                </Box>
+              </ListItemButton>
+            </MenuItem>
+          );
+        })}
+      </MenuList>
+    );
+  };
 
   return (
     <>

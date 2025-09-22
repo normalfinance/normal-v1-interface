@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { captureException } from '@sentry/nextjs';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { checkTrustline, fetchAndIssueTrustline } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
+import { logger, createTrustline } from '@normalfinance/utils';
+
+import { useStellarWalletsKit } from '../use-stellar-wallets-kit';
 
 // ----------------------------------------------------------------------
 
@@ -12,15 +13,14 @@ interface ReturnType {
   loading: boolean;
   txBroadcasting: boolean;
   trustlineButtonActive: boolean;
-  handleTrustLine: (tokenAddress: string) => Promise<void>;
-  addTrustLine: () => Promise<void>;
+  addTrustLine: (assetCode: string, assetIssuer: string) => Promise<void>;
 }
 
 // ----------------------------------------------------------------------
 
 export function useTrustLine(): ReturnType {
-  const store = useAppStore(); // Global state management
   const storePersist = usePersistStore();
+  const { signTransaction, publicKey } = useStellarWalletsKit();
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true); // Loading state for async operations
@@ -28,59 +28,47 @@ export function useTrustLine(): ReturnType {
   const [txBroadcasting, setTxBroadcasting] = useState<boolean>(false);
 
   const [trustlineButtonActive, setTrustlineButtonActive] = useState<boolean>(false);
-  const [trustlineTokenName, setTrustlineTokenName] = useState<string>('');
-  const [trustlineAssetAmount, setTrustlineAssetAmount] = useState<number>(0);
-
-  /**
-   * Handles adding a trustline for a token.
-   *
-   * @param {string} tokenAddress - The address of the token.
-   * @async
-   */
-  const handleTrustLine = useCallback(
-    async (tokenAddress: string): Promise<void> => {
-      const trust = await checkTrustline(storePersist.wallet.address!, tokenAddress);
-      setTrustlineButtonActive(!trust.exists);
-      // setTrustlineTokenSymbol(trust.asset?.code || '');
-      const tlAsset = await store.fetchTokenInfo(
-        'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA'
-      );
-      // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-      setTrustlineAssetAmount(Number(tlAsset?.balance) / 10 ** tlAsset?.decimals!);
-      setTrustlineTokenName(trust.asset?.contract || '');
-    },
-    [storePersist.wallet.address]
-  );
 
   /**
    * Adds a trustline for the specified token.
    *
    * @async
    */
-  const addTrustLine = useCallback(async (): Promise<void> => {
-    try {
-      setError(null);
-      setLoading(true);
+  const addTrustLine = useCallback(
+    async (assetCode: string, assetIssuer: string): Promise<void> => {
+      try {
+        setError(null);
+        setLoading(true);
+        setTxBroadcasting(true);
 
-      setTxBroadcasting(true);
-      await fetchAndIssueTrustline(storePersist.wallet.address!, trustlineTokenName);
-      setTrustlineButtonActive(false);
-    } catch (e: any) {
-      captureException(e);
-      console.log(e);
-      setError(e);
-    }
-    setTxBroadcasting(false);
+        const walletAddress = publicKey || storePersist.wallet.address;
 
-    setLoading(false);
-  }, [storePersist.wallet.address, trustlineTokenName]);
+        if (!walletAddress) {
+          throw new Error('No wallet connected');
+        }
+
+        logger.log('[TRUSTLINE] Creating trustline for:', assetCode, 'with issuer:', assetIssuer);
+
+        await createTrustline(walletAddress, assetCode, assetIssuer, signTransaction);
+
+        logger.log('[TRUSTLINE] Trustline created successfully');
+        setTrustlineButtonActive(false);
+      } catch (e: any) {
+        logger.error('[TRUSTLINE] Error creating trustline:', e);
+        setError(e);
+      }
+
+      setTxBroadcasting(false);
+      setLoading(false);
+    },
+    [storePersist.wallet.address, publicKey, signTransaction]
+  );
 
   return {
     error,
     loading,
     txBroadcasting,
     trustlineButtonActive,
-    handleTrustLine,
     addTrustLine,
   };
 }

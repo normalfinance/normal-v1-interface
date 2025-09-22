@@ -1,20 +1,22 @@
 'use client';
 
-import type { Stake, Client } from '@normalfinance/contracts/build/insurance_fund';
+import type {
+  Stake,
+  Client,
+  InsuranceFundReserve,
+} from '@normalfinance/contracts/build/insurance_fund';
 
 import { BigNumber } from 'bignumber.js';
-import { getTokenBalance } from '@/lib/token';
-import { constants } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { InsuranceFundContract } from '@normalfinance/contracts';
+import { logger, constants, getTokenBalance } from '@normalfinance/utils';
 
 import { useContractTransaction } from './use-contract-transaction';
 
 export type InsuranceFundInfo = {
-  total_shares: BigNumber;
+  reserve: InsuranceFundReserve;
   optimal_insurance: BigNumber;
   unstaking_period: BigNumber;
   current_rate: BigNumber;
@@ -53,15 +55,21 @@ export function useInsuranceFund(): ReturnType {
       setError(null);
       setLoading(true);
 
-      const xlmBalance = await getTokenBalance(
-        constants.StellarConfig.XLM_ADDRESS,
-        constants.StellarConfig.INSURANCE_FUND_ADDRESS
-      );
+      let xlmBalance: bigint;
+      try {
+        xlmBalance = await getTokenBalance(
+          constants.StellarConfig.XLM_ADDRESS,
+          constants.StellarConfig.INSURANCE_FUND_ADDRESS
+        );
+      } catch (e: any) {
+        logger.log(e);
+        setError(e.toString());
+        xlmBalance = BigInt(0);
+      }
 
       if (xlmBalance) setBalance(BigNumber(xlmBalance));
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -80,27 +88,24 @@ export function useInsuranceFund(): ReturnType {
         rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
-      const [total_shares, optimal_insurance, unstaking_period, current_rate, current_utilization] =
+      const [reserve, optimal_insurance, unstaking_period, current_rate, current_utilization] =
         await Promise.all([
-          InsuranceFund.get_total_shares(),
+          InsuranceFund.get_reserve({ token: constants.StellarConfig.XLM_ADDRESS }),
           InsuranceFund.get_optimal_insurance(),
           InsuranceFund.get_unstaking_period(),
           InsuranceFund.get_rate(),
           InsuranceFund.get_utilization(),
         ]);
 
-      // if (total_shares.result) {
       setInsuranceFund({
-        total_shares: BigNumber(total_shares.result),
+        reserve: reserve.result as InsuranceFundReserve,
         optimal_insurance: BigNumber(optimal_insurance.result),
         unstaking_period: BigNumber(unstaking_period.result),
         current_rate: BigNumber(current_rate.result),
         current_utilization: BigNumber(current_utilization.result),
       });
-      // }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -120,14 +125,16 @@ export function useInsuranceFund(): ReturnType {
           rpcUrl: constants.StellarConfig.RPC_URL,
         });
 
-        const user_stake = await InsuranceFund.get_stake({ user: storePersist.wallet.address });
+        const user_stake = await InsuranceFund.get_stake({
+          user: storePersist.wallet.address,
+          token: constants.StellarConfig.XLM_ADDRESS,
+        });
 
         if (user_stake?.result) {
           setStake(user_stake.result as Stake);
         }
       } catch (e: any) {
-        captureException(e);
-        console.log(e);
+        logger.log(e);
         setError(e.toString());
       } finally {
         setLoading(false);
@@ -159,7 +166,7 @@ export function useInsuranceFund(): ReturnType {
       throw new Error(data.error || 'Insurance fund execution failed');
     }
 
-    console.log('Data from backend: ', data);
+    logger.log('Data from backend: ', data);
 
     return data;
   };
@@ -167,6 +174,7 @@ export function useInsuranceFund(): ReturnType {
   const onDeposit = async (args: DepositArgs) => {
     const processedArgs = {
       user: storePersist.wallet.address!,
+      token: constants.StellarConfig.XLM_ADDRESS,
       amount: BigInt((args.amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
     };
 
@@ -183,14 +191,17 @@ export function useInsuranceFund(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          console.log('txtxtx', tx, tx.signed, signedXDR);
+          logger.log('txtxtx', tx, tx.built, unsignedXDR);
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             const apiRes = await executeInsurance(signedXDR, 'Insurance Fund Deposit');
-            console.log('API result:', apiRes);
+            logger.log('API result:', apiRes);
             if (apiRes?.transactionHash) {
               (tx as any).hash = apiRes.transactionHash;
             }
@@ -205,6 +216,7 @@ export function useInsuranceFund(): ReturnType {
   const onRequestWithdraw = async (args: RequestWithdrawArgs) => {
     const processedArgs = {
       user: storePersist.wallet.address!,
+      token: constants.StellarConfig.XLM_ADDRESS,
       amount: BigInt((args.amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
     };
 
@@ -221,10 +233,13 @@ export function useInsuranceFund(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             await executeInsurance(signedXDR, 'Insurance Fund Request Withdraw');
           }
 
@@ -237,6 +252,7 @@ export function useInsuranceFund(): ReturnType {
   const onCancelRequestWithdraw = async () => {
     const processedArgs = {
       user: storePersist.wallet.address!,
+      token: constants.StellarConfig.XLM_ADDRESS,
     };
 
     await executeContractTransaction({
@@ -251,10 +267,13 @@ export function useInsuranceFund(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             await executeInsurance(signedXDR, 'Insurance Fund Cancel Request Withdraw');
           }
 
@@ -267,6 +286,7 @@ export function useInsuranceFund(): ReturnType {
   const onWithdraw = async () => {
     const processedArgs = {
       user: storePersist.wallet.address!,
+      token: constants.StellarConfig.XLM_ADDRESS,
     };
 
     await executeContractTransaction({
@@ -281,10 +301,13 @@ export function useInsuranceFund(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             await executeInsurance(signedXDR, 'Insurance Fund Withdraw');
           }
 

@@ -77,7 +77,6 @@ export const getTransactionMessages = (details: TransactionDetails) => {
 };
 
 export const createStellarExpertUrl = (type: StellarExpertResourceType, id: string) => {
-  const network =
-    (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET' ? 'testnet' : 'public';
+  const network = process.env.NEXT_PUBLIC_NETWORK === 'MAINNET' ? 'public' : 'testnet';
   return `https://stellar.expert/explorer/${network}/${type}/${id}`;
 };

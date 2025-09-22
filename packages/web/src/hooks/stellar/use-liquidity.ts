@@ -96,10 +96,13 @@ export function useLiquidity(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             const apiRes = await executeLiquidity(signedXDR, 'Deposit Liquidity');
             if (apiRes?.transactionHash) {
               (tx as any).hash = apiRes.transactionHash;
@@ -140,10 +143,13 @@ export function useLiquidity(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             const apiRes = await executeLiquidity(signedXDR, 'Withdraw Liquidity');
             if (apiRes?.transactionHash) {
               (tx as any).hash = apiRes.transactionHash;

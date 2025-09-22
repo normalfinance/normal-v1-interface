@@ -3,8 +3,11 @@ name: Release
 on:
   push:
     branches:
-      - staging
+      - testnet
       - master
+
+permissions:
+  contents: write  # needed for semantic-release to push
 
 jobs:
   release:

@@ -87,7 +87,7 @@ export const CtaImage: React.FC<CtaImageProps> = ({
           }}
         >
           <Typography variant="h3" fontWeight={500} sx={{ fontSize: { xs: '24px', md: '40px' } }}>
-            {heading}
+            {t(heading)}
           </Typography>
 
           <Button
@@ -98,6 +98,12 @@ export const CtaImage: React.FC<CtaImageProps> = ({
               color: '#6E4BFF',
               fontWeight: 500,
             }}
+            // onClick={() =>
+            //   trackEvent('button_clicked', {
+            //     label: 'Start swapping now',
+            //     location: 'Home',
+            //   })
+            // }
           >
             {t('Start swapping now')}
           </Button>

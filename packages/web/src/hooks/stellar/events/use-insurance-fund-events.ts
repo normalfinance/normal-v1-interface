@@ -5,7 +5,6 @@ import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
 import { useState, useEffect } from 'react';
-import { captureException } from '@sentry/nextjs';
 import { supabase } from '@/lib/createSupabaseClient';
 import { constants, rpcServer, parseEvent } from '@normalfinance/utils';
 
@@ -19,7 +18,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export function useInsuranceFundEvents(): ReturnType {
+export function useInsuranceFundEvents(limit: number): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,16 +28,18 @@ export function useInsuranceFundEvents(): ReturnType {
     const fetchInitialData = async () => {
       setError(null);
       setLoading(true);
+
       const { data, error: e } = await supabase
         .from(constants.StellarConfig.EVENTS_TABLENAME)
         .select('*')
         .eq('contract_id', constants.StellarConfig.INSURANCE_FUND_ADDRESS)
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
-        .order('id', { ascending: false });
+        .eq('transaction_successful', true)
+        .order('id', { ascending: false })
+        .limit(limit);
 
       if (e) {
-        captureException(e);
         setError(e.toString() as any);
       } else {
         const rows = data as GoldskyTableRow[];

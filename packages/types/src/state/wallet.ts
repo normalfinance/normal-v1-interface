@@ -1,3 +1,4 @@
+import { PoolRouterContract } from '@normalfinance/contracts';
 import { Horizon } from '@stellar/stellar-sdk';
 
 export type ApiToken = {
@@ -13,7 +14,7 @@ export type ApiToken = {
 
 export type StateToken = {
   id: string;
-  balance: bigint;
+  balance: number;
   decimals: number;
   symbol: string;
   // ===
@@ -36,14 +37,33 @@ export type Wallet = {
   address: string | undefined;
   activeChain: WalletChain | undefined;
   server: Horizon.Server | undefined;
-  walletType: 'freighter' | 'xbull' | 'lobstr' | 'wallet-connect' | 'hana' | undefined;
+  walletType:
+    | 'freighter'
+    | 'xbull'
+    | 'lobstr'
+    | 'wallet-connect'
+    | 'hana'
+    | 'ledger'
+    | 'hana-stellar-kit'
+    | 'xbull-stellar-kit'
+    | 'freighter-stellar-kit'
+    | 'lobstr-stellar-kit'
+    | 'stellar-wallets-kit'
+    | 'wallet-connect-stellar-kit'
+    | 'ledger-stellar-kit'
+    | undefined;
 };
 
 export interface WalletActions {
   tokens: StateToken[];
-  fetchTokenInfo: (tokenAddress: string) => Promise<StateToken | undefined>;
-  getAllTokens: (apiTokens: ApiToken[]) => Promise<any[]>;
   walletConnectInstance?: any;
+  fetchNativeTokenInfo: () => Promise<StateToken | undefined>;
+  fetchNormalTokenInfo: (
+    pool: PoolRouterContract.PoolInfo,
+    xlmPrice: number
+  ) => Promise<StateToken | undefined>;
+  fetchApiTokenInfo: (apiToken: ApiToken) => Promise<StateToken | undefined>;
+  getAllTokens: () => Promise<StateToken[]>;
 }
 
 export interface WalletChain {

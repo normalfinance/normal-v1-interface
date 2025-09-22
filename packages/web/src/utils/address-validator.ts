@@ -1,5 +1,5 @@
 // import { getAddress } from 'ethers';
-import { StrKey } from 'stellar-sdk';
+import { StrKey } from '@stellar/stellar-sdk';
 // import * as bitcoin from 'bitcoinjs-lib';
 // import { PublicKey } from '@solana/web3.js';
 

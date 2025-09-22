@@ -77,6 +77,13 @@ export class ReferralAPI {
     });
     return response.data;
   }
+
+  static async getUserReferrals(walletAddress: string) {
+    const response = await axios.get(`${this.baseUrl}/user`, {
+      params: { walletAddress },
+    });
+    return response.data;
+  }
 }
 
 export function isReferralAPIError(error: any): error is { response: { data: { error: string } } } {

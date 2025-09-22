@@ -6,10 +6,9 @@ import type { Activity } from '@/types/activity';
 
 import { useTranslate } from '@/locales';
 import { ago } from '@/utils/format-time';
+import { fShortenNumber } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fTruncate } from '@normalfinance/utils/build/format';
-import { fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -52,8 +51,8 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     case 'Sent':
     case 'Received': {
       const {
-        asset: { token, amount, iconUrl },
-        address, // <— comes from the activity, not asset
+        token: { address, symbol, amount, iconUrl },
+        address: otherAddress, // <— comes from the activity, not asset
         type,
       } = activity;
 
@@ -63,32 +62,29 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       const preposition = type === 'Sent' ? 'to' : 'from';
 
       // Sent / Received use fShortenNumber; others use fCurrencyCompact
-      sentence = `${fShortenNumber(amount)} ${token} ${preposition} ${shortenAddress(address)}`;
+      sentence = `${fShortenNumber(amount)} ${symbol} ${preposition} ${shortenAddress(otherAddress)}`;
 
       break;
     }
     case 'Stake':
     case 'Unstake': {
-      const { token, amount, iconUrl } = activity.asset;
+      const { symbol, amount, iconUrl } = activity.token;
       icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${fCurrencyCompact(amount)} ${token}`;
+      sentence = `${fShortenNumber(amount)} ${symbol}`;
       break;
     }
     case 'Add Liquidity':
     case 'Remove Liquidity': {
-      const { token, amount, iconUrl } = activity.tokenB;
-      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${fCurrencyCompact(amount)} ${fTruncate(token, 15)}`;
+      const { symbol, amount } = activity.tokenB;
+      icon = <Avatar src={getCryptoIconUrl(activity.asset)} sx={{ width: 32, height: 32 }} />;
+      sentence = `${fShortenNumber(amount)} ${symbol}`;
       break;
     }
     case 'Swapped': {
-      const {
-        sell: { token: sTok, amount: sAmt },
-        buy: { token: bTok, amount: bAmt },
-      } = activity;
+      const { sell, buy } = activity;
 
-      icon = <SplitAvatar left={sTok} right={bTok} />;
-      sentence = `${fShortenNumber(sAmt)} ${sTok} for ${fShortenNumber(bAmt)} ${bTok}`;
+      icon = <SplitAvatar left={sell.symbol} right={buy.symbol} />;
+      sentence = `${fShortenNumber(sell.amount)} ${sell.symbol} for ${fShortenNumber(buy.amount)} ${buy.symbol}`;
       break;
     }
     default:

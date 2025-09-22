@@ -1,14 +1,10 @@
 'use client';
 
 import type { events } from '@normalfinance/types';
-import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 import type { ChartTimeframeKey, ExplorerChartData } from '@/components/_pool-page-components';
 
 import { useState, useEffect } from 'react';
-import { captureException } from '@sentry/nextjs';
-import { supabase } from '@/lib/createSupabaseClient';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
-import { constants, rpcServer, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -34,7 +30,10 @@ const bucketCounts: Record<ChartTimeframeKey, number> = {
 
 // ----------------------------------------------------------------------
 
-export function usePoolPriceChart(poolAddress: string): ReturnType {
+export function usePoolPriceChart(
+  asset: string,
+  swapHistory: events.RouterSwapEvent[] = []
+): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,145 +59,151 @@ export function usePoolPriceChart(poolAddress: string): ReturnType {
   });
 
   useEffect(() => {
-    if (!poolAddress) return;
+    if (!swapHistory || swapHistory.length === 0) {
+      // TODO: get swaps
+    }
+  }, [swapHistory]);
 
-    const now = Date.now();
+  // useEffect(() => {
+  //   if (!asset) return;
 
-    const fetchPriceData = async () => {
-      const blocksPerYear = (365 * 24 * 60 * 60) / 5;
-      const ledger = await rpcServer.getLatestLedger();
-      const ledgerOneYearAgo = ledger.sequence - blocksPerYear;
+  //   const now = Date.now();
 
-      const { data, error: e } = await supabase
-        .from(constants.StellarConfig.EVENTS_TABLENAME)
-        .select('*')
-        .eq('contract_id', poolAddress)
-        .eq('type', 'contract')
-        .eq('in_successful_contract_call', true)
-        .ilike('topics', `%rebalance%`)
-        .gte('ledger_sequence', ledgerOneYearAgo)
-        .order('id', { ascending: true });
+  //   const fetchPriceData = async () => {
+  //     const blocksPerYear = (365 * 24 * 60 * 60) / 5;
+  //     const ledger = await rpcServer.getLatestLedger();
+  //     const ledgerOneYearAgo = ledger.sequence - blocksPerYear;
 
-      if (e) {
-        captureException(e);
-        setError(e as any);
-        return;
-      }
+  //     const { data, error: e } = await supabase
+  //       .from(constants.StellarConfig.EVENTS_TABLENAME)
+  //       .select('*')
+  //       .eq('contract_id', constants.StellarConfig.POOL_ROUTER_ADDRESS)
+  //       .eq('type', 'contract')
+  //       .eq('in_successful_contract_call', true)
+  //       .eq('transaction_successful', true)
+  //       .ilike('topics', `%rebalance%`)
+  //       .gte('ledger_sequence', ledgerOneYearAgo)
+  //       .order('id', { ascending: true });
 
-      const rows = data as GoldskyTableRow[];
+  //     if (e) {
+  //       setError(e as any);
+  //       return;
+  //     }
 
-      const result: ExplorerChartData = { price: {}, volume: {} };
+  //     const rows = data as GoldskyTableRow[];
 
-      (['24h', '7d', '30d', '12m'] as ChartTimeframeKey[]).forEach(async (tf) => {
-        const duration = timeframeDurations[tf];
-        const buckets = bucketCounts[tf];
-        const bucketSize = duration / buckets;
+  //     const result: ExplorerChartData = { price: {}, volume: {} };
 
-        const priceBuckets: number[][] = Array.from({ length: buckets }, () => []);
+  //     (['24h', '7d', '30d', '12m'] as ChartTimeframeKey[]).forEach(async (tf) => {
+  //       const duration = timeframeDurations[tf];
+  //       const buckets = bucketCounts[tf];
+  //       const bucketSize = duration / buckets;
 
-        for (const row of rows) {
-          const tx = await rpcServer.getTransaction(row.transaction_hash);
+  //       const priceBuckets: number[][] = Array.from({ length: buckets }, () => []);
 
-          if (tx.status == 'SUCCESS') {
-            const ts = new Date(tx.createdAt).getTime();
-            if (now - ts > duration) continue;
+  //       for (const row of rows) {
+  //         const tx = await rpcServer.getTransaction(row.transaction_hash);
 
-            const bucketIndex = Math.floor((ts - (now - duration)) / bucketSize);
-            if (bucketIndex < 0 || bucketIndex >= buckets) continue;
+  //         if (tx.status == 'SUCCESS') {
+  //           const ts = new Date(tx.createdAt).getTime();
+  //           if (now - ts > duration) continue;
 
-            const parsed = parseEvent(
-              JSON.parse(row.topics!),
-              JSON.parse(row.data!),
-              row.transaction_hash
-            ) as events.RebalanceEvent;
+  //           const bucketIndex = Math.floor((ts - (now - duration)) / bucketSize);
+  //           if (bucketIndex < 0 || bucketIndex >= buckets) continue;
 
-            if (Number(parsed.newReserveA) === 0 || Number(parsed.newReserveB) === 0) continue;
+  //           const parsed = parseEvent(
+  //             JSON.parse(row.topics!),
+  //             JSON.parse(row.data!),
+  //             row.transaction_hash
+  //           ) as events.RebalanceEvent;
 
-            const price = parsed.newReserveB / parsed.newReserveA;
-            priceBuckets[bucketIndex].push(Number(price));
-          }
-        }
+  //           if (Number(parsed.newReserveA) === 0 || Number(parsed.newReserveB) === 0) continue;
 
-        const averagedPrices = priceBuckets.map((p) =>
-          p.length ? p.reduce((a, b) => a + b, 0) / p.length : 0
-        );
+  //           const price = parsed.newReserveB / parsed.newReserveA;
+  //           priceBuckets[bucketIndex].push(Number(price));
+  //         }
+  //       }
 
-        result.price![tf] = createChartData(tf, averagedPrices, tickCount(tf));
-      });
+  //       const averagedPrices = priceBuckets.map((p) =>
+  //         p.length ? p.reduce((a, b) => a + b, 0) / p.length : 0
+  //       );
 
-      setChartData({ ...chartData, price: result.price });
-    };
+  //       result.price![tf] = createChartData(tf, averagedPrices, tickCount(tf));
+  //     });
 
-    const fetchVolumeData = async () => {
-      const blocksPerYear = (365 * 24 * 60 * 60) / 5;
-      const ledger = await rpcServer.getLatestLedger();
-      const ledgerOneYearAgo = ledger.sequence - blocksPerYear;
+  //     setChartData({ ...chartData, price: result.price });
+  //   };
 
-      const { data, error: e } = await supabase
-        .from(constants.StellarConfig.EVENTS_TABLENAME)
-        .select('*')
-        .eq('contract_id', poolAddress)
-        .eq('type', 'contract')
-        .eq('in_successful_contract_call', true)
-        .ilike('topics', `%swap%`)
-        .gte('ledger_sequence', ledgerOneYearAgo)
-        .order('id', { ascending: true });
+  //   const fetchVolumeData = async () => {
+  //     const blocksPerYear = (365 * 24 * 60 * 60) / 5;
+  //     const ledger = await rpcServer.getLatestLedger();
+  //     const ledgerOneYearAgo = ledger.sequence - blocksPerYear;
 
-      if (e) {
-        captureException(e);
-        setError(e as any);
-        return;
-      }
+  //     const { data, error: e } = await supabase
+  //       .from(constants.StellarConfig.EVENTS_TABLENAME)
+  //       .select('*')
+  //       .eq('contract_id', constants.StellarConfig.POOL_ROUTER_ADDRESS)
+  //       .eq('type', 'contract')
+  //       .eq('in_successful_contract_call', true)
+  //       .eq('transaction_successful', true)
+  //       .ilike('topics', `%swap%`)
+  //       .gte('ledger_sequence', ledgerOneYearAgo)
+  //       .order('id', { ascending: true });
 
-      const rows = data as GoldskyTableRow[];
+  //     if (e) {
+  //       setError(e as any);
+  //       return;
+  //     }
 
-      const result: ExplorerChartData = { price: {}, volume: {} };
+  //     const rows = data as GoldskyTableRow[];
 
-      (['24h', '7d', '30d', '12m'] as ChartTimeframeKey[]).forEach(async (tf) => {
-        const duration = timeframeDurations[tf];
-        const buckets = bucketCounts[tf];
-        const bucketSize = duration / buckets;
+  //     const result: ExplorerChartData = { price: {}, volume: {} };
 
-        // const volumeBuckets: number[] = Array.from({ length: buckets }, () => 0);
-        const volumeBuckets: number[][] = Array.from({ length: buckets }, () => []);
+  //     (['24h', '7d', '30d', '12m'] as ChartTimeframeKey[]).forEach(async (tf) => {
+  //       const duration = timeframeDurations[tf];
+  //       const buckets = bucketCounts[tf];
+  //       const bucketSize = duration / buckets;
 
-        for (const row of rows) {
-          const tx = await rpcServer.getTransaction(row.transaction_hash);
+  //       // const volumeBuckets: number[] = Array.from({ length: buckets }, () => 0);
+  //       const volumeBuckets: number[][] = Array.from({ length: buckets }, () => []);
 
-          if (tx.status == 'SUCCESS') {
-            const ts = new Date(tx.createdAt).getTime();
-            if (now - ts > duration) continue;
+  //       for (const row of rows) {
+  //         const tx = await rpcServer.getTransaction(row.transaction_hash);
 
-            const bucketIndex = Math.floor((ts - (now - duration)) / bucketSize);
-            if (bucketIndex < 0 || bucketIndex >= buckets) continue;
+  //         if (tx.status == 'SUCCESS') {
+  //           const ts = new Date(tx.createdAt).getTime();
+  //           if (now - ts > duration) continue;
 
-            const parsed = parseEvent(
-              JSON.parse(row.topics!),
-              JSON.parse(row.data!),
-              row.transaction_hash
-            ) as events.SwapEvent;
+  //           const bucketIndex = Math.floor((ts - (now - duration)) / bucketSize);
+  //           if (bucketIndex < 0 || bucketIndex >= buckets) continue;
 
-            const volume = parsed.direction === 'buy' ? parsed.inAmount : parsed.outAmount;
-            // volumeBuckets[bucketIndex] += volumeUsd;
+  //           const parsed = parseEvent(
+  //             JSON.parse(row.topics!),
+  //             JSON.parse(row.data!),
+  //             row.transaction_hash
+  //           ) as events.SwapEvent;
 
-            // const price = parsed.newReserveB / parsed.newReserveA;
-            volumeBuckets[bucketIndex].push(Number(volume));
-          }
-        }
+  //           const volume = parsed.direction === 'Buy' ? parsed.inAmount : parsed.outAmount;
+  //           // volumeBuckets[bucketIndex] += volumeUsd;
 
-        const averagedPrices = volumeBuckets.map((p) =>
-          p.length ? p.reduce((a, b) => a + b, 0) / p.length : 0
-        );
+  //           // const price = parsed.newReserveB / parsed.newReserveA;
+  //           volumeBuckets[bucketIndex].push(Number(volume));
+  //         }
+  //       }
 
-        result.volume![tf] = createChartData(tf, averagedPrices, tickCount(tf));
-      });
+  //       const averagedPrices = volumeBuckets.map((p) =>
+  //         p.length ? p.reduce((a, b) => a + b, 0) / p.length : 0
+  //       );
 
-      setChartData({ ...chartData, volume: result.volume });
-    };
+  //       result.volume![tf] = createChartData(tf, averagedPrices, tickCount(tf));
+  //     });
 
-    fetchPriceData();
-    fetchVolumeData();
-  }, [poolAddress]);
+  //     setChartData({ ...chartData, volume: result.volume });
+  //   };
+
+  //   fetchPriceData();
+  //   fetchVolumeData();
+  // }, [asset]);
 
   return {
     error,

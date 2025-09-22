@@ -1,6 +1,6 @@
 import useSWRImmutable from 'swr/immutable';
-import { getTokenBalance } from '@/lib/token';
 import { usePersistStore } from '@normalfinance/state';
+import { getTokenBalance } from '@normalfinance/utils';
 
 interface FetchTokenBalanceProps {
   tokenAddress: string;

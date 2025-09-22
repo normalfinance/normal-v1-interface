@@ -9,6 +9,7 @@ import { detectLanguage } from '@/locales/server';
 import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
+import { PostHogProvider } from '@/providers/PostHogProvider';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
@@ -18,6 +19,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
 import { ProgressBar } from '@/components/template/progress-bar';
 import { SnackbarProvider } from '@/components/template/snackbar';
+// import { InviteCodeGate } from '@/components/_common/invite-code-gate';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
@@ -36,7 +38,7 @@ export const metadata: Metadata = {
     default: 'Normal',
     template: '%s · Normal',
   },
-  description: 'Invest in diversified crypto indices with Normal.',
+  description: 'Invest in diversified crypto indices and synthetic assets with Normal.',
   keywords: 'crypto, investing, crypto index, defi',
   openGraph: {
     siteName: 'Normal',
@@ -96,41 +98,45 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
       <body>
-        <InitColorSchemeScript
-          defaultMode={themeConfig.defaultMode}
-          modeStorageKey={themeConfig.modeStorageKey}
-          attribute={themeConfig.cssVariables.colorSchemeSelector}
-        />
+        <PostHogProvider>
+          <InitColorSchemeScript
+            defaultMode={themeConfig.defaultMode}
+            modeStorageKey={themeConfig.modeStorageKey}
+            attribute={themeConfig.cssVariables.colorSchemeSelector}
+          />
 
-        <I18nProvider lang={appConfig.i18nLang}>
-          <SettingsProvider
-            cookieSettings={appConfig.cookieSettings}
-            defaultSettings={defaultSettings}
-          >
-            <LocalizationProvider>
-              <AppRouterCacheProvider options={{ key: 'css' }}>
-                <ThemeProvider
-                  defaultMode={themeConfig.defaultMode}
-                  modeStorageKey={themeConfig.modeStorageKey}
-                >
-                  <ExternalProvider>
-                    <ReferralProvider>
-                      <MotionLazy>
-                        <SnackbarProvider>
-                          <ProgressBar />
-                          <SettingsDrawer defaultSettings={defaultSettings} />
-                          <AnnouncementProvider>
-                            <DashboardLayout>{children}</DashboardLayout>
-                          </AnnouncementProvider>
-                        </SnackbarProvider>
-                      </MotionLazy>
-                    </ReferralProvider>
-                  </ExternalProvider>
-                </ThemeProvider>
-              </AppRouterCacheProvider>
-            </LocalizationProvider>
-          </SettingsProvider>
-        </I18nProvider>
+          <I18nProvider lang={appConfig.i18nLang}>
+            <SettingsProvider
+              cookieSettings={appConfig.cookieSettings}
+              defaultSettings={defaultSettings}
+            >
+              <LocalizationProvider>
+                <AppRouterCacheProvider options={{ key: 'css' }}>
+                  <ThemeProvider
+                    defaultMode={themeConfig.defaultMode}
+                    modeStorageKey={themeConfig.modeStorageKey}
+                  >
+                    <ExternalProvider>
+                      <ReferralProvider>
+                        <MotionLazy>
+                          <SnackbarProvider>
+                            <ProgressBar />
+                            <SettingsDrawer defaultSettings={defaultSettings} />
+                            <AnnouncementProvider>
+                              {/* <InviteCodeGate enforceInDev> */}
+                              <DashboardLayout>{children}</DashboardLayout>
+                              {/* </InviteCodeGate> */}
+                            </AnnouncementProvider>
+                          </SnackbarProvider>
+                        </MotionLazy>
+                      </ReferralProvider>
+                    </ExternalProvider>
+                  </ThemeProvider>
+                </AppRouterCacheProvider>
+              </LocalizationProvider>
+            </SettingsProvider>
+          </I18nProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

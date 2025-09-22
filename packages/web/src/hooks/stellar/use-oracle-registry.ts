@@ -1,8 +1,7 @@
 'use client';
 
-import { constants } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
+import { logger, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
 
@@ -10,11 +9,8 @@ interface ReturnType {
   error: any | null;
   loading: boolean;
   oracleRegistry: OracleRegistryContract.Client | undefined;
-  getPrice: (asset: string, cached: boolean) => Promise<OracleRegistryContract.OraclePriceData>;
-  getLastPrice: (
-    asset: string,
-    cached: boolean
-  ) => Promise<OracleRegistryContract.HistoricalOracleData>;
+  getPrice: (asset: string) => Promise<OracleRegistryContract.OraclePriceData>;
+  getLastPrice: (asset: string) => Promise<OracleRegistryContract.HistoricalOracleData>;
   getOracle: (asset: string) => Promise<OracleRegistryContract.OracleInfo>;
 }
 
@@ -26,11 +22,6 @@ export function useOracleRegistry(): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const storePersist = usePersistStore();
-
-  const defaultAction: OracleRegistryContract.NormalAction = {
-    tag: 'UpdateTwap',
-    values: undefined,
-  };
 
   const fetchOracleRegistry = useCallback(() => {
     try {
@@ -46,8 +37,7 @@ export function useOracleRegistry(): ReturnType {
         setOracleRegistry(OracleRegistry);
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -71,7 +61,7 @@ export function useOracleRegistry(): ReturnType {
     }
   };
 
-  const getPrice = useCallback(async (asset: string, cached: boolean) => {
+  const getPrice = useCallback(async (asset: string) => {
     try {
       setError(null);
       setLoading(true);
@@ -85,17 +75,13 @@ export function useOracleRegistry(): ReturnType {
 
       const oraclePriceData = await oracleRegistry.get_price({
         asset,
-        cached,
-        action: defaultAction,
-        skip_validation: true,
       });
 
       if (oraclePriceData?.result) {
         return oraclePriceData?.result;
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -122,8 +108,7 @@ export function useOracleRegistry(): ReturnType {
         return oraclePriceData.result;
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -151,8 +136,7 @@ export function useOracleRegistry(): ReturnType {
         return oracle.result;
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 

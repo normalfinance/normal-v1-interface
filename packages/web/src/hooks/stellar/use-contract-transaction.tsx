@@ -1,19 +1,20 @@
 'use client';
 
-import type { TransactionDetails } from '@/types/transaction';
-import type { AppStore, AppStorePersist } from '@normalfinance/types';
+import type { ContractType } from '@normalfinance/types';
+import type { SnackbarKey } from '@/components/template/snackbar';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
-import { constants } from '@normalfinance/utils';
-import { Signer } from '@normalfinance/utils/build/stellar';
+import { usePersistStore } from '@normalfinance/state';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { logger, constants, trackEvent } from '@normalfinance/utils';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
   PoolContract,
-  BufferContract,
+  LpTokenContract,
   PoolRouterContract,
   PoolSwapFeeContract,
   SorobanTokenContract,
@@ -27,37 +28,14 @@ import Button from '@mui/material/Button';
 
 import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
 
-const logToFile = async (message: string) => {
-  try {
-    await fetch('/api/log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
-    });
-  } catch (error) {
-    console.error('Failed to log to file:', error);
-  }
-};
-
-// Define Contract Types
-type ContractType =
-  | 'oracle_registry'
-  | 'pool_swap_fee'
-  | 'pool'
-  | 'pool_router'
-  | 'buffer'
-  | 'insurance_fund'
-  | 'liquidity_calculator'
-  | 'token';
-
 const contractClients = {
   oracle_registry: OracleRegistryContract.Client,
   pool_swap_fee: PoolSwapFeeContract.Client,
   pool: PoolContract.Client,
   pool_router: PoolRouterContract.Client,
-  buffer: BufferContract.Client,
   insurance_fund: InsuranceFundContract.Client,
   liquidity_calculator: LiquidityCalculatorContract.Client,
+  lp_token: LpTokenContract.Client,
   token: SorobanTokenContract.Client,
 };
 
@@ -69,12 +47,12 @@ type ContractClientType<T extends ContractType> = T extends 'oracle_registry'
       ? PoolContract.Client
       : T extends 'pool_router'
         ? PoolRouterContract.Client
-        : T extends 'buffer'
-          ? BufferContract.Client
-          : T extends 'insurance_fund'
-            ? InsuranceFundContract.Client
-            : T extends 'liquidity_calculator'
-              ? LiquidityCalculatorContract.Client
+        : T extends 'insurance_fund'
+          ? InsuranceFundContract.Client
+          : T extends 'liquidity_calculator'
+            ? LiquidityCalculatorContract.Client
+            : T extends 'lp_token'
+              ? LpTokenContract.Client
               : T extends 'token'
                 ? SorobanTokenContract.Client
                 : never;
@@ -93,32 +71,20 @@ interface ExecuteContractTransactionParams<T extends ContractType>
   contractType: T;
 }
 
-const getSigner = (storePersist: AppStorePersist, appStore: AppStore) =>
-  storePersist.wallet.walletType === 'wallet-connect'
-    ? appStore.walletConnectInstance
-    : new Signer();
-
-const getSignerFunction = (signer: any, storePersist: any) => (tx: string) =>
-  storePersist.wallet.walletType === 'wallet-connect'
-    ? signer.signTransaction(tx)
-    : signer.sign(tx);
-
 const getContractClient = <T extends ContractType>(
   contractType: T,
   contractAddress: string,
-  signer: any,
+  signTransaction: (xdr: string) => Promise<string>,
   networkPassphrase: string,
   rpcUrl: string,
-  publicKey: string,
-  storePersist: any
+  publicKey: string
 ): ContractClientType<T> => {
-  const signTransaction = getSignerFunction(signer, storePersist);
   const commonOptions = {
     publicKey,
     contractId: contractAddress,
     networkPassphrase,
     rpcUrl,
-    signTransaction: signTransaction.bind(signer),
+    signTransaction,
   };
 
   const ClientConstructor = contractClients[contractType] as any;
@@ -127,7 +93,7 @@ const getContractClient = <T extends ContractType>(
 
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
-  const appStore = useAppStore();
+  const { signTransaction, publicKey } = useStellarWalletsKit();
   const { t } = useTranslate();
 
   const { openRestoreModal, closeRestoreModal } = useRestoreModal();
@@ -139,47 +105,92 @@ export const useContractTransaction = () => {
       transactionFunction,
       transactionDetails,
     }: ExecuteContractTransactionParams<T>) => {
-      const signer = getSigner(storePersist, appStore);
       const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
       const rpcUrl = constants.StellarConfig.RPC_URL;
-      const publicKey = storePersist.wallet.address!;
+      const walletAddress = publicKey || storePersist.wallet.address;
 
-      const run = async (restore: boolean = false): Promise<{ txHash?: string }> => {
+      if (!walletAddress) {
+        throw new Error('No wallet connected');
+      }
+
+      logger.log('[USE CONTRACT TRANSACTION] Wallet address:', walletAddress);
+      logger.log('[USE CONTRACT TRANSACTION] PublicKey from kit:', publicKey);
+      logger.log('[USE CONTRACT TRANSACTION] Address from persist:', storePersist.wallet.address);
+
+      logger.log('[USE CONTRACT TRANSACTION] Network passphrase:', networkPassphrase);
+
+      const run = async (
+        restore: boolean = false
+      ): Promise<{ txHash?: string; notify: boolean }> => {
+        // Add safety check for signTransaction function
+        const safeSignTransaction = async (xdr: string) => {
+          try {
+            logger.log('[USE CONTRACT TRANSACTION] Attempting to sign transaction...');
+            if (!signTransaction) {
+              throw new Error('Sign transaction function not available');
+            }
+            const result = await signTransaction(xdr);
+            logger.log('[USE CONTRACT TRANSACTION] Transaction signed successfully');
+            return result;
+          } catch (error) {
+            logger.error('[USE CONTRACT TRANSACTION] Error during transaction signing:', error);
+            throw error;
+          }
+        };
+
         const contractClient = getContractClient(
           contractType,
           contractAddress,
-          signer,
+          safeSignTransaction,
           networkPassphrase,
           rpcUrl,
-          publicKey,
-          storePersist
+          walletAddress
         );
 
         const transaction = await transactionFunction(contractClient, restore);
 
-        console.log('Transaction from backend: ', transaction);
+        logger.log('Transaction from backend: ', transaction);
 
         try {
           if (restore) {
-            console.log('Restoring transaction state...');
+            logger.log('Restoring transaction state...');
             await transaction.simulate({ restore: true });
-            return {};
+            return { notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP };
           }
           const txHash = (transaction as any).hash || null;
 
           if (txHash) {
             const timestamp = new Date().toISOString();
             const transactionType = transactionDetails.type || 'unknown';
-            const walletAddress = publicKey || 'unknown';
-            const logMessage = `[${timestamp}], ${transactionType}, ${txHash}, ${walletAddress}`;
-            await logToFile(logMessage);
+            logger.log('[USE CONTRACT TRANSACTION] Transactionn hash:', txHash);
+            logger.log('[USE CONTRACT TRANSACTION] Transactionn type:', transactionType);
+            logger.log('[USE CONTRACT TRANSACTION] Transactionn Time:', timestamp);
+
+            logger.log(
+              `[${timestamp}] Transaction ${transactionType} completed for ${walletAddress}: ${txHash}`
+            );
           }
+
+          trackEvent('transaction_successful', {
+            txHash,
+            contractName: contractType,
+            contractAddress,
+            method: transactionDetails.type,
+          });
 
           return {
             txHash,
+            notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP,
           };
         } catch (error) {
-          console.error('Error during returning transaction hash: ', error);
+          logger.error('Error during returning transaction hash: ', error);
+
+          trackEvent('transaction_failed', {
+            error: (error as any).toString(),
+            contractName: contractType,
+            contractAddress,
+            method: transactionDetails.type,
+          });
 
           if (error instanceof Error && error.message.includes('restore some contract state')) {
             return new Promise((resolve, reject) => {
@@ -188,7 +199,7 @@ export const useContractTransaction = () => {
                   const result = await run(true);
                   resolve(result);
                 } catch (restoreError) {
-                  console.error('Error during restoring transaction:', restoreError);
+                  logger.error('Error during restoring transaction:', restoreError);
                   reject(restoreError);
                 } finally {
                   closeRestoreModal();
@@ -202,56 +213,62 @@ export const useContractTransaction = () => {
 
       const messages = getTransactionMessages(transactionDetails);
 
-      const loadingKey = enqueueSnackbar(messages.loading, {
-        variant: 'info',
-        persist: true,
-      });
+      let loadingKey: SnackbarKey | null = null;
+      if (transactionDetails.type !== TransactionType.ESTIMATE_SWAP) {
+        loadingKey = enqueueSnackbar(messages.loading, {
+          variant: 'info',
+          persist: true,
+        });
+      }
 
       return run()
         .then((result) => {
-          closeSnackbar(loadingKey);
+          if (loadingKey) closeSnackbar(loadingKey);
 
-          if (result.txHash) {
-            const stellarExpertUrl = createStellarExpertUrl('tx', result.txHash);
+          if (result.notify) {
+            if (result.txHash) {
+              const stellarExpertUrl = createStellarExpertUrl('tx', result.txHash);
 
-            enqueueSnackbar(
-              <Box component="span">
-                {messages.success}{' '}
-                <Button
-                  size="small"
-                  onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
-                  sx={{
-                    textTransform: 'none',
-                    minWidth: 'auto',
-                    p: 0,
-                    textDecoration: 'underline',
-                    '&:hover': {
+              enqueueSnackbar(
+                <Box component="span">
+                  {messages.success}{' '}
+                  <Button
+                    size="small"
+                    onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+                    sx={{
+                      textTransform: 'none',
+                      minWidth: 'auto',
+                      p: 0,
                       textDecoration: 'underline',
-                      backgroundColor: 'transparent',
-                    },
-                  }}
-                >
-                  {t('View More')}
-                </Button>
-              </Box>,
-              {
+                      '&:hover': {
+                        textDecoration: 'underline',
+                        backgroundColor: 'transparent',
+                      },
+                    }}
+                  >
+                    {t('View More')}
+                  </Button>
+                </Box>,
+                {
+                  variant: 'success',
+                  persist: false,
+                  autoHideDuration: 7500,
+                }
+              );
+            } else {
+              enqueueSnackbar(messages.success, {
                 variant: 'success',
                 persist: false,
                 autoHideDuration: 7500,
-              }
-            );
-          } else {
-            enqueueSnackbar(messages.success, {
-              variant: 'success',
-              persist: false,
-              autoHideDuration: 7500,
-            });
+              });
+            }
           }
 
           return result;
         })
         .catch((error) => {
-          closeSnackbar(loadingKey);
+          logger.error('Error during contract transaction: ', error);
+          if (loadingKey) closeSnackbar(loadingKey);
 
           enqueueSnackbar(messages.error, {
             variant: 'error',
@@ -262,7 +279,7 @@ export const useContractTransaction = () => {
           throw error;
         });
     },
-    [storePersist, appStore, openRestoreModal, closeRestoreModal]
+    [storePersist, signTransaction, openRestoreModal, closeRestoreModal, t]
   );
 
   return {

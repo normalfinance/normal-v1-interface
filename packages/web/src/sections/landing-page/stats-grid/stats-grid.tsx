@@ -55,32 +55,35 @@ const paperSx = {
   borderRadius: 3,
 };
 
-const StatCard: React.FC<StatsProps> = ({ percentage, heading }) => (
-  <Paper variant="outlined" sx={{ ...paperSx }}>
-    <Box
-      sx={{
-        p: { xs: 2.5, md: 4 },
-        height: '100%',
-      }}
-    >
-      <Typography variant="h6" component="h3" fontWeight={400} sx={{ lineHeight: 1.4 }}>
-        {heading}
-      </Typography>
-
-      <Typography
-        component="p"
-        fontWeight={500}
+const StatCard: React.FC<StatsProps> = ({ percentage, heading }) => {
+  const { t } = useTranslate();
+  return (
+    <Paper variant="outlined" sx={{ ...paperSx }}>
+      <Box
         sx={{
-          fontSize: '48px',
-          mt: { xs: 4, md: 5, lg: 6 },
-          lineHeight: 1.3,
+          p: { xs: 2.5, md: 4 },
+          height: '100%',
         }}
       >
-        {percentage}
-      </Typography>
-    </Box>
-  </Paper>
-);
+        <Typography variant="h6" component="h3" fontWeight={400} sx={{ lineHeight: 1.4 }}>
+          {t(heading)}
+        </Typography>
+
+        <Typography
+          component="p"
+          fontWeight={500}
+          sx={{
+            fontSize: '48px',
+            mt: { xs: 4, md: 5, lg: 6 },
+            lineHeight: 1.3,
+          }}
+        >
+          {percentage}
+        </Typography>
+      </Box>
+    </Paper>
+  );
+};
 
 export const StatsGrid: React.FC<StatsGridProps> = ({
   tagline = DEFAULT_PROPS.tagline,
@@ -134,6 +137,12 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
                   bgcolor: '#6E4BFF',
                   '&:hover': { bgcolor: '#6E4BFF' },
                 }}
+                // onClick={() =>
+                //   trackEvent('button_clicked', {
+                //     label: 'Learn more',
+                //     location: 'Home',
+                //   })
+                // }
               >
                 {t('Learn more')}
               </Button>

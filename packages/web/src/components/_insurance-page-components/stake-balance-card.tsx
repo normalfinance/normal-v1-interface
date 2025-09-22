@@ -4,11 +4,12 @@ import type { InsuranceQueryParams } from '@/types/query-params';
 import { useEffect } from 'react';
 import { useBoolean } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { format } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { formatTokenAmount } from '@/utils/format-stellar';
 
 import Box from '@mui/material/Box';
+import { Chip } from '@mui/material';
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -73,15 +74,21 @@ export function StakeBalance({
         {t(label)}
       </Box>
       <Box component="span">
-        {formatter(value)} {label === 'Staked' && 'XLM'}
+        {label === 'Earned' ? (
+          <Chip label="Coming soon" color="info" size="small" />
+        ) : (
+          <>
+            {formatter(value)} {label === 'Staked' && 'XLM'}
+          </>
+        )}
       </Box>
     </Box>
   );
 
   // Define default rows if none are provided via props.
   const defaultRows: BalanceRow[] = [
-    { label: 'Staked', value: staked.toNumber(), formatter: formatTokenAmount },
-    { label: 'Earned', value: yieldPercent, formatter: fCurrency },
+    { label: 'Staked', value: staked.toNumber(), formatter: format.formatTokenAmount },
+    { label: 'Earned', value: 0, formatter: fCurrency },
   ];
 
   const rowsToRender = defaultRows;
@@ -109,8 +116,18 @@ export function StakeBalance({
               fullWidth
               variant="contained"
               color="secondary"
-              onClick={manageStake.onTrue}
               data-testid="manage-stake-button"
+              onClick={() => {
+                // trackEvent('button_clicked', {
+                //   label: 'Manage Stake',
+                //   location: 'Insurance',
+                // });
+                // trackEvent('popup_opened', {
+                //   label: 'Manage Stake',
+                //   location: 'Insurance',
+                // });
+                manageStake.onTrue();
+              }}
             >
               {t('Manage stake')}
             </Button>

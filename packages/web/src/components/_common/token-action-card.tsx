@@ -7,6 +7,7 @@ import type { IndexDetails, StateToken as Token } from '@normalfinance/types';
 import React from 'react';
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
+import { logger } from '@normalfinance/utils';
 import { useTabs } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 
@@ -89,7 +90,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 
   // Fallback: at least one tab must be rendered ------------------------
   if (activeTabs.length === 0) {
-    console.warn('TokenActionCard: enabledTabs is empty – defaulting to all tabs.');
+    logger.warn('TokenActionCard: enabledTabs is empty – defaulting to all tabs.');
     activeTabs.push(...ALL_TABS);
   }
   const getInitialTab = (): TokenActionKey => {

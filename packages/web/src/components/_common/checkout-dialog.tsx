@@ -2,7 +2,8 @@ import React from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { CONFIG } from '@/global-config';
-import { createOnramperURL, createCoinbasePayURL } from '@normalfinance/utils';
+import { enqueueSnackbar } from 'notistack';
+import { createOnramperURL, createCoinbasePayURL } from '@/utils/checkout';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -31,7 +32,8 @@ export interface CheckoutOption {
   avatar: string; // URL of the logo / avatar
   heading: string;
   description: string;
-  url: string; // external link or deeplink
+  url?: string; // external link or deeplink
+  onClick?: () => void;
 }
 
 export interface CheckoutDialogProps {
@@ -39,39 +41,75 @@ export interface CheckoutDialogProps {
   token: string;
   amount: string;
   onClose: () => void;
+  walletAddress: string | undefined;
 }
 
 // ----------------------------------------------------------------------
 // COMPONENT -------------------------------------------------------------
 
-const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, token, amount, onClose }) => {
+const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
+  open,
+  token,
+  amount,
+  onClose,
+  walletAddress,
+}) => {
   const theme = useTheme();
   const { t } = useTranslate();
 
-  const handleCheckoutClick = (wallet: CheckoutOption) => {
-    window.open(wallet.url, '_blank', 'noopener');
+  const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
+
+  const onramperUrl = createOnramperURL(CONFIG.onramper.apiKey, {
+    amountUsd: amount,
+    tokenSymbol: token,
+    walletAddress,
+    fiat: 'USD',
+  });
+
+  const handleCoinbaseClick = async () => {
+    if (!walletAddress) {
+      enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
+      return;
+    }
+    const r = await fetch('/api/coinbase/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: walletAddress, asset: token }),
+    });
+    const { token: sessionToken, error } = await r.json();
+    if (error || !sessionToken) {
+      enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
+      return;
+    }
+    const url = createCoinbasePayURL({
+      amountUsd: amount,
+      assetSymbol: token,
+      sessionToken,
+      fiat: 'USD',
+      sandbox: true,
+      path: 'buy/select-asset',
+    });
+    openExternal(url);
   };
 
-  // ----------------------------------------------------------------------
-  // DEFAULT DATA ----------------------------------------------------------
-
-  const DEFAULT_CHECKOUTS: CheckoutOption[] = [
+  const CHECKOUTS: CheckoutOption[] = [
     {
       id: 'onramper',
       avatar:
         'https://dashboard.onramper.com/assets/onramper-logo-08814537d425beb902d0f9b80fc5ac47b5fa20f88139ff16f09b290335d68447.png',
       heading: 'Onramper',
-      description: 'Fiat-to-crypto Aggregator',
-      url: createOnramperURL(CONFIG.onramper.apiKey, amount),
+      description: t('Fiat-to-crypto Aggregator'),
+      url: onramperUrl,
     },
     {
       id: 'coinbase',
       avatar: 'https://avatars.githubusercontent.com/u/1885080?s=200&v=4',
       heading: 'Coinbase',
-      description: 'Debit Card, ACH, Apple Pay, Coinbase Cash Balance',
-      url: createCoinbasePayURL(CONFIG.coinbase.projectId, amount),
+      description: t('Debit Card, ACH, Apple Pay, Coinbase Cash Balance'),
+      onClick: handleCoinbaseClick,
     },
   ];
+  const disableButtons = !amount || Number(amount) <= 0 || !token || !walletAddress;
 
   return (
     <Dialog
@@ -86,17 +124,16 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, token, amount, on
             alignItems: 'flex-start',
             width: '100%',
             maxWidth: 400,
-            maxHeight: 'auto',
           },
         },
       }}
     >
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" component="div" color="text.primary">
+          <Typography variant="h6" color="text.primary">
             {t('Checkout with')}
           </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <GetHelpButton url={paths.help.buy} />
             <IconButton onClick={onClose} aria-label="close dialog">
               <Iconify icon="mingcute:close-line" width={24} />
@@ -110,19 +147,20 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, token, amount, on
           p: 2,
           width: '100%',
           '&::-webkit-scrollbar': { width: 2 },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: theme.palette.divider,
-            borderRadius: 4,
-          },
-          scrollbarWidth: 'thin',
-          scrollbarColor: `${theme.palette.divider} transparent`,
+          '&::-webkit-scrollbar-thumb': { backgroundColor: theme.palette.divider, borderRadius: 4 },
         }}
       >
         <List disablePadding>
-          {DEFAULT_CHECKOUTS.map((checkout) => (
+          {CHECKOUTS.map((checkout) => (
             <ListItemButton
               key={checkout.id}
-              onClick={() => handleCheckoutClick(checkout)}
+              onClick={() => {
+                if (checkout.onClick) {
+                  checkout.onClick();
+                } else if (checkout.url) {
+                  openExternal(checkout.url);
+                }
+              }}
               sx={{
                 borderRadius: 1,
                 mb: 1,
@@ -156,12 +194,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, token, amount, on
       <Box sx={{ px: 4, pb: 4, width: '100%' }}>
         <Typography
           variant="body2"
-          sx={{
-            fontWeight: 500,
-            color: theme.palette.text.primary,
-            fontSize: '12px',
-            textAlign: 'center',
-          }}
+          sx={{ fontWeight: 500, color: 'text.primary', fontSize: '12px', textAlign: 'center' }}
         >
           {t(
             "You'll continue to the provider's portal to see the fees associated with your transaction"

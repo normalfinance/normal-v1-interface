@@ -6,8 +6,8 @@ import { useEffect } from 'react';
 // mui
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { captureException } from '@sentry/nextjs';
 import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
@@ -22,7 +22,6 @@ import { CreatePosition } from '@/components/_create-position-page-components/cr
 
 export default function CreatePositionView() {
   const { t } = useTranslate();
-  // const { tokens: apiTokens }
   const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
   const { params } = useQueryParams<PositionQueryParams>();
 
@@ -31,11 +30,10 @@ export default function CreatePositionView() {
     const refreshTokens = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
-        await getAllTokens([]);
+        await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
-        captureException(e);
-        console.error(e);
+        logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }
@@ -59,7 +57,10 @@ export default function CreatePositionView() {
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12, md: 12 }}>
             <Box sx={{ position: 'relative' }}>
-              <CreatePosition tokens={tokens} queryParams={params} />
+              <CreatePosition
+                tokens={tokens.filter((tkn) => tkn.symbol.startsWith('n'))}
+                queryParams={params}
+              />
               <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
             </Box>
           </Grid2>

@@ -1,8 +1,7 @@
 'use client';
 
-import { constants } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
 import { usePersistStore } from '@normalfinance/state';
+import { logger, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { OracleRegistryContract } from '@normalfinance/contracts';
 
@@ -13,7 +12,7 @@ interface ReturnType {
   loading: boolean;
   price: number | undefined;
   lastPrice: number | undefined;
-  updatePrice: (cached: boolean) => void;
+  updatePrice: () => void;
   updateLastPrice: () => void;
 }
 
@@ -33,11 +32,6 @@ export function useOracle(_asset: string): ReturnType {
   const [price, setPrice] = useState<number | undefined>(undefined);
   const [lastPrice, setLastPrice] = useState<number | undefined>(undefined);
 
-  const defaultAction: OracleRegistryContract.NormalAction = {
-    tag: 'UpdateTwap',
-    values: undefined,
-  };
-
   const rateLimitCheck = async () => {
     if (!storePersist.wallet.address) return;
     const res = await fetch('/api/oracle', {
@@ -54,7 +48,7 @@ export function useOracle(_asset: string): ReturnType {
     }
   };
 
-  const getPrice = useCallback(async (cached: boolean) => {
+  const getPrice = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
@@ -65,17 +59,13 @@ export function useOracle(_asset: string): ReturnType {
 
       const oraclePriceData = await oracleRegistry.get_price({
         asset,
-        cached,
-        action: defaultAction,
-        skip_validation: true,
       });
 
       if (oraclePriceData?.result) {
         setPrice(oraclePriceData?.result);
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 
@@ -100,8 +90,7 @@ export function useOracle(_asset: string): ReturnType {
         setLastPrice(oraclePriceData?.result);
       }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 

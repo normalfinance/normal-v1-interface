@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { logger } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -18,7 +19,7 @@ export function usePasteFromClipboard(): ReturnType {
 
   const paste: PasteFn = async () => {
     if (!navigator?.clipboard) {
-      console.warn('Clipboard not supported');
+      logger.warn('Clipboard not supported');
       return '';
     }
 
@@ -28,7 +29,7 @@ export function usePasteFromClipboard(): ReturnType {
       setPastedText(text);
       return text;
     } catch (error) {
-      console.warn('Paste failed', error);
+      logger.warn('Paste failed', error);
       setPastedText(null);
       return '';
     }

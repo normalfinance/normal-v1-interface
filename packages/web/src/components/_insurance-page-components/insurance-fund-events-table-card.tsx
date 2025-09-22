@@ -1,8 +1,8 @@
 import type { events } from '@normalfinance/types';
 import type { TableHeadCellProps } from '@/components/template/table';
 
+import { format } from '@normalfinance/utils';
 import { fDateTime } from '@/utils/format-time';
-import { formatTokenAmount } from '@/utils/format-stellar';
 import { fTruncate } from '@normalfinance/utils/build/format';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 
@@ -66,9 +66,13 @@ export function InsuranceFundEventsTableCard({ events }: Props) {
                   onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
                 >
                   <TableCell>{event.action}</TableCell>
-                  <TableCell>{formatTokenAmount(event.amount.toString())} XLM</TableCell>
-                  <TableCell>{formatTokenAmount(event.totalIfSharesBefore.toString())}</TableCell>
-                  <TableCell>{formatTokenAmount(event.totalIfSharesAfter.toString())}</TableCell>
+                  <TableCell>{format.formatTokenAmount(event.amount.toString())} XLM</TableCell>
+                  <TableCell>
+                    {format.formatTokenAmount(event.totalSharesBefore.toString())}
+                  </TableCell>
+                  <TableCell>
+                    {format.formatTokenAmount(event.totalSharesAfter.toString())}
+                  </TableCell>
                   <TableCell>{fTruncate(event.user, 15)}</TableCell>
                   <TableCell>{event.timestamp ? fDateTime(event.timestamp) : ''}</TableCell>
                   <TableCell sx={{ pr: 1 }}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { logger } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -18,7 +19,7 @@ export function useCopyToClipboard(): ReturnType {
 
   const copy: CopyFn = async (text) => {
     if (!navigator?.clipboard) {
-      console.warn('Clipboard not supported');
+      logger.warn('Clipboard not supported');
       return false;
     }
 
@@ -28,7 +29,7 @@ export function useCopyToClipboard(): ReturnType {
       setCopiedText(text);
       return true;
     } catch (error) {
-      console.warn('Copy failed', error);
+      logger.warn('Copy failed', error);
       setCopiedText(null);
       return false;
     }

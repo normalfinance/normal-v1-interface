@@ -1,27 +1,31 @@
-NETWORK_PASSPHRASE = "Public Global Stellar Network ; September 2015"
-FEDERATION_SERVER = "https://api.domain.com/federation"
-AUTH_SERVER = "https://api.domain.com/auth"
-TRANSFER_SERVER = "https://api.domain.com"
-SIGNING_KEY = "GBBHQ7H4V6RRORKYLHTCAWP6MOHNORRFJSDPXDFYDGJB2LPZUFPXUEW3"
-HORIZON_URL = "https://horizon.domain.com"
-ACCOUNTS = [""]
-VERSION = "0.1.0"
+NETWORK_PASSPHRASE = "Test SDF Network ; September 2015"
+SIGNING_KEY = "GDV2ULP4SMV7HB67ADWZZ42N7JBQCTZB5OK3ARKMCELSHFEMM66GSDVB"
+ACCOUNTS = [
+    "GBCSMMXFXVKUYHPUN4BMSSN4QTCH7CNJPBV3S4MXJ4TFH6D5M55F7JWK", # deployer
+    "GDON6QOT37KT4C4RKZON4AOTSAUZYKT5WBKQ5FE65R64IMK2U3YL3M44", # distributor
+    "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H", # issuer
+    "GCSP3QHYLZMDKZ3LBGDDEXF6DCPEIHZWFNXBEDSQBALSJKSETGTOS3PQ", # admin
+    "GDUGVTIBMIJB3AET7KV6ZI7M4SNSPTXHIGI65IFJOTNICAC6OXTMKIME", # protocol owned liquidity (POL)
+]
+VERSION = "1.0.0"
 
 [DOCUMENTATION]
-ORG_NAME = "Normal Finance"
+ORG_NAME = "Normal"
 ORG_DBA = "Normal"
 ORG_URL = "https://www.normalfinance.io"
-ORG_LOGO = "https://www.normalfinance.io/logo.png"
-ORG_DESCRIPTION = "Synthetic asset protocol"
-ORG_PHYSICAL_ADDRESS = "254 Chapman Rd Ste 208 #7553 Newark Delaware, 19702, United States"
-ORG_PHYSICAL_ADDRESS_ATTESTATION = ""
-ORG_PHONE_NUMBER = "1 (827)-274-3151"
-ORG_PHONE_NUMBER_ATTESTATION = ""
+ORG_LOGO = "https://www.normalfinance.io/logo/logo-full.png"
+ORG_DESCRIPTION = "Synthetic asset and index fund protocol"
+ORG_PHYSICAL_ADDRESS = "254 Chapman Rd, Ste 208 #7553, Newark, Delaware, 19702, United States"
+ORG_PHYSICAL_ADDRESS_ATTESTATION = "https://www.normalfinance.io/address_attestation.jpg" # coming soon
+ORG_PHONE_NUMBER = "+18272743151"
+ORG_PHONE_NUMBER_ATTESTATION = "https://www.normalfinance.io/phone_attestation.jpg" # coming soon
 ORG_KEYBASE = "normalfi"
 ORG_TWITTER = "normalfi"
 ORG_GITHUB = "normalfinance"
 ORG_OFFICIAL_EMAIL = "hello@normalfinance.io"
+ORG_SUPPORT_EMAIL = "support@normalfinance.io"
 
+# Co-founder & CEO
 [[PRINCIPALS]]
 name = "Joshua Blew"
 email = "joshua@normalfinance.io"
@@ -29,80 +33,89 @@ keybase = "jblewnormal"
 twitter = "0xjblew"
 github = "jblewnormal"
 
+# Co-founder & COO
 [[PRINCIPALS]]
 name = "Justin Benjamin"
 email = "justin@normalfinance.io"
 twitter = "justinbenjaminn"
 
-# Governance
-[[CURRENCIES]]
-code = "NORM"
-issuer = ""
-is_asset_anchored = false
-display_decimals = 7
-name = "Normal Token"
-desc = "Utility and governance token for the Normal Protocol and DAO"
-image = ""
-fixed_number = 100000000 # 100 million
-
 # Synthetics
 [[CURRENCIES]]
 code = "nBTC"
-issuer = ""
+issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Bitcoin"
-desc = "An over-collateralized synthethic Bitcoin token"
-image = "https://cryptologos.cc/logos/bitcoin-btc-logo.png" # TODO: replace with Normal subscript version
-anchor_asset_type = "crypto"
-anchor_asset = "BTC"
-redemption_instructions = "Invoke <swap> on the nBTC synth market's AMM via our app"
-attestation_of_reserve = ""
-collateral_addresses = [""]
-collateral_address_signatures = [""]
+desc = "A synthethic token backed by XLM tracking the value of Bitcoin"
+conditions = "Token supply is controlled by the Normal nBTC/XLM liquidity pool"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nBTC.webp"
 
 [[CURRENCIES]]
 code = "nETH"
-issuer = ""
+issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Ethereum"
-desc = "An over-collateralized synthethic Ethereum token"
-image = "https://cryptologos.cc/logos/ethereum-eth-logo.png" # TODO: replace with Normal subscript version
-anchor_asset_type = "crypto"
-anchor_asset = "ETH"
-redemption_instructions = "Invoke <swap> on the nETH synth market's AMM via our app"
-attestation_of_reserve = ""
-collateral_addresses = [""]
-collateral_address_signatures = [""]
+desc = "A synthethic token backed by XLM tracking the value of Ethereum"
+conditions = "Token supply is controlled by the Normal nETH/XLM liquidity pool"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nETH.webp"
 
 [[CURRENCIES]]
 code = "nSOL"
-issuer = ""
+issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Solana"
-desc = "An over-collateralized synthethic Solana token"
-image = "https://cryptologos.cc/logos/solana-sol-logo.png" # TODO: replace with Normal subscript version
-anchor_asset_type = "crypto"
-anchor_asset = "SOL"
-redemption_instructions = "Invoke <swap> on the nSOL synth market's AMM via our app"
-attestation_of_reserve = ""
-collateral_addresses = [""]
-collateral_address_signatures = [""]
+desc = "A synthethic token backed by XLM tracking the value of Solana"
+conditions = "Token supply is controlled by the Normal nSOL/XLM liquidity pool"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nSOL.webp"
 
-# Indexes
 [[CURRENCIES]]
-code = "NT5CI"
-issuer = ""
+code = "nXRP"
+issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
 is_asset_anchored = false
 display_decimals = 7
-name = "Normal Top 5 Crypto Index"
-desc = "A crypto index fund token composed of the top 5 cryptocurrencies"
-image = "https://app.normalfinance.io/assets/icons/indexes/top_5.png"
-anchor_asset_type = "crypto"
-anchor_asset = ["nBTC", "nETH", "nSOL", "nXRP", "nBNB"]
-redemption_instructions = "Invoke <redeem_index_tokens> on the NT5CI contract via our app"
-attestation_of_reserve = ""
-collateral_addresses = ["", "", "", "", ""]
-collateral_address_signatures = ["", "", "", "", ""]
+name = "Normal Ripple"
+desc = "A synthethic token backed by XLM tracking the value of Ripple"
+conditions = "Token supply is controlled by the Normal nXRP/XLM liquidity pool"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nXRP.webp"
+
+[[CURRENCIES]]
+code = "nLINK"
+issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Chainlink"
+desc = "A synthethic token backed by XLM tracking the value of Chainlink"
+conditions = "Token supply is controlled by the Normal nLINK/XLM liquidity pool"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nLINK.webp"
+
+[[CURRENCIES]]
+code = "nADA"
+issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Cardano"
+desc = "A synthethic token backed by XLM tracking the value of Cardano"
+conditions = "Token supply is controlled by the Normal nADA/XLM liquidity pool"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nADA.webp"
+
+[[CURRENCIES]]
+code = "nAVAX"
+issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Avalanche"
+desc = "A synthethic token backed by XLM tracking the value of Avalanche"
+conditions = "Token supply is controlled by the Normal nAVAX/XLM liquidity pool"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nAVAX.webp"
+
+[[CURRENCIES]]
+code = "nPOL"
+issuer = "GB55TEPZCAPVA5QKOGTKEBLGJNCP4LSEIM65PMKYKVTABMFCKQNKPJ2H"
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Polygon"
+desc = "A synthethic token backed by XLM tracking the value of Polygon"
+conditions = "Token supply is controlled by the Normal nPOL/XLM liquidity pool"
+image = "https://www.normalfinance.io/assets/icons/crypto-icons/nPOL.webp"

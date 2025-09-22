@@ -42,9 +42,6 @@ _static
 
 .unimportedrc.json
 
-# Sentry Config File
-.sentryclirc
-
 # crowdin.yml
 
 # PWA files
