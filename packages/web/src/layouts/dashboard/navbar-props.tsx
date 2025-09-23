@@ -183,11 +183,11 @@ export const NormalNavbarDefaults: Props = {
           ],
         },
         button: {
-          title: 'All docs',
+          title: 'All posts',
           variant: 'text',
           size: 'small',
           endIcon: <ChevronRightIcon />,
-          href: paths.docs,
+          href: paths.blog,
           target: '_blank',
           rel: 'noopener noreferrer',
         },

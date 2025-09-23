@@ -24,6 +24,7 @@ type Props = {
   heading: string;
   description: string;
   image: ImageProps;
+  halbornImage: ImageProps;
   tagline: string;
   taglineLogo: ImageProps;
   swapParams?: SwapQueryParams;
@@ -39,7 +40,16 @@ const swapFeeInfo: SwapFeeInfo = {
 };
 
 export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
-  const { heading, description, image, tagline, taglineLogo, swapParams, ...sectionProps } = {
+  const {
+    heading,
+    description,
+    image,
+    halbornImage,
+    tagline,
+    taglineLogo,
+    swapParams,
+    ...sectionProps
+  } = {
     ...HeroHeaderDefaults,
     ...incomingProps,
   } as Props;
@@ -225,12 +235,27 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
               {t(description)}
             </Typography>
-            <Box
-              component="img"
-              src={image.src}
-              alt={image.alt ?? ''}
-              sx={{ width: '82px', height: 'auto', objectFit: 'cover', mt: '20px' }}
-            />
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="center"
+              gap={2}
+              flexWrap="wrap"
+            >
+              <Box
+                component="img"
+                src={image.src}
+                alt={image.alt ?? ''}
+                sx={{ width: '82px', height: 'auto', objectFit: 'cover', mt: '20px' }}
+              />
+
+              <Box
+                component="img"
+                src={halbornImage.src}
+                alt={halbornImage.alt ?? ''}
+                sx={{ width: '112px', height: 'auto', objectFit: 'cover', mt: '20px' }}
+              />
+            </Stack>
           </Box>
         </Stack>
       </Container>
@@ -246,6 +271,10 @@ export const HeroHeaderDefaults: Props = {
     'The largest on-chain catalogue of synthetic crypto and real-world assets built on Stellar.',
   image: {
     src: '/assets/images/landing-page/stellar-logo.webp',
+    alt: 'Stellar Logo Long',
+  },
+  halbornImage: {
+    src: '/assets/images/landing-page/halborn-logo.webp',
     alt: 'Stellar Logo Long',
   },
   tagline: 'Crypto that just works',
