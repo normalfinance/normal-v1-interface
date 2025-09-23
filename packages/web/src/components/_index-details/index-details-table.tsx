@@ -1,6 +1,6 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
-import type { TxType, PoolTxRow, UiPoolTxRow } from '@/types/pools';
+import type { TxType, UiPoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
 import { ago } from '@/utils/format-time';
