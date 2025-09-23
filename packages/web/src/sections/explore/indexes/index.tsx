@@ -333,13 +333,13 @@ export default function ExploreIndexesView() {
 
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12 }}>
-            <IndexFundsInfoSection />
+            <ExploreIndexesTable indexes={INDEXES} loading={false} />
           </Grid2>
         </Grid2>
 
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12 }}>
-            <ExploreIndexesTable indexes={INDEXES} loading={false} />
+            <IndexFundsInfoSection />
           </Grid2>
         </Grid2>
       </DashboardContent>
