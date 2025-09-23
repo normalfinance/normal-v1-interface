@@ -1,6 +1,6 @@
 'use client';
 
-import type { PoolTxRow } from '@/types/pools';
+import type { UiPoolTxRow } from '@/types/pools';
 import type { TokenActionQueryParams } from '@/types/query-params';
 import type { SingleStat } from '@/components/_explore-page-components';
 import type { LegendValue } from '@/components/_common/area-chart-card';
@@ -8,7 +8,6 @@ import type { TokenActionKey } from '@/components/_common/token-action-card';
 import type { Token, IndexDetails, WeightedToken } from '@normalfinance/types';
 
 import { useEffect } from 'react';
-import { useApiTokens } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
@@ -175,12 +174,13 @@ export const INDEXES: IndexDetails[] = [
   },
 ];
 
-const TABLE_ROWS: PoolTxRow[] = [
+const TABLE_ROWS: UiPoolTxRow[] = [
   {
     type: 'Buy',
     timestamp: Date.now() - 60 * 60 * 1000,
     tokenAAmount: 120.5,
     tokenBAmount: 360.0,
+    deltaA: 120.5,
     user: 'GB6P...3K9Q',
     txHash: 'a1f3e0b2c4d5e6f7a8b9c0d1e2f3a4b5',
   },
@@ -189,6 +189,7 @@ const TABLE_ROWS: PoolTxRow[] = [
     timestamp: Date.now() - 2 * 60 * 60 * 1000,
     tokenAAmount: 75.2,
     tokenBAmount: 210.4,
+    deltaA: -75.2,
     user: 'GC7X...P0ZT',
     txHash: 'b2c4d5e6f7a8b9c0d1e2f3a4b5a1f3e0',
   },
@@ -197,6 +198,7 @@ const TABLE_ROWS: PoolTxRow[] = [
     timestamp: Date.now() - 6 * 60 * 60 * 1000,
     tokenAAmount: 300.0,
     tokenBAmount: 915.3,
+    deltaA: 300.0,
     user: 'GD1M...L8QW',
     txHash: 'c4d5e6f7a8b9c0d1e2f3a4b5a1f3e0b2',
   },
@@ -205,6 +207,7 @@ const TABLE_ROWS: PoolTxRow[] = [
     timestamp: Date.now() - 12 * 60 * 60 * 1000,
     tokenAAmount: 48.9,
     tokenBAmount: 150.2,
+    deltaA: -48.9,
     user: 'GE9K...R2VX',
     txHash: 'd5e6f7a8b9c0d1e2f3a4b5a1f3e0b2c4',
   },
@@ -213,6 +216,7 @@ const TABLE_ROWS: PoolTxRow[] = [
     timestamp: Date.now() - 24 * 60 * 60 * 1000,
     tokenAAmount: 510.75,
     tokenBAmount: 1610.0,
+    deltaA: 510.75,
     user: 'GF2H...M7NP',
     txHash: 'e6f7a8b9c0d1e2f3a4b5a1f3e0b2c4d5',
   },
@@ -268,7 +272,6 @@ export default function IndexDetailsView() {
   const walletAddress = usePersistStore((s) => s.wallet.address);
 
   const { params } = useQueryParams<TokenActionQueryParams>();
-  const { tokens: apiTokens } = useApiTokens();
   const { tokens, getAllTokens, globalIsLoading, setGlobalIsLoading } = useAppStore();
 
   // Determine which tab to show based on query params, default to 'swap'
@@ -315,7 +318,7 @@ export default function IndexDetailsView() {
     const refreshTokens = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
-        await getAllTokens(apiTokens);
+        await getAllTokens();
         setGlobalIsLoading(false);
       } catch (e) {
         console.error(e);

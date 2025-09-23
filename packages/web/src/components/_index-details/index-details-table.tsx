@@ -1,6 +1,6 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
-import type { TxType, PoolTxRow } from '@/types/pools';
+import type { TxType, PoolTxRow, UiPoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
 import { ago } from '@/utils/format-time';
@@ -44,7 +44,7 @@ type ColumnKey = 'timestamp' | 'tokenAAmount' | 'tokenBAmount' | 'user';
 export const IndexDetailsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
-  rows: PoolTxRow[];
+  rows: UiPoolTxRow[];
   xlmPrice: number;
   loading?: boolean;
 }> = ({ baseTokenSymbol, quoteTokenSymbol, rows, xlmPrice, loading }) => {

@@ -9,3 +9,9 @@ export interface PoolTxRow {
   timestamp: number;
   txHash: string;
 }
+
+export type UiPoolTxRow = Omit<PoolTxRow, 'tokenAAmount' | 'tokenBAmount' | 'deltaA'> & {
+  tokenAAmount: number;
+  tokenBAmount: number;
+  deltaA: number;
+};
