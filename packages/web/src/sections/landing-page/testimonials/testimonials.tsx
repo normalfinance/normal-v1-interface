@@ -5,16 +5,7 @@ import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
 
 import Masonry from '@mui/lab/Masonry';
-import {
-  Box,
-  Paper,
-  Stack,
-  Avatar,
-  Button,
-  Container,
-  Typography,
-  type ButtonProps,
-} from '@mui/material';
+import { Box, Paper, Stack, Avatar, Container, Typography, type ButtonProps } from '@mui/material';
 
 type ImageProps = { src: string; alt?: string };
 
@@ -148,7 +139,6 @@ const DEFAULT_PROPS = {
       numberOfStars: 5,
     },
   ],
-  cta: { title: 'Read more success stories', variant: 'outlined' as const },
 };
 
 const paperSx = {
@@ -208,7 +198,6 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
   heading = DEFAULT_PROPS.heading,
   description = DEFAULT_PROPS.description,
   testimonials = DEFAULT_PROPS.testimonials,
-  cta = DEFAULT_PROPS.cta,
   ...sectionProps
 }) => {
   const { t } = useTranslate();
@@ -228,14 +217,6 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
             <TestimonialCard key={i} {...tItem} />
           ))}
         </Masonry>
-
-        {cta && (
-          <Box textAlign="center" mt={{ xs: 6, md: 8 }}>
-            <Button variant={cta.variant ?? 'outlined'} {...cta}>
-              {t(cta.title)}
-            </Button>
-          </Box>
-        )}
       </Container>
     </Box>
   );

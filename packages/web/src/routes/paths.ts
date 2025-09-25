@@ -20,7 +20,7 @@ export const paths = {
     tiktok: 'https://www.tiktok.com/@normalfinance.io',
     instagram: 'https://www.instagram.com/normalfinance.io',
   },
-  blog: 'https://blog.normalfinance.io/',
+  blog: 'https://normalfi.substack.com/',
   docs: 'https://normalfinance.gitbook.io/docs',
   // main
   explore: '/explore',
