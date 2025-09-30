@@ -2,150 +2,80 @@
 
 import React from 'react';
 import { useTranslate } from '@/locales';
-
 import Grid2 from '@mui/material/Grid2';
-import { Box, Paper, Container, Typography, CardContent } from '@mui/material';
+import { Box, Paper, Container, Typography, CardContent, Stack } from '@mui/material';
 
 /* -------------------------------------------------------------------------- */
-/*                                 Prop Types                                 */
+/*                                   Types                                    */
 /* -------------------------------------------------------------------------- */
 
-type ImageProps = {
-  src: string;
-  alt?: string;
+type Img = { src: string; alt?: string };
+
+type TopCard = {
+  image: Img;
+  title: string;
+  description: string;
 };
 
-type StatCardProps = {
-  icon: {
-    src: string;
-    alt: string;
-  };
+type BottomCard = {
+  icon: Img;
+  title: string;
   description: string;
 };
 
 type Props = {
   heading: string;
-  description: string;
-  image: ImageProps;
-  stats: StatCardProps[];
+  topCards: [TopCard, TopCard];
+  bottomCards: [BottomCard, BottomCard, BottomCard];
 };
 
 export type VisionProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
 /* -------------------------------------------------------------------------- */
-/*                                Defaults                                    */
+/*                                 Defaults                                   */
 /* -------------------------------------------------------------------------- */
 
 export const VisionDefaults: Props = {
   heading: 'Our Vision',
-  description:
-    'We see a future where self‑custody and sophisticated portfolio strategies live together. By 2030, we aim to:',
-  image: {
-    src: '/assets/images/about/team2.webp',
-    alt: 'Team image 2',
-  },
-  stats: [
+  topCards: [
     {
-      icon: {
-        src: '/assets/images/about/i6.svg',
-        alt: 'Icon 1',
+      image: {
+        src: '/assets/images/about/diversify.webp',
+        alt: '1-Click diversification',
       },
+      title: '1-Click diversification',
       description:
-        '1‑Click diversification in any chain‑agnostic wallet—gas‑abstracted mint & redeem.',
+        'Build a balanced portfolio instantly with custom crypto baskets in a single tap.',
     },
     {
-      icon: {
-        src: '/assets/images/about/i7.svg',
-        alt: 'Icon 2',
-      },
+      image: { src: '/assets/images/about/world-map.webp', alt: 'Borderless Access' },
+      title: 'Borderless Access',
       description:
-        'Sub‑second swaps & deep liquidity across all Normal indexes and synthetic assets.',
+        'Trade and invest globally without barriers. Wherever you are, Normal connects you to opportunities.',
+    },
+  ],
+  bottomCards: [
+    {
+      icon: { src: '/assets/images/about/n1.svg', alt: 'Swaps' },
+      title: 'Sub-Second Swaps & Deep Liquidity',
+      description: 'Execute trades instantly with optimized routing and deep liquidity pools.',
     },
     {
-      icon: {
-        src: '/assets/images/about/i8.svg',
-        alt: 'Icon 3',
-      },
+      icon: { src: '/assets/images/about/n2.svg', alt: 'Governance' },
+      title: '100 % Community Governance',
       description:
-        '100 % community governance on upgrades, fees, and new product launches through NORM votes.',
+        'Every decision is driven by the community — powered by open participation and voting.',
+    },
+    {
+      icon: { src: '/assets/images/about/n3.svg', alt: 'Growth' },
+      title: 'Sustainable Growth',
+      description: 'Normal grows with the community — expanding responsibly, together.',
     },
   ],
 };
 
 /* -------------------------------------------------------------------------- */
-/*                              Vision Component                              */
-/* -------------------------------------------------------------------------- */
-
-export const Vision: React.FC<VisionProps> = (props) => {
-  const { t } = useTranslate();
-
-  const { heading, description, image, stats, ...sectionProps } = {
-    ...VisionDefaults,
-    ...props,
-  };
-
-  return (
-    <Box component="section" {...sectionProps} py={{ xs: 8, md: 12, lg: 14 }} id="our-vision">
-      <Container>
-        <Box maxWidth={600} mx="left" textAlign="left" mb={{ xs: 6, md: 9, lg: 10 }}>
-          <Typography
-            component="h2"
-            sx={{
-              fontWeight: 500,
-              fontSize: {
-                xs: '2rem',
-                md: '3rem',
-                lg: '3rem',
-              },
-              mb: { xs: 2, md: 3 },
-            }}
-          >
-            {t(heading)}
-          </Typography>
-          <Typography variant="body1">{t(description)}</Typography>
-        </Box>
-
-        <Grid2 container spacing={{ xs: 4, lg: 6 }} columns={{ xs: 1, lg: 12 }}>
-          <Grid2
-            size={{ xs: 12, lg: 5 }}
-            display="flex"
-            flexDirection={{ xs: 'column', md: 'row', lg: 'column' }}
-            gap={3}
-          >
-            {stats.map((stat, index) => (
-              <StatCard key={index} {...stat} />
-            ))}
-          </Grid2>
-
-          <Grid2
-            size={{ xs: 12, lg: 7 }}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Box
-              component="img"
-              src={image.src}
-              alt={image.alt}
-              sx={{
-                width: '100%',
-                objectFit: 'cover',
-                borderRadius: 3,
-                border: 5,
-                borderStyle: 'solid',
-                borderColor: 'divider',
-                aspectRatio: '1/1',
-              }}
-            />
-          </Grid2>
-        </Grid2>
-      </Container>
-    </Box>
-  );
-};
-
-/* -------------------------------------------------------------------------- */
-/*                                StatCard                                    */
+/*                                   Styles                                   */
 /* -------------------------------------------------------------------------- */
 
 const paperSx = {
@@ -153,35 +83,106 @@ const paperSx = {
   borderRadius: 3,
 };
 
-const cardPadding = { xs: 2.5, md: 4 };
+const topCardPadding = { xs: 3, md: 4 };
+const bottomCardPadding = { xs: 2.5, md: 3.5 };
 
-const StatCard: React.FC<StatCardProps> = ({ icon, description }) => {
+/* -------------------------------------------------------------------------- */
+/*                              Helper Components                              */
+/* -------------------------------------------------------------------------- */
+
+const TopFeatureCard: React.FC<TopCard> = ({ image, title, description }) => (
+  <Paper variant="outlined" sx={{ ...paperSx, height: '100%' }}>
+    <Stack p={topCardPadding} height="100%">
+      <Box
+        component="img"
+        src={image.src}
+        alt={image.alt}
+        sx={{
+          width: '100%',
+          height: { xs: 200, md: 260 },
+          objectFit: 'contain',
+          borderRadius: 2,
+        }}
+        mb={4}
+      />
+      <Typography variant="subtitle1" fontWeight={700} mb={1}>
+        {title}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+    </Stack>
+  </Paper>
+);
+
+const BottomStatCard: React.FC<BottomCard> = ({ icon, title, description }) => (
+  <Paper variant="outlined" sx={{ ...paperSx, height: '100%' }}>
+    <CardContent sx={{ p: bottomCardPadding }}>
+      <Box mb={2.5}>
+        <Box component="img" src={icon.src} alt={icon.alt} sx={{ width: 44, height: 44 }} />
+      </Box>
+      <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+        {title}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+    </CardContent>
+  </Paper>
+);
+
+/* -------------------------------------------------------------------------- */
+/*                               Main Component                                */
+/* -------------------------------------------------------------------------- */
+
+export const Vision: React.FC<VisionProps> = (props) => {
   const { t } = useTranslate();
 
+  const { heading, topCards, bottomCards, ...sectionProps } = {
+    ...VisionDefaults,
+    ...props,
+  };
+
   return (
-    <Paper variant="outlined" sx={{ ...paperSx }}>
-      <CardContent sx={{ p: cardPadding }}>
-        <Box mb={5}>
-          <Box
+    <Box component="section" {...sectionProps} py={{ xs: 8, md: 12, lg: 14 }} id="our-vision">
+      <Container>
+        <Box maxWidth={720} textAlign="left" mb={{ xs: 4, md: 6 }}>
+          <Typography
+            component="h2"
             sx={{
-              backgroundColor: 'background.paper',
-              width: 64,
-              height: 64,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              border: 1,
-              borderColor: 'divider',
-              zIndex: 10,
+              fontWeight: 500,
+              fontSize: { xs: '2rem', md: '2.5rem', lg: '3rem' },
+              lineHeight: 1.15,
             }}
           >
-            <Box component="img" src={icon.src} alt={icon.alt} sx={{ width: 32, height: 32 }} />
-          </Box>
+            {t(heading)}
+          </Typography>
         </Box>
-        <Typography variant="body2">{t(description)}</Typography>
-      </CardContent>
-    </Paper>
+
+        {/* Top row: two small feature cards */}
+        <Grid2 container spacing={{ xs: 2, md: 2, lg: 2 }} mb={{ xs: 2, md: 2 }}>
+          <Grid2 size={{ xs: 12, lg: 6 }}>
+            <TopFeatureCard {...topCards[0]} />
+          </Grid2>
+          <Grid2 size={{ xs: 12, lg: 6 }}>
+            <TopFeatureCard {...topCards[1]} />
+          </Grid2>
+        </Grid2>
+
+        {/* Bottom row: three stat cards */}
+        <Grid2 container spacing={{ xs: 2, md: 2, lg: 2 }}>
+          <Grid2 size={{ xs: 12, md: 4 }}>
+            <BottomStatCard {...bottomCards[0]} />
+          </Grid2>
+          <Grid2 size={{ xs: 12, md: 4 }}>
+            <BottomStatCard {...bottomCards[1]} />
+          </Grid2>
+          <Grid2 size={{ xs: 12, md: 4 }}>
+            <BottomStatCard {...bottomCards[2]} />
+          </Grid2>
+        </Grid2>
+      </Container>
+    </Box>
   );
 };
 
