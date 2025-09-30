@@ -101,7 +101,7 @@ export const AboutHeader: React.FC = () => {
                 size="large"
                 onClick={handleScrollToVision}
                 sx={{
-                  borderRadius: 1,
+                  borderRadius: 2,
                   bgcolor: 'secondary.light',
                   '&:hover': { bgcolor: 'secondary.light' },
                   color: 'text.primary',
@@ -116,7 +116,7 @@ export const AboutHeader: React.FC = () => {
                 size="large"
                 onClick={() => router.push('/roadmap')}
                 sx={{
-                  borderRadius: 1,
+                  borderRadius: 2,
                   bgcolor: 'white',
                   '&:hover': { bgcolor: 'white' },
                   color: 'text.primary',
