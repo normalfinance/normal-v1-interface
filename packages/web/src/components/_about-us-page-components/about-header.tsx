@@ -45,6 +45,25 @@ export const AboutHeader: React.FC = () => {
   return (
     <Box component="section" py={{ xs: 8, md: 12, lg: 14 }} bgcolor="#F9FAFB">
       <Container>
+        <Grid2 size={{ xs: 12, md: 6 }} mb={{ xs: 2, md: 4 }}>
+          <Box
+            sx={{
+              display: 'inline-flex',
+              borderRadius: 1,
+              fontSize: 12,
+              bgcolor: 'white',
+              '&:hover': { bgcolor: 'white' },
+              color: 'text.primary',
+              border: 1,
+              borderColor: 'grey.300',
+              px: 1,
+              py: 0.5,
+              fontWeight: 'bold',
+            }}
+          >
+            {t('About')}
+          </Box>
+        </Grid2>
         <Grid2
           container
           spacing={{ xs: 1.5, lg: 5 }}
@@ -78,11 +97,13 @@ export const AboutHeader: React.FC = () => {
             <Stack direction="row" gap={2} mt={4}>
               <Button
                 variant="contained"
+                size="large"
                 onClick={handleScrollToVision}
                 sx={{
                   borderRadius: 1,
-                  bgcolor: 'text.primary',
-                  '&:hover': { bgcolor: 'text.primary' },
+                  bgcolor: 'secondary.light',
+                  '&:hover': { bgcolor: 'secondary.light' },
+                  color: 'text.primary',
                 }}
               >
                 {t('Our vision')}
@@ -91,11 +112,15 @@ export const AboutHeader: React.FC = () => {
               {/* Navigate to /roadmap */}
               <Button
                 variant="contained"
+                size="large"
                 onClick={() => router.push('/roadmap')}
                 sx={{
                   borderRadius: 1,
-                  bgcolor: 'text.secondary',
-                  '&:hover': { bgcolor: 'text.secondary' },
+                  bgcolor: 'white',
+                  '&:hover': { bgcolor: 'white' },
+                  color: 'text.primary',
+                  border: 1,
+                  borderColor: 'grey.300',
                 }}
               >
                 {t('Roadmap')}
