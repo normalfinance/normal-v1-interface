@@ -323,6 +323,8 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
       p={1}
       bgcolor="white"
       sx={{
+        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+        transition: 'transform 120ms ease, box-shadow 120ms ease',
         borderRadius: 2,
       }}
     >
