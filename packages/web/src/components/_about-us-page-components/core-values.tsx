@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { useTranslate } from '@/locales';
+
 import Grid2 from '@mui/material/Grid2';
-import { Box, Container, Paper, Stack, Typography } from '@mui/material';
+import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 /* --------------------------------- Types --------------------------------- */
 

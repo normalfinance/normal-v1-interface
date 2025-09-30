@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { useTranslate } from '@/locales';
-import { Box, Container, Typography } from '@mui/material';
+
 import FavoriteIcon from '@mui/icons-material/Favorite'; // ❤️ MUI heart
+import { Box, Container, Typography } from '@mui/material';
 
 type ImageProps = {
   url?: string;

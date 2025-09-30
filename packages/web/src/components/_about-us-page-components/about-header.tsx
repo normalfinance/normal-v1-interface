@@ -3,8 +3,9 @@
 import React from 'react';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
+
 import Grid2 from '@mui/material/Grid2';
-import { Box, Button, Container, Link, Stack, Typography } from '@mui/material';
+import { Box, Link, Stack, Button, Container, Typography } from '@mui/material';
 
 type LogoItem = {
   name: string;
