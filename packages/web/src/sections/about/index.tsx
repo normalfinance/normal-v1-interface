@@ -13,8 +13,8 @@ const AboutUsView: React.FC = () => (
   <>
     <AboutHeader />
     <Vision />
-    <CoreValues />
     <Moments />
+    <CoreValues />
     <TestimonialGrid />
     <StatsGrid />
     <Team />

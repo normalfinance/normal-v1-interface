@@ -136,9 +136,6 @@ export const AboutHeader: React.FC = () => {
             width: '100%',
             objectFit: 'cover',
             borderRadius: 3,
-            border: 5,
-            borderStyle: 'solid',
-            borderColor: 'divider',
           }}
         />
 
