@@ -317,8 +317,16 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
   const { t } = useTranslate();
 
   return (
-    <Box display="flex" flexDirection="column">
-      <Box position="relative" width="100%" paddingTop="100%" mb={2} sx={{ overflow: 'hidden' }}>
+    <Box
+      display="flex"
+      flexDirection="column"
+      p={1}
+      bgcolor="white"
+      sx={{
+        borderRadius: 2,
+      }}
+    >
+      <Box position="relative" width="100%" paddingTop="100%" mb={1} sx={{ overflow: 'hidden' }}>
         <Box
           component="img"
           src={member.image.src}
@@ -330,20 +338,14 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
             width: '100%',
             objectFit: 'cover',
             borderRadius: 2,
-            border: 2,
-            borderStyle: 'solid',
-            borderColor: 'divider',
             aspectRatio: 1 / 1,
           }}
         />
       </Box>
       <Box
-        mb={1.5}
         sx={{
-          backgroundColor: 'background.paper',
+          backgroundColor: 'grey.100',
           borderRadius: 2,
-          border: 2,
-          borderColor: 'divider',
           p: 3,
         }}
       >
