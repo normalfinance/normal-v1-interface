@@ -85,7 +85,7 @@ export const Vision: React.FC<VisionProps> = (props) => {
   };
 
   return (
-    <Box component="section" {...sectionProps} py={{ xs: 8, md: 12, lg: 14 }}>
+    <Box component="section" {...sectionProps} py={{ xs: 8, md: 12, lg: 14 }} id="our-vision">
       <Container>
         <Box maxWidth={600} mx="left" textAlign="left" mb={{ xs: 6, md: 9, lg: 10 }}>
           <Typography

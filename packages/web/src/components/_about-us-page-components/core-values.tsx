@@ -84,6 +84,7 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
       component="section"
       {...sectionProps}
       py={{ xs: 8, md: 12, lg: 14, backgroundColor: '#F9FAFB' }}
+      id="core-values"
     >
       <Container>
         <Grid2 container spacing={{ xs: 4, md: 6 }} alignItems="flex-start">
