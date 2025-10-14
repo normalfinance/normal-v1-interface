@@ -17,13 +17,14 @@ import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
 
 import type { SmallCard } from './features-grid';
+import { cdn } from '@/utils/cdn';
 
 export const tokens: Token[] = [
   {
     id: '<insert_pool_address>',
     name: 'Bitcoin',
     symbol: 'BTC',
-    icon: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+    icon: cdn('tokens/bitcoin.webp'),
     usdValue: 67600.18,
     percentageChange: 2.45435,
     decimals: 7,
@@ -34,7 +35,7 @@ export const tokens: Token[] = [
     id: '<insert_pool_address>',
     name: 'Ethereum',
     symbol: 'ETH',
-    icon: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+    icon: cdn('tokens/ethereum.webp'),
     usdValue: 3150,
     percentageChange: 1.1,
     decimals: 7,
@@ -45,7 +46,7 @@ export const tokens: Token[] = [
     id: '<insert_pool_address>',
     name: 'Solana',
     symbol: 'SOL',
-    icon: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+    icon: cdn('tokens/solana.webp'),
     usdValue: 141,
     percentageChange: -0.8,
     decimals: 7,
@@ -56,7 +57,7 @@ export const tokens: Token[] = [
     id: '<insert_pool_address>',
     name: 'XRP',
     symbol: 'XRP',
-    icon: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
+    icon: cdn('tokens/xrp.webp'),
     usdValue: 0.48,
     percentageChange: 0.5,
     decimals: 7,
