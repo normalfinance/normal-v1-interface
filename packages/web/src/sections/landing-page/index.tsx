@@ -10,6 +10,8 @@ import { logger } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
 import { useQueryParams } from '@/hooks/use-query-params';
 
+import AnimatedPoolsFeature from '@/components/ui/animated-pools-feature';
+
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
 import { HeroHeader } from './hero-header';
@@ -92,12 +94,9 @@ export const featureCardTall = {
   icon: <Icon icon="mage:chart-fill" width={14} height={14} />,
   tagline: 'Liquidity',
   heading: 'Provide liquidity to pools on Normal and create indexes to earn yield.',
-  image: {
-    src: '/assets/images/landing-page/pools-feature.svg',
-    alt: 'Pools',
-  },
+  image: { component: <AnimatedPoolsFeature /> },
   url: 'https://normalfinance.gitbook.io/docs/getting-started/guides/providing-liquidity',
-};
+} as const;
 
 export const featureCardWide = {
   icon: <Icon icon="mdi:code-tags" width={14} />,

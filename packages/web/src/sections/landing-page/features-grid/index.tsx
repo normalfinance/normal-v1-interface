@@ -15,13 +15,19 @@ import IndexBasketArt from '@/components/ui/index-basket-art';
 
 /* ––––– Types ––––– */
 
-type Image = { src: string; alt?: string };
+type ImageSrc = { src: string; alt?: string };
+type ImageNode = { component: React.ReactNode };
+type ImageLike = ImageSrc | ImageNode;
+
+const hasSrc = (img: ImageLike): img is ImageSrc => typeof (img as any)?.src === 'string';
+
+const hasComponent = (img: ImageLike): img is ImageNode => (img as any)?.component !== undefined;
 
 interface CardBase {
   icon?: React.ReactElement;
   tagline: string;
   heading: string;
-  image?: Image;
+  image?: ImageLike;
   url?: string;
 }
 
@@ -57,7 +63,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
   const isLink = Boolean(c.url);
   const [hovered, setHovered] = React.useState(false);
 
-  const isIndexesArt = typeof c.image?.src === 'string' && c.image.src.includes('basket.svg');
+  const isIndexesArt = !!c.image && hasSrc(c.image) && c.image.src.includes('basket.svg');
 
   return (
     <Paper
@@ -242,28 +248,16 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
           )}
 
           {/* optional image (placed last for mobile flow) */}
-          {c.image && (
-            <Box
-              flexShrink={0}
-              width={{
-                xs: '100%',
-                md: '100%',
-              }}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {isIndexesArt ? (
+          {c.image &&
+            (hasSrc(c.image) ? (
+              isIndexesArt ? (
                 <Box
-                  sx={{ mt: 4, px: { xs: 2, md: 4 } }}
-                  width={{
-                    xs: '100%',
-                    md: '60%',
-                  }}
+                  sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  width={{ xs: '100%', md: '100%' }}
                 >
-                  <IndexBasketArt />
+                  <Box sx={{ mt: 4, px: { xs: 2, md: 4 } }} width={{ xs: '100%', md: '60%' }}>
+                    <IndexBasketArt />
+                  </Box>
                 </Box>
               ) : (
                 <Box
@@ -274,9 +268,12 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   height="auto"
                   sx={{ objectFit: 'cover', mt: 4 }}
                 />
-              )}
-            </Box>
-          )}
+              )
+            ) : hasComponent(c.image) ? (
+              <Box sx={{ mt: 4, px: { xs: 2, md: 4 } }} width={{ xs: '100%', md: '60%' }}>
+                {c.image.component}
+              </Box>
+            ) : null)}
         </Stack>
       </Box>
     </Paper>
@@ -332,16 +329,21 @@ const TallCardItem: React.FC<TallCard> = (c) => {
             {c.heading}
           </Typography>
         </Stack>
-        {c.image && (
-          <Box
-            component="img"
-            src={c.image.src}
-            alt={c.image.alt}
-            px={{ xs: 3, md: 4 }}
-            pb={{ xs: 3, md: 4 }}
-            width="100%"
-          />
-        )}
+        {c.image &&
+          (hasSrc(c.image) ? (
+            <Box
+              component="img"
+              src={c.image.src}
+              alt={c.image.alt}
+              px={{ xs: 3, md: 4 }}
+              pb={{ xs: 3, md: 4 }}
+              width="100%"
+            />
+          ) : hasComponent(c.image) ? (
+            <Box px={{ xs: 3, md: 4 }} pb={{ xs: 3, md: 4 }} width="100%">
+              {c.image.component}
+            </Box>
+          ) : null)}
       </Box>
     </Paper>
   );
@@ -397,16 +399,21 @@ const WideCardItem: React.FC<WideCard> = (c) => {
           {c.heading}
         </Typography>
       </Stack>
-      {c.image && (
-        <Box
-          component="img"
-          src={c.image.src}
-          alt={c.image.alt}
-          px={{ xs: 3, md: 4 }}
-          pb={{ xs: 3, md: 4 }}
-          width="100%"
-        />
-      )}
+      {c.image &&
+        (hasSrc(c.image) ? (
+          <Box
+            component="img"
+            src={c.image.src}
+            alt={c.image.alt}
+            px={{ xs: 3, md: 4 }}
+            pb={{ xs: 3, md: 4 }}
+            width="100%"
+          />
+        ) : hasComponent(c.image) ? (
+          <Box px={{ xs: 3, md: 4 }} pb={{ xs: 3, md: 4 }} width="100%">
+            {c.image.component}
+          </Box>
+        ) : null)}
     </Paper>
   );
 };
