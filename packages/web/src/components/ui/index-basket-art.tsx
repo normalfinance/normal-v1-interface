@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { LazyMotion, domMax, m } from 'framer-motion';
+import { m, domMax, LazyMotion } from 'framer-motion';
 
 type Props = { style?: React.CSSProperties; className?: string };
 
