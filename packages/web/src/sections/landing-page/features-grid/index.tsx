@@ -11,6 +11,7 @@ import { fPercent, fCurrency } from '@/utils/format-number';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import IndexBasketArt from '@/components/ui/index-basket-art';
 
 /* ––––– Types ––––– */
 
@@ -54,11 +55,20 @@ const cardPadding = { xs: 2.5, md: 4 };
 const SmallCardItem: React.FC<SmallCard> = (c) => {
   const router = useRouter();
   const isLink = Boolean(c.url);
+  const [hovered, setHovered] = React.useState(false);
+
+  const isIndexesArt = typeof c.image?.src === 'string' && c.image.src.includes('basket.svg');
 
   return (
     <Paper
       variant="outlined"
       sx={{ ...paperSx, cursor: isLink ? 'pointer' : 'default' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)} // keyboard focus
+      onBlur={() => setHovered(false)}
+      onTouchStart={() => setHovered(true)} // mobile
+      onTouchEnd={() => setHovered(false)}
       onClick={() => isLink && router.push(c.url!)}
       role={isLink ? 'link' : undefined}
       tabIndex={isLink ? 0 : undefined}
@@ -235,16 +245,36 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
           {c.image && (
             <Box
               flexShrink={0}
-              width={{ xs: '100%', md: '100%', display: 'flex', justifyContent: 'center' }}
+              width={{
+                xs: '100%',
+                md: '100%',
+              }}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <Box
-                component="img"
-                src={c.image.src}
-                alt={c.image.alt}
-                width="50%"
-                height="auto"
-                sx={{ objectFit: 'cover', mt: 4 }}
-              />
+              {isIndexesArt ? (
+                <Box
+                  sx={{ mt: 4, px: { xs: 2, md: 4 } }}
+                  width={{
+                    xs: '100%',
+                    md: '60%',
+                  }}
+                >
+                  <IndexBasketArt />
+                </Box>
+              ) : (
+                <Box
+                  component="img"
+                  src={c.image.src}
+                  alt={c.image.alt}
+                  width="50%"
+                  height="auto"
+                  sx={{ objectFit: 'cover', mt: 4 }}
+                />
+              )}
             </Box>
           )}
         </Stack>

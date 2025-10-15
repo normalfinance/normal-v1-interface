@@ -4,6 +4,7 @@ import type { SwapQueryParams } from '@/types/query-params';
 import type { StateToken as Token } from '@normalfinance/types';
 
 import { useEffect } from 'react';
+import { cdn } from '@/utils/cdn';
 import { Icon } from '@iconify/react';
 import { logger } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
@@ -17,7 +18,6 @@ import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
 
 import type { SmallCard } from './features-grid';
-import { cdn } from '@/utils/cdn';
 
 export const tokens: Token[] = [
   {
@@ -81,7 +81,7 @@ export const featureCardsSmall: [SmallCard, SmallCard] = [
     tagline: 'Indexes',
     heading: 'Diversify with ease. Custom crypto baskets in seconds.',
     image: {
-      src: '/assets/images/landing-page/index-feature.svg',
+      src: '/assets/images/landing-page/basket.svg',
       alt: 'Indexes',
     },
     url: 'https://normalfinance.gitbook.io/docs/getting-started/crypto-index-funds',
