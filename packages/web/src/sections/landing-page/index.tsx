@@ -10,6 +10,7 @@ import { logger } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
 import { useQueryParams } from '@/hooks/use-query-params';
 
+import AnimatedDevFeature2 from '@/components/ui/animated-dev-feature';
 import AnimatedPoolsFeature from '@/components/ui/animated-pools-feature';
 
 import { CtaImage } from './cta';
@@ -102,10 +103,7 @@ export const featureCardWide = {
   icon: <Icon icon="mdi:code-tags" width={14} />,
   tagline: 'Developer docs',
   heading: 'Expand the possibilities of your applications with Normal Tokens.',
-  image: {
-    src: '/assets/images/landing-page/dev-feature.svg',
-    alt: 'Developers',
-  },
+  image: { component: <AnimatedDevFeature2 imageSrc={cdn('homepage/chart.webp')} /> },
   url: 'https://normalfinance.gitbook.io/docs/developers/the-normal-amm',
 };
 
