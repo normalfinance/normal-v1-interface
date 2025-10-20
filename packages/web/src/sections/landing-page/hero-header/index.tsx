@@ -14,6 +14,7 @@ import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 import SwapCard from '@/components/_common/swap-card';
 
 import { WavyBackground } from './wavy-background';
+import { cdn } from '@/utils/cdn';
 
 type ImageProps = {
   src: string;
@@ -270,16 +271,16 @@ export const HeroHeaderDefaults: Props = {
   description:
     'The largest on-chain catalogue of synthetic crypto and real-world assets built on Stellar, secured by Halborn.',
   image: {
-    src: '/assets/images/landing-page/stellar-logo.webp',
+    src: cdn('homepage/stellar-logo.webp'),
     alt: 'Stellar Logo Long',
   },
   halbornImage: {
-    src: '/assets/images/landing-page/halborn-logo.webp',
+    src: cdn('homepage/halborn-logo.webp'),
     alt: 'Stellar Logo Long',
   },
   tagline: 'Crypto that just works',
   taglineLogo: {
-    src: '/assets/images/landing-page/normal-long.svg',
+    src: cdn('homepage/normal-long.svg'),
     alt: 'Normal Logo Long',
   },
 };

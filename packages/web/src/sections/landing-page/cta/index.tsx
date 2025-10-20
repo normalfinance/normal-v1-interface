@@ -5,6 +5,7 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 
 import { Box, Stack, Button, Container, Typography, type ButtonProps } from '@mui/material';
+import { cdn } from '@/utils/cdn';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -31,7 +32,7 @@ export const CtaImage: React.FC<CtaImageProps> = ({
     { title: 'Button', variant: 'contained', color: 'primary' },
     { title: 'Button', variant: 'outlined', color: 'primary' },
   ],
-  image = '/assets/images/landing-page/cta-bg.webp',
+  image = cdn('homepage/cta-bg.webp'),
   ...sectionProps
 }) => {
   const { t } = useTranslate();
