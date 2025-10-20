@@ -5,6 +5,7 @@ import { useTranslate } from '@/locales';
 
 import FavoriteIcon from '@mui/icons-material/Favorite'; // ❤️ MUI heart
 import { Box, Container, Typography } from '@mui/material';
+import { cdn } from '@/utils/cdn';
 
 type ImageProps = {
   url?: string;
@@ -25,12 +26,12 @@ export const MomentsDefaults: Props = {
   description:
     'We believe great work starts with great relationships. From impromptu coffee runs to cross-team hackathons and weekend hikes, these snapshots capture the energy, laughter, and collaboration that fuel our day-to-day.',
   images: [
-    { url: '#', src: '/assets/images/about/t1.webp', alt: 'Team image 1' },
-    { url: '#', src: '/assets/images/about/t2.webp', alt: 'Team image 2' },
-    { url: '#', src: '/assets/images/about/t3.webp', alt: 'Team image 3' },
-    { url: '#', src: '/assets/images/about/t4.webp', alt: 'Team image 4' },
-    { url: '#', src: '/assets/images/about/t5.webp', alt: 'Team image 5' },
-    { url: '#', src: '/assets/images/about/t7.webp', alt: 'Team image 7' },
+    { url: '#', src: cdn('about-page/t1.webp'), alt: 'Team image 1' },
+    { url: '#', src: cdn('about-page/t2.webp'), alt: 'Team image 2' },
+    { url: '#', src: cdn('about-page/t3.webp'), alt: 'Team image 3' },
+    { url: '#', src: cdn('about-page/t4.webp'), alt: 'Team image 4' },
+    { url: '#', src: cdn('about-page/t5.webp'), alt: 'Team image 5' },
+    { url: '#', src: cdn('about-page/t6.webp'), alt: 'Team image 7' },
   ],
 };
 

@@ -5,6 +5,7 @@ import { useTranslate } from '@/locales';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
+import { cdn } from '@/utils/cdn';
 
 /* --------------------------------- Types --------------------------------- */
 
@@ -31,27 +32,27 @@ export const CoreValuesDefaults: Props = {
   heading: 'Core Values',
   features: [
     {
-      icon: { src: '/assets/images/about/i1.svg', alt: 'Icon 1' },
+      icon: { src: cdn('about-page/i1.svg'), alt: 'Icon 1' },
       heading: 'Keep Crypto Human',
       description: 'Remove complexity, speak plainly, design for real people.',
     },
     {
-      icon: { src: '/assets/images/about/i2.svg', alt: 'Icon 2' },
+      icon: { src: cdn('about-page/i2.svg'), alt: 'Icon 2' },
       heading: 'Security First',
       description: 'Audited contracts, battle-tested code, and 24/7 monitoring.',
     },
     {
-      icon: { src: '/assets/images/about/i3.svg', alt: 'Icon 3' },
+      icon: { src: cdn('about-page/i3.svg'), alt: 'Icon 3' },
       heading: 'Permissionless Innovation',
       description: 'Build composable primitives that anyone can extend.',
     },
     {
-      icon: { src: '/assets/images/about/i4.svg', alt: 'Icon 4' },
+      icon: { src: cdn('about-page/i4.svg'), alt: 'Icon 4' },
       heading: 'Community Ownership',
       description: 'NORM token holders create and vote on proposals.',
     },
     {
-      icon: { src: '/assets/images/about/i5.svg', alt: 'Icon 5' },
+      icon: { src: cdn('about-page/i5.svg'), alt: 'Icon 5' },
       heading: 'Data > Hype',
       description: 'Let on-chain metrics guide every product decision.',
     },

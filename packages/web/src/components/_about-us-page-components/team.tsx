@@ -11,6 +11,7 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import { Box, Grid, Container, Typography } from '@mui/material';
+import { cdn } from '@/utils/cdn';
 
 type ImageProps = {
   src: string;
@@ -62,7 +63,7 @@ export const TeamDefaults: Props = {
   teamMembers: [
     {
       image: {
-        src: '/assets/images/about/josh.webp',
+        src: cdn('about-page/josh.webp'),
         alt: 'Joshua Blew',
       },
       name: 'Joshua Blew',
@@ -87,7 +88,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/just.webp',
+        src: cdn('about-page/just.webp'),
         alt: 'Justin Benjamin',
       },
       name: 'Justin Benjamin',
@@ -111,7 +112,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/avm.webp',
+        src: cdn('about-page/avm.webp'),
         alt: 'Amit Anand',
       },
       name: 'Amit Anand',
@@ -132,7 +133,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/jake.webp',
+        src: cdn('about-page/jake.webp'),
         alt: 'Jake Penzato',
       },
       name: 'Jake Penzato',
@@ -153,7 +154,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/niko.webp',
+        src: cdn('about-page/niko.webp'),
         alt: 'Niko Gorjan',
       },
       name: 'Niko Gorjan',
@@ -177,7 +178,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/jay.webp',
+        src: cdn('about-page/jay.webp'),
         alt: 'Jay Malve',
       },
       name: 'Jay Malve',
@@ -201,7 +202,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/anth.webp',
+        src: cdn('about-page/anth.webp'),
         alt: 'Anthony Benjamin',
       },
       name: 'Anthony Benjamin',
@@ -225,7 +226,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/john.webp',
+        src: cdn('about-page/john.webp'),
         alt: 'John Reyes',
       },
       name: 'John Reyes',
@@ -246,7 +247,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/zeal.webp',
+        src: cdn('about-page/zeal.webp'),
         alt: 'Chief Doge',
       },
       name: 'Zeal',

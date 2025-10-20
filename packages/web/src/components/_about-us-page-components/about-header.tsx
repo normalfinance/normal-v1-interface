@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Link, Stack, Button, Container, Typography } from '@mui/material';
-import { cdn } from '@/utils/cdn';
 
 type LogoItem = {
   name: string;
