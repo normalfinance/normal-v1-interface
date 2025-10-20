@@ -410,7 +410,11 @@ const WideCardItem: React.FC<WideCard> = (c) => {
             width="100%"
           />
         ) : hasComponent(c.image) ? (
-          <Box px={{ xs: 3, md: 4 }} pb={{ xs: 3, md: 4 }} width="100%">
+          <Box
+            px={{ xs: 3, md: 4 }}
+            sx={{ display: 'flex', alignItems: 'end', justifyContent: 'end' }}
+            width="100%"
+          >
             {c.image.component}
           </Box>
         ) : null)}

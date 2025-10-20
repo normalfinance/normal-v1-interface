@@ -44,7 +44,7 @@ export const AboutHeader: React.FC = () => {
   };
 
   return (
-    <Box component="section" py={{ xs: 8, md: 12, lg: 14 }} bgcolor="#F9FAFB">
+    <Box component="section" py={{ xs: 8, md: 12, lg: 14 }} bgcolor="#F8FAFC">
       <Container>
         <Grid2 size={{ xs: 12, md: 6 }} mb={{ xs: 2, md: 4 }}>
           <Box

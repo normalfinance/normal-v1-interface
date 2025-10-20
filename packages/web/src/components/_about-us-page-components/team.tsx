@@ -281,7 +281,7 @@ export const Team: React.FC<TeamProps> = (props) => {
       component="section"
       {...sectionProps}
       py={{ xs: 8, md: 12, lg: 14 }}
-      sx={{ backgroundColor: '#F9FAFB' }}
+      sx={{ backgroundColor: '#F8FAFC' }}
     >
       <Container>
         <Box maxWidth={600} mb={{ xs: 6, md: 9, lg: 10 }}>
