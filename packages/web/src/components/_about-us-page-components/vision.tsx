@@ -1,12 +1,16 @@
 'use client';
 
+import type { StateToken as Token } from '@normalfinance/types';
+
 import React from 'react';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Paper, Stack, Container, Typography, CardContent } from '@mui/material';
+
 import WorldMap from '../ui/world-map';
-import { cdn } from '@/utils/cdn';
+import LoadingCoins from '../ui/loading-coins';
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
@@ -77,6 +81,53 @@ export const VisionDefaults: Props = {
   ],
 };
 
+export const tokens: Token[] = [
+  {
+    id: '<insert_pool_address>',
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    icon: cdn('about-page/btc-flat.svg'),
+    usdValue: 67600.18,
+    percentageChange: 2.45435,
+    decimals: 7,
+    balance: 0,
+    featured: false,
+  },
+  {
+    id: '<insert_pool_address>',
+    name: 'Ethereum',
+    symbol: 'ETH',
+    icon: cdn('about-page/eth-flat.svg'),
+    usdValue: 3150,
+    percentageChange: 1.1,
+    decimals: 7,
+    balance: 0,
+    featured: false,
+  },
+  {
+    id: '<insert_pool_address>',
+    name: 'XRP',
+    symbol: 'XRP',
+    icon: cdn('about-page/xrp-flat.svg'),
+    usdValue: 0.48,
+    percentageChange: 0.5,
+    decimals: 7,
+    balance: 0,
+    featured: false,
+  },
+  {
+    id: '<insert_pool_address>',
+    name: 'Cardano',
+    symbol: 'ADA',
+    icon: cdn('about-page/ada-flat.svg'),
+    usdValue: 0.32,
+    percentageChange: -0.8,
+    decimals: 7,
+    balance: 0,
+    featured: false,
+  },
+];
+
 /* -------------------------------------------------------------------------- */
 /*                                   Styles                                   */
 /* -------------------------------------------------------------------------- */
@@ -104,7 +155,7 @@ const TopFeatureCard: React.FC<TopCard & { map?: boolean }> = ({
       <Box
         sx={{
           width: '100%',
-          height: { xs: 200, md: 260 },
+          height: { xs: 320, md: 320 },
           borderRadius: 2,
           mb: 4,
         }}
@@ -146,12 +197,7 @@ const TopFeatureCard: React.FC<TopCard & { map?: boolean }> = ({
             ]}
           />
         ) : (
-          <Box
-            component="img"
-            src={image.src}
-            alt={image.alt}
-            sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
+          <LoadingCoins tokens={tokens} />
         )}
       </Box>
       <Typography variant="subtitle1" fontWeight={700} mb={1}>
@@ -214,7 +260,7 @@ export const Vision: React.FC<VisionProps> = (props) => {
             <TopFeatureCard {...topCards[0]} />
           </Grid2>
           <Grid2 size={{ xs: 12, lg: 6 }}>
-            <TopFeatureCard {...topCards[1]} map={true} />
+            <TopFeatureCard {...topCards[1]} map />
           </Grid2>
         </Grid2>
 

@@ -17,18 +17,18 @@ type LogoItem = {
 
 const DEFAULT_LOGOS: LogoItem[] = [
   {
-    name: 'Notion',
+    name: 'Stellar',
     src: '/assets/images/landing-page/stellar-logo.webp',
     width: 82,
     height: 20,
-    href: 'https://www.notion.so',
+    href: 'https://stellar.org/',
   },
   {
     name: 'Mailchimp',
     src: '/assets/images/landing-page/halborn-logo.webp',
     width: 113,
     height: 13,
-    href: 'https://mailchimp.com',
+    href: 'https://www.halborn.com/',
   },
 ];
 
