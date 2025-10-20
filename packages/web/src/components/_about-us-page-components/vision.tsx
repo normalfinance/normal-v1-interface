@@ -148,7 +148,7 @@ const TopFeatureCard: React.FC<TopCard & { map?: boolean }> = ({
       <Box
         sx={{
           width: '100%',
-          height: { xs: 320, md: 320 },
+          height: { xs: 'auto', md: 320 },
           borderRadius: 2,
           mb: 4,
         }}
