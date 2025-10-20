@@ -11,6 +11,7 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 
 import { varBounce, MotionContainer } from '@/components/template/animate';
+import { cdn } from '@/utils/cdn';
 
 // ----------------------------------------------------------------------
 
@@ -39,7 +40,7 @@ export function NotFoundView() {
 
         <m.div variants={varBounce('in')}>
           <Image
-            src="/assets/illustrations/placeholders/404.svg"
+            src={cdn('placeholders/404.svg')}
             alt="404 - Page not found"
             width={400}
             height={300}

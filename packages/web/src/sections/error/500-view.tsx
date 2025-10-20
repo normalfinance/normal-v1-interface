@@ -11,6 +11,7 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 
 import { varBounce, MotionContainer } from '@/components/template/animate';
+import { cdn } from '@/utils/cdn';
 
 // ----------------------------------------------------------------------
 
@@ -37,7 +38,7 @@ export function View500() {
 
         <m.div variants={varBounce('in')}>
           <Image
-            src="/assets/illustrations/placeholders/server-error.svg"
+            src={cdn('placeholders/server-error.svg')}
             alt="500 - Server error"
             width={400}
             height={300}

@@ -6,6 +6,7 @@ import { DashboardContent } from '@/layouts/dashboard';
 
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import { cdn } from '@/utils/cdn';
 
 type SpecificNotFoundProps = {
   type: 'pool' | 'index' | 'default';
@@ -15,17 +16,17 @@ type SpecificNotFoundProps = {
 
 const notFoundConfig = {
   pool: {
-    src: '/assets/illustrations/placeholders/pool-not-found.svg',
+    src: cdn('placeholders/pool-not-found.svg'),
     defaultTitle: 'Pool Not Found',
     defaultDescription: "The pool you're looking for doesn't exist",
   },
   index: {
-    src: '/assets/illustrations/placeholders/index-not-found.svg',
+    src: cdn('placeholders/index-not-found.svg'),
     defaultTitle: 'Index Not Found',
     defaultDescription: "The index you're looking for doesn't exist",
   },
   default: {
-    src: '/assets/illustrations/placeholders/404.svg',
+    src: cdn('placeholders/404.svg'),
     defaultTitle: 'Page Not Found',
     defaultDescription: "Sorry, we couldn't find the page you're looking for.",
   },
