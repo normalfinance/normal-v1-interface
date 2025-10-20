@@ -5,6 +5,8 @@ import { useTranslate } from '@/locales';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Paper, Stack, Container, Typography, CardContent } from '@mui/material';
+import WorldMap from '../ui/world-map';
+import { cdn } from '@/utils/cdn';
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
@@ -91,21 +93,67 @@ const bottomCardPadding = { xs: 2.5, md: 3.5 };
 /*                              Helper Components                              */
 /* -------------------------------------------------------------------------- */
 
-const TopFeatureCard: React.FC<TopCard> = ({ image, title, description }) => (
+const TopFeatureCard: React.FC<TopCard & { map?: boolean }> = ({
+  image,
+  title,
+  description,
+  map = false,
+}) => (
   <Paper variant="outlined" sx={{ ...paperSx, height: '100%' }}>
     <Stack p={topCardPadding} height="100%">
       <Box
-        component="img"
-        src={image.src}
-        alt={image.alt}
         sx={{
           width: '100%',
           height: { xs: 200, md: 260 },
-          objectFit: 'contain',
           borderRadius: 2,
+          mb: 4,
         }}
-        mb={4}
-      />
+      >
+        {map ? (
+          <WorldMap
+            backgroundSrc={cdn('about-page/world-map.webp')}
+            dots={[
+              {
+                start: {
+                  lat: 64.2008,
+                  lng: -149.4937,
+                }, // Alaska (Fairbanks)
+                end: {
+                  lat: 34.0522,
+                  lng: -118.2437,
+                }, // Los Angeles
+              },
+              {
+                start: { lat: 64.2008, lng: -149.4937 }, // Alaska (Fairbanks)
+                end: { lat: -15.7975, lng: -47.8919 }, // Brazil (Brasília)
+              },
+              {
+                start: { lat: -15.7975, lng: -47.8919 }, // Brazil (Brasília)
+                end: { lat: 38.7223, lng: -9.1393 }, // Lisbon
+              },
+              {
+                start: { lat: 51.5074, lng: -0.1278 }, // London
+                end: { lat: 28.6139, lng: 77.209 }, // New Delhi
+              },
+              {
+                start: { lat: 28.6139, lng: 77.209 }, // New Delhi
+                end: { lat: 43.1332, lng: 131.9113 }, // Vladivostok
+              },
+              {
+                start: { lat: 28.6139, lng: 77.209 }, // New Delhi
+                end: { lat: -1.2921, lng: 36.8219 }, // Nairobi
+              },
+            ]}
+          />
+        ) : (
+          <Box
+            component="img"
+            src={image.src}
+            alt={image.alt}
+            sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
+        )}
+      </Box>
       <Typography variant="subtitle1" fontWeight={700} mb={1}>
         {title}
       </Typography>
@@ -166,7 +214,7 @@ export const Vision: React.FC<VisionProps> = (props) => {
             <TopFeatureCard {...topCards[0]} />
           </Grid2>
           <Grid2 size={{ xs: 12, lg: 6 }}>
-            <TopFeatureCard {...topCards[1]} />
+            <TopFeatureCard {...topCards[1]} map={true} />
           </Grid2>
         </Grid2>
 
