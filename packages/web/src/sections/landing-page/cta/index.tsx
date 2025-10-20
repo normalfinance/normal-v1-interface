@@ -1,11 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { cdn } from '@/utils/cdn';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 
 import { Box, Stack, Button, Container, Typography, type ButtonProps } from '@mui/material';
-import { cdn } from '@/utils/cdn';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */

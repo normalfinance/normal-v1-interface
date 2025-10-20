@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { cdn } from '@/utils/cdn';
 import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
 
 import Masonry from '@mui/lab/Masonry';
 import { Box, Paper, Stack, Avatar, Container, Typography, type ButtonProps } from '@mui/material';
-import { cdn } from '@/utils/cdn';
 
 type ImageProps = { src: string; alt?: string };
 

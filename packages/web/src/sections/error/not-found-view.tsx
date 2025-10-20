@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { m } from 'framer-motion';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 import { SimpleLayout } from '@/layouts/simple';
 import { RouterLink } from '@/routes/components';
@@ -11,7 +12,6 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 
 import { varBounce, MotionContainer } from '@/components/template/animate';
-import { cdn } from '@/utils/cdn';
 
 // ----------------------------------------------------------------------
 

@@ -198,7 +198,6 @@ export default function LoadingCoinsMouse({
                       }}
                     />
                   )}
-                  <Typography fontWeight={600}>{tok.name}</Typography>
                   <Typography fontWeight={500} color="text.secondary" sx={{ ml: 0.5 }}>
                     {tok.symbol}
                   </Typography>

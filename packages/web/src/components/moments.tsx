@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 
 import FavoriteIcon from '@mui/icons-material/Favorite'; // ❤️ MUI heart
 import { Box, Container, Typography } from '@mui/material';
-import { cdn } from '@/utils/cdn';
 
 type ImageProps = {
   url?: string;

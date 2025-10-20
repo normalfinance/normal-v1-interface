@@ -3,6 +3,7 @@
 import type { ButtonProps } from '@mui/material';
 
 import React from 'react';
+import { cdn } from '@/utils/cdn';
 import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
 
@@ -11,7 +12,6 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import { Box, Grid, Container, Typography } from '@mui/material';
-import { cdn } from '@/utils/cdn';
 
 type ImageProps = {
   src: string;

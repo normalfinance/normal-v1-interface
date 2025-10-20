@@ -1,12 +1,12 @@
 'use client';
 
 import Image from 'next/image';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { cdn } from '@/utils/cdn';
 
 type SpecificNotFoundProps = {
   type: 'pool' | 'index' | 'default';
