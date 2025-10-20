@@ -104,7 +104,7 @@ const WorldMap: React.FC<MapProps> = ({
                 strokeWidth="1"
                 initial={{ pathLength: 0 }}
                 whileInView={{ pathLength: 1 }}
-                viewport={{ amount: viewportAmount, margin: viewportMargin, once: false }}
+                viewport={{ amount: viewportAmount, margin: viewportMargin, once: true }}
                 transition={{
                   duration,
                   delay: baseDelay + stagger * i,
