@@ -19,7 +19,6 @@ import LoadingCoins from '../ui/loading-coins';
 type Img = { src: string; alt?: string };
 
 type TopCard = {
-  image: Img;
   title: string;
   description: string;
 };
@@ -46,16 +45,11 @@ export const VisionDefaults: Props = {
   heading: 'Our Vision',
   topCards: [
     {
-      image: {
-        src: '/assets/images/about/diversify.webp',
-        alt: '1-Click diversification',
-      },
       title: '1-Click diversification',
       description:
         'Build a balanced portfolio instantly with custom crypto baskets in a single tap.',
     },
     {
-      image: { src: '/assets/images/about/world-map.webp', alt: 'Borderless Access' },
       title: 'Borderless Access',
       description:
         'Trade and invest globally without barriers. Wherever you are, Normal connects you to opportunities.',
@@ -63,18 +57,18 @@ export const VisionDefaults: Props = {
   ],
   bottomCards: [
     {
-      icon: { src: '/assets/images/about/n1.svg', alt: 'Swaps' },
+      icon: { src: cdn('about-page/n1.svg'), alt: 'Swaps' },
       title: 'Sub-Second Swaps & Deep Liquidity',
       description: 'Execute trades instantly with optimized routing and deep liquidity pools.',
     },
     {
-      icon: { src: '/assets/images/about/n2.svg', alt: 'Governance' },
+      icon: { src: cdn('about-page/n2.svg'), alt: 'Governance' },
       title: '100 % Community Governance',
       description:
         'Every decision is driven by the community — powered by open participation and voting.',
     },
     {
-      icon: { src: '/assets/images/about/n3.svg', alt: 'Growth' },
+      icon: { src: cdn('about-page/n3.svg'), alt: 'Growth' },
       title: 'Sustainable Growth',
       description: 'Normal grows with the community — expanding responsibly, together.',
     },
@@ -145,7 +139,6 @@ const bottomCardPadding = { xs: 2.5, md: 3.5 };
 /* -------------------------------------------------------------------------- */
 
 const TopFeatureCard: React.FC<TopCard & { map?: boolean }> = ({
-  image,
   title,
   description,
   map = false,

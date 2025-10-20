@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Link, Stack, Button, Container, Typography } from '@mui/material';
+import { cdn } from '@/utils/cdn';
 
 type LogoItem = {
   name: string;
@@ -18,14 +19,14 @@ type LogoItem = {
 const DEFAULT_LOGOS: LogoItem[] = [
   {
     name: 'Stellar',
-    src: '/assets/images/landing-page/stellar-logo.webp',
+    src: cdn('homepage/stellar-logo.webp'),
     width: 82,
     height: 20,
     href: 'https://stellar.org/',
   },
   {
     name: 'Mailchimp',
-    src: '/assets/images/landing-page/halborn-logo.webp',
+    src: cdn('homepage/halborn-logo.webp'),
     width: 113,
     height: 13,
     href: 'https://www.halborn.com/',
