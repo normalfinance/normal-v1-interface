@@ -14,12 +14,13 @@ import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
   PoolContract,
-  LpTokenContract,
+  PoolElasticContract,
+  PoolPlaneContract,
+  ConfigStorageContract,
+  RewardsGaugeContract,
+  TokenShareContract,
   PoolRouterContract,
-  PoolSwapFeeContract,
   SorobanTokenContract,
-  InsuranceFundContract,
-  OracleRegistryContract,
   LiquidityCalculatorContract,
 } from '@normalfinance/contracts';
 
@@ -29,33 +30,36 @@ import Button from '@mui/material/Button';
 import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
 
 const contractClients = {
-  oracle_registry: OracleRegistryContract.Client,
-  pool_swap_fee: PoolSwapFeeContract.Client,
-  pool: PoolContract.Client,
   pool_router: PoolRouterContract.Client,
-  insurance_fund: InsuranceFundContract.Client,
+  pool: PoolContract.Client,
+  pool_elastic: PoolElasticContract.Client,
+  pool_plane: PoolPlaneContract.Client,
   liquidity_calculator: LiquidityCalculatorContract.Client,
-  lp_token: LpTokenContract.Client,
+  rewards_gauge: RewardsGaugeContract.Client,
+  config_storage: ConfigStorageContract.Client,
+  token_share: TokenShareContract.Client,
   token: SorobanTokenContract.Client,
 };
 
-type ContractClientType<T extends ContractType> = T extends 'oracle_registry'
-  ? OracleRegistryContract.Client
-  : T extends 'pool_swap_fee'
-    ? PoolSwapFeeContract.Client
-    : T extends 'pool'
-      ? PoolContract.Client
-      : T extends 'pool_router'
-        ? PoolRouterContract.Client
-        : T extends 'insurance_fund'
-          ? InsuranceFundContract.Client
-          : T extends 'liquidity_calculator'
-            ? LiquidityCalculatorContract.Client
-            : T extends 'lp_token'
-              ? LpTokenContract.Client
-              : T extends 'token'
-                ? SorobanTokenContract.Client
-                : never;
+type ContractClientType<T extends ContractType> = T extends 'pool_router'
+  ? PoolRouterContract.Client
+  : T extends 'pool'
+    ? PoolContract.Client
+    : T extends 'pool_elastic'
+      ? PoolElasticContract.Client
+      : T extends 'liquidity_calculator'
+        ? LiquidityCalculatorContract.Client
+        : T extends 'pool_plane'
+          ? PoolPlaneContract.Client
+          : T extends 'config_storage'
+            ? ConfigStorageContract.Client
+            : T extends 'rewards_gauge'
+              ? RewardsGaugeContract.Client
+              : T extends 'token_share'
+                ? TokenShareContract.Client
+                : T extends 'token'
+                  ? SorobanTokenContract.Client
+                  : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;
