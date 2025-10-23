@@ -1,4 +1,4 @@
-import type { u128, u256, u32, u64 } from '@stellar/stellar-sdk/contract'
+import type { u128, u32, u64 } from '@stellar/stellar-sdk/contract'
 import {
   AssembledTransaction,
   Client as ContractClient,
@@ -16,8 +16,10 @@ if (typeof window !== 'undefined') {
   window.Buffer = window.Buffer || Buffer
 }
 
-export const LiquidityPoolCalculatorError = {
-  209: { message: 'MaxIterationsReached' },
+export interface PoolPlaneType {
+  init_args: Array<u128>
+  pool_type: string
+  reserves: Array<u128>
 }
 
 export const AccessControlError = {
@@ -162,10 +164,15 @@ export interface Client {
   ) => Promise<AssembledTransaction<null>>
 
   /**
-   * Construct and simulate a set_pools_plane transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a update transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  set_pools_plane: (
-    { admin, plane }: { admin: string; plane: string },
+  update: (
+    {
+      pool,
+      pool_type,
+      init_args,
+      reserves,
+    }: { pool: string; pool_type: string; init_args: Array<u128>; reserves: Array<u128> },
     options?: {
       /**
        * The fee to pay for the transaction. Default: BASE_FEE
@@ -185,29 +192,9 @@ export interface Client {
   ) => Promise<AssembledTransaction<null>>
 
   /**
-   * Construct and simulate a get_pools_plane transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a get transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  get_pools_plane: (options?: {
-    /**
-     * The fee to pay for the transaction. Default: BASE_FEE
-     */
-    fee?: number
-
-    /**
-     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-     */
-    timeoutInSeconds?: number
-
-    /**
-     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-     */
-    simulate?: boolean
-  }) => Promise<AssembledTransaction<string>>
-
-  /**
-   * Construct and simulate a get_liquidity transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  get_liquidity: (
+  get: (
     { pools }: { pools: Array<string> },
     options?: {
       /**
@@ -225,7 +212,7 @@ export interface Client {
        */
       simulate?: boolean
     },
-  ) => Promise<AssembledTransaction<Array<u256>>>
+  ) => Promise<AssembledTransaction<Array<readonly [string, Array<u128>, Array<u128>]>>>
 
   /**
    * Construct and simulate a version transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -490,9 +477,8 @@ export class Client extends ContractClient {
     super(
       new ContractSpec([
         'AAAAAAAAAAAAAAAKaW5pdF9hZG1pbgAAAAAAAQAAAAAAAAAHYWNjb3VudAAAAAATAAAAAA==',
-        'AAAAAAAAAAAAAAAPc2V0X3Bvb2xzX3BsYW5lAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAFcGxhbmUAAAAAAAATAAAAAA==',
-        'AAAAAAAAAAAAAAAPZ2V0X3Bvb2xzX3BsYW5lAAAAAAAAAAABAAAAEw==',
-        'AAAAAAAAAAAAAAANZ2V0X2xpcXVpZGl0eQAAAAAAAAEAAAAAAAAABXBvb2xzAAAAAAAD6gAAABMAAAABAAAD6gAAAAw=',
+        'AAAAAAAAAAAAAAAGdXBkYXRlAAAAAAAEAAAAAAAAAARwb29sAAAAEwAAAAAAAAAJcG9vbF90eXBlAAAAAAAAEQAAAAAAAAAJaW5pdF9hcmdzAAAAAAAD6gAAAAoAAAAAAAAACHJlc2VydmVzAAAD6gAAAAoAAAAA',
+        'AAAAAAAAAAAAAAADZ2V0AAAAAAEAAAAAAAAABXBvb2xzAAAAAAAD6gAAABMAAAABAAAD6gAAA+0AAAADAAAAEQAAA+oAAAAKAAAD6gAAAAo=',
         'AAAAAAAAAAAAAAAHdmVyc2lvbgAAAAAAAAAAAQAAAAQ=',
         'AAAAAAAAAAAAAAANY29udHJhY3RfbmFtZQAAAAAAAAAAAAABAAAAEQ==',
         'AAAAAAAAAAAAAAAOY29tbWl0X3VwZ3JhZGUAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAANbmV3X3dhc21faGFzaAAAAAAAA+4AAAAgAAAAAA==',
@@ -504,7 +490,7 @@ export class Client extends ContractClient {
         'AAAAAAAAAAAAAAAYYXBwbHlfdHJhbnNmZXJfb3duZXJzaGlwAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAlyb2xlX25hbWUAAAAAAAARAAAAAA==',
         'AAAAAAAAAAAAAAAZcmV2ZXJ0X3RyYW5zZmVyX293bmVyc2hpcAAAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAJcm9sZV9uYW1lAAAAAAAAEQAAAAA=',
         'AAAAAAAAAAAAAAASZ2V0X2Z1dHVyZV9hZGRyZXNzAAAAAAABAAAAAAAAAAlyb2xlX25hbWUAAAAAAAARAAAAAQAAABM=',
-        'AAAABAAAAAAAAAAAAAAAHExpcXVpZGl0eVBvb2xDYWxjdWxhdG9yRXJyb3IAAAABAAAAAAAAABRNYXhJdGVyYXRpb25zUmVhY2hlZAAAANE=',
+        'AAAAAQAAAAAAAAAAAAAADVBvb2xQbGFuZVR5cGUAAAAAAAADAAAAAAAAAAlpbml0X2FyZ3MAAAAAAAPqAAAACgAAAAAAAAAJcG9vbF90eXBlAAAAAAAAEQAAAAAAAAAIcmVzZXJ2ZXMAAAPqAAAACg==',
         'AAAABAAAAAAAAAAAAAAAEkFjY2Vzc0NvbnRyb2xFcnJvcgAAAAAABwAAAAAAAAAMUm9sZU5vdEZvdW5kAAAAZQAAAAAAAAAMVW5hdXRob3JpemVkAAAAZgAAAAAAAAAPQWRtaW5BbHJlYWR5U2V0AAAAAGcAAAAAAAAADEJhZFJvbGVVc2FnZQAAAGgAAAAAAAAAE0Fub3RoZXJBY3Rpb25BY3RpdmUAAAALWgAAAAAAAAAOTm9BY3Rpb25BY3RpdmUAAAAAC1sAAAAAAAAAEUFjdGlvbk5vdFJlYWR5WWV0AAAAAAALXA==',
         'AAAABAAAAAAAAAAAAAAABUVycm9yAAAAAAAAAwAAAAAAAAATQW5vdGhlckFjdGlvbkFjdGl2ZQAAAAtaAAAAAAAAAA5Ob0FjdGlvbkFjdGl2ZQAAAAALWwAAAAAAAAARQWN0aW9uTm90UmVhZHlZZXQAAAAAAAtc',
         'AAAABAAAAAAAAAAAAAAACU1hdGhFcnJvcgAAAAAAAAkAAAAZTWF0aEVycm9yOiBOdW1iZXJPdmVyZmxvdwAAAAAAAA5OdW1iZXJPdmVyZmxvdwAAAAAB/gAAAB1NYXRoRXJyb3I6IEdlbmVyaWMgbWF0aCBlcnJvcgAAAAAAAAlNYXRoRXJyb3IAAAAAAAH/AAAALU1hdGhFcnJvcjogQWRkaXRpb24gb3BlcmF0aW9uIGNhdXNlZCBvdmVyZmxvdwAAAAAAABBBZGRpdGlvbk92ZXJmbG93AAACAAAAADFNYXRoRXJyb3I6IFN1YnRyYWN0aW9uIG9wZXJhdGlvbiBjYXVzZWQgdW5kZXJmbG93AAAAAAAAFFN1YnRyYWN0aW9uVW5kZXJmbG93AAACAQAAADNNYXRoRXJyb3I6IE11bHRpcGxpY2F0aW9uIG9wZXJhdGlvbiBjYXVzZWQgb3ZlcmZsb3cAAAAAFk11bHRpcGxpY2F0aW9uT3ZlcmZsb3cAAAAAAgIAAAAbTWF0aEVycm9yOiBEaXZpc2lvbiBieSB6ZXJvAAAAAA5EaXZpc2lvbkJ5WmVybwAAAAACAwAAACNNYXRoRXJyb3I6IFR5cGUgY29udmVyc2lvbiBvdmVyZmxvdwAAAAASQ29udmVyc2lvbk92ZXJmbG93AAAAAAIEAAAAP01hdGhFcnJvcjogQXR0ZW1wdGVkIHRvIGNvbnZlcnQgbmVnYXRpdmUgdmFsdWUgdG8gdW5zaWduZWQgdHlwZQAAAAASTmVnYXRpdmVUb1Vuc2lnbmVkAAAAAAIFAAAAKk1hdGhFcnJvcjogRml4ZWQtcG9pbnQgYXJpdGhtZXRpYyBvdmVyZmxvdwAAAAAAEkZpeGVkUG9pbnRPdmVyZmxvdwAAAAACBg==',
@@ -524,9 +510,8 @@ export class Client extends ContractClient {
   }
   public readonly fromJSON = {
     init_admin: this.txFromJSON<null>,
-    set_pools_plane: this.txFromJSON<null>,
-    get_pools_plane: this.txFromJSON<string>,
-    get_liquidity: this.txFromJSON<Array<u256>>,
+    update: this.txFromJSON<null>,
+    get: this.txFromJSON<Array<readonly [string, Array<u128>, Array<u128>]>>,
     version: this.txFromJSON<u32>,
     contract_name: this.txFromJSON<string>,
     commit_upgrade: this.txFromJSON<null>,
