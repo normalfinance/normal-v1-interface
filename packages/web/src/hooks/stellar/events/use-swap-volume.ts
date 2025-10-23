@@ -29,7 +29,7 @@ type GetSwapVolumeParams =
   | undefined
   | {
       since?: Date;
-      asset?: string;
+      poolAddress?: string;
     };
 
 // windows (in ms) for each timeframe
@@ -52,15 +52,15 @@ export function useSwapVolume(): ReturnType {
 
   const getSwapVolume = useCallback(
     async (params?: GetSwapVolumeParams): Promise<SwapVolumeStats> => {
-      const { asset, since } = params ?? {};
+      const { poolAddress, since } = params ?? {};
 
       setError(null);
       setLoading(true);
 
       // Build topics filter
       let topicsPattern = '%swap%';
-      if (asset && String(asset).trim()) {
-        topicsPattern += `%${String(asset).trim()}%`;
+      if (poolAddress && String(poolAddress).trim()) {
+        topicsPattern += `%${String(poolAddress).trim()}%`;
       }
 
       // Map timeframe to a Date
@@ -162,10 +162,9 @@ export function useSwapVolume(): ReturnType {
               r.transaction_hash
             ) as events.RouterSwapEvent;
 
-            const buying = parsedEvent.direction === 'Buy';
             const inAmt = parsedEvent.inAmount;
-            const outAmt = parsedEvent.outAmount;
-            const amount = buying ? inAmt : outAmt;
+            // const outAmt = parsedEvent.outAmount;
+            const amount = inAmt;
 
             // Increment every applicable timeframe bucket
             for (const key of keysToCompute) {

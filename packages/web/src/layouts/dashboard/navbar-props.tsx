@@ -85,15 +85,6 @@ export const NormalNavbarDefaults: Props = {
             title: 'Safety & Rewards',
             links: [
               {
-                url: paths.insurance,
-                image: {
-                  src: '/assets/icons/normal-navbar/insurance.svg',
-                  alt: 'Insurance',
-                },
-                title: 'Insurance',
-                description: 'Protect your positions.',
-              },
-              {
                 url: paths.rewards,
                 image: {
                   src: '/assets/icons/normal-navbar/rewards.svg',

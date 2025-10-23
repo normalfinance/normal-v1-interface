@@ -50,9 +50,9 @@ export const PoolTransactionsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
   rows: PoolTxRow[];
-  xlmPrice: BigNumber;
+  quoteTokenPrice: BigNumber;
   loading?: boolean;
-}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, xlmPrice, loading }) => {
+}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, quoteTokenPrice, loading }) => {
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -193,8 +193,8 @@ export const PoolTransactionsTable: React.FC<{
                   const poolPrice = row.tokenBAmount.dividedBy(row.tokenAAmount);
                   const baseFiatValue = poolPrice
                     .multipliedBy(row.tokenAAmount)
-                    .multipliedBy(xlmPrice);
-                  const quoteFiatValue = row.tokenBAmount.multipliedBy(xlmPrice);
+                    .multipliedBy(quoteTokenPrice);
+                  const quoteFiatValue = row.tokenBAmount.multipliedBy(quoteTokenPrice);
 
                   return (
                     <TableRow

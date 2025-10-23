@@ -9,11 +9,25 @@ import { Alert } from '@mui/material';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 
 import PoolDetailsView from './pool-details-view';
+import { useCallback, useEffect, useState } from 'react';
 
-export default function PoolView({ asset }: { asset: string }) {
+export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const { t } = useTranslate();
 
-  const { loading, error, pool } = usePool(asset);
+  const { loading, error, fetchPoolByAddress } = usePool();
+
+  const [pool, setPool] = useState<any>();
+
+  //  useCallback(async () => await fetchPoolByAddress(poolAddress), [poolAddress]);
+
+  useEffect(() => {
+    const run = async function () {
+      const poolInfo = await fetchPoolByAddress(poolAddress);
+      setPool(poolInfo);
+    };
+
+    run();
+  }, [poolAddress]);
 
   if (error != null) {
     return (
@@ -27,5 +41,5 @@ export default function PoolView({ asset }: { asset: string }) {
     return <SpecificNotFound type="pool" />;
   }
 
-  return <PoolDetailsView asset={asset} pool={pool} />;
+  return <PoolDetailsView poolAddress={poolAddress} pool={pool} />;
 }

@@ -2,12 +2,13 @@ import {
   ApiToken,
   AppStore,
   GetStateType,
+  PoolInfo,
   SetStateType,
   StateToken as Token,
   WalletActions,
 } from '@normalfinance/types';
 import axios from 'axios';
-import { PoolRouterContract } from '@normalfinance/contracts';
+// import { PoolRouterContract } from '@normalfinance/contracts';
 import { usePersistStore } from '../store';
 import {
   constants,
@@ -33,7 +34,7 @@ export const createWalletActions = (
       const pools = await getState().getAllPools();
 
       const normalTokens = pools.map(
-        async (pool) => await getState().fetchNormalTokenInfo(pool, xlm?.usdValue ?? 0)
+        async (pool: any) => await getState().fetchNormalTokenInfo(pool, xlm?.usdValue ?? 0)
       );
       await Promise.all(normalTokens);
 
@@ -63,12 +64,12 @@ export const createWalletActions = (
 
         // Get wallet address from persist store
         const walletAddress = usePersistStore.getState().wallet.address;
-        
+
         if (!walletAddress) {
           logger.warn('[WALLET ACTIONS] No wallet address found, skipping native token fetch');
           return undefined;
         }
-        
+
         logger.log('[WALLET ACTIONS] Fetching native token for address:', walletAddress);
 
         let balance: bigint;
@@ -129,22 +130,28 @@ export const createWalletActions = (
       }
     },
 
-    fetchNormalTokenInfo: async (pool: PoolRouterContract.PoolInfo, xlmPrice: number) => {
+    // quoteTokenPrice => USDC price from Reflector oracle
+    fetchNormalTokenInfo: async (pool: PoolInfo, quoteTokenPrice: number) => {
       try {
         let updatedTokenInfo: Token | undefined;
 
         // Use token_a address from the pool response (this is the actual token contract)
-        const tokenAddress = pool.pool_response.token_a.address;
+        const tokenAddress = pool.token_a.address;
 
         // Get wallet address from persist store
         const walletAddress = usePersistStore.getState().wallet.address;
-        
+
         if (!walletAddress) {
           logger.warn('[WALLET ACTIONS] No wallet address found, skipping normal token fetch');
           return undefined;
         }
-        
-        logger.log('[WALLET ACTIONS] Fetching normal token for address:', walletAddress, 'token:', tokenAddress);
+
+        logger.log(
+          '[WALLET ACTIONS] Fetching normal token for address:',
+          walletAddress,
+          'token:',
+          tokenAddress
+        );
 
         let balance: bigint;
         try {
@@ -155,17 +162,17 @@ export const createWalletActions = (
         }
 
         // Calculate price using pool reserves
-        const reserve_a = BigInt(pool.pool_response.token_a.amount);
-        const reserve_b = BigInt(pool.pool_response.token_b.amount);
+        const reserve_a = BigInt(pool.token_a.amount);
+        const reserve_b = BigInt(pool.token_b.amount);
         let poolPrice = BigInt(0);
         if (reserve_a > 0 && reserve_b > 0) poolPrice = reserve_b / reserve_a;
 
         // Create the proper token symbol (e.g., "nBTC", "nETH", "nSOL")
-        const symbol = `n${pool.pool_response.pool.base_asset}`;
+        const symbol = `n${pool.token_a.symbol}`;
 
         const decimals = 7; // Standard for Stellar tokens
         const formattedBalance = Number(format.formatTokenAmount(balance, decimals));
-        const formattedUsdValue = Number(poolPrice) * xlmPrice;
+        const formattedUsdValue = Number(poolPrice) * quoteTokenPrice;
 
         // Update state
         setState((state: AppStore) => {
@@ -176,7 +183,7 @@ export const createWalletActions = (
                   balance: formattedBalance,
                   decimals,
                   symbol,
-                  name: `Normal ${pool.pool_response.pool.base_asset}`,
+                  name: `Normal ${pool.token_a.symbol}`,
                   usdValue: formattedUsdValue,
                 }
               : token
@@ -189,7 +196,7 @@ export const createWalletActions = (
               balance: formattedBalance,
               decimals,
               symbol,
-              name: `Normal ${pool.pool_response.pool.base_asset}`,
+              name: `Normal ${pool.token_a.symbol}`,
               icon: getCryptoIconUrl(symbol),
               usdValue: formattedUsdValue,
               featured: true, // Normal tokens are featured
@@ -219,13 +226,18 @@ export const createWalletActions = (
 
         // Get wallet address from persist store
         const walletAddress = usePersistStore.getState().wallet.address;
-        
+
         if (!walletAddress) {
           logger.warn('[WALLET ACTIONS] No wallet address found, skipping API token fetch');
           return undefined;
         }
-        
-        logger.log('[WALLET ACTIONS] Fetching API token for address:', walletAddress, 'token:', tokenAddress);
+
+        logger.log(
+          '[WALLET ACTIONS] Fetching API token for address:',
+          walletAddress,
+          'token:',
+          tokenAddress
+        );
 
         let balance: bigint;
         try {

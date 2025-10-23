@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
-import PoolView from '@/sections/pools/[asset]';
+import PoolView from '@/sections/pools/[poolAddress]';
 
 // ----------------------------------------------------------------------
 
@@ -45,9 +45,9 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  params: { asset: string };
+  params: { poolAddress: string };
 }
 
 export default function Page({ params }: PageProps) {
-  return <PoolView asset={params.asset} />;
+  return <PoolView poolAddress={params.poolAddress} />;
 }

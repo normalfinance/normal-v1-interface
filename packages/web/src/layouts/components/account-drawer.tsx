@@ -12,7 +12,7 @@ import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useState, useEffect, useCallback } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
-import { format, logger, trackEvent } from '@normalfinance/utils';
+import { format, isTestnet, logger, trackEvent } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
@@ -186,22 +186,24 @@ function WalletConnected({ address }: { address: string }) {
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
-      <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-        <Button
-          fullWidth
-          variant="soft"
-          color="info"
-          size="large"
-          startIcon={<Iconify icon="eva:droplet-fill" />}
-          onClick={handleFaucetRequest}
-          sx={{ my: 1 }}
-          loading={faucetLoading}
-          disabled={faucetOff}
-        >
-          {t('Get testnet XLM')}
-        </Button>
-        <ZealyHighlight questId={ZEALY_QUEST_IDS.receiveFaucet} position={{ right: -10 }} />
-      </Box>
+      {isTestnet() && (
+        <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+          <Button
+            fullWidth
+            variant="soft"
+            color="info"
+            size="large"
+            startIcon={<Iconify icon="eva:droplet-fill" />}
+            onClick={handleFaucetRequest}
+            sx={{ my: 1 }}
+            loading={faucetLoading}
+            disabled={faucetOff}
+          >
+            {t('Get testnet XLM')}
+          </Button>
+          <ZealyHighlight questId={ZEALY_QUEST_IDS.receiveFaucet} position={{ right: -10 }} />
+        </Box>
+      )}
       <ConnectedWallet
         balance={totalBalance}
         percentageChange={0}

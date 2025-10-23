@@ -29,6 +29,7 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
+import { isTestnet } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -138,19 +139,26 @@ export function DashboardLayout({
           ...(Array.isArray(sx) ? sx : [sx]),
         ]}
       >
-        <Alert severity="warning" sx={{ m: 2 }}>
-          <AlertTitle>{t('Normal Testnet')}&nbsp;🎉</AlertTitle>
-          {t(
-            'You are using a testnet version of the Normal Protocol. All tokens are NOT real. You WILL experience bugs. Please report all bugs and feedback to our team. Thank you!'
-          )}
-          <br />
-          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-            <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={handleGiveFeedback}>
-              {t('Give feedback / Report bug')}
-            </Button>
-            <ZealyHighlight questId={ZEALY_QUEST_IDS.giveFeedback} position={{ right: -10 }} />
-          </Box>
-        </Alert>
+        {isTestnet() && (
+          <Alert severity="warning" sx={{ m: 2 }}>
+            <AlertTitle>{t('Normal Testnet')}&nbsp;🎉</AlertTitle>
+            {t(
+              'You are using a testnet version of the Normal Protocol. All tokens are NOT real. You WILL experience bugs. Please report all bugs and feedback to our team. Thank you!'
+            )}
+            <br />
+            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+              <Button
+                variant="contained"
+                color="inherit"
+                sx={{ mt: 1 }}
+                onClick={handleGiveFeedback}
+              >
+                {t('Give feedback / Report bug')}
+              </Button>
+              <ZealyHighlight questId={ZEALY_QUEST_IDS.giveFeedback} position={{ right: -10 }} />
+            </Box>
+          </Alert>
+        )}
 
         {renderMain()}
       </LayoutSection>

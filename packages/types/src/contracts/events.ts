@@ -27,107 +27,35 @@ export interface SwapEvent {
   feeAmount: bigint;
 }
 
-export interface RebalanceEvent {
-  type: 'rebalance';
-  reserveA: bigint;
-  reserveB: bigint;
-  newReserveA: bigint;
-  newReserveB: bigint;
-  deltaA: bigint;
-}
-
-// ─── Insurance Fund Events ──────────────────────────────────
-
-export interface InsuranceStakeRecordEvent {
-  type: 'insurance_stake_record';
-  user: string;
-  token: string;
-  action: string; // Assuming StakeAction is symbol (e.g., "stake" / "unstake")
-  amount: bigint;
-  reserveAmountBefore: bigint;
-  stakeSharesBefore: bigint;
-  totalSharesBefore: bigint;
-  stakeSharesAfter: bigint;
-  totalSharesAfter: bigint;
-}
-
-export interface CollectPremiumEvent {
-  type: 'collect_premium';
-  sender: string;
-  amount: bigint;
-}
-
-// ─── PoolSwapFee Events ─────────────────────────────
-
-export interface FeeSwapEvent {
-  type: 'swap';
-  asset: string; // symbol
-  pool: string; // address
-  user: string; // address
-  direction: string; // symbol (e.g. "buy" or "sell")
-  inAmount: bigint;
-  outAmount: bigint;
-  feeAmount: bigint;
-  lpFee: bigint;
-  ifPremium: bigint;
-  revenueFee: bigint;
-}
-
-export interface ClaimFeesEvent {
-  type: 'claim_fees';
-  token: string;
-  sender: string;
-  amount: bigint;
-}
-
 // ─── PoolRouter Events ─────────────────────────────
 
 export interface RouterDepositLiquidityEvent {
   type: 'deposit_liquidity';
-  asset: string;
-  pool: string;
+  tokens: string[];
   user: string;
-  amount: bigint;
+  poolAddress: string;
+  amounts: bigint[];
   shareAmount: bigint;
-  delta_a: bigint;
 }
 
 export interface RouterSwapEvent {
   type: 'swap';
-  asset: string;
-  pool: string;
+  tokens: string[];
   user: string;
-  direction: string;
+  poolAddress: string;
+  tokenIn: string;
+  tokenOut: string;
   inAmount: bigint;
   outAmount: bigint;
-  delta_a_prior: bigint;
-  delta_a_post: bigint;
 }
 
 export interface RouterWithdrawLiquidityEvent {
   type: 'withdraw_liquidity';
-  asset: string;
-  pool: string;
-  user: string;
-  shareAmount: bigint;
-  amount: bigint;
-  delta_a: bigint;
-}
-
-export interface AddPoolEvent {
-  type: 'add_pool';
-  asset: string;
-  pool: string;
   tokens: string[];
-  initArgs: unknown[]; // these are `Val`s; parsing depends on context
-}
-
-export interface ConfigRewardsEvent {
-  type: 'config_rewards';
-  asset: string;
-  pool: string;
-  poolTps: bigint;
-  expiredAt: bigint;
+  user: string;
+  poolAddress: string;
+  amounts: bigint[];
+  shareAmount: bigint;
 }
 
 export interface ClaimRewardEvent {
@@ -141,22 +69,7 @@ export interface ClaimRewardEvent {
 
 // ─── Union Type ─────────────────────────────────────────────
 
-export type PoolEvent = (
-  | DepositLiquidityEvent
-  | WithdrawLiquidityEvent
-  | SwapEvent
-  | RebalanceEvent
-) & {
-  timestamp?: number;
-  txHash: string;
-};
-
-export type InsuranceFundEvent = InsuranceStakeRecordEvent & {
-  timestamp?: number;
-  txHash: string;
-};
-
-export type PoolSwapFeeEvent = (CollectPremiumEvent | FeeSwapEvent | ClaimFeesEvent) & {
+export type PoolEvent = (DepositLiquidityEvent | WithdrawLiquidityEvent | SwapEvent) & {
   timestamp?: number;
   txHash: string;
 };
@@ -165,8 +78,6 @@ export type PoolRouterEvent = (
   | RouterDepositLiquidityEvent
   | RouterSwapEvent
   | RouterWithdrawLiquidityEvent
-  | AddPoolEvent
-  | ConfigRewardsEvent
   | ClaimRewardEvent
 ) & {
   timestamp?: number;
@@ -177,17 +88,12 @@ export type UserActivityEvent = (
   | RouterDepositLiquidityEvent
   | RouterSwapEvent
   | RouterWithdrawLiquidityEvent
-  | InsuranceStakeRecordEvent
 ) & {
   timestamp?: number;
   txHash: string;
 };
 
-export type NormalContractEvent =
-  | PoolEvent
-  | InsuranceFundEvent
-  | PoolSwapFeeEvent
-  | PoolRouterEvent;
+export type NormalContractEvent = PoolEvent | PoolRouterEvent;
 
 export interface GoldskyTableRow {
   id: string;

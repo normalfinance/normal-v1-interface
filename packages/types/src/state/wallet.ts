@@ -58,10 +58,7 @@ export interface WalletActions {
   tokens: StateToken[];
   walletConnectInstance?: any;
   fetchNativeTokenInfo: () => Promise<StateToken | undefined>;
-  fetchNormalTokenInfo: (
-    pool: PoolRouterContract.PoolInfo,
-    xlmPrice: number
-  ) => Promise<StateToken | undefined>;
+  fetchNormalTokenInfo: (pool: any, quoteTokenPrice: number) => Promise<StateToken | undefined>;
   fetchApiTokenInfo: (apiToken: ApiToken) => Promise<StateToken | undefined>;
   getAllTokens: () => Promise<StateToken[]>;
 }

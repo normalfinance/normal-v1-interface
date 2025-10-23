@@ -1,6 +1,6 @@
 'use client';
 
-import type { Client } from '@normalfinance/contracts/build/pool_router';
+import type { Client as PoolRouterClient } from '@normalfinance/contracts/build/pool_router';
 
 import { useState } from 'react';
 import { constants } from '@normalfinance/utils';
@@ -9,8 +9,8 @@ import { usePersistStore } from '@normalfinance/state';
 
 import { useContractTransaction } from './use-contract-transaction';
 
-export type DepositLiquidityArgs = Omit<Parameters<Client['deposit']>[0], 'user'>;
-export type WithdrawLiquidityArgs = Omit<Parameters<Client['withdraw']>[0], 'user'>;
+export type DepositLiquidityArgs = Omit<Parameters<PoolRouterClient['deposit']>[0], 'user'>;
+export type WithdrawLiquidityArgs = Omit<Parameters<PoolRouterClient['withdraw']>[0], 'user'>;
 
 interface ReturnType {
   error: any | null;
@@ -78,9 +78,10 @@ export function useLiquidity(): ReturnType {
     const processedArgs = {
       ...args,
       user: storePersist.wallet.address!,
-      token_b_amount: BigInt(
-        (args.token_b_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)
-      ),
+      desired_amounts: [
+        BigInt((args.desired_amounts[0] * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
+        BigInt((args.desired_amounts[1] * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
+      ],
     };
 
     await executeContractTransaction({
@@ -88,7 +89,8 @@ export function useLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.DEPOSIT_LIQUIDITY,
-        token1: { name: 'XLM', amount: args.token_b_amount },
+        token1: { name: 'XLM', amount: args.desired_amounts[0] },
+        token2: { name: 'USDC', amount: args.desired_amounts[1] },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.deposit(processedArgs, { simulate: !restore });
@@ -127,6 +129,9 @@ export function useLiquidity(): ReturnType {
       user: storePersist.wallet.address!,
       share_amount: BigInt(
         (args.share_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)
+      ),
+      min_amounts: args.min_amounts.map((amt) =>
+        BigInt((amt * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0))
       ),
     };
 

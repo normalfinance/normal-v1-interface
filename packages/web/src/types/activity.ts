@@ -38,12 +38,14 @@ export interface SwappedActivity extends ActivityBase {
 export interface AddLiquidityActivity extends ActivityBase {
   type: 'Add Liquidity';
   asset: string;
+  tokenA: TokenAmount;
   tokenB: TokenAmount;
 }
 
 export interface RemoveLiquidityActivity extends ActivityBase {
   type: 'Remove Liquidity';
   asset: string;
+  tokenA: TokenAmount;
   tokenB: TokenAmount;
 }
 

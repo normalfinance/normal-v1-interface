@@ -1,21 +1,19 @@
 'use client';
 
-import type { PoolSwapFeeContract } from '@normalfinance/contracts';
 import type { Client as PoolClient } from '@normalfinance/contracts/build/pool';
 import type { Client as PoolRouterClient } from '@normalfinance/contracts/build/pool_router';
-import type { Client as PoolSwapFeeClient } from '@normalfinance/contracts/build/pool_swap_fee';
 
 import { useState } from 'react';
+import { constants } from '@normalfinance/utils';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
-import { format, constants } from '@normalfinance/utils';
 
 import { useContractTransaction } from './use-contract-transaction';
 
 // ----------------------------------------------------------------------
 
 export type EstimateSwapArgs = Parameters<PoolRouterClient['estimate_swap']>[0];
-export type SwapArgs = Omit<Parameters<PoolSwapFeeClient['swap']>[0], 'user'>;
+export type SwapArgs = Omit<Parameters<PoolRouterClient['swap']>[0], 'user'>;
 export type SwapStrictReceiveArgs = Omit<Parameters<PoolClient['swap_strict_receive']>[0], 'user'>;
 
 interface ReturnType {
@@ -34,16 +32,6 @@ interface ReturnType {
     token_out_decimals?: number
   ) => Promise<void>;
 }
-
-export const BuyDirection: PoolSwapFeeContract.SwapDirection = {
-  tag: 'Buy',
-  values: undefined,
-};
-
-export const SellDirection: PoolSwapFeeContract.SwapDirection = {
-  tag: 'Sell',
-  values: undefined,
-};
 
 // ----------------------------------------------------------------------
 
@@ -101,7 +89,6 @@ export function useSwap(): ReturnType {
     token_in_decimals?: number,
     token_out_decimals?: number
   ) => {
-    const buy = args.direction == BuyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
@@ -109,15 +96,17 @@ export function useSwap(): ReturnType {
       out_min: BigInt((args.out_min * 10 ** (token_out_decimals || 7)).toFixed(0)),
     };
 
-    const normalTokenName = format.formatNormalToken(args.asset, 'with-n');
+    // const normalTokenName = format.formatNormalToken(args.asset, 'with-n');
 
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: buy ? 'XLM' : normalTokenName, amount: args.in_amount },
-        token2: { name: buy ? normalTokenName : 'XLM', amount: args.out_min },
+        // token1: { name: buy ? 'USDC' : normalTokenName, amount: args.in_amount },
+        // token2: { name: buy ? normalTokenName : 'USDC', amount: args.out_min },
+        token1: { name: args.token_in, amount: args.in_amount },
+        token2: { name: args.token_out, amount: args.out_min },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });
@@ -149,22 +138,23 @@ export function useSwap(): ReturnType {
     args: SwapStrictReceiveArgs,
     token_out_decimals?: number
   ) => {
-    const buy = args.direction == BuyDirection;
     const processedArgs = {
       user: storePersist.wallet.address!,
       ...args,
       out_amount: BigInt((args.out_amount * 10 ** (token_out_decimals || 7)).toFixed(0)),
     };
 
-    const normalTokenName = format.formatNormalToken('', 'with-n'); // FIXME:
+    // const normalTokenName = format.formatNormalToken('', 'with-n');
 
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: buy ? 'XLM' : normalTokenName, amount: args.in_max },
-        token2: { name: buy ? normalTokenName : 'XLM', amount: args.out_amount },
+        // token1: { name: buy ? 'XLM' : normalTokenName, amount: args.in_max },
+        // token2: { name: buy ? normalTokenName : 'XLM', amount: args.out_amount },
+        token1: { name: args.in_idx, amount: args.in_max },
+        token2: { name: args.out_idx, amount: args.out_amount },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap_strict_receive(processedArgs, { simulate: !restore });

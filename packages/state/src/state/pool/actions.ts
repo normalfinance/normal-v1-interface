@@ -1,5 +1,5 @@
 import { PoolRouterContract } from '@normalfinance/contracts';
-import { GetStateType, SetStateType } from '@normalfinance/types';
+import { GetStateType, PoolInfo, SetStateType } from '@normalfinance/types';
 import { constants } from '@normalfinance/utils';
 
 export function createPoolActions(setState: SetStateType, getState: GetStateType) {
@@ -14,8 +14,8 @@ export function createPoolActions(setState: SetStateType, getState: GetStateType
 
     getAllPools: async () => {
       try {
-        const allPoolsDetails = await PoolRouter.query_all_pools_details();
-        const parsedResults: PoolRouterContract.PoolInfo[] = allPoolsDetails.result;
+        const allPoolsDetails = await PoolRouter.get_pools({ tokens: [] });
+        const parsedResults: PoolInfo[] = allPoolsDetails.result;
 
         setState({ pools: parsedResults });
 
@@ -25,13 +25,13 @@ export function createPoolActions(setState: SetStateType, getState: GetStateType
       }
     },
 
-    setPools: (_pools: PoolRouterContract.PoolInfo[]) => {
+    setPools: (_pools: PoolInfo[]) => {
       setState({ pools: _pools });
     },
 
     getPool: async (asset: string) => {
       try {
-        const pool = await PoolRouter.query_pool_details({ asset });
+        const pool = await PoolRouter.get_pools({ tokens: [] });
 
         if (pool.result) {
           return pool.result;

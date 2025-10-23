@@ -6,14 +6,17 @@ export interface PriceData {
   timestamp: number;
 }
 
-export async function getOraclePrice(oracle_address: string, _asset: string): Promise<PriceData> {
+export async function getOraclePrice(
+  oracle_address: string,
+  asset_symbol: string
+): Promise<PriceData> {
   const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
   });
 
-  const asset = xdr.ScVal.scvVec([xdr.ScVal.scvSymbol('Other'), xdr.ScVal.scvSymbol(_asset)]);
+  const asset = xdr.ScVal.scvVec([xdr.ScVal.scvSymbol('Other'), xdr.ScVal.scvSymbol(asset_symbol)]);
 
   tx_builder.addOperation(new Contract(oracle_address).call('lastprice', asset));
 
