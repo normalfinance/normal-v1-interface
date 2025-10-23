@@ -43,11 +43,6 @@ export interface WithdrawLiquidityQueryParams extends BaseQueryParams {
   share_amount?: string;
 }
 
-export interface InsuranceQueryParams extends BaseQueryParams {
-  action?: 'stake' | 'unstake';
-  amount?: string;
-}
-
 export interface PoolQueryParams extends BaseQueryParams {
   pool_address?: string;
   action?: 'deposit' | 'withdraw';
@@ -88,7 +83,6 @@ export type AllQueryParams =
   | TokenActionQueryParams
   | DepositLiquidityQueryParams
   | WithdrawLiquidityQueryParams
-  | InsuranceQueryParams
   | PoolQueryParams
   | PositionQueryParams
   | ExploreQueryParams

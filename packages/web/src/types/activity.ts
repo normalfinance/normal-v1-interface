@@ -47,16 +47,6 @@ export interface RemoveLiquidityActivity extends ActivityBase {
   tokenB: TokenAmount;
 }
 
-export interface StakeActivity extends ActivityBase {
-  type: 'Stake';
-  token: TokenAmount;
-}
-
-export interface UnstakeActivity extends ActivityBase {
-  type: 'Unstake';
-  token: TokenAmount;
-}
-
 // -----------------------------------------------------------------------------
 //  Discriminated union
 // -----------------------------------------------------------------------------
@@ -65,6 +55,4 @@ export type Activity =
   | ReceivedActivity
   | SwappedActivity
   | AddLiquidityActivity
-  | RemoveLiquidityActivity
-  | StakeActivity
-  | UnstakeActivity;
+  | RemoveLiquidityActivity;
