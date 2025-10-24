@@ -1,7 +1,6 @@
 'use client';
 
-import type { events } from '@normalfinance/types';
-import type { PoolRouterContract } from '@normalfinance/contracts';
+import type { events, PoolInfo } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
@@ -34,18 +33,18 @@ export default function ExploreView() {
 
   const [volume, setVolume] = useState<BigNumber>(BigNumber(0));
 
-  useEffect(() => {
-    getSwapVolume().then((res) => setVolume(res['24h'].volume));
-  }, []);
+  // useEffect(() => {
+  //   getSwapVolume().then((res) => setVolume(res['24h'].volume));
+  // }, []);
 
   const formattedPools = useMemo(() => {
     // TODO:
     const dTime = 0;
     const mTime = 0;
 
-    return pools.map((p) => {
-      const poolSwaps = allSwaps.filter((s) => s.asset === p.pool_response.pool.base_asset);
-      return formatPool(p, xlmPrice, poolSwaps, dTime, mTime);
+    return pools.map((pool) => {
+      const poolSwaps = allSwaps.filter((swap) => swap.tokenIn === pool.token_a.address);
+      return formatPool(pool, xlmPrice, poolSwaps, dTime, mTime);
     });
   }, [pools, xlmPrice]);
 
@@ -103,27 +102,22 @@ export default function ExploreView() {
 }
 
 const formatPool = (
-  pool_info: PoolRouterContract.PoolInfo,
+  pool: PoolInfo,
   xlmPrice: BigNumber,
   swaps: events.RouterSwapEvent[],
   dailyCutoff: number,
   monthlyCutoff: number
 ): ExplorePoolsRow => {
-  const {
-    pool_address: address,
-    pool_response: { pool, token_a, token_b },
-  } = pool_info;
+  const normalTokenName = format.formatNormalToken(pool.token_a.symbol, 'with-n');
 
-  const normalTokenName = format.formatNormalToken(pool.base_asset, 'with-n');
-
-  const reserveA = BigNumber(format.formatTokenAmount(token_a.amount));
-  const reserveB = BigNumber(format.formatTokenAmount(token_b.amount));
+  const reserveA = BigNumber(format.formatTokenAmount(pool.token_a.amount));
+  const reserveB = BigNumber(format.formatTokenAmount(pool.token_b.amount));
 
   if (reserveA.eq(0) || reserveB.eq(0)) {
     return {
       tokenAName: normalTokenName,
-      tokenBName: pool.quote_asset,
-      address,
+      tokenBName: pool.token_b.symbol,
+      address: pool.address,
       fee: pool.fee_fraction,
       tvl: Number(0),
       apr: 0,
@@ -160,8 +154,8 @@ const formatPool = (
 
   return {
     tokenAName: normalTokenName,
-    tokenBName: pool.quote_asset,
-    address,
+    tokenBName: pool.token_b.symbol,
+    address: pool.address,
     fee: pool.fee_fraction,
     tvl: Number(tvl.toFixed(2)),
     apr: 0,

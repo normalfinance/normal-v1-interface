@@ -1,9 +1,7 @@
 'use client';
 
 import { paths } from '@/routes/paths';
-import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
-import { format } from '@normalfinance/utils';
 import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Stack from '@mui/material/Stack';
@@ -37,19 +35,15 @@ type Props = {
 /* ------------------------------------------------------------------ */
 
 export function ExplorePoolsTableRow({ row, index }: Props) {
-  const { t } = useTranslate();
-
   const router = useRouter();
 
-  const normalTokenSymbol = format.formatNormalToken(row.tokenAName, 'with-n');
-
-  const onClickRow = () => router.push(paths.pools.details(normalTokenSymbol));
+  const onClickRow = () => router.push(paths.pools.details(row.address));
 
   return (
     <TableRow
       hover
       sx={{ cursor: 'pointer' }}
-      onClick={() => router.push(paths.pools.details(normalTokenSymbol))}
+      onClick={onClickRow}
       data-testid={`explore-pools-table-row-${index}`}
     >
       {/* Rank (#) ---------------------------------------------------- */}

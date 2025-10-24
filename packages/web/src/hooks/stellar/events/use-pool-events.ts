@@ -1,12 +1,11 @@
 'use client';
 
 import type { events } from '@normalfinance/types';
-import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
-import { constants, rpcServer, parseEvent } from '@normalfinance/utils';
+import { rpcServer, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -31,17 +30,21 @@ export function usePoolEvents(poolAddress: string | undefined, limit: number): R
       setError(null);
       setLoading(true);
 
-      const { data, error: e } = await supabase
-        .from(constants.StellarConfig.EVENTS_TABLENAME)
-        .select('*')
-        .eq('contract_id', constants.StellarConfig.POOL_ROUTER_ADDRESS)
-        .eq('type', 'contract')
-        .eq('in_successful_contract_call', true)
-        .eq('transaction_successful', true)
-        .ilike('topics', `%${poolAddress}%`)
-        .or(`topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%`)
-        .order('id', { ascending: false })
-        .limit(limit);
+      const { data, error: e } = await supabase.from('referrals').select('*');
+
+      // const { data, error: e } = await supabase
+      //   .from(constants.StellarConfig.EVENTS_TABLENAME)
+      //   .select('*')
+      //   .eq('contract_id', constants.StellarConfig.POOL_ROUTER_ADDRESS)
+      //   .eq('type', 'contract')
+      //   .eq('in_successful_contract_call', true)
+      //   .eq('transaction_successful', true)
+      //   .ilike('topics', `%${poolAddress}%`)
+      //   .or(`topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%`)
+      //   .order('id', { ascending: false })
+      //   .limit(limit);
+
+      console.log({ data, e });
 
       if (e) {
         setError(e.toString() as any);
@@ -75,39 +78,39 @@ export function usePoolEvents(poolAddress: string | undefined, limit: number): R
 
     fetchInitialData();
 
-    const channel = supabase
-      .channel(`realtime:goldsky:pool:${poolAddress}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: constants.StellarConfig.EVENTS_TABLENAME,
-          filter: `contract_id=eq.${constants.StellarConfig.POOL_ROUTER_ADDRESS}&topics=ilike.%${poolAddress}%&or=(topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%)`,
-        },
-        async (payload: RealtimePostgresInsertPayload<GoldskyTableRow>) => {
-          const { topics, data, transaction_hash } = payload.new;
-          if (topics && data) {
-            const parsed = parseEvent(
-              JSON.parse(topics),
-              JSON.parse(data),
-              transaction_hash
-            ) as events.PoolRouterEvent;
+    // const channel = supabase
+    //   .channel(`realtime:goldsky:pool:${poolAddress}`)
+    //   .on(
+    //     'postgres_changes',
+    //     {
+    //       event: 'INSERT',
+    //       schema: 'public',
+    //       table: constants.StellarConfig.EVENTS_TABLENAME,
+    //       filter: `contract_id=eq.${constants.StellarConfig.POOL_ROUTER_ADDRESS}&topics=ilike.%${poolAddress}%&or=(topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%)`,
+    //     },
+    //     async (payload: RealtimePostgresInsertPayload<GoldskyTableRow>) => {
+    //       const { topics, data, transaction_hash } = payload.new;
+    //       if (topics && data) {
+    //         const parsed = parseEvent(
+    //           JSON.parse(topics),
+    //           JSON.parse(data),
+    //           transaction_hash
+    //         ) as events.PoolRouterEvent;
 
-            const tx = await rpcServer.getTransaction(transaction_hash);
-            if (tx.status === 'SUCCESS') {
-              parsed.timestamp = tx.createdAt * 1000;
-            }
+    //         const tx = await rpcServer.getTransaction(transaction_hash);
+    //         if (tx.status === 'SUCCESS') {
+    //           parsed.timestamp = tx.createdAt * 1000;
+    //         }
 
-            setEvents((prev) => [parsed, ...prev]);
-          }
-        }
-      )
-      .subscribe();
+    //         setEvents((prev) => [parsed, ...prev]);
+    //       }
+    //     }
+    //   )
+    //   .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // return () => {
+    //   supabase.removeChannel(channel);
+    // };
   }, [poolAddress]);
 
   return {
