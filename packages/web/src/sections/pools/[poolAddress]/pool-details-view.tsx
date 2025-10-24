@@ -10,7 +10,7 @@ import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fPercent, fCurrency } from '@/utils/format-number';
 import { format, getCryptoIconUrl } from '@normalfinance/utils';
-import { usePoolEvents, useSwapVolume, useTokenPrice, usePoolPriceChart } from '@/hooks';
+import { usePoolEvents, usePoolPriceChart } from '@/hooks';
 
 import { Stack, Grid2, useTheme, Typography } from '@mui/material';
 
@@ -29,11 +29,6 @@ export default function PoolDetailsView({
   const { t } = useTranslate();
   const { tokens } = useAppStore();
 
-  const normalTokenSymbol = format.formatNormalToken(pool.token_a.symbol, 'with-n');
-
-  // Load quote token price
-  const { loading: priceLoading, price: quoteTokenPrice } = useTokenPrice('USDC');
-
   // Load recent pool events
   const { events } = usePoolEvents(poolAddress, 20);
 
@@ -42,11 +37,8 @@ export default function PoolDetailsView({
     .map(convertToPoolTxRow)
     .sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
 
-  // Load the past 24h volume
-  const { getSwapVolume, allSwaps } = useSwapVolume();
-
   // Load price and volume chart data
-  const { chartData } = usePoolPriceChart(poolAddress, allSwaps);
+  const { chartData } = usePoolPriceChart(poolAddress, []);
 
   // Load pool price and exchange rate info
   const [poolPrice, setPoolPrice] = useState<BigNumber>(BigNumber(0));
@@ -59,14 +51,10 @@ export default function PoolDetailsView({
 
   const [past24hVolume, setPast24hVolume] = useState<BigNumber>(BigNumber(0));
 
-  // Fetch volume
-  useEffect(() => {
-    getSwapVolume({ poolAddress }).then((res) => setPast24hVolume(BigNumber(res['24h'].volume)));
-  }, []);
-
   // Calculate pool info
   useEffect(() => {
-    if (pool && quoteTokenPrice) {
+    if (pool) {
+      const quoteTokenOraclePrice = pool.token_b.oraclePrice;
       const reserve_a = BigNumber(format.formatTokenAmount(pool.token_a.amount));
       const reserve_b = BigNumber(format.formatTokenAmount(pool.token_b.amount));
 
@@ -75,10 +63,13 @@ export default function PoolDetailsView({
       const pool_price = reserve_b.div(reserve_a);
       setPoolPrice(pool_price);
 
-      setTokenUSDValue(pool_price.multipliedBy(quoteTokenPrice));
+      setTokenUSDValue(pool_price.multipliedBy(quoteTokenOraclePrice));
 
-      const reserve_b_value = reserve_b.multipliedBy(quoteTokenPrice);
-      const reserve_a_value = pool_price.multipliedBy(reserve_a).multipliedBy(quoteTokenPrice);
+      const reserve_b_value = reserve_b.multipliedBy(quoteTokenOraclePrice);
+      const reserve_a_value = pool_price
+        .multipliedBy(reserve_a)
+        .multipliedBy(quoteTokenOraclePrice);
+
       setReserveFiatValues({
         token_a: reserve_a_value,
         token_b: reserve_b_value,
@@ -86,7 +77,7 @@ export default function PoolDetailsView({
 
       setTvl(reserve_a_value.plus(reserve_b_value));
     }
-  }, [pool, quoteTokenPrice]);
+  }, [pool]);
 
   return (
     <DashboardContent maxWidth="xl">
@@ -104,7 +95,7 @@ export default function PoolDetailsView({
           <PoolChart
             pairInfo={{
               tokenA: {
-                name: normalTokenSymbol,
+                name: pool.token_a.symbol,
                 iconUrl: getCryptoIconUrl(pool.token_a.symbol),
               },
               tokenB: {
@@ -118,9 +109,9 @@ export default function PoolDetailsView({
               feeTier: fPercent(pool.fee_fraction / 100),
             }}
             exchangeRate={{
-              label: `1 ${normalTokenSymbol} = ${poolPrice.toFixed(4)} ${pool.token_b.symbol}`,
+              label: `1 ${pool.token_a.symbol} = ${poolPrice.toFixed(4)} ${pool.token_b.symbol}`,
               usdEquivalent: fCurrency(tokenUSDValue.toFixed(2)),
-              tokenSymbol: normalTokenSymbol,
+              tokenSymbol: pool.token_a.symbol,
               tokenRate: `${poolPrice.toFixed(4)} ${pool.token_b.symbol}`,
               tokenUSDValue: fCurrency(tokenUSDValue.toFixed(2)),
             }}
@@ -134,7 +125,7 @@ export default function PoolDetailsView({
             totalAprPercentage={0}
             poolBalances={[
               {
-                tokenSymbol: normalTokenSymbol,
+                tokenSymbol: pool.token_a.symbol,
                 amount: BigNumber(pool.token_a.amount),
                 fiatValue: reserveFiatValues.token_a,
               },
@@ -162,7 +153,7 @@ export default function PoolDetailsView({
             baseTokenSymbol={format.formatNormalToken(pool.token_a.symbol, 'with-n')}
             quoteTokenSymbol={pool.token_b.symbol}
             rows={rows}
-            quoteTokenPrice={quoteTokenPrice}
+            quoteTokenPrice={pool.token_b.oraclePrice}
           />
         </Grid2>
       </Grid2>
@@ -172,7 +163,7 @@ export default function PoolDetailsView({
 
 function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
   switch (event.type) {
-    case 'deposit_liquidity':
+    case 'deposit':
       return {
         type: 'Deposit',
         tokenAAmount: BigNumber(event.amounts[0]),
@@ -182,7 +173,7 @@ function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
         txHash: event.txHash,
       };
 
-    case 'withdraw_liquidity':
+    case 'withdraw':
       return {
         type: 'Withdraw',
         tokenAAmount: BigNumber(event.amounts[0]),

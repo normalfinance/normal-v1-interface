@@ -1,14 +1,13 @@
 'use client';
 
-import type { events, PoolInfo } from '@normalfinance/types';
+import type { PoolInfo } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useAppStore } from '@normalfinance/state';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import { format, logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useSwapVolume, useTokenPrice } from '@/hooks';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Grid2 from '@mui/material/Grid2';
@@ -26,37 +25,16 @@ export default function ExploreView() {
 
   const { globalIsLoading, setGlobalIsLoading, getAllTokens, pools } = useAppStore();
 
-  const { loading: loadingSwaps, error: swapsError, allSwaps, getSwapVolume } = useSwapVolume();
-
-  // Load XLM price
-  const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
-
-  const [volume, setVolume] = useState<BigNumber>(BigNumber(0));
-
-  // useEffect(() => {
-  //   getSwapVolume().then((res) => setVolume(res['24h'].volume));
-  // }, []);
-
   const formattedPools = useMemo(() => {
-    // TODO:
-    const dTime = 0;
-    const mTime = 0;
-
     return pools.map((pool) => {
-      const poolSwaps = allSwaps.filter((swap) => swap.tokenIn === pool.token_a.address);
-      return formatPool(pool, xlmPrice, poolSwaps, dTime, mTime);
+      return formatPool(pool);
     });
-  }, [pools, xlmPrice]);
+  }, [pools]);
 
   const totalTvl = formattedPools.reduce((acc, p) => acc.plus(p.tvl), new BigNumber(0));
 
-  const dailyVolume = useMemo(
-    () => format.formatTokenAmount(volume.multipliedBy(xlmPrice)),
-    [pools, xlmPrice]
-  );
-
   const stats: SingleStat[] = [
-    { title: '1D Volume', total: Number(dailyVolume), percent: 0, formatter: fCurrency },
+    { title: '1D Volume', total: Number(0), percent: 0, formatter: fCurrency },
     { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
     {
       title: 'Total Pools',
@@ -101,21 +79,14 @@ export default function ExploreView() {
   );
 }
 
-const formatPool = (
-  pool: PoolInfo,
-  xlmPrice: BigNumber,
-  swaps: events.RouterSwapEvent[],
-  dailyCutoff: number,
-  monthlyCutoff: number
-): ExplorePoolsRow => {
-  const normalTokenName = format.formatNormalToken(pool.token_a.symbol, 'with-n');
-
+const formatPool = (pool: PoolInfo): ExplorePoolsRow => {
+  const quoteTokenOraclePrice = pool.token_b.oraclePrice;
   const reserveA = BigNumber(format.formatTokenAmount(pool.token_a.amount));
   const reserveB = BigNumber(format.formatTokenAmount(pool.token_b.amount));
 
   if (reserveA.eq(0) || reserveB.eq(0)) {
     return {
-      tokenAName: normalTokenName,
+      tokenAName: pool.token_a.symbol,
       tokenBName: pool.token_b.symbol,
       address: pool.address,
       fee: pool.fee_fraction,
@@ -131,29 +102,19 @@ const formatPool = (
   const volume1d = BigNumber(0);
   const volume30d = BigNumber(0);
 
-  // swaps.forEach((s) => {
-  //   const swapTime = new Date(s.ledger_closed_at);
-
-  //   if (swapTime < dailyCutoff) {
-  //     volume1d = volume1d.plus(0);
-  //   } else if (swapTime < monthlyCutoff) {
-  //     volume30d = volume30d.plus(0);
-  //   }
-  // });
-
-  const volume1dValue = volume1d.multipliedBy(xlmPrice);
-  const volume30dValue = volume30d.multipliedBy(xlmPrice);
+  const volume1dValue = volume1d.multipliedBy(quoteTokenOraclePrice);
+  const volume30dValue = volume30d.multipliedBy(quoteTokenOraclePrice);
 
   const pool_price = reserveB.div(reserveA);
 
-  const reserveBValue = reserveB.multipliedBy(xlmPrice);
-  const reserveAValue = pool_price.multipliedBy(reserveA).multipliedBy(xlmPrice);
+  const reserveBValue = reserveB.multipliedBy(quoteTokenOraclePrice);
+  const reserveAValue = pool_price.multipliedBy(reserveA).multipliedBy(quoteTokenOraclePrice);
 
   const tvl = reserveAValue.plus(reserveBValue);
   const ratio = volume1d.dividedBy(tvl);
 
   return {
-    tokenAName: normalTokenName,
+    tokenAName: pool.token_a.symbol,
     tokenBName: pool.token_b.symbol,
     address: pool.address,
     fee: pool.fee_fraction,

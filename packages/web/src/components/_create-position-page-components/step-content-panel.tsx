@@ -35,9 +35,14 @@ export interface StepContentPanelProps {
 /* Zod schema                                                          */
 /* ------------------------------------------------------------------ */
 export const FormSchema = z.object({
-  tokenASymbol: z.string().min(1, 'Pick token A'),
-  tokenBSymbol: z.literal('XLM'),
-  depositAmount: z
+  tokenASymbol: z.string().min(1, 'Choose token'),
+  tokenBSymbol: z.string().min(1, 'Choose token'),
+  feeTier: z.string().min(1, 'Choose fee tier'),
+  depositAmountA: z
+    .number({ invalid_type_error: 'Enter amount' })
+    .min(0.000001, 'Amount must be positive')
+    .optional(),
+  depositAmountB: z
     .number({ invalid_type_error: 'Enter amount' })
     .min(0.000001, 'Amount must be positive')
     .optional(),
@@ -67,9 +72,10 @@ export function StepContentPanel({
   const methods = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      tokenASymbol: '',
-      tokenBSymbol: 'XLM',
-      depositAmount: undefined,
+      tokenASymbol: 'USDC',
+      tokenBSymbol: '',
+      depositAmountA: undefined,
+      depositAmountB: undefined,
     },
   });
 
@@ -80,7 +86,7 @@ export function StepContentPanel({
     // If we have a pool_address, we might be able to infer tokens from it
     // For now, we'll use the amount if provided
     if (queryParams.amount) {
-      methods.setValue('depositAmount', Number(queryParams.amount), { shouldValidate: false });
+      methods.setValue('depositAmountA', Number(queryParams.amount), { shouldValidate: false });
     }
 
     // If action is provided, we could potentially pre-select certain flows
@@ -89,50 +95,52 @@ export function StepContentPanel({
 
   /* Which fields are validated per step */
   const stepFields: Record<number, (keyof FormValues)[]> = {
-    0: ['tokenASymbol'],
-    1: ['depositAmount'],
+    0: ['tokenASymbol', 'tokenBSymbol'],
+    1: ['depositAmountA', 'depositAmountB'],
   };
 
   /* ------------- helpers --------------- */
-  const watchToken = methods.watch('tokenASymbol');
-  const watchAmount = methods.watch('depositAmount');
+  const watchTokenA = methods.watch('tokenASymbol');
+  const watchTokenB = methods.watch('tokenBSymbol');
+  const watchAmountA = methods.watch('depositAmountA');
+  const watchAmountB = methods.watch('depositAmountB');
 
   // Check if wallet is connected
   const isWalletConnected = !!persistStore.wallet.address;
 
   // Get token balance for the selected token
-  const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
-    constants.StellarConfig.XLM_ADDRESS
-  );
+  // const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
+  //   constants.StellarConfig.XLM_ADDRESS
+  // );
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
-    if (!isWalletConnected || !watchAmount || !tokenBalance) {
+    if (!isWalletConnected || !watchAmountA || !tokenBalance) {
       return false;
     }
 
     // Convert the user input amount to the token's smallest unit (considering decimals)
     const requiredAmount = BigInt(
-      Math.floor(watchAmount * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
+      Math.floor(watchAmountA * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
     );
     return tokenBalance.data < requiredAmount;
   };
 
   const getButtonLabel = () => {
-    if (step === 0) return watchToken ? 'Continue' : 'Select token';
+    if (step === 0) return watchTokenA && watchTokenB ? 'Continue' : 'Select token';
     if (step === 1) {
-      if (!watchAmount) return 'Enter amount';
+      if (!watchAmountA) return 'Enter amount';
       if (!isWalletConnected) return 'Connect Wallet';
-      if (hasInsufficientBalance()) return 'Insufficient XLM';
+      if (hasInsufficientBalance()) return 'Insufficient balance';
       return 'Continue';
     }
     return 'Continue';
   };
 
   const isStepInvalid = () => {
-    if (step === 0) return !watchToken;
+    if (step === 0) return !watchTokenA || !watchTokenB;
     if (step === 1) {
-      if (!watchAmount) return true;
+      if (!watchAmountA) return true;
       if (!isWalletConnected) return false; // Allow wallet connection
       if (hasInsufficientBalance()) return true; // Disable if insufficient balance
       return false;
@@ -142,21 +150,16 @@ export function StepContentPanel({
 
   const isButtonDisabled = () => {
     if (isLoading) return true;
-    if (step === 0) return !watchToken;
+    if (step === 0) return !watchTokenA || !watchTokenB;
     return false;
   };
 
   /* ------- main CTA click handler ------------------------------------ */
   const handleMainButtonClick = async () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
-
     if (isLoading) return;
 
     // ----- Step-2 special case  ---------------------------------------
-    if (step === 1 && watchAmount !== undefined) {
+    if (step === 1 && watchAmountA !== undefined) {
       if (!isWalletConnected) {
         // Wallet connection is handled by WalletGate component
         return;
@@ -167,16 +170,19 @@ export function StepContentPanel({
       }
 
       await depositLiquidity({
-        asset: watchToken.startsWith('n') ? watchToken.slice(1) : watchToken,
-        token_b_amount: watchAmount,
+        tokens: [watchTokenA, watchTokenB],
+        pool_index: '',
+        desired_amounts: [watchAmountA, watchAmountB],
+        min_shares: 0,
       });
       return;
     }
 
     if (step == 2 && watchAmount !== undefined) {
       depositLiquidity({
-        asset: watchToken.startsWith('n') ? watchToken.slice(1) : watchToken,
-        token_b_amount: watchAmount,
+        tokens: [watchTokenA, watchTokenB],
+        pool_index: '',
+        desired_amounts: [watchAmountA, watchAmountB],
       });
     }
 
@@ -200,7 +206,7 @@ export function StepContentPanel({
 
         {/* ---- navigation ---- */}
         <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
-          {step === 1 && watchAmount ? (
+          {step === 1 && watchAmountA ? (
             <WalletGate buttonText={getButtonLabel()} fullWidth variant="soft" color="success">
               <Button
                 fullWidth

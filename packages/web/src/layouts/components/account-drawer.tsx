@@ -2,17 +2,16 @@
 
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import axios from 'axios';
 import posthog from 'posthog-js';
 import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
-import { format, isTestnet, logger, trackEvent } from '@normalfinance/utils';
+import { format, logger, trackEvent } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
@@ -112,30 +111,6 @@ function WalletConnected({ address }: { address: string }) {
 
   const { loading, error, recentActivity } = useUserActivity();
 
-  // Faucet
-  const [faucetLoading, setFaucetLoading] = useState(false);
-  const [faucetOff, setFaucetOff] = useState(false);
-
-  const handleFaucetRequest = useCallback(async () => {
-    try {
-      setFaucetLoading(true);
-      const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
-
-      if (data) {
-        enqueueSnackbar(t('Account funded!'), { variant: 'success' });
-      }
-    } catch (e) {
-      if (axios.isAxiosError(e)) {
-        if (e?.response?.data.detail === 'account already funded to starting balance') {
-          setFaucetOff(true);
-          enqueueSnackbar(t('Account already funded'), { variant: 'warning' });
-        }
-      }
-    } finally {
-      setFaucetLoading(false);
-    }
-  }, [address, enqueueSnackbar, t]);
-
   // Effect hook to fetch all tokens when the component mounts or address changes
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
@@ -186,24 +161,7 @@ function WalletConnected({ address }: { address: string }) {
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
-      {isTestnet() && (
-        <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-          <Button
-            fullWidth
-            variant="soft"
-            color="info"
-            size="large"
-            startIcon={<Iconify icon="eva:droplet-fill" />}
-            onClick={handleFaucetRequest}
-            sx={{ my: 1 }}
-            loading={faucetLoading}
-            disabled={faucetOff}
-          >
-            {t('Get testnet XLM')}
-          </Button>
-          <ZealyHighlight questId={ZEALY_QUEST_IDS.receiveFaucet} position={{ right: -10 }} />
-        </Box>
-      )}
+
       <ConnectedWallet
         balance={totalBalance}
         percentageChange={0}

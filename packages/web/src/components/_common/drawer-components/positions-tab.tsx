@@ -11,10 +11,9 @@ import { Stack, Avatar, Button, Typography } from '@mui/material';
 
 export interface PoolsTabsProps {
   positions?: PoolPosition[];
-  xlmPrice?: BigNumber;
 }
 
-export default function PositioinsTab({ positions = [], xlmPrice = BigNumber(0) }: PoolsTabsProps) {
+export default function PositioinsTab({ positions = [] }: PoolsTabsProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -22,7 +21,8 @@ export default function PositioinsTab({ positions = [], xlmPrice = BigNumber(0) 
     <Box sx={{ p: 2, pt: 0 }}>
       {positions.length > 0 ? (
         positions?.map((position) => {
-          const positionFiatValue = xlmPrice.multipliedBy(
+          // FIXME: replace 1 with quoteTokenOraclePrice
+          const positionFiatValue = BigNumber(1).multipliedBy(
             format.formatTokenAmount(position.balance)
           );
 
@@ -77,7 +77,7 @@ export default function PositioinsTab({ positions = [], xlmPrice = BigNumber(0) 
                 <Stack direction="column" alignItems="start">
                   <Typography color="text.primary" variant="body1">
                     {/* eslint-disable-next-line i18next/no-literal-string */}
-                    {format.formatTokenAmount(position.balance)} XLM (
+                    {format.formatTokenAmount(position.balance)} {position.tokenA.name} (
                     {format.fCurrency(positionFiatValue.toFixed(2))})
                   </Typography>
                   <Typography color="text.secondary" variant="caption">

@@ -5,6 +5,7 @@ export type TokenInfo = {
   address: string;
   amount: number;
   symbol: string;
+  oraclePrice: bigint;
 };
 export type PoolInfo = {
   address: string;

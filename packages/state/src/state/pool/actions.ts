@@ -1,6 +1,6 @@
 import { PoolContract, PoolRouterContract } from '@normalfinance/contracts';
 import { GetStateType, PoolInfo, SetStateType } from '@normalfinance/types';
-import { constants, getTokenSymbol } from '@normalfinance/utils';
+import { constants, getOraclePrice, getTokenSymbol } from '@normalfinance/utils';
 
 /**
  * Parses a Vec<(Vec<Address>, Map<BytesN<32>, Address>)> into a flat list of inner Address values.
@@ -36,6 +36,8 @@ export function createPoolActions(setState: SetStateType, getState: GetStateType
 
         const poolAddresses = extractInnerAddresses(poolsForTokensRange.result);
 
+        const oraclePrices: Record<string, bigint> = {};
+
         const poolsWithDetails = await Promise.all(
           poolAddresses.map(async (poolAddress) => {
             const Pool = new PoolContract.Client({
@@ -53,7 +55,23 @@ export function createPoolActions(setState: SetStateType, getState: GetStateType
             ]);
 
             const tokenASymbol = (await getTokenSymbol(tokens.result[0])) ?? 'Unknown';
-            const tokenBSymbol = (await getTokenSymbol(tokens.result[1])) ?? 'USDC';
+            const tokenBSymbol = (await getTokenSymbol(tokens.result[1])) ?? 'Unknown';
+            const tokenShareSymbol = (await getTokenSymbol(token_share.result)) ?? 'LP Token';
+
+            if (tokenASymbol in oraclePrices) {
+              const tokenAOraclePrice = await getOraclePrice(
+                constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS,
+                tokenASymbol
+              );
+              oraclePrices[tokenASymbol] = tokenAOraclePrice.price;
+            }
+            if (tokenBSymbol in oraclePrices) {
+              const tokenBOraclePrice = await getOraclePrice(
+                constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS,
+                tokenBSymbol
+              );
+              oraclePrices[tokenBSymbol] = tokenBOraclePrice.price;
+            }
 
             const poolDetails: PoolInfo = {
               address: poolAddress,
@@ -61,16 +79,18 @@ export function createPoolActions(setState: SetStateType, getState: GetStateType
                 address: tokens?.result ? tokens.result[0] : '',
                 amount: reserves?.result ? reserves.result[0] : 0,
                 symbol: tokenASymbol,
+                oraclePrice: oraclePrices[tokenASymbol],
               },
               token_b: {
                 address: tokens?.result ? tokens.result[1] : '',
                 amount: reserves?.result ? reserves.result[1] : 0,
                 symbol: tokenBSymbol,
+                oraclePrice: oraclePrices[tokenBSymbol],
               },
               token_share: {
                 address: token_share?.result ? token_share.result : 0,
                 amount: 0,
-                symbol: 'LP Token',
+                symbol: tokenShareSymbol,
               },
               total_shares: total_shares?.result ? total_shares.result : 0,
               fee_fraction: fee_fraction?.result ? fee_fraction.result : 0,

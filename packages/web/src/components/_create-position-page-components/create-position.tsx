@@ -47,10 +47,6 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
   const [formKey, setFormKey] = useState(0); // ¦– bumping it forces remount
 
   const handleReset = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
     setFormKey((k) => k + 1); // clears RHF + Zod
     setActiveStep(0); // back to step-1
   };
@@ -98,12 +94,6 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
               bgcolor: alpha(theme.palette.grey[500], 0.08),
               p: 1,
             }}
-            // onClick={() =>
-            //   trackEvent('button_clicked', {
-            //     label: 'Manage Stake',
-            //     location: 'Insurance',
-            //   })
-            // }
           >
             <Iconify icon="ic-settings" width={24} />
           </Button>

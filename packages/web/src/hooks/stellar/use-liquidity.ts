@@ -89,8 +89,8 @@ export function useLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.DEPOSIT_LIQUIDITY,
-        token1: { name: 'XLM', amount: args.desired_amounts[0] },
-        token2: { name: 'USDC', amount: args.desired_amounts[1] },
+        token1: { name: args.tokens[0], amount: args.desired_amounts[0] }, // FIXME: replace name with symbol
+        token2: { name: args.tokens[1], amount: args.desired_amounts[1] }, // FIXME: replace name with symbol
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.deposit(processedArgs, { simulate: !restore });
@@ -140,7 +140,7 @@ export function useLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.REMOVE_LIQUIDITY,
-        token1: { name: 'XLM', amount: args.share_amount },
+        token1: { name: 'LP Token', amount: args.share_amount },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.withdraw(processedArgs, { simulate: !restore });

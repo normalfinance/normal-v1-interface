@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import { usePool } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
@@ -9,16 +11,14 @@ import { Alert } from '@mui/material';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 
 import PoolDetailsView from './pool-details-view';
-import { useCallback, useEffect, useState } from 'react';
+import { PoolInfo } from '@normalfinance/types';
 
 export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const { t } = useTranslate();
 
-  const { loading, error, fetchPoolByAddress } = usePool();
+  const { error, fetchPoolByAddress } = usePool();
 
-  const [pool, setPool] = useState<any>();
-
-  //  useCallback(async () => await fetchPoolByAddress(poolAddress), [poolAddress]);
+  const [pool, setPool] = useState<PoolInfo | undefined>(undefined);
 
   useEffect(() => {
     const run = async function () {

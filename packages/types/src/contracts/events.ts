@@ -1,36 +1,7 @@
-// ─── Pool Events ──────────────────────────────────
-
-export interface DepositLiquidityEvent {
-  type: 'deposit_liquidity';
-  token: string; // Address
-  user: string; // Address
-  amount: bigint;
-  shareAmount: bigint;
-}
-
-export interface WithdrawLiquidityEvent {
-  type: 'withdraw_liquidity';
-  token: string;
-  user: string;
-  shareAmount: bigint;
-  amount: bigint;
-}
-
-export interface SwapEvent {
-  type: 'swap';
-  direction: 'Buy' | 'Sell';
-  tokenIn: string;
-  tokenOut: string;
-  user: string;
-  inAmount: bigint;
-  outAmount: bigint;
-  feeAmount: bigint;
-}
-
 // ─── PoolRouter Events ─────────────────────────────
 
 export interface RouterDepositLiquidityEvent {
-  type: 'deposit_liquidity';
+  type: 'deposit';
   tokens: string[];
   user: string;
   poolAddress: string;
@@ -50,7 +21,7 @@ export interface RouterSwapEvent {
 }
 
 export interface RouterWithdrawLiquidityEvent {
-  type: 'withdraw_liquidity';
+  type: 'withdraw';
   tokens: string[];
   user: string;
   poolAddress: string;
@@ -68,11 +39,6 @@ export interface ClaimRewardEvent {
 }
 
 // ─── Union Type ─────────────────────────────────────────────
-
-export type PoolEvent = (DepositLiquidityEvent | WithdrawLiquidityEvent | SwapEvent) & {
-  timestamp?: number;
-  txHash: string;
-};
 
 export type PoolRouterEvent = (
   | RouterDepositLiquidityEvent
@@ -93,7 +59,7 @@ export type UserActivityEvent = (
   txHash: string;
 };
 
-export type NormalContractEvent = PoolEvent | PoolRouterEvent;
+export type NormalContractEvent = PoolRouterEvent;
 
 export interface GoldskyTableRow {
   id: string;

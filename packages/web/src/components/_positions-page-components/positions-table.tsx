@@ -105,12 +105,6 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
                   sx={{ color: theme.palette.primary.dark, rotate: '-90deg' }}
                 />
               }
-              // onClick={() =>
-              //   trackEvent('button_clicked', {
-              //     label: 'Manage Stake',
-              //     location: 'Insurance',
-              //   })
-              // }
             >
               {btn.label}
             </Button>

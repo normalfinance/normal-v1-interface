@@ -31,69 +31,39 @@ export function parseEvent(
   const parsedData = parseVec(data);
 
   switch (type) {
-    // ─── Pool and Pool Router Events ──────────────────────────────────
-
-    case 'deposit_liquidity': {
-      if (topics.length === 4 && parsedData.length === 2) {
-        // PoolRouter
-        return {
-          type,
-          tokens: (topics[0] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
-          user: parseAddress(topics[1]),
-          poolAddress: parseAddress(parsedData[0]),
-          amounts: (parsedData[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseBigInt),
-          shareAmount: parseBigInt(parsedData[2]),
-          txHash,
-          timestamp: undefined,
-        };
-      } else {
-        // Pool
-        return {
-          type,
-          token: parseAddress(topics[1]),
-          user: parseAddress(topics[2]),
-          amount: parseBigInt(parsedData[0]),
-          shareAmount: parseBigInt(parsedData[1]),
-          txHash,
-          timestamp: undefined,
-        };
-      }
-    }
-
-    case 'withdraw_liquidity': {
-      if (topics.length === 4 && parsedData.length === 2) {
-        // PoolRouter
-        return {
-          type,
-          tokens: (topics[0] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
-          user: parseAddress(topics[1]),
-          poolAddress: parseAddress(parsedData[0]),
-          amounts: (parsedData[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseBigInt),
-          shareAmount: parseBigInt(parsedData[2]),
-          txHash,
-          timestamp: undefined,
-        };
-      } else {
-        // Pool
-        return {
-          type,
-          token: parseAddress(topics[1]),
-          user: parseAddress(topics[2]),
-          shareAmount: parseBigInt(parsedData[0]),
-          amount: parseBigInt(parsedData[1]),
-          txHash,
-          timestamp: undefined,
-        };
-      }
-    }
-
     // ─── Pool Router Events ──────────────────────────────────
+
+    case 'deposit': {
+      return {
+        type,
+        tokens: (topics[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
+        user: parseAddress(topics[2]),
+        poolAddress: parseAddress(parsedData[0]),
+        amounts: (parsedData[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseBigInt),
+        shareAmount: parseBigInt(parsedData[2]),
+        txHash,
+        timestamp: undefined,
+      };
+    }
+
+    case 'withdraw': {
+      return {
+        type,
+        tokens: (topics[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
+        user: parseAddress(topics[2]),
+        poolAddress: parseAddress(parsedData[0]),
+        amounts: (parsedData[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseBigInt),
+        shareAmount: parseBigInt(parsedData[2]),
+        txHash,
+        timestamp: undefined,
+      };
+    }
 
     case 'swap': {
       return {
         type,
-        tokens: (topics[0] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
-        user: parseAddress(topics[1]),
+        tokens: (topics[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
+        user: parseAddress(topics[2]),
         poolAddress: parseAddress(parsedData[0]),
         tokenIn: parseAddress(parsedData[1]),
         tokenOut: parseAddress(parsedData[2]),

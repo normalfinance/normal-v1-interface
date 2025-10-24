@@ -24,34 +24,46 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
   const { register, setValue, watch, clearErrors } = useFormContext<FormValues>();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogIndex, setDialiogIndex] = useState<number>(0); // 0 for token A, 1 for token B
   const tokenASymbol = watch('tokenASymbol');
+  const tokenBSymbol = watch('tokenBSymbol');
 
   /** user picks a token */
   const handleSelect = (tok: StateToken) => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
-    setValue('tokenASymbol', tok.symbol, { shouldValidate: true });
-    clearErrors('tokenASymbol');
+    if (dialogIndex === 0) {
+      setValue('tokenASymbol', tok.symbol, { shouldValidate: true });
+      clearErrors('tokenASymbol');
+    } else if (dialogIndex === 1) {
+      setValue('tokenBSymbol', tok.symbol, { shouldValidate: true });
+      clearErrors('tokenBSymbol');
+    }
+
     setDialogOpen(false);
   };
 
-  const selected = tokens.find((tkn) => tkn.symbol === tokenASymbol);
-  const avatarSrc = selected?.icon || '';
+  const selectedA = tokens.find((tkn) => tkn.symbol === tokenASymbol);
+  const selectedB = tokens.find((tkn) => tkn.symbol === tokenBSymbol);
+  const avatarSrcA = selectedA?.icon || '';
+  const avatarSrcB = selectedB?.icon || '';
 
   return (
     <Stack>
       {/* hidden input registers the field */}
       <input type="hidden" {...register('tokenASymbol')} />
-      <Typography variant="subtitle1">{t('Select Normal Token')}</Typography>
+      <input type="hidden" {...register('tokenBSymbol')} />
+
+      <Typography variant="subtitle1">{t('Select pair')}</Typography>
       <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>
-        {t('Choose the Normal Token you want to provide liquidity for.')}
+        {t('Choose the tokens you want to provide liquidity for.')}
       </Typography>
+
       <Stack direction="row" spacing={2}>
         {/* token-A button */}
         <Button
-          onClick={() => setDialogOpen(true)}
+          onClick={() => {
+            setDialiogIndex(0);
+            setDialogOpen(true);
+          }}
           sx={{
             px: 2,
             py: 1,
@@ -68,7 +80,7 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
             <Stack direction="row">
               {tokenASymbol ? (
                 <>
-                  <Avatar src={avatarSrc} sx={{ width: 24, height: 24, mr: 1 }} />
+                  <Avatar src={avatarSrcA} sx={{ width: 24, height: 24, mr: 1 }} />
                   {tokenASymbol}
                 </>
               ) : (
@@ -87,15 +99,92 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
             />
           </Stack>
         </Button>
+
+        {/* token-B button */}
+        <Button
+          onClick={() => {
+            setDialiogIndex(1);
+            setDialogOpen(true);
+          }}
+          sx={{
+            px: 2,
+            py: 1,
+            borderRadius: 2,
+            border: `1px solid ${theme.palette.divider}`,
+            backgroundColor: alpha(theme.palette.grey[500], 0.08),
+            minWidth: 140,
+            justifyContent: 'flex-start',
+            gap: 1,
+            width: 1,
+          }}
+        >
+          <Stack direction="row" justifyContent="space-between" sx={{ width: 1 }}>
+            <Stack direction="row">
+              {tokenBSymbol ? (
+                <>
+                  <Avatar src={avatarSrcB} sx={{ width: 24, height: 24, mr: 1 }} />
+                  {tokenBSymbol}
+                </>
+              ) : (
+                'Select token'
+              )}
+            </Stack>
+            <Iconify
+              width={24}
+              icon="eva:arrow-ios-downward-fill"
+              sx={{
+                color:
+                  theme.palette.mode === 'light'
+                    ? theme.palette.text.primary
+                    : theme.palette.common.white,
+              }}
+            />
+          </Stack>
+        </Button>
       </Stack>
+
+      <Typography variant="subtitle1">{t('Fee Tier')}</Typography>
+      <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>
+        {t(
+          'The amount earned providing liquidity. Choose an amount that suits your risk tolerance and strategy.'
+        )}
+      </Typography>
+
+      <Stack direction="row" spacing={2}>
+        <Button
+          // onClick={() => setDialogOpen(true)}
+          sx={{
+            px: 2,
+            py: 1,
+            borderRadius: 2,
+            border: `1px solid ${theme.palette.divider}`,
+            backgroundColor: alpha(theme.palette.grey[500], 0.08),
+            minWidth: 140,
+            justifyContent: 'flex-start',
+            gap: 1,
+            width: 1,
+          }}
+        >
+          <Stack direction="row" justifyContent="space-between" sx={{ width: 1 }}>
+            <Stack direction="row"></Stack>
+            <Iconify
+              width={24}
+              icon="eva:arrow-ios-downward-fill"
+              sx={{
+                color:
+                  theme.palette.mode === 'light'
+                    ? theme.palette.text.primary
+                    : theme.palette.common.white,
+              }}
+            />
+          </Stack>
+        </Button>
+      </Stack>
+
       {/* token picker dialog */}
       <PickToken
         open={dialogOpen}
         onClose={() => {
-          // trackEvent('button_clicked', {
-          //   label: 'Manage Stake',
-          //   location: 'Insurance',
-          // });
           setDialogOpen(false);
         }}
         buttonSource="A"
