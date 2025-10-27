@@ -5,11 +5,12 @@ import { paths } from '@/routes/paths';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import type { Props } from './normal-navbar';
+import { cdn } from '@/utils/cdn';
 
 export const NormalNavbarDefaults: Props = {
   logo: {
     url: '#',
-    src: 'https://d22po4pjz3o32e.cloudfront.net/logo-image.svg',
+    src: cdn('logo/logo-full.svg'),
     alt: 'Logo image',
   },
   links: [
@@ -24,7 +25,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: '/explore',
                 image: {
-                  src: '/assets/icons/normal-navbar/explore.svg',
+                  src: cdn('nav/explore.svg'),
                   alt: 'Explore',
                 },
                 title: 'Explore',
@@ -33,7 +34,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.swap,
                 image: {
-                  src: '/assets/icons/normal-navbar/swap.svg',
+                  src: cdn('nav/swap.svg'),
                   alt: 'Swap',
                 },
                 title: 'Swap',
@@ -46,13 +47,13 @@ export const NormalNavbarDefaults: Props = {
             links: [
               {
                 url: '/indexes',
-                image: { src: '/assets/icons/normal-navbar/indexes.svg', alt: 'Browse Indexes' },
+                image: { src: cdn('nav/indexes.svg'), alt: 'Browse Indexes' },
                 title: 'Browse indexes',
                 description: 'Discover curated on-chain indexes.',
               },
               {
                 url: '/indexes/create',
-                image: { src: '/assets/icons/normal-navbar/create-index.svg', alt: 'Create Index' },
+                image: { src: cdn('nav/create-index.svg'), alt: 'Create Index' },
                 title: 'Create index',
                 description: 'Build and manage your own index.',
               },
@@ -64,7 +65,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.positions.root,
                 image: {
-                  src: '/assets/icons/normal-navbar/positions.svg',
+                  src: cdn('nav/positions.svg'),
                   alt: 'Positions',
                 },
                 title: 'Positions',
@@ -73,7 +74,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.positions.create,
                 image: {
-                  src: '/assets/icons/normal-navbar/provide-liquidity.svg',
+                  src: cdn('nav/provide-liquidity.svg'),
                   alt: 'Provide',
                 },
                 title: 'Provide liquidity',
@@ -87,7 +88,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.insurance,
                 image: {
-                  src: '/assets/icons/normal-navbar/insurance.svg',
+                  src: cdn('nav/insurance.svg'),
                   alt: 'Insurance',
                 },
                 title: 'Insurance',
@@ -96,7 +97,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.rewards,
                 image: {
-                  src: '/assets/icons/normal-navbar/rewards.svg',
+                  src: cdn('nav/rewards.svg'),
                   alt: 'Rewards',
                 },
                 title: 'Rewards',
@@ -110,7 +111,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.help.feedbackForm,
                 image: {
-                  src: '/assets/icons/normal-navbar/help.svg',
+                  src: cdn('nav/help.svg'),
                   alt: 'Help',
                 },
                 title: 'Help & feedback',
@@ -119,7 +120,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.docs,
                 image: {
-                  src: '/assets/icons/normal-navbar/docs.svg',
+                  src: cdn('nav/docs.svg'),
                   alt: 'Docs',
                 },
                 title: 'Docs',
@@ -130,7 +131,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.core.about,
                 image: {
-                  src: '/assets/icons/normal-navbar/about.svg',
+                  src: cdn('nav/about.svg'),
                   alt: 'About us',
                 },
                 title: 'About us',
@@ -139,7 +140,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.core.contact,
                 image: {
-                  src: '/assets/icons/normal-navbar/contact.svg',
+                  src: cdn('nav/contact.svg'),
                   alt: 'Contact',
                 },
                 title: 'Contact',
@@ -148,7 +149,7 @@ export const NormalNavbarDefaults: Props = {
               {
                 url: paths.core.roadmap,
                 image: {
-                  src: '/assets/icons/normal-navbar/positions.svg',
+                  src: cdn('nav/positions.svg'),
                   alt: 'Roadmap',
                 },
                 title: 'Roadmap',
@@ -163,7 +164,7 @@ export const NormalNavbarDefaults: Props = {
             {
               url: 'https://normalfi.substack.com/p/normal-partners-with-halborn-for',
               image: {
-                src: '/assets/images/normal-navbar/halborn.webp',
+                src: cdn('nav/halborn.webp'),
                 alt: 'Normal Partners with Halborn',
               },
               title: 'Normal Partners with Halborn',
@@ -173,7 +174,7 @@ export const NormalNavbarDefaults: Props = {
             {
               url: 'https://normalfi.substack.com/p/the-normal-top-10-index',
               image: {
-                src: '/assets/images/normal-navbar/index.webp',
+                src: cdn('nav/index.webp'),
                 alt: 'The Normal Top 10 Index',
               },
               title: 'The Normal Top 10 Index',

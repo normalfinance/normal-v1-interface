@@ -8,6 +8,7 @@ import Link from '@mui/material/Link';
 import { styled } from '@mui/material/styles';
 
 import { logoClasses } from './classes';
+import { cdn } from '@/utils/cdn';
 
 // ----------------------------------------------------------------------
 
@@ -20,10 +21,12 @@ export const Logo = forwardRef<HTMLAnchorElement, LogoProps>((props, ref) => {
   const { className, href = '/', isSingle = true, disabled, sx, ...other } = props;
 
   const singleLogo = (
-    <img alt="Single logo" src="/logo/logo-single.svg" width="100%" height="100%" />
+    <img alt="Single logo" src={cdn('logo/logo-single.svg')} width="100%" height="100%" />
   );
 
-  const fullLogo = <img alt="Full logo" src="/logo/logo-full.svg" width="100%" height="100%" />;
+  const fullLogo = (
+    <img alt="Full logo" src={cdn('logo/logo-full.svg')} width="100%" height="100%" />
+  );
 
   return (
     <LogoRoot

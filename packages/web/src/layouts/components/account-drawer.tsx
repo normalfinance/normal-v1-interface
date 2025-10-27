@@ -26,6 +26,7 @@ import ConnectedWallet from '@/components/_common/drawer-components/connected-wa
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
+import { cdn } from '@/utils/cdn';
 
 /* ------------------------------------------------------------------ */
 /* ① Disconnected: Show connect wallet button                         */
@@ -234,7 +235,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   } = useBoolean();
 
   /* ↓ main button uses dummy avatar ------------------------------ */
-  const avatarURL = '/assets/icons/navbar/logo.webp';
+  const avatarURL = cdn('logo/logo-single.svg');
 
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address || publicKey;
