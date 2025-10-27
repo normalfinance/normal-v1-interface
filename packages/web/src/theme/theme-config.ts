@@ -94,7 +94,7 @@ export const themeConfig: ThemeConfig = {
     },
     grey: {
       '50': '#FCFDFD',
-      '100': '#F9FAFB',
+      '100': '#F8FAFC',
       '200': '#F4F6F8',
       '250': '#f1f3f4',
       '300': '#DFE3E8',

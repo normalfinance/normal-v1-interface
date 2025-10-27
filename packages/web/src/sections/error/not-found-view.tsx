@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { m } from 'framer-motion';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 import { SimpleLayout } from '@/layouts/simple';
 import { RouterLink } from '@/routes/components';
@@ -39,7 +40,7 @@ export function NotFoundView() {
 
         <m.div variants={varBounce('in')}>
           <Image
-            src="/assets/illustrations/placeholders/404.svg"
+            src={cdn('placeholders/404.svg')}
             alt="404 - Page not found"
             width={400}
             height={300}

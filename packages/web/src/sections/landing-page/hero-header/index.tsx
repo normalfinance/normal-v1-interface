@@ -5,6 +5,7 @@ import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
 import { useEffect } from 'react';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
 import { useAppStore } from '@normalfinance/state';
@@ -270,16 +271,16 @@ export const HeroHeaderDefaults: Props = {
   description:
     'The largest on-chain catalogue of synthetic crypto and real-world assets built on Stellar, secured by Halborn.',
   image: {
-    src: '/assets/images/landing-page/stellar-logo.webp',
+    src: cdn('homepage/stellar-logo.webp'),
     alt: 'Stellar Logo Long',
   },
   halbornImage: {
-    src: '/assets/images/landing-page/halborn-logo.webp',
+    src: cdn('homepage/halborn-logo.webp'),
     alt: 'Stellar Logo Long',
   },
   tagline: 'Crypto that just works',
   taglineLogo: {
-    src: '/assets/images/landing-page/normal-long.svg',
+    src: cdn('homepage/normal-long.svg'),
     alt: 'Normal Logo Long',
   },
 };

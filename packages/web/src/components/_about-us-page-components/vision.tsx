@@ -1,10 +1,16 @@
 'use client';
 
+import type { StateToken as Token } from '@normalfinance/types';
+
 import React from 'react';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Paper, Stack, Container, Typography, CardContent } from '@mui/material';
+
+import WorldMap from '../ui/world-map';
+import LoadingCoins from '../ui/loading-coins';
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
@@ -13,7 +19,6 @@ import { Box, Paper, Stack, Container, Typography, CardContent } from '@mui/mate
 type Img = { src: string; alt?: string };
 
 type TopCard = {
-  image: Img;
   title: string;
   description: string;
 };
@@ -40,16 +45,11 @@ export const VisionDefaults: Props = {
   heading: 'Our Vision',
   topCards: [
     {
-      image: {
-        src: '/assets/images/about/diversify.webp',
-        alt: '1-Click diversification',
-      },
       title: '1-Click diversification',
       description:
         'Build a balanced portfolio instantly with custom crypto baskets in a single tap.',
     },
     {
-      image: { src: '/assets/images/about/world-map.webp', alt: 'Borderless Access' },
       title: 'Borderless Access',
       description:
         'Trade and invest globally without barriers. Wherever you are, Normal connects you to opportunities.',
@@ -57,23 +57,70 @@ export const VisionDefaults: Props = {
   ],
   bottomCards: [
     {
-      icon: { src: '/assets/images/about/n1.svg', alt: 'Swaps' },
+      icon: { src: cdn('about-page/n1.svg'), alt: 'Swaps' },
       title: 'Sub-Second Swaps & Deep Liquidity',
       description: 'Execute trades instantly with optimized routing and deep liquidity pools.',
     },
     {
-      icon: { src: '/assets/images/about/n2.svg', alt: 'Governance' },
+      icon: { src: cdn('about-page/n2.svg'), alt: 'Governance' },
       title: '100 % Community Governance',
       description:
         'Every decision is driven by the community — powered by open participation and voting.',
     },
     {
-      icon: { src: '/assets/images/about/n3.svg', alt: 'Growth' },
+      icon: { src: cdn('about-page/n3.svg'), alt: 'Growth' },
       title: 'Sustainable Growth',
       description: 'Normal grows with the community — expanding responsibly, together.',
     },
   ],
 };
+
+export const tokens: Token[] = [
+  {
+    id: '<insert_pool_address>',
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    icon: cdn('about-page/btc-flat.svg'),
+    usdValue: 67600.18,
+    percentageChange: 2.45435,
+    decimals: 7,
+    balance: 0,
+    featured: false,
+  },
+  {
+    id: '<insert_pool_address>',
+    name: 'Ethereum',
+    symbol: 'ETH',
+    icon: cdn('about-page/eth-flat.svg'),
+    usdValue: 3150,
+    percentageChange: 1.1,
+    decimals: 7,
+    balance: 0,
+    featured: false,
+  },
+  {
+    id: '<insert_pool_address>',
+    name: 'XRP',
+    symbol: 'XRP',
+    icon: cdn('about-page/xrp-flat.svg'),
+    usdValue: 0.48,
+    percentageChange: 0.5,
+    decimals: 7,
+    balance: 0,
+    featured: false,
+  },
+  {
+    id: '<insert_pool_address>',
+    name: 'Cardano',
+    symbol: 'ADA',
+    icon: cdn('about-page/ada-flat.svg'),
+    usdValue: 0.32,
+    percentageChange: -0.8,
+    decimals: 7,
+    balance: 0,
+    featured: false,
+  },
+];
 
 /* -------------------------------------------------------------------------- */
 /*                                   Styles                                   */
@@ -91,21 +138,61 @@ const bottomCardPadding = { xs: 2.5, md: 3.5 };
 /*                              Helper Components                              */
 /* -------------------------------------------------------------------------- */
 
-const TopFeatureCard: React.FC<TopCard> = ({ image, title, description }) => (
+const TopFeatureCard: React.FC<TopCard & { map?: boolean }> = ({
+  title,
+  description,
+  map = false,
+}) => (
   <Paper variant="outlined" sx={{ ...paperSx, height: '100%' }}>
     <Stack p={topCardPadding} height="100%">
       <Box
-        component="img"
-        src={image.src}
-        alt={image.alt}
         sx={{
           width: '100%',
-          height: { xs: 200, md: 260 },
-          objectFit: 'contain',
+          height: { xs: 'auto', md: 320 },
           borderRadius: 2,
+          mb: 4,
         }}
-        mb={4}
-      />
+      >
+        {map ? (
+          <WorldMap
+            backgroundSrc={cdn('about-page/world-map.webp')}
+            dots={[
+              {
+                start: {
+                  lat: 64.2008,
+                  lng: -149.4937,
+                }, // Alaska (Fairbanks)
+                end: {
+                  lat: 34.0522,
+                  lng: -118.2437,
+                }, // Los Angeles
+              },
+              {
+                start: { lat: 64.2008, lng: -149.4937 }, // Alaska (Fairbanks)
+                end: { lat: -15.7975, lng: -47.8919 }, // Brazil (Brasília)
+              },
+              {
+                start: { lat: -15.7975, lng: -47.8919 }, // Brazil (Brasília)
+                end: { lat: 38.7223, lng: -9.1393 }, // Lisbon
+              },
+              {
+                start: { lat: 51.5074, lng: -0.1278 }, // London
+                end: { lat: 28.6139, lng: 77.209 }, // New Delhi
+              },
+              {
+                start: { lat: 28.6139, lng: 77.209 }, // New Delhi
+                end: { lat: 43.1332, lng: 131.9113 }, // Vladivostok
+              },
+              {
+                start: { lat: 28.6139, lng: 77.209 }, // New Delhi
+                end: { lat: -1.2921, lng: 36.8219 }, // Nairobi
+              },
+            ]}
+          />
+        ) : (
+          <LoadingCoins tokens={tokens} />
+        )}
+      </Box>
       <Typography variant="subtitle1" fontWeight={700} mb={1}>
         {title}
       </Typography>
@@ -166,7 +253,7 @@ export const Vision: React.FC<VisionProps> = (props) => {
             <TopFeatureCard {...topCards[0]} />
           </Grid2>
           <Grid2 size={{ xs: 12, lg: 6 }}>
-            <TopFeatureCard {...topCards[1]} />
+            <TopFeatureCard {...topCards[1]} map />
           </Grid2>
         </Grid2>
 

@@ -1,5 +1,6 @@
 import type { LinkProps } from '@mui/material/Link';
 
+import { cdn } from '@/utils/cdn';
 import { forwardRef } from 'react';
 import { RouterLink } from '@/routes/components';
 import { mergeClasses } from 'minimal-shared/utils';
@@ -20,10 +21,12 @@ export const Logo = forwardRef<HTMLAnchorElement, LogoProps>((props, ref) => {
   const { className, href = '/', isSingle = true, disabled, sx, ...other } = props;
 
   const singleLogo = (
-    <img alt="Single logo" src="/logo/logo-single.svg" width="100%" height="100%" />
+    <img alt="Single logo" src={cdn('logo/logo-single.svg')} width="100%" height="100%" />
   );
 
-  const fullLogo = <img alt="Full logo" src="/logo/logo-full.svg" width="100%" height="100%" />;
+  const fullLogo = (
+    <img alt="Full logo" src={cdn('logo/logo-full.svg')} width="100%" height="100%" />
+  );
 
   return (
     <LogoRoot
