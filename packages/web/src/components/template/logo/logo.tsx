@@ -1,5 +1,6 @@
 import type { LinkProps } from '@mui/material/Link';
 
+import { cdn } from '@/utils/cdn';
 import { forwardRef } from 'react';
 import { RouterLink } from '@/routes/components';
 import { mergeClasses } from 'minimal-shared/utils';
@@ -8,7 +9,6 @@ import Link from '@mui/material/Link';
 import { styled } from '@mui/material/styles';
 
 import { logoClasses } from './classes';
-import { cdn } from '@/utils/cdn';
 
 // ----------------------------------------------------------------------
 

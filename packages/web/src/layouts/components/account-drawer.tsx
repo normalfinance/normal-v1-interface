@@ -4,6 +4,7 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 
 import axios from 'axios';
 import posthog from 'posthog-js';
+import { cdn } from '@/utils/cdn';
 import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
@@ -26,7 +27,6 @@ import ConnectedWallet from '@/components/_common/drawer-components/connected-wa
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
-import { cdn } from '@/utils/cdn';
 
 /* ------------------------------------------------------------------ */
 /* ① Disconnected: Show connect wallet button                         */
