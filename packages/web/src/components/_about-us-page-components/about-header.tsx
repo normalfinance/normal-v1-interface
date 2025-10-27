@@ -132,7 +132,7 @@ export const AboutHeader: React.FC = () => {
         </Grid2>
         <Box
           component="img"
-          src="/assets/images/about/meridian.webp"
+          src={cdn('about-page/meridian.webp')}
           alt="Group image"
           sx={{
             width: '100%',
