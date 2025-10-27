@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { m } from 'framer-motion';
+import { cdn } from '@/utils/cdn';
 
 type Segment = {
   id: 'INPUT1' | 'INPUT2' | 'OUTPUT2' | 'OUTPUT1' | 'INPUT4' | 'INPUT3' | 'OUTPUT3' | 'OUTPUT4';
@@ -63,7 +64,7 @@ export default function AnimatedPoolsFeature(props: React.SVGProps<SVGSVGElement
     >
       {/* Base art */}
       <image
-        href="/assets/images/landing-page/pools-feature.svg"
+        href={cdn('homepage/pools-feature.svg')}
         x="0"
         y="0"
         width="568"
