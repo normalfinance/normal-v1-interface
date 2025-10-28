@@ -115,10 +115,6 @@ const PickToken: React.FC<PickTokenProps> = ({
             placeholder={t('Search tokens')}
             value={searchTerm}
             onChange={(e) => {
-              // trackEvent('button_clicked', {
-              //   label: 'Manage Stake',
-              //   location: 'Insurance',
-              // });
               setSearchTerm(e.target.value);
             }}
             slotProps={{
@@ -231,7 +227,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           variant="body2"
                           sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                         >
-                          {fCurrency(token.oraclePrice * token.balance)}
+                          {fCurrency(token.price * token.balance)}
                         </Typography>
                         <Typography
                           variant="body2"
@@ -398,7 +394,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 variant="body2"
                                 sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                               >
-                                {fCurrency(token.oraclePrice * token.balance)}
+                                {fCurrency(token.price * token.balance)}
                               </Typography>
                               <Typography
                                 variant="body2"
@@ -517,7 +513,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               variant="body2"
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
-                              {fCurrency(token.oraclePrice * token.balance)}
+                              {fCurrency(token.price * token.balance)}
                             </Typography>
                             <Typography
                               variant="body2"

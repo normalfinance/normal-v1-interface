@@ -44,7 +44,7 @@ const MAINNET_CONFIG: NetworkConfig = {
   TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
   NETWORK_PASSPHRASE: Networks.PUBLIC,
   HORIZON_URL: process.env.NEXT_PUBLIC_MAINNET_HORIZON_URL || 'https://horizon.stellar.org',
-  RPC_URL: 'https://rpc.lightsail.network/',
+  RPC_URL: process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://rpc.lightsail.network/',
 
   // accounts
   NORMAL_TOKEN_ISSUER: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ISSUER || '',

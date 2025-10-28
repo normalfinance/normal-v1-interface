@@ -209,7 +209,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
                 />
               </Box>
-              <Typography
+              {/* <Typography
                 variant="body2"
                 sx={{
                   fontWeight: 500,
@@ -217,10 +217,9 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                <Chip label="Coming soon" color="info" size="small" />
-                {/* TODO: finish */}
-                {/* {fCurrencyTwoDecimals(networkCost)} */}
-              </Typography>
+                {fCurrencyTwoDecimals(networkCost)}
+              </Typography> */}
+              <Chip label="Coming soon" color="info" size="small" />
             </Box>
             <Box
               sx={{
@@ -254,7 +253,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
                 />
               </Box>
-              <Typography
+              {/* <Typography
                 variant="body2"
                 sx={{
                   fontWeight: 500,
@@ -262,10 +261,9 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                <Chip label="Coming soon" color="info" size="small" />
-                {/* TODO: finish */}
-                {/* {fRawPercent(priceImpact)} */}
-              </Typography>
+                {fRawPercent(priceImpact)}
+              </Typography> */}
+              <Chip label="Coming soon" color="info" size="small" />
             </Box>
             <Box
               sx={{
@@ -299,7 +297,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
                 />
               </Box>
-              <Typography
+              {/* <Typography
                 variant="body2"
                 sx={{
                   fontWeight: 500,
@@ -307,10 +305,9 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                <Chip label="Coming soon" color="info" size="small" />
-                {/* TODO: finish */}
-                {/* {fRawPercent(maxSlippage)} */}
-              </Typography>
+                {fRawPercent(maxSlippage)}
+              </Typography> */}
+              <Chip label="Coming soon" color="info" size="small" />
             </Box>
           </Box>
         </Box>

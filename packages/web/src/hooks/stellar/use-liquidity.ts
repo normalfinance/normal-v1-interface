@@ -1,5 +1,6 @@
 'use client';
 
+import type { Dispatch, SetStateAction } from 'react';
 import type { Client as PoolRouterClient } from '@normalfinance/contracts/build/pool_router';
 
 import { useState } from 'react';
@@ -15,6 +16,7 @@ export type WithdrawLiquidityArgs = Omit<Parameters<PoolRouterClient['withdraw']
 interface ReturnType {
   error: any | null;
   loading: boolean;
+  setLoading: Dispatch<SetStateAction<boolean>>;
   depositLiquidity: (args: DepositLiquidityArgs) => Promise<void>;
   withdrawLiquidity: (args: WithdrawLiquidityArgs) => Promise<void>;
 }
@@ -75,12 +77,15 @@ export function useLiquidity(): ReturnType {
 
     await rateLimitCheck();
 
+    const tokenA = storePersist.tokenState.tokensByAddress[args.tokens[0]];
+    const tokenB = storePersist.tokenState.tokensByAddress[args.tokens[1]];
+
     const processedArgs = {
       ...args,
       user: storePersist.wallet.address!,
       desired_amounts: [
-        BigInt((args.desired_amounts[0] * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
-        BigInt((args.desired_amounts[1] * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
+        BigInt((args.desired_amounts[0] * 10 ** tokenA.decimals).toFixed(0)),
+        BigInt((args.desired_amounts[1] * 10 ** tokenB.decimals).toFixed(0)),
       ],
     };
 
@@ -89,8 +94,8 @@ export function useLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.DEPOSIT_LIQUIDITY,
-        token1: { name: args.tokens[0], amount: args.desired_amounts[0] }, // FIXME: replace name with symbol
-        token2: { name: args.tokens[1], amount: args.desired_amounts[1] }, // FIXME: replace name with symbol
+        token1: { name: tokenA.symbol, amount: args.desired_amounts[0] },
+        token2: { name: tokenB.symbol, amount: args.desired_amounts[1] },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.deposit(processedArgs, { simulate: !restore });
@@ -127,12 +132,8 @@ export function useLiquidity(): ReturnType {
     const processedArgs = {
       ...args,
       user: storePersist.wallet.address!,
-      share_amount: BigInt(
-        (args.share_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)
-      ),
-      min_amounts: args.min_amounts.map((amt) =>
-        BigInt((amt * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0))
-      ),
+      share_amount: BigInt((args.share_amount * 10 ** 7).toFixed(0)),
+      min_amounts: args.min_amounts.map((amt) => BigInt((amt * 10 ** 7).toFixed(0))),
     };
 
     await executeContractTransaction({
@@ -140,7 +141,7 @@ export function useLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.REMOVE_LIQUIDITY,
-        token1: { name: 'LP Token', amount: args.share_amount },
+        token1: { name: 'Pool Token', amount: args.share_amount },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.withdraw(processedArgs, { simulate: !restore });
@@ -172,6 +173,7 @@ export function useLiquidity(): ReturnType {
   return {
     error,
     loading,
+    setLoading,
     depositLiquidity,
     withdrawLiquidity,
   };

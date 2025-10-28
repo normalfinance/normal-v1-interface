@@ -192,7 +192,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                       fontWeight={500}
                       sx={{ fontSize: { xs: 14, md: 20 }, color: 'text.primary' }}
                     >
-                      {fCurrency(tkn.oraclePrice)}
+                      {fCurrency(tkn.price)}
                     </Typography>
 
                     <Box

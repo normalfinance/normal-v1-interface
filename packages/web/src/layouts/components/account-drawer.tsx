@@ -140,7 +140,7 @@ function WalletConnected({ address }: { address: string }) {
 
   // Total balance
   const totalBalance = tokens.reduce((acc, tkn) => {
-    const holdings = tkn.balance * tkn.oraclePrice;
+    const holdings = tkn.balance * tkn.price;
     return acc + holdings;
   }, 0);
 

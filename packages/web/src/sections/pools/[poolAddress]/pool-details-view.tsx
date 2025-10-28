@@ -107,7 +107,7 @@ export default function PoolDetailsView({ pool }: { pool: PoolInfo }) {
             baseTokenSymbol={tokenA.symbol}
             quoteTokenSymbol={tokenB.symbol}
             rows={rows}
-            quoteTokenPrice={tokenB.oraclePrice}
+            quoteTokenPrice={tokenB.price}
           />
         </Grid2>
       </Grid2>

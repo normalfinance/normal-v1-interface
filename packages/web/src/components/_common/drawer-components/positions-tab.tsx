@@ -13,7 +13,7 @@ export interface PoolsTabsProps {
   positions?: PoolPosition[];
 }
 
-export default function PositioinsTab({ positions = [] }: PoolsTabsProps) {
+export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 

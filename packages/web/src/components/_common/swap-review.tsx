@@ -162,7 +162,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {buyAmount.toFixed(4)} {buyToken?.symbol}
+                  {buyAmount.toFixed(8)} {buyToken?.symbol}
                 </Typography>
                 <Typography
                   variant="body1"
@@ -178,7 +178,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                     minWidth: 0,
                   }}
                 >
-                  {buyToken ? fCurrencyTwoDecimals(buyToken.oraclePrice * buyAmount) : ''}
+                  {buyToken ? fCurrencyTwoDecimals(buyToken.price * buyAmount) : ''}
                 </Typography>
               </Box>
 

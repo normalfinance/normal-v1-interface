@@ -4,15 +4,15 @@ import { fCurrencyTwoDecimals } from './format-number';
 
 //1 USDC = 0.000355263 ETH ($1.00) - We are swaping ETH to USDC
 export const getConversionText = (sellToken: Token, buyToken: Token): string => {
-  const conversion = buyToken.oraclePrice / sellToken.oraclePrice;
+  const conversion = buyToken.price / sellToken.price;
   return `1 ${buyToken.symbol} = ${conversion.toFixed(9)} ${sellToken.symbol} (${fCurrencyTwoDecimals(
-    buyToken.oraclePrice
+    buyToken.price
   )})`;
 };
 
 // 1 ETH = $2,814.81 USDC ($2,814.81) - We are swaping ETH to USDC
 export const getSwapConversionText = (sellToken: Token, buyToken: Token): string => {
-  const conversion = sellToken.oraclePrice / buyToken.oraclePrice;
+  const conversion = sellToken.price / buyToken.price;
   return `1 ${sellToken.symbol} = ${fCurrencyTwoDecimals(conversion)} ${buyToken.symbol} (${fCurrencyTwoDecimals(conversion)})`;
 };
 

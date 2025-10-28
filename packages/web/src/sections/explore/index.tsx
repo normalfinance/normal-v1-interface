@@ -42,8 +42,6 @@ export default function ExploreView() {
     return pools.map((pool) => formatPoolForTable(pool, tokensByAddress));
   }, [pools, tokensByAddress]);
 
-  console.log({ tableData });
-
   const totalTvl = tableData.reduce((acc, p) => acc.plus(p.tvl), new BigNumber(0));
 
   const stats: SingleStat[] = [
@@ -95,7 +93,6 @@ export default function ExploreView() {
 const formatPoolForTable = (pool: PoolInfo, tokens: TokenMapType): ExplorePoolsRow => {
   const tokenA = tokens[pool.tokenA] ?? undefined;
   const tokenB = tokens[pool.tokenB] ?? undefined;
-  console.log({ tokenA, tokenB });
 
   if (pool.reserves.tokenA === 0 || pool.reserves.tokenB === 0) {
     return {

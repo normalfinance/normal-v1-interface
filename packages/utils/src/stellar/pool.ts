@@ -36,6 +36,23 @@ export const isValidContractAddress = (address: string): boolean => {
   }
 };
 
+/**
+ * Returns two strings sorted in ascending (lexicographical) order.
+ *
+ * @param {string} a - The first string.
+ * @param {string} b - The second string.
+ * @returns {[string, string]} A tuple of [smaller, larger].
+ *
+ * @example
+ * ```ts
+ * sortStringsAscending("zebra", "apple");
+ * // → ["apple", "zebra"]
+ * ```
+ */
+export const sortTokenAddreses = (a: string, b: string): [string, string] => {
+  return a < b ? [a, b] : [b, a];
+};
+
 export const calculatePoolPrices = (reserveA: BigNumber, reserveB: BigNumber): PoolReserves => {
   if (reserveA.eq(0) || reserveB.eq(0)) {
     return {

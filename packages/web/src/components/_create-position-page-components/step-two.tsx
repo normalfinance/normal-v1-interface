@@ -1,8 +1,9 @@
 'use client';
 
+import type { StateToken as Token } from '@normalfinance/types';
+
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
-import { useTokenBalance } from '@/hooks';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
@@ -12,43 +13,40 @@ import { Box, Stack, Avatar, InputBase, Typography } from '@mui/material';
 
 import type { FormValues } from './step-content-panel';
 
-export default function StepTwo() {
+interface StepTwoProps {
+  tokens: Token[];
+}
+
+export const StepTwo: React.FC<StepTwoProps> = ({ tokens }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { control, setValue, watch } = useFormContext<FormValues>();
   const { enqueueSnackbar } = useSnackbar();
 
   // -- keep field in sync with the text input ------------------------
-  const amountA = watch('depositAmountA') ?? '';
-  const amountB = watch('depositAmountB') ?? '';
-  const tokenASymbol = watch('tokenASymbol');
-  const tokenBSymbol = watch('tokenBSymbol');
+  const watchAmountA = watch('amountA') ?? '';
+  const watchAmountB = watch('amountB') ?? '';
+  const watchTokenA = watch('tokenA');
+  const watchTokenB = watch('tokenB');
 
-  // Get user token balances
-  const { data: tokenABalance } = useTokenBalance(tokenASymbol);
-  const { data: tokenBBalance } = useTokenBalance(tokenBSymbol);
-
-  // Get token prices
-  // const { loading: priceLoading, price: tokenAPrice } = useTokenPrice(tokenASymbol);
-  // const { loading: priceLoading, price: tokenAPrice } = useTokenPrice(tokenASymbol);
+  const tokenA = tokens.find((tkn) => tkn.contract === watchTokenA);
+  const tokenB = tokens.find((tkn) => tkn.contract === watchTokenB);
 
   const handleChange = (index: 0 | 1, value: string) => {
-    let valueKey: 'depositAmountA' | 'depositAmountB' = 'depositAmountA';
+    let valueKey: 'amountA' | 'amountB' = 'amountA';
 
     if (index === 0) {
-      // Token A
-      if (tokenABalance) {
-        const max = Number(tokenABalance.data);
+      if (tokenA) {
+        const max = tokenA.balance;
         if (Number(value) > max) {
           enqueueSnackbar(t('Amount greater than wallet balance'), { variant: 'error' });
         }
       }
     } else {
-      // Token B
-      valueKey = 'depositAmountB';
+      valueKey = 'amountB';
 
-      if (tokenBBalance) {
-        const max = Number(tokenBBalance.data);
+      if (tokenB) {
+        const max = tokenB.balance;
         if (Number(value) > max) {
           enqueueSnackbar(t('Amount greater than wallet balance'), { variant: 'error' });
         }
@@ -104,11 +102,11 @@ export default function StepTwo() {
           }}
         >
           <Controller
-            name="depositAmountA"
+            name="amountA"
             control={control}
             render={() => (
               <InputBase
-                value={amountA}
+                value={watchAmountA}
                 type="number"
                 onChange={(e) => handleChange(0, sanitizeAmountInput(e.target.value))}
                 placeholder="0.0"
@@ -134,10 +132,19 @@ export default function StepTwo() {
           spacing={1}
           sx={{ mr: 2, borderRadius: 99, p: 1 }}
         >
-          <Avatar src={getCryptoIconUrl(tokenASymbol)} sx={{ width: 32, height: 32 }} />
-          <Typography variant="body1" fontWeight="bold">
-            {tokenASymbol}
-          </Typography>
+          {tokenA ? (
+            <>
+              <Avatar
+                src={tokenA.icon ?? getCryptoIconUrl(tokenA.symbol)}
+                sx={{ width: 32, height: 32 }}
+              />
+              <Typography variant="body1" fontWeight="bold">
+                {tokenA.symbol}
+              </Typography>
+            </>
+          ) : (
+            'Select token'
+          )}
         </Stack>
       </Box>
 
@@ -169,11 +176,11 @@ export default function StepTwo() {
           }}
         >
           <Controller
-            name="depositAmountB"
+            name="amountB"
             control={control}
             render={() => (
               <InputBase
-                value={amountB}
+                value={watchAmountB}
                 type="number"
                 onChange={(e) => handleChange(1, sanitizeAmountInput(e.target.value))}
                 placeholder="0.0"
@@ -199,12 +206,21 @@ export default function StepTwo() {
           spacing={1}
           sx={{ mr: 2, borderRadius: 99, p: 1 }}
         >
-          <Avatar src={getCryptoIconUrl(tokenBSymbol)} sx={{ width: 32, height: 32 }} />
-          <Typography variant="body1" fontWeight="bold">
-            {tokenBSymbol}
-          </Typography>
+          {tokenB ? (
+            <>
+              <Avatar
+                src={tokenB.icon ?? getCryptoIconUrl(tokenB.symbol)}
+                sx={{ width: 32, height: 32 }}
+              />
+              <Typography variant="body1" fontWeight="bold">
+                {tokenB.symbol}
+              </Typography>
+            </>
+          ) : (
+            'Select token'
+          )}
         </Stack>
       </Box>
     </Stack>
   );
-}
+};

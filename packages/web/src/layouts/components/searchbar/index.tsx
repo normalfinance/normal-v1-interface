@@ -296,9 +296,9 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
                       {fCurrency(item.balance)}
                     </Typography>
                   )}
-                  {item.oraclePrice > 0 && (
+                  {item.price > 0 && (
                     <Typography variant="caption" color="text.secondary">
-                      {fCurrency(item.oraclePrice)}
+                      {fCurrency(item.price)}
                     </Typography>
                   )}
                 </Box>

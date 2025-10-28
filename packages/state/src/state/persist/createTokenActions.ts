@@ -13,48 +13,47 @@ import {
   getReflectorPubnetPrice,
   getTokenBalance,
   logger,
+  sortTokenAddreses,
 } from '@normalfinance/utils';
 
 async function fetchTokenBalance(token: ApiToken, address: string): Promise<number> {
   // Fetch the user's balance
-  let balance: number;
+  let balance = 0;
   try {
     const rawBalance = await getTokenBalance(token.contract, address);
     balance = Number(format.formatTokenAmount(rawBalance, token.decimals));
   } catch (error) {
     logger.warn('[WALLET ACTIONS] Error getting API token balance:', error);
     console.log({ error });
-    balance = 0;
   }
   return balance;
 }
 
-async function fetchTokenPrices(
-  token: ApiToken
-): Promise<{ oraclePrice: number; nativePrice: number }> {
+async function fetchTokenPrices(token: ApiToken): Promise<number> {
   // Oracle price
   let isNormalToken = token.issuer === constants.StellarConfig.NORMAL_TOKEN_ISSUER;
 
   if (isNormalToken) {
     // Compute price from the pool
-    const tokenKey = [token.contract, constants.StellarConfig.USDC_ADDRESS].join(':');
-    const pools = usePersistStore.getState().poolState.poolsByTokens[tokenKey];
+    const sortedTokens = sortTokenAddreses(token.contract, constants.StellarConfig.USDC_ADDRESS);
+    const tokensKey = sortedTokens.join(':');
 
-    if (!pools || pools.length === 0) return { oraclePrice: 0, nativePrice: 0 };
-
+    const pools = usePersistStore.getState().poolState.poolsByTokens[tokensKey];
+    if (!pools || pools.length === 0) return 0;
     const pool = pools[0];
-    return { oraclePrice: 0, nativePrice: pool.prices.tokenA };
+
+    return pool.prices.tokenA;
   } else {
+    if (token.symbol === 'USDC') return 1; // FIXME: REMOVE THIS ASAP
     let oraclePrice = 0;
     try {
       const { price } = await getReflectorPubnetPrice(token.contract);
-      console.log({ token: token.symbol, oraclePrice });
       oraclePrice = Number(format.formatTokenAmount(price, 14));
     } catch (error) {
       console.log({ error });
       // Some tokens might not have oracle prices
     }
-    return { oraclePrice, nativePrice: 0 };
+    return oraclePrice;
   }
 }
 
@@ -115,7 +114,7 @@ export const createTokenActions = (): TokenActions => {
 
         if (walletAddress) balance = await fetchTokenBalance(token, walletAddress);
 
-        const { oraclePrice, nativePrice } = await fetchTokenPrices(token);
+        const price = await fetchTokenPrices(token);
 
         // Update state
         usePersistStore.setState((state: AppStorePersist) => {
@@ -124,8 +123,7 @@ export const createTokenActions = (): TokenActions => {
               ? {
                   ...existingToken,
                   balance,
-                  nativePrice,
-                  oraclePrice,
+                  price,
                   percentageChange: 0,
                 }
               : existingToken
@@ -138,8 +136,7 @@ export const createTokenActions = (): TokenActions => {
             const newToken: Token = {
               ...token,
               balance,
-              nativePrice,
-              oraclePrice,
+              price,
               percentageChange: 0,
             };
             updatedTokens.push(newToken);

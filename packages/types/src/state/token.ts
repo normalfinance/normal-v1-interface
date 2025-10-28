@@ -12,8 +12,7 @@ export type ApiToken = {
 
 export type StateToken = ApiToken & {
   balance: number; // The user's balance of this token
-  nativePrice: number; // The price of this token on Normal DEX
-  oraclePrice: number; // The price of this token according to an oracle
+  price: number; // The USD price of this token
   percentageChange: number;
 };
 

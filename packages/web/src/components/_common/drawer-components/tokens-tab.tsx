@@ -112,7 +112,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                       variant="body2"
                       sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                     >
-                      {fCurrency(token.oraclePrice * token.balance)}
+                      {fCurrency(token.price * token.balance)}
                     </Typography>
                     <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                       <Box

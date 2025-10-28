@@ -36,10 +36,10 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
   /* wizard navigation state                                             */
   /* ------------------------------------------------------------------ */
   const totalSteps = 2; // bump to 3 when you add step-3
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeStep, setActiveStep] = useState(1);
 
   const handleNext = () => setActiveStep((s) => Math.min(s + 1, totalSteps));
-  const handleBack = () => setActiveStep((s) => Math.max(s - 1, 0));
+  const handleBack = () => setActiveStep((s) => Math.max(s - 1, 1));
 
   /* ------------------------------------------------------------------ */
   /* form reset → remount StepContentPanel                               */
@@ -48,7 +48,7 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
 
   const handleReset = () => {
     setFormKey((k) => k + 1); // clears RHF + Zod
-    setActiveStep(0); // back to step-1
+    setActiveStep(1); // back to step-1
   };
 
   /* ------------------------------------------------------------------ */

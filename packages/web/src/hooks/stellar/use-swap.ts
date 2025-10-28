@@ -1,5 +1,6 @@
 'use client';
 
+import type { Dispatch, SetStateAction } from 'react';
 import type { Client as PoolClient } from '@normalfinance/contracts/build/pool';
 import type { Client as PoolRouterClient } from '@normalfinance/contracts/build/pool_router';
 
@@ -19,7 +20,7 @@ export type SwapStrictReceiveArgs = Omit<Parameters<PoolClient['swap_strict_rece
 interface ReturnType {
   error: any | null;
   loading: boolean;
-
+  setLoading: Dispatch<SetStateAction<boolean>>;
   onEstimateSwap: (args: EstimateSwapArgs, token_in_decimals?: number) => Promise<void>;
   onSwap: (
     args: SwapArgs,
@@ -96,13 +97,16 @@ export function useSwap(): ReturnType {
       out_min: BigInt((args.out_min * 10 ** (token_out_decimals || 7)).toFixed(0)),
     };
 
+    const tokenIn = storePersist.tokenState.tokensByAddress[args.token_in];
+    const tokenOut = storePersist.tokenState.tokensByAddress[args.token_out];
+
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: args.token_in, amount: args.in_amount },
-        token2: { name: args.token_out, amount: args.out_min },
+        token1: { name: tokenIn.symbol, amount: args.in_amount },
+        token2: { name: tokenOut.symbol, amount: args.out_min },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap(processedArgs, { simulate: !restore });
@@ -140,13 +144,17 @@ export function useSwap(): ReturnType {
       out_amount: BigInt((args.out_amount * 10 ** (token_out_decimals || 7)).toFixed(0)),
     };
 
+    // const pool = storePersist.poolState.pools.find(p => p.address === poolAddress);
+    // const tokenIn = pool?.tokenA;
+    // const tokenOut = pool?.tokenB;
+
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: args.in_idx, amount: args.in_max },
-        token2: { name: args.out_idx, amount: args.out_amount },
+        token1: { name: 'token 1', amount: args.in_max },
+        token2: { name: 'token 2', amount: args.out_amount },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap_strict_receive(processedArgs, { simulate: !restore });
@@ -176,6 +184,7 @@ export function useSwap(): ReturnType {
   return {
     error,
     loading,
+    setLoading,
     onEstimateSwap,
     onSwap,
     onSwapStrictReceive,
