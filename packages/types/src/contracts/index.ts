@@ -5,13 +5,19 @@ export type TokenInfo = {
   address: string;
   amount: number;
   symbol: string;
-  oraclePrice: bigint;
+};
+export type PoolReserves = {
+  tokenA: number;
+  tokenB: number;
 };
 export type PoolInfo = {
   address: string;
-  token_a: TokenInfo;
-  token_b: TokenInfo;
-  token_share: TokenInfo;
-  total_shares: number;
-  fee_fraction: number;
+  index: Buffer;
+  tokenA: string;
+  tokenB: string;
+  reserves: PoolReserves;
+  prices: PoolReserves;
+  tokenShare: TokenInfo;
+  totalShares: number;
+  feeFraction: number;
 };

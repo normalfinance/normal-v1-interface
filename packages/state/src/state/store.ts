@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createWalletActions } from './wallet/actions';
+import { createTokenActions } from './persist/createTokenActions';
 import { persist } from 'zustand/middleware';
 import { Horizon } from '@stellar/stellar-sdk';
 import { AppStore, AppStorePersist } from '@normalfinance/types';
@@ -9,28 +9,19 @@ import { createLoadingActions } from './loading/actions';
 import { constants } from '@normalfinance/utils';
 import { createReferralActions } from './persist/createReferralActions';
 import { createInviteCodeActions } from './persist/createInviteCodeActions';
-import { createPoolActions } from './pool/actions';
+import { createPoolActions } from './persist/createPoolActions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
   // Create a new server instance.
   const server = new Horizon.Server(constants.StellarConfig.RPC_URL);
 
-  // Create a wallet with the given server and network passphrase.
-  const wallet = createWalletActions(set, get);
-
   // Create a loading state
   const loading = createLoadingActions(set, get);
 
-  // Create
-  const pool = createPoolActions(set, get);
-
   return {
     server,
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-    ...wallet,
     ...loading,
-    ...pool,
   };
 });
 
@@ -52,17 +43,24 @@ export const usePersistStore = create<AppStorePersist>()(
       // Create invite code actions
       const inviteCodeActions = createInviteCodeActions();
 
+      // Create pool actions
+      const poolActions = createPoolActions();
+
+      // Create token actions
+      const tokenActions = createTokenActions();
+
       return {
         server,
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         ...walletPersist,
         ...disclaimer,
         ...referralActions,
         ...inviteCodeActions,
+        ...poolActions,
+        ...tokenActions,
       };
     },
     {
-      name: 'app-storage', // name of the item in the storage (must be unique)
+      name: 'just-some-normal-storage',
     }
   )
 );

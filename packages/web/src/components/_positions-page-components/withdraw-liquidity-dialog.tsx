@@ -4,14 +4,12 @@ import type { PoolPosition } from '@/hooks';
 import type { PoolQueryParams } from '@/types/query-params';
 
 import z from 'zod';
-import BigNumber from 'bignumber.js';
+import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
-import { useMemo, useEffect } from 'react';
-import { fCurrency } from '@/utils/format-number';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
+import { useLiquidity, useTokenBalance } from '@/hooks';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { useLiquidity, useTokenPrice, useTokenBalance } from '@/hooks';
 import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
@@ -93,7 +91,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
   const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(position.tokenAddress);
 
   // Get the price for XLM
-  const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
+  // const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
 
   // Check if wallet is connected
   const isWalletConnected = !!store.wallet.address;
@@ -119,12 +117,12 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       shouldValidate: true,
     });
 
-  const fiatValue = useMemo(() => {
-    if (xlmPrice && amount) {
-      return xlmPrice.multipliedBy(amount);
-    }
-    return new BigNumber(0);
-  }, [xlmPrice, amount]);
+  // const fiatValue = useMemo(() => {
+  //   if (xlmPrice && amount) {
+  //     return xlmPrice.multipliedBy(amount);
+  //   }
+  //   return new BigNumber(0);
+  // }, [xlmPrice, amount]);
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
@@ -144,8 +142,10 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
     if (label === 'Withdraw') {
       withdrawLiquidity({
-        asset: format.formatNormalToken(position.tokenA.name, 'without-n'),
+        tokens: [position.tokenA.contract, position.tokenB.contract],
+        pool_index: Buffer.from(''),
         share_amount: amount,
+        min_amounts: [0, 0],
       });
     }
   };
@@ -205,9 +205,9 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
               )}
             />
 
-            <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+            {/* <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
               {fCurrency(fiatValue.toFixed(2))}
-            </Typography>
+            </Typography> */}
           </Stack>
 
           <Stack

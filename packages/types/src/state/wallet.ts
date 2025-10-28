@@ -1,66 +1,22 @@
-import { PoolRouterContract } from '@normalfinance/contracts';
 import { Horizon } from '@stellar/stellar-sdk';
-
-export type ApiToken = {
-  code: string;
-  issuer: string;
-  contract: string;
-  name: string;
-  org: string;
-  domain: string;
-  icon: string;
-  decimals: number;
-};
-
-export type StateToken = {
-  id: string;
-  balance: number;
-  decimals: number;
-  symbol: string;
-  // ===
-  name: string;
-  icon: string;
-  usdValue: number;
-  featured: boolean;
-  percentageChange?: number;
-};
-
-export type TokenMapType = {
-  [key: string]: StateToken;
-};
-
-export type TokenBalancesMap = {
-  [tokenAddress: string]: { usdValue: string; balance: string };
-};
 
 export type Wallet = {
   address: string | undefined;
   activeChain: WalletChain | undefined;
   server: Horizon.Server | undefined;
   walletType:
-    | 'freighter'
-    | 'xbull'
-    | 'lobstr'
-    | 'wallet-connect'
     | 'hana'
-    | 'ledger'
-    | 'hana-stellar-kit'
-    | 'xbull-stellar-kit'
-    | 'freighter-stellar-kit'
-    | 'lobstr-stellar-kit'
+    | 'xbull'
+    | 'freighter'
+    | 'lobstr'
     | 'stellar-wallets-kit'
-    | 'wallet-connect-stellar-kit'
-    | 'ledger-stellar-kit'
+    | 'wallet-connect'
+    | 'ledger'
     | undefined;
 };
 
 export interface WalletActions {
-  tokens: StateToken[];
   walletConnectInstance?: any;
-  fetchNativeTokenInfo: () => Promise<StateToken | undefined>;
-  fetchNormalTokenInfo: (pool: any, quoteTokenPrice: number) => Promise<StateToken | undefined>;
-  fetchApiTokenInfo: (apiToken: ApiToken) => Promise<StateToken | undefined>;
-  getAllTokens: () => Promise<StateToken[]>;
 }
 
 export interface WalletChain {
@@ -77,35 +33,6 @@ export interface NetworkDetails {
   network: string;
   networkUrl: string;
   networkPassphrase: string;
-}
-
-export interface Connector {
-  id: string;
-  name: string;
-  iconUrl: string;
-  iconBackground: string;
-  installed: boolean;
-  downloadUrls: {
-    browserExtension: string;
-  };
-  client?: any;
-
-  isConnected(): Promise<boolean>;
-
-  getNetworkDetails(): Promise<NetworkDetails>;
-
-  getPublicKey(): Promise<string>;
-
-  isAvailable(): Promise<boolean>;
-
-  signTransaction(
-    xdr: string,
-    opts?: {
-      network?: string;
-      networkPassphrase?: string;
-      accountToSign?: string;
-    }
-  ): Promise<string>;
 }
 
 // Sourced from https://github.com/tmm/wagmi/blob/main/packages/core/src/constants/chains.ts

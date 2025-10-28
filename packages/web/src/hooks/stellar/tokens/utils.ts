@@ -4,7 +4,7 @@ export const tokensToMap = (tokens: StateToken[]) => {
   if (!tokens) return {};
 
   return tokens.reduce((map: TokenMapType, token) => {
-    map[token.id] = token;
+    map[token.contract] = token;
     return map;
   }, {});
 };

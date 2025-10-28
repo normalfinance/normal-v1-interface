@@ -90,7 +90,7 @@ const SendReview: React.FC<SendReviewProps> = ({
 
     await executeContractTransaction({
       contractType: 'token',
-      contractAddress: sendToken.id,
+      contractAddress: sendToken.contract,
       transactionDetails: {
         type: TransactionType.SEND,
         token1: { name: sendToken.symbol, amount: tokenValue.toString() },

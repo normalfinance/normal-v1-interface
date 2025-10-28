@@ -68,7 +68,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
 
   const fiatValue = parseFloat(amount) || 0;
   const buyableAmt =
-    buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.usdValue) : 0;
+    buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.oraclePrice) : 0;
 
   // State for review dialog
   const [reviewOpen, setReviewOpen] = useState(false);

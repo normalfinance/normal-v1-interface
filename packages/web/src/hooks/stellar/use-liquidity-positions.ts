@@ -2,9 +2,9 @@
 
 import type { PoolInfo, StateToken as Token } from '@normalfinance/types';
 
+import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { logger, getTokenBalance, getCryptoIconUrl } from '@normalfinance/utils';
+import { logger, getTokenBalance } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -31,7 +31,10 @@ interface ReturnType {
 // ----------------------------------------------------------------------
 
 export function useLiquidityPositions(): ReturnType {
-  const { pools } = useAppStore();
+  const {
+    tokenState: { tokens },
+    poolState: { pools },
+  } = usePersistStore();
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,11 +44,18 @@ export function useLiquidityPositions(): ReturnType {
     // eslint-disable-next-line prefer-const
     let position: PoolPosition | undefined;
 
-    const tokenAddress = pool.token_share.address;
+    const tokenShareAddress = pool.tokenShare.address;
+
+    // Find TokenA and TokenB
+    const tokenA = tokens.find((tkn) => tkn.contract === pool.tokenA)!;
+    const tokenB = tokens.find((tkn) => tkn.contract === pool.tokenA)!;
 
     let balance: bigint;
     try {
-      balance = await getTokenBalance(tokenAddress, usePersistStore.getState().wallet.address!);
+      balance = await getTokenBalance(
+        tokenShareAddress,
+        usePersistStore.getState().wallet.address!
+      );
     } catch (e: any) {
       logger.log(e);
       setError(e.toString());
@@ -54,36 +64,20 @@ export function useLiquidityPositions(): ReturnType {
 
     if (Number(balance) == 0) return position;
 
+    // if (tokenA === undefined) {
+    //   await
+    // }
+
     position = {
       poolAddress: pool.address,
-      tokenAddress: pool.token_share.address,
-      tokenA: {
-        id: pool.token_a.address,
-        decimals: 7,
-        symbol: pool.token_a.symbol,
-        name: pool.token_a.symbol,
-        icon: getCryptoIconUrl(pool.token_a.symbol),
-        balance: 0,
-        usdValue: 0,
-        featured: false,
-        percentageChange: 0,
-      },
-      tokenB: {
-        id: pool.token_b.address,
-        decimals: 7,
-        symbol: pool.token_b.symbol,
-        name: pool.token_b.symbol,
-        icon: getCryptoIconUrl(pool.token_b.symbol),
-        balance: 0,
-        usdValue: 0,
-        featured: false,
-        percentageChange: 0,
-      },
+      tokenAddress: tokenShareAddress,
+      tokenA,
+      tokenB,
       balance: Number(balance),
-      lpPercentage: (Number(balance) / Number(pool.total_shares)).toFixed(4),
-      totalShares: Number(pool.total_shares),
+      lpPercentage: (Number(balance) / pool.totalShares).toFixed(4),
+      totalShares: Number(pool.totalShares),
       status: 'Active',
-      poolFee: (Number(pool.fee_fraction) / 100).toString(),
+      poolFee: (pool.feeFraction / 100).toString(),
       poolVersion: 'v1',
     };
 
@@ -95,9 +89,9 @@ export function useLiquidityPositions(): ReturnType {
       setError(null);
       setLoading(true);
 
-      const allPositions = pools.map((pool) => fetchTokenInfoIntoPositions(pool));
+      // const allPositions = pools.map((pool) => fetchTokenInfoIntoPositions(pool));
 
-      const data = await Promise.all(allPositions);
+      const data = await Promise.all([]);
 
       const userPositions = data.filter((e) => e !== undefined);
       setPostions(userPositions as PoolPosition[]);

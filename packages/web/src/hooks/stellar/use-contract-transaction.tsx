@@ -14,13 +14,13 @@ import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
   PoolContract,
-  PoolElasticContract,
   PoolPlaneContract,
-  ConfigStorageContract,
-  RewardsGaugeContract,
   TokenShareContract,
   PoolRouterContract,
+  PoolElasticContract,
+  RewardsGaugeContract,
   SorobanTokenContract,
+  ConfigStorageContract,
   LiquidityCalculatorContract,
 } from '@normalfinance/contracts';
 

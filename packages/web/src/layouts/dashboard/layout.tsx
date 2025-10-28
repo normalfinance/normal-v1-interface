@@ -4,6 +4,7 @@ import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
+import { isTestnet } from '@normalfinance/utils';
 import { ZEALY_QUEST_IDS } from '@/global-config';
 import { allLangs, useTranslate } from '@/locales';
 import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
@@ -29,7 +30,6 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
-import { isTestnet } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 

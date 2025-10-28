@@ -6,8 +6,8 @@ import type { StateToken as Token } from '@normalfinance/types';
 import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { logger } from '@normalfinance/utils';
-import { useAppStore } from '@normalfinance/state';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
@@ -20,44 +20,60 @@ import type { SmallCard } from './features-grid';
 
 export const tokens: Token[] = [
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'Bitcoin',
     symbol: 'BTC',
     icon: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
-    usdValue: 67600.18,
+    oraclePrice: 67600.18,
+    nativePrice: 0,
     percentageChange: 2.45435,
     decimals: 7,
     balance: 0,
     featured: false,
   },
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'Ethereum',
     symbol: 'ETH',
     icon: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
-    usdValue: 3150,
+    oraclePrice: 3150,
+    nativePrice: 0,
     percentageChange: 1.1,
     decimals: 7,
     balance: 0,
     featured: false,
   },
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'Solana',
     symbol: 'SOL',
     icon: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
-    usdValue: 141,
+    oraclePrice: 141,
+    nativePrice: 0,
     percentageChange: -0.8,
     decimals: 7,
     balance: 0,
     featured: false,
   },
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'XRP',
     symbol: 'XRP',
     icon: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
-    usdValue: 0.48,
+    oraclePrice: 0.48,
+    nativePrice: 0,
     percentageChange: 0.5,
     decimals: 7,
     balance: 0,
@@ -112,14 +128,15 @@ export const featureCardWide = {
 export default function LandingPage() {
   const { params } = useQueryParams<SwapQueryParams>();
 
-  const { getAllTokens, setGlobalIsLoading } = useAppStore();
+  const { setGlobalIsLoading } = useAppStore();
+  const { getAllTokens, getAllPools } = usePersistStore();
 
-  // Effect hook to fetch all tokens once the component mounts
+  // Effect hook to fetch all tokens and pools once the component mounts
   useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
+    const refreshData = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
-        await getAllTokens();
+        await Promise.all([await getAllTokens(), await getAllPools()]);
         setGlobalIsLoading(false);
       } catch (e) {
         logger.error(e);
@@ -127,7 +144,7 @@ export default function LandingPage() {
         setGlobalIsLoading(false);
       }
     };
-    refreshTokens();
+    refreshData();
   }, []);
 
   return (

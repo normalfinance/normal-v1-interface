@@ -24,7 +24,8 @@ export interface NetworkConfig {
   USDC_DECIMALS: number;
 
   // oracle
-  REFLECTOR_ORACLE_ADDRESS: string;
+  REFLECTOR_EXTERNAL_ORACLE_ADDRESS: string;
+  REFLECTOR_PUBNET_ORACLE_ADDRESS: string;
 
   // supabase
   EVENTS_TABLENAME: string;

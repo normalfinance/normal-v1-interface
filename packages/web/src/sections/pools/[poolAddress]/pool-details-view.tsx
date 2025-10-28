@@ -3,34 +3,32 @@
 import type { PoolTxRow } from '@/types/pools';
 import type { events, PoolInfo } from '@normalfinance/types';
 
+import { useState } from 'react';
 import BigNumber from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useState, useEffect } from 'react';
-import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
-import { fPercent, fCurrency } from '@/utils/format-number';
-import { format, getCryptoIconUrl } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
 import { usePoolEvents, usePoolPriceChart } from '@/hooks';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
-import { Stack, Grid2, useTheme, Typography } from '@mui/material';
+import { Grid2, useTheme } from '@mui/material';
 
 import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
 import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-transactions-table';
 
-export default function PoolDetailsView({
-  poolAddress,
-  pool,
-}: {
-  poolAddress: string;
-  pool: PoolInfo;
-}) {
+export default function PoolDetailsView({ pool }: { pool: PoolInfo }) {
   const theme = useTheme();
   const { t } = useTranslate();
-  const { tokens } = useAppStore();
+  const {
+    tokenState: { tokens },
+  } = usePersistStore();
+
+  const tokenA = tokens.find((tkn) => tkn.contract === pool.tokenA)!;
+  const tokenB = tokens.find((tkn) => tkn.contract === pool.tokenB)!;
 
   // Load recent pool events
-  const { events } = usePoolEvents(poolAddress, 20);
+  const { events } = usePoolEvents(pool.address, 20);
 
   // Format the pool events
   const rows = events
@@ -38,81 +36,37 @@ export default function PoolDetailsView({
     .sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
 
   // Load price and volume chart data
-  const { chartData } = usePoolPriceChart(poolAddress, []);
+  const { chartData } = usePoolPriceChart(pool.address, []);
 
   // Load pool price and exchange rate info
-  const [poolPrice, setPoolPrice] = useState<BigNumber>(BigNumber(0));
   const [tokenUSDValue, setTokenUSDValue] = useState<BigNumber>(BigNumber(0));
   const [reserveFiatValues, setReserveFiatValues] = useState<{
     token_a: BigNumber;
     token_b: BigNumber;
   }>({ token_a: BigNumber(0), token_b: BigNumber(0) });
-  const [tvl, setTvl] = useState<BigNumber>(BigNumber(0));
 
-  const [past24hVolume, setPast24hVolume] = useState<BigNumber>(BigNumber(0));
-
-  // Calculate pool info
-  useEffect(() => {
-    if (pool) {
-      const quoteTokenOraclePrice = pool.token_b.oraclePrice;
-      const reserve_a = BigNumber(format.formatTokenAmount(pool.token_a.amount));
-      const reserve_b = BigNumber(format.formatTokenAmount(pool.token_b.amount));
-
-      if (reserve_a.eq(0) || reserve_b.eq(0)) return;
-
-      const pool_price = reserve_b.div(reserve_a);
-      setPoolPrice(pool_price);
-
-      setTokenUSDValue(pool_price.multipliedBy(quoteTokenOraclePrice));
-
-      const reserve_b_value = reserve_b.multipliedBy(quoteTokenOraclePrice);
-      const reserve_a_value = pool_price
-        .multipliedBy(reserve_a)
-        .multipliedBy(quoteTokenOraclePrice);
-
-      setReserveFiatValues({
-        token_a: reserve_a_value,
-        token_b: reserve_b_value,
-      });
-
-      setTvl(reserve_a_value.plus(reserve_b_value));
-    }
-  }, [pool]);
+  const past24hVolume = BigNumber(0);
+  const tvl = BigNumber(0);
 
   return (
     <DashboardContent maxWidth="xl">
-      <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">
-          {t('Pool')}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {pool.address}
-        </Typography>
-      </Stack>
-
-      <Grid2 container spacing={3} sx={{ mt: 3 }}>
+      <Grid2 container spacing={3}>
         <Grid2 size={{ xs: 12, md: 8 }}>
           <PoolChart
             pairInfo={{
-              tokenA: {
-                name: pool.token_a.symbol,
-                iconUrl: getCryptoIconUrl(pool.token_a.symbol),
-              },
-              tokenB: {
-                name: pool.token_b.symbol,
-                iconUrl: getCryptoIconUrl(pool.token_b.symbol),
-              },
+              tokenA,
+              tokenB,
               address: pool.address,
             }}
             metadata={{
               version: 'v1',
-              feeTier: fPercent(pool.fee_fraction / 100),
+              feeTier: fPercent(pool.feeFraction / 100),
             }}
             exchangeRate={{
-              label: `1 ${pool.token_a.symbol} = ${poolPrice.toFixed(4)} ${pool.token_b.symbol}`,
+              label: `1 ${tokenA.symbol} = ${pool.prices.tokenA.toFixed(4)} ${tokenB.symbol}`,
               usdEquivalent: fCurrency(tokenUSDValue.toFixed(2)),
-              tokenSymbol: pool.token_a.symbol,
-              tokenRate: `${poolPrice.toFixed(4)} ${pool.token_b.symbol}`,
+              tokenSymbol: tokenA.symbol,
+              tokenRate: `${pool.prices.tokenA.toFixed(4)} ${tokenB.symbol}`,
               tokenUSDValue: fCurrency(tokenUSDValue.toFixed(2)),
             }}
             performance={{ percentageChange: 0 }}
@@ -125,13 +79,13 @@ export default function PoolDetailsView({
             totalAprPercentage={0}
             poolBalances={[
               {
-                tokenSymbol: pool.token_a.symbol,
-                amount: BigNumber(pool.token_a.amount),
+                tokenSymbol: tokenA.symbol,
+                amount: BigNumber(pool.reserves.tokenA),
                 fiatValue: reserveFiatValues.token_a,
               },
               {
-                tokenSymbol: pool.token_a.symbol,
-                amount: BigNumber(pool.token_b.amount),
+                tokenSymbol: tokenA.symbol,
+                amount: BigNumber(pool.reserves.tokenB),
                 fiatValue: reserveFiatValues.token_b,
               },
             ]}
@@ -150,10 +104,10 @@ export default function PoolDetailsView({
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 12 }}>
           <PoolTransactionsTable
-            baseTokenSymbol={format.formatNormalToken(pool.token_a.symbol, 'with-n')}
-            quoteTokenSymbol={pool.token_b.symbol}
+            baseTokenSymbol={tokenA.symbol}
+            quoteTokenSymbol={tokenB.symbol}
             rows={rows}
-            quoteTokenPrice={pool.token_b.oraclePrice}
+            quoteTokenPrice={tokenB.oraclePrice}
           />
         </Grid2>
       </Grid2>

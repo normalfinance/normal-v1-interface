@@ -1,14 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useSnackbar } from 'notistack';
-import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { fCurrency } from '@/utils/format-number';
-import { useTokenPrice, useTokenBalance } from '@/hooks';
+import { useTokenBalance } from '@/hooks';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
-import { constants, getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Avatar, InputBase, Typography } from '@mui/material';
@@ -21,39 +18,59 @@ export default function StepTwo() {
   const { control, setValue, watch } = useFormContext<FormValues>();
   const { enqueueSnackbar } = useSnackbar();
 
-  // Get token balance for XLM
-  // const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
-  //   constants.StellarConfig.XLM_ADDRESS
-  // );
-  // const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
-
   // -- keep field in sync with the text input ------------------------
   const amountA = watch('depositAmountA') ?? '';
   const amountB = watch('depositAmountB') ?? '';
+  const tokenASymbol = watch('tokenASymbol');
+  const tokenBSymbol = watch('tokenBSymbol');
 
-  const handleChange = (value: string) => {
-    if (tokenBalance) {
-      const max = Number(tokenBalance.data);
-      if (Number(value) > max) {
-        enqueueSnackbar(t('Amount greater than wallet balance'), { variant: 'error' });
+  // Get user token balances
+  const { data: tokenABalance } = useTokenBalance(tokenASymbol);
+  const { data: tokenBBalance } = useTokenBalance(tokenBSymbol);
+
+  // Get token prices
+  // const { loading: priceLoading, price: tokenAPrice } = useTokenPrice(tokenASymbol);
+  // const { loading: priceLoading, price: tokenAPrice } = useTokenPrice(tokenASymbol);
+
+  const handleChange = (index: 0 | 1, value: string) => {
+    let valueKey: 'depositAmountA' | 'depositAmountB' = 'depositAmountA';
+
+    if (index === 0) {
+      // Token A
+      if (tokenABalance) {
+        const max = Number(tokenABalance.data);
+        if (Number(value) > max) {
+          enqueueSnackbar(t('Amount greater than wallet balance'), { variant: 'error' });
+        }
       }
+    } else {
+      // Token B
+      valueKey = 'depositAmountB';
 
-      setValue('depositAmountA', value === '' ? undefined : Number(value), {
-        shouldValidate: true,
-      });
+      if (tokenBBalance) {
+        const max = Number(tokenBBalance.data);
+        if (Number(value) > max) {
+          enqueueSnackbar(t('Amount greater than wallet balance'), { variant: 'error' });
+        }
+      }
     }
+
+    setValue(valueKey, value === '' ? undefined : Number(value), {
+      shouldValidate: true,
+    });
   };
 
-  const fiatValue = useMemo(() => {
-    if (xlmPrice && amount) {
-      return xlmPrice.multipliedBy(amount);
-    }
-    return BigNumber(0);
-  }, [xlmPrice, amount]);
+  // TODO:
+  // const fiatValue = useMemo(() => {
+  //   if (xlmPrice && amount) {
+  //     return xlmPrice.multipliedBy(amount);
+  //   }
+  //   return BigNumber(0);
+  // }, [xlmPrice, amount]);
 
   return (
     <Stack spacing={3} width={1}>
-      {/* eslint-disable-next-line i18next/no-literal-string */}
+      {}
       <Typography variant="subtitle1">{t('Deposit tokens')}</Typography>
       <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>
         {t('Specify the token amounts for your liquidity contribution.')}
@@ -93,7 +110,7 @@ export default function StepTwo() {
               <InputBase
                 value={amountA}
                 type="number"
-                onChange={(e) => handleChange(sanitizeAmountInput(e.target.value))}
+                onChange={(e) => handleChange(0, sanitizeAmountInput(e.target.value))}
                 placeholder="0.0"
                 inputProps={{ min: 0 }}
                 sx={{
@@ -105,9 +122,9 @@ export default function StepTwo() {
             )}
           />
 
-          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+          {/* <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
             {fCurrency(fiatValue.toFixed(2))}
-          </Typography>
+          </Typography> */}
         </Stack>
 
         {/* Token avatar / symbol */}
@@ -117,9 +134,9 @@ export default function StepTwo() {
           spacing={1}
           sx={{ mr: 2, borderRadius: 99, p: 1 }}
         >
-          <Avatar src={getCryptoIconUrl('XLM')} sx={{ width: 32, height: 32 }} />
+          <Avatar src={getCryptoIconUrl(tokenASymbol)} sx={{ width: 32, height: 32 }} />
           <Typography variant="body1" fontWeight="bold">
-            XLM
+            {tokenASymbol}
           </Typography>
         </Stack>
       </Box>
@@ -152,13 +169,13 @@ export default function StepTwo() {
           }}
         >
           <Controller
-            name="depositAmountA"
+            name="depositAmountB"
             control={control}
             render={() => (
               <InputBase
-                value={amounB}
+                value={amountB}
                 type="number"
-                onChange={(e) => handleChange(sanitizeAmountInput(e.target.value))}
+                onChange={(e) => handleChange(1, sanitizeAmountInput(e.target.value))}
                 placeholder="0.0"
                 inputProps={{ min: 0 }}
                 sx={{
@@ -170,9 +187,9 @@ export default function StepTwo() {
             )}
           />
 
-          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+          {/* <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
             {fCurrency(fiatValue.toFixed(2))}
-          </Typography>
+          </Typography> */}
         </Stack>
 
         {/* Token avatar / symbol */}
@@ -182,9 +199,9 @@ export default function StepTwo() {
           spacing={1}
           sx={{ mr: 2, borderRadius: 99, p: 1 }}
         >
-          <Avatar src={getCryptoIconUrl('XLM')} sx={{ width: 32, height: 32 }} />
+          <Avatar src={getCryptoIconUrl(tokenBSymbol)} sx={{ width: 32, height: 32 }} />
           <Typography variant="body1" fontWeight="bold">
-            XLM
+            {tokenBSymbol}
           </Typography>
         </Stack>
       </Box>

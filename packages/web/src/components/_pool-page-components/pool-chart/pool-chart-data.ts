@@ -1,3 +1,4 @@
+import type { StateToken as Token } from '@normalfinance/types';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 export type ChartMetricKey = 'price' | 'volume' | 'liquidity';
@@ -21,8 +22,8 @@ export type PoolDetails = {
 };
 
 export type TokenPairInfo = {
-  tokenA: { name: string; iconUrl: string };
-  tokenB: { name: string; iconUrl: string };
+  tokenA: Token;
+  tokenB: Token;
   address: string;
 };
 

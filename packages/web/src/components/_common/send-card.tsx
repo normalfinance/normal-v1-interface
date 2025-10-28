@@ -84,8 +84,8 @@ const SendCard: React.FC<SendCardProps> = ({
     if (sendToken) {
       const amt = parseFloat(amount) || 0;
       // When in fiat mode, the input is in dollars:
-      const _coinValue = isFiatMode ? amt / sendToken.usdValue : amt;
-      const _fiatValue = sendToken ? _coinValue * sendToken.usdValue : 0;
+      const _coinValue = isFiatMode ? amt / sendToken.oraclePrice : amt;
+      const _fiatValue = sendToken ? _coinValue * sendToken.oraclePrice : 0;
       setCoinValue(_coinValue);
       setFiatValue(_fiatValue);
     } else {
@@ -133,10 +133,10 @@ const SendCard: React.FC<SendCardProps> = ({
       if (amt === 0) {
         setAmount('0');
       } else if (isFiatMode) {
-        const coinVal = convertFiatToCoin(amt, sendToken.usdValue);
+        const coinVal = convertFiatToCoin(amt, sendToken.oraclePrice);
         setAmount(coinVal.toFixed(6));
       } else {
-        const fiatVal = convertCoinToFiat(amt, sendToken.usdValue);
+        const fiatVal = convertCoinToFiat(amt, sendToken.oraclePrice);
         setAmount(fiatVal.toFixed(6));
       }
     }
@@ -148,7 +148,7 @@ const SendCard: React.FC<SendCardProps> = ({
   let coinAmount = 0;
   if (sendToken) {
     const amt = parseFloat(amount) || 0;
-    coinAmount = isFiatMode ? amt / sendToken.usdValue : amt;
+    coinAmount = isFiatMode ? amt / sendToken.oraclePrice : amt;
   }
 
   const insufficientBalance = sendToken ? coinAmount > sendToken.balance : false;
@@ -295,7 +295,7 @@ const SendCard: React.FC<SendCardProps> = ({
               </Typography>
             ) : sendToken ? (
               <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
-                {fCurrency(coinAmount * sendToken.usdValue)}
+                {fCurrency(coinAmount * sendToken.oraclePrice)}
               </Typography>
             ) : null}
             <Iconify
@@ -360,7 +360,7 @@ const SendCard: React.FC<SendCardProps> = ({
                 <Box component="span">{sendToken?.balance}</Box>{' '}
                 <Box component="span" sx={{ color: theme.palette.text.secondary }}>
                   {t('(')}
-                  {fCurrency(Number(sendToken?.balance ?? 0) * (sendToken?.usdValue ?? 0))}
+                  {fCurrency(Number(sendToken?.balance ?? 0) * (sendToken?.oraclePrice ?? 0))}
                   {t(')')}
                 </Box>
               </Typography>
@@ -381,13 +381,9 @@ const SendCard: React.FC<SendCardProps> = ({
               sx={{ fontWeight: 500, fontSize: '12px', p: 0, height: '24px', minWidth: '36px' }}
               onClick={(e) => {
                 e.stopPropagation();
-                // trackEvent('button_clicked', {
-                //   label: 'Max',
-                //   location: 'Swap',
-                // });
                 if (sendToken) {
                   setAmount(
-                    getMaxAmount(Number(sendToken.balance), sendToken.usdValue, isFiatMode)
+                    getMaxAmount(Number(sendToken.balance), sendToken.oraclePrice, isFiatMode)
                   );
                 }
               }}

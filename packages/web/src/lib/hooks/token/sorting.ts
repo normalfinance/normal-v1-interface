@@ -18,8 +18,8 @@ function balanceComparator(a?: number, b?: number) {
 export function tokenComparator(balances: TokenBalancesMap, a: Token, b: Token) {
   // Sorts by balances
   const balanceComparison = balanceComparator(
-    Number(balances[a.id]?.balance),
-    Number(balances[b.id]?.balance)
+    Number(balances[a.contract]?.balance),
+    Number(balances[b.contract]?.balance)
   );
   if (balanceComparison !== 0) return balanceComparison;
 

@@ -11,9 +11,9 @@ import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
 import { useBoolean } from 'minimal-shared/hooks';
 import { fCurrency } from '@/utils/format-number';
-import { useAppStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -55,13 +55,13 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
   const [searchQuery, setSearchQuery] = useState('');
 
   // Get tokens from the app store
-  const { tokens, getAllTokens, globalIsLoading } = useAppStore();
+  const { globalIsLoading } = useAppStore();
+  const {
+    tokenState: { tokens },
+    getAllTokens,
+  } = usePersistStore();
 
   const handleClose = useCallback(() => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
     onClose();
     setSearchQuery('');
   }, [onClose]);
@@ -296,9 +296,9 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
                       {fCurrency(item.balance)}
                     </Typography>
                   )}
-                  {item.usdValue > 0 && (
+                  {item.oraclePrice > 0 && (
                     <Typography variant="caption" color="text.secondary">
-                      {fCurrency(item.usdValue)}
+                      {fCurrency(item.oraclePrice)}
                     </Typography>
                   )}
                 </Box>

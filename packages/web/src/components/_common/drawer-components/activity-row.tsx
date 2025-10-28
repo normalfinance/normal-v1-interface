@@ -66,13 +66,6 @@ export function ActivityRow({ activity }: { activity: Activity }) {
 
       break;
     }
-    case 'Stake':
-    case 'Unstake': {
-      const { symbol, amount, iconUrl } = activity.token;
-      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${fShortenNumber(amount)} ${symbol}`;
-      break;
-    }
     case 'Add Liquidity':
     case 'Remove Liquidity': {
       const { symbol, amount } = activity.tokenB;

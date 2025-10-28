@@ -149,7 +149,7 @@ const PickToken: React.FC<PickTokenProps> = ({
             {filteredTokens.length > 0 ? (
               filteredTokens.map((token) => (
                 <Button
-                  key={token.id}
+                  key={token.contract}
                   sx={{
                     display: 'flex',
                     padding: '16px 0px',
@@ -202,7 +202,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                         >
                           {token.symbol}
                         </Typography>
-                        {token.balance == 0 && token.id && (
+                        {token.balance == 0 && token.contract && (
                           <Typography
                             variant="body2"
                             sx={{
@@ -211,7 +211,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               fontSize: '12px',
                             }}
                           >
-                            {token.id && shortenAddress(token.id)}
+                            {token.contract && shortenAddress(token.contract)}
                           </Typography>
                         )}
                       </Box>
@@ -231,7 +231,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           variant="body2"
                           sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                         >
-                          {fCurrency(token.usdValue * token.balance)}
+                          {fCurrency(token.oraclePrice * token.balance)}
                         </Typography>
                         <Typography
                           variant="body2"
@@ -276,7 +276,7 @@ const PickToken: React.FC<PickTokenProps> = ({
               >
                 {featuredTokens.map((token) => (
                   <Button
-                    key={token.id}
+                    key={token.contract}
                     sx={{
                       display: 'flex',
                       height: '68px',
@@ -333,7 +333,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       .filter((token) => token.balance)
                       .map((token) => (
                         <Button
-                          key={token.id}
+                          key={token.contract}
                           sx={{
                             display: 'flex',
                             padding: '16px 0px',
@@ -398,7 +398,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 variant="body2"
                                 sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                               >
-                                {fCurrency(token.usdValue * token.balance)}
+                                {fCurrency(token.oraclePrice * token.balance)}
                               </Typography>
                               <Typography
                                 variant="body2"
@@ -435,7 +435,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                 >
                   {arrangedTokens.map((token) => (
                     <Button
-                      key={token.id}
+                      key={token.contract}
                       sx={{
                         display: 'flex',
                         padding: '16px 0px',
@@ -488,7 +488,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             >
                               {token.symbol}
                             </Typography>
-                            {token.balance == 0 && token.id && (
+                            {token.balance == 0 && token.contract && (
                               <Typography
                                 variant="body2"
                                 sx={{
@@ -497,7 +497,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                   fontSize: '12px',
                                 }}
                               >
-                                {shortenAddress(token.id)}
+                                {shortenAddress(token.contract)}
                               </Typography>
                             )}
                           </Box>
@@ -517,7 +517,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               variant="body2"
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
-                              {fCurrency(token.usdValue * token.balance)}
+                              {fCurrency(token.oraclePrice * token.balance)}
                             </Typography>
                             <Typography
                               variant="body2"

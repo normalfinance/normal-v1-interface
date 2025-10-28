@@ -142,8 +142,6 @@ async function parseEventToActivity(
 ): Promise<Activity | null> {
   switch (event.type) {
     case 'swap': {
-      // const normalTokenSymbol = format.formatNormalToken(event.asset, 'with-n');
-
       const tokenInSymbol = (await getTokenSymbol(event.tokenIn)) ?? 'Unknown';
       const tokenOutSymbol = (await getTokenSymbol(event.tokenOut)) ?? 'Unknown';
 
@@ -166,46 +164,54 @@ async function parseEventToActivity(
         },
       };
     }
-    case 'deposit_liquidity':
+    case 'deposit': {
+      const tokenASymbol = (await getTokenSymbol(event.tokens[0])) ?? 'Unknown';
+      const tokenBSymbol = (await getTokenSymbol(event.tokens[1])) ?? 'Unknown';
+
       return {
         id,
         type: 'Add Liquidity',
         timestamp: event.timestamp ?? 0,
-        // asset: format.formatNormalToken(event.asset, 'with-n'),
-        asset: 'idk',
+        asset: tokenASymbol,
         tokenA: {
           address: event.tokens[0],
-          symbol: 'NORMAL',
-          iconUrl: getCryptoIconUrl('XLM'),
+          symbol: tokenASymbol,
+          iconUrl: getCryptoIconUrl(tokenASymbol),
           amount: Number(format.formatTokenAmount(event.amounts[0].toString())),
         },
         tokenB: {
           address: event.tokens[1],
-          symbol: 'USDC',
-          iconUrl: getCryptoIconUrl('USDC'),
+          symbol: tokenBSymbol,
+          iconUrl: getCryptoIconUrl(tokenBSymbol),
           amount: Number(format.formatTokenAmount(event.amounts[1].toString())),
         },
       };
-    case 'withdraw_liquidity':
+    }
+
+    case 'withdraw': {
+      const tokenASymbol = (await getTokenSymbol(event.tokens[0])) ?? 'Unknown';
+      const tokenBSymbol = (await getTokenSymbol(event.tokens[1])) ?? 'Unknown';
+
       return {
         id,
         type: 'Remove Liquidity',
         timestamp: event.timestamp ?? 0,
-        // asset: format.formatNormalToken(event.asset, 'with-n'),
-        asset: 'idk',
+        asset: tokenASymbol,
         tokenA: {
-          address: event.tokens[0],
+          address: tokenASymbol,
           symbol: 'XLM',
-          iconUrl: getCryptoIconUrl('XLM'),
+          iconUrl: getCryptoIconUrl(tokenASymbol),
           amount: Number(format.formatTokenAmount(event.amounts[0].toString())),
         },
         tokenB: {
           address: event.tokens[1],
-          symbol: 'USDC',
-          iconUrl: getCryptoIconUrl('USDC'),
+          symbol: tokenBSymbol,
+          iconUrl: getCryptoIconUrl(tokenBSymbol),
           amount: Number(format.formatTokenAmount(event.amounts[1].toString())),
         },
       };
+    }
+
     default:
       return null;
   }

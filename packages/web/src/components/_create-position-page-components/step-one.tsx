@@ -30,14 +30,14 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
 
   /** user picks a token */
   const handleSelect = (tok: StateToken) => {
-    if (dialogIndex === 0) {
-      setValue('tokenASymbol', tok.symbol, { shouldValidate: true });
-      clearErrors('tokenASymbol');
-    } else if (dialogIndex === 1) {
-      setValue('tokenBSymbol', tok.symbol, { shouldValidate: true });
-      clearErrors('tokenBSymbol');
+    let valueKey: 'tokenASymbol' | 'tokenBSymbol' = 'tokenASymbol';
+
+    if (dialogIndex === 1) {
+      valueKey = 'tokenBSymbol';
     }
 
+    setValue(valueKey, tok.symbol, { shouldValidate: true });
+    clearErrors(valueKey);
     setDialogOpen(false);
   };
 
@@ -166,7 +166,7 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
           }}
         >
           <Stack direction="row" justifyContent="space-between" sx={{ width: 1 }}>
-            <Stack direction="row"></Stack>
+            <Stack direction="row" />
             <Iconify
               width={24}
               icon="eva:arrow-ios-downward-fill"

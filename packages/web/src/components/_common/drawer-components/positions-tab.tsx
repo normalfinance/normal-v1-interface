@@ -76,7 +76,7 @@ export default function PositioinsTab({ positions = [] }: PoolsTabsProps) {
               <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
                 <Stack direction="column" alignItems="start">
                   <Typography color="text.primary" variant="body1">
-                    {/* eslint-disable-next-line i18next/no-literal-string */}
+                    {}
                     {format.formatTokenAmount(position.balance)} {position.tokenA.name} (
                     {format.fCurrency(positionFiatValue.toFixed(2))})
                   </Typography>

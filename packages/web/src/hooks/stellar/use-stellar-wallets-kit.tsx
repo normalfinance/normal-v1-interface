@@ -46,27 +46,21 @@ export const useStellarWalletsKit = () => {
             let walletId: string | null = null;
             switch (storedWalletType) {
               case 'hana':
-              case 'hana-stellar-kit':
                 walletId = HANA_ID;
                 break;
               case 'xbull':
-              case 'xbull-stellar-kit':
                 walletId = XBULL_ID;
                 break;
               case 'freighter':
-              case 'freighter-stellar-kit':
                 walletId = FREIGHTER_ID;
                 break;
               case 'lobstr':
-              case 'lobstr-stellar-kit':
                 walletId = LOBSTR_ID;
                 break;
               case 'wallet-connect':
-              case 'wallet-connect-stellar-kit':
                 walletId = WALLET_CONNECT_ID;
                 break;
               case 'ledger':
-              case 'ledger-stellar-kit':
                 walletId = LEDGER_ID;
                 break;
               default:
@@ -99,27 +93,21 @@ export const useStellarWalletsKit = () => {
         let walletId: string | null = null;
         switch (storedWalletType) {
           case 'hana':
-          case 'hana-stellar-kit':
             walletId = HANA_ID;
             break;
           case 'xbull':
-          case 'xbull-stellar-kit':
             walletId = XBULL_ID;
             break;
           case 'freighter':
-          case 'freighter-stellar-kit':
             walletId = FREIGHTER_ID;
             break;
           case 'lobstr':
-          case 'lobstr-stellar-kit':
             walletId = LOBSTR_ID;
             break;
           case 'wallet-connect':
-          case 'wallet-connect-stellar-kit':
             walletId = WALLET_CONNECT_ID;
             break;
           case 'ledger':
-          case 'ledger-stellar-kit':
             walletId = LEDGER_ID;
             break;
           default:

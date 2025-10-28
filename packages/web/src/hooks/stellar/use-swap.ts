@@ -96,15 +96,11 @@ export function useSwap(): ReturnType {
       out_min: BigInt((args.out_min * 10 ** (token_out_decimals || 7)).toFixed(0)),
     };
 
-    // const normalTokenName = format.formatNormalToken(args.asset, 'with-n');
-
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.SWAP,
-        // token1: { name: buy ? 'USDC' : normalTokenName, amount: args.in_amount },
-        // token2: { name: buy ? normalTokenName : 'USDC', amount: args.out_min },
         token1: { name: args.token_in, amount: args.in_amount },
         token2: { name: args.token_out, amount: args.out_min },
       },
@@ -144,15 +140,11 @@ export function useSwap(): ReturnType {
       out_amount: BigInt((args.out_amount * 10 ** (token_out_decimals || 7)).toFixed(0)),
     };
 
-    // const normalTokenName = format.formatNormalToken('', 'with-n');
-
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
       transactionDetails: {
         type: TransactionType.SWAP,
-        // token1: { name: buy ? 'XLM' : normalTokenName, amount: args.in_max },
-        // token2: { name: buy ? normalTokenName : 'XLM', amount: args.out_amount },
         token1: { name: args.in_idx, amount: args.in_max },
         token2: { name: args.out_idx, amount: args.out_amount },
       },

@@ -1,6 +1,5 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
-import type { BigNumber } from 'bignumber.js';
 import type { TxType, PoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
@@ -50,7 +49,7 @@ export const PoolTransactionsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
   rows: PoolTxRow[];
-  quoteTokenPrice: BigNumber;
+  quoteTokenPrice: number;
   loading?: boolean;
 }> = ({ baseTokenSymbol, quoteTokenSymbol, rows, quoteTokenPrice, loading }) => {
   const theme = useTheme();

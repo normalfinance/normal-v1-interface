@@ -4,10 +4,8 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
-import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
-import { logger } from '@normalfinance/utils';
-import { useAppStore } from '@normalfinance/state';
+import { usePersistStore } from '@normalfinance/state';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
@@ -56,27 +54,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
 
   const { t } = useTranslate();
 
-  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
-
-  useEffect(() => {
-    if (tokens.length === 0) {
-      setGlobalIsLoading(true);
-
-      getAllTokens()
-        .catch((error) => logger.error(error))
-        .finally(() => {
-          setGlobalIsLoading(false);
-        });
-    }
-  }, []);
-
-  const allowedTokens = React.useMemo(
-    () =>
-      tokens.filter(
-        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
-      ),
-    [tokens]
-  );
+  const {
+    tokenState: { tokens },
+  } = usePersistStore();
 
   return (
     <Box
@@ -225,11 +205,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard
-                tokensList={allowedTokens}
-                swapFeeInfo={swapFeeInfo}
-                queryParams={swapParams}
-              />
+              <SwapCard tokensList={tokens} swapFeeInfo={swapFeeInfo} queryParams={swapParams} />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>

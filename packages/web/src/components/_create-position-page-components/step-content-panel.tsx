@@ -108,14 +108,13 @@ export function StepContentPanel({
   // Check if wallet is connected
   const isWalletConnected = !!persistStore.wallet.address;
 
-  // Get token balance for the selected token
-  // const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
-  //   constants.StellarConfig.XLM_ADDRESS
-  // );
+  // Get user balance for the selected tokens
+  const { data: tokenABalance } = useTokenBalance(watchTokenA);
+  const { data: tokenBBalance } = useTokenBalance(watchTokenB);
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
-    if (!isWalletConnected || !watchAmountA || !tokenBalance) {
+    if (!isWalletConnected || !watchAmountA || !tokenABalance) {
       return false;
     }
 
@@ -123,7 +122,7 @@ export function StepContentPanel({
     const requiredAmount = BigInt(
       Math.floor(watchAmountA * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
     );
-    return tokenBalance.data < requiredAmount;
+    return tokenABalance.data < requiredAmount;
   };
 
   const getButtonLabel = () => {
@@ -171,18 +170,19 @@ export function StepContentPanel({
 
       await depositLiquidity({
         tokens: [watchTokenA, watchTokenB],
-        pool_index: '',
+        pool_index: Buffer.from(''),
         desired_amounts: [watchAmountA, watchAmountB],
         min_shares: 0,
       });
       return;
     }
 
-    if (step == 2 && watchAmount !== undefined) {
+    if (step == 2 && watchAmountA !== undefined && watchAmountB !== undefined) {
       depositLiquidity({
         tokens: [watchTokenA, watchTokenB],
-        pool_index: '',
+        pool_index: Buffer.from(''),
         desired_amounts: [watchAmountA, watchAmountB],
+        min_shares: 0,
       });
     }
 

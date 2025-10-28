@@ -4,11 +4,10 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 
 import posthog from 'posthog-js';
 import { paths } from '@/routes/paths';
-import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useState, useEffect } from 'react';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
 import { format, logger, trackEvent } from '@normalfinance/utils';
@@ -103,42 +102,45 @@ function WalletDisconnected({ onConnectClick }: { onConnectClick: () => void }) 
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
   const { t } = useTranslate();
-  const { enqueueSnackbar } = useSnackbar();
 
-  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
+  const { setGlobalIsLoading } = useAppStore();
+
+  const {
+    tokenState: { tokens },
+  } = usePersistStore();
 
   const { positions } = useLiquidityPositions();
 
   const { loading, error, recentActivity } = useUserActivity();
 
   // Effect hook to fetch all tokens when the component mounts or address changes
-  useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
-      if (!address) return; // Don't fetch tokens if no address
+  // useEffect(() => {
+  //   const refreshTokens = async (): Promise<void> => {
+  //     if (!address) return; // Don't fetch tokens if no address
 
-      logger.log('[WALLET CONNECTED] Refreshing tokens for address:', address);
-      setGlobalIsLoading(true);
-      try {
-        await getAllTokens();
-        logger.log('[WALLET CONNECTED] Tokens fetched successfully');
-        setGlobalIsLoading(false);
-      } catch (e) {
-        logger.error('[WALLET CONNECTED] Error fetching tokens:', e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
+  //     logger.log('[WALLET CONNECTED] Refreshing tokens for address:', address);
+  //     setGlobalIsLoading(true);
+  //     try {
+  //       await getAllTokens();
+  //       logger.log('[WALLET CONNECTED] Tokens fetched successfully');
+  //       setGlobalIsLoading(false);
+  //     } catch (e) {
+  //       logger.error('[WALLET CONNECTED] Error fetching tokens:', e);
+  //     } finally {
+  //       setGlobalIsLoading(false);
+  //     }
+  //   };
 
-    const timer = setTimeout(() => {
-      refreshTokens();
-    }, 100);
+  //   const timer = setTimeout(() => {
+  //     refreshTokens();
+  //   }, 100);
 
-    return () => clearTimeout(timer);
-  }, [address, getAllTokens]);
+  //   return () => clearTimeout(timer);
+  // }, [address, getAllTokens]);
 
   // Total balance
   const totalBalance = tokens.reduce((acc, tkn) => {
-    const holdings = tkn.balance * tkn.usdValue;
+    const holdings = tkn.balance * tkn.oraclePrice;
     return acc + holdings;
   }, 0);
 

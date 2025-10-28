@@ -10,3 +10,4 @@ export * from './address';
 export * from './events';
 export * from './oracle';
 export * from './token';
+export * from './pool';

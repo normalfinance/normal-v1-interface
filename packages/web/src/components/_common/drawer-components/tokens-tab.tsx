@@ -52,7 +52,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
           })
           .map((token) => (
             <Button
-              key={token.id}
+              key={token.contract}
               sx={{
                 display: 'flex',
                 padding: '16px 0px',
@@ -112,7 +112,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                       variant="body2"
                       sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                     >
-                      {fCurrency(token.usdValue * token.balance)}
+                      {fCurrency(token.oraclePrice * token.balance)}
                     </Typography>
                     <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                       <Box

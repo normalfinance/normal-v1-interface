@@ -1,8 +1,9 @@
 import { PoolInfo } from '../contracts';
-
-export interface PoolActions {
-  getAllPools: () => Promise<PoolInfo[]>;
-  setPools: (_pools: PoolInfo[]) => void;
-  getPool: (asset: string) => Promise<PoolInfo>;
+export interface PoolState {
   pools: PoolInfo[];
+  poolsByTokens: Record<string, PoolInfo[]>;
+}
+export interface PoolActions {
+  getAllPools: () => Promise<void>;
+  poolState: PoolState;
 }

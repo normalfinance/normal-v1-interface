@@ -8,9 +8,9 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
 import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box, Grid2 } from '@mui/material';
 
@@ -22,15 +22,23 @@ import { CreatePosition } from '@/components/_create-position-page-components/cr
 
 export default function CreatePositionView() {
   const { t } = useTranslate();
-  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
+
   const { params } = useQueryParams<PositionQueryParams>();
+
+  const { setGlobalIsLoading } = useAppStore();
+
+  const {
+    tokenState: { tokens },
+    getAllTokens,
+    getAllPools,
+  } = usePersistStore();
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
-        await getAllTokens();
+        await Promise.all([await getAllTokens(), await getAllPools()]);
         setGlobalIsLoading(false);
       } catch (e) {
         logger.error(e);

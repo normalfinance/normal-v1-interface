@@ -1,17 +1,17 @@
 import type { CardProps } from '@mui/material';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
-import { PoolInfo, type StateToken as Token } from '@normalfinance/types';
+import type { PoolInfo, type StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
+import { useSwap, useTrustLine } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { usePool, useSwap, useTrustLine } from '@/hooks';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { format, logger, constants, checkTrustline, getCryptoIconUrl } from '@normalfinance/utils';
+import { logger, constants, checkTrustline, getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Button, InputBase, Typography } from '@mui/material';
@@ -55,8 +55,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const { t } = useTranslate('auto');
 
   // Using the store
-  const storePersist = usePersistStore();
   const appStore = useAppStore();
+  const {
+    wallet,
+    tokenState,
+    updateTokenInfo,
+    poolState: { poolsByTokens },
+  } = usePersistStore();
   const { publicKey } = useStellarWalletsKit();
 
   const {
@@ -68,7 +73,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   } = useTrustLine();
 
   const { onEstimateSwap, onSwap } = useSwap();
-  const { loading: loadingPool, fetchPoolsByPair } = usePool();
 
   const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
   const [swapError, setSwapError] = useState<string | null>(null);
@@ -86,7 +90,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const [tokens, setTokens] = useState(tokensList);
   const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
-  const [pools, setPools] = useState<PoolInfo[] | null>(null);
+  // const [pools, setPools] = useState<any | null>(null);
   const [selectedPool, setSelectedpool] = useState<PoolInfo | null>(null);
 
   // 2) State for the user's sell amount
@@ -107,7 +111,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // Compute the fiat value for the user's sell input
   const sellVal = parseFloat(amount) || 0;
-  const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.usdValue : 0;
+  const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.oraclePrice : 0;
 
   // 5) Example of how much buyToken the user might get
   const [buyAmount, setBuyAmount] = useState<number>(0);
@@ -169,7 +173,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       return;
     }
 
-    const walletAddress = publicKey || storePersist.wallet.address;
+    const walletAddress = publicKey || wallet.address;
     if (!walletAddress) {
       logger.log('[TRUSTLINE CHECK] No wallet address available');
       setNeedsTrustline(false);
@@ -191,7 +195,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setNeedsTrustline(false);
     }
     setCheckingTrustline(false);
-  }, [buyToken, publicKey, storePersist.wallet.address]);
+  }, [buyToken, publicKey, wallet.address]);
 
   // Check trustline status when buy token changes
   useEffect(() => {
@@ -223,8 +227,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     // Start "fetching" quote
     setIsLoading(true);
 
-    fetchPool();
-
     doSimulateSwap();
 
     // Simulate an async fetch with a 1s delay
@@ -232,7 +234,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setIsLoading(false);
       setQuoteFetched(true);
 
-      const potentialBuyAmount = sellVal * (sellToken.usdValue / buyToken.usdValue);
+      const potentialBuyAmount = sellVal * (sellToken.oraclePrice / buyToken.oraclePrice);
       setBuyAmount(potentialBuyAmount);
 
       if (sellVal > sellToken.balance) {
@@ -268,7 +270,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const handleTokenSelect = (token: Token) => {
     if (activeButton === 'sell') {
       // User selecting the sell token
-      if (buyToken && buyToken.id === token.id) {
+      if (buyToken && buyToken.contract === token.contract) {
         // Prevent selecting the same token as the buy side
         setBuyToken(null);
       }
@@ -291,7 +293,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       // }
     } else if (activeButton === 'buy') {
       // User selecting the buy token
-      if (sellToken && sellToken.id === token.id) {
+      if (sellToken && sellToken.contract === token.contract) {
         // Prevent selecting the same token as the sell side
         setSellToken(null);
       }
@@ -446,7 +448,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setSwapError(null);
 
     try {
-      await addTrustLine(buyToken.symbol, buyToken.issuer); // constants.StellarConfig.NORMAL_TOKEN_ISSUER
+      await addTrustLine(buyToken.symbol, buyToken.issuer);
       // After successful trustline creation, check status again
       await checkTrustlineStatus();
     } catch (error) {
@@ -476,18 +478,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     return true;
   };
 
-  const fetchPool = useCallback(async (): Promise<void> => {
-    if (sellToken && buyToken) {
-      try {
-        const tokens = [sellToken.id, buyToken.id];
-        const poolInfos = await fetchPoolsByPair(tokens);
-        if (poolInfos) setPools(poolInfos);
-      } catch (e) {
-        // Simulation error handled silently
-      }
-    }
-  }, [sellToken, buyToken]);
-
   /**
    * Simulates the swap transaction to determine the exchange rate and network fee.
    *
@@ -496,7 +486,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const doSimulateSwap = useCallback(async (): Promise<void> => {
     if (sellToken && buyToken) {
       if (amount === '0') {
-        // setTokenAmounts([0, 0]);
         setAmount('0');
         setBuyAmount(0);
         setExchangeRate('');
@@ -506,11 +495,20 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
       setLoadingSimulate(true);
       try {
+        const tokensKey = [sellToken.contract, buyToken.contract].join(':');
+        const pools = poolsByTokens[tokensKey];
+        if (!pools || pools.length === 0) {
+          setSwapError('No pools found');
+          return;
+        }
+        const pool = pools[0];
+        console.log(pool);
+
         await onEstimateSwap({
-          tokens: [sellToken.id, buyToken.id],
-          token_in: sellToken.id,
-          token_out: buyToken.id,
-          pool_index: Buffer.from(''),
+          tokens: [sellToken.contract, buyToken.contract],
+          token_in: sellToken.contract,
+          token_out: buyToken.contract,
+          pool_index: pool.index,
           in_amount: amount,
         });
       } catch (e) {
@@ -522,7 +520,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // New: doSwap function for use in onSubmit (simplified - no trustline creation)
   const doSwap = async (): Promise<void> => {
-    if (sellToken && buyToken && sellToken.id && buyToken.id) {
+    if (sellToken && buyToken && sellToken.contract && buyToken.contract) {
       try {
         const allowed = await checkIfSwapAllowed();
         if (!allowed) {
@@ -531,7 +529,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
         // Check if trustline exists for the buy token (if it's not XLM)
         if (buyToken.symbol !== 'XLM') {
-          const walletAddress = publicKey || storePersist.wallet.address;
+          const walletAddress = publicKey || wallet.address;
           if (!walletAddress) {
             setSwapError('No wallet connected');
             return;
@@ -549,19 +547,27 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           }
         }
 
+        const tokensKey = [sellToken.contract, buyToken.contract].join(':');
+        const pools = poolsByTokens[tokensKey];
+        if (!pools || pools.length === 0) {
+          setSwapError('No pools found');
+          return;
+        }
+        const pool = pools[0];
+
         // Now call the client-side onSwap (sign and submit
         await onSwap({
-          tokens: [sellToken.id, buyToken.id], // FIXME: these will not necessarily be in order
-          token_in: sellToken.id,
-          token_out: buyToken.id,
-          pool_index: Buffer.from(''),
+          tokens: [sellToken.contract, buyToken.contract], // FIXME: these will not necessarily be in order
+          token_in: sellToken.contract,
+          token_out: buyToken.contract,
+          pool_index: pool.index,
           in_amount: Number(amount),
           out_min: Number(0), //buyAmount
         });
 
         setTimeout(async () => {
-          await appStore.fetchNativeTokenInfo();
-          // await appStore.fetchNormalTokenInfo(pool);
+          await updateTokenInfo(sellToken);
+          await updateTokenInfo(buyToken);
         }, 7000);
       } catch (error) {
         setSwapError('Error during swap transaction');
@@ -915,7 +921,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
                 overflow: 'visible',
               }}
             >
-              {buyToken ? `${fCurrency(buyToken.usdValue * buyAmount)}` : '$0'}
+              {buyToken ? `${fCurrency(buyToken.oraclePrice * buyAmount)}` : '$0'}
             </Typography>
           </Box>
 

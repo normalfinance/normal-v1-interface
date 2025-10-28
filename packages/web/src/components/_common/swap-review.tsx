@@ -178,7 +178,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                     minWidth: 0,
                   }}
                 >
-                  {buyToken ? fCurrencyTwoDecimals(buyToken.usdValue * buyAmount) : ''}
+                  {buyToken ? fCurrencyTwoDecimals(buyToken.oraclePrice * buyAmount) : ''}
                 </Typography>
               </Box>
 

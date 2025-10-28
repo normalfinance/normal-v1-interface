@@ -10,7 +10,7 @@ export function getTokenFilter<T extends Token>(query: string): (token: T) => bo
 
   if (searchingAddress) {
     const address = searchingAddress.toLowerCase();
-    return (t: T) => 'address' in t && address === t.id.toLowerCase();
+    return (t: T) => 'address' in t && address === t.contract.toLowerCase();
   }
 
   const queryParts = query
