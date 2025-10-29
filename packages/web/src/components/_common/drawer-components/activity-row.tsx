@@ -18,7 +18,7 @@ import Typography from '@mui/material/Typography';
 /* ------------------------------------------------------------------ */
 /* Split avatar helper                                                */
 /* ------------------------------------------------------------------ */
-function SplitAvatar({ left, right }: { left: string; right: string }) {
+export function SplitAvatar({ left, right }: { left: string; right: string }) {
   return (
     <Box sx={{ width: 32, height: 32, position: 'relative' }}>
       <Avatar

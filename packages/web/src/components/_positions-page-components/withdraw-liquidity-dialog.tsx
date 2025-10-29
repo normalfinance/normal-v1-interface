@@ -5,13 +5,13 @@ import type { PoolQueryParams } from '@/types/query-params';
 
 import z from 'zod';
 import { useEffect } from 'react';
-import { useLiquidity } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
+import { useLiquidity, useTokenBalance } from '@/hooks';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { format, constants, getCryptoIconUrl, sortTokenAddreses } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
-import { constants, getCryptoIconUrl, sortTokenAddreses } from '@normalfinance/utils';
 
 import {
   Box,
@@ -28,12 +28,13 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
+import { SplitAvatar } from '../_common/drawer-components/activity-row';
 
 /* ------------------------------------------------------------------ */
 /* Zod schema                                                          */
 /* ------------------------------------------------------------------ */
 export const FormSchema = z.object({
-  amount: z
+  shareAmount: z
     .number({ invalid_type_error: 'Enter amount' })
     .min(0.000001, 'Amount must be positive')
     .optional(),
@@ -62,7 +63,7 @@ export default function WithdrawLiquidityDialog({
   const methods = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      amount: undefined,
+      shareAmount: undefined,
     },
   });
 
@@ -83,12 +84,12 @@ interface ContentProps {
 export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
   const theme = useTheme();
   const { t } = useTranslate();
-  const store = usePersistStore();
+  const { wallet } = usePersistStore();
 
   const { loading: txLoading, withdrawLiquidity } = useLiquidity();
 
   // Check if wallet is connected
-  const isWalletConnected = !!store.wallet.address;
+  const isWalletConnected = !!wallet.address;
 
   // Form stuff
   const { control, setValue, watch } = useFormContext<FormValues>();
@@ -99,29 +100,25 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
     if (queryParams.amount) {
       // Set tab based on action parameter, default to 'stake' if not specified
-      setValue('amount', Number(queryParams.amount), { shouldValidate: false });
+      setValue('shareAmount', Number(queryParams.amount), { shouldValidate: false });
     }
   }, [queryParams, setValue]);
 
   // -- keep field in sync with the text input ------------------------
-  const amount = watch('amount') ?? '';
+  const shareAmount = watch('shareAmount') ?? '';
 
   const handleChange = (value: string) =>
-    setValue('amount', value === '' ? undefined : Number(value), {
+    setValue('shareAmount', value === '' ? undefined : Number(value), {
       shouldValidate: true,
     });
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
-    if (!isWalletConnected || !position.balances.tokenShare || !amount) {
+    if (!isWalletConnected || !position.balances.tokenShare || !shareAmount) {
       return false;
     }
 
-    // Convert the user input amount to the token's smallest unit (considering decimals)
-    const requiredAmount = BigInt(
-      Math.floor(amount * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
-    );
-    return position.balances.tokenShare < requiredAmount;
+    return position.balances.tokenShare <= shareAmount;
   };
 
   const handleWithdrawButtonClick = () => {
@@ -131,14 +128,14 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       withdrawLiquidity({
         tokens: sortTokenAddreses(position.tokenA.contract, position.tokenB.contract),
         pool_index: position.pool.index,
-        share_amount: amount,
+        share_amount: shareAmount,
         min_amounts: [0, 0],
       });
     }
   };
 
   const getButtonLabel = (): string => {
-    if (!amount) return 'Enter amount';
+    if (!shareAmount) return 'Enter amount';
     if (!isWalletConnected) return 'Connect Wallet';
     if (hasInsufficientBalance()) return 'Insufficient LP tokens';
     return 'Withdraw';
@@ -174,11 +171,11 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
             }}
           >
             <Controller
-              name="amount"
+              name="shareAmount"
               control={control}
               render={() => (
                 <InputBase
-                  value={amount}
+                  value={shareAmount}
                   type="number"
                   onChange={(e) => handleChange(sanitizeAmountInput(e.target.value))}
                   placeholder="0.0"
@@ -193,7 +190,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
             />
 
             <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-              {/* {fCurrency(fiatValue.toFixed(2))} */}
+              {format.fCurrency(Number(shareAmount) * position.usdValues.tokenShare)}
             </Typography>
           </Stack>
 
@@ -203,9 +200,9 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
             spacing={1}
             sx={{ mr: 2, borderRadius: 99, p: 1 }}
           >
-            <Avatar src={getCryptoIconUrl('XLM')} sx={{ width: 32, height: 32 }} />
+            <SplitAvatar left={position.tokenA.icon} right={position.tokenB.icon} />
             <Typography variant="body1" fontWeight="bold">
-              XLM
+              POOL
             </Typography>
           </Stack>
         </Box>

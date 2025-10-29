@@ -20,15 +20,10 @@ export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
   return (
     <Box sx={{ p: 2, pt: 0 }}>
       {positions.length > 0 ? (
-        positions?.map((position) => {
-          // FIXME: replace 1 with quoteTokenOraclePrice
-          const positionFiatValue = BigNumber(1).multipliedBy(
-            format.formatTokenAmount(position.balance)
-          );
-
+        positions.map((position) => {
           return (
             <Button
-              key={position.poolAddress}
+              key={position.pool.address}
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -49,13 +44,13 @@ export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
                   }}
                 >
                   <Avatar
-                    src={getCryptoIconUrl(position.tokenA.name ?? '')}
+                    src={position.tokenA.icon ?? getCryptoIconUrl(position.tokenA.symbol)}
                     alt="Token A"
                     sx={{ width: 25, height: 25, zIndex: 1 }}
                   />
 
                   <Avatar
-                    src={getCryptoIconUrl(position.tokenB.name ?? '')}
+                    src={position.tokenB.icon ?? getCryptoIconUrl(position.tokenB.symbol)}
                     alt="Token B"
                     sx={{
                       width: 25,
@@ -66,9 +61,9 @@ export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
                 </Box>
                 <Stack direction="column" width={1} alignItems="start">
                   <Typography component="span" color="text.primary" variant="h6" ml={1}>
-                    {position.tokenA.name}
+                    {position.tokenA.symbol}
                     {t('/')}
-                    {position.tokenB.name}
+                    {position.tokenB.symbol}
                   </Typography>
                 </Stack>
               </Stack>
@@ -76,9 +71,10 @@ export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
               <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
                 <Stack direction="column" alignItems="start">
                   <Typography color="text.primary" variant="body1">
-                    {}
-                    {format.formatTokenAmount(position.balance)} {position.tokenA.name} (
-                    {format.fCurrency(positionFiatValue.toFixed(2))})
+                    {format.formatTokenAmount(position.balances.tokenA)} {position.tokenA.symbol} (
+                    {format.fCurrency(position.usdValues.tokenA)})
+                    {format.formatTokenAmount(position.balances.tokenB)} {position.tokenB.symbol} (
+                    {format.fCurrency(position.usdValues.tokenB)})
                   </Typography>
                   <Typography color="text.secondary" variant="caption">
                     {t('Liquidity Provided')}

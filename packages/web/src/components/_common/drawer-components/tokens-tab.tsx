@@ -9,7 +9,7 @@ import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
-import { Stack, Button, Typography } from '@mui/material';
+import { Stack, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 
@@ -21,28 +21,8 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
-  const handleRequestAsset = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
-    window.open('https://forms.fillout.com/t/tQuo1BRFJeus', '_blank', 'noopener');
-  };
-
   return (
     <Box sx={{ p: 2, pt: 0 }}>
-      <Button
-        fullWidth
-        variant="soft"
-        color="info"
-        size="large"
-        startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
-        onClick={handleRequestAsset}
-        sx={{ mb: 2 }}
-      >
-        {t("Don't see a token? Request it!")}
-      </Button>
-
       {tokens.length > 0 ? (
         [...tokens]
           .sort((a, b) => {
@@ -51,7 +31,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
             return bBal - aBal;
           })
           .map((token) => (
-            <Button
+            <Box
               key={token.contract}
               sx={{
                 display: 'flex',
@@ -170,7 +150,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                   </Box>
                 </Box>
               </Box>
-            </Button>
+            </Box>
           ))
       ) : (
         <Typography>{t('No tokens found.')}</Typography>

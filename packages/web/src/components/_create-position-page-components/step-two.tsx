@@ -11,7 +11,7 @@ import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Stack, Avatar, InputBase, Typography } from '@mui/material';
+import { Box, Stack, Avatar, InputBase, Typography, Button } from '@mui/material';
 
 import type { FormValues } from './step-content-panel';
 
@@ -58,9 +58,23 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
     });
   };
 
+  // Max the sell token
+  const handleMaxClick = (isTokenA: boolean) => {
+    if (isTokenA) {
+      setValue('amountA', tokenA.balance, {
+        shouldValidate: true,
+      });
+    } else {
+      setValue('amountB', tokenB.balance, {
+        shouldValidate: true,
+      });
+    }
+  };
+
+  const insufficientBalance = false;
+
   return (
     <Stack spacing={3} width={1}>
-      {}
       <Typography variant="subtitle1">{t('Deposit tokens')}</Typography>
       <Typography variant="caption" color={theme.palette.text.secondary} mb={2.5} mt={1}>
         {t('Specify the token amounts for your liquidity contribution.')}
@@ -137,6 +151,86 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
               <Typography variant="body1" fontWeight="bold">
                 {tokenA.symbol}
               </Typography>
+
+              <Box
+                sx={{
+                  flexShrink: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'flex-end',
+                  height: '128px',
+                  overflow: 'hidden',
+                }}
+              >
+                <Box
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        height: '100%',
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 500,
+                          color: insufficientBalance
+                            ? theme.palette.error.main
+                            : theme.palette.text.secondary,
+                          fontSize: '12px',
+                        }}
+                      >
+                        {tokenA.balance}{' '}
+                        <Box
+                          component="span"
+                          sx={{
+                            color: insufficientBalance
+                              ? theme.palette.error.main
+                              : theme.palette.text.primary,
+                          }}
+                        >
+                          {tokenA.symbol}
+                        </Box>
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => handleMaxClick(true)}
+                      disabled={false}
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '12px',
+                        p: 0,
+                        height: '24px',
+                        minWidth: '36px',
+                        backgroundColor: 'rgba(148,123,255,0.29)',
+                        color: '#6E4BFF',
+                        '&:hover': {
+                          backgroundColor: 'rgba(148,123,255,0.20)',
+                        },
+                      }}
+                    >
+                      {t('Max')}
+                    </Button>
+                  </Box>
+                </Box>
+              </Box>
             </>
           ) : (
             'Select token'
@@ -215,6 +309,86 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
               <Typography variant="body1" fontWeight="bold">
                 {tokenB.symbol}
               </Typography>
+
+              <Box
+                sx={{
+                  flexShrink: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'flex-end',
+                  height: '128px',
+                  overflow: 'hidden',
+                }}
+              >
+                <Box
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        height: '100%',
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 500,
+                          color: insufficientBalance
+                            ? theme.palette.error.main
+                            : theme.palette.text.secondary,
+                          fontSize: '12px',
+                        }}
+                      >
+                        {tokenB.balance}{' '}
+                        <Box
+                          component="span"
+                          sx={{
+                            color: insufficientBalance
+                              ? theme.palette.error.main
+                              : theme.palette.text.primary,
+                          }}
+                        >
+                          {tokenB.symbol}
+                        </Box>
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => handleMaxClick(false)}
+                      disabled={false}
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '12px',
+                        p: 0,
+                        height: '24px',
+                        minWidth: '36px',
+                        backgroundColor: 'rgba(148,123,255,0.29)',
+                        color: '#6E4BFF',
+                        '&:hover': {
+                          backgroundColor: 'rgba(148,123,255,0.20)',
+                        },
+                      }}
+                    >
+                      {t('Max')}
+                    </Button>
+                  </Box>
+                </Box>
+              </Box>
             </>
           ) : (
             'Select token'

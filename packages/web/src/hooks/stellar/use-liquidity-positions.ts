@@ -4,7 +4,7 @@ import type { PoolInfo, StateToken as Token } from '@normalfinance/types';
 
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
-import { logger, format, getTokenBalance } from '@normalfinance/utils';
+import { logger, format, constants, getTokenBalance } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -21,6 +21,7 @@ export type PoolPosition = {
     reward: number;
   };
   usdValues: {
+    tokenShare: number;
     tokenA: number;
     tokenB: number;
     feeA: number;
@@ -28,8 +29,6 @@ export type PoolPosition = {
     reward: number;
   };
   lpPercentage: string;
-  totalShares: number;
-  status: string;
 };
 
 interface ReturnType {
@@ -80,7 +79,12 @@ export function useLiquidityPositions(): ReturnType {
     const tokenAValue = positionTokenABalance * tokenA.price;
     const tokenBValue = positionTokenBBalance * tokenB.price;
 
-    // PoolRouter.get_user_reward
+    const rewardTokenAddress = constants.StellarConfig.XLM_ADDRESS; // FIXME: pull from pool or pool router
+    const rewardToken = tokens.find((tkn) => tkn.contract === rewardTokenAddress);
+
+    const { result: userClaimableReward } = await pool.client.get_user_reward({
+      user: wallet.address,
+    });
 
     const position: PoolPosition = {
       pool,
@@ -90,20 +94,19 @@ export function useLiquidityPositions(): ReturnType {
         tokenShare: userTokenShareBalance,
         tokenA: Number(format.formatTokenAmount(pool.reserves.tokenA * lpPercentage)),
         tokenB: Number(format.formatTokenAmount(positionTokenBBalance)),
-        feeA: 0,
+        feeA: 0, // TODO: how do we compute this?
         feeB: 0,
-        reward: 0,
+        reward: userClaimableReward ?? 0,
       },
       usdValues: {
+        tokenShare: 0,
         tokenA: tokenAValue,
         tokenB: tokenBValue,
         feeA: 0,
         feeB: 0,
-        reward: 0,
+        reward: userClaimableReward && rewardToken ? userClaimableReward * rewardToken.price : 0,
       },
       lpPercentage: lpPercentage.toFixed(4),
-      totalShares: pool.totalShares,
-      status: 'Active',
     };
 
     return position;

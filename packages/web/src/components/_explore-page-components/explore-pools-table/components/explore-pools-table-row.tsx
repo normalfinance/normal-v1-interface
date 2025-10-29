@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
 import PoolTokensAvatarGroup from '@/components/_common/pool-tokens-avatar-group';
+import { StateToken as Token } from '@normalfinance/types';
 
 /* ------------------------------------------------------------------ */
 /* Row props & type -------------------------------------------------- */
@@ -25,6 +26,8 @@ export interface ExplorePoolsRow {
   volume1d: number;
   volume30d: number;
   ratio: number;
+  tokenA: Token;
+  tokenB: Token;
 }
 
 type Props = {
@@ -52,7 +55,7 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       {/* Name + symbol + avatar ------------------------------------ */}
       <TableCell sx={{ minWidth: 160 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          <PoolTokensAvatarGroup tokenAName={row.tokenAName} tokenBName={row.tokenBName} />
+          <PoolTokensAvatarGroup tokenA={row.tokenA} tokenB={row.tokenB} />
           <Stack>
             <Typography variant="subtitle2">{`${row.tokenAName} / ${row.tokenBName}`}</Typography>
           </Stack>

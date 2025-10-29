@@ -107,6 +107,8 @@ const formatPoolForTable = (pool: PoolInfo, tokens: TokenMapType): ExplorePoolsR
       volume1d: 0,
       volume30d: 0,
       ratio: 0,
+      tokenA,
+      tokenB,
     };
   }
 
@@ -139,5 +141,7 @@ const formatPoolForTable = (pool: PoolInfo, tokens: TokenMapType): ExplorePoolsR
     volume1d: Number(volume1dValue.toFixed(2)),
     volume30d: Number(volume30dValue.toFixed(2)),
     ratio: Number(ratio.toFixed(4)),
+    tokenA,
+    tokenB,
   };
 };

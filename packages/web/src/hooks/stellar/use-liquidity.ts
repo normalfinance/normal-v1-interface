@@ -89,6 +89,28 @@ export function useLiquidity(): ReturnType {
       ],
     };
 
+    function reorderObject<T extends Record<string, any>>(obj: T, order: (keyof T)[]): T {
+      const reordered: Partial<T> = {};
+      for (const key of order) {
+        if (key in obj) {
+          reordered[key] = obj[key];
+        }
+      }
+      return reordered as T;
+    }
+
+    const ordered = reorderObject(processedArgs, [
+      'user',
+      'tokens',
+      'pool_index',
+      'desired_amounts',
+      'min_shares',
+    ]);
+    console.log({ ordered });
+
+    console.log({ processedArgs });
+    console.log(Object.keys(processedArgs));
+
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
@@ -98,7 +120,7 @@ export function useLiquidity(): ReturnType {
         token2: { name: tokenB.symbol, amount: args.desired_amounts[1] },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.deposit(processedArgs, { simulate: !restore });
+        const tx = await client.deposit(ordered, { simulate: !restore });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
