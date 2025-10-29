@@ -151,7 +151,7 @@ export function PoolOverview({
         {actionButtons.map((btn, idx) => (
           <WalletGate
             key={idx}
-            buttonText={`Connect Wallet to ${btn.label}`}
+            buttonText={`Connect wallet to ${btn.label}`}
             fullWidth
             variant="soft"
             color="success"

@@ -22,7 +22,7 @@ export default function PositionsView() {
       <DashboardContent maxWidth="xl">
         <PageHeader title={t('Your positions')} />
 
-        <WalletGate buttonText={t('Connect Wallet to view positions')} fullWidth>
+        <WalletGate buttonText={t('Connect wallet to view positions')} fullWidth>
           <PositionsTable positions={positions ?? []} />
         </WalletGate>
       </DashboardContent>

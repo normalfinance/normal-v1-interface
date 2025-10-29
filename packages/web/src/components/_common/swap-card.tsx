@@ -1,7 +1,7 @@
 import type { CardProps } from '@mui/material';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
-import type { StateToken as Token } from '@normalfinance/types';
+import type { PoolInfo, StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { useSwap, useTrustLine } from '@/hooks';
@@ -37,6 +37,7 @@ enum ButtonState {
   CHECKING_TRUSTLINE = 'CHECKING_TRUSTLINE',
   CREATE_TRUSTLINE = 'CREATE_TRUSTLINE',
   CREATING_TRUSTLINE = 'CREATING_TRUSTLINE',
+  NO_POOL_FOUND = 'NO_POOL_FOUND',
   FINALIZING_QUOTE = 'FINALIZING_QUOTE',
   INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
   REVIEW = 'REVIEW',
@@ -88,6 +89,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const [tokens, setTokens] = useState(tokensList);
   const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
+  const [pool, setPool] = useState<PoolInfo | null>(null);
 
   // 2) State for the user's sell amount
   const [amount, setAmount] = useState<string>('0');
@@ -206,9 +208,17 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setCreatingTrustline(false);
     setNeedsTrustline(false);
     setCheckingTrustline(false);
+    setPool(null);
 
     // Make sure we have both tokens
     if (!sellToken || !buyToken) {
+      return;
+    }
+
+    const _pool = searchPool();
+
+    // If no pool exists for the selected tokens
+    if (!_pool) {
       return;
     }
 
@@ -308,6 +318,27 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setBuyAmount(0);
   };
 
+  const searchPool = useCallback((): PoolInfo | null => {
+    if (sellToken && buyToken && Object.keys(poolsByTokens).length) {
+      const sortedTokens = sortTokenAddreses(sellToken.contract, buyToken.contract);
+      const tokensKey = sortedTokens.join(':');
+
+      const pools = poolsByTokens[tokensKey];
+
+      if (!pools || pools.length === 0) {
+        setPool(null);
+        return null;
+      }
+
+      // TODO: Once we support multiple fee fractions for the same pair, this index can be 1 or 2
+      const selectedpool = pools[0];
+
+      setPool(selectedpool);
+
+      return selectedpool;
+    } else return null;
+  }, [sellToken, buyToken]);
+
   const getButtonState = (): ButtonState => {
     logger.log('[BUTTON STATE] State check:', {
       sellToken: sellToken?.symbol,
@@ -323,6 +354,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
     if (!sellToken || !buyToken) {
       return ButtonState.SELECT_TOKEN;
+    }
+    if (!pool) {
+      return ButtonState.NO_POOL_FOUND;
     }
     if (checkingTrustline) {
       return ButtonState.CHECKING_TRUSTLINE;
@@ -371,6 +405,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
         label: 'Creating trustline...',
         disabled: true,
         action: () => {},
+      },
+      [ButtonState.NO_POOL_FOUND]: {
+        label: 'No pool found',
+        disabled: true,
+        action: () => {},
+        color: 'error' as const,
       },
       [ButtonState.FINALIZING_QUOTE]: {
         label: 'Finalizing quote...',
@@ -440,7 +480,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
    */
   const checkIfSwapAllowed = async () => {
     setSwapError(null);
-    if (!sellToken || !buyToken) return false;
+    if (!sellToken || !buyToken || !pool) return false;
     return true;
   };
 
@@ -450,7 +490,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
    * @async
    */
   const doSimulateSwap = useCallback(async (): Promise<void> => {
-    if (sellToken && buyToken) {
+    if (sellToken && buyToken && pool) {
       if (amount === '0') {
         setAmount('0');
         setBuyAmount(0);
@@ -461,19 +501,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
       setLoadingSimulate(true);
       try {
-        const sortedTokens = sortTokenAddreses(sellToken.contract, buyToken.contract);
-        const tokensKey = sortedTokens.join(':');
-
-        const pools = poolsByTokens[tokensKey];
-
-        if (!pools || pools.length === 0) {
-          setSwapError('No pools found');
-          return;
-        }
-        const pool = pools[0];
-
         await onEstimateSwap({
-          tokens: sortedTokens,
+          tokens: sortTokenAddreses(sellToken.contract, buyToken.contract),
           token_in: sellToken.contract,
           token_out: buyToken.contract,
           pool_index: pool.index,
@@ -488,7 +517,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // New: doSwap function for use in onSubmit (simplified - no trustline creation)
   const doSwap = async (): Promise<void> => {
-    if (sellToken && buyToken && sellToken.contract && buyToken.contract) {
+    if (sellToken && buyToken && pool) {
       try {
         const allowed = await checkIfSwapAllowed();
         if (!allowed) {
@@ -515,23 +544,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           }
         }
 
-        const sortedTokens = sortTokenAddreses(sellToken.contract, buyToken.contract);
-        const tokensKey = sortedTokens.join(':');
-        const pools = poolsByTokens[tokensKey];
-        if (!pools || pools.length === 0) {
-          setSwapError('No pools found');
-          return;
-        }
-        const pool = pools[0];
-
         // Now call the client-side onSwap (sign and submit
         await onSwap({
-          tokens: sortedTokens,
+          tokens: sortTokenAddreses(sellToken.contract, buyToken.contract),
           token_in: sellToken.contract,
           token_out: buyToken.contract,
           pool_index: pool.index,
           in_amount: Number(amount),
-          out_min: Number(0), //buyAmount
+          out_min: Number(0), // buyAmount
         });
 
         setTimeout(async () => {
@@ -945,7 +965,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
           );
         })()
       ) : (
-        <WalletGate buttonText="Connect Wallet to Swap" fullWidth variant="contained">
+        <WalletGate buttonText="Connect wallet to Swap" fullWidth variant="contained">
           {null}
         </WalletGate>
       )}

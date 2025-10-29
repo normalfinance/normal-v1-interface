@@ -81,12 +81,12 @@ export default function PoolDetailsView({ pool }: { pool: PoolInfo }) {
               {
                 tokenSymbol: tokenA.symbol,
                 amount: BigNumber(pool.reserves.tokenA),
-                fiatValue: reserveFiatValues.token_a,
+                fiatValue: BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price),
               },
               {
-                tokenSymbol: tokenA.symbol,
+                tokenSymbol: tokenB.symbol,
                 amount: BigNumber(pool.reserves.tokenB),
-                fiatValue: reserveFiatValues.token_b,
+                fiatValue: BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price),
               },
             ]}
             stats={[

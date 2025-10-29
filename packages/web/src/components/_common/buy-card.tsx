@@ -354,7 +354,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
               {getButtonLabel()}
             </Button>
           ) : (
-            <WalletGate buttonText="Connect Wallet to Buy" fullWidth variant="soft">
+            <WalletGate buttonText="Connect wallet to Buy" fullWidth variant="soft">
               {null}
             </WalletGate>
           )}

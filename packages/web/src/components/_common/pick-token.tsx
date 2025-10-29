@@ -58,10 +58,9 @@ const PickToken: React.FC<PickTokenProps> = ({
   };
 
   const featuredTokens = tokens.filter((token) => token.featured);
-
   const ownedTokens = tokens.filter((token) => token.balance > 0);
   const unownedTokens = tokens.filter((token) => token.balance == 0);
-  const arrangedTokens = [...ownedTokens, ...unownedTokens];
+  const arrangedTokens = [...unownedTokens];
 
   return (
     <Dialog
@@ -198,7 +197,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                         >
                           {token.symbol}
                         </Typography>
-                        {token.balance == 0 && token.contract && (
+                        {token.contract && (
                           <Typography
                             variant="body2"
                             sx={{
@@ -207,7 +206,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               fontSize: '12px',
                             }}
                           >
-                            {token.contract && shortenAddress(token.contract)}
+                            {shortenAddress(token.contract)}
                           </Typography>
                         )}
                       </Box>
@@ -308,7 +307,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   </Button>
                 ))}
               </Box>
-              {tokens.some((token) => token.balance) && (
+              {ownedTokens && (
                 <Box sx={{ mt: '12px' }} width="100%">
                   <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <Iconify icon="carbon:skill-level-basic" width={14} />
@@ -325,50 +324,51 @@ const PickToken: React.FC<PickTokenProps> = ({
                       alignSelf: 'stretch',
                     }}
                   >
-                    {tokens
-                      .filter((token) => token.balance)
-                      .map((token) => (
-                        <Button
-                          key={token.contract}
-                          sx={{
-                            display: 'flex',
-                            padding: '16px 0px',
-                            width: '100%',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                          }}
-                          onClick={() => handleTokenClick(token)}
-                        >
+                    {ownedTokens.map((token) => (
+                      <Button
+                        key={token.contract}
+                        sx={{
+                          display: 'flex',
+                          padding: '16px 0px',
+                          width: '100%',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                        onClick={() => handleTokenClick(token)}
+                      >
+                        <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                           <Box
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="center"
-                            gap="10px"
+                            component="img"
+                            src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              justifyContent: 'center',
+                            }}
                           >
-                            <Box
-                              component="img"
-                              src={token.icon ?? getCryptoIconUrl(token.symbol)}
-                              sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: '50%',
-                                objectFit: 'cover',
-                              }}
-                            />
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 500, color: theme.palette.text.primary }}
+                            >
+                              {token.name}
+                            </Typography>
                             <Box
                               sx={{
                                 display: 'flex',
-                                flexDirection: 'column',
+                                gap: '4px',
                                 alignItems: 'flex-start',
                                 justifyContent: 'center',
                               }}
                             >
-                              <Typography
-                                variant="body2"
-                                sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                              >
-                                {token.name}
-                              </Typography>
                               <Typography
                                 variant="body2"
                                 sx={{
@@ -379,37 +379,50 @@ const PickToken: React.FC<PickTokenProps> = ({
                               >
                                 {token.symbol}
                               </Typography>
+                              {token.contract && (
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 500,
+                                    color: theme.palette.text.disabled,
+                                    fontSize: '12px',
+                                  }}
+                                >
+                                  {shortenAddress(token.contract)}
+                                </Typography>
+                              )}
                             </Box>
                           </Box>
-                          <Box>
-                            <Box
+                        </Box>
+                        <Box>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-end',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 500, color: theme.palette.text.primary }}
+                            >
+                              {fCurrency(token.price * token.balance)}
+                            </Typography>
+                            <Typography
+                              variant="body2"
                               sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'flex-end',
-                                justifyContent: 'center',
+                                fontWeight: 500,
+                                color: theme.palette.text.secondary,
+                                fontSize: '12px',
                               }}
                             >
-                              <Typography
-                                variant="body2"
-                                sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                              >
-                                {fCurrency(token.price * token.balance)}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: 500,
-                                  color: theme.palette.text.secondary,
-                                  fontSize: '12px',
-                                }}
-                              >
-                                {token.balance}
-                              </Typography>
-                            </Box>
+                              {token.balance}
+                            </Typography>
                           </Box>
-                        </Button>
-                      ))}
+                        </Box>
+                      </Button>
+                    ))}
                   </Box>
                 </Box>
               )}
@@ -484,7 +497,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             >
                               {token.symbol}
                             </Typography>
-                            {token.balance == 0 && token.contract && (
+                            {token.contract && (
                               <Typography
                                 variant="body2"
                                 sx={{

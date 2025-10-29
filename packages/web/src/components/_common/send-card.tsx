@@ -461,7 +461,7 @@ const SendCard: React.FC<SendCardProps> = ({
             {getButtonLabel()}
           </Button>
         ) : (
-          <WalletGate buttonText="Connect Wallet to Send" fullWidth variant="soft">
+          <WalletGate buttonText="Connect wallet to Send" fullWidth variant="soft">
             {null}
           </WalletGate>
         )}

@@ -12,6 +12,8 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Avatar, InputBase, Typography } from '@mui/material';
 
 import type { FormValues } from './step-content-panel';
+import { fCurrency } from '@/utils/format-number';
+import { BigNumber } from 'bignumber.js';
 
 interface StepTwoProps {
   tokens: Token[];
@@ -57,14 +59,6 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokens }) => {
       shouldValidate: true,
     });
   };
-
-  // TODO:
-  // const fiatValue = useMemo(() => {
-  //   if (xlmPrice && amount) {
-  //     return xlmPrice.multipliedBy(amount);
-  //   }
-  //   return BigNumber(0);
-  // }, [xlmPrice, amount]);
 
   return (
     <Stack spacing={3} width={1}>
@@ -120,9 +114,13 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokens }) => {
             )}
           />
 
-          {/* <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-            {fCurrency(fiatValue.toFixed(2))}
-          </Typography> */}
+          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+            {fCurrency(
+              tokenA && watchAmountA
+                ? BigNumber(watchAmountA).multipliedBy(tokenA.price).toFixed(2)
+                : 0
+            )}
+          </Typography>
         </Stack>
 
         {/* Token avatar / symbol */}
@@ -194,9 +192,13 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokens }) => {
             )}
           />
 
-          {/* <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-            {fCurrency(fiatValue.toFixed(2))}
-          </Typography> */}
+          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+            {fCurrency(
+              tokenB && watchAmountB
+                ? BigNumber(watchAmountB).multipliedBy(tokenB.price).toFixed(2)
+                : 0
+            )}
+          </Typography>
         </Stack>
 
         {/* Token avatar / symbol */}

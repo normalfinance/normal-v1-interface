@@ -23,11 +23,11 @@ function SplitAvatar({ left, right }: { left: string; right: string }) {
   return (
     <Box sx={{ width: 32, height: 32, position: 'relative' }}>
       <Avatar
-        src={getCryptoIconUrl(left)}
+        src={left ?? getCryptoIconUrl(left)}
         sx={{ width: 32, height: 32, position: 'absolute', clipPath: 'inset(0 16px 0 0)' }}
       />
       <Avatar
-        src={getCryptoIconUrl(right)}
+        src={right ?? getCryptoIconUrl(right)}
         sx={{ width: 32, height: 32, position: 'absolute', clipPath: 'inset(0 0 0 16px)' }}
       />
     </Box>
@@ -41,7 +41,6 @@ export function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslate();
 
   const time = ago(activity.timestamp / 1000);
-  // new Date(activity.timestamp).toLocaleTimeString();
 
   /* ---------- derive icon + sentence ---------------------------- */
   let icon: React.ReactNode;
@@ -51,7 +50,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     case 'Sent':
     case 'Received': {
       const {
-        token: { address, symbol, amount, iconUrl },
+        token: { symbol, amount, iconUrl },
         address: otherAddress, // <— comes from the activity, not asset
         type,
       } = activity;
@@ -62,7 +61,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       const preposition = type === 'Sent' ? 'to' : 'from';
 
       // Sent / Received use fShortenNumber; others use fCurrencyCompact
-      sentence = `${fShortenNumber(amount)} ${symbol} ${preposition} ${shortenAddress(otherAddress)}`;
+      sentence = `${amount} ${symbol} ${preposition} ${shortenAddress(otherAddress)}`;
 
       break;
     }
@@ -70,14 +69,14 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     case 'Remove Liquidity': {
       const { symbol, amount } = activity.tokenB;
       icon = <Avatar src={getCryptoIconUrl(activity.asset)} sx={{ width: 32, height: 32 }} />;
-      sentence = `${fShortenNumber(amount)} ${symbol}`;
+      sentence = `${amount} ${symbol}`;
       break;
     }
     case 'Swapped': {
       const { sell, buy } = activity;
 
-      icon = <SplitAvatar left={sell.symbol} right={buy.symbol} />;
-      sentence = `${fShortenNumber(sell.amount)} ${sell.symbol} for ${fShortenNumber(buy.amount)} ${buy.symbol}`;
+      icon = <SplitAvatar left={sell.iconUrl} right={buy.iconUrl} />;
+      sentence = `${sell.amount} ${sell.symbol} for ${buy.amount} ${buy.symbol}`;
       break;
     }
     default:

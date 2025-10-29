@@ -19,6 +19,7 @@ import {
   ExplorePoolsTable,
   type ExplorePoolsRow,
 } from '@/components/_explore-page-components';
+import { formatTokenAmount } from '@normalfinance/utils/build/format';
 
 export default function ExploreView() {
   const { t } = useTranslate();
@@ -37,8 +38,9 @@ export default function ExploreView() {
       pools.length === 0 ||
       !tokensByAddress ||
       Object.keys(tokensByAddress).length === 0
-    )
+    ) {
       return [];
+    }
     return pools.map((pool) => formatPoolForTable(pool, tokensByAddress));
   }, [pools, tokensByAddress]);
 
@@ -115,9 +117,16 @@ const formatPoolForTable = (pool: PoolInfo, tokens: TokenMapType): ExplorePoolsR
   const volume1dValue = volume1d.multipliedBy(1); // FIXME: finish
   const volume30dValue = volume30d.multipliedBy(1); // FIXME: finish
 
-  const tvl = BigNumber(pool.reserves.tokenA)
-    .multipliedBy(pool.prices.tokenA)
-    .plus(BigNumber(pool.reserves.tokenB).multipliedBy(pool.prices.tokenB));
+  const reserveAValue = BigNumber(
+    formatTokenAmount(pool.reserves.tokenA, tokenA.decimals)
+  ).multipliedBy(tokenA.price);
+
+  const reserveBValue = BigNumber(
+    formatTokenAmount(pool.reserves.tokenB, tokenB.decimals)
+  ).multipliedBy(tokenB.price);
+
+  const tvl = reserveAValue.plus(reserveBValue);
+
   const ratio = volume1d.dividedBy(tvl);
 
   return {
