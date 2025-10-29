@@ -20,4 +20,5 @@ export type PoolInfo = {
   tokenShare: TokenInfo;
   totalShares: number;
   feeFraction: number;
+  version: string;
 };

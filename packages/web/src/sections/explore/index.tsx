@@ -9,6 +9,7 @@ import { logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { formatTokenAmount } from '@normalfinance/utils/build/format';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
@@ -19,7 +20,6 @@ import {
   ExplorePoolsTable,
   type ExplorePoolsRow,
 } from '@/components/_explore-page-components';
-import { formatTokenAmount } from '@normalfinance/utils/build/format';
 
 export default function ExploreView() {
   const { t } = useTranslate();

@@ -34,24 +34,25 @@ export interface TokenActionQueryParams extends BaseQueryParams {
 }
 
 export interface DepositLiquidityQueryParams extends BaseQueryParams {
-  asset?: string;
-  amount?: string;
+  tokenA?: string; // contract address
+  tokenB?: string;
+  feeTier?: string; // 10, 30, 1000
+  amountA?: string;
+  amountB?: string;
 }
 
 export interface WithdrawLiquidityQueryParams extends BaseQueryParams {
-  asset?: string;
-  share_amount?: string;
+  tokenA?: string; // contract address
+  tokenB?: string;
+  feeTier?: string; // 10, 30, 1000
+  shareAmount?: string;
+  minAmountA?: string;
+  minAmountB?: string;
 }
 
 export interface PoolQueryParams extends BaseQueryParams {
   pool_address?: string;
   action?: 'deposit' | 'withdraw';
-  amount?: string;
-}
-
-export interface PositionQueryParams extends BaseQueryParams {
-  position_id?: string;
-  action?: 'close' | 'modify';
   amount?: string;
 }
 
@@ -84,7 +85,6 @@ export type AllQueryParams =
   | DepositLiquidityQueryParams
   | WithdrawLiquidityQueryParams
   | PoolQueryParams
-  | PositionQueryParams
   | ExploreQueryParams
   | TransactionQueryParams
   | ReferralQueryParams;

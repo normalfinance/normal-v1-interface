@@ -90,6 +90,7 @@ export function createPoolActions(): PoolActions {
               },
               totalShares: total_shares?.result ? Number(total_shares.result) : 0,
               feeFraction: fee_fraction?.result ? fee_fraction.result : 0,
+              version: 'v1',
             };
 
             return poolDetails;

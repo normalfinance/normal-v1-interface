@@ -121,7 +121,7 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
       {/* Positions grid */}
       <Grid2 container spacing={2}>
         {positions.map((position) => (
-          <Grid2 key={position.poolAddress} size={{ xs: 12, sm: 6, md: 4 }}>
+          <Grid2 key={position.pool.address} size={{ xs: 12, sm: 6, md: 4 }}>
             <PositionItem
               position={position}
               onWithdraw={() => {

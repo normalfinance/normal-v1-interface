@@ -4,6 +4,8 @@ import type { StateToken as Token } from '@normalfinance/types';
 
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
+import { BigNumber } from 'bignumber.js';
+import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
@@ -12,14 +14,13 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Avatar, InputBase, Typography } from '@mui/material';
 
 import type { FormValues } from './step-content-panel';
-import { fCurrency } from '@/utils/format-number';
-import { BigNumber } from 'bignumber.js';
 
 interface StepTwoProps {
-  tokens: Token[];
+  tokenA: Token;
+  tokenB: Token;
 }
 
-export const StepTwo: React.FC<StepTwoProps> = ({ tokens }) => {
+export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { control, setValue, watch } = useFormContext<FormValues>();
@@ -30,9 +31,6 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokens }) => {
   const watchAmountB = watch('amountB') ?? '';
   const watchTokenA = watch('tokenA');
   const watchTokenB = watch('tokenB');
-
-  const tokenA = tokens.find((tkn) => tkn.contract === watchTokenA);
-  const tokenB = tokens.find((tkn) => tkn.contract === watchTokenB);
 
   const handleChange = (index: 0 | 1, value: string) => {
     let valueKey: 'amountA' | 'amountB' = 'amountA';

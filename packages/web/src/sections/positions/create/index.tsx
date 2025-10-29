@@ -1,6 +1,6 @@
 'use client';
 
-import type { PositionQueryParams } from '@/types/query-params';
+import type { DepositLiquidityQueryParams } from '@/types/query-params';
 
 import { useEffect } from 'react';
 // mui
@@ -23,15 +23,11 @@ import { CreatePosition } from '@/components/_create-position-page-components/cr
 export default function CreatePositionView() {
   const { t } = useTranslate();
 
-  const { params } = useQueryParams<PositionQueryParams>();
+  const { params } = useQueryParams<DepositLiquidityQueryParams>();
 
   const { setGlobalIsLoading } = useAppStore();
 
-  const {
-    tokenState: { tokens },
-    getAllTokens,
-    getAllPools,
-  } = usePersistStore();
+  const { getAllTokens, getAllPools } = usePersistStore();
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
@@ -65,7 +61,7 @@ export default function CreatePositionView() {
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12, md: 12 }}>
             <Box sx={{ position: 'relative' }}>
-              <CreatePosition tokens={tokens} queryParams={params} />
+              <CreatePosition queryParams={params} />
               <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
             </Box>
           </Grid2>

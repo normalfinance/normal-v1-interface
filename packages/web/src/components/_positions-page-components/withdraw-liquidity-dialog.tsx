@@ -5,13 +5,13 @@ import type { PoolQueryParams } from '@/types/query-params';
 
 import z from 'zod';
 import { useEffect } from 'react';
+import { useLiquidity } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
-import { useLiquidity, useTokenBalance } from '@/hooks';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
+import { constants, getCryptoIconUrl, sortTokenAddreses } from '@normalfinance/utils';
 
 import {
   Box,
@@ -87,12 +87,6 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
   const { loading: txLoading, withdrawLiquidity } = useLiquidity();
 
-  // Get token balance for the LP token
-  const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(position.tokenAddress);
-
-  // Get the price for XLM
-  // const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
-
   // Check if wallet is connected
   const isWalletConnected = !!store.wallet.address;
 
@@ -117,16 +111,9 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       shouldValidate: true,
     });
 
-  // const fiatValue = useMemo(() => {
-  //   if (xlmPrice && amount) {
-  //     return xlmPrice.multipliedBy(amount);
-  //   }
-  //   return new BigNumber(0);
-  // }, [xlmPrice, amount]);
-
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
-    if (!isWalletConnected || !position.tokenAddress || !amount || !tokenBalance) {
+    if (!isWalletConnected || !position.balances.tokenShare || !amount) {
       return false;
     }
 
@@ -134,7 +121,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
     const requiredAmount = BigInt(
       Math.floor(amount * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
     );
-    return tokenBalance.data < requiredAmount;
+    return position.balances.tokenShare < requiredAmount;
   };
 
   const handleWithdrawButtonClick = () => {
@@ -142,8 +129,8 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
     if (label === 'Withdraw') {
       withdrawLiquidity({
-        tokens: [position.tokenA.contract, position.tokenB.contract],
-        pool_index: Buffer.from(''),
+        tokens: sortTokenAddreses(position.tokenA.contract, position.tokenB.contract),
+        pool_index: position.pool.index,
         share_amount: amount,
         min_amounts: [0, 0],
       });
@@ -163,7 +150,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       <DialogContent dividers sx={{ maxHeight: 600 }}>
         <Alert severity="warning" sx={{ mt: 1 }}>
           {t(
-            'Withdrawing liquidity will remove your depoisted XLM from this pool and move it back to your wallet, plus any accrued yield.'
+            'Withdrawing liquidity will remove your depoisted tokens from this pool and move it back to your wallet, plus any accrued yield.'
           )}
         </Alert>
 
@@ -205,9 +192,9 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
               )}
             />
 
-            {/* <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-              {fCurrency(fiatValue.toFixed(2))}
-            </Typography> */}
+            <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+              {/* {fCurrency(fiatValue.toFixed(2))} */}
+            </Typography>
           </Stack>
 
           <Stack
@@ -282,7 +269,18 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                     fontSize: '12px',
                   }}
                 >
-                  {format.formatTokenAmount(position.balance)} XLM
+                  {position.balances.tokenA} {position.tokenA.symbol}
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                    fontSize: '12px',
+                  }}
+                >
+                  {position.balances.tokenB} {position.tokenB.symbol}
                 </Typography>
               </Box>
             </Box>

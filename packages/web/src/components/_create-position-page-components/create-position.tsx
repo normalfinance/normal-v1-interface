@@ -3,8 +3,7 @@
 'use client';
 
 import type { CardProps } from '@mui/material/Card';
-import type { StateToken as Token } from '@normalfinance/types';
-import type { PositionQueryParams } from '@/types/query-params';
+import type { DepositLiquidityQueryParams } from '@/types/query-params';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
@@ -18,16 +17,10 @@ import { StepContentPanel } from './step-content-panel';
 import { ResponsiveLinearStepper } from './responsive-linear-stepper';
 
 interface CreatePositionProps extends CardProps {
-  tokens: Token[];
-  queryParams?: PositionQueryParams;
+  queryParams?: DepositLiquidityQueryParams;
 }
 
-export const CreatePosition: React.FC<CreatePositionProps> = ({
-  tokens,
-  queryParams,
-  sx,
-  ...other
-}) => {
+export const CreatePosition: React.FC<CreatePositionProps> = ({ queryParams, sx, ...other }) => {
   const theme = useTheme();
 
   const { t } = useTranslate('auto');
@@ -118,7 +111,6 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
             onBack={handleBack}
             onReset={handleReset}
             isLastStep={activeStep === totalSteps}
-            tokens={tokens}
             queryParams={queryParams}
           />
         </Box>

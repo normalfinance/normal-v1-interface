@@ -6,7 +6,6 @@ import type { Activity } from '@/types/activity';
 
 import { useTranslate } from '@/locales';
 import { ago } from '@/utils/format-time';
-import { fShortenNumber } from '@/utils/format-number';
 import { shortenAddress } from '@/utils/format-address';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 

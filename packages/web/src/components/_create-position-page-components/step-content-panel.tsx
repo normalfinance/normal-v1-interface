@@ -1,23 +1,26 @@
 'use client';
 
-import type { StateToken } from '@normalfinance/types';
-import type { PositionQueryParams } from '@/types/query-params';
+import type { PoolInfo } from '@normalfinance/types';
+import type { DepositLiquidityQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
-import { useEffect } from 'react';
 import { useLiquidity } from '@/hooks';
+import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
 import { useForm, FormProvider } from 'react-hook-form';
-import { constants, sortTokenAddreses } from '@normalfinance/utils';
+import { constants, sortTokenAddreses, isValidContractAddress } from '@normalfinance/utils';
 
-import { Box, Stack } from '@mui/material';
+import { Box, Alert, Stack } from '@mui/material';
 import LoadingButton from '@mui/lab/LoadingButton';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
 
 import { StepOne } from './step-one';
 import { StepTwo } from './step-two';
+
+const VALID_FEE_TIERS = ['10', '30', '100'] as const;
 
 /* ------------------------------------------------------------------ */
 /* props                                                               */
@@ -28,17 +31,28 @@ export interface StepContentPanelProps {
   onBack: () => void;
   onReset: () => void;
   isLastStep: boolean;
-  tokens: StateToken[];
-  queryParams?: PositionQueryParams;
+  queryParams?: DepositLiquidityQueryParams;
 }
 
 /* ------------------------------------------------------------------ */
 /* Zod schema                                                          */
 /* ------------------------------------------------------------------ */
 export const FormSchema = z.object({
-  tokenA: z.string().min(1, 'Choose token').max(56, 'Too long'),
-  tokenB: z.string().min(1, 'Choose token').max(56, 'Too long'),
-  feeTier: z.string().min(1, 'Choose fee tier').max(3, 'Too long'),
+  tokenA: z
+    .string()
+    .min(1, 'Choose token')
+    .max(56, 'Too long')
+    .refine((val) => isValidContractAddress(val), {
+      message: 'Must be a valid token',
+    }),
+  tokenB: z
+    .string()
+    .min(1, 'Choose token')
+    .max(56, 'Too long')
+    .refine((val) => isValidContractAddress(val), {
+      message: 'Must be a valid token',
+    }),
+  feeTier: z.enum(VALID_FEE_TIERS, { required_error: 'Choose fee tier' }),
   amountA: z
     .number({ invalid_type_error: 'Enter amount' })
     .min(0.000001, 'Amount must be positive')
@@ -60,15 +74,19 @@ export function StepContentPanel({
   onBack,
   onReset,
   isLastStep,
-  tokens,
   queryParams,
 }: StepContentPanelProps) {
+  const { t } = useTranslate();
+
   const {
     wallet,
+    tokenState: { tokens },
     poolState: { poolsByTokens },
   } = usePersistStore();
 
   const { loading, setLoading, depositLiquidity } = useLiquidity();
+
+  const [pool, setPool] = useState<PoolInfo | null>(null);
 
   /* ---------------- RHF ---------------- */
   const methods = useForm<FormValues>({
@@ -76,7 +94,7 @@ export function StepContentPanel({
     defaultValues: {
       tokenA: constants.StellarConfig.USDC_ADDRESS,
       tokenB: '',
-      feeTier: '30',
+      feeTier: VALID_FEE_TIERS[1], // 30
       amountA: undefined,
       amountB: undefined,
     },
@@ -86,10 +104,32 @@ export function StepContentPanel({
   useEffect(() => {
     if (!queryParams) return;
 
-    // If we have a pool_address, we might be able to infer tokens from it
-    // For now, we'll use the amount if provided
-    if (queryParams.amount) {
-      methods.setValue('amountA', Number(queryParams.amount), { shouldValidate: false });
+    if (queryParams.tokenA) {
+      if (isValidContractAddress(queryParams.tokenA)) {
+        methods.setValue('tokenA', queryParams.tokenA, { shouldValidate: false });
+      }
+    }
+
+    if (queryParams.tokenB) {
+      if (isValidContractAddress(queryParams.tokenB)) {
+        methods.setValue('tokenB', queryParams.tokenB, { shouldValidate: false });
+      }
+    }
+
+    if (queryParams.feeTier) {
+      if (queryParams.feeTier in VALID_FEE_TIERS) {
+        methods.setValue('feeTier', queryParams.feeTier as (typeof VALID_FEE_TIERS)[number], {
+          shouldValidate: false,
+        });
+      }
+    }
+
+    if (queryParams.amountA) {
+      methods.setValue('amountA', Number(queryParams.amountA), { shouldValidate: false });
+    }
+
+    if (queryParams.amountB) {
+      methods.setValue('amountB', Number(queryParams.amountB), { shouldValidate: false });
     }
 
     // If action is provided, we could potentially pre-select certain flows
@@ -120,15 +160,17 @@ export function StepContentPanel({
       return false;
     }
 
-    // Convert the user input amount to the token's smallest unit (considering decimals)
-    // const requiredAmountA = BigInt(Math.floor(watchAmountA * Math.pow(10, tokenA.decimals)));
-    // const requiredAmountB = BigInt(Math.floor(watchAmountB * Math.pow(10, tokenB.decimals)));
-
     return tokenA.balance < watchAmountA || tokenB.balance < watchAmountB;
   };
 
   const getButtonLabel = () => {
-    if (step === 1) return watchTokenA && watchTokenB ? 'Continue' : 'Select token';
+    if (step === 1) {
+      if (watchTokenA && watchTokenB) {
+        if (!pool) return 'No pool found';
+        return 'Continue';
+      }
+      return 'Select token';
+    }
     if (step === 2) {
       if (!watchAmountA) return 'Enter amount';
       if (!watchAmountB) return 'Enter amount';
@@ -141,7 +183,7 @@ export function StepContentPanel({
 
   const isButtonDisabled = () => {
     if (loading) return true;
-    if (step === 1) return !watchTokenA || !watchTokenB;
+    if (step === 1) return !watchTokenA || !watchTokenB || !pool;
     if (step === 2) return !watchAmountA || !watchAmountB || hasInsufficientBalance();
     return false;
   };
@@ -161,19 +203,13 @@ export function StepContentPanel({
         return;
       }
 
-      const sortedTokens = sortTokenAddreses(watchTokenA, watchTokenB);
-      const tokensKey = sortedTokens.join(':');
-
-      const pools = poolsByTokens[tokensKey];
-
-      if (!pools || pools.length === 0) {
-        alert('No pools found');
+      if (!pool) {
+        alert('No pool found');
         return;
       }
-      const pool = pools[0];
 
       await depositLiquidity({
-        tokens: sortedTokens,
+        tokens: sortTokenAddreses(watchTokenA, watchTokenB),
         pool_index: pool.index,
         desired_amounts: [watchAmountA, watchAmountB],
         min_shares: 0,
@@ -189,6 +225,37 @@ export function StepContentPanel({
     if (ok) (isLastStep ? onReset : onNext)();
   };
 
+  // Find pool whenever relevant fields change: sellToken, buyToken
+  useEffect(() => {
+    // Clear old state each time we start a new fetch
+    setLoading(false);
+    setPool(null);
+
+    // Make sure we have both tokens
+    if (!tokenA || !tokenB) {
+      return;
+    }
+
+    // Make sure pools are loaded
+    if (!Object.keys(poolsByTokens).length) {
+      return;
+    }
+
+    const sortedTokens = sortTokenAddreses(tokenA.contract, tokenB.contract);
+    const tokensKey = sortedTokens.join(':');
+
+    const pools = poolsByTokens[tokensKey];
+
+    if (!pools || pools.length === 0) {
+      return;
+    }
+
+    // TODO: Once we support multiple fee fractions for the same pair, this index can be 1 or 2
+    const selectedpool = pools[0];
+
+    setPool(selectedpool);
+  }, [tokenA, tokenB]);
+
   /* ------------- render --------------- */
   return (
     <FormProvider {...methods}>
@@ -196,7 +263,15 @@ export function StepContentPanel({
         {/* ---- step body ---- */}
         <Box>
           {step === 1 && <StepOne tokens={tokens} />}
-          {step === 2 && <StepTwo tokens={tokens} />}
+          {step === 2 && (
+            <>
+              {tokenA && tokenB ? (
+                <StepTwo tokenA={tokenA} tokenB={tokenB} />
+              ) : (
+                <Alert severity="error">{t('Unable to load tokens for pool.')}</Alert>
+              )}
+            </>
+          )}
         </Box>
 
         {/* ---- navigation ---- */}
