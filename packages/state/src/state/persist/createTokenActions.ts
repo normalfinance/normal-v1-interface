@@ -9,21 +9,20 @@ import {
   logger,
   sortTokenAddreses,
 } from '@normalfinance/utils';
+import { BigNumber } from 'bignumber.js';
 
-async function fetchTokenBalance(token: ApiToken, address: string): Promise<number> {
-  // Fetch the user's balance
-  let balance = 0;
+const fetchTokenBalance = async (token: ApiToken, address: string): Promise<BigNumber> => {
+  let balance = BigNumber(0);
   try {
     const rawBalance = await getTokenBalance(token.contract, address);
-    balance = Number(format.formatTokenAmount(rawBalance, token.decimals));
+    balance = BigNumber(format.fTokenAmount(rawBalance, token.decimals));
   } catch (error) {
     logger.warn('[WALLET ACTIONS] Error getting API token balance:', error);
-    console.log({ error });
   }
   return balance;
-}
+};
 
-async function fetchTokenPrices(token: ApiToken): Promise<number> {
+const fetchTokenPrices = async (token: ApiToken): Promise<BigNumber> => {
   // Oracle price
   let isNormalToken = token.issuer === constants.StellarConfig.NORMAL_TOKEN_ISSUER;
 
@@ -36,23 +35,23 @@ async function fetchTokenPrices(token: ApiToken): Promise<number> {
     const tokensKey = sortedTokens.join(':');
 
     const pools = usePersistStore.getState().poolState.poolsByTokens[tokensKey];
-    if (!pools || pools.length === 0) return 0;
+    if (!pools || pools.length === 0) return BigNumber(0);
     const pool = pools[0];
 
-    return pool.prices.tokenA;
+    return BigNumber(pool.prices.tokenA);
   } else {
-    if (token.symbol === 'USDC') return 1; // FIXME: REMOVE THIS ASAP
-    let oraclePrice = 0;
+    if (token.symbol === 'USDC') return BigNumber(1); // FIXME: REMOVE THIS ASAP
+    let oraclePrice = BigNumber(0);
     try {
       const { price } = await getReflectorPubnetPrice(token.contract);
-      oraclePrice = Number(format.formatTokenAmount(price, 14));
+      oraclePrice = BigNumber(format.fTokenAmount(price, 14));
     } catch (error) {
       console.log({ error });
       // Some tokens might not have oracle prices
     }
     return oraclePrice;
   }
-}
+};
 
 export const createTokenActions = (): TokenActions => {
   const initialState: TokenState = {
@@ -107,7 +106,7 @@ export const createTokenActions = (): TokenActions => {
           token.contract
         );
 
-        let balance = 0;
+        let balance = BigNumber(0);
 
         if (walletAddress) balance = await fetchTokenBalance(token, walletAddress);
 
@@ -119,8 +118,8 @@ export const createTokenActions = (): TokenActions => {
             existingToken.contract === token.contract
               ? {
                   ...existingToken,
-                  balance,
-                  price,
+                  balance: balance.toString(),
+                  price: price.toString(),
                   percentageChange: 0,
                 }
               : existingToken
@@ -132,8 +131,8 @@ export const createTokenActions = (): TokenActions => {
           ) {
             const newToken: Token = {
               ...token,
-              balance,
-              price,
+              balance: balance.toString(),
+              price: price.toString(),
               percentageChange: 0,
             };
             updatedTokens.push(newToken);

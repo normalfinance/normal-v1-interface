@@ -5,9 +5,7 @@
 import type { Activity } from '@/types/activity';
 
 import { useTranslate } from '@/locales';
-import { ago } from '@/utils/format-time';
-import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@normalfinance/utils';
+import { format, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -39,7 +37,7 @@ export function SplitAvatar({ left, right }: { left: string; right: string }) {
 export function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslate();
 
-  const time = ago(activity.timestamp / 1000);
+  const time = format.ago(activity.timestamp / 1000);
 
   /* ---------- derive icon + sentence ---------------------------- */
   let icon: React.ReactNode;
@@ -60,7 +58,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       const preposition = type === 'Sent' ? 'to' : 'from';
 
       // Sent / Received use fShortenNumber; others use fCurrencyCompact
-      sentence = `${amount} ${symbol} ${preposition} ${shortenAddress(otherAddress)}`;
+      sentence = `${amount} ${symbol} ${preposition} ${format.shortenAddress(otherAddress)}`;
 
       break;
     }

@@ -1,10 +1,10 @@
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
-import type { Token } from '@normalfinance/types';
 
 import React from 'react';
 import { useTranslate } from '@/locales';
 import { useTabs } from 'minimal-shared/hooks';
+import { usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -19,7 +19,6 @@ import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 interface SwapSendCardProps extends CardProps {
   title?: string;
   subheader?: string;
-  tokensList?: Token[];
   swapFeeInfo?: SwapFeeInfo;
 }
 
@@ -27,7 +26,6 @@ export const SwapSendCard: React.FC<SwapSendCardProps> = ({
   sx,
   title,
   subheader,
-  tokensList,
   swapFeeInfo,
   ...other
 }) => {
@@ -35,6 +33,10 @@ export const SwapSendCard: React.FC<SwapSendCardProps> = ({
   const { t } = useTranslate('auto');
   // Use the tabs hook with a default value of 'swap'
   const tabs = useTabs('swap');
+
+  const {
+    tokenState: { tokens },
+  } = usePersistStore();
 
   // Define the tabs for this component
   const TABS = [
@@ -100,11 +102,7 @@ export const SwapSendCard: React.FC<SwapSendCardProps> = ({
       </CustomTabsSwapSend>
 
       {/* Conditionally render a component based on the active tab */}
-      {tabs.value === 'swap' ? (
-        <SwapCard tokensList={tokensList} />
-      ) : (
-        <SendCard tokensList={tokensList} networkCost={0} />
-      )}
+      {tabs.value === 'swap' ? <SwapCard /> : <SendCard tokens={tokens} networkCost={0} />}
     </Card>
   );
 };

@@ -5,6 +5,7 @@ import type { DepositLiquidityQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
 import { useLiquidity } from '@/hooks';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -160,7 +161,7 @@ export function StepContentPanel({
       return false;
     }
 
-    return tokenA.balance < watchAmountA || tokenB.balance < watchAmountB;
+    return BigNumber(tokenA.balance).lt(watchAmountA) || BigNumber(tokenB.balance).lt(watchAmountB);
   };
 
   const getButtonLabel = () => {

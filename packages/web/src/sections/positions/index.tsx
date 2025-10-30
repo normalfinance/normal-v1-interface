@@ -1,17 +1,17 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 import { useLiquidityPositions } from '@/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box } from '@mui/material';
 
 import PageHeader from '@/components/page-header';
 import { WalletGate } from '@/components/_common/wallet-gate';
 import { PositionsTable } from '@/components/_positions-page-components/positions-table';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { useEffect } from 'react';
-import { logger } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 

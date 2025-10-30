@@ -226,7 +226,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           }}
         >
           <Box sx={{ width: '100%', maxWidth: 320, mx: 'auto' }}>
-            <Searchbar data={navData} />
+            <Searchbar />
           </Box>
         </Box>
 
@@ -670,7 +670,7 @@ function MobileMega({
   return (
     <Box sx={{ py: 0 }}>
       <Box sx={{ width: '100%', mb: 4 }}>
-        <Searchbar data={navData} />
+        <Searchbar />
       </Box>
 
       <Box

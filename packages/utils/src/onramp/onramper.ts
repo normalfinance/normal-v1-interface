@@ -1,11 +1,4 @@
-type CreateOnramperUrlLegacy = (apiKey: string, amountUsd?: string | number) => string;
-
-export type CreateOnramperUrlOpts = {
-  amountUsd: number | string;
-  tokenSymbol: string;
-  walletAddress?: string;
-  fiat?: string;
-};
+import { CreateOnramperUrlOpts } from '@normalfinance/types';
 
 function isTestKey(apiKey?: string) {
   return !!apiKey && apiKey.startsWith('pk_test_');
@@ -27,7 +20,7 @@ function toOnramperAssetId(symbolRaw: string): string {
   if (s === 'XLM') return 'xlm_stellar';
 
   // TODO: extend as needed, e.g.:
-  // if (s === 'USDC') return 'usdc_stellar'; // only if confirmed in your Onramper asset list
+  if (s === 'USDC') return 'usdc_stellar'; // only if confirmed in your Onramper asset list
 
   return s || 'XLM';
 }
@@ -66,39 +59,4 @@ export function createOnramperURL(
   }
 
   return `${base}/?${params.toString()}`;
-}
-
-export type CreateCoinbaseUrlOpts = {
-  amountUsd: number | string;
-  assetSymbol: string;
-  sessionToken: string;
-  fiat?: string;
-  path?: 'buy' | 'buy/select-asset'; // default 'buy'
-  redirectUrl?: string;
-  sandbox?: boolean;
-};
-
-export function createCoinbasePayURL(opts: CreateCoinbaseUrlOpts): string {
-  const {
-    amountUsd,
-    assetSymbol,
-    sessionToken,
-    fiat = 'USD',
-    path = 'buy',
-    redirectUrl,
-    sandbox = true, // default to sandbox while testing
-  } = opts;
-
-  const base = sandbox ? 'https://pay-sandbox.coinbase.com' : 'https://pay.coinbase.com';
-
-  const params = new URLSearchParams({
-    presetFiatAmount: String(amountUsd),
-    fiatCurrency: fiat,
-    defaultAsset: assetSymbol, // e.g., 'USDC'
-    sessionToken,
-  });
-
-  if (redirectUrl) params.set('redirectUrl', redirectUrl);
-
-  return `${base}/${path}?${params.toString()}`;
 }

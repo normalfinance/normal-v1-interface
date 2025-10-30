@@ -1,6 +1,7 @@
 import type { Token } from '@normalfinance/types';
 
 import React from 'react';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
@@ -178,7 +179,9 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                     minWidth: 0,
                   }}
                 >
-                  {buyToken ? fCurrencyTwoDecimals(buyToken.price * buyAmount) : ''}
+                  {buyToken
+                    ? fCurrencyTwoDecimals(BigNumber(buyToken.price).multipliedBy(buyAmount))
+                    : ''}
                 </Typography>
               </Box>
 

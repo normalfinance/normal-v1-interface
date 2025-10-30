@@ -159,7 +159,7 @@ export function useLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.REMOVE_LIQUIDITY,
-        token1: { name: 'Pool Token', amount: args.share_amount },
+        token1: { name: 'POOL', amount: args.share_amount },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.withdraw(processedArgs, { simulate: !restore });

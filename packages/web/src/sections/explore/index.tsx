@@ -9,7 +9,6 @@ import { logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { formatTokenAmount } from '@normalfinance/utils/build/format';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
@@ -44,7 +43,7 @@ export default function ExploreView() {
     return pools.map((pool) => formatPoolForTable(pool, tokensByAddress));
   }, [pools, tokensByAddress]);
 
-  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.tvl), new BigNumber(0));
+  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.tvl), BigNumber(0));
 
   const stats: SingleStat[] = [
     { title: '1D Volume', total: 0, percent: 0, formatter: fCurrency },
@@ -93,20 +92,20 @@ export default function ExploreView() {
 }
 
 const formatPoolForTable = (pool: Pool, tokens: TokenMapType): ExplorePoolsRow => {
-  const tokenA = tokens[pool.tokenA] ?? undefined;
-  const tokenB = tokens[pool.tokenB] ?? undefined;
+  const tokenA = tokens[pool.addresses.tokenA] ?? undefined;
+  const tokenB = tokens[pool.addresses.tokenB] ?? undefined;
 
-  if (pool.reserves.tokenA === 0 || pool.reserves.tokenB === 0) {
+  if (BigNumber(pool.reserves.tokenA).eq(0) || BigNumber(pool.reserves.tokenB).eq(0)) {
     return {
       tokenAName: tokenA ? tokenA.symbol : '',
       tokenBName: tokenB ? tokenB.symbol : '',
-      address: pool.address,
-      fee: pool.feeFraction,
-      tvl: Number(0),
+      address: pool.addresses.pool,
+      fee: pool.fee,
+      tvl: '0',
       apr: 0,
-      volume1d: 0,
-      volume30d: 0,
-      ratio: 0,
+      volume1d: '0',
+      volume30d: '0',
+      ratio: '0',
       tokenA,
       tokenB,
     };
@@ -120,27 +119,27 @@ const formatPoolForTable = (pool: Pool, tokens: TokenMapType): ExplorePoolsRow =
   const volume30dValue = volume30d.multipliedBy(1); // FIXME: finish
 
   const reserveAValue = tokenA
-    ? BigNumber(formatTokenAmount(pool.reserves.tokenA, tokenA.decimals)).multipliedBy(tokenA.price)
+    ? BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price)
     : BigNumber(0);
 
   const reserveBValue = tokenB
-    ? BigNumber(formatTokenAmount(pool.reserves.tokenB, tokenB.decimals)).multipliedBy(tokenB.price)
+    ? BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price)
     : BigNumber(0);
 
   const tvl = reserveAValue.plus(reserveBValue);
 
-  const ratio = volume1d.dividedBy(tvl);
+  const ratio = '0'; // volume1d.dividedBy(tvl);
 
   return {
     tokenAName: tokenA ? tokenA.symbol : '',
     tokenBName: tokenB ? tokenB.symbol : '',
-    address: pool.address,
-    fee: pool.feeFraction,
-    tvl: Number(tvl.toFixed(2)),
+    address: pool.addresses.pool,
+    fee: pool.fee,
+    tvl: tvl.toString(),
     apr: 0,
-    volume1d: Number(volume1dValue.toFixed(2)),
-    volume30d: Number(volume30dValue.toFixed(2)),
-    ratio: Number(ratio.toFixed(4)),
+    volume1d: volume1dValue.toString(),
+    volume30d: volume30dValue.toString(),
+    ratio,
     tokenA,
     tokenB,
   };

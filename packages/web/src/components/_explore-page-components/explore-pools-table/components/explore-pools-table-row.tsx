@@ -22,11 +22,11 @@ export interface ExplorePoolsRow {
   tokenAName: string;
   tokenBName: string;
   fee: number;
-  tvl: number;
+  tvl: string;
   apr: number;
-  volume1d: number;
-  volume30d: number;
-  ratio: number;
+  volume1d: string;
+  volume30d: string;
+  ratio: string;
   tokenA: Token;
   tokenB: Token;
 }

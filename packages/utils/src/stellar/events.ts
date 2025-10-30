@@ -52,8 +52,8 @@ export function parseEvent(
         tokens: (topics[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
         user: parseAddress(topics[2]),
         poolAddress: parseAddress(parsedData[0]),
-        amounts: (parsedData[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseBigInt),
-        shareAmount: parseBigInt(parsedData[2]),
+        shareAmount: parseBigInt(parsedData[1]),
+        amounts: (parsedData[2] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseBigInt),
         txHash,
         timestamp: undefined,
       };

@@ -2,9 +2,9 @@ import type { Token } from '@normalfinance/types';
 
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { BigNumber } from 'bignumber.js';
 import { fCurrency } from '@/utils/format-number';
-import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@normalfinance/utils';
+import { format, getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -49,17 +49,13 @@ const PickToken: React.FC<PickTokenProps> = ({
   });
 
   const handleTokenClick = (token: Token) => {
-    // trackEvent('button_clicked', {
-    //   label: 'Select Token',
-    //   location: 'Insurance',
-    // });
     onTokenSelect(token);
     onClose();
   };
 
   const featuredTokens = tokens.filter((token) => token.featured);
-  const ownedTokens = tokens.filter((token) => token.balance > 0);
-  const unownedTokens = tokens.filter((token) => token.balance == 0);
+  const ownedTokens = tokens.filter((token) => BigNumber(token.balance).gt(0));
+  const unownedTokens = tokens.filter((token) => BigNumber(token.balance).eq(0));
   const arrangedTokens = [...unownedTokens];
 
   return (
@@ -206,7 +202,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               fontSize: '12px',
                             }}
                           >
-                            {shortenAddress(token.contract)}
+                            {format.shortenAddress(token.contract)}
                           </Typography>
                         )}
                       </Box>
@@ -226,7 +222,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                           variant="body2"
                           sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                         >
-                          {fCurrency(token.price * token.balance)}
+                          {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
                         </Typography>
                         <Typography
                           variant="body2"
@@ -236,7 +232,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             fontSize: '12px',
                           }}
                         >
-                          {token.balance.toFixed(token.decimals)}
+                          {BigNumber(token.balance).toFixed(token.decimals)}
                         </Typography>
                       </Box>
                     )}
@@ -388,7 +384,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                     fontSize: '12px',
                                   }}
                                 >
-                                  {shortenAddress(token.contract)}
+                                  {format.shortenAddress(token.contract)}
                                 </Typography>
                               )}
                             </Box>
@@ -407,7 +403,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               variant="body2"
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
-                              {fCurrency(token.price * token.balance)}
+                              {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
                             </Typography>
                             <Typography
                               variant="body2"
@@ -417,7 +413,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 fontSize: '12px',
                               }}
                             >
-                              {token.balance.toFixed(token.decimals)}
+                              {BigNumber(token.balance).toFixed(token.decimals)}
                             </Typography>
                           </Box>
                         </Box>
@@ -506,14 +502,14 @@ const PickToken: React.FC<PickTokenProps> = ({
                                   fontSize: '12px',
                                 }}
                               >
-                                {shortenAddress(token.contract)}
+                                {format.shortenAddress(token.contract)}
                               </Typography>
                             )}
                           </Box>
                         </Box>
                       </Box>
                       <Box>
-                        {token.balance > 0 && (
+                        {BigNumber(token.balance).gt(0) && (
                           <Box
                             sx={{
                               display: 'flex',
@@ -526,7 +522,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                               variant="body2"
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
-                              {fCurrency(token.price * token.balance)}
+                              {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
                             </Typography>
                             <Typography
                               variant="body2"
@@ -536,7 +532,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 fontSize: '12px',
                               }}
                             >
-                              {token.balance.toFixed(token.decimals)}
+                              {BigNumber(token.balance).toFixed(token.decimals)}
                             </Typography>
                           </Box>
                         )}

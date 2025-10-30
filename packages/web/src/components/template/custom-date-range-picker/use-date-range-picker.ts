@@ -1,7 +1,7 @@
 import type { IDatePickerControl } from '@/types/common';
 
 import { useState, useCallback } from 'react';
-import { fIsAfter, fDateRangeShortLabel } from '@/utils/format-time';
+import { format } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ export function useDateRangePicker(
   const [endDate, setEndDate] = useState(end as IDatePickerControl);
   const [startDate, setStartDate] = useState(start as IDatePickerControl);
 
-  const error = fIsAfter(startDate, endDate);
+  const error = format.fIsAfter(startDate, endDate);
 
   const onOpen = useCallback(() => {
     setOpen(true);
@@ -81,8 +81,8 @@ export function useDateRangePicker(
     error,
     selected: !!startDate && !!endDate,
     /********/
-    label: fDateRangeShortLabel(startDate, endDate, true),
-    shortLabel: fDateRangeShortLabel(startDate, endDate),
+    label: format.fDateRangeShortLabel(startDate, endDate, true),
+    shortLabel: format.fDateRangeShortLabel(startDate, endDate),
     /********/
     setStartDate,
     setEndDate,

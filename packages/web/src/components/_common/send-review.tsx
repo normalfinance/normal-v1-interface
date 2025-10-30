@@ -6,9 +6,8 @@ import { useTranslate } from '@/locales';
 import { useContractTransaction } from '@/hooks';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
-import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
+import { format, getCryptoIconUrl } from '@normalfinance/utils';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -227,7 +226,7 @@ const SendReview: React.FC<SendReviewProps> = ({
               }}
             >
               <Box>
-                <Typography variant="h4">{shortenAddress(address)}</Typography>
+                <Typography variant="h4">{format.shortenAddress(address)}</Typography>
               </Box>
             </Box>
           </Box>

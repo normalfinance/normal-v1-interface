@@ -6,9 +6,8 @@ import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { fCurrency } from '@/utils/format-number';
-import { getCryptoIconUrl } from '@normalfinance/utils';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
+import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Avatar, Button, InputBase, Typography } from '@mui/material';
@@ -37,8 +36,7 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
 
     if (index === 0) {
       if (tokenA) {
-        const max = tokenA.balance;
-        if (Number(value) > max) {
+        if (BigNumber(tokenA.balance).lt(value)) {
           enqueueSnackbar(t('Amount greater than wallet balance'), { variant: 'error' });
         }
       }
@@ -46,8 +44,7 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
       valueKey = 'amountB';
 
       if (tokenB) {
-        const max = tokenB.balance;
-        if (Number(value) > max) {
+        if (BigNumber(tokenB.balance).lt(value)) {
           enqueueSnackbar(t('Amount greater than wallet balance'), { variant: 'error' });
         }
       }
@@ -61,11 +58,11 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
   // Max the sell token
   const handleMaxClick = (isTokenA: boolean) => {
     if (isTokenA) {
-      setValue('amountA', tokenA.balance, {
+      setValue('amountA', Number(tokenA.balance.toString()), {
         shouldValidate: true,
       });
     } else {
-      setValue('amountB', tokenB.balance, {
+      setValue('amountB', Number(tokenB.balance.toString()), {
         shouldValidate: true,
       });
     }
@@ -195,7 +192,7 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
                           fontSize: '12px',
                         }}
                       >
-                        {tokenA.balance}{' '}
+                        {BigNumber(tokenA.balance).toFixed(tokenA.decimals)}{' '}
                         <Box
                           component="span"
                           sx={{
@@ -353,7 +350,7 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
                           fontSize: '12px',
                         }}
                       >
-                        {tokenB.balance}{' '}
+                        {BigNumber(tokenB.balance).toFixed(tokenB.decimals)}{' '}
                         <Box
                           component="span"
                           sx={{

@@ -44,7 +44,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
     if (!validContractAddress) return undefined;
     if (!pools || pools.length === 0) return undefined;
 
-    return pools.find((p) => p.address === poolAddress);
+    return pools.find((p) => p.addresses.pool === poolAddress);
   }, [poolAddress, validContractAddress, pools]);
 
   if (validContractAddress === false) {

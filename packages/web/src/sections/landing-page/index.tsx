@@ -1,7 +1,7 @@
 'use client';
 
-import type { SwapQueryParams } from '@/types/query-params';
 import type { Token } from '@normalfinance/types';
+import type { SwapQueryParams } from '@/types/query-params';
 
 import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
@@ -27,10 +27,10 @@ export const tokens: Token[] = [
     name: 'Bitcoin',
     symbol: 'BTC',
     icon: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
-    price: 67600.18,
+    price: '67600.18',
     percentageChange: 2.45435,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
   {
@@ -41,10 +41,10 @@ export const tokens: Token[] = [
     name: 'Ethereum',
     symbol: 'ETH',
     icon: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
-    price: 3150,
+    price: '3150',
     percentageChange: 1.1,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
   {
@@ -55,10 +55,10 @@ export const tokens: Token[] = [
     name: 'Solana',
     symbol: 'SOL',
     icon: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
-    price: 141,
+    price: '141',
     percentageChange: -0.8,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
   {
@@ -69,10 +69,10 @@ export const tokens: Token[] = [
     name: 'XRP',
     symbol: 'XRP',
     icon: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
-    price: 0.48,
+    price: '0.48',
     percentageChange: 0.5,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
 ];

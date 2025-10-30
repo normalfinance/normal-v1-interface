@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
-import { format, logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
-import { Box, Stack, Button, Drawer, Tooltip, Typography, IconButton } from '@mui/material';
+import { Button } from '@mui/material';
 
-import { Iconify } from '@/components/template/iconify';
-import CopyIconButton from '@/components/copy-icon-button';
-import { Scrollbar } from '@/components/template/scrollbar';
-import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 interface WalletGateProps {
@@ -25,29 +21,6 @@ interface WalletGateProps {
 /* ------------------------------------------------------------------ */
 /* ② Connected: simple summary / logout                               */
 /* ------------------------------------------------------------------ */
-function WalletConnected({ address }: { address: string }) {
-  const { t } = useTranslate();
-  // const { data: tokenBalances, isLoading: balancesLoading } = useUserTokens();
-
-  return (
-    <Box
-      sx={{
-        p: 2,
-        pt: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'start',
-      }}
-    >
-      <Stack direction="row" width={1} justifyContent="space-between" alignItems="center">
-        <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
-        <CopyIconButton value={address} alert={t('Address copied')} />
-      </Stack>
-      {/* TODO: replace balance with tokenBalances */}
-      <ConnectedWallet balance={0} percentageChange={0} tokens={[]} positions={[]} activity={[]} />
-    </Box>
-  );
-}
 
 export const WalletGate: React.FC<WalletGateProps> = ({
   children,
@@ -109,52 +82,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   };
 
   if (isWalletConnected) {
-    return (
-      <>
-        {children}
-        {/* Drawer for showing wallet info when connected */}
-        <Drawer
-          open={open}
-          onClose={onClose}
-          anchor="right"
-          slotProps={{ backdrop: { invisible: true } }}
-          PaperProps={{
-            sx: {
-              width: { xs: '100%', sm: 420 },
-            },
-          }}
-        >
-          {/* close (X) and disconnect button */}
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 12,
-              left: 12,
-              right: 12,
-              zIndex: 9,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Tooltip title="Close">
-              <IconButton onClick={onClose}>
-                <Iconify icon="mingcute:close-line" />
-              </IconButton>
-            </Tooltip>
-
-            <Tooltip title="Disconnect">
-              <IconButton onClick={handleDisconnectClick} sx={{ ml: 'auto' }}>
-                <Iconify icon="solar:power-bold" />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          <Scrollbar>
-            <WalletConnected address={persist.wallet.address || publicKey || ''} />
-          </Scrollbar>
-        </Drawer>
-      </>
-    );
+    return children;
   }
 
   return (

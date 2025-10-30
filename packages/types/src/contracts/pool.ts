@@ -1,25 +1,30 @@
 import { PoolContract, PoolElasticContract } from '@normalfinance/contracts';
-import BigNumber from 'bignumber.js';
+import { BigNumber } from 'bignumber.js';
 
-export type PoolTokenValues = {
-  tokenA: BigNumber;
-  tokenB: BigNumber;
-};
+export type Address = string;
 
 export type Pool = {
-  address: string;
   index: Buffer;
-  tokenA: string;
-  tokenB: string;
-  reserves: PoolTokenValues; // balances
-  prices: PoolTokenValues;
-  tokenShare: {
-    address: string;
-    amount: BigNumber;
+  version: string;
+  fee: number; // 10, 30, or 100
+  addresses: {
+    pool: Address;
+    tokenA: Address;
+    tokenB: Address;
+    tokenShare: Address;
+  };
+  reserves: {
+    tokenA: string;
+    tokenB: string;
+  };
+  prices: {
+    tokenA: string;
+    tokenB: string;
+  };
+  shares: {
+    address: Address;
+    total: string;
     symbol: string;
   };
-  totalShares: BigNumber;
-  feeFraction: BigNumber;
-  version: string;
   client: PoolContract.Client | PoolElasticContract.Client;
 };

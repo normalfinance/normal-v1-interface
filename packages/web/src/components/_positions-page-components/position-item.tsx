@@ -6,7 +6,7 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { format } from '@normalfinance/utils';
-import { fPercent } from '@/utils/format-number';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -26,7 +26,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push(paths.pools.details(position.pool.address));
+    router.push(paths.pools.details(position.pool.addresses.pool));
   };
 
   return (
@@ -79,7 +79,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
                   py: '2px',
                 }}
               >
-                {fPercent(position.pool.feeFraction / 100)}
+                {fPercent(position.pool.fee / 100)}
               </Typography>
             </Box>
             <Box
@@ -122,12 +122,12 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
             {position.balances.tokenA.toFixed(position.tokenA.decimals)} {position.tokenA.symbol} (
-            {format.fCurrency(position.usdValues.tokenA)})
+            {fCurrency(position.usdValues.tokenA)})
           </Typography>
 
           <Typography color="text.primary" variant="body1">
             {position.balances.tokenB.toFixed(position.tokenA.decimals)} {position.tokenB.symbol} (
-            {format.fCurrency(position.usdValues.tokenB)})
+            {fCurrency(position.usdValues.tokenB)})
           </Typography>
           <Typography color="text.secondary" variant="caption">
             {t('Liquidity Provided')}
@@ -136,13 +136,13 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
 
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
-            {format.formatTokenAmount(position.balances.feeA)} {position.tokenA.symbol} (
-            {format.fCurrency(position.usdValues.feeA)})
+            {format.fTokenAmount(position.balances.feeA)} {position.tokenA.symbol} (
+            {fCurrency(position.usdValues.feeA)})
           </Typography>
 
           <Typography color="text.primary" variant="body1">
-            {format.formatTokenAmount(position.balances.feeB)} {position.tokenB.symbol} (
-            {format.fCurrency(position.usdValues.feeB)})
+            {format.fTokenAmount(position.balances.feeB)} {position.tokenB.symbol} (
+            {fCurrency(position.usdValues.feeB)})
           </Typography>
           <Typography color="text.secondary" variant="caption">
             {t('Fees')}

@@ -2,9 +2,16 @@
 
 import type { Pool, Token } from '@normalfinance/types';
 
+import { BigNumber } from 'bignumber.js';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
-import { logger, format, getTokenBalance } from '@normalfinance/utils';
+import {
+  logger,
+  format,
+  constants,
+  getTokenBalance,
+  convertCoinToFiat,
+} from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -13,22 +20,22 @@ export type PoolPosition = {
   tokenA: Token;
   tokenB: Token;
   balances: {
-    tokenShare: number;
-    tokenA: number;
-    tokenB: number;
-    feeA: number;
-    feeB: number;
-    reward: number;
+    tokenShare: BigNumber;
+    tokenA: BigNumber;
+    tokenB: BigNumber;
+    feeA: BigNumber;
+    feeB: BigNumber;
+    reward: BigNumber;
   };
   usdValues: {
-    tokenA: number;
-    tokenB: number;
-    feeA: number;
-    feeB: number;
-    reward: number;
+    tokenA: string;
+    tokenB: string;
+    feeA: string;
+    feeB: string;
+    reward: string;
   };
   lpPercentage: string;
-  tokenSharePrice: number;
+  tokenSharePrice: BigNumber;
 };
 
 interface ReturnType {
@@ -56,59 +63,58 @@ export function useLiquidityPositions(): ReturnType {
       return undefined;
     }
 
-    const tokenA = tokens.find((tkn) => tkn.contract === pool.tokenA);
-    const tokenB = tokens.find((tkn) => tkn.contract === pool.tokenB);
+    const tokenA = tokens.find((tkn) => tkn.contract === pool.addresses.tokenA);
+    const tokenB = tokens.find((tkn) => tkn.contract === pool.addresses.tokenB);
+    const rewardToken = tokens.find((tkn) => tkn.contract === constants.StellarConfig.XLM_ADDRESS);
 
-    const userTokenShareBalance = await fetchTokenBalance(pool.tokenShare.address, wallet.address);
+    const tokenShareBalanceRaw = await fetchTokenBalance(pool.addresses.tokenShare, wallet.address);
+    if (!tokenShareBalanceRaw || tokenShareBalanceRaw.eq(0)) return undefined;
 
-    if (!userTokenShareBalance) return undefined;
+    const tokenShareBalance = BigNumber(format.fTokenAmount(tokenShareBalanceRaw, 7));
 
     if (!tokenA || !tokenB) {
       return undefined;
     }
 
-    const totalReserveAValue = pool.reserves.tokenA * tokenA.price;
-    const totalReserveBValue = pool.reserves.tokenB * tokenB.price;
+    const reserveABN = BigNumber(pool.reserves.tokenA);
+    const reserveBBN = BigNumber(pool.reserves.tokenB);
 
-    const lpPercentage = userTokenShareBalance / pool.totalShares;
+    const totalReserveAValue = reserveABN.multipliedBy(tokenA.price);
+    const totalReserveBValue = reserveBBN.multipliedBy(tokenB.price);
 
-    const positionTokenABalance = Number(
-      format.formatTokenAmount(pool.reserves.tokenA * lpPercentage)
-    );
-    const positionTokenBBalance = Number(
-      format.formatTokenAmount(pool.reserves.tokenB * lpPercentage)
-    );
+    const lpPercentage = tokenShareBalance.dividedBy(pool.shares.total);
 
-    const tokenAValue = positionTokenABalance * tokenA.price;
-    const tokenBValue = positionTokenBBalance * tokenB.price;
+    const positionTokenABalance = reserveABN.multipliedBy(lpPercentage);
+    const positionTokenBBalance = reserveBBN.multipliedBy(lpPercentage);
 
-    const tokenSharePrice = (totalReserveAValue + totalReserveBValue) / pool.totalShares;
+    const tokenSharePrice = totalReserveAValue
+      .plus(totalReserveBValue)
+      .dividedBy(pool.shares.total);
 
-    // const rewardTokenAddress = constants.StellarConfig.XLM_ADDRESS; // FIXME: pull from pool or pool router
-    // const rewardToken = tokens.find((tkn) => tkn.contract === rewardTokenAddress);
-
-    // const { result: userClaimableReward } = await pool.client.get_user_reward({
-    //   user: wallet.address,
-    // }); {Number(token.balance).toFixed(token.decimals)}
+    const feeA = BigNumber(0);
+    const feeB = BigNumber(0);
+    const claimableReward = BigNumber(0);
 
     const position: PoolPosition = {
       pool,
       tokenA,
       tokenB,
       balances: {
-        tokenShare: userTokenShareBalance,
-        tokenA: Number(format.formatTokenAmount(pool.reserves.tokenA * lpPercentage)),
-        tokenB: Number(format.formatTokenAmount(pool.reserves.tokenB * lpPercentage)),
-        feeA: 0, // TODO: how do we compute this?
-        feeB: 0,
-        reward: 0, // userClaimableReward ?? 0,
+        tokenShare: tokenShareBalance,
+        tokenA: reserveABN.multipliedBy(lpPercentage),
+        tokenB: reserveBBN.multipliedBy(lpPercentage),
+        feeA,
+        feeB,
+        reward: claimableReward,
       },
       usdValues: {
-        tokenA: tokenAValue,
-        tokenB: tokenBValue,
-        feeA: 0,
-        feeB: 0,
-        reward: 0, // userClaimableReward && rewardToken ? userClaimableReward * rewardToken.price : 0,
+        tokenA: convertCoinToFiat(positionTokenABalance, BigNumber(tokenA.price)),
+        tokenB: convertCoinToFiat(positionTokenBBalance, BigNumber(tokenB.price)),
+        feeA: convertCoinToFiat(feeA, BigNumber(tokenA.price)),
+        feeB: convertCoinToFiat(feeB, BigNumber(tokenB.price)),
+        reward: rewardToken
+          ? convertCoinToFiat(claimableReward, BigNumber(rewardToken.price))
+          : '0',
       },
       lpPercentage: lpPercentage.toFixed(4),
       tokenSharePrice,
@@ -122,13 +128,16 @@ export function useLiquidityPositions(): ReturnType {
       setError(null);
       setLoading(true);
 
-      const allPositions = await Promise.all(
+      const poolPositions = await Promise.all(
         pools.map(async (pool) => await fetchTokenInfoIntoPositions(pool))
       );
 
-      const userPositions = allPositions.filter((e) => e !== undefined);
+      // Safely remove all undefined values
+      const poolPositionsFiltered = poolPositions.filter(
+        (r): r is NonNullable<typeof r> => r !== undefined && r !== null
+      );
 
-      setPostions(userPositions as PoolPosition[]);
+      setPostions(poolPositionsFiltered as PoolPosition[]);
     } catch (e: any) {
       setError(e);
     } finally {
@@ -150,15 +159,13 @@ export function useLiquidityPositions(): ReturnType {
   };
 }
 
-async function fetchTokenBalance(tokenAddress: string, address: string): Promise<number> {
-  // Fetch the user's balance
-  let balance = 0;
+const fetchTokenBalance = async (tokenAddress: string, address: string): Promise<BigNumber> => {
+  let balance = BigNumber(0);
   try {
     const rawBalance = await getTokenBalance(tokenAddress, address);
-    balance = Number(format.formatTokenAmount(rawBalance, 7));
+    balance = BigNumber(rawBalance);
   } catch (error) {
     logger.warn('[WALLET ACTIONS] Error getting API token balance:', error);
-    console.log({ error });
   }
   return balance;
-}
+};

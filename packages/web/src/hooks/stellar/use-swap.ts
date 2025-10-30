@@ -134,7 +134,7 @@ export function useSwap(): ReturnType {
   };
 
   const onSwapStrictReceive = async (poolAddress: string, args: SwapStrictReceiveArgs) => {
-    const pool = pools.find((p) => p.address === poolAddress);
+    const pool = pools.find((p) => p.addresses.pool === poolAddress);
 
     if (!pool) return;
 

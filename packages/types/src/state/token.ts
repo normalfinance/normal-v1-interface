@@ -1,3 +1,5 @@
+import { BigNumber } from 'bignumber.js';
+
 export type ApiToken = {
   symbol: string;
   issuer: string;
@@ -11,9 +13,9 @@ export type ApiToken = {
 };
 
 export type Token = ApiToken & {
-  balance: BigNumber; // A user's balance
-  price: BigNumber; // The USD price
-  percentageChange: BigNumber;
+  balance: string; // A user's balance
+  price: string; // The USD price
+  percentageChange: number;
 };
 
 export type TokenMapType = {

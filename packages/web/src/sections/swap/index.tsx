@@ -25,7 +25,7 @@ export default function SwapView() {
   const { params } = useQueryParams<TokenActionQueryParams>();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
-  const { tokenState, getAllTokens, poolState, getAllPools } = usePersistStore();
+  const { getAllTokens, getAllPools } = usePersistStore();
 
   // Determine which tab to show based on query params, default to 'swap'
   const activeTab: TokenActionKey = params?.tab || 'swap';
@@ -90,7 +90,6 @@ export default function SwapView() {
         <Box maxWidth={500} width={1}>
           <Box width={1}>
             <TokenActionCard
-              tokensList={tokenState.tokens}
               swapFeeInfo={swapFeeInfo}
               cashBalance={0}
               queryParams={getCardQueryParams()}

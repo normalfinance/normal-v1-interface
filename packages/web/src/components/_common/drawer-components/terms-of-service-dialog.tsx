@@ -150,7 +150,7 @@ export default function TermsOfServiceDialog({ open, onClose }: TermsOfServiceDi
               primary={
                 <Typography variant="body2" component="span" color="text.secondary">
                   {t(
-                    'You understand the rules and risks associated with settlement of pool liquidity, synthetic assets, insurance, and socialised losses.'
+                    'You understand the rules and risks associated with settlement of pool liquidity and synthetic assets.'
                   )}
                 </Typography>
               }

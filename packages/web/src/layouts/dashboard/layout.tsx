@@ -5,8 +5,8 @@ import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
 import { isTestnet } from '@normalfinance/utils';
-import { ZEALY_QUEST_IDS } from '@/global-config';
 import { allLangs, useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
 import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
 
 import Box from '@mui/material/Box';
@@ -14,7 +14,6 @@ import { useTheme } from '@mui/material/styles';
 import { Alert, Button, AlertTitle } from '@mui/material';
 
 import { useSettingsContext } from '@/components/template/settings';
-import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 
 import { FooterSection } from '../core';
 import { NormalNavbar } from './normal-navbar';
@@ -55,6 +54,10 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const { t } = useTranslate();
 
+  const {
+    tokenState: { tokens },
+  } = usePersistStore();
+
   const theme = useTheme();
 
   const settings = useSettingsContext();
@@ -65,10 +68,6 @@ export function DashboardLayout({
   const isNavHorizontal = settings.state.navLayout === 'horizontal';
 
   const handleGiveFeedback = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Give feedback / Report bug',
-    //   location: '',
-    // });
     window.open(paths.help.feedbackForm, '_blank', 'noopener');
   };
 
@@ -89,7 +88,7 @@ export function DashboardLayout({
           logo={NormalNavbarDefaults.logo}
           links={NormalNavbarDefaults.links}
           buttons={NormalNavbarDefaults.buttons}
-          searchbar={<Searchbar data={undefined} />} // TODO: add tokens
+          searchbar={<Searchbar />}
           language={<LanguagePopover data={allLangs} />}
           account={<AccountDrawer />}
         />
@@ -155,7 +154,6 @@ export function DashboardLayout({
               >
                 {t('Give feedback / Report bug')}
               </Button>
-              <ZealyHighlight questId={ZEALY_QUEST_IDS.giveFeedback} position={{ right: -10 }} />
             </Box>
           </Alert>
         )}

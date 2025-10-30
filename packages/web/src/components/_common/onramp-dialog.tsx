@@ -3,7 +3,7 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { CONFIG } from '@/global-config';
 import { enqueueSnackbar } from 'notistack';
-import { createOnramperURL, createCoinbasePayURL } from '@/utils/checkout';
+import { createOnramperURL, createCoinbasePayURL } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -27,7 +27,7 @@ import GetHelpButton from './get-help-button';
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------
 
-export interface CheckoutOption {
+export interface OnrampOption {
   id: string;
   avatar: string; // URL of the logo / avatar
   heading: string;
@@ -36,7 +36,7 @@ export interface CheckoutOption {
   onClick?: () => void;
 }
 
-export interface CheckoutDialogProps {
+export interface OnrampDialogProps {
   open: boolean;
   token: string;
   amount: string;
@@ -47,7 +47,7 @@ export interface CheckoutDialogProps {
 // ----------------------------------------------------------------------
 // COMPONENT -------------------------------------------------------------
 
-const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
+const OnrampDialog: React.FC<OnrampDialogProps> = ({
   open,
   token,
   amount,
@@ -92,7 +92,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
     openExternal(url);
   };
 
-  const CHECKOUTS: CheckoutOption[] = [
+  const ONRAMPS: OnrampOption[] = [
     {
       id: 'onramper',
       avatar:
@@ -131,7 +131,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" color="text.primary">
-            {t('Checkout with')}
+            {t('Onramp with')}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <GetHelpButton url={paths.help.buy} />
@@ -151,7 +151,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         }}
       >
         <List disablePadding>
-          {CHECKOUTS.map((checkout) => (
+          {ONRAMPS.map((checkout) => (
             <ListItemButton
               key={checkout.id}
               onClick={() => {
@@ -205,4 +205,4 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   );
 };
 
-export default CheckoutDialog;
+export default OnrampDialog;

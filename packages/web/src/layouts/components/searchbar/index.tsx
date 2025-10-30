@@ -1,10 +1,12 @@
 'use client';
 
 import type { BoxProps } from '@mui/material/Box';
+import type { Token } from '@normalfinance/types';
 import type { Breakpoint } from '@mui/material/styles';
-import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
+// import type { NavSectionProps } from '@/components/template/nav-section';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from '@/routes/hooks';
 import parse from 'autosuggest-highlight/parse';
@@ -39,13 +41,9 @@ import { applyFilter } from './utils';
 
 // ----------------------------------------------------------------------
 
-export type SearchbarProps = BoxProps & {
-  data?: NavSectionProps['data'];
-};
-
 const breakpoint: Breakpoint = 'sm';
 
-export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps) {
+export function Searchbar({ sx, ...other }: BoxProps) {
   const { t } = useTranslate('auto');
   const theme = useTheme();
   const router = useRouter();
@@ -92,14 +90,9 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
   }, [open, getAllTokens, tokens.length]);
 
   const handleTokenClick = useCallback(
-    (token: any) => {
-      const isNormalToken = token.symbol.toLowerCase().startsWith('n');
-      const destination = isNormalToken
-        ? paths.pools.details(token.symbol)
-        : `${paths.swap}?token_in=${token.symbol}`;
-
+    (token: Token) => {
       setTimeout(() => handleClose(), 50);
-      router.push(destination);
+      router.push(paths.explore);
     },
     [router, handleClose]
   );
@@ -227,85 +220,88 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           },
         }}
       >
-        {dataFiltered.map((item) => {
-          const partsTitle = parse(item.name, match(item.name, searchQuery));
-          const partsSymbol = parse(item.symbol, match(item.symbol, searchQuery));
+        {dataFiltered.length &&
+          dataFiltered.map((item) => {
+            const partsTitle = parse(item.name, match(item.name, searchQuery));
+            const partsSymbol = parse(item.symbol, match(item.symbol, searchQuery));
 
-          return (
-            <MenuItem disableRipple key={item.symbol}>
-              <ListItemButton
-                onClick={() => handleTokenClick(item)}
-                sx={{
-                  borderWidth: 1,
-                  borderStyle: 'dashed',
-                  borderColor: 'transparent',
-                  borderBottomColor: theme.vars?.palette.divider || theme.palette.divider,
-                  '&:hover': {
-                    borderRadius: 1,
-                    borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
-                    backgroundColor: theme.vars?.palette.action.hover || theme.palette.action.hover,
-                  },
-                }}
-              >
-                <ListItemAvatar>
-                  <Avatar src={getCryptoIconUrl(item.symbol)} sx={{ width: 32, height: 32 }}>
-                    {item.symbol.substring(0, 2)}
-                  </Avatar>
-                </ListItemAvatar>
+            return (
+              <MenuItem disableRipple key={item.symbol}>
+                <ListItemButton
+                  onClick={() => handleTokenClick(item)}
+                  sx={{
+                    borderWidth: 1,
+                    borderStyle: 'dashed',
+                    borderColor: 'transparent',
+                    borderBottomColor: theme.vars?.palette.divider || theme.palette.divider,
+                    '&:hover': {
+                      borderRadius: 1,
+                      borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
+                      backgroundColor:
+                        theme.vars?.palette.action.hover || theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <ListItemAvatar>
+                    <Avatar src={getCryptoIconUrl(item.symbol)} sx={{ width: 32, height: 32 }}>
+                      {item.symbol.substring(0, 2)}
+                    </Avatar>
+                  </ListItemAvatar>
 
-                <ListItemText
-                  primary={
-                    <Box component="span">
-                      {partsTitle.map((part, index) => (
-                        <Box
-                          key={index}
-                          component="span"
-                          sx={{
-                            color: part.highlight
-                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
-                              : theme.vars?.palette.text.primary || theme.palette.text.primary,
-                          }}
-                        >
-                          {part.text}
-                        </Box>
-                      ))}
-                    </Box>
-                  }
-                  secondary={
-                    <Box component="span">
-                      {partsSymbol.map((part, index) => (
-                        <Box
-                          key={index}
-                          component="span"
-                          sx={{
-                            color: part.highlight
-                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
-                              : theme.vars?.palette.text.secondary || theme.palette.text.secondary,
-                          }}
-                        >
-                          {part.text}
-                        </Box>
-                      ))}
-                    </Box>
-                  }
-                />
+                  <ListItemText
+                    primary={
+                      <Box component="span">
+                        {partsTitle.map((part, index) => (
+                          <Box
+                            key={index}
+                            component="span"
+                            sx={{
+                              color: part.highlight
+                                ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                                : theme.vars?.palette.text.primary || theme.palette.text.primary,
+                            }}
+                          >
+                            {part.text}
+                          </Box>
+                        ))}
+                      </Box>
+                    }
+                    secondary={
+                      <Box component="span">
+                        {partsSymbol.map((part, index) => (
+                          <Box
+                            key={index}
+                            component="span"
+                            sx={{
+                              color: part.highlight
+                                ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                                : theme.vars?.palette.text.secondary ||
+                                  theme.palette.text.secondary,
+                            }}
+                          >
+                            {part.text}
+                          </Box>
+                        ))}
+                      </Box>
+                    }
+                  />
 
-                <Box sx={{ textAlign: 'right', minWidth: 80 }}>
-                  {item.balance > 0 && (
-                    <Typography variant="body2" color="text.primary">
-                      {fCurrency(item.balance)}
-                    </Typography>
-                  )}
-                  {item.price > 0 && (
-                    <Typography variant="caption" color="text.secondary">
-                      {fCurrency(item.price)}
-                    </Typography>
-                  )}
-                </Box>
-              </ListItemButton>
-            </MenuItem>
-          );
-        })}
+                  <Box sx={{ textAlign: 'right', minWidth: 80 }}>
+                    {BigNumber(item.balance).gt(0) && (
+                      <Typography variant="body2" color="text.primary">
+                        {fCurrency(item.balance)}
+                      </Typography>
+                    )}
+                    {BigNumber(item.price).gt(0) && (
+                      <Typography variant="caption" color="text.secondary">
+                        {fCurrency(item.price)}
+                      </Typography>
+                    )}
+                  </Box>
+                </ListItemButton>
+              </MenuItem>
+            );
+          })}
       </MenuList>
     );
   };

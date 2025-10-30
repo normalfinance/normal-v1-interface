@@ -1,4 +1,3 @@
-import { PoolReserves } from '@normalfinance/types';
 import { StrKey, xdr } from '@stellar/stellar-sdk';
 import { createHash } from 'crypto';
 
@@ -54,23 +53,6 @@ export const sortTokenAddreses = (
   b: string
 ): { tokens: [string, string]; idx: { a: 0 | 1; b: 0 | 1 } } => {
   return a < b ? { tokens: [a, b], idx: { a: 0, b: 1 } } : { tokens: [b, a], idx: { b: 0, a: 1 } };
-};
-
-export const calculatePoolPrices = (reserveA: BigNumber, reserveB: BigNumber): PoolReserves => {
-  if (reserveA.eq(0) || reserveB.eq(0)) {
-    return {
-      tokenA: 0,
-      tokenB: 0,
-    };
-  }
-
-  const tokenAPrice = reserveB.div(reserveA);
-  const tokenBPrice = reserveA.div(reserveB);
-
-  return {
-    tokenA: tokenAPrice.toNumber(),
-    tokenB: tokenBPrice.toNumber(),
-  };
 };
 
 /**

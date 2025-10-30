@@ -6,11 +6,12 @@ import type { PoolQueryParams } from '@/types/query-params';
 import z from 'zod';
 import { useEffect } from 'react';
 import { useLiquidity } from '@/hooks';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { format } from '@normalfinance/utils';
+import { fCurrency } from '@/utils/format-number';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
+import { sanitizeAmountInput } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
@@ -118,7 +119,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       return false;
     }
 
-    return position.balances.tokenShare <= shareAmount;
+    return position.balances.tokenShare.lte(shareAmount);
   };
 
   const handleWithdrawButtonClick = () => {
@@ -146,15 +147,15 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
     if (position) {
       setValue(
         'shareAmount',
-        position.balances.tokenShare === 0 ? undefined : position.balances.tokenShare,
+        position.balances.tokenShare.eq(0)
+          ? undefined
+          : Number(position.balances.tokenShare.toString()),
         {
           shouldValidate: true,
         }
       );
     }
   };
-
-  console.log(position);
 
   return (
     <>
@@ -205,7 +206,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
             />
 
             <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-              {format.fCurrency(Number(shareAmount) * position.tokenSharePrice)}
+              {fCurrency(shareAmount ? position.tokenSharePrice.multipliedBy(shareAmount) : 0)}
             </Typography>
           </Stack>
 
@@ -250,7 +251,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                   fontSize: '12px',
                 }}
               >
-                {position.balances.tokenShare}{' '}
+                {position.balances.tokenShare.toFixed(7)}{' '}
               </Typography>
             </Box>
             <Button
@@ -335,7 +336,8 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                     fontSize: '12px',
                   }}
                 >
-                  {position.balances.tokenA} {position.tokenA.symbol}
+                  {position.balances.tokenA.toFixed(position.tokenA.decimals)}{' '}
+                  {position.tokenA.symbol}
                 </Typography>
 
                 <Typography
@@ -346,7 +348,8 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                     fontSize: '12px',
                   }}
                 >
-                  {position.balances.tokenB} {position.tokenB.symbol}
+                  {position.balances.tokenB.toFixed(position.tokenB.decimals)}{' '}
+                  {position.tokenB.symbol}
                 </Typography>
               </Box>
             </Box>
@@ -402,27 +405,39 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                   </Typography>
                 </Box>
 
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 500,
-                    color: theme.palette.text.primary,
-                    fontSize: '12px',
-                  }}
-                >
-                  {position.balances.tokenA} {position.tokenA.symbol}
-                </Typography>
+                {shareAmount && (
+                  <>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.primary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      {BigNumber(shareAmount)
+                        .dividedBy(position.balances.tokenShare)
+                        .multipliedBy(position.balances.tokenA)
+                        .toFixed(position.tokenA.decimals)}{' '}
+                      {position.tokenA.symbol}
+                    </Typography>
 
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 500,
-                    color: theme.palette.text.primary,
-                    fontSize: '12px',
-                  }}
-                >
-                  {position.balances.tokenB} {position.tokenB.symbol}
-                </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.primary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      {BigNumber(shareAmount)
+                        .dividedBy(position.balances.tokenShare)
+                        .multipliedBy(position.balances.tokenB)
+                        .toFixed(position.tokenB.decimals)}{' '}
+                      {position.tokenB.symbol}
+                    </Typography>
+                  </>
+                )}
               </Box>
             </Box>
           </Box>

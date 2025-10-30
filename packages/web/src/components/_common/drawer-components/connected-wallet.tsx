@@ -6,6 +6,7 @@ import type { Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { paths } from '@/routes/paths';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
@@ -204,7 +205,9 @@ export default function ConnectedWallet({
       </CustomTabsSwapSend>
 
       {/* ------- tab panels ---------------------------------------- */}
-      {tabs.value === 'tokens' && <TokensTab tokens={tokens?.filter((tkn) => tkn.balance > 0)} />}
+      {tabs.value === 'tokens' && (
+        <TokensTab tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0))} />
+      )}
       {tabs.value === 'positions' && <PositionsTab positions={positions ?? []} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
 

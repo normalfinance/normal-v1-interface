@@ -4,10 +4,10 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 
 import posthog from 'posthog-js';
 import { paths } from '@/routes/paths';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
-import { ZEALY_QUEST_IDS } from '@/global-config';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
 import { format, logger, trackEvent } from '@normalfinance/utils';
@@ -19,7 +19,6 @@ import { Box, Stack, Button, Drawer, Tooltip, IconButton, Typography } from '@mu
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
-import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
@@ -58,10 +57,6 @@ function WalletDisconnected({ onConnectClick }: { onConnectClick: () => void }) 
         >
           {t('Connect your wallet')}
         </Typography>
-        <ZealyHighlight
-          questId={ZEALY_QUEST_IDS.connectWallet}
-          position={{ top: -22, right: -32 }}
-        />
       </Box>
 
       <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
@@ -76,10 +71,6 @@ function WalletDisconnected({ onConnectClick }: { onConnectClick: () => void }) 
         >
           {t('Need help creating a wallet?')}
         </Button>
-        <ZealyHighlight
-          questId={ZEALY_QUEST_IDS.createWallet}
-          position={{ top: -10, right: -10 }}
-        />
       </Box>
 
       {/* Connect wallet button - opens Stellar Wallets Kit popup */}
@@ -140,9 +131,9 @@ function WalletConnected({ address }: { address: string }) {
 
   // Total balance
   const totalBalance = tokens.reduce((acc, tkn) => {
-    const holdings = tkn.balance * tkn.price;
-    return acc + holdings;
-  }, 0);
+    const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
+    return acc.plus(holdings);
+  }, BigNumber(0));
 
   if (!address) {
     return null;
@@ -165,7 +156,7 @@ function WalletConnected({ address }: { address: string }) {
       </Stack>
 
       <ConnectedWallet
-        balance={totalBalance}
+        balance={totalBalance.toNumber()}
         percentageChange={0}
         tokens={tokens}
         positions={positions}

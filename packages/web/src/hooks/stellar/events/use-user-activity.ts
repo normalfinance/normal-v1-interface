@@ -82,7 +82,7 @@ export function useUserActivity(): ReturnType {
                   parsedEvent.timestamp = tx.createdAt * 1000;
                 }
 
-                return parseEventToActivity(r.id, parsedEvent, tokensByAddress);
+                return parseEventToActivity(r.transaction_hash, parsedEvent, tokensByAddress);
               })
           )
         );
@@ -119,7 +119,7 @@ export function useUserActivity(): ReturnType {
             }
 
             const activityParsed = await parseEventToActivity(
-              payload.new.id,
+              transaction_hash,
               parsed,
               tokensByAddress
             );
@@ -161,13 +161,13 @@ async function parseEventToActivity(
           address: event.tokenIn,
           symbol: tokenIn.symbol,
           iconUrl: tokenIn.icon ?? getCryptoIconUrl(tokenIn.symbol),
-          amount: Number(format.formatTokenAmount(event.inAmount.toString())),
+          amount: Number(format.fTokenAmount(event.inAmount.toString())),
         },
         buy: {
           address: event.tokenOut,
           symbol: tokenOut.symbol,
           iconUrl: tokenOut.icon ?? getCryptoIconUrl(tokenOut.symbol),
-          amount: Number(format.formatTokenAmount(event.outAmount.toString())),
+          amount: Number(format.fTokenAmount(event.outAmount.toString())),
         },
       };
     }
@@ -184,13 +184,13 @@ async function parseEventToActivity(
           address: tokenA.contract,
           symbol: tokenA.symbol,
           iconUrl: tokenA.icon ?? getCryptoIconUrl(tokenA.symbol),
-          amount: Number(format.formatTokenAmount(event.amounts[tokenIdx.a].toString())),
+          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.a].toString())),
         },
         tokenB: {
           address: tokenB.contract,
           symbol: tokenB.symbol,
           iconUrl: tokenB.icon ?? getCryptoIconUrl(tokenB.symbol),
-          amount: Number(format.formatTokenAmount(event.amounts[tokenIdx.b].toString())),
+          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.b].toString())),
         },
       };
     }
@@ -208,13 +208,13 @@ async function parseEventToActivity(
           address: tokenA.contract,
           symbol: tokenA.symbol,
           iconUrl: tokenA.icon ?? getCryptoIconUrl(tokenA.symbol),
-          amount: Number(format.formatTokenAmount(event.amounts[tokenIdx.a].toString())),
+          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.a].toString())),
         },
         tokenB: {
           address: tokenB.contract,
           symbol: tokenB.symbol,
           iconUrl: tokenB.icon ?? getCryptoIconUrl(tokenB.symbol),
-          amount: Number(format.formatTokenAmount(event.amounts[tokenIdx.b].toString())),
+          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.b].toString())),
         },
       };
     }

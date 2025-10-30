@@ -7,14 +7,12 @@ import { useEffect } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
-import { ZEALY_QUEST_IDS } from '@/global-config';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box, Grid2 } from '@mui/material';
 
-import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
 import { CreatePosition } from '@/components/_create-position-page-components/create-position';
 
@@ -62,7 +60,6 @@ export default function CreatePositionView() {
           <Grid2 size={{ xs: 12, md: 12 }}>
             <Box sx={{ position: 'relative' }}>
               <CreatePosition queryParams={params} />
-              <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
             </Box>
           </Grid2>
         </Grid2>

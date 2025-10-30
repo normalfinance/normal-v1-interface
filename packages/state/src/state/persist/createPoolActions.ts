@@ -1,14 +1,9 @@
 import { PoolContract, PoolRouterContract } from '@normalfinance/contracts';
-import { AppStorePersist, PoolActions, Pool, PoolState } from '@normalfinance/types';
-import {
-  calculatePoolPrices,
-  constants,
-  format,
-  getTokenSymbol,
-  logger,
-} from '@normalfinance/utils';
+import { AppStorePersist, PoolActions, Pool, PoolState, Address } from '@normalfinance/types';
+import { constants, format, getTokenSymbol, logger } from '@normalfinance/utils';
 import { usePersistStore } from '../store';
 import { BigNumber } from 'bignumber.js';
+import { u128 } from '@stellar/stellar-sdk/lib/contract';
 
 const SKIPPED_POOLS = ['CDCADRS4JAUPWO3BXERSUMUWEGBZO6TKBRMPKQUD3QLS2PGM7MV3FILX'];
 
@@ -39,6 +34,9 @@ function extractInnerAddresses(
 
 export function createPoolActions(): PoolActions {
   const initialState: PoolState = {
+    loading: false,
+    error: null,
+
     pools: [],
     poolsByTokens: {},
   };
@@ -54,82 +52,140 @@ export function createPoolActions(): PoolActions {
 
     getAllPools: async () => {
       try {
-        const tokensSetsCount = await PoolRouter.get_tokens_sets_count();
+        const tokensSetsCountResponse = await PoolRouter.get_tokens_sets_count();
 
-        const poolsForTokensRange = await PoolRouter.get_pools_for_tokens_range({
+        const tokensSetsEnd =
+          tokensSetsCountResponse && tokensSetsCountResponse.result
+            ? tokensSetsCountResponse.result
+            : 3;
+
+        const poolsForTokensRangeResponse = await PoolRouter.get_pools_for_tokens_range({
           start: 0,
-          end: tokensSetsCount?.result || 3,
+          end: tokensSetsEnd,
         });
 
-        const pools = extractInnerAddresses(poolsForTokensRange.result);
+        // No pools found
+        if (!poolsForTokensRangeResponse || !poolsForTokensRangeResponse.result) return;
 
-        const poolsWithDetails = await Promise.all(
-          pools.map(async (pool) => {
-            const { address, index } = pool;
+        // Convert complex data structure to usable format
+        const poolsData = extractInnerAddresses(poolsForTokensRangeResponse.result);
 
-            const Pool = new PoolContract.Client({
-              contractId: address,
+        if (!poolsData || !poolsData.length) return;
+
+        const pools = await Promise.all(
+          poolsData.map(async ({ address: poolAddress, index: poolIndex }) => {
+            const PoolClient = new PoolContract.Client({
+              contractId: poolAddress,
               networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
               rpcUrl: constants.StellarConfig.RPC_URL,
             });
 
-            const [fee_fraction, reserves, tokens, token_share, total_shares] = await Promise.all([
-              Pool.get_fee_fraction(),
-              Pool.get_reserves(),
-              Pool.get_tokens(),
-              Pool.share_id(),
-              Pool.get_total_shares(),
+            const [
+              feeResponse,
+              reservesResponse,
+              tokensResponse,
+              tokenShareResponse,
+              totalSharesResponse,
+            ] = await Promise.all([
+              PoolClient.get_fee_fraction(),
+              PoolClient.get_reserves(),
+              PoolClient.get_tokens(),
+              PoolClient.share_id(),
+              PoolClient.get_total_shares(),
             ]);
 
-            const tokenA = tokens?.result ? tokens.result[0] : '';
-            const tokenB = tokens?.result ? tokens.result[1] : '';
-            const tokenAReserve = BigNumber(reserves?.result ? reserves.result[0] : 0);
-            const tokenBReserve = BigNumber(reserves?.result ? reserves.result[1] : 0);
+            // Tokens
+            const tokens =
+              tokensResponse && tokensResponse.result
+                ? Array.from<Address>(tokensResponse.result)
+                : [];
 
-            const tokenShareSymbol = (await getTokenSymbol(token_share.result)) ?? 'LP Token';
+            // We can't render anything without the token addresses
+            if (!tokens || !tokens.length) return;
 
-            // Calculate price using pool reserves
-            const poolPrices = calculatePoolPrices(tokenAReserve, tokenBReserve);
+            // Reserves
+            const reserves =
+              reservesResponse && reservesResponse.result
+                ? Array.from<u128>(reservesResponse.result)
+                : [];
+
+            // We can't render anything without both reserves
+            if (reserves.length !== 2) return;
+
+            const reserveA = BigNumber(format.fTokenAmount(reserves[0], 7));
+            const reserveB = BigNumber(format.fTokenAmount(reserves[1], 7));
+
+            const priceA = reserveA.eq(0) || reserveB.eq(0) ? BigNumber(0) : reserveB.div(reserveA);
+            const priceB = reserveA.eq(0) || reserveB.eq(0) ? BigNumber(0) : reserveA.div(reserveB);
+
+            // LP Token
+            const tokenShareAddress: Address =
+              tokenShareResponse && tokenShareResponse.result ? tokenShareResponse.result : '';
+
+            const tokenShareSymbol = tokenShareAddress
+              ? ((await getTokenSymbol(tokenShareAddress)) ?? 'LP Token')
+              : '';
+
+            const totalShares =
+              totalSharesResponse && totalSharesResponse.result
+                ? BigNumber(format.fTokenAmount(totalSharesResponse.result, 7))
+                : BigNumber(0);
+
+            // Fee
+            const fee = feeResponse && feeResponse.result ? Number(feeResponse.result) : 30;
 
             const poolDetails: Pool = {
-              address,
-              index,
-              tokenA,
-              tokenB,
-              reserves: {
-                tokenA: Number(format.formatTokenAmount(tokenAReserve)),
-                tokenB: Number(format.formatTokenAmount(tokenBReserve)),
-              },
-              prices: poolPrices,
-              tokenShare: {
-                address: token_share?.result ? token_share.result : 0,
-                amount: 0,
-                symbol: tokenShareSymbol,
-              },
-              totalShares: total_shares?.result
-                ? Number(format.formatTokenAmount(total_shares.result, 7))
-                : 0,
-              feeFraction: fee_fraction?.result ? fee_fraction.result : 0,
+              index: poolIndex,
               version: 'v1',
-              client: Pool,
+              fee,
+              addresses: {
+                pool: poolAddress,
+                tokenA: tokens[0],
+                tokenB: tokens[1],
+                tokenShare: tokenShareAddress,
+              },
+              reserves: {
+                tokenA: reserveA.toString(),
+                tokenB: reserveB.toString(),
+              },
+              prices: {
+                tokenA: priceA.toString(),
+                tokenB: priceB.toString(),
+              },
+              shares: {
+                address: tokenShareAddress,
+                symbol: tokenShareSymbol,
+                total: totalShares.toString(),
+              },
+
+              client: PoolClient,
             };
 
             return poolDetails;
           })
         );
 
-        const poolRecord = poolsWithDetails.reduce<Record<string, Pool[]>>((acc, pool) => {
-          const key = [pool.tokenA, pool.tokenB].join(':');
+        // Safely remove all undefined values
+        const poolsFiltered = pools.filter(
+          (r): r is NonNullable<typeof r> => r !== undefined && r !== null
+        );
+
+        // Map pools by their tokens
+        const poolsByTokens = poolsFiltered.reduce<Record<string, Pool[]>>((acc, pool) => {
+          const key = [pool.addresses.tokenA, pool.addresses.tokenB].join(':');
           if (!acc[key]) acc[key] = [];
           acc[key].push(pool);
           return acc;
         }, {});
 
         const newState: PoolState = {
-          pools: poolsWithDetails,
-          poolsByTokens: poolRecord,
+          loading: false,
+          error: null,
+          pools: poolsFiltered,
+          poolsByTokens,
         };
 
+        // Update the state
         usePersistStore.setState((state: AppStorePersist) => ({
           ...state,
           poolState: newState,

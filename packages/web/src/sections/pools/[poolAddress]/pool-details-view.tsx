@@ -1,7 +1,7 @@
 'use client';
 
 import type { PoolTxRow } from '@/types/pools';
-import type { events, Pool } from '@normalfinance/types';
+import type { Pool, events } from '@normalfinance/types';
 
 import { useState } from 'react';
 import BigNumber from 'bignumber.js';
@@ -24,11 +24,11 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
     tokenState: { tokens },
   } = usePersistStore();
 
-  const tokenA = tokens.find((tkn) => tkn.contract === pool.tokenA)!;
-  const tokenB = tokens.find((tkn) => tkn.contract === pool.tokenB)!;
+  const tokenA = tokens.find((tkn) => tkn.contract === pool.addresses.tokenA)!;
+  const tokenB = tokens.find((tkn) => tkn.contract === pool.addresses.tokenB)!;
 
   // Load recent pool events
-  const { events } = usePoolEvents(pool.address, 20);
+  const { events } = usePoolEvents(pool.addresses.pool, 20);
 
   // Format the pool events
   const rows = events
@@ -36,14 +36,10 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
     .sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
 
   // Load price and volume chart data
-  const { chartData } = usePoolPriceChart(pool.address, []);
+  const { chartData } = usePoolPriceChart(pool.addresses.pool, []);
 
   // Load pool price and exchange rate info
   const [tokenUSDValue, setTokenUSDValue] = useState<BigNumber>(BigNumber(0));
-  const [reserveFiatValues, setReserveFiatValues] = useState<{
-    token_a: BigNumber;
-    token_b: BigNumber;
-  }>({ token_a: BigNumber(0), token_b: BigNumber(0) });
 
   const past24hVolume = BigNumber(0);
   const tvl = BigNumber(0);
@@ -56,17 +52,17 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
             pairInfo={{
               tokenA,
               tokenB,
-              address: pool.address,
+              address: pool.addresses.pool,
             }}
             metadata={{
               version: 'v1',
-              feeTier: fPercent(pool.feeFraction / 100),
+              feeTier: fPercent(pool.fee / 100),
             }}
             exchangeRate={{
-              label: `1 ${tokenA.symbol} = ${pool.prices.tokenA.toFixed(4)} ${tokenB.symbol}`,
+              label: `1 ${tokenA.symbol} = ${BigNumber(pool.prices.tokenA).toFixed(4)} ${tokenB.symbol}`,
               usdEquivalent: fCurrency(tokenUSDValue.toFixed(2)),
               tokenSymbol: tokenA.symbol,
-              tokenRate: `${pool.prices.tokenA.toFixed(4)} ${tokenB.symbol}`,
+              tokenRate: `${BigNumber(pool.prices.tokenA).toFixed(4)} ${tokenB.symbol}`,
               tokenUSDValue: fCurrency(tokenUSDValue.toFixed(2)),
             }}
             performance={{ percentageChange: 0 }}
@@ -107,7 +103,7 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
             baseTokenSymbol={tokenA.symbol}
             quoteTokenSymbol={tokenB.symbol}
             rows={rows}
-            quoteTokenPrice={tokenB.price}
+            quoteTokenPrice={BigNumber(tokenB.price).toNumber()}
           />
         </Grid2>
       </Grid2>

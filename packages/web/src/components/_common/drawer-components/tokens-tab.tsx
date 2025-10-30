@@ -2,6 +2,7 @@
 
 import type { Token } from '@normalfinance/types';
 
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { getCryptoIconUrl } from '@normalfinance/utils';
@@ -28,7 +29,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
           .sort((a, b) => {
             const aBal = a.balance;
             const bBal = b.balance;
-            return bBal - aBal;
+            return BigNumber(bBal).minus(aBal).toNumber();
           })
           .map((token) => (
             <Box
@@ -64,7 +65,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                     variant="body2"
                     sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                   >
-                    {Number(token.balance).toFixed(token.decimals)}
+                    {BigNumber(token.balance).toFixed(token.decimals)}
                   </Typography>
                   <Typography
                     variant="body2"
@@ -92,7 +93,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                       variant="body2"
                       sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                     >
-                      {fCurrency(token.price * token.balance)}
+                      {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
                     </Typography>
                     <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                       <Box

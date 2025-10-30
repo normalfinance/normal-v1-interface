@@ -205,7 +205,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard tokensList={tokens} swapFeeInfo={swapFeeInfo} queryParams={swapParams} />
+              <SwapCard swapFeeInfo={swapFeeInfo} queryParams={swapParams} />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>

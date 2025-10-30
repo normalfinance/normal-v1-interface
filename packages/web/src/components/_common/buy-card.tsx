@@ -1,19 +1,19 @@
 import type { CardProps } from '@mui/material';
-import type { BuyQueryParams } from '@/types/query-params';
 import type { Token } from '@normalfinance/types';
+import type { BuyQueryParams } from '@/types/query-params';
 
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { convertFiatToCoin } from '@/utils/conversion-helpers';
+import { convertFiatToCoin, sanitizeAmountInput } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
 
 import PickToken from './pick-token';
 import { WalletGate } from './wallet-gate';
-import CheckoutDialog from './checkout-dialog';
+import OnrampDialog from './onramp-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
@@ -55,10 +55,6 @@ const BuyCard: React.FC<BuyCardProps> = ({
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Close Buy Card',
-    //   location: 'Insurance',
-    // });
     setOpen(false);
   };
 
@@ -67,7 +63,8 @@ const BuyCard: React.FC<BuyCardProps> = ({
   const spanRef = useRef<HTMLSpanElement>(null);
 
   const fiatValue = parseFloat(amount) || 0;
-  const buyableAmt = buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.price) : 0;
+  const buyableAmt =
+    buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, BigNumber(buyToken.price)) : 0;
 
   // State for review dialog
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -367,7 +364,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
         />
 
         {reviewOpen && (
-          <CheckoutDialog
+          <OnrampDialog
             open={reviewOpen}
             token={buyToken?.symbol ?? 'USDC'}
             amount={amount}

@@ -25,7 +25,7 @@ export const useTokenPrice = (tokenSymbol: string): ReturnType => {
       const data = await getReflectorExternalPrice(tokenSymbol);
 
       if (data && data.price) {
-        setPrice(BigNumber(format.formatTokenAmount(data.price, 14)));
+        setPrice(BigNumber(format.fTokenAmount(data.price, 14)));
       }
     } catch (e: any) {
       logger.log(e);

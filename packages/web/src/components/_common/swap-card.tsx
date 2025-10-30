@@ -1,13 +1,13 @@
 import type { CardProps } from '@mui/material';
+import type { Pool, Token } from '@normalfinance/types';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
-import type { Pool, Token } from '@normalfinance/types';
 
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useSwap, useTrustLine } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
@@ -17,6 +17,7 @@ import {
   checkTrustline,
   getCryptoIconUrl,
   sortTokenAddreses,
+  sanitizeAmountInput,
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -52,12 +53,11 @@ interface ButtonConfig {
 }
 
 interface SwapCardProps extends CardProps {
-  tokensList?: Token[];
   swapFeeInfo?: SwapFeeInfo;
   queryParams?: SwapQueryParams;
 }
 
-const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...other }) => {
+const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -65,8 +65,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const {
     wallet,
     updateTokenInfo,
+    tokenState: { tokens },
     poolState: { poolsByTokens },
   } = usePersistStore();
+
   const { publicKey } = useStellarWalletsKit();
 
   const { addTrustLine, loading: trustlineLoading, error: _ } = useTrustLine();
@@ -86,7 +88,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const [priceImpact, setPriceImpact] = useState<number>(0); // bps
 
   // 1) States for tokens, default sell token is first in the list
-  const [tokens, setTokens] = useState(tokensList);
   const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
   const [pool, setPool] = useState<Pool | null>(null);
@@ -108,22 +109,21 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   // Compute the fiat value for the user's sell input
   const sellVal = parseFloat(amount) || 0;
-  const sellFiatValue = sellToken && sellVal > 0 ? sellVal * sellToken.price : 0;
+  const sellFiatValue =
+    sellToken && sellVal > 0 ? BigNumber(sellToken.price).multipliedBy(sellVal).toNumber() : 0;
 
   // 5) Example of how much buyToken the user might get
   const [buyAmount, setBuyAmount] = useState<number>(0);
 
   useEffect(() => {
-    if (tokensList.length === 0) return;
-    setTokens(tokensList);
+    if (tokens.length === 0) return;
+
     // If no sell token is set yet, default to USDC if present, otherwise first token
     if (!sellToken) {
-      const usdcToken = tokensList.find(
-        (tkn) => tkn.contract === constants.StellarConfig.USDC_ADDRESS
-      );
-      setSellToken(usdcToken || tokensList[0]);
+      const usdcToken = tokens.find((tkn) => tkn.contract === constants.StellarConfig.USDC_ADDRESS);
+      setSellToken(usdcToken || tokens[0]);
     }
-  }, [tokensList]);
+  }, [tokens]);
 
   // Initialize from query params
   useEffect(() => {
@@ -237,14 +237,16 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setLoading(false);
       setQuoteFetched(true);
 
-      if (sellToken.price === 0 || buyToken.price === 0) {
+      if (BigNumber(sellToken.price).eq(0) || BigNumber(buyToken.price).eq(0)) {
         setBuyAmount(0);
       } else {
-        const potentialBuyAmount = sellVal * (sellToken.price / buyToken.price);
-        setBuyAmount(potentialBuyAmount);
+        const potentialBuyAmount = BigNumber(sellToken.price)
+          .dividedBy(buyToken.price)
+          .multipliedBy(sellVal);
+        setBuyAmount(potentialBuyAmount.toNumber());
       }
 
-      if (sellVal > sellToken.balance) {
+      if (BigNumber(sellToken.balance).lt(sellVal)) {
         setInsufficientBalance(true);
       }
     }, 1000);
@@ -765,7 +767,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
                         fontSize: '12px',
                       }}
                     >
-                      {sellToken.balance}{' '}
+                      {BigNumber(sellToken.balance).toFixed(sellToken.decimals)}{' '}
                       <Box
                         component="span"
                         sx={{
@@ -876,7 +878,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
                 overflow: 'visible',
               }}
             >
-              {buyToken ? `${fCurrency(buyToken.price * buyAmount)}` : '$0'}
+              {buyToken ? `${fCurrency(BigNumber(buyToken.price).multipliedBy(buyAmount))}` : '$0'}
             </Typography>
           </Box>
 
