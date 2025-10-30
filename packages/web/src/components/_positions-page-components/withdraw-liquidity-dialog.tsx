@@ -5,12 +5,12 @@ import type { PoolQueryParams } from '@/types/query-params';
 
 import z from 'zod';
 import { useEffect } from 'react';
+import { useLiquidity } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { format } from '@normalfinance/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
-import { useLiquidity, useTokenBalance } from '@/hooks';
 import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { format, constants, getCryptoIconUrl, sortTokenAddreses } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
@@ -19,7 +19,6 @@ import {
   Stack,
   Dialog,
   Button,
-  Avatar,
   Divider,
   useTheme,
   InputBase,
@@ -28,6 +27,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
+
 import { SplitAvatar } from '../_common/drawer-components/activity-row';
 
 /* ------------------------------------------------------------------ */
@@ -126,7 +126,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
     if (label === 'Withdraw') {
       withdrawLiquidity({
-        tokens: sortTokenAddreses(position.tokenA.contract, position.tokenB.contract),
+        tokens: [position.tokenA.contract, position.tokenB.contract],
         pool_index: position.pool.index,
         share_amount: shareAmount,
         min_amounts: [0, 0],

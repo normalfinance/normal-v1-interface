@@ -31,7 +31,6 @@ export interface RouterWithdrawLiquidityEvent {
 
 export interface ClaimRewardEvent {
   type: 'claim';
-  asset: string;
   pool: string;
   user: string;
   rewardToken: string;

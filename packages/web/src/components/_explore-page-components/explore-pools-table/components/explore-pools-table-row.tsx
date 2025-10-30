@@ -1,5 +1,7 @@
 'use client';
 
+import type { StateToken as Token } from '@normalfinance/types';
+
 import { paths } from '@/routes/paths';
 import { useRouter } from 'next/navigation';
 import { fPercent, fCurrency } from '@/utils/format-number';
@@ -12,7 +14,6 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
 import PoolTokensAvatarGroup from '@/components/_common/pool-tokens-avatar-group';
-import { StateToken as Token } from '@normalfinance/types';
 
 /* ------------------------------------------------------------------ */
 /* Row props & type -------------------------------------------------- */
@@ -55,7 +56,9 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       {/* Name + symbol + avatar ------------------------------------ */}
       <TableCell sx={{ minWidth: 160 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          <PoolTokensAvatarGroup tokenA={row.tokenA} tokenB={row.tokenB} />
+          {row.tokenA && row.tokenB && (
+            <PoolTokensAvatarGroup tokenA={row.tokenA} tokenB={row.tokenB} />
+          )}
           <Stack>
             <Typography variant="subtitle2">{`${row.tokenAName} / ${row.tokenBName}`}</Typography>
           </Stack>

@@ -77,9 +77,8 @@ export function parseEvent(
     case 'claim':
       return {
         type,
-        asset: parseSymbol(topics[1]),
-        pool: parseAddress(topics[2]),
-        user: parseAddress(topics[3]),
+        pool: parseAddress(topics[1]),
+        user: parseAddress(topics[2]),
         rewardToken: parseAddress(parsedData[0]),
         rewardAmount: parseBigInt(parsedData[1]),
         txHash,

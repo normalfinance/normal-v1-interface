@@ -5,9 +5,9 @@ import type { Client as PoolClient } from '@normalfinance/contracts/build/pool';
 import type { Client as PoolRouterClient } from '@normalfinance/contracts/build/pool_router';
 
 import { useState } from 'react';
-import { constants } from '@normalfinance/utils';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
+import { constants, sortTokenAddreses } from '@normalfinance/utils';
 
 import { useContractTransaction } from './use-contract-transaction';
 
@@ -21,23 +21,19 @@ interface ReturnType {
   error: any | null;
   loading: boolean;
   setLoading: Dispatch<SetStateAction<boolean>>;
-  onEstimateSwap: (args: EstimateSwapArgs, token_in_decimals?: number) => Promise<void>;
-  onSwap: (
-    args: SwapArgs,
-    token_in_decimals?: number,
-    token_out_decimals?: number
-  ) => Promise<void>;
-  onSwapStrictReceive: (
-    poolAddress: string,
-    args: SwapStrictReceiveArgs,
-    token_out_decimals?: number
-  ) => Promise<void>;
+  onEstimateSwap: (args: EstimateSwapArgs) => Promise<void>;
+  onSwap: (args: SwapArgs) => Promise<void>;
+  onSwapStrictReceive: (poolAddress: string, args: SwapStrictReceiveArgs) => Promise<void>;
 }
 
 // ----------------------------------------------------------------------
 
 export function useSwap(): ReturnType {
-  const storePersist = usePersistStore();
+  const {
+    wallet,
+    tokenState: { tokensByAddress },
+    poolState: { pools },
+  } = usePersistStore();
 
   const { executeContractTransaction } = useContractTransaction();
 
@@ -45,12 +41,12 @@ export function useSwap(): ReturnType {
   const [loading, setLoading] = useState(true); // Loading state for async operations
 
   const executeSwap = async (signedTransactionXDR: string, transactionType: string = 'Swap') => {
-    if (!storePersist.wallet.address) return null;
+    if (!wallet.address) return null;
     const res = await fetch('/api/transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        walletAddress: storePersist.wallet.address,
+        walletAddress: wallet.address,
         signedTransactionXDR,
         transactionType,
       }),
@@ -68,10 +64,15 @@ export function useSwap(): ReturnType {
     return data;
   };
 
-  const onEstimateSwap = async (args: EstimateSwapArgs, token_in_decimals?: number) => {
-    const processedArgs = {
+  const onEstimateSwap = async (args: EstimateSwapArgs) => {
+    const { tokens: sortedTokens } = sortTokenAddreses(args.tokens[0], args.tokens[1]);
+
+    const tokenIn = tokensByAddress[args.token_in];
+
+    const processedArgs: Parameters<PoolRouterClient['estimate_swap']>[0] = {
       ...args,
-      in_amount: BigInt((args.in_amount * 10 ** (token_in_decimals || 7)).toFixed(0)),
+      tokens: sortedTokens,
+      in_amount: BigInt((args.in_amount * 10 ** tokenIn.decimals).toFixed(0)),
     };
 
     await executeContractTransaction({
@@ -85,20 +86,19 @@ export function useSwap(): ReturnType {
     });
   };
 
-  const onSwap = async (
-    args: SwapArgs,
-    token_in_decimals?: number,
-    token_out_decimals?: number
-  ) => {
-    const processedArgs = {
-      user: storePersist.wallet.address!,
-      ...args,
-      in_amount: BigInt((args.in_amount * 10 ** (token_in_decimals || 7)).toFixed(0)),
-      out_min: BigInt((args.out_min * 10 ** (token_out_decimals || 7)).toFixed(0)),
-    };
+  const onSwap = async (args: SwapArgs) => {
+    const { tokens: sortedTokens } = sortTokenAddreses(args.tokens[0], args.tokens[1]);
 
-    const tokenIn = storePersist.tokenState.tokensByAddress[args.token_in];
-    const tokenOut = storePersist.tokenState.tokensByAddress[args.token_out];
+    const tokenIn = tokensByAddress[args.token_in];
+    const tokenOut = tokensByAddress[args.token_out];
+
+    const processedArgs: Parameters<PoolRouterClient['swap']>[0] = {
+      ...args,
+      user: wallet.address!,
+      tokens: sortedTokens,
+      in_amount: BigInt((args.in_amount * 10 ** tokenIn.decimals).toFixed(0)),
+      out_min: BigInt((args.out_min * 10 ** tokenOut.decimals).toFixed(0)),
+    };
 
     await executeContractTransaction({
       contractType: 'pool_router',
@@ -133,28 +133,28 @@ export function useSwap(): ReturnType {
     });
   };
 
-  const onSwapStrictReceive = async (
-    poolAddress: string,
-    args: SwapStrictReceiveArgs,
-    token_out_decimals?: number
-  ) => {
-    const processedArgs = {
-      user: storePersist.wallet.address!,
-      ...args,
-      out_amount: BigInt((args.out_amount * 10 ** (token_out_decimals || 7)).toFixed(0)),
-    };
+  const onSwapStrictReceive = async (poolAddress: string, args: SwapStrictReceiveArgs) => {
+    const pool = pools.find((p) => p.address === poolAddress);
 
-    // const pool = storePersist.poolState.pools.find(p => p.address === poolAddress);
-    // const tokenIn = pool?.tokenA;
-    // const tokenOut = pool?.tokenB;
+    if (!pool) return;
+
+    const tokenIn = tokensByAddress[args.in_idx];
+    const tokenOut = tokensByAddress[args.out_idx];
+
+    const processedArgs: Parameters<PoolClient['swap_strict_receive']>[0] = {
+      ...args,
+      user: wallet.address!,
+      out_amount: BigInt((args.out_amount * 10 ** tokenOut.decimals).toFixed(0)),
+      in_max: BigInt((args.in_max * 10 ** tokenIn.decimals).toFixed(0)),
+    };
 
     await executeContractTransaction({
       contractType: 'pool',
       contractAddress: poolAddress,
       transactionDetails: {
         type: TransactionType.SWAP,
-        token1: { name: 'token 1', amount: args.in_max },
-        token2: { name: 'token 2', amount: args.out_amount },
+        token1: { name: tokenIn.symbol, amount: args.in_max },
+        token2: { name: tokenOut.symbol, amount: args.out_amount },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.swap_strict_receive(processedArgs, { simulate: !restore });

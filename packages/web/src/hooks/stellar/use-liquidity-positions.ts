@@ -4,7 +4,7 @@ import type { PoolInfo, StateToken as Token } from '@normalfinance/types';
 
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
-import { logger, format, constants, getTokenBalance } from '@normalfinance/utils';
+import { logger, format, getTokenBalance } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -56,8 +56,8 @@ export function useLiquidityPositions(): ReturnType {
       return undefined;
     }
 
-    const tokenA = tokens.find((tkn) => tkn.contract === pool.tokenA)!;
-    const tokenB = tokens.find((tkn) => tkn.contract === pool.tokenA)!;
+    const tokenA = tokens.find((tkn) => tkn.contract === pool.tokenA);
+    const tokenB = tokens.find((tkn) => tkn.contract === pool.tokenB);
 
     const userTokenShareBalance = await fetchTokenBalance(pool.tokenShare.address, wallet.address);
 
@@ -79,12 +79,12 @@ export function useLiquidityPositions(): ReturnType {
     const tokenAValue = positionTokenABalance * tokenA.price;
     const tokenBValue = positionTokenBBalance * tokenB.price;
 
-    const rewardTokenAddress = constants.StellarConfig.XLM_ADDRESS; // FIXME: pull from pool or pool router
-    const rewardToken = tokens.find((tkn) => tkn.contract === rewardTokenAddress);
+    // const rewardTokenAddress = constants.StellarConfig.XLM_ADDRESS; // FIXME: pull from pool or pool router
+    // const rewardToken = tokens.find((tkn) => tkn.contract === rewardTokenAddress);
 
-    const { result: userClaimableReward } = await pool.client.get_user_reward({
-      user: wallet.address,
-    });
+    // const { result: userClaimableReward } = await pool.client.get_user_reward({
+    //   user: wallet.address,
+    // });
 
     const position: PoolPosition = {
       pool,
@@ -96,7 +96,7 @@ export function useLiquidityPositions(): ReturnType {
         tokenB: Number(format.formatTokenAmount(positionTokenBBalance)),
         feeA: 0, // TODO: how do we compute this?
         feeB: 0,
-        reward: userClaimableReward ?? 0,
+        reward: 0, // userClaimableReward ?? 0,
       },
       usdValues: {
         tokenShare: 0,
@@ -104,7 +104,7 @@ export function useLiquidityPositions(): ReturnType {
         tokenB: tokenBValue,
         feeA: 0,
         feeB: 0,
-        reward: userClaimableReward && rewardToken ? userClaimableReward * rewardToken.price : 0,
+        reward: 0, // userClaimableReward && rewardToken ? userClaimableReward * rewardToken.price : 0,
       },
       lpPercentage: lpPercentage.toFixed(4),
     };

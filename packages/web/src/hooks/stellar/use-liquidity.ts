@@ -4,9 +4,9 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { Client as PoolRouterClient } from '@normalfinance/contracts/build/pool_router';
 
 import { useState } from 'react';
-import { constants } from '@normalfinance/utils';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
+import { constants, sortTokenAddreses } from '@normalfinance/utils';
 
 import { useContractTransaction } from './use-contract-transaction';
 
@@ -77,50 +77,34 @@ export function useLiquidity(): ReturnType {
 
     await rateLimitCheck();
 
-    const tokenA = storePersist.tokenState.tokensByAddress[args.tokens[0]];
-    const tokenB = storePersist.tokenState.tokensByAddress[args.tokens[1]];
+    const { tokens: sortedTokens, idx: tokenIdx } = sortTokenAddreses(
+      args.tokens[0],
+      args.tokens[1]
+    );
 
-    const processedArgs = {
+    const tokenA = storePersist.tokenState.tokensByAddress[args.tokens[tokenIdx.a]];
+    const tokenB = storePersist.tokenState.tokensByAddress[args.tokens[tokenIdx.b]];
+
+    const processedArgs: Parameters<PoolRouterClient['deposit']>[0] = {
       ...args,
       user: storePersist.wallet.address!,
+      tokens: sortedTokens,
       desired_amounts: [
-        BigInt((args.desired_amounts[0] * 10 ** tokenA.decimals).toFixed(0)),
-        BigInt((args.desired_amounts[1] * 10 ** tokenB.decimals).toFixed(0)),
+        BigInt((args.desired_amounts[tokenIdx.a] * 10 ** tokenA.decimals).toFixed(0)),
+        BigInt((args.desired_amounts[tokenIdx.b] * 10 ** tokenB.decimals).toFixed(0)),
       ],
     };
-
-    function reorderObject<T extends Record<string, any>>(obj: T, order: (keyof T)[]): T {
-      const reordered: Partial<T> = {};
-      for (const key of order) {
-        if (key in obj) {
-          reordered[key] = obj[key];
-        }
-      }
-      return reordered as T;
-    }
-
-    const ordered = reorderObject(processedArgs, [
-      'user',
-      'tokens',
-      'pool_index',
-      'desired_amounts',
-      'min_shares',
-    ]);
-    console.log({ ordered });
-
-    console.log({ processedArgs });
-    console.log(Object.keys(processedArgs));
 
     await executeContractTransaction({
       contractType: 'pool_router',
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.DEPOSIT_LIQUIDITY,
-        token1: { name: tokenA.symbol, amount: args.desired_amounts[0] },
-        token2: { name: tokenB.symbol, amount: args.desired_amounts[1] },
+        token1: { name: tokenA.symbol, amount: args.desired_amounts[tokenIdx.a] },
+        token2: { name: tokenB.symbol, amount: args.desired_amounts[tokenIdx.b] },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.deposit(ordered, { simulate: !restore });
+        const tx = await client.deposit(processedArgs, { simulate: !restore });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -151,11 +135,23 @@ export function useLiquidity(): ReturnType {
 
     await rateLimitCheck();
 
-    const processedArgs = {
+    const { tokens: sortedTokens, idx: tokenIdx } = sortTokenAddreses(
+      args.tokens[0],
+      args.tokens[1]
+    );
+
+    const tokenA = storePersist.tokenState.tokensByAddress[args.tokens[tokenIdx.a]];
+    const tokenB = storePersist.tokenState.tokensByAddress[args.tokens[tokenIdx.b]];
+
+    const processedArgs: Parameters<PoolRouterClient['withdraw']>[0] = {
       ...args,
       user: storePersist.wallet.address!,
+      tokens: sortedTokens,
       share_amount: BigInt((args.share_amount * 10 ** 7).toFixed(0)),
-      min_amounts: args.min_amounts.map((amt) => BigInt((amt * 10 ** 7).toFixed(0))),
+      min_amounts: [
+        BigInt((args.min_amounts[tokenIdx.a] * 10 ** tokenA.decimals).toFixed(0)),
+        BigInt((args.min_amounts[tokenIdx.b] * 10 ** tokenB.decimals).toFixed(0)),
+      ],
     };
 
     await executeContractTransaction({

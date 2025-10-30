@@ -47,7 +47,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
 
   switch (activity.type) {
     case 'Sent':
-    case 'Received': {
+    case 'Receive': {
       const {
         token: { symbol, amount, iconUrl },
         address: otherAddress, // <— comes from the activity, not asset
@@ -66,12 +66,12 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     }
     case 'Add Liquidity':
     case 'Remove Liquidity': {
-      const { symbol, amount } = activity.tokenB;
-      icon = <Avatar src={getCryptoIconUrl(activity.asset)} sx={{ width: 32, height: 32 }} />;
-      sentence = `${amount} ${symbol}`;
+      const { tokenA, tokenB } = activity;
+      icon = <SplitAvatar left={tokenA.iconUrl} right={tokenB.iconUrl} />;
+      sentence = `${tokenA.amount} ${tokenA.symbol} and ${tokenB.amount} ${tokenB.symbol}`;
       break;
     }
-    case 'Swapped': {
+    case 'Swap': {
       const { sell, buy } = activity;
 
       icon = <SplitAvatar left={sell.iconUrl} right={buy.iconUrl} />;

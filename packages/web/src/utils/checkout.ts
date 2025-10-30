@@ -94,7 +94,7 @@ export function createCoinbasePayURL(opts: CreateCoinbaseUrlOpts): string {
   const params = new URLSearchParams({
     presetFiatAmount: String(amountUsd),
     fiatCurrency: fiat,
-    defaultAsset: assetSymbol, // e.g., 'XLM'
+    defaultAsset: assetSymbol, // e.g., 'USDC'
     sessionToken,
   });
 

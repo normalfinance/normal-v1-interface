@@ -35,7 +35,10 @@ async function fetchTokenPrices(token: ApiToken): Promise<number> {
 
   if (isNormalToken) {
     // Compute price from the pool
-    const sortedTokens = sortTokenAddreses(token.contract, constants.StellarConfig.USDC_ADDRESS);
+    const { tokens: sortedTokens } = sortTokenAddreses(
+      token.contract,
+      constants.StellarConfig.USDC_ADDRESS
+    );
     const tokensKey = sortedTokens.join(':');
 
     const pools = usePersistStore.getState().poolState.poolsByTokens[tokensKey];

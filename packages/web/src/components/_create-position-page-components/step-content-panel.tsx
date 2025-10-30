@@ -209,7 +209,7 @@ export function StepContentPanel({
       }
 
       await depositLiquidity({
-        tokens: sortTokenAddreses(watchTokenA, watchTokenB),
+        tokens: [watchTokenA, watchTokenB],
         pool_index: pool.index,
         desired_amounts: [watchAmountA, watchAmountB],
         min_shares: 0,
@@ -241,7 +241,7 @@ export function StepContentPanel({
       return;
     }
 
-    const sortedTokens = sortTokenAddreses(tokenA.contract, tokenB.contract);
+    const { tokens: sortedTokens } = sortTokenAddreses(tokenA.contract, tokenB.contract);
     const tokensKey = sortedTokens.join(':');
 
     const pools = poolsByTokens[tokensKey];

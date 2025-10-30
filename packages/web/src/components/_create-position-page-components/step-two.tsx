@@ -11,7 +11,7 @@ import { sanitizeAmountInput } from '@/utils/input-helpers';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Stack, Avatar, InputBase, Typography, Button } from '@mui/material';
+import { Box, Stack, Avatar, Button, InputBase, Typography } from '@mui/material';
 
 import type { FormValues } from './step-content-panel';
 

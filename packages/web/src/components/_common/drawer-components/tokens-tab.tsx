@@ -64,7 +64,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                     variant="body2"
                     sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                   >
-                    {token.balance}
+                    {Number(token.balance).toFixed(token.decimals)}
                   </Typography>
                   <Typography
                     variant="body2"

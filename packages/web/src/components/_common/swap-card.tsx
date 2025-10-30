@@ -320,7 +320,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
   const searchPool = useCallback((): PoolInfo | null => {
     if (sellToken && buyToken && Object.keys(poolsByTokens).length) {
-      const sortedTokens = sortTokenAddreses(sellToken.contract, buyToken.contract);
+      const { tokens: sortedTokens } = sortTokenAddreses(sellToken.contract, buyToken.contract);
       const tokensKey = sortedTokens.join(':');
 
       const pools = poolsByTokens[tokensKey];
@@ -502,7 +502,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
       setLoadingSimulate(true);
       try {
         await onEstimateSwap({
-          tokens: sortTokenAddreses(sellToken.contract, buyToken.contract),
+          tokens: [sellToken.contract, buyToken.contract],
           token_in: sellToken.contract,
           token_out: buyToken.contract,
           pool_index: pool.index,
@@ -546,7 +546,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
 
         // Now call the client-side onSwap (sign and submit
         await onSwap({
-          tokens: sortTokenAddreses(sellToken.contract, buyToken.contract),
+          tokens: [sellToken.contract, buyToken.contract],
           token_in: sellToken.contract,
           token_out: buyToken.contract,
           pool_index: pool.index,

@@ -22,29 +22,26 @@ export interface SentActivity extends ActivityBase {
   token: TokenAmount;
 }
 
-export interface ReceivedActivity extends ActivityBase {
-  type: 'Received';
+export interface ReceiveActivity extends ActivityBase {
+  type: 'Receive';
   address: string; // ⬅ where the funds came from
   token: TokenAmount;
 }
 
-export interface SwappedActivity extends ActivityBase {
-  type: 'Swapped';
-  asset: string;
+export interface SwapActivity extends ActivityBase {
+  type: 'Swap';
   sell: TokenAmount;
   buy: TokenAmount;
 }
 
 export interface AddLiquidityActivity extends ActivityBase {
   type: 'Add Liquidity';
-  asset: string;
   tokenA: TokenAmount;
   tokenB: TokenAmount;
 }
 
 export interface RemoveLiquidityActivity extends ActivityBase {
   type: 'Remove Liquidity';
-  asset: string;
   tokenA: TokenAmount;
   tokenB: TokenAmount;
 }
@@ -54,7 +51,7 @@ export interface RemoveLiquidityActivity extends ActivityBase {
 // -----------------------------------------------------------------------------
 export type Activity =
   | SentActivity
-  | ReceivedActivity
-  | SwappedActivity
+  | ReceiveActivity
+  | SwapActivity
   | AddLiquidityActivity
   | RemoveLiquidityActivity;

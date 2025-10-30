@@ -49,8 +49,11 @@ export const isValidContractAddress = (address: string): boolean => {
  * // → ["apple", "zebra"]
  * ```
  */
-export const sortTokenAddreses = (a: string, b: string): [string, string] => {
-  return a < b ? [a, b] : [b, a];
+export const sortTokenAddreses = (
+  a: string,
+  b: string
+): { tokens: [string, string]; idx: { a: 0 | 1; b: 0 | 1 } } => {
+  return a < b ? { tokens: [a, b], idx: { a: 0, b: 1 } } : { tokens: [b, a], idx: { b: 0, a: 1 } };
 };
 
 export const calculatePoolPrices = (reserveA: BigNumber, reserveB: BigNumber): PoolReserves => {

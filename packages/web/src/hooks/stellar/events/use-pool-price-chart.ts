@@ -31,7 +31,7 @@ const bucketCounts: Record<ChartTimeframeKey, number> = {
 // ----------------------------------------------------------------------
 
 export function usePoolPriceChart(
-  asset: string,
+  poolAddress: string,
   swapHistory: events.RouterSwapEvent[] = []
 ): ReturnType {
   const [error, setError] = useState(null);

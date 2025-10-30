@@ -1,7 +1,7 @@
 'use client';
 
 import type { Activity } from '@/types/activity';
-import type { events } from '@normalfinance/types';
+import type { events, TokenState } from '@normalfinance/types';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
@@ -13,8 +13,8 @@ import {
   format,
   constants,
   parseEvent,
-  getTokenSymbol,
   getCryptoIconUrl,
+  sortTokenAddreses,
 } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
@@ -30,7 +30,10 @@ interface ReturnType {
 const server = new rpc.Server(constants.StellarConfig.RPC_URL);
 
 export function useUserActivity(): ReturnType {
-  const store = usePersistStore();
+  const {
+    wallet,
+    tokenState: { tokensByAddress },
+  } = usePersistStore();
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +41,7 @@ export function useUserActivity(): ReturnType {
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
 
   useEffect(() => {
-    const userAddress = store.wallet.address;
+    const userAddress = wallet.address;
 
     if (!userAddress) return;
 
@@ -79,7 +82,7 @@ export function useUserActivity(): ReturnType {
                   parsedEvent.timestamp = tx.createdAt * 1000;
                 }
 
-                return parseEventToActivity(r.id, parsedEvent);
+                return parseEventToActivity(r.id, parsedEvent, tokensByAddress);
               })
           )
         );
@@ -115,7 +118,11 @@ export function useUserActivity(): ReturnType {
               parsed.timestamp = tx.createdAt * 1000;
             }
 
-            const activityParsed = await parseEventToActivity(payload.new.id, parsed);
+            const activityParsed = await parseEventToActivity(
+              payload.new.id,
+              parsed,
+              tokensByAddress
+            );
 
             if (activityParsed) setRecentActivity((prev) => [activityParsed, ...prev]);
           }
@@ -127,7 +134,7 @@ export function useUserActivity(): ReturnType {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [store.wallet.address]);
+  }, [wallet.address]);
 
   return {
     error,
@@ -138,76 +145,76 @@ export function useUserActivity(): ReturnType {
 
 async function parseEventToActivity(
   id: string,
-  event: events.UserActivityEvent
+  event: events.UserActivityEvent,
+  tokensByAddress: TokenState['tokensByAddress']
 ): Promise<Activity | null> {
   switch (event.type) {
     case 'swap': {
-      const tokenInSymbol = (await getTokenSymbol(event.tokenIn)) ?? 'Unknown';
-      const tokenOutSymbol = (await getTokenSymbol(event.tokenOut)) ?? 'Unknown';
+      const tokenIn = tokensByAddress[event.tokenIn];
+      const tokenOut = tokensByAddress[event.tokenOut];
 
       return {
         id,
-        type: 'Swapped',
+        type: 'Swap',
         timestamp: event.timestamp ?? 0,
-        asset: 'idk',
         sell: {
           address: event.tokenIn,
-          symbol: tokenInSymbol,
-          iconUrl: getCryptoIconUrl(tokenInSymbol),
+          symbol: tokenIn.symbol,
+          iconUrl: tokenIn.icon ?? getCryptoIconUrl(tokenIn.symbol),
           amount: Number(format.formatTokenAmount(event.inAmount.toString())),
         },
         buy: {
           address: event.tokenOut,
-          symbol: tokenOutSymbol,
-          iconUrl: getCryptoIconUrl(tokenOutSymbol),
+          symbol: tokenOut.symbol,
+          iconUrl: tokenOut.icon ?? getCryptoIconUrl(tokenOut.symbol),
           amount: Number(format.formatTokenAmount(event.outAmount.toString())),
         },
       };
     }
     case 'deposit': {
-      const tokenASymbol = (await getTokenSymbol(event.tokens[0])) ?? 'Unknown';
-      const tokenBSymbol = (await getTokenSymbol(event.tokens[1])) ?? 'Unknown';
+      const { idx: tokenIdx } = sortTokenAddreses(event.tokens[0], event.tokens[1]);
+      const tokenA = tokensByAddress[event.tokens[tokenIdx.a]];
+      const tokenB = tokensByAddress[event.tokens[tokenIdx.b]];
 
       return {
         id,
         type: 'Add Liquidity',
         timestamp: event.timestamp ?? 0,
-        asset: tokenASymbol,
         tokenA: {
-          address: event.tokens[0],
-          symbol: tokenASymbol,
-          iconUrl: getCryptoIconUrl(tokenASymbol),
-          amount: Number(format.formatTokenAmount(event.amounts[0].toString())),
+          address: tokenA.contract,
+          symbol: tokenA.symbol,
+          iconUrl: tokenA.icon ?? getCryptoIconUrl(tokenA.symbol),
+          amount: Number(format.formatTokenAmount(event.amounts[tokenIdx.a].toString())),
         },
         tokenB: {
-          address: event.tokens[1],
-          symbol: tokenBSymbol,
-          iconUrl: getCryptoIconUrl(tokenBSymbol),
-          amount: Number(format.formatTokenAmount(event.amounts[1].toString())),
+          address: tokenB.contract,
+          symbol: tokenB.symbol,
+          iconUrl: tokenB.icon ?? getCryptoIconUrl(tokenB.symbol),
+          amount: Number(format.formatTokenAmount(event.amounts[tokenIdx.b].toString())),
         },
       };
     }
 
     case 'withdraw': {
-      const tokenASymbol = (await getTokenSymbol(event.tokens[0])) ?? 'Unknown';
-      const tokenBSymbol = (await getTokenSymbol(event.tokens[1])) ?? 'Unknown';
+      const { idx: tokenIdx } = sortTokenAddreses(event.tokens[0], event.tokens[1]);
+      const tokenA = tokensByAddress[event.tokens[tokenIdx.a]];
+      const tokenB = tokensByAddress[event.tokens[tokenIdx.b]];
 
       return {
         id,
         type: 'Remove Liquidity',
         timestamp: event.timestamp ?? 0,
-        asset: tokenASymbol,
         tokenA: {
-          address: tokenASymbol,
-          symbol: 'XLM',
-          iconUrl: getCryptoIconUrl(tokenASymbol),
-          amount: Number(format.formatTokenAmount(event.amounts[0].toString())),
+          address: tokenA.contract,
+          symbol: tokenA.symbol,
+          iconUrl: tokenA.icon ?? getCryptoIconUrl(tokenA.symbol),
+          amount: Number(format.formatTokenAmount(event.amounts[tokenIdx.a].toString())),
         },
         tokenB: {
-          address: event.tokens[1],
-          symbol: tokenBSymbol,
-          iconUrl: getCryptoIconUrl(tokenBSymbol),
-          amount: Number(format.formatTokenAmount(event.amounts[1].toString())),
+          address: tokenB.contract,
+          symbol: tokenB.symbol,
+          iconUrl: tokenB.icon ?? getCryptoIconUrl(tokenB.symbol),
+          amount: Number(format.formatTokenAmount(event.amounts[tokenIdx.b].toString())),
         },
       };
     }

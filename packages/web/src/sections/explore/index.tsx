@@ -119,13 +119,13 @@ const formatPoolForTable = (pool: PoolInfo, tokens: TokenMapType): ExplorePoolsR
   const volume1dValue = volume1d.multipliedBy(1); // FIXME: finish
   const volume30dValue = volume30d.multipliedBy(1); // FIXME: finish
 
-  const reserveAValue = BigNumber(
-    formatTokenAmount(pool.reserves.tokenA, tokenA.decimals)
-  ).multipliedBy(tokenA.price);
+  const reserveAValue = tokenA
+    ? BigNumber(formatTokenAmount(pool.reserves.tokenA, tokenA.decimals)).multipliedBy(tokenA.price)
+    : BigNumber(0);
 
-  const reserveBValue = BigNumber(
-    formatTokenAmount(pool.reserves.tokenB, tokenB.decimals)
-  ).multipliedBy(tokenB.price);
+  const reserveBValue = tokenB
+    ? BigNumber(formatTokenAmount(pool.reserves.tokenB, tokenB.decimals)).multipliedBy(tokenB.price)
+    : BigNumber(0);
 
   const tvl = reserveAValue.plus(reserveBValue);
 

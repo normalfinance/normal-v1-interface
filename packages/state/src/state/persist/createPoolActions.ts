@@ -1,8 +1,16 @@
 import { PoolContract, PoolRouterContract } from '@normalfinance/contracts';
 import { AppStorePersist, PoolActions, PoolInfo, PoolState } from '@normalfinance/types';
-import { calculatePoolPrices, constants, getTokenSymbol, logger } from '@normalfinance/utils';
+import {
+  calculatePoolPrices,
+  constants,
+  format,
+  getTokenSymbol,
+  logger,
+} from '@normalfinance/utils';
 import { usePersistStore } from '../store';
 import { BigNumber } from 'bignumber.js';
+
+const SKIPPED_POOLS = ['CDCADRS4JAUPWO3BXERSUMUWEGBZO6TKBRMPKQUD3QLS2PGM7MV3FILX'];
 
 /**
  * Parses a Vec<(Vec<Address>, Map<BytesN<32>, Address>)> into a flat list of inner Address values.
@@ -11,9 +19,19 @@ function extractInnerAddresses(
   data: [string[], Map<any, string>][]
 ): { address: string; index: Buffer }[] {
   const result: { address: string; index: Buffer }[] = [];
+  const seen = new Set<string>();
 
   for (const [, map] of data) {
-    map.forEach((addr) => result.push({ address: addr[1], index: Buffer.from(addr[0]) }));
+    map.forEach((addr) => {
+      const address = addr[1];
+      const index = Buffer.from(addr[0]);
+      if (!seen.has(address)) {
+        seen.add(address);
+        if (!SKIPPED_POOLS.includes(address)) {
+          result.push({ address, index });
+        }
+      }
+    });
   }
 
   return result;
@@ -88,7 +106,9 @@ export function createPoolActions(): PoolActions {
                 amount: 0,
                 symbol: tokenShareSymbol,
               },
-              totalShares: total_shares?.result ? Number(total_shares.result) : 0,
+              totalShares: total_shares?.result
+                ? Number(format.formatTokenAmount(total_shares.result, 7))
+                : 0,
               feeFraction: fee_fraction?.result ? fee_fraction.result : 0,
               version: 'v1',
               client: Pool,

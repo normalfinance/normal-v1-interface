@@ -40,7 +40,6 @@ export default function SwapView() {
     switch (activeTab) {
       case 'swap':
         return {
-          asset: params.asset,
           token_in: params.token_in,
           token_out: params.token_out,
           in_amount: params.in_amount,
