@@ -1,7 +1,7 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import BigNumber from 'bignumber.js';

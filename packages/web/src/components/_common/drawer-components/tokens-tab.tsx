@@ -1,6 +1,6 @@
 'use client';
 
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';

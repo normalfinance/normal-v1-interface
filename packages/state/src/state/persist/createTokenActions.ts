@@ -1,10 +1,4 @@
-import {
-  ApiToken,
-  AppStorePersist,
-  StateToken as Token,
-  TokenActions,
-  TokenState,
-} from '@normalfinance/types';
+import { ApiToken, AppStorePersist, Token, TokenActions, TokenState } from '@normalfinance/types';
 import axios from 'axios';
 import { usePersistStore } from '../store';
 import {

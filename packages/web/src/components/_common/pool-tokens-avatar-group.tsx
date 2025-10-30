@@ -1,4 +1,4 @@
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import React from 'react';
 import { getCryptoIconUrl } from '@normalfinance/utils';

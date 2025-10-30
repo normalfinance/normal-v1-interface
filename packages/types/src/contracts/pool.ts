@@ -1,6 +1,5 @@
 import { PoolContract, PoolElasticContract } from '@normalfinance/contracts';
 import BigNumber from 'bignumber.js';
-import { Token } from '../state';
 
 export type PoolTokenValues = {
   tokenA: BigNumber;
@@ -14,7 +13,11 @@ export type Pool = {
   tokenB: string;
   reserves: PoolTokenValues; // balances
   prices: PoolTokenValues;
-  tokenShare: Pick<Token, 'address' | 'amount' | 'symbol'>;
+  tokenShare: {
+    address: string;
+    amount: BigNumber;
+    symbol: string;
+  };
   totalShares: BigNumber;
   feeFraction: BigNumber;
   version: string;

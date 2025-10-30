@@ -1,6 +1,6 @@
 'use client';
 
-import type { StateToken } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
@@ -16,7 +16,7 @@ import PickToken from '../_common/pick-token';
 import type { FormValues } from './step-content-panel';
 
 interface StepOneProps {
-  tokens: StateToken[];
+  tokens: Token[];
 }
 
 export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
@@ -31,7 +31,7 @@ export const StepOne: React.FC<StepOneProps> = ({ tokens }) => {
   const watchTokenB = watch('tokenB');
 
   /** user picks a token */
-  const handleSelect = (tok: StateToken) => {
+  const handleSelect = (tok: Token) => {
     let valueKey: 'tokenA' | 'tokenB' = 'tokenA';
 
     if (dialogIndex === 1) {

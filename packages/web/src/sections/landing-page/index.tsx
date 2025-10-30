@@ -1,7 +1,7 @@
 'use client';
 
 import type { SwapQueryParams } from '@/types/query-params';
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import { useEffect } from 'react';
 import { Icon } from '@iconify/react';

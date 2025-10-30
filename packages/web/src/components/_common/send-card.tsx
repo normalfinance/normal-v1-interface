@@ -1,6 +1,6 @@
 import type { CardProps } from '@mui/material';
 import type { SendQueryParams } from '@/types/query-params';
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';

@@ -10,14 +10,14 @@ export type ApiToken = {
   featured: boolean;
 };
 
-export type StateToken = ApiToken & {
-  balance: number; // The user's balance of this token
-  price: number; // The USD price of this token
-  percentageChange: number;
+export type Token = ApiToken & {
+  balance: BigNumber; // A user's balance
+  price: BigNumber; // The USD price
+  percentageChange: BigNumber;
 };
 
 export type TokenMapType = {
-  [key: string]: StateToken;
+  [key: string]: Token;
 };
 
 export type TokenBalancesMap = {
@@ -25,8 +25,8 @@ export type TokenBalancesMap = {
 };
 
 export interface TokenState {
-  tokens: StateToken[];
-  tokensByAddress: Record<string, StateToken>;
+  tokens: Token[];
+  tokensByAddress: Record<string, Token>;
 }
 export interface TokenActions {
   tokenState: TokenState;

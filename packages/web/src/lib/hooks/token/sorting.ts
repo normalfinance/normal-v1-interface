@@ -1,4 +1,4 @@
-import type { TokenBalancesMap, StateToken as Token } from '@normalfinance/types';
+import type { TokenBalancesMap, Token } from '@normalfinance/types';
 
 import { useMemo } from 'react';
 

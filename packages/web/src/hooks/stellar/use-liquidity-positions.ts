@@ -1,6 +1,6 @@
 'use client';
 
-import type { Pool, StateToken as Token } from '@normalfinance/types';
+import type { Pool, Token } from '@normalfinance/types';
 
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';

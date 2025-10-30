@@ -1,4 +1,4 @@
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 // ----------------------------------------------------------------------
 
