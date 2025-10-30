@@ -4,10 +4,14 @@ import type { Token } from '@normalfinance/types';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import { useEffect } from 'react';
+import { cdn } from '@/utils/cdn';
 import { Icon } from '@iconify/react';
 import { logger } from '@normalfinance/utils';
 import { useQueryParams } from '@/hooks/use-query-params';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+
+import AnimatedDevFeature2 from '@/components/ui/animated-dev-feature';
+import AnimatedPoolsFeature from '@/components/ui/animated-pools-feature';
 
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
@@ -26,7 +30,7 @@ export const tokens: Token[] = [
     domain: 'normalfinance.io',
     name: 'Bitcoin',
     symbol: 'BTC',
-    icon: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+    icon: cdn('tokens/bitcoin.webp'),
     price: '67600.18',
     percentageChange: 2.45435,
     decimals: 7,
@@ -40,7 +44,7 @@ export const tokens: Token[] = [
     domain: 'normalfinance.io',
     name: 'Ethereum',
     symbol: 'ETH',
-    icon: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+    icon: cdn('tokens/ethereum.webp'),
     price: '3150',
     percentageChange: 1.1,
     decimals: 7,
@@ -54,7 +58,7 @@ export const tokens: Token[] = [
     domain: 'normalfinance.io',
     name: 'Solana',
     symbol: 'SOL',
-    icon: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+    icon: cdn('tokens/solana.webp'),
     price: '141',
     percentageChange: -0.8,
     decimals: 7,
@@ -68,7 +72,7 @@ export const tokens: Token[] = [
     domain: 'normalfinance.io',
     name: 'XRP',
     symbol: 'XRP',
-    icon: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
+    icon: cdn('tokens/xrp.webp'),
     price: '0.48',
     percentageChange: 0.5,
     decimals: 7,
@@ -92,7 +96,7 @@ export const featureCardsSmall: [SmallCard, SmallCard] = [
     tagline: 'Indexes',
     heading: 'Diversify with ease. Custom crypto baskets in seconds.',
     image: {
-      src: '/assets/images/landing-page/index-feature.svg',
+      src: '/assets/images/landing-page/basket.svg',
       alt: 'Indexes',
     },
     url: 'https://normalfinance.gitbook.io/docs/getting-started/crypto-index-funds',
@@ -103,21 +107,15 @@ export const featureCardTall = {
   icon: <Icon icon="mage:chart-fill" width={14} height={14} />,
   tagline: 'Liquidity',
   heading: 'Provide liquidity to pools on Normal and create indexes to earn yield.',
-  image: {
-    src: '/assets/images/landing-page/pools-feature.svg',
-    alt: 'Pools',
-  },
+  image: { component: <AnimatedPoolsFeature /> },
   url: 'https://normalfinance.gitbook.io/docs/getting-started/guides/providing-liquidity',
-};
+} as const;
 
 export const featureCardWide = {
   icon: <Icon icon="mdi:code-tags" width={14} />,
   tagline: 'Developer docs',
   heading: 'Expand the possibilities of your applications with Normal Tokens.',
-  image: {
-    src: '/assets/images/landing-page/dev-feature.svg',
-    alt: 'Developers',
-  },
+  image: { component: <AnimatedDevFeature2 imageSrc={cdn('homepage/chart.webp')} /> },
   url: 'https://normalfinance.gitbook.io/docs/developers/the-normal-amm',
 };
 

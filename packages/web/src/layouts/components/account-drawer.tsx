@@ -3,6 +3,7 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import posthog from 'posthog-js';
+import { cdn } from '@/utils/cdn';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -187,7 +188,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   } = useBoolean();
 
   /* ↓ main button uses dummy avatar ------------------------------ */
-  const avatarURL = '/assets/icons/navbar/logo.webp';
+  const avatarURL = cdn('logo/logo-single.svg');
 
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address || publicKey;

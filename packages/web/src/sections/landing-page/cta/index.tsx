@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { cdn } from '@/utils/cdn';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 
@@ -31,7 +32,7 @@ export const CtaImage: React.FC<CtaImageProps> = ({
     { title: 'Button', variant: 'contained', color: 'primary' },
     { title: 'Button', variant: 'outlined', color: 'primary' },
   ],
-  image = '/assets/images/landing-page/cta-bg.webp',
+  image = cdn('homepage/cta-bg.webp'),
   ...sectionProps
 }) => {
   const { t } = useTranslate();

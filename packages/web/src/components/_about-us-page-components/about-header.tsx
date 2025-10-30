@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 
@@ -17,18 +18,18 @@ type LogoItem = {
 
 const DEFAULT_LOGOS: LogoItem[] = [
   {
-    name: 'Notion',
-    src: '/assets/images/landing-page/stellar-logo.webp',
+    name: 'Stellar',
+    src: cdn('homepage/stellar-logo.webp'),
     width: 82,
     height: 20,
-    href: 'https://www.notion.so',
+    href: 'https://stellar.org/',
   },
   {
     name: 'Mailchimp',
-    src: '/assets/images/landing-page/halborn-logo.webp',
+    src: cdn('homepage/halborn-logo.webp'),
     width: 113,
     height: 13,
-    href: 'https://mailchimp.com',
+    href: 'https://www.halborn.com/',
   },
 ];
 
@@ -44,7 +45,7 @@ export const AboutHeader: React.FC = () => {
   };
 
   return (
-    <Box component="section" py={{ xs: 8, md: 12, lg: 14 }} bgcolor="#F9FAFB">
+    <Box component="section" py={{ xs: 8, md: 12, lg: 14 }} bgcolor="#F8FAFC">
       <Container>
         <Grid2 size={{ xs: 12, md: 6 }} mb={{ xs: 2, md: 4 }}>
           <Box
@@ -131,7 +132,7 @@ export const AboutHeader: React.FC = () => {
         </Grid2>
         <Box
           component="img"
-          src="/assets/images/about/meridian.webp"
+          src={cdn('about-page/meridian.webp')}
           alt="Group image"
           sx={{
             width: '100%',

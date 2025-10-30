@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { m } from 'framer-motion';
+import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
 import { SimpleLayout } from '@/layouts/simple';
 import { RouterLink } from '@/routes/components';
@@ -37,7 +38,7 @@ export function View500() {
 
         <m.div variants={varBounce('in')}>
           <Image
-            src="/assets/illustrations/placeholders/server-error.svg"
+            src={cdn('placeholders/server-error.svg')}
             alt="500 - Server error"
             width={400}
             height={300}
