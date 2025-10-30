@@ -1,7 +1,7 @@
 import type { CardProps } from '@mui/material';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
-import type { PoolInfo, StateToken as Token } from '@normalfinance/types';
+import type { Pool, StateToken as Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { useSwap, useTrustLine } from '@/hooks';
@@ -89,7 +89,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
   const [tokens, setTokens] = useState(tokensList);
   const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
   const [buyToken, setBuyToken] = useState<Token | null>(null);
-  const [pool, setPool] = useState<PoolInfo | null>(null);
+  const [pool, setPool] = useState<Pool | null>(null);
 
   // 2) State for the user's sell amount
   const [amount, setAmount] = useState<string>('0');
@@ -318,7 +318,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ tokensList = [], queryParams, ...ot
     setBuyAmount(0);
   };
 
-  const searchPool = useCallback((): PoolInfo | null => {
+  const searchPool = useCallback((): Pool | null => {
     if (sellToken && buyToken && Object.keys(poolsByTokens).length) {
       const { tokens: sortedTokens } = sortTokenAddreses(sellToken.contract, buyToken.contract);
       const tokensKey = sortedTokens.join(':');

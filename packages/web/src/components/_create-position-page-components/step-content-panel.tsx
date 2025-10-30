@@ -1,6 +1,6 @@
 'use client';
 
-import type { PoolInfo } from '@normalfinance/types';
+import type { Pool } from '@normalfinance/types';
 import type { DepositLiquidityQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
@@ -86,7 +86,7 @@ export function StepContentPanel({
 
   const { loading, setLoading, depositLiquidity } = useLiquidity();
 
-  const [pool, setPool] = useState<PoolInfo | null>(null);
+  const [pool, setPool] = useState<Pool | null>(null);
 
   /* ---------------- RHF ---------------- */
   const methods = useForm<FormValues>({

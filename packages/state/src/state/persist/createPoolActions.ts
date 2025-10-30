@@ -1,5 +1,5 @@
 import { PoolContract, PoolRouterContract } from '@normalfinance/contracts';
-import { AppStorePersist, PoolActions, PoolInfo, PoolState } from '@normalfinance/types';
+import { AppStorePersist, PoolActions, Pool, PoolState } from '@normalfinance/types';
 import {
   calculatePoolPrices,
   constants,
@@ -91,7 +91,7 @@ export function createPoolActions(): PoolActions {
             // Calculate price using pool reserves
             const poolPrices = calculatePoolPrices(tokenAReserve, tokenBReserve);
 
-            const poolDetails: PoolInfo = {
+            const poolDetails: Pool = {
               address,
               index,
               tokenA,
@@ -118,7 +118,7 @@ export function createPoolActions(): PoolActions {
           })
         );
 
-        const poolRecord = poolsWithDetails.reduce<Record<string, PoolInfo[]>>((acc, pool) => {
+        const poolRecord = poolsWithDetails.reduce<Record<string, Pool[]>>((acc, pool) => {
           const key = [pool.tokenA, pool.tokenB].join(':');
           if (!acc[key]) acc[key] = [];
           acc[key].push(pool);

@@ -1,7 +1,7 @@
-import { PoolInfo } from '../contracts';
+import { Pool } from '../contracts';
 export interface PoolState {
-  pools: PoolInfo[];
-  poolsByTokens: Record<string, PoolInfo[]>;
+  pools: Pool[];
+  poolsByTokens: Record<string, Pool[]>;
 }
 export interface PoolActions {
   getAllPools: () => Promise<void>;

@@ -1,6 +1,6 @@
 'use client';
 
-import type { PoolInfo, StateToken as Token } from '@normalfinance/types';
+import type { Pool, StateToken as Token } from '@normalfinance/types';
 
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
@@ -9,7 +9,7 @@ import { logger, format, getTokenBalance } from '@normalfinance/utils';
 // ----------------------------------------------------------------------
 
 export type PoolPosition = {
-  pool: PoolInfo;
+  pool: Pool;
   tokenA: Token;
   tokenB: Token;
   balances: {
@@ -51,7 +51,7 @@ export function useLiquidityPositions(): ReturnType {
   const [loading, setLoading] = useState(true);
   const [positions, setPostions] = useState<PoolPosition[] | undefined>(undefined);
 
-  const fetchTokenInfoIntoPositions = async (pool: PoolInfo): Promise<PoolPosition | undefined> => {
+  const fetchTokenInfoIntoPositions = async (pool: Pool): Promise<PoolPosition | undefined> => {
     if (!wallet.address) {
       return undefined;
     }

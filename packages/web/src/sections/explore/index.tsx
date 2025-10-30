@@ -1,6 +1,6 @@
 'use client';
 
-import type { PoolInfo, TokenMapType } from '@normalfinance/types';
+import type { Pool, TokenMapType } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
@@ -92,7 +92,7 @@ export default function ExploreView() {
   );
 }
 
-const formatPoolForTable = (pool: PoolInfo, tokens: TokenMapType): ExplorePoolsRow => {
+const formatPoolForTable = (pool: Pool, tokens: TokenMapType): ExplorePoolsRow => {
   const tokenA = tokens[pool.tokenA] ?? undefined;
   const tokenB = tokens[pool.tokenB] ?? undefined;
 
