@@ -141,13 +141,28 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
     return 'Withdraw';
   };
 
+  // Max the LP token
+  const handleMaxClick = () => {
+    if (position) {
+      setValue(
+        'shareAmount',
+        position.balances.tokenShare === 0 ? undefined : position.balances.tokenShare,
+        {
+          shouldValidate: true,
+        }
+      );
+    }
+  };
+
+  console.log(position);
+
   return (
     <>
       <DialogTitle>{t('Withdraw liquidity')}</DialogTitle>
       <DialogContent dividers sx={{ maxHeight: 600 }}>
         <Alert severity="warning" sx={{ mt: 1 }}>
           {t(
-            'Withdrawing liquidity will remove your depoisted tokens from this pool and move it back to your wallet, plus any accrued yield.'
+            'This will remove your depoisted tokens from this pool back to your wallet, plus any accrued yield.'
           )}
         </Alert>
 
@@ -190,7 +205,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
             />
 
             <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-              {format.fCurrency(Number(shareAmount) * position.usdValues.tokenShare)}
+              {format.fCurrency(Number(shareAmount) * position.tokenSharePrice)}
             </Typography>
           </Stack>
 
@@ -205,6 +220,60 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
               POOL
             </Typography>
           </Stack>
+
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              gap: '4px',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                height: '100%',
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 500,
+                  color: hasInsufficientBalance()
+                    ? theme.palette.error.main
+                    : theme.palette.text.secondary,
+                  fontSize: '12px',
+                }}
+              >
+                {position.balances.tokenShare}{' '}
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={handleMaxClick}
+              // disabled={loadingSwap}
+              sx={{
+                fontWeight: 500,
+                fontSize: '12px',
+                p: 0,
+                height: '24px',
+                minWidth: '36px',
+                backgroundColor: 'rgba(148,123,255,0.29)',
+                color: '#6E4BFF',
+                '&:hover': {
+                  backgroundColor: 'rgba(148,123,255,0.20)',
+                },
+              }}
+            >
+              {t('Max')}
+            </Button>
+          </Box>
         </Box>
 
         <Box sx={{ pt: 2 }}>
@@ -255,6 +324,81 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                     }}
                   >
                     {t('Amount Deposited')}
+                  </Typography>
+                </Box>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                    fontSize: '12px',
+                  }}
+                >
+                  {position.balances.tokenA} {position.tokenA.symbol}
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                    fontSize: '12px',
+                  }}
+                >
+                  {position.balances.tokenB} {position.tokenB.symbol}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Withdraw Amounts */}
+          <Box
+            sx={{
+              mt: 0,
+              px: 0,
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1,
+              pt: 2,
+            }}
+          >
+            <Box
+              sx={{
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1,
+                px: 0,
+              }}
+            >
+              <Box
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 500,
+                      color: theme.palette.text.secondary,
+                      fontSize: '12px',
+                    }}
+                  >
+                    {t('Estimated to Receive')}
                   </Typography>
                 </Box>
 

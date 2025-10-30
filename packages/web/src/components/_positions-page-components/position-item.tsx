@@ -79,7 +79,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
                   py: '2px',
                 }}
               >
-                {fPercent(position.pool.feeFraction)}
+                {fPercent(position.pool.feeFraction / 100)}
               </Typography>
             </Box>
             <Box
@@ -121,13 +121,12 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
       <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
-            {position.balances.tokenA} {position.tokenA.symbol} (
+            {position.balances.tokenA.toFixed(position.tokenA.decimals)} {position.tokenA.symbol} (
             {format.fCurrency(position.usdValues.tokenA)})
           </Typography>
 
           <Typography color="text.primary" variant="body1">
-            {}
-            {position.balances.tokenB} {position.tokenB.symbol} (
+            {position.balances.tokenB.toFixed(position.tokenA.decimals)} {position.tokenB.symbol} (
             {format.fCurrency(position.usdValues.tokenB)})
           </Typography>
           <Typography color="text.secondary" variant="caption">

@@ -97,8 +97,8 @@ export function createPoolActions(): PoolActions {
               tokenA,
               tokenB,
               reserves: {
-                tokenA: tokenAReserve.toNumber(),
-                tokenB: tokenBReserve.toNumber(),
+                tokenA: Number(format.formatTokenAmount(tokenAReserve)),
+                tokenB: Number(format.formatTokenAmount(tokenBReserve)),
               },
               prices: poolPrices,
               tokenShare: {

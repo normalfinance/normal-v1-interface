@@ -236,7 +236,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             fontSize: '12px',
                           }}
                         >
-                          {token.balance}
+                          {token.balance.toFixed(token.decimals)}
                         </Typography>
                       </Box>
                     )}
@@ -417,7 +417,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 fontSize: '12px',
                               }}
                             >
-                              {token.balance}
+                              {token.balance.toFixed(token.decimals)}
                             </Typography>
                           </Box>
                         </Box>
@@ -536,7 +536,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 fontSize: '12px',
                               }}
                             >
-                              {token.balance}
+                              {token.balance.toFixed(token.decimals)}
                             </Typography>
                           </Box>
                         )}
