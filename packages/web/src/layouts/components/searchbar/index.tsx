@@ -243,7 +243,10 @@ export function Searchbar({ sx, ...other }: BoxProps) {
                   }}
                 >
                   <ListItemAvatar>
-                    <Avatar src={getCryptoIconUrl(item.symbol)} sx={{ width: 32, height: 32 }}>
+                    <Avatar
+                      src={item.icon ?? getCryptoIconUrl(item.symbol)}
+                      sx={{ width: 32, height: 32 }}
+                    >
                       {item.symbol.substring(0, 2)}
                     </Avatar>
                   </ListItemAvatar>
@@ -289,7 +292,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
                   <Box sx={{ textAlign: 'right', minWidth: 80 }}>
                     {BigNumber(item.balance).gt(0) && (
                       <Typography variant="body2" color="text.primary">
-                        {fCurrency(item.balance)}
+                        {t('Balance: ')} {fCurrency(item.balance)}
                       </Typography>
                     )}
                     {BigNumber(item.price).gt(0) && (

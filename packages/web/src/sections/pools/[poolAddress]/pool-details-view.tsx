@@ -3,7 +3,6 @@
 import type { PoolTxRow } from '@/types/pools';
 import type { Pool, events } from '@normalfinance/types';
 
-import { useState } from 'react';
 import BigNumber from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
@@ -38,9 +37,6 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
   // Load price and volume chart data
   const { chartData } = usePoolPriceChart(pool.addresses.pool, []);
 
-  // Load pool price and exchange rate info
-  const [tokenUSDValue, setTokenUSDValue] = useState<BigNumber>(BigNumber(0));
-
   const past24hVolume = BigNumber(0);
   const tvl = BigNumber(0);
 
@@ -59,11 +55,11 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
               feeTier: fPercent(pool.fee / 100),
             }}
             exchangeRate={{
-              label: `1 ${tokenA.symbol} = ${BigNumber(pool.prices.tokenA).toFixed(4)} ${tokenB.symbol}`,
-              usdEquivalent: fCurrency(tokenUSDValue.toFixed(2)),
+              label: `1 ${tokenA.symbol} = ${BigNumber(pool.prices.tokenA).toFixed(tokenB.decimals)} ${tokenB.symbol}`,
+              usdEquivalent: fCurrency(pool.prices.tokenA),
               tokenSymbol: tokenA.symbol,
-              tokenRate: `${BigNumber(pool.prices.tokenA).toFixed(4)} ${tokenB.symbol}`,
-              tokenUSDValue: fCurrency(tokenUSDValue.toFixed(2)),
+              tokenRate: `${BigNumber(pool.prices.tokenA).toFixed(tokenB.decimals)} ${tokenB.symbol}`,
+              tokenUSDValue: fCurrency(pool.prices.tokenB),
             }}
             performance={{ percentageChange: 0 }}
             chart={chartData}
