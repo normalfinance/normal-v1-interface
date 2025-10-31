@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 import {
   m,
   domMax,

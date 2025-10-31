@@ -1,8 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Box from '@mui/material/Box';

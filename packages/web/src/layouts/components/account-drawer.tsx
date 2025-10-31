@@ -3,7 +3,6 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import posthog from 'posthog-js';
-import { cdn } from '@/utils/cdn';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -11,8 +10,8 @@ import { useState, useEffect } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
-import { format, logger, trackEvent } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { cdn, format, logger, trackEvent } from '@normalfinance/utils';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import { Box, Stack, Button, Drawer, Tooltip, IconButton, Typography } from '@mui/material';

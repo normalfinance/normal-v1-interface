@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';

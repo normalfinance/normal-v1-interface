@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 
 import FavoriteIcon from '@mui/icons-material/Favorite'; // ❤️ MUI heart
 import { Box, Container, Typography } from '@mui/material';

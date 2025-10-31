@@ -1,7 +1,7 @@
 'use client';
 
-import { cdn } from '@/utils/cdn';
 import { paths } from '@/routes/paths';
+import { cdn } from '@normalfinance/utils';
 
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 

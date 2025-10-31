@@ -4,9 +4,8 @@ import type { Token } from '@normalfinance/types';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import { useEffect } from 'react';
-import { cdn } from '@/utils/cdn';
 import { Icon } from '@iconify/react';
-import { logger } from '@normalfinance/utils';
+import { cdn, logger } from '@normalfinance/utils';
 import { useQueryParams } from '@/hooks/use-query-params';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 

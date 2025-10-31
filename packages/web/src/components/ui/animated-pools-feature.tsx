@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { m } from 'framer-motion';
-import { cdn } from '@/utils/cdn';
+import { cdn } from '@normalfinance/utils';
 
 type Segment = {
   id: 'INPUT1' | 'INPUT2' | 'OUTPUT2' | 'OUTPUT1' | 'INPUT4' | 'INPUT3' | 'OUTPUT3' | 'OUTPUT4';

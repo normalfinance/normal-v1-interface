@@ -1,7 +1,7 @@
 import type { LinkProps } from '@mui/material/Link';
 
-import { cdn } from '@/utils/cdn';
 import { forwardRef } from 'react';
+import { cdn } from '@normalfinance/utils';
 import { RouterLink } from '@/routes/components';
 import { mergeClasses } from 'minimal-shared/utils';
 

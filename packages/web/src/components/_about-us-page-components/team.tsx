@@ -3,9 +3,9 @@
 import type { ButtonProps } from '@mui/material';
 
 import React from 'react';
-import { cdn } from '@/utils/cdn';
 import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 
 import Link from '@mui/material/Link';
 import GitHubIcon from '@mui/icons-material/GitHub';

@@ -4,8 +4,8 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
-import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';

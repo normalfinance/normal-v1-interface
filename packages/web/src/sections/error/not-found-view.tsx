@@ -2,8 +2,8 @@
 
 import Image from 'next/image';
 import { m } from 'framer-motion';
-import { cdn } from '@/utils/cdn';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 import { SimpleLayout } from '@/layouts/simple';
 import { RouterLink } from '@/routes/components';
 
