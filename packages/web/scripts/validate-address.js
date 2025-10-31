@@ -13,15 +13,6 @@ function printUsage() {
 
 function toAddressType(arg = '') {
   switch (arg.toLowerCase()) {
-    // case 'btc':
-    // case 'bitcoin':
-    //   return AddressType.Bitcoin;
-    // case 'eth':
-    // case 'ethereum':
-    //   return AddressType.Ethereum;
-    // case 'sol':
-    // case 'solana':
-    //   return AddressType.Solana;
     case 'xlm':
     case 'stellar':
       return AddressType.Stellar;
