@@ -4,9 +4,10 @@ import type { events } from '@normalfinance/types';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
+import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
-import { rpcServer, constants, parseEvent } from '@normalfinance/utils';
+import { constants, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -25,6 +26,10 @@ export function usePoolEvents(poolAddress: string | undefined, limit: number): R
   const [events, setEvents] = useState<events.PoolRouterEvent[]>([]);
 
   useEffect(() => {
+    const rpcServer = new rpc.Server(constants.StellarConfig.RPC_URL, {
+      allowHttp: constants.StellarConfig.RPC_URL.startsWith('http://'),
+    });
+
     const fetchInitialData = async () => {
       if (!poolAddress) return;
 

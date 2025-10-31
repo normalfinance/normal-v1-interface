@@ -7,10 +7,6 @@ import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
-const rpcServer = new rpc.Server(constants.StellarConfig.RPC_URL, {
-  allowHttp: constants.StellarConfig.RPC_URL.startsWith('http://'),
-});
-
 async function transactionHandler(req: NextRequest) {
   try {
     const { walletAddress, signedTransactionXDR, transactionType } = await req.json();
@@ -114,9 +110,9 @@ async function transactionHandler(req: NextRequest) {
 
     // Execute the contract transaction server-side
     try {
-      // const rpcServer = new rpc.Server(constants.StellarConfig.RPC_URL, {
-      //   allowHttp: constants.StellarConfig.RPC_URL.startsWith('http://'),
-      // });
+      const rpcServer = new rpc.Server(constants.StellarConfig.RPC_URL, {
+        allowHttp: constants.StellarConfig.RPC_URL.startsWith('http://'),
+      });
 
       logger.log('[Transaction API] Stellar Server: ', rpcServer);
 
