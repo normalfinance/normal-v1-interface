@@ -1,3 +1,10 @@
+## [1.0.6](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.5...v1.0.6) (2025-10-31)
+
+
+### Bug Fixes
+
+* remove edge runtime from transaction ([6b74656](https://github.com/normalfinance/normal-v1-interface/commit/6b746561b9cbb992c86ddbf0ab854f554e925d1f))
+
 ## [1.0.5](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.4...v1.0.5) (2025-10-31)
 
 
