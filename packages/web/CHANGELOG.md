@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.1...v1.0.2) (2025-10-31)
+
+
+### Bug Fixes
+
+* add missing turbo envs and update engine version ([78fc78d](https://github.com/normalfinance/normal-v1-interface/commit/78fc78d742c2a50da83ed36ce90ff70404f386a0))
+
 ## [1.0.1](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.0...v1.0.1) (2025-10-31)
 
 
