@@ -1,17 +1,16 @@
+import type { Token } from '@normalfinance/types';
+
 import React from 'react';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import { Box, Avatar } from '@mui/material';
 
 interface PoolTokensAvatarGroupProps {
-  tokenAName: string;
-  tokenBName: string;
+  tokenA: Token;
+  tokenB: Token;
 }
 
-const PoolTokensAvatarGroup: React.FC<PoolTokensAvatarGroupProps> = ({
-  tokenAName,
-  tokenBName,
-}) => (
+const PoolTokensAvatarGroup: React.FC<PoolTokensAvatarGroupProps> = ({ tokenA, tokenB }) => (
   <Box
     sx={{
       display: 'flex',
@@ -19,16 +18,19 @@ const PoolTokensAvatarGroup: React.FC<PoolTokensAvatarGroupProps> = ({
       justifyContent: 'flex-start',
     }}
   >
-    <Avatar src={getCryptoIconUrl(tokenAName)} alt="Token A" sx={{ width: 27, height: 27 }} />
+    <Avatar
+      src={tokenA.icon ?? getCryptoIconUrl(tokenA.symbol)}
+      alt="Token A"
+      sx={{ width: 27, height: 27, zIndex: 1 }}
+    />
 
     <Avatar
-      src={getCryptoIconUrl(tokenBName)}
+      src={tokenB.icon ?? getCryptoIconUrl(tokenB.symbol)}
       alt="Token B"
       sx={{
         width: 27,
         height: 27,
         ml: '-12px',
-        zIndex: 1,
       }}
     />
   </Box>

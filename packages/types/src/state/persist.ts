@@ -1,13 +1,19 @@
-import { Disclaimer } from './disclaimer';
+import { DisclaimerActions } from './disclaimer';
 import { Wallet } from './wallet';
 import { ReferralActions } from './referral';
+import { InviteCodeActions } from './invite-code';
+import { PoolActions } from './pool';
+import { TokenActions } from './token';
 
 export interface PersistWalletActions {
-  connectWallet: (wallet: string) => Promise<void>;
+  connectWallet: (walletAddress: string, walletType?: string) => Promise<void>;
   disconnectWallet: () => void;
   wallet: Wallet;
-  disclaimer: Disclaimer;
-  setDisclaimerAccepted: (accepted: boolean) => Promise<void>;
 }
 
-export type AppStorePersist = PersistWalletActions & ReferralActions;
+export type AppStorePersist = PersistWalletActions &
+  DisclaimerActions &
+  ReferralActions &
+  InviteCodeActions &
+  PoolActions &
+  TokenActions;

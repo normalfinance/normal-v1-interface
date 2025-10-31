@@ -2,7 +2,10 @@ import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
+import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
+import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const RecordActionSchema = z.object({
   userWalletAddress: z.string().min(1, 'User wallet address is required'),
@@ -21,12 +24,15 @@ const GetActionsSchema = z.object({
   referralCode: z.string().optional(),
 });
 
-export async function POST(request: NextRequest) {
+async function recordActionHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const validation = RecordActionSchema.safeParse(body);
 
     if (!validation.success) {
+      await logWithConfig('warn', 'Referral actions API called with invalid request body', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid request body', details: validation.error.errors },
         { status: 400 }
@@ -34,6 +40,42 @@ export async function POST(request: NextRequest) {
     }
 
     const { userWalletAddress, referralCode, action, metadata } = validation.data;
+
+    // Get Edge Config for rate limiting
+    const rateLimitConfig = await getRateLimitConfig('referral-actions');
+    const apiConfig = await getApiConfig('referral-actions');
+
+    // Get client IP address
+    const ip =
+      request.headers.get('x-real-ip') ||
+      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
+      request.ip;
+
+    // Use Edge Config rate limit override if available
+    const effectiveLimit = apiConfig.rateLimitOverride || {
+      requests: rateLimitConfig.requests,
+      windowMs: rateLimitConfig.windowMs,
+    };
+
+    const { success, limit, remaining, reset } = await rateLimiter.limit(userWalletAddress, ip);
+
+    await logWithConfig('info', 'Referral actions rate limit check', {
+      success,
+      limit,
+      remaining,
+      reset,
+      walletAddress: userWalletAddress.substring(0, 8) + '...',
+      effectiveLimit,
+      action,
+    });
+
+    if (!success) {
+      await logWithConfig('warn', 'Rate limit exceeded for referral actions API', {
+        userWalletAddress,
+        action,
+      });
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
 
     if (!ReferralService.isValidAction(action)) {
       return NextResponse.json(
@@ -63,15 +105,25 @@ export async function POST(request: NextRequest) {
       metadata
     );
 
+    await logWithConfig('info', 'Referral action recorded successfully', {
+      walletAddress: userWalletAddress.substring(0, 8) + '...',
+      action,
+      referralCode,
+    });
+
     return NextResponse.json(
       {
         action: actionRecord,
         message: 'Action recorded successfully',
+        config: {
+          timeout: apiConfig.timeout,
+          rateLimitRemaining: remaining,
+        },
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error recording action:', error);
+    await logWithConfig('error', 'Error recording referral action', { error });
 
     if (error instanceof Error) {
       const errorMessages = [
@@ -98,7 +150,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function getActionsHandler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userWalletAddress = searchParams.get('userWalletAddress');
@@ -110,10 +162,43 @@ export async function GET(request: NextRequest) {
     });
 
     if (!validation.success) {
+      await logWithConfig('warn', 'Referral actions GET API called with invalid parameters', {
+        errors: validation.error.errors,
+      });
       return NextResponse.json(
         { error: 'Invalid parameters', details: validation.error.errors },
         { status: 400 }
       );
+    }
+
+    // Get Edge Config for rate limiting
+    const rateLimitConfig = await getRateLimitConfig('referral-actions');
+    const apiConfig = await getApiConfig('referral-actions');
+
+    // Get client IP address
+    const ip =
+      request.headers.get('x-real-ip') ||
+      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
+      request.ip;
+
+    const { success, limit, remaining, reset } = await rateLimiter.limit(
+      validation.data.userWalletAddress,
+      ip
+    );
+
+    await logWithConfig('info', 'Referral actions GET rate limit check', {
+      success,
+      limit,
+      remaining,
+      reset,
+      walletAddress: validation.data.userWalletAddress.substring(0, 8) + '...',
+    });
+
+    if (!success) {
+      await logWithConfig('warn', 'Rate limit exceeded for referral actions GET API', {
+        userWalletAddress: validation.data.userWalletAddress,
+      });
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
     const actions = await ReferralService.getUserActions(
@@ -121,9 +206,23 @@ export async function GET(request: NextRequest) {
       validation.data.referralCode
     );
 
-    return NextResponse.json({ actions });
+    await logWithConfig('info', 'Referral actions retrieved successfully', {
+      walletAddress: validation.data.userWalletAddress.substring(0, 8) + '...',
+      actionsCount: actions.length,
+    });
+
+    return NextResponse.json({
+      actions,
+      config: {
+        timeout: apiConfig.timeout,
+        rateLimitRemaining: remaining,
+      },
+    });
   } catch (error) {
-    console.error('Error fetching actions:', error);
+    await logWithConfig('error', 'Error fetching referral actions', { error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = createEdgeConfigHandler(recordActionHandler, 'referral-actions');
+export const GET = createEdgeConfigHandler(getActionsHandler, 'referral-actions');

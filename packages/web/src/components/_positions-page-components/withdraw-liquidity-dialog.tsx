@@ -4,15 +4,14 @@ import type { PoolPosition } from '@/hooks';
 import type { PoolQueryParams } from '@/types/query-params';
 
 import z from 'zod';
-import BigNumber from 'bignumber.js';
+import { useEffect } from 'react';
+import { useLiquidity } from '@/hooks';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useMemo, useEffect } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { useLiquidity, useTokenPrice, useTokenBalance } from '@/hooks';
-import { format, constants, getCryptoIconUrl } from '@normalfinance/utils';
+import { sanitizeAmountInput } from '@normalfinance/utils';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 
 import {
@@ -21,7 +20,6 @@ import {
   Stack,
   Dialog,
   Button,
-  Avatar,
   Divider,
   useTheme,
   InputBase,
@@ -31,11 +29,13 @@ import {
   DialogActions,
 } from '@mui/material';
 
+import { SplitAvatar } from '../_common/drawer-components/activity-row';
+
 /* ------------------------------------------------------------------ */
 /* Zod schema                                                          */
 /* ------------------------------------------------------------------ */
 export const FormSchema = z.object({
-  amount: z
+  shareAmount: z
     .number({ invalid_type_error: 'Enter amount' })
     .min(0.000001, 'Amount must be positive')
     .optional(),
@@ -64,7 +64,7 @@ export default function WithdrawLiquidityDialog({
   const methods = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      amount: undefined,
+      shareAmount: undefined,
     },
   });
 
@@ -85,18 +85,12 @@ interface ContentProps {
 export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
   const theme = useTheme();
   const { t } = useTranslate();
-  const store = usePersistStore();
+  const { wallet } = usePersistStore();
 
   const { loading: txLoading, withdrawLiquidity } = useLiquidity();
 
-  // Get token balance for the LP token
-  const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(position.tokenAddress);
-
-  // Get the price for XLM
-  const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
-
   // Check if wallet is connected
-  const isWalletConnected = !!store.wallet.address;
+  const isWalletConnected = !!wallet.address;
 
   // Form stuff
   const { control, setValue, watch } = useFormContext<FormValues>();
@@ -107,37 +101,25 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
     if (queryParams.amount) {
       // Set tab based on action parameter, default to 'stake' if not specified
-      setValue('amount', Number(queryParams.amount), { shouldValidate: false });
+      setValue('shareAmount', Number(queryParams.amount), { shouldValidate: false });
     }
   }, [queryParams, setValue]);
 
   // -- keep field in sync with the text input ------------------------
-  const amount = watch('amount') ?? '';
+  const shareAmount = watch('shareAmount') ?? '';
 
   const handleChange = (value: string) =>
-    setValue('amount', value === '' ? undefined : Number(value), {
+    setValue('shareAmount', value === '' ? undefined : Number(value), {
       shouldValidate: true,
     });
 
-  const fiatValue = useMemo(() => {
-    if (xlmPrice && amount) {
-      const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
-      return xlm_price.multipliedBy(amount);
-    }
-    return new BigNumber(0);
-  }, [xlmPrice, amount]);
-
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
-    if (!isWalletConnected || !position.tokenAddress || !amount || !tokenBalance) {
+    if (!isWalletConnected || !position.balances.tokenShare || !shareAmount) {
       return false;
     }
 
-    // Convert the user input amount to the token's smallest unit (considering decimals)
-    const requiredAmount = BigInt(
-      Math.floor(amount * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
-    );
-    return tokenBalance.data < requiredAmount;
+    return position.balances.tokenShare.lte(shareAmount);
   };
 
   const handleWithdrawButtonClick = () => {
@@ -145,17 +127,34 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
     if (label === 'Withdraw') {
       withdrawLiquidity({
-        asset: position.tokenA.name,
-        share_amount: 0,
+        tokens: [position.tokenA.contract, position.tokenB.contract],
+        pool_index: position.pool.index,
+        share_amount: shareAmount,
+        min_amounts: [0, 0],
       });
     }
   };
 
   const getButtonLabel = (): string => {
-    if (!amount) return 'Enter amount';
+    if (!shareAmount) return 'Enter amount';
     if (!isWalletConnected) return 'Connect Wallet';
     if (hasInsufficientBalance()) return 'Insufficient LP tokens';
     return 'Withdraw';
+  };
+
+  // Max the LP token
+  const handleMaxClick = () => {
+    if (position) {
+      setValue(
+        'shareAmount',
+        position.balances.tokenShare.eq(0)
+          ? undefined
+          : Number(position.balances.tokenShare.toString()),
+        {
+          shouldValidate: true,
+        }
+      );
+    }
   };
 
   return (
@@ -164,7 +163,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
       <DialogContent dividers sx={{ maxHeight: 600 }}>
         <Alert severity="warning" sx={{ mt: 1 }}>
           {t(
-            'Withdrawing liquidity will remove your depoisted XLM from this pool and move it back to your wallet, plus any accrued yield.'
+            'This will remove your depoisted tokens from this pool back to your wallet, plus any accrued yield.'
           )}
         </Alert>
 
@@ -188,11 +187,11 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
             }}
           >
             <Controller
-              name="amount"
+              name="shareAmount"
               control={control}
               render={() => (
                 <InputBase
-                  value={amount}
+                  value={shareAmount}
                   type="number"
                   onChange={(e) => handleChange(sanitizeAmountInput(e.target.value))}
                   placeholder="0.0"
@@ -207,7 +206,7 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
             />
 
             <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
-              {fCurrency(fiatValue.toFixed(2))}
+              {fCurrency(shareAmount ? position.tokenSharePrice.multipliedBy(shareAmount) : 0)}
             </Typography>
           </Stack>
 
@@ -217,11 +216,65 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
             spacing={1}
             sx={{ mr: 2, borderRadius: 99, p: 1 }}
           >
-            <Avatar src={getCryptoIconUrl('XLM')} sx={{ width: 32, height: 32 }} />
+            <SplitAvatar left={position.tokenA.icon} right={position.tokenB.icon} />
             <Typography variant="body1" fontWeight="bold">
-              XLM
+              POOL
             </Typography>
           </Stack>
+
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              gap: '4px',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                height: '100%',
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 500,
+                  color: hasInsufficientBalance()
+                    ? theme.palette.error.main
+                    : theme.palette.text.secondary,
+                  fontSize: '12px',
+                }}
+              >
+                {position.balances.tokenShare.toFixed(7)}{' '}
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={handleMaxClick}
+              // disabled={loadingSwap}
+              sx={{
+                fontWeight: 500,
+                fontSize: '12px',
+                p: 0,
+                height: '24px',
+                minWidth: '36px',
+                backgroundColor: 'rgba(148,123,255,0.29)',
+                color: '#6E4BFF',
+                '&:hover': {
+                  backgroundColor: 'rgba(148,123,255,0.20)',
+                },
+              }}
+            >
+              {t('Max')}
+            </Button>
+          </Box>
         </Box>
 
         <Box sx={{ pt: 2 }}>
@@ -283,8 +336,108 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
                     fontSize: '12px',
                   }}
                 >
-                  {format.formatTokenAmount(position.balance)} XLM
+                  {position.balances.tokenA.toFixed(position.tokenA.decimals)}{' '}
+                  {position.tokenA.symbol}
                 </Typography>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                    fontSize: '12px',
+                  }}
+                >
+                  {position.balances.tokenB.toFixed(position.tokenB.decimals)}{' '}
+                  {position.tokenB.symbol}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Withdraw Amounts */}
+          <Box
+            sx={{
+              mt: 0,
+              px: 0,
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1,
+              pt: 2,
+            }}
+          >
+            <Box
+              sx={{
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1,
+                px: 0,
+              }}
+            >
+              <Box
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 500,
+                      color: theme.palette.text.secondary,
+                      fontSize: '12px',
+                    }}
+                  >
+                    {t('Estimated to Receive')}
+                  </Typography>
+                </Box>
+
+                {shareAmount && (
+                  <>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.primary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      {BigNumber(shareAmount)
+                        .dividedBy(position.balances.tokenShare)
+                        .multipliedBy(position.balances.tokenA)
+                        .toFixed(position.tokenA.decimals)}{' '}
+                      {position.tokenA.symbol}
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.primary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      {BigNumber(shareAmount)
+                        .dividedBy(position.balances.tokenShare)
+                        .multipliedBy(position.balances.tokenB)
+                        .toFixed(position.tokenB.decimals)}{' '}
+                      {position.tokenB.symbol}
+                    </Typography>
+                  </>
+                )}
               </Box>
             </Box>
           </Box>

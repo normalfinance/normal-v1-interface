@@ -1,11 +1,33 @@
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
+import { logger, constants } from '@normalfinance/utils';
+
+function getUpstashConfig() {
+  const network = constants.getCurrentNetwork();
+
+  switch (network) {
+    case 'testnet':
+      return {
+        url: process.env.UPSTASH_REDIS_TESTNET_REST_URL!,
+        token: process.env.UPSTASH_REDIS_TESTNET_REST_TOKEN!,
+      };
+    case 'mainnet':
+      return {
+        url: process.env.UPSTASH_REDIS_MAINNET_REST_URL!,
+        token: process.env.UPSTASH_REDIS_MAINNET_REST_TOKEN!,
+      };
+    default:
+      return {
+        url: process.env.UPSTASH_REDIS_TESTNET_REST_URL!,
+        token: process.env.UPSTASH_REDIS_TESTNET_REST_TOKEN!,
+      };
+  }
+}
+
+logger.log('getUpstashConfig', getUpstashConfig());
 
 // Create a Redis client from your .env
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+const redis = new Redis(getUpstashConfig());
 
 // Allow 30 requests per 10 seconds, sliding window
 const walletRateLimiter = new Ratelimit({

@@ -15,7 +15,7 @@ import Card from '@mui/material/Card';
 import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Tab, Stack, Avatar } from '@mui/material';
+import { Box, Tab, Chip, Stack, Avatar } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { Chart, useChart, ChartSelect } from '@/components/template/chart';
@@ -45,7 +45,7 @@ type Props = CardProps & {
   subheader?: string;
   color?: string;
   chart: ExplorerChartData;
-  pairInfo?: TokenPairInfo;
+  pairInfo: TokenPairInfo;
   metadata?: PoolMetadata;
   exchangeRate?: ExchangeRateInfo;
   performance?: PerformanceInfo;
@@ -191,13 +191,13 @@ export function PoolChart({
           }}
         >
           <Avatar
-            src={getCryptoIconUrl(pairInfo?.tokenA.name ?? '')}
+            src={pairInfo.tokenA.icon ?? getCryptoIconUrl(pairInfo.tokenA.symbol)}
             alt="Token A"
             sx={{ width: 27, height: 27 }}
           />
 
           <Avatar
-            src={getCryptoIconUrl(pairInfo?.tokenB.name ?? '')}
+            src={pairInfo.tokenB.icon ?? getCryptoIconUrl(pairInfo.tokenB.symbol)}
             alt="Token B"
             sx={{
               width: 27,
@@ -209,9 +209,9 @@ export function PoolChart({
         </Box>
 
         <Typography component="span" color="text.primary" variant="h6" ml={1}>
-          {pairInfo?.tokenA.name}
+          {pairInfo.tokenA.symbol}
           {t('/')}
-          {pairInfo?.tokenB.name}
+          {pairInfo.tokenB.symbol}
         </Typography>
 
         <Box
@@ -397,6 +397,7 @@ export function PoolChart({
           ))}
         </CustomTabsSwapSend>
         <div style={{ display: 'flex', gap: 8 }}>
+          <Chip label="Coming soon" color="info" size="small" />
           <ChartSelect
             options={['price', 'volume']}
             value={selectedMetric}

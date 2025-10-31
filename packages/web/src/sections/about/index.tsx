@@ -12,9 +12,9 @@ import { TestimonialGrid } from '../landing-page/testimonials/testimonials';
 const AboutUsView: React.FC = () => (
   <>
     <AboutHeader />
-    <CoreValues />
     <Vision />
     <Moments />
+    <CoreValues />
     <TestimonialGrid />
     <StatsGrid />
     <Team />

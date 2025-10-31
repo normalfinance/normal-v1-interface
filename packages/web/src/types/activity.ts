@@ -2,7 +2,8 @@
 //  Common helpers
 // -----------------------------------------------------------------------------
 export interface TokenAmount {
-  token: string;
+  address: string;
+  symbol: string;
   iconUrl: string;
   amount: number;
 }
@@ -18,39 +19,31 @@ interface ActivityBase {
 export interface SentActivity extends ActivityBase {
   type: 'Sent';
   address: string; // ⬅ where the funds went
-  asset: TokenAmount;
+  token: TokenAmount;
 }
 
-export interface ReceivedActivity extends ActivityBase {
-  type: 'Received';
+export interface ReceiveActivity extends ActivityBase {
+  type: 'Receive';
   address: string; // ⬅ where the funds came from
-  asset: TokenAmount;
+  token: TokenAmount;
 }
 
-export interface SwappedActivity extends ActivityBase {
-  type: 'Swapped';
+export interface SwapActivity extends ActivityBase {
+  type: 'Swap';
   sell: TokenAmount;
   buy: TokenAmount;
 }
 
 export interface AddLiquidityActivity extends ActivityBase {
   type: 'Add Liquidity';
+  tokenA: TokenAmount;
   tokenB: TokenAmount;
 }
 
 export interface RemoveLiquidityActivity extends ActivityBase {
   type: 'Remove Liquidity';
+  tokenA: TokenAmount;
   tokenB: TokenAmount;
-}
-
-export interface StakeActivity extends ActivityBase {
-  type: 'Stake';
-  asset: TokenAmount;
-}
-
-export interface UnstakeActivity extends ActivityBase {
-  type: 'Unstake';
-  asset: TokenAmount;
 }
 
 // -----------------------------------------------------------------------------
@@ -58,9 +51,7 @@ export interface UnstakeActivity extends ActivityBase {
 // -----------------------------------------------------------------------------
 export type Activity =
   | SentActivity
-  | ReceivedActivity
-  | SwappedActivity
+  | ReceiveActivity
+  | SwapActivity
   | AddLiquidityActivity
-  | RemoveLiquidityActivity
-  | StakeActivity
-  | UnstakeActivity;
+  | RemoveLiquidityActivity;

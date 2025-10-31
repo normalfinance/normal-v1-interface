@@ -1,22 +1,27 @@
 'use client';
 
-import type { StateToken } from '@normalfinance/types';
-import type { PositionQueryParams } from '@/types/query-params';
+import type { Pool } from '@normalfinance/types';
+import type { DepositLiquidityQueryParams } from '@/types/query-params';
 
 import { z } from 'zod';
+import { useLiquidity } from '@/hooks';
+import { BigNumber } from 'bignumber.js';
+import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
-import { constants } from '@normalfinance/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePersistStore } from '@normalfinance/state';
-import { useLiquidity, useTokenBalance } from '@/hooks';
 import { useForm, FormProvider } from 'react-hook-form';
+import { constants, sortTokenAddreses, isValidContractAddress } from '@normalfinance/utils';
 
-import { Box, Stack, Button } from '@mui/material';
+import { Box, Alert, Stack } from '@mui/material';
+import LoadingButton from '@mui/lab/LoadingButton';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
 
-import StepTwo from './step-two';
 import { StepOne } from './step-one';
+import { StepTwo } from './step-two';
+
+const VALID_FEE_TIERS = ['10', '30', '100'] as const;
 
 /* ------------------------------------------------------------------ */
 /* props                                                               */
@@ -27,17 +32,33 @@ export interface StepContentPanelProps {
   onBack: () => void;
   onReset: () => void;
   isLastStep: boolean;
-  tokens: StateToken[];
-  queryParams?: PositionQueryParams;
+  queryParams?: DepositLiquidityQueryParams;
 }
 
 /* ------------------------------------------------------------------ */
 /* Zod schema                                                          */
 /* ------------------------------------------------------------------ */
 export const FormSchema = z.object({
-  tokenASymbol: z.string().min(1, 'Pick token A'),
-  tokenBSymbol: z.literal('XLM'),
-  depositAmount: z
+  tokenA: z
+    .string()
+    .min(1, 'Choose token')
+    .max(56, 'Too long')
+    .refine((val) => isValidContractAddress(val), {
+      message: 'Must be a valid token',
+    }),
+  tokenB: z
+    .string()
+    .min(1, 'Choose token')
+    .max(56, 'Too long')
+    .refine((val) => isValidContractAddress(val), {
+      message: 'Must be a valid token',
+    }),
+  feeTier: z.enum(VALID_FEE_TIERS, { required_error: 'Choose fee tier' }),
+  amountA: z
+    .number({ invalid_type_error: 'Enter amount' })
+    .min(0.000001, 'Amount must be positive')
+    .optional(),
+  amountB: z
     .number({ invalid_type_error: 'Enter amount' })
     .min(0.000001, 'Amount must be positive')
     .optional(),
@@ -54,22 +75,29 @@ export function StepContentPanel({
   onBack,
   onReset,
   isLastStep,
-  tokens,
   queryParams,
 }: StepContentPanelProps) {
-  const persistStore = usePersistStore();
+  const { t } = useTranslate();
 
-  const { depositLiquidity } = useLiquidity();
+  const {
+    wallet,
+    tokenState: { tokens },
+    poolState: { poolsByTokens },
+  } = usePersistStore();
 
-  const [isLoading, setIsLoading] = useState(false);
+  const { loading, setLoading, depositLiquidity } = useLiquidity();
+
+  const [pool, setPool] = useState<Pool | null>(null);
 
   /* ---------------- RHF ---------------- */
   const methods = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      tokenASymbol: '',
-      tokenBSymbol: 'XLM',
-      depositAmount: undefined,
+      tokenA: constants.StellarConfig.USDC_ADDRESS,
+      tokenB: '',
+      feeTier: VALID_FEE_TIERS[1], // 30
+      amountA: undefined,
+      amountB: undefined,
     },
   });
 
@@ -77,10 +105,32 @@ export function StepContentPanel({
   useEffect(() => {
     if (!queryParams) return;
 
-    // If we have a pool_address, we might be able to infer tokens from it
-    // For now, we'll use the amount if provided
-    if (queryParams.amount) {
-      methods.setValue('depositAmount', Number(queryParams.amount), { shouldValidate: false });
+    if (queryParams.tokenA) {
+      if (isValidContractAddress(queryParams.tokenA)) {
+        methods.setValue('tokenA', queryParams.tokenA, { shouldValidate: false });
+      }
+    }
+
+    if (queryParams.tokenB) {
+      if (isValidContractAddress(queryParams.tokenB)) {
+        methods.setValue('tokenB', queryParams.tokenB, { shouldValidate: false });
+      }
+    }
+
+    if (queryParams.feeTier) {
+      if (queryParams.feeTier in VALID_FEE_TIERS) {
+        methods.setValue('feeTier', queryParams.feeTier as (typeof VALID_FEE_TIERS)[number], {
+          shouldValidate: false,
+        });
+      }
+    }
+
+    if (queryParams.amountA) {
+      methods.setValue('amountA', Number(queryParams.amountA), { shouldValidate: false });
+    }
+
+    if (queryParams.amountB) {
+      methods.setValue('amountB', Number(queryParams.amountB), { shouldValidate: false });
     }
 
     // If action is provided, we could potentially pre-select certain flows
@@ -89,74 +139,62 @@ export function StepContentPanel({
 
   /* Which fields are validated per step */
   const stepFields: Record<number, (keyof FormValues)[]> = {
-    0: ['tokenASymbol'],
-    1: ['depositAmount'],
+    1: ['tokenA', 'tokenB'],
+    2: ['amountA', 'amountB'],
   };
 
   /* ------------- helpers --------------- */
-  const watchToken = methods.watch('tokenASymbol');
-  const watchAmount = methods.watch('depositAmount');
+  const watchTokenA = methods.watch('tokenA');
+  const watchTokenB = methods.watch('tokenB');
+  const watchAmountA = methods.watch('amountA');
+  const watchAmountB = methods.watch('amountB');
 
   // Check if wallet is connected
-  const isWalletConnected = !!persistStore.wallet.address;
+  const isWalletConnected = !!wallet.address;
 
-  // Get token balance for the selected token
-  const { data: tokenBalance, isLoading: balanceLoading } = useTokenBalance(
-    constants.StellarConfig.XLM_ADDRESS
-  );
+  const tokenA = tokens.find((tkn) => tkn.contract === watchTokenA);
+  const tokenB = tokens.find((tkn) => tkn.contract === watchTokenB);
 
   // Check if user has insufficient balance
   const hasInsufficientBalance = () => {
-    if (!isWalletConnected || !watchAmount || !tokenBalance) {
+    if (!isWalletConnected || !watchAmountA || !watchAmountB || !tokenA || !tokenB) {
       return false;
     }
 
-    // Convert the user input amount to the token's smallest unit (considering decimals)
-    const requiredAmount = BigInt(
-      Math.floor(watchAmount * Math.pow(10, constants.StellarConfig.XLM_DECIMALS))
-    );
-    return tokenBalance.data < requiredAmount;
+    return BigNumber(tokenA.balance).lt(watchAmountA) || BigNumber(tokenB.balance).lt(watchAmountB);
   };
 
   const getButtonLabel = () => {
-    if (step === 0) return watchToken ? 'Continue' : 'Select token';
     if (step === 1) {
-      if (!watchAmount) return 'Enter amount';
+      if (watchTokenA && watchTokenB) {
+        if (!pool) return 'No pool found';
+        return 'Continue';
+      }
+      return 'Select token';
+    }
+    if (step === 2) {
+      if (!watchAmountA) return 'Enter amount';
+      if (!watchAmountB) return 'Enter amount';
       if (!isWalletConnected) return 'Connect Wallet';
-      if (hasInsufficientBalance()) return 'Insufficient XLM';
+      if (hasInsufficientBalance()) return 'Insufficient balance';
       return 'Continue';
     }
     return 'Continue';
   };
 
-  const isStepInvalid = () => {
-    if (step === 0) return !watchToken;
-    if (step === 1) {
-      if (!watchAmount) return true;
-      if (!isWalletConnected) return false; // Allow wallet connection
-      if (hasInsufficientBalance()) return true; // Disable if insufficient balance
-      return false;
-    }
-    return false;
-  };
-
   const isButtonDisabled = () => {
-    if (isLoading) return true;
-    if (step === 0) return !watchToken;
+    if (loading) return true;
+    if (step === 1) return !watchTokenA || !watchTokenB || !pool;
+    if (step === 2) return !watchAmountA || !watchAmountB || hasInsufficientBalance();
     return false;
   };
 
   /* ------- main CTA click handler ------------------------------------ */
   const handleMainButtonClick = async () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
+    if (loading) return;
 
-    if (isLoading) return;
-
-    // ----- Step-2 special case  ---------------------------------------
-    if (step === 1 && watchAmount !== undefined) {
+    // ----- Step-2 main case  ---------------------------------------
+    if (step == 2 && watchAmountA !== undefined && watchAmountB !== undefined) {
       if (!isWalletConnected) {
         // Wallet connection is handled by WalletGate component
         return;
@@ -166,27 +204,58 @@ export function StepContentPanel({
         return;
       }
 
+      if (!pool) {
+        alert('No pool found');
+        return;
+      }
+
       await depositLiquidity({
-        asset: watchToken.startsWith('n') ? watchToken.slice(1) : watchToken,
-        token_b_amount: watchAmount,
+        tokens: [watchTokenA, watchTokenB],
+        pool_index: pool.index,
+        desired_amounts: [watchAmountA, watchAmountB],
+        min_shares: 0,
       });
       return;
     }
 
-    if (step == 2 && watchAmount !== undefined) {
-      depositLiquidity({
-        asset: watchToken.startsWith('n') ? watchToken.slice(1) : watchToken,
-        token_b_amount: watchAmount,
-      });
-    }
-
     // ----- normal flow (validate & advance) ---------------------------
-    setIsLoading(true);
+    setLoading(true);
     const ok = await methods.trigger(stepFields[step]);
-    setIsLoading(false);
+    setLoading(false);
 
     if (ok) (isLastStep ? onReset : onNext)();
   };
+
+  // Find pool whenever relevant fields change: sellToken, buyToken
+  useEffect(() => {
+    // Clear old state each time we start a new fetch
+    setLoading(false);
+    setPool(null);
+
+    // Make sure we have both tokens
+    if (!tokenA || !tokenB) {
+      return;
+    }
+
+    // Make sure pools are loaded
+    if (!Object.keys(poolsByTokens).length) {
+      return;
+    }
+
+    const { tokens: sortedTokens } = sortTokenAddreses(tokenA.contract, tokenB.contract);
+    const tokensKey = sortedTokens.join(':');
+
+    const pools = poolsByTokens[tokensKey];
+
+    if (!pools || pools.length === 0) {
+      return;
+    }
+
+    // TODO: Once we support multiple fee fractions for the same pair, this index can be 1 or 2
+    const selectedpool = pools[0];
+
+    setPool(selectedpool);
+  }, [tokenA, tokenB]);
 
   /* ------------- render --------------- */
   return (
@@ -194,36 +263,46 @@ export function StepContentPanel({
       <Stack direction="column" justifyContent="space-between" minHeight={312} sx={{ width: 1 }}>
         {/* ---- step body ---- */}
         <Box>
-          {step === 0 && <StepOne tokens={tokens} />}
-          {step === 1 && <StepTwo />}
+          {step === 1 && <StepOne tokens={tokens} />}
+          {step === 2 && (
+            <>
+              {tokenA && tokenB ? (
+                <StepTwo tokenA={tokenA} tokenB={tokenB} />
+              ) : (
+                <Alert severity="error">{t('Unable to load tokens for pool.')}</Alert>
+              )}
+            </>
+          )}
         </Box>
 
         {/* ---- navigation ---- */}
         <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
-          {step === 1 && watchAmount ? (
+          {step === 1 && watchAmountA && watchAmountB ? (
             <WalletGate buttonText={getButtonLabel()} fullWidth variant="soft" color="success">
-              <Button
+              <LoadingButton
                 fullWidth
                 variant="soft"
                 color="success"
                 size="large"
                 onClick={handleMainButtonClick}
                 disabled={isButtonDisabled()}
+                loading={loading}
               >
                 {getButtonLabel()}
-              </Button>
+              </LoadingButton>
             </WalletGate>
           ) : (
-            <Button
+            <LoadingButton
               fullWidth
               variant="soft"
               color="success"
               size="large"
               onClick={handleMainButtonClick}
               disabled={isButtonDisabled()}
+              loading={loading}
             >
               {getButtonLabel()}
-            </Button>
+            </LoadingButton>
           )}
         </Stack>
       </Stack>

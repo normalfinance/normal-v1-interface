@@ -1,12 +1,19 @@
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 // fee-info-accordion.tsx
 import React from 'react';
 import { useTranslate } from '@/locales';
-import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+import { fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Accordion, Typography, AccordionSummary, AccordionDetails } from '@mui/material';
+import {
+  Box,
+  Chip,
+  Accordion,
+  Typography,
+  AccordionSummary,
+  AccordionDetails,
+} from '@mui/material';
 
 import { Iconify } from '../template/iconify';
 
@@ -202,7 +209,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
                 />
               </Box>
-              <Typography
+              {/* <Typography
                 variant="body2"
                 sx={{
                   fontWeight: 500,
@@ -211,7 +218,8 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                 }}
               >
                 {fCurrencyTwoDecimals(networkCost)}
-              </Typography>
+              </Typography> */}
+              <Chip label="Coming soon" color="info" size="small" />
             </Box>
             <Box
               sx={{
@@ -245,7 +253,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
                 />
               </Box>
-              <Typography
+              {/* <Typography
                 variant="body2"
                 sx={{
                   fontWeight: 500,
@@ -254,7 +262,8 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                 }}
               >
                 {fRawPercent(priceImpact)}
-              </Typography>
+              </Typography> */}
+              <Chip label="Coming soon" color="info" size="small" />
             </Box>
             <Box
               sx={{
@@ -288,7 +297,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
                 />
               </Box>
-              <Typography
+              {/* <Typography
                 variant="body2"
                 sx={{
                   fontWeight: 500,
@@ -297,7 +306,8 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                 }}
               >
                 {fRawPercent(maxSlippage)}
-              </Typography>
+              </Typography> */}
+              <Chip label="Coming soon" color="info" size="small" />
             </Box>
           </Box>
         </Box>

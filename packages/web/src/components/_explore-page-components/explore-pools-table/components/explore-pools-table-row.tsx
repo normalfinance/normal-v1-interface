@@ -1,14 +1,15 @@
 'use client';
 
+import type { Token } from '@normalfinance/types';
+
 import { paths } from '@/routes/paths';
-import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
-import { fPercent, fCurrency, fShortenNumber } from '@/utils/format-number';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Stack from '@mui/material/Stack';
-import { IconButton } from '@mui/material';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
+import { Chip, IconButton } from '@mui/material';
 import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
@@ -21,11 +22,13 @@ export interface ExplorePoolsRow {
   tokenAName: string;
   tokenBName: string;
   fee: number;
-  tvl: number;
+  tvl: string;
   apr: number;
-  volume1d: number;
-  volume30d: number;
-  ratio: number;
+  volume1d: string;
+  volume30d: string;
+  ratio: string;
+  tokenA: Token;
+  tokenB: Token;
 }
 
 type Props = {
@@ -36,8 +39,6 @@ type Props = {
 /* ------------------------------------------------------------------ */
 
 export function ExplorePoolsTableRow({ row, index }: Props) {
-  const { t } = useTranslate();
-
   const router = useRouter();
 
   const onClickRow = () => router.push(paths.pools.details(row.address));
@@ -46,7 +47,7 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
     <TableRow
       hover
       sx={{ cursor: 'pointer' }}
-      onClick={() => router.push(paths.pools.details(row.address))}
+      onClick={onClickRow}
       data-testid={`explore-pools-table-row-${index}`}
     >
       {/* Rank (#) ---------------------------------------------------- */}
@@ -55,7 +56,9 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       {/* Name + symbol + avatar ------------------------------------ */}
       <TableCell sx={{ minWidth: 160 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          <PoolTokensAvatarGroup tokenAName={row.tokenAName} tokenBName={row.tokenBName} />
+          {row.tokenA && row.tokenB && (
+            <PoolTokensAvatarGroup tokenA={row.tokenA} tokenB={row.tokenB} />
+          )}
           <Stack>
             <Typography variant="subtitle2">{`${row.tokenAName} / ${row.tokenBName}`}</Typography>
           </Stack>
@@ -70,16 +73,25 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
 
       {/* APR % ------------------------------------------------------- */}
       <TableCell>
-        {t('Coming soon')}
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
         {/* {fPercent(row.apr)} */}
       </TableCell>
 
       {/* Volume ---------------------------------------------- */}
-      <TableCell>{fCurrency(row.volume1d)}</TableCell>
-      <TableCell>{fCurrency(row.volume30d)}</TableCell>
+      <TableCell>
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        {/* {fCurrency(row.volume1d)} */}
+      </TableCell>
+      <TableCell>
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        {/* {fCurrency(row.volume30d)} */}
+      </TableCell>
 
       {/* Ratio -------------------------------------------------- */}
-      <TableCell>{fShortenNumber(row.ratio)}</TableCell>
+      <TableCell>
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        {/* {fShortenNumber(row.ratio)} */}
+      </TableCell>
 
       <TableCell align="right" sx={{ pr: 1 }}>
         <IconButton color="default" onClick={onClickRow}>

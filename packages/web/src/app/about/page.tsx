@@ -10,13 +10,13 @@ export const metadata: Metadata = {
     default: 'About Us | Normal',
     template: '%s · Normal',
   },
-  description: 'Get to know the people, mission, and values driving Normal Finance.',
+  description: 'Get to know the people, mission, and values driving Normal.',
   alternates: {
     canonical: '/about',
   },
   openGraph: {
     title: 'About Us | Normal',
-    description: 'Get to know the people, mission, and values driving Normal Finance.',
+    description: 'Get to know the people, mission, and values driving Normal.',
     url: `${CONFIG.siteUrl}/about`,
     siteName: 'Normal',
     images: [
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
         url: '/og/home.png',
         width: 1200,
         height: 630,
-        alt: 'Normal Finance – About Us',
+        alt: 'Normal – About Us',
       },
     ],
     locale: 'en_US',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'About Us | Normal',
-    description: 'Get to know the people, mission, and values driving Normal Finance.',
+    description: 'Get to know the people, mission, and values driving Normal.',
     images: ['/og/home.png'],
   },
   robots: {

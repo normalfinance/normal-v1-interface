@@ -1,5 +1,6 @@
 import posthog from 'posthog-js';
 import { AnalyticsEventName, AnalyticsEventMap } from '@normalfinance/types';
+import { logger } from './logger';
 
 export function isValidAnalyticsEvent<K extends AnalyticsEventName>(
   event: K,
@@ -91,6 +92,6 @@ export function trackEvent<K extends AnalyticsEventName>(
   if (isValidAnalyticsEvent(event, properties)) {
     posthog.capture(event, properties);
   } else {
-    console.warn(`[trackEvent] Invalid payload for event "${event}"`, properties);
+    logger.warn(`[trackEvent] Invalid payload for event "${event}"`, properties);
   }
 }

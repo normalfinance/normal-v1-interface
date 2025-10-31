@@ -1,115 +1,33 @@
 'use client';
 
-import type { Connector } from '@normalfinance/types';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import axios from 'axios';
 import posthog from 'posthog-js';
 import { paths } from '@/routes/paths';
-import { useSnackbar } from 'notistack';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import * as Sentry from '@sentry/nextjs';
+import { useState, useEffect } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
-import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useState, useEffect, useCallback } from 'react';
-import { format, trackEvent } from '@normalfinance/utils';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
-import {
-  hana,
-  xbull,
-  lobstr,
-  freighter,
-  useAppStore,
-  WalletConnect,
-  usePersistStore,
-} from '@normalfinance/state';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { cdn, format, logger, trackEvent } from '@normalfinance/utils';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
-import { useTheme } from '@mui/material/styles';
-import {
-  Box,
-  Paper,
-  Stack,
-  Button,
-  Drawer,
-  Tooltip,
-  IconButton,
-  Typography,
-  CircularProgress,
-} from '@mui/material';
+import { Box, Stack, Button, Drawer, Tooltip, IconButton, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
-import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
 
 /* ------------------------------------------------------------------ */
-/* tiny wallet tile (re-used in the grid)                              */
+/* ① Disconnected: Show connect wallet button                         */
 /* ------------------------------------------------------------------ */
-function WalletOption({
-  connector,
-  allowed,
-  onClick,
-}: {
-  connector: Connector;
-  allowed: boolean;
-  onClick: () => void;
-}) {
-  const theme = useTheme();
-  const { t } = useTranslate();
-
-  return (
-    <Paper
-      variant="outlined"
-      onClick={onClick}
-      sx={{
-        display: 'flex',
-        p: '10px',
-        my: '4px',
-        textAlign: 'center',
-        cursor: allowed ? 'pointer' : 'default',
-        opacity: allowed ? 1 : 0.4,
-        borderRadius: '8px',
-        border: `1px solid ${theme.palette.divider}`,
-        ...(allowed && {
-          '&:hover': { boxShadow: 4 },
-        }),
-        gap: 2,
-        alignItems: 'center',
-      }}
-    >
-      <img src={connector.iconUrl} width={48} height={48} alt={connector.name} />
-      <Typography variant="h6" sx={{ mt: 0.5 }}>
-        {connector.name}
-      </Typography>
-      {!allowed && (
-        <Typography variant="body2" color="text.secondary">
-          {t('Not installed')}
-        </Typography>
-      )}
-    </Paper>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* ① Disconnected: list the wallets                                   */
-/* ------------------------------------------------------------------ */
-function WalletDisconnected({
-  connectors,
-  onSelect,
-}: {
-  connectors: Connector[];
-  onSelect: (c: Connector) => void;
-}) {
-  const theme = useTheme();
-
-  const [allowed, setAllowed] = useState<Connector[]>([]);
-  const [disallowed, setDisallowed] = useState<Connector[]>([]);
-  const [loading, setLoading] = useState(true);
+function WalletDisconnected({ onConnectClick }: { onConnectClick: () => void }) {
   const { t } = useTranslate();
 
   const handleWalletHelp = () => {
@@ -119,24 +37,6 @@ function WalletDisconnected({
     });
     window.open(`${paths.docs}/getting-started/guides`, '_blank', 'noopener');
   };
-
-  useEffect(() => {
-    (async () => {
-      const ok: Connector[] = [];
-      const no: Connector[] = [];
-
-      for (const c of connectors) {
-        if (await c.isConnected()) {
-          ok.push(c);
-        } else {
-          no.push(c);
-        }
-      }
-      setAllowed(ok);
-      setDisallowed(no);
-      setLoading(false);
-    })();
-  }, [connectors]);
 
   return (
     <Box
@@ -157,44 +57,33 @@ function WalletDisconnected({
         >
           {t('Connect your wallet')}
         </Typography>
-        <ZealyHighlight
-          questId={ZEALY_QUEST_IDS.connectWallet}
-          position={{ top: -22, right: -32 }}
-        />
       </Box>
-      {loading ? (
-        <CircularProgress />
-      ) : (
-        <>
-          {/* How to create a wallet? */}
-          <Button
-            fullWidth
-            variant="soft"
-            color="secondary"
-            size="large"
-            startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
-            onClick={handleWalletHelp}
-            sx={{ mb: 2 }}
-          >
-            {t('Need help creating a wallet?')}
-          </Button>
-          <Box
-            gap={2}
-            width="100%"
-            sx={{ backgroundColor: theme.palette.grey[200], p: 1, borderRadius: 1.5 }}
-          >
-            {/* Wallet options */}
-            {[...allowed, ...disallowed].map((c) => (
-              <WalletOption
-                key={c.id}
-                connector={c}
-                allowed={allowed.includes(c)}
-                onClick={() => allowed.includes(c) && onSelect(c)}
-              />
-            ))}
-          </Box>
-        </>
-      )}
+
+      <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
+        {/* How to create a wallet? */}
+        <Button
+          fullWidth
+          variant="soft"
+          color="secondary"
+          size="large"
+          startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
+          onClick={handleWalletHelp}
+        >
+          {t('Need help creating a wallet?')}
+        </Button>
+      </Box>
+
+      {/* Connect wallet button - opens Stellar Wallets Kit popup */}
+      <Button
+        fullWidth
+        variant="contained"
+        color="primary"
+        size="large"
+        onClick={onConnectClick}
+        data-testid="connect-wallet-stellar-kit-button"
+      >
+        {t('Connect Wallet')}
+      </Button>
     </Box>
   );
 }
@@ -204,60 +93,47 @@ function WalletDisconnected({
 /* ------------------------------------------------------------------ */
 function WalletConnected({ address }: { address: string }) {
   const { t } = useTranslate();
-  const { enqueueSnackbar } = useSnackbar();
 
-  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
+  const { setGlobalIsLoading } = useAppStore();
+
+  const {
+    tokenState: { tokens },
+  } = usePersistStore();
 
   const { positions } = useLiquidityPositions();
 
   const { loading, error, recentActivity } = useUserActivity();
 
-  // Faucet
-  const [faucetLoading, setFaucetLoading] = useState(false);
-  const [faucetOff, setFaucetOff] = useState(false);
+  // Effect hook to fetch all tokens when the component mounts or address changes
+  // useEffect(() => {
+  //   const refreshTokens = async (): Promise<void> => {
+  //     if (!address) return; // Don't fetch tokens if no address
 
-  const handleFaucetRequest = useCallback(async () => {
-    try {
-      setFaucetLoading(true);
-      const { data } = await axios.get(`https://friendbot.stellar.org?addr=${address}`);
+  //     logger.log('[WALLET CONNECTED] Refreshing tokens for address:', address);
+  //     setGlobalIsLoading(true);
+  //     try {
+  //       await getAllTokens();
+  //       logger.log('[WALLET CONNECTED] Tokens fetched successfully');
+  //       setGlobalIsLoading(false);
+  //     } catch (e) {
+  //       logger.error('[WALLET CONNECTED] Error fetching tokens:', e);
+  //     } finally {
+  //       setGlobalIsLoading(false);
+  //     }
+  //   };
 
-      if (data) {
-        enqueueSnackbar(t('Account funded!'), { variant: 'success' });
-      }
-    } catch (e) {
-      if (axios.isAxiosError(e)) {
-        if (e?.response?.data.detail === 'account already funded to starting balance') {
-          setFaucetOff(true);
-          enqueueSnackbar(t('Account already funded'), { variant: 'warning' });
-        }
-      }
-    } finally {
-      setFaucetLoading(false);
-    }
-  }, [address, enqueueSnackbar, t]);
+  //   const timer = setTimeout(() => {
+  //     refreshTokens();
+  //   }, 100);
 
-  // Effect hook to fetch all tokens once the component mounts
-  useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
-      setGlobalIsLoading(true);
-      try {
-        await getAllTokens();
-        setGlobalIsLoading(false);
-      } catch (e) {
-        Sentry.captureException(e);
-        console.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-    refreshTokens();
-  }, []);
+  //   return () => clearTimeout(timer);
+  // }, [address, getAllTokens]);
 
   // Total balance
   const totalBalance = tokens.reduce((acc, tkn) => {
-    const holdings = tkn.balance * tkn.usdValue;
-    return acc + holdings;
-  }, 0);
+    const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
+    return acc.plus(holdings);
+  }, BigNumber(0));
 
   if (!address) {
     return null;
@@ -278,21 +154,9 @@ function WalletConnected({ address }: { address: string }) {
         <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
-      <Button
-        fullWidth
-        variant="soft"
-        color="info"
-        size="large"
-        startIcon={<Iconify icon="eva:droplet-fill" />}
-        onClick={handleFaucetRequest}
-        sx={{ my: 1 }}
-        loading={faucetLoading}
-        disabled={faucetOff}
-      >
-        {t('Get testnet XLM')}
-      </Button>
+
       <ConnectedWallet
-        balance={totalBalance}
+        balance={totalBalance.toNumber()}
         percentageChange={0}
         tokens={tokens}
         positions={positions}
@@ -310,75 +174,100 @@ export type AccountDrawerProps = IconButtonProps;
 export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ stores ------------------------------------------------------ */
   const persist = usePersistStore();
-
   const { t } = useTranslate();
-
-  /* ↓ connectors -------------------------------------------------- */
-  const connectors: Connector[] = [freighter(), xbull(), lobstr(), hana(), new WalletConnect(true)];
-
-  const connect = (c: Connector) => persist.connectWallet(c.id);
-  const disconnect = () => persist.disconnectWallet();
+  const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
 
   /* ↓ drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
+  const {
+    value: isDisconnecting,
+    onTrue: startDisconnecting,
+    onFalse: stopDisconnecting,
+  } = useBoolean();
+
   /* ↓ main button uses dummy avatar ------------------------------ */
-  const avatarURL = '/assets/icons/navbar/logo.webp';
+  const avatarURL = cdn('logo/logo-single.svg');
 
   /* ↓ derived state ---------------------------------------------- */
-  const connectedAddress = persist.wallet.address;
+  const connectedAddress = persist.wallet.address || publicKey;
+  const isWalletConnected = !!connectedAddress || isConnected;
 
-  const isConnected = !!connectedAddress;
+  const handleDisconnect = async () => {
+    if (isDisconnecting) {
+      return;
+    }
+
+    try {
+      startDisconnecting();
+
+      persist.disconnectWallet();
+
+      await disconnectWallet();
+
+      posthog.reset();
+
+      onClose();
+    } catch (error) {
+      logger.error('Error disconnecting wallet:', error);
+
+      onClose();
+    } finally {
+      stopDisconnecting();
+    }
+  };
 
   useEffect(() => {
     if (connectedAddress) {
-      Sentry.setUser({ id: connectedAddress });
       posthog.identify(
         connectedAddress,
         { last_login: new Date() }, // updates every time
         { signup_date: new Date() } // sets only once
       );
-    } else {
-      Sentry.setUser(null);
     }
   }, [connectedAddress]);
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
 
-  /** Open drawer OR show ToS dialog, depending on acceptance */
-  const handleMainButtonClick = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
+  /** Handle connecting wallet - show Stellar Wallets Kit popup OR ToS */
+  const handleConnectClick = async () => {
     if (disclaimerVersion < CURRENT_TOS_VERSION) {
       setShowTos(true);
-    } else {
-      onOpen();
+      return;
+    }
+
+    try {
+      await connectWallet();
+      onClose(); // Close the drawer after connecting
+    } catch (error) {
+      logger.error('Error connecting wallet:', error);
     }
   };
 
-  /** Called whenever the ToS modal closes (Accept or Decline).
-   *  If they accepted, open the wallet drawer right away. */
-  const handleTosClose = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
+  /** Open drawer when wallet is connected, connect when not connected */
+  const handleMainButtonClick = () => {
+    if (isWalletConnected) {
+      onOpen(); // Open drawer to show wallet info
+    } else {
+      handleConnectClick(); // Connect wallet
+    }
+  };
 
+  /** Called when ToS dialog closes */
+  const handleTosClose = async () => {
     setShowTos(false);
 
-    // read the latest store value directly (no hooks inside a callback)
+    // Check if user accepted ToS, then connect wallet
     const latestVersion = usePersistStore.getState().disclaimer.version;
     if (latestVersion >= CURRENT_TOS_VERSION) {
-      onOpen(); // open the drawer immediately
+      await handleConnectClick();
     }
   };
 
   return (
     <>
-      {isConnected ? (
+      {isWalletConnected ? (
         <AccountButton
           data-testid="account-button"
           onClick={handleMainButtonClick}
@@ -427,18 +316,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
             </IconButton>
           </Tooltip>
 
-          {isConnected && (
-            <Tooltip title="Disconnect">
+          {isWalletConnected && (
+            <Tooltip title={isDisconnecting ? 'Disconnecting...' : 'Disconnect'}>
               <IconButton
-                onClick={() => {
-                  // trackEvent('button_clicked', {
-                  //   label: 'Manage Stake',
-                  //   location: 'Insurance',
-                  // });
-                  disconnect();
-                  onClose();
-                }}
+                onClick={handleDisconnect}
                 sx={{ ml: 'auto' }}
+                disabled={isDisconnecting}
                 data-testid="disconnect-wallet-button"
               >
                 <Iconify icon="solar:power-bold" />
@@ -447,20 +330,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
           )}
         </Box>
         <Scrollbar>
-          {isConnected && connectedAddress ? (
+          {isWalletConnected && connectedAddress ? (
             <WalletConnected address={connectedAddress} />
           ) : (
-            <WalletDisconnected
-              connectors={connectors}
-              onSelect={async (c) => {
-                // trackEvent('button_clicked', {
-                //   label: 'Manage Stake',
-                //   location: 'Insurance',
-                // });
-                await connect(c);
-                onClose();
-              }}
-            />
+            <WalletDisconnected onConnectClick={handleConnectClick} />
           )}
         </Scrollbar>
       </Drawer>

@@ -5,11 +5,7 @@
 import type { Activity } from '@/types/activity';
 
 import { useTranslate } from '@/locales';
-import { ago } from '@/utils/format-time';
-import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fTruncate } from '@normalfinance/utils/build/format';
-import { fShortenNumber, fCurrencyCompact } from '@/utils/format-number';
+import { format, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -20,15 +16,15 @@ import Typography from '@mui/material/Typography';
 /* ------------------------------------------------------------------ */
 /* Split avatar helper                                                */
 /* ------------------------------------------------------------------ */
-function SplitAvatar({ left, right }: { left: string; right: string }) {
+export function SplitAvatar({ left, right }: { left: string; right: string }) {
   return (
     <Box sx={{ width: 32, height: 32, position: 'relative' }}>
       <Avatar
-        src={getCryptoIconUrl(left)}
+        src={left ?? getCryptoIconUrl(left)}
         sx={{ width: 32, height: 32, position: 'absolute', clipPath: 'inset(0 16px 0 0)' }}
       />
       <Avatar
-        src={getCryptoIconUrl(right)}
+        src={right ?? getCryptoIconUrl(right)}
         sx={{ width: 32, height: 32, position: 'absolute', clipPath: 'inset(0 0 0 16px)' }}
       />
     </Box>
@@ -41,8 +37,7 @@ function SplitAvatar({ left, right }: { left: string; right: string }) {
 export function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslate();
 
-  const time = ago(activity.timestamp / 1000);
-  // new Date(activity.timestamp).toLocaleTimeString();
+  const time = format.ago(activity.timestamp / 1000);
 
   /* ---------- derive icon + sentence ---------------------------- */
   let icon: React.ReactNode;
@@ -50,10 +45,10 @@ export function ActivityRow({ activity }: { activity: Activity }) {
 
   switch (activity.type) {
     case 'Sent':
-    case 'Received': {
+    case 'Receive': {
       const {
-        asset: { token, amount, iconUrl },
-        address, // <— comes from the activity, not asset
+        token: { symbol, amount, iconUrl },
+        address: otherAddress, // <— comes from the activity, not asset
         type,
       } = activity;
 
@@ -63,32 +58,22 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       const preposition = type === 'Sent' ? 'to' : 'from';
 
       // Sent / Received use fShortenNumber; others use fCurrencyCompact
-      sentence = `${fShortenNumber(amount)} ${token} ${preposition} ${shortenAddress(address)}`;
+      sentence = `${amount} ${symbol} ${preposition} ${format.shortenAddress(otherAddress)}`;
 
-      break;
-    }
-    case 'Stake':
-    case 'Unstake': {
-      const { token, amount, iconUrl } = activity.asset;
-      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${fCurrencyCompact(amount)} ${token}`;
       break;
     }
     case 'Add Liquidity':
     case 'Remove Liquidity': {
-      const { token, amount, iconUrl } = activity.tokenB;
-      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${fCurrencyCompact(amount)} ${fTruncate(token, 15)}`;
+      const { tokenA, tokenB } = activity;
+      icon = <SplitAvatar left={tokenA.iconUrl} right={tokenB.iconUrl} />;
+      sentence = `${tokenA.amount} ${tokenA.symbol} and ${tokenB.amount} ${tokenB.symbol}`;
       break;
     }
-    case 'Swapped': {
-      const {
-        sell: { token: sTok, amount: sAmt },
-        buy: { token: bTok, amount: bAmt },
-      } = activity;
+    case 'Swap': {
+      const { sell, buy } = activity;
 
-      icon = <SplitAvatar left={sTok} right={bTok} />;
-      sentence = `${fShortenNumber(sAmt)} ${sTok} for ${fShortenNumber(bAmt)} ${bTok}`;
+      icon = <SplitAvatar left={sell.iconUrl} right={buy.iconUrl} />;
+      sentence = `${sell.amount} ${sell.symbol} for ${buy.amount} ${buy.symbol}`;
       break;
     }
     default:

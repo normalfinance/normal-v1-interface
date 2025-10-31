@@ -6,7 +6,7 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { format } from '@normalfinance/utils';
-import { fPercent } from '@/utils/format-number';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -26,8 +26,9 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push(paths.pools.details(position.poolAddress));
+    router.push(paths.pools.details(position.pool.addresses.pool));
   };
+
   return (
     <Button
       sx={{
@@ -41,20 +42,16 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
         borderColor: alpha(theme.palette.grey[500], 0.32),
         bgcolor: 'white',
       }}
-      // href={paths.pools.details(position.poolAddress)}
       onClick={handleCardClick}
     >
       <Stack direction="row" width={1} alignItems="center">
-        <PoolTokensAvatarGroup
-          tokenAName={position.tokenA.name}
-          tokenBName={position.tokenB.name}
-        />
+        <PoolTokensAvatarGroup tokenA={position.tokenA} tokenB={position.tokenB} />
 
         <Stack direction="column" width={1} alignItems="start">
           <Typography component="span" color="text.primary" variant="h6" ml={1}>
-            {position.tokenA.name}
+            {position.tokenA.symbol}
             {t('/')}
-            {position.tokenB.name}
+            {position.tokenB.symbol}
           </Typography>
           <Box
             sx={{
@@ -82,7 +79,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
                   py: '2px',
                 }}
               >
-                {fPercent(position.poolFee)}
+                {fPercent(position.pool.fee / 100)}
               </Typography>
             </Box>
             <Box
@@ -104,7 +101,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
                   py: '2px',
                 }}
               >
-                {position.poolVersion}
+                {position.pool.version}
               </Typography>
             </Box>
           </Box>
@@ -124,18 +121,28 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
       <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
-            {/* {fCurrency(pool.performance?.position)} */}
-            {format.formatTokenAmount(position.balance)} XLM
+            {position.balances.tokenA.toFixed(position.tokenA.decimals)} {position.tokenA.symbol} (
+            {fCurrency(position.usdValues.tokenA)})
+          </Typography>
+
+          <Typography color="text.primary" variant="body1">
+            {position.balances.tokenB.toFixed(position.tokenA.decimals)} {position.tokenB.symbol} (
+            {fCurrency(position.usdValues.tokenB)})
           </Typography>
           <Typography color="text.secondary" variant="caption">
-            {t('Position')}
+            {t('Liquidity Provided')}
           </Typography>
         </Stack>
 
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
-            {/* {fCurrency(pool.performance?.fees)} */}
-            {t('Coming soon')}
+            {format.fTokenAmount(position.balances.feeA)} {position.tokenA.symbol} (
+            {fCurrency(position.usdValues.feeA)})
+          </Typography>
+
+          <Typography color="text.primary" variant="body1">
+            {format.fTokenAmount(position.balances.feeB)} {position.tokenB.symbol} (
+            {fCurrency(position.usdValues.feeB)})
           </Typography>
           <Typography color="text.secondary" variant="caption">
             {t('Fees')}

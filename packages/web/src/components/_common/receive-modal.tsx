@@ -2,6 +2,7 @@
 
 import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -54,7 +55,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
       });
       setQrCodeUrl(qrDataUrl);
     } catch (error) {
-      console.error('Error generating QR code:', error);
+      logger.error('Error generating QR code:', error);
       enqueueSnackbar('Failed to generate QR code', { variant: 'error' });
     } finally {
       setIsGeneratingQR(false);

@@ -3,7 +3,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import type { TxType, PoolTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
-import { ago } from '@/utils/format-time';
+import { format } from '@normalfinance/utils';
 import React, { useMemo, useState } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { fTruncate } from '@normalfinance/utils/build/format';
@@ -48,9 +48,9 @@ export const PoolTransactionsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
   rows: PoolTxRow[];
-  xlmPrice: number;
+  quoteTokenPrice: number;
   loading?: boolean;
-}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, xlmPrice, loading }) => {
+}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, quoteTokenPrice, loading }) => {
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -188,9 +188,11 @@ export const PoolTransactionsTable: React.FC<{
                 ordered.map((row, idx) => {
                   const stellarExpertUrl = createStellarExpertUrl('tx', row.txHash);
 
-                  const poolPrice = row.tokenBAmount / row.tokenAAmount;
-                  const baseFiatValue = poolPrice * row.tokenAAmount * xlmPrice;
-                  const quoteFiatValue = row.tokenBAmount * xlmPrice;
+                  const poolPrice = row.tokenBAmount.dividedBy(row.tokenAAmount);
+                  const baseFiatValue = poolPrice
+                    .multipliedBy(row.tokenAAmount)
+                    .multipliedBy(quoteTokenPrice);
+                  const quoteFiatValue = row.tokenBAmount.multipliedBy(quoteTokenPrice);
 
                   return (
                     <TableRow
@@ -200,16 +202,18 @@ export const PoolTransactionsTable: React.FC<{
                       onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
                     >
                       <TableCell>
-                        {row.timestamp ? `${ago(row.timestamp / 1000)} ago` : ''}
+                        {row.timestamp ? `${format.ago(row.timestamp / 1000)} ago` : ''}
                       </TableCell>
                       <TableCell>
                         <Chip label={row.type} color={typeColor[row.type]} size="small" />
                       </TableCell>
                       <TableCell>
-                        {row.tokenAAmount} ({fCurrency(baseFiatValue)})
+                        {format.fTokenAmount(row.tokenAAmount)} (
+                        {fCurrency(format.fTokenAmount(baseFiatValue))})
                       </TableCell>
                       <TableCell>
-                        {row.tokenBAmount} ({fCurrency(quoteFiatValue)})
+                        {format.fTokenAmount(row.tokenBAmount)} (
+                        {fCurrency(format.fTokenAmount(quoteFiatValue))})
                       </TableCell>
                       <TableCell>{fTruncate(row.user, 15)}</TableCell>
                     </TableRow>

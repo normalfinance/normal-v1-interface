@@ -5,10 +5,10 @@ import type { TokenActionQueryParams } from '@/types/query-params';
 import type { TokenActionKey } from '@/components/_common/token-action-card';
 
 import React, { useEffect } from 'react';
-import { captureException } from '@sentry/nextjs';
-import { useAppStore } from '@normalfinance/state';
+import { logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box } from '@mui/material';
 
@@ -23,7 +23,9 @@ const swapFeeInfo: SwapFeeInfo = {
 
 export default function SwapView() {
   const { params } = useQueryParams<TokenActionQueryParams>();
-  const { tokens, getAllTokens, globalIsLoading, setGlobalIsLoading } = useAppStore();
+
+  const { globalIsLoading, setGlobalIsLoading } = useAppStore();
+  const { getAllTokens, getAllPools } = usePersistStore();
 
   // Determine which tab to show based on query params, default to 'swap'
   const activeTab: TokenActionKey = params?.tab || 'swap';
@@ -38,7 +40,6 @@ export default function SwapView() {
     switch (activeTab) {
       case 'swap':
         return {
-          asset: params.asset,
           token_in: params.token_in,
           token_out: params.token_out,
           in_amount: params.in_amount,
@@ -60,30 +61,21 @@ export default function SwapView() {
     }
   };
 
-  // Effect hook to fetch all tokens once the component mounts
+  // Effect hook to fetch all tokens and pools once the component mounts
   useEffect(() => {
-    // Only fetch if no tokens are loaded yet
-    if (tokens.length === 0) {
+    const refreshData = async (): Promise<void> => {
       setGlobalIsLoading(true);
-
-      getAllTokens()
-        .catch((error) => {
-          captureException(error);
-          console.error(error);
-        })
-        .finally(() => {
-          setGlobalIsLoading(false);
-        });
-    }
+      try {
+        await Promise.all([await getAllTokens(), await getAllPools()]);
+        setGlobalIsLoading(false);
+      } catch (e) {
+        logger.error(e);
+      } finally {
+        setGlobalIsLoading(false);
+      }
+    };
+    refreshData();
   }, []);
-
-  const allowedTokens = React.useMemo(
-    () =>
-      tokens.filter(
-        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
-      ),
-    [tokens]
-  );
 
   return (
     <DashboardContent maxWidth="xl">
@@ -98,7 +90,6 @@ export default function SwapView() {
         <Box maxWidth={500} width={1}>
           <Box width={1}>
             <TokenActionCard
-              tokensList={allowedTokens}
               swapFeeInfo={swapFeeInfo}
               cashBalance={0}
               queryParams={getCardQueryParams()}

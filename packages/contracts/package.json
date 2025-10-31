@@ -1,11 +1,11 @@
 {
-  "version": "0.0.1",
   "name": "@normalfinance/contracts",
+  "version": "1.0.0",
   "files": [
     "build/**/*"
   ],
   "dependencies": {
-    "@stellar/freighter-api": "3.0.0",
+    "@stellar/freighter-api": "5.0.0",
     "bigint-conversion": "2.4.1",
     "buffer": "6.0.3"
   },

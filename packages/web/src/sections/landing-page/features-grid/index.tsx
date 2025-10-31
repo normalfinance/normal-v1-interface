@@ -1,6 +1,6 @@
 'use client';
 
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import * as React from 'react';
 import { paths } from '@/routes/paths';
@@ -11,16 +11,23 @@ import { fPercent, fCurrency } from '@/utils/format-number';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import IndexBasketArt from '@/components/ui/index-basket-art';
 
 /* ––––– Types ––––– */
 
-type Image = { src: string; alt?: string };
+type ImageSrc = { src: string; alt?: string };
+type ImageNode = { component: React.ReactNode };
+type ImageLike = ImageSrc | ImageNode;
+
+const hasSrc = (img: ImageLike): img is ImageSrc => typeof (img as any)?.src === 'string';
+
+const hasComponent = (img: ImageLike): img is ImageNode => (img as any)?.component !== undefined;
 
 interface CardBase {
   icon?: React.ReactElement;
   tagline: string;
   heading: string;
-  image?: Image;
+  image?: ImageLike;
   url?: string;
 }
 
@@ -54,11 +61,20 @@ const cardPadding = { xs: 2.5, md: 4 };
 const SmallCardItem: React.FC<SmallCard> = (c) => {
   const router = useRouter();
   const isLink = Boolean(c.url);
+  const [hovered, setHovered] = React.useState(false);
+
+  const isIndexesArt = !!c.image && hasSrc(c.image) && c.image.src.includes('basket.svg');
 
   return (
     <Paper
       variant="outlined"
       sx={{ ...paperSx, cursor: isLink ? 'pointer' : 'default' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)} // keyboard focus
+      onBlur={() => setHovered(false)}
+      onTouchStart={() => setHovered(true)} // mobile
+      onTouchEnd={() => setHovered(false)}
       onClick={() => isLink && router.push(c.url!)}
       role={isLink ? 'link' : undefined}
       tabIndex={isLink ? 0 : undefined}
@@ -123,7 +139,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
           {/* token preview list */}
           {c.tokens && (
             <Stack spacing={1} mt={2}>
-              {c.tokens.map((t, index) => (
+              {c.tokens.map((tkn, index) => (
                 <Box
                   key={index}
                   display="flex"
@@ -133,15 +149,15 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   width={1}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (t.icon) router.push(paths.pools.details(t.id));
+                    if (tkn.icon) router.push(paths.pools.details(tkn.symbol));
                   }}
-                  role={t.icon ? 'link' : undefined}
-                  tabIndex={t.icon ? 0 : undefined}
+                  role={tkn.icon ? 'link' : undefined}
+                  tabIndex={tkn.icon ? 0 : undefined}
                   sx={{
-                    cursor: t.icon ? 'pointer' : 'default',
+                    cursor: tkn.icon ? 'pointer' : 'default',
                     transition: 'transform 0.15s ease',
                     '&:hover': {
-                      transform: t.icon ? 'scale(1.03)' : 'none',
+                      transform: tkn.icon ? 'scale(1.03)' : 'none',
                     },
                     px: { xs: '12px', md: '16px' },
                     py: { xs: '6px', md: '12px' },
@@ -154,8 +170,8 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   <Box display="flex" alignItems="center" gap={1}>
                     <Box
                       component="img"
-                      src={t.icon}
-                      alt={t.symbol}
+                      src={tkn.icon}
+                      alt={tkn.symbol}
                       sx={{ width: { xs: 24, md: 32 }, height: { xs: 24, md: 32 } }}
                     />
                     <Typography
@@ -165,7 +181,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                         color: 'text.primary',
                       }}
                     >
-                      {t.name}
+                      {tkn.name}
                     </Typography>
                     <Typography
                       fontWeight={500}
@@ -174,7 +190,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                         color: 'text.secondary',
                       }}
                     >
-                      {t.symbol}
+                      {tkn.symbol}
                     </Typography>
                   </Box>
 
@@ -192,7 +208,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                       fontWeight={500}
                       sx={{ fontSize: { xs: 14, md: 20 }, color: 'text.primary' }}
                     >
-                      {fCurrency(t.usdValue)}
+                      {fCurrency(tkn.price.toString())}
                     </Typography>
 
                     <Box
@@ -205,13 +221,13 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                     >
                       <Iconify
                         icon={
-                          (t.percentageChange ?? 0) < 0
+                          (tkn.percentageChange ?? 0) < 0
                             ? 'solar:double-alt-arrow-down-bold-duotone'
                             : 'solar:double-alt-arrow-up-bold-duotone'
                         }
                         sx={{
                           width: { xs: 10, md: 16 }, // responsive icon size
-                          color: (t.percentageChange ?? 0) < 0 ? 'error.main' : 'success.main',
+                          color: (tkn.percentageChange ?? 0) < 0 ? 'error.main' : 'success.main',
                         }}
                       />
 
@@ -219,10 +235,10 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                         fontWeight={500}
                         sx={{
                           fontSize: { xs: 12, md: 20 },
-                          color: (t.percentageChange ?? 0) < 0 ? 'error.main' : 'success.main',
+                          color: (tkn.percentageChange ?? 0) < 0 ? 'error.main' : 'success.main',
                         }}
                       >
-                        {fPercent(t.percentageChange)}
+                        {fPercent(tkn.percentageChange)}
                       </Typography>
                     </Box>
                   </Box>
@@ -232,21 +248,32 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
           )}
 
           {/* optional image (placed last for mobile flow) */}
-          {c.image && (
-            <Box
-              flexShrink={0}
-              width={{ xs: '100%', md: '100%', display: 'flex', justifyContent: 'center' }}
-            >
-              <Box
-                component="img"
-                src={c.image.src}
-                alt={c.image.alt}
-                width="50%"
-                height="auto"
-                sx={{ objectFit: 'cover', mt: 4 }}
-              />
-            </Box>
-          )}
+          {c.image &&
+            (hasSrc(c.image) ? (
+              isIndexesArt ? (
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  width={{ xs: '100%', md: '100%' }}
+                >
+                  <Box sx={{ mt: 4, px: { xs: 2, md: 4 } }} width={{ xs: '100%', md: '60%' }}>
+                    <IndexBasketArt />
+                  </Box>
+                </Box>
+              ) : (
+                <Box
+                  component="img"
+                  src={c.image.src}
+                  alt={c.image.alt}
+                  width="50%"
+                  height="auto"
+                  sx={{ objectFit: 'cover', mt: 4 }}
+                />
+              )
+            ) : hasComponent(c.image) ? (
+              <Box sx={{ mt: 4, px: { xs: 2, md: 4 } }} width={{ xs: '100%', md: '60%' }}>
+                {c.image.component}
+              </Box>
+            ) : null)}
         </Stack>
       </Box>
     </Paper>
@@ -302,16 +329,21 @@ const TallCardItem: React.FC<TallCard> = (c) => {
             {c.heading}
           </Typography>
         </Stack>
-        {c.image && (
-          <Box
-            component="img"
-            src={c.image.src}
-            alt={c.image.alt}
-            px={{ xs: 3, md: 4 }}
-            pb={{ xs: 3, md: 4 }}
-            width="100%"
-          />
-        )}
+        {c.image &&
+          (hasSrc(c.image) ? (
+            <Box
+              component="img"
+              src={c.image.src}
+              alt={c.image.alt}
+              px={{ xs: 3, md: 4 }}
+              pb={{ xs: 3, md: 4 }}
+              width="100%"
+            />
+          ) : hasComponent(c.image) ? (
+            <Box px={{ xs: 3, md: 4 }} pb={{ xs: 3, md: 4 }} width="100%">
+              {c.image.component}
+            </Box>
+          ) : null)}
       </Box>
     </Paper>
   );
@@ -367,16 +399,25 @@ const WideCardItem: React.FC<WideCard> = (c) => {
           {c.heading}
         </Typography>
       </Stack>
-      {c.image && (
-        <Box
-          component="img"
-          src={c.image.src}
-          alt={c.image.alt}
-          px={{ xs: 3, md: 4 }}
-          pb={{ xs: 3, md: 4 }}
-          width="100%"
-        />
-      )}
+      {c.image &&
+        (hasSrc(c.image) ? (
+          <Box
+            component="img"
+            src={c.image.src}
+            alt={c.image.alt}
+            px={{ xs: 3, md: 4 }}
+            pb={{ xs: 3, md: 4 }}
+            width="100%"
+          />
+        ) : hasComponent(c.image) ? (
+          <Box
+            px={{ xs: 3, md: 4 }}
+            sx={{ display: 'flex', alignItems: 'end', justifyContent: 'end' }}
+            width="100%"
+          >
+            {c.image.component}
+          </Box>
+        ) : null)}
     </Paper>
   );
 };

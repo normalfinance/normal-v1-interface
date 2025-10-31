@@ -1,26 +1,41 @@
 'use client';
 
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Pool, Token } from '@normalfinance/types';
 
-import { captureException } from '@sentry/nextjs';
+import { BigNumber } from 'bignumber.js';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
-import { constants, getCryptoIconUrl } from '@normalfinance/utils';
-import { PoolRouterContract, SorobanTokenContract } from '@normalfinance/contracts';
+import {
+  logger,
+  format,
+  constants,
+  getTokenBalance,
+  convertCoinToFiat,
+} from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
 export type PoolPosition = {
-  poolAddress: string;
-  tokenAddress: string;
+  pool: Pool;
   tokenA: Token;
   tokenB: Token;
-  balance: number;
+  balances: {
+    tokenShare: BigNumber;
+    tokenA: BigNumber;
+    tokenB: BigNumber;
+    feeA: BigNumber;
+    feeB: BigNumber;
+    reward: BigNumber;
+  };
+  usdValues: {
+    tokenA: string;
+    tokenB: string;
+    feeA: string;
+    feeB: string;
+    reward: string;
+  };
   lpPercentage: string;
-  totalShares: number;
-  status: string;
-  poolFee: string;
-  poolVersion: string;
+  tokenSharePrice: BigNumber;
 };
 
 interface ReturnType {
@@ -33,85 +48,76 @@ interface ReturnType {
 // ----------------------------------------------------------------------
 
 export function useLiquidityPositions(): ReturnType {
+  const {
+    wallet,
+    tokenState: { tokens },
+    poolState: { pools },
+  } = usePersistStore();
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [positions, setPostions] = useState<PoolPosition[] | undefined>(undefined);
 
-  const fetchTokenInfoIntoPositions = async (
-    poolInfo: PoolRouterContract.PoolInfo
-  ): Promise<PoolPosition | undefined> => {
-    // eslint-disable-next-line prefer-const
-    let position: PoolPosition | undefined;
-
-    // Check if account, server, and network passphrase are set
-    // if (!getState().server || !getState().networkPassphrase) {
-    //   throw new Error('Missing account, server, or network passphrase');
-    // }
-
-    const tokenAddress = poolInfo.pool_response.token_share.address;
-
-    const TokenContract = new SorobanTokenContract.Client({
-      contractId: tokenAddress.toString(),
-      networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-      rpcUrl: constants.StellarConfig.RPC_URL,
-    });
-
-    // BALANCE
-    let balance: bigint;
-    try {
-      balance = (
-        await TokenContract.balance({
-          id: usePersistStore.getState().wallet.address!,
-        })
-      ).result;
-    } catch (e) {
-      balance = BigInt(0);
+  const fetchTokenInfoIntoPositions = async (pool: Pool): Promise<PoolPosition | undefined> => {
+    if (!wallet.address) {
+      return undefined;
     }
 
-    // SYMBOL
-    let symbol: string;
-    try {
-      symbol = (await TokenContract.symbol()).result;
-    } catch (e) {
-      return position;
+    const tokenA = tokens.find((tkn) => tkn.contract === pool.addresses.tokenA);
+    const tokenB = tokens.find((tkn) => tkn.contract === pool.addresses.tokenB);
+    const rewardToken = tokens.find((tkn) => tkn.contract === constants.StellarConfig.XLM_ADDRESS);
+
+    const tokenShareBalanceRaw = await fetchTokenBalance(pool.addresses.tokenShare, wallet.address);
+    if (!tokenShareBalanceRaw || tokenShareBalanceRaw.eq(0)) return undefined;
+
+    const tokenShareBalance = BigNumber(format.fTokenAmount(tokenShareBalanceRaw, 7));
+
+    if (!tokenA || !tokenB) {
+      return undefined;
     }
 
-    // DECIMALS
-    const decimals = Number((await TokenContract.decimals()).result);
+    const reserveABN = BigNumber(pool.reserves.tokenA);
+    const reserveBBN = BigNumber(pool.reserves.tokenB);
 
-    position = {
-      poolAddress: poolInfo.pool_address,
-      tokenAddress: poolInfo.pool_response.token_share.address,
-      tokenA: {
-        id: poolInfo.pool_response.token_a.address,
-        decimals,
-        symbol,
-        name: `n${poolInfo.pool_response.pool.base_asset}`,
-        icon: getCryptoIconUrl(poolInfo.pool_response.pool.base_asset),
-        balance: 0,
-        usdValue: 0,
-        featured: false,
-        percentageChange: 0,
+    const totalReserveAValue = reserveABN.multipliedBy(tokenA.price);
+    const totalReserveBValue = reserveBBN.multipliedBy(tokenB.price);
+
+    const lpPercentage = tokenShareBalance.dividedBy(pool.shares.total);
+
+    const positionTokenABalance = reserveABN.multipliedBy(lpPercentage);
+    const positionTokenBBalance = reserveBBN.multipliedBy(lpPercentage);
+
+    const tokenSharePrice = totalReserveAValue
+      .plus(totalReserveBValue)
+      .dividedBy(pool.shares.total);
+
+    const feeA = BigNumber(0);
+    const feeB = BigNumber(0);
+    const claimableReward = BigNumber(0);
+
+    const position: PoolPosition = {
+      pool,
+      tokenA,
+      tokenB,
+      balances: {
+        tokenShare: tokenShareBalance,
+        tokenA: reserveABN.multipliedBy(lpPercentage),
+        tokenB: reserveBBN.multipliedBy(lpPercentage),
+        feeA,
+        feeB,
+        reward: claimableReward,
       },
-      tokenB: {
-        id: poolInfo.pool_response.token_b.address,
-        decimals,
-        symbol,
-        name: poolInfo.pool_response.pool.quote_asset,
-        icon: getCryptoIconUrl(poolInfo.pool_response.pool.quote_asset),
-        balance: 0,
-        usdValue: 0,
-        featured: false,
-        percentageChange: 0,
+      usdValues: {
+        tokenA: convertCoinToFiat(positionTokenABalance, BigNumber(tokenA.price)),
+        tokenB: convertCoinToFiat(positionTokenBBalance, BigNumber(tokenB.price)),
+        feeA: convertCoinToFiat(feeA, BigNumber(tokenA.price)),
+        feeB: convertCoinToFiat(feeB, BigNumber(tokenB.price)),
+        reward: rewardToken
+          ? convertCoinToFiat(claimableReward, BigNumber(rewardToken.price))
+          : '0',
       },
-      balance: Number(balance),
-      lpPercentage: (Number(balance) / Number(poolInfo.pool_response.token_share.amount)).toFixed(
-        4
-      ),
-      totalShares: Number(poolInfo.pool_response.token_share.amount),
-      status: 'Active',
-      poolFee: (Number(poolInfo.pool_response.pool.fee_fraction) / 100).toString(),
-      poolVersion: 'v1',
+      lpPercentage: lpPercentage.toFixed(4),
+      tokenSharePrice,
     };
 
     return position;
@@ -122,25 +128,17 @@ export function useLiquidityPositions(): ReturnType {
       setError(null);
       setLoading(true);
 
-      const PoolRouter = new PoolRouterContract.Client({
-        contractId: constants.StellarConfig.POOL_ROUTER_ADDRESS,
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-        rpcUrl: constants.StellarConfig.RPC_URL,
-      });
+      const poolPositions = await Promise.all(
+        pools.map(async (pool) => await fetchTokenInfoIntoPositions(pool))
+      );
 
-      const allPoolsDetails = await PoolRouter.query_all_pools_details();
+      // Safely remove all undefined values
+      const poolPositionsFiltered = poolPositions.filter(
+        (r): r is NonNullable<typeof r> => r !== undefined && r !== null
+      );
 
-      // Parse results
-      const parsedResults: PoolRouterContract.PoolInfo[] = allPoolsDetails.result;
-
-      const allPositions = parsedResults
-        ? parsedResults.map((poolInfo) => fetchTokenInfoIntoPositions(poolInfo))
-        : [];
-
-      const data = await Promise.all(allPositions);
-      setPostions(data as PoolPosition[]);
+      setPostions(poolPositionsFiltered as PoolPosition[]);
     } catch (e: any) {
-      captureException(e);
       setError(e);
     } finally {
       setLoading(false);
@@ -151,7 +149,7 @@ export function useLiquidityPositions(): ReturnType {
   // On component mount, fetch positions
   useEffect(() => {
     fetchPositions();
-  }, [fetchPositions]);
+  }, [fetchPositions, pools]);
 
   return {
     error,
@@ -160,3 +158,14 @@ export function useLiquidityPositions(): ReturnType {
     fetchPositions,
   };
 }
+
+const fetchTokenBalance = async (tokenAddress: string, address: string): Promise<BigNumber> => {
+  let balance = BigNumber(0);
+  try {
+    const rawBalance = await getTokenBalance(tokenAddress, address);
+    balance = BigNumber(rawBalance);
+  } catch (error) {
+    logger.warn('[WALLET ACTIONS] Error getting API token balance:', error);
+  }
+  return balance;
+};

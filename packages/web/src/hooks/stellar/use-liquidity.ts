@@ -1,20 +1,22 @@
 'use client';
 
-import type { Client } from '@normalfinance/contracts/build/pool_router';
+import type { Dispatch, SetStateAction } from 'react';
+import type { Client as PoolRouterClient } from '@normalfinance/contracts/build/pool_router';
 
 import { useState } from 'react';
-import { constants } from '@normalfinance/utils';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
+import { constants, sortTokenAddreses } from '@normalfinance/utils';
 
 import { useContractTransaction } from './use-contract-transaction';
 
-export type DepositLiquidityArgs = Omit<Parameters<Client['deposit']>[0], 'user'>;
-export type WithdrawLiquidityArgs = Omit<Parameters<Client['withdraw']>[0], 'user'>;
+export type DepositLiquidityArgs = Omit<Parameters<PoolRouterClient['deposit']>[0], 'user'>;
+export type WithdrawLiquidityArgs = Omit<Parameters<PoolRouterClient['withdraw']>[0], 'user'>;
 
 interface ReturnType {
   error: any | null;
   loading: boolean;
+  setLoading: Dispatch<SetStateAction<boolean>>;
   depositLiquidity: (args: DepositLiquidityArgs) => Promise<void>;
   withdrawLiquidity: (args: WithdrawLiquidityArgs) => Promise<void>;
 }
@@ -75,12 +77,22 @@ export function useLiquidity(): ReturnType {
 
     await rateLimitCheck();
 
-    const processedArgs = {
+    const { tokens: sortedTokens, idx: tokenIdx } = sortTokenAddreses(
+      args.tokens[0],
+      args.tokens[1]
+    );
+
+    const tokenA = storePersist.tokenState.tokensByAddress[args.tokens[tokenIdx.a]];
+    const tokenB = storePersist.tokenState.tokensByAddress[args.tokens[tokenIdx.b]];
+
+    const processedArgs: Parameters<PoolRouterClient['deposit']>[0] = {
       ...args,
       user: storePersist.wallet.address!,
-      token_b_amount: BigInt(
-        (args.token_b_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)
-      ),
+      tokens: sortedTokens,
+      desired_amounts: [
+        BigInt((args.desired_amounts[tokenIdx.a] * 10 ** tokenA.decimals).toFixed(0)),
+        BigInt((args.desired_amounts[tokenIdx.b] * 10 ** tokenB.decimals).toFixed(0)),
+      ],
     };
 
     await executeContractTransaction({
@@ -88,7 +100,8 @@ export function useLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.DEPOSIT_LIQUIDITY,
-        token1: { name: 'XLM', amount: args.token_b_amount },
+        token1: { name: tokenA.symbol, amount: args.desired_amounts[tokenIdx.a] },
+        token2: { name: tokenB.symbol, amount: args.desired_amounts[tokenIdx.b] },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.deposit(processedArgs, { simulate: !restore });
@@ -96,10 +109,13 @@ export function useLiquidity(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             const apiRes = await executeLiquidity(signedXDR, 'Deposit Liquidity');
             if (apiRes?.transactionHash) {
               (tx as any).hash = apiRes.transactionHash;
@@ -119,12 +135,23 @@ export function useLiquidity(): ReturnType {
 
     await rateLimitCheck();
 
-    const processedArgs = {
+    const { tokens: sortedTokens, idx: tokenIdx } = sortTokenAddreses(
+      args.tokens[0],
+      args.tokens[1]
+    );
+
+    const tokenA = storePersist.tokenState.tokensByAddress[args.tokens[tokenIdx.a]];
+    const tokenB = storePersist.tokenState.tokensByAddress[args.tokens[tokenIdx.b]];
+
+    const processedArgs: Parameters<PoolRouterClient['withdraw']>[0] = {
       ...args,
       user: storePersist.wallet.address!,
-      share_amount: BigInt(
-        (args.share_amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)
-      ),
+      tokens: sortedTokens,
+      share_amount: BigInt((args.share_amount * 10 ** 7).toFixed(0)),
+      min_amounts: [
+        BigInt((args.min_amounts[tokenIdx.a] * 10 ** tokenA.decimals).toFixed(0)),
+        BigInt((args.min_amounts[tokenIdx.b] * 10 ** tokenB.decimals).toFixed(0)),
+      ],
     };
 
     await executeContractTransaction({
@@ -132,7 +159,7 @@ export function useLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.POOL_ROUTER_ADDRESS,
       transactionDetails: {
         type: TransactionType.REMOVE_LIQUIDITY,
-        token1: { name: 'XLM', amount: args.share_amount },
+        token1: { name: 'POOL', amount: args.share_amount },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.withdraw(processedArgs, { simulate: !restore });
@@ -140,10 +167,13 @@ export function useLiquidity(): ReturnType {
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+          // Get the unsigned transaction XDR and manually sign it with the wallet
+          const unsignedXDR = tx.built?.toXDR();
 
-          if (signedXDR) {
+          if (unsignedXDR) {
+            // Use the safeSignTransaction function to sign the transaction
+            const signedXDR = await client.options.signTransaction(unsignedXDR);
+
             const apiRes = await executeLiquidity(signedXDR, 'Withdraw Liquidity');
             if (apiRes?.transactionHash) {
               (tx as any).hash = apiRes.transactionHash;
@@ -161,6 +191,7 @@ export function useLiquidity(): ReturnType {
   return {
     error,
     loading,
+    setLoading,
     depositLiquidity,
     withdrawLiquidity,
   };

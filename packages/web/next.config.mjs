@@ -1,4 +1,4 @@
-import { withSentryConfig } from '@sentry/nextjs';
+import { withPostHogConfig } from '@posthog/nextjs-config';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -8,9 +8,7 @@ const __dirname = path.dirname(__filename);
 const packageJson = readFileSync(path.join(__dirname, 'package.json'), 'utf-8');
 const { version } = JSON.parse(packageJson);
 
-/**
- * @type {import('next').NextConfig}
- */
+/** @type {import('next').NextConfig} */
 
 const isStaticExport = 'false';
 
@@ -23,18 +21,12 @@ const nextConfig = {
     NEXT_PUBLIC_APP_VERSION: version,
   },
   modularizeImports: {
-    '@mui/icons-material': {
-      transform: '@mui/icons-material/{{member}}',
-    },
-    '@mui/material': {
-      transform: '@mui/material/{{member}}',
-    },
-    '@mui/lab': {
-      transform: '@mui/lab/{{member}}',
-    },
+    '@mui/icons-material': { transform: '@mui/icons-material/{{member}}' },
+    '@mui/material': { transform: '@mui/material/{{member}}' },
+    '@mui/lab': { transform: '@mui/lab/{{member}}' },
   },
   experimental: {
-    reactCompiler: true,
+    // reactCompiler: true, // <-- remove/gate this on Next 14
     turbo: {
       resolveAlias: {
         '@normalfinance/types': '../types/src',
@@ -49,45 +41,71 @@ const nextConfig = {
       test: /\.svg$/,
       use: ['@svgr/webpack'],
     });
-
+    // Do NOT override devtool in dev (avoids Next warning/perf hit)
     return config;
   },
   async rewrites() {
     return [
       {
-        source: '/.well-known/stellar.toml',
-        destination: '/api/stellar',
-      },
-      {
         source: '/ingest/static/:path*',
         destination: 'https://us-assets.i.posthog.com/static/:path*',
       },
-      {
-        source: '/ingest/:path*',
-        destination: 'https://us.i.posthog.com/:path*',
-      },
-      {
-        source: '/ingest/decide',
-        destination: 'https://us.i.posthog.com/decide',
-      },
+      { source: '/ingest/:path*', destination: 'https://us.i.posthog.com/:path*' },
+      { source: '/ingest/decide', destination: 'https://us.i.posthog.com/decide' },
     ];
   },
-  ...(isStaticExport === 'true' && {
-    output: 'export',
-  }),
+  ...(isStaticExport === 'true' && { output: 'export' }),
 };
 
-export default withSentryConfig(
-  nextConfig,
-  {
-    silent: true,
-    org: process.env.SENTRY_ORG,
-    project: process.env.SENTRY_PROJECT,
-  },
-  {
-    widenClientFileUpload: true,
-    hideSourceMaps: true,
-    disableLogger: true,
-    automaticVercelMonitors: true,
+// ---- PostHog guard --------------------------------------------------
+const isProd = process.env.NODE_ENV === 'production';
+const network = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() || 'testnet';
+
+const getPostHogConfig = () => {
+  const isMainnet = network === 'mainnet';
+
+  return {
+    projectName: isMainnet
+      ? process.env.NEXT_PUBLIC_MAINNET_POSTHOG_PROJECT_NAME
+      : process.env.NEXT_PUBLIC_TESTNET_POSTHOG_PROJECT_NAME,
+    key: isMainnet
+      ? process.env.NEXT_PUBLIC_MAINNET_POSTHOG_KEY
+      : process.env.NEXT_PUBLIC_TESTNET_POSTHOG_KEY,
+    host: isMainnet
+      ? process.env.NEXT_PUBLIC_MAINNET_POSTHOG_HOST
+      : process.env.NEXT_PUBLIC_TESTNET_POSTHOG_HOST,
+    envId: isMainnet ? process.env.POSTHOG_MAINNET_ENV_ID : process.env.POSTHOG_TESTNET_ENV_ID,
+    apiKey: isMainnet ? process.env.POSTHOG_MAINNET_API_KEY : process.env.POSTHOG_TESTNET_API_KEY,
+  };
+};
+
+const posthogConfig = getPostHogConfig();
+const hasPHKeys = !!posthogConfig.apiKey && !!posthogConfig.envId && !!posthogConfig.host;
+
+const getPostHogProjectName = () => {
+  const branch = process.env.VERCEL_GIT_BRANCH;
+
+  if (branch === 'develop') {
+    return 'Normal - Development';
   }
-);
+
+  return (
+    posthogConfig.projectName || (network === 'mainnet' ? 'Normal - Mainnet' : 'Normal - Testnet')
+  );
+};
+
+const posthogOptions = {
+  personalApiKey: posthogConfig.apiKey,
+  envId: posthogConfig.envId,
+  host: posthogConfig.host,
+  sourcemaps: {
+    // Only upload on production builds, and only when keys are present
+    enabled: isProd && hasPHKeys,
+    project: getPostHogProjectName(),
+    version,
+    deleteAfterUpload: true,
+  },
+};
+
+// Export plain config in dev (or when keys missing); wrap only in prod with keys.
+export default isProd && hasPHKeys ? withPostHogConfig(nextConfig, posthogOptions) : nextConfig;

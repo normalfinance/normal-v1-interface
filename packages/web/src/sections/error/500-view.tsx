@@ -1,10 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import { m } from 'framer-motion';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 import { SimpleLayout } from '@/layouts/simple';
 import { RouterLink } from '@/routes/components';
-import { ServerErrorIllustration } from '@/assets/illustrations';
 
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
@@ -36,7 +37,13 @@ export function View500() {
         </m.div>
 
         <m.div variants={varBounce('in')}>
-          <ServerErrorIllustration sx={{ my: { xs: 5, sm: 10 } }} />
+          <Image
+            src={cdn('placeholders/server-error.svg')}
+            alt="500 - Server error"
+            width={400}
+            height={300}
+            style={{ margin: '40px 0 80px 0' }}
+          />
         </m.div>
 
         <Button component={RouterLink} href="/" size="large" variant="contained">

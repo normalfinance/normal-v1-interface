@@ -1,15 +1,14 @@
 'use client';
 
-import type { PoolRouterContract } from '@normalfinance/contracts';
+import type { Pool, TokenMapType } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
-import { format } from '@normalfinance/utils';
-import { useAppStore } from '@normalfinance/state';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
+import { logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useSwapVolume, useTokenPrice } from '@/hooks';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
@@ -24,52 +23,53 @@ import {
 export default function ExploreView() {
   const { t } = useTranslate();
 
-  const { globalIsLoading, setGlobalIsLoading, getAllTokens, pools } = useAppStore();
+  const { globalIsLoading, setGlobalIsLoading } = useAppStore();
+  const {
+    tokenState: { tokensByAddress },
+    getAllTokens,
+    poolState: { pools },
+    getAllPools,
+  } = usePersistStore();
 
-  // const { totalTVL } = useTotalTVL();
-  const { getSwapVolume } = useSwapVolume();
+  const tableData = useMemo(() => {
+    if (
+      !pools ||
+      pools.length === 0 ||
+      !tokensByAddress ||
+      Object.keys(tokensByAddress).length === 0
+    ) {
+      return [];
+    }
+    return pools.map((pool) => formatPoolForTable(pool, tokensByAddress));
+  }, [pools, tokensByAddress]);
 
-  // Load XLM price
-  const { loading: priceLoading, price: xlmPrice } = useTokenPrice('XLM');
-
-  const [volume, setVolume] = useState<number | undefined>(undefined);
-
-  useEffect(() => {
-    getSwapVolume({ timeframe: '24h' }).then((res) => setVolume(res['24h'].volume));
-  }, []);
-
-  const formattedPools = useMemo(
-    () => pools.map((p) => formatPool(p, xlmPrice ?? 0)),
-    [pools, xlmPrice]
-  );
-
-  const totalTvl = formattedPools.reduce((acc, p) => acc.plus(p.tvl), new BigNumber(0));
+  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.tvl), BigNumber(0));
 
   const stats: SingleStat[] = [
-    { title: '1D Volume', total: volume ?? 0, percent: 0, formatter: fCurrency },
+    { title: '1D Volume', total: 0, percent: 0, formatter: fCurrency },
     { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
     {
       title: 'Total Pools',
-      total: pools ? pools.length : 0,
+      total: pools.length,
       percent: 0,
       formatter: fShortenNumber,
     },
   ];
 
-  // Effect hook to fetch all tokens once the component mounts
+  // Effect hook to fetch all tokens and pools once the component mounts
   useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
+    const refreshData = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
-        await getAllTokens();
+        await Promise.all([await getAllTokens(), await getAllPools()]);
         setGlobalIsLoading(false);
       } catch (e) {
-        console.error(e);
+        logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }
     };
-    refreshTokens();
+    refreshData();
   }, []);
 
   return (
@@ -84,38 +84,63 @@ export default function ExploreView() {
           <ExploreStats stats={stats} />
         </Grid2>
         <Grid2 sx={{ mt: 3 }}>
-          <ExplorePoolsTable pools={formattedPools} loading={globalIsLoading} />
+          <ExplorePoolsTable pools={tableData} loading={globalIsLoading} />
         </Grid2>
       </DashboardContent>
     </Box>
   );
 }
 
-const formatPool = (pool_info: PoolRouterContract.PoolInfo, xlmPrice: number): ExplorePoolsRow => {
-  const {
-    pool_address: address,
-    pool_response: { pool, token_a, token_b },
-  } = pool_info;
+const formatPoolForTable = (pool: Pool, tokens: TokenMapType): ExplorePoolsRow => {
+  const tokenA = tokens[pool.addresses.tokenA] ?? undefined;
+  const tokenB = tokens[pool.addresses.tokenB] ?? undefined;
 
-  const reserve_a = BigNumber(format.formatTokenAmount(token_a.amount));
-  const reserve_b = BigNumber(format.formatTokenAmount(token_b.amount));
+  if (BigNumber(pool.reserves.tokenA).eq(0) || BigNumber(pool.reserves.tokenB).eq(0)) {
+    return {
+      tokenAName: tokenA ? tokenA.symbol : '',
+      tokenBName: tokenB ? tokenB.symbol : '',
+      address: pool.addresses.pool,
+      fee: pool.fee,
+      tvl: '0',
+      apr: 0,
+      volume1d: '0',
+      volume30d: '0',
+      ratio: '0',
+      tokenA,
+      tokenB,
+    };
+  }
 
-  const pool_price = reserve_b.div(reserve_a);
+  // Volume
+  const volume1d = BigNumber(0);
+  const volume30d = BigNumber(0);
 
-  const xlm_price = BigNumber(format.formatTokenAmount(xlmPrice, 14));
+  const volume1dValue = volume1d.multipliedBy(1); // FIXME: finish
+  const volume30dValue = volume30d.multipliedBy(1); // FIXME: finish
 
-  const reserve_b_value = reserve_b.multipliedBy(xlm_price);
-  const reserve_a_value = pool_price.multipliedBy(reserve_a).multipliedBy(xlm_price);
+  const reserveAValue = tokenA
+    ? BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price)
+    : BigNumber(0);
+
+  const reserveBValue = tokenB
+    ? BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price)
+    : BigNumber(0);
+
+  const tvl = reserveAValue.plus(reserveBValue);
+
+  const ratio = '0'; // volume1d.dividedBy(tvl);
 
   return {
-    tokenAName: `n${pool.base_asset}`,
-    tokenBName: pool.quote_asset,
-    address,
-    fee: pool.fee_fraction,
-    tvl: Number(reserve_a_value.plus(reserve_b_value).toFixed(2)),
+    tokenAName: tokenA ? tokenA.symbol : '',
+    tokenBName: tokenB ? tokenB.symbol : '',
+    address: pool.addresses.pool,
+    fee: pool.fee,
+    tvl: tvl.toString(),
     apr: 0,
-    volume1d: 0,
-    volume30d: 0,
-    ratio: 0,
+    volume1d: volume1dValue.toString(),
+    volume30d: volume30dValue.toString(),
+    ratio,
+    tokenA,
+    tokenB,
   };
 };

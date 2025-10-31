@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { logger } from '@normalfinance/utils';
 import { useReferralTracking } from '@/hooks/use-referral-tracking';
 
 interface ReferralProviderProps {
@@ -12,10 +13,10 @@ export function ReferralProvider({ children }: ReferralProviderProps) {
 
   useEffect(() => {
     if (hasReferral) {
-      console.log('[referral] User has referral:', referralCode);
+      logger.log('[referral] User has referral:', referralCode);
 
       if (hasUnusedReferral) {
-        console.log('[referral] New referral detected');
+        logger.log('[referral] New referral detected');
       }
     }
   }, [hasReferral, referralCode, hasUnusedReferral]);

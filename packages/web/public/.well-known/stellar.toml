@@ -1,0 +1,68 @@
+NETWORK_PASSPHRASE = "Public Global Stellar Network ; September 2015"
+SIGNING_KEY = "GDV2ULP4SMV7HB67ADWZZ42N7JBQCTZB5OK3ARKMCELSHFEMM66GSDVB"
+ACCOUNTS = [
+    "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB", # deployer
+    "GAZ3UNVBD3TKRTKT7BLOI5TTKPT3V4J7OSZ2YQHNFZSW2HVOID6LJTMQ", # distributor
+    "GBPH7PWUDCTRDTC2GIEKSLINSNE754FGO26RIX5B7F6DDRNLG6MKOTDW", # issuer & admin
+]
+VERSION = "1.0.0"
+
+[DOCUMENTATION]
+ORG_NAME = "Normal"
+ORG_DBA = "Normal"
+ORG_URL = "https://www.normalfinance.io"
+ORG_LOGO = "https://cdn.normalapi.com/logo/logo-full.png"
+ORG_DESCRIPTION = "Synthetic asset and index fund protocol"
+ORG_PHYSICAL_ADDRESS = "254 Chapman Rd, Ste 208 #7553, Newark, Delaware, 19702, United States"
+ORG_PHYSICAL_ADDRESS_ATTESTATION = "https://www.normalfinance.io/address_attestation.jpg" # coming soon
+ORG_PHONE_NUMBER = "+18272743151"
+ORG_PHONE_NUMBER_ATTESTATION = "https://www.normalfinance.io/phone_attestation.jpg" # coming soon
+ORG_KEYBASE = "normalfi"
+ORG_TWITTER = "normalfi"
+ORG_GITHUB = "normalfinance"
+ORG_OFFICIAL_EMAIL = "hello@normalfinance.io"
+ORG_SUPPORT_EMAIL = "support@normalfinance.io"
+
+# Co-founder & CEO
+[[PRINCIPALS]]
+name = "Joshua Blew"
+email = "joshua@normalfinance.io"
+keybase = "jblewnormal"
+twitter = "0xjblew"
+github = "jblewnormal"
+
+# Co-founder & COO
+[[PRINCIPALS]]
+name = "Justin Benjamin"
+email = "justin@normalfinance.io"
+twitter = "justinbenjaminn"
+
+# Synthetics
+[[CURRENCIES]]
+code = "nBTC"
+issuer = "GBPH7PWUDCTRDTC2GIEKSLINSNE754FGO26RIX5B7F6DDRNLG6MKOTDW"
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Bitcoin"
+desc = "A synthetic token with freely traded market price whose liquidity pool applies incentive and penalty mechanisms to align price toward its target value of Bitcoin."
+conditions = "Token is free-trade"
+image = "https://cdn.normalapi.com/tokens/normal/nBTC.webp"
+
+[[CURRENCIES]]
+code = "nETH"
+issuer = "GBPH7PWUDCTRDTC2GIEKSLINSNE754FGO26RIX5B7F6DDRNLG6MKOTDW"
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Ethereum"
+desc = "A synthetic token with freely traded market price whose liquidity pool applies incentive and penalty mechanisms to align price toward its target value of Ethereum."
+image = "https://cdn.normalapi.com/tokens/normal/nETH.webp"
+
+[[CURRENCIES]]
+code = "nSOL"
+issuer = "GBPH7PWUDCTRDTC2GIEKSLINSNE754FGO26RIX5B7F6DDRNLG6MKOTDW"
+is_asset_anchored = false
+display_decimals = 7
+name = "Normal Solana"
+desc = "A synthetic token with freely traded market price whose liquidity pool applies incentive and penalty mechanisms to align price toward its target value of Solana."
+conditions = "Nat"
+image = "https://cdn.normalapi.com/tokens/normal/nSOL.webp"

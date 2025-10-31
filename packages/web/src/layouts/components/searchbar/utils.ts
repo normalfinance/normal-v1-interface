@@ -1,35 +1,35 @@
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 // ----------------------------------------------------------------------
 
-type NavItem = {
-  title: string;
-  path: string;
-  children?: NavItem[];
-};
+// type NavItem = {
+//   title: string;
+//   path: string;
+//   children?: NavItem[];
+// };
 
-type OutputItem = {
-  name: string;
-  shortname: string;
-};
+// type OutputItem = {
+//   name: string;
+//   shortname: string;
+// };
 
-const flattenNavItems = (navItems: Token[], parentGroup?: string): OutputItem[] => {
-  const flattenedItems: OutputItem[] = [];
+// const flattenNavItems = (navItems: Token[], parentGroup?: string): OutputItem[] => {
+//   const flattenedItems: OutputItem[] = [];
 
-  navItems.forEach((navItem) => {
-    // const currentGroup = parentGroup ? `${parentGroup}-${navItem.title}` : navItem.title;
+//   navItems.forEach((navItem) => {
+//     // const currentGroup = parentGroup ? `${parentGroup}-${navItem.title}` : navItem.title;
 
-    flattenedItems.push({
-      name: navItem.name,
-      shortname: navItem.symbol,
-    });
+//     flattenedItems.push({
+//       name: navItem.name,
+//       shortname: navItem.symbol,
+//     });
 
-    // if (navItem.children) {
-    //   flattenedItems = flattenedItems.concat(flattenNavItems(navItem.children, currentGroup));
-    // }
-  });
-  return flattenedItems;
-};
+//     // if (navItem.children) {
+//     //   flattenedItems = flattenedItems.concat(flattenNavItems(navItem.children, currentGroup));
+//     // }
+//   });
+//   return flattenedItems;
+// };
 
 // export function flattenNavSections(navSections: NavSectionProps['data']): OutputItem[] {
 //   return navSections.flatMap((navSection) =>

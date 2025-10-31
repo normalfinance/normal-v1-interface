@@ -1,7 +1,7 @@
 {
   "name": "@normalfinance/normal-v1-interface",
   "description": "🌈 Open source interfaces for the Normal protocol",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "scripts": {
     "test": "turbo run test",
     "build": "turbo run build",
@@ -15,7 +15,12 @@
     "build:types": "turbo run build --filter=@normalfinance/types",
     "clean": "rm -rf node_modules .turbo yarn.lock && rm -rf packages/*/{node_modules,.next,.swc,dist,build,tsconfig.tsbuildinfo,.turbo}",
     "setup": "yarn install && yarn build",
-    "refresh": "yarn run clean && yarn run setup"
+    "refresh": "yarn run clean && yarn run setup",
+    "invite:generate": "node get-unused-invite-code.js",
+    "invite:seed": "node generate-invite-codes.js",
+    "goldsky:testnet": "NEXT_PUBLIC_NETWORK=testnet node packages/goldsky/generate-config.js testnet",
+    "goldsky:mainnet": "NEXT_PUBLIC_NETWORK=mainnet node packages/goldsky/generate-config.js mainnet",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -38,15 +43,24 @@
     "@tsconfig/recommended": "^1.0.2",
     "@types/jest": "^29.5.2",
     "concurrently": "^9.1.2",
+    "husky": "^9.1.7",
     "jest": "^29.5.0",
+    "lint-staged": "^16.1.5",
+    "prettier-plugin-organize-imports": "^4.2.0",
     "turbo": "^2.5.3"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "packageManager": "yarn@3.6.4",
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/figtree": "^5.2.8",
-    "@stellar/stellar-sdk": "14.0.0-rc.3",
+    "@stellar/stellar-sdk": "^14.1.1",
     "@upstash/ratelimit": "^2.0.5",
     "@upstash/redis": "^1.35.1",
     "@walletconnect/modal": "^2.6.2",
@@ -54,6 +68,8 @@
     "@walletconnect/types": "^2.13.1",
     "clsx": "^2.1.1",
     "copy-to-clipboard": "^3.3.3",
+    "dotted-map": "^2.2.3",
+    "jose": "^6.1.0",
     "motion": "^10",
     "next": "15.0.3",
     "simplex-noise": "^4.0.3",

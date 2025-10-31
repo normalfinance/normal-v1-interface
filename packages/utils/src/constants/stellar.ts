@@ -1,64 +1,86 @@
 import { NetworkConfig } from '@normalfinance/types';
 import { Account, Networks } from '@stellar/stellar-sdk';
+import { getCurrentNetwork } from '../network';
+import { logger } from '../logger';
 
 const RPC_API_KEY = process.env.RPC_API_KEY ?? '';
 
-const TESTNET: NetworkConfig = {
+const TESTNET_CONFIG: NetworkConfig = {
   // network
   TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
   NETWORK_PASSPHRASE: Networks.TESTNET,
-  HORIZON_URL: 'https://horizon-testnet.stellar.org',
+  HORIZON_URL: process.env.NEXT_PUBLIC_TESTNET_HORIZON_URL || 'https://horizon-testnet.stellar.org',
   RPC_URL: RPC_API_KEY
     ? `https://testnet.stellar.validationcloud.io/v1/${RPC_API_KEY}`
-    : 'https://soroban-testnet.stellar.org',
+    : process.env.NEXT_PUBLIC_TESTNET_RPC_URL || 'https://soroban-testnet.stellar.org',
+
+  // accounts
+  NORMAL_TOKEN_ISSUER: process.env.NEXT_PUBLIC_TESTNET_TOKEN_ISSUER || '',
 
   // contracts
-  POOL_ROUTER_ADDRESS: 'CC7BAPX2HYU76CDGCWLLVZT5O7CTTT5VHRC4H6VZUXLJ7PKHPKDT3PS3', // updated on 7.30.25
-  POOL_SWAP_FEE_ADDRESS: 'CBY6HH7FFNBLARQYSKJAK6O2AGPTM5VYGOYHTQQPTFLUTS2DNOXPT5QD', // updated on 7.30.25
-  BUFFER_ADDRESS: 'CAKRRRDCBT4K3TRIW4GTTIOUEEOCHOPEXO4WFQURP7W44KOCKHWNTLQM', // updated on 7.30.25
-  INSURANCE_FUND_ADDRESS: 'CDRVNXARMUM6IGTLMXBCMSBZ7DCI4Y3AANA7HQCZCP6XMXNCOXT7HKDZ', // updated on 7.30.25
-  ORACLE_REGISTRY_ADDRESS: 'CDB6MTYST4WQMQZB2ES4UVS6KMIHE2TAHWCONOIJQZ2HMH6NT2C77H3X', // updated on 7.30.25
-  LIQUIDITY_CALCULATOR_ADDRESS: 'CCDDTBUR7QFOS33HL4THNO7CZ6J25H7AUINYCKPIFQFZKLWLI26WE7BE', // updated on 7.30.25
+  POOL_ROUTER_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_POOL_ROUTER || '',
+  POOL_PLANE_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_POOL_PLANE || '',
+  LIQUIDITY_CALCULATOR_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_LIQUIDITY_CALCULATOR || '',
+  CONFIG_STORAGE_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_CONFIG_STORAGE || '',
+  REWARDS_GAUGE_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_REWARDS_GAUGE || '',
 
   // stellar
-  XLM_ADDRESS: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
+  XLM_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_XLM_ADDRESS || '',
   XLM_DECIMALS: 7,
+  USDC_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_USDC_ADDRESS || '',
+  USDC_DECIMALS: 7,
 
   // oracle
-  REFLECTOR_ORACLE_ADDRESS: 'CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63',
+  REFLECTOR_EXTERNAL_ORACLE_ADDRESS:
+    process.env.NEXT_PUBLIC_TESTNET_REFLECTOR_EXTERNAL_ORACLE || '',
+  REFLECTOR_PUBNET_ORACLE_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_REFLECTOR_PUBNET_ORACLE || '',
 
   // supabase
-  EVENTS_TABLENAME: 'normal_contract_events_testnet',
+  EVENTS_TABLENAME: 'normal_contract_events',
 };
 
-const MAINNET: NetworkConfig = {
+const MAINNET_CONFIG: NetworkConfig = {
   // network
   TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
   NETWORK_PASSPHRASE: Networks.PUBLIC,
-  HORIZON_URL: 'https://horizon.stellar.org',
-  RPC_URL: RPC_API_KEY
-    ? `https://mainnet.stellar.validationcloud.io/v1/${RPC_API_KEY}`
-    : 'https://soroban.stellar.org',
+  HORIZON_URL: process.env.NEXT_PUBLIC_MAINNET_HORIZON_URL || 'https://horizon.stellar.org',
+  RPC_URL: process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://rpc.lightsail.network/',
+
+  // accounts
+  NORMAL_TOKEN_ISSUER: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ISSUER || '',
 
   // contracts
-  POOL_ROUTER_ADDRESS: '...', // updated on 7.30.25
-  POOL_SWAP_FEE_ADDRESS: '...', // updated on 7.30.25
-  BUFFER_ADDRESS: '...', // updated on 7.30.25
-  INSURANCE_FUND_ADDRESS: '...', // updated on 7.30.25
-  ORACLE_REGISTRY_ADDRESS: '...', // updated on 7.30.25
-  LIQUIDITY_CALCULATOR_ADDRESS: '...', // updated on 7.30.25
+  POOL_ROUTER_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_POOL_ROUTER || '',
+  POOL_PLANE_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_POOL_PLANE || '',
+  LIQUIDITY_CALCULATOR_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_LIQUIDITY_CALCULATOR || '',
+  CONFIG_STORAGE_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_CONFIG_STORAGE || '',
+  REWARDS_GAUGE_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_REWARDS_GAUGE || '',
 
   // stellar
-  XLM_ADDRESS: 'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA',
+  XLM_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_XLM_ADDRESS || '',
   XLM_DECIMALS: 7,
+  USDC_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_USDC_ADDRESS || '',
+  USDC_DECIMALS: 7,
 
   // oracle
-  REFLECTOR_ORACLE_ADDRESS: 'CAFJZQWSED6YAWZU3GWRTOCNPPCGBN32L7QV43XX5LZLFTK6JLN34DLN',
+  REFLECTOR_EXTERNAL_ORACLE_ADDRESS:
+    process.env.NEXT_PUBLIC_MAINNET_REFLECTOR_EXTERNAL_ORACLE || '',
+  REFLECTOR_PUBNET_ORACLE_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_REFLECTOR_PUBNET_ORACLE || '',
 
   // supabase
-  EVENTS_TABLENAME: 'normal_contract_events_mainnet',
+  EVENTS_TABLENAME: 'normal_contract_events',
 };
 
-// Decide based on env
-const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'TESTNET'; // or use NEXT_PUBLIC_NETWORK for Next.js
-export const StellarConfig: NetworkConfig = NETWORK === 'MAINNET' ? MAINNET : TESTNET;
+/**
+ * Get the current network configuration based on NEXT_PUBLIC_NETWORK environment variable
+ */
+function getStellarConfig(): NetworkConfig {
+  const network = getCurrentNetwork();
+  logger.log('[getStellarConfig] network', network);
+  return network === 'mainnet' ? MAINNET_CONFIG : TESTNET_CONFIG;
+}
+
+// Export the current stellar configuration
+export const StellarConfig: NetworkConfig = getStellarConfig();
+
+logger.log('[StellarConfig] StellarConfig', StellarConfig);

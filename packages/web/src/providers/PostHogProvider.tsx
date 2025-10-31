@@ -8,9 +8,9 @@ import { PostHogProvider as PHProvider } from 'posthog-js/react';
 
 export function PostHogProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+    posthog.init(process.env.NEXT_PUBLIC_TESTNET_POSTHOG_KEY!, {
       api_host: '/ingest',
-      ui_host: 'https://us.posthog.com',
+      ui_host: process.env.NEXT_PUBLIC_TESTNET_POSTHOG_HOST ?? 'https://us.posthog.com',
       defaults: '2025-05-24',
       capture_exceptions: true,
       debug: process.env.NODE_ENV === 'development',
@@ -22,6 +22,7 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
           tags: ['posthog'], // Can be used with Next.js `revalidateTag` function
         },
       },
+      __add_tracing_headers: ['normalfinance.io'],
     });
   }, []);
 

@@ -48,7 +48,7 @@ export const ContactFormDefaults: Props = {
   tagline: 'Tagline',
   heading: 'Contact us',
   description:
-    'Have a question, idea, or partnership in mind? We’d love to hear from you. Drop us a message anytime and the Normal Finance team will get back to you within one business day.',
+    'Have a question, idea, or partnership in mind? We’d love to hear from you. Drop us a message anytime and the Normal team will get back to you within one business day.',
   email: 'hello@normalfinance.io',
   socialLinks: [
     {
@@ -74,7 +74,7 @@ export const ContactFormDefaults: Props = {
 export const ContactForm: React.FC<ContactFormProps> = (props) => {
   const { t } = useTranslate();
 
-  const { tagline, heading, description, email, socialLinks, ...sectionProps } = {
+  const { heading, description, email, socialLinks, ...sectionProps } = {
     ...ContactFormDefaults,
     ...props,
   };

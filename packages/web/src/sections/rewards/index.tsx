@@ -96,7 +96,6 @@ export function RewardsView() {
 
   const { user, about } = USER_DATA;
 
-  const referralLink = `https://app.normalfinance.io/ref/${walletAddress}`;
   const walletLabel =
     walletAddress && walletAddress.length > 0
       ? format.fTruncate(walletAddress, 12)
@@ -136,9 +135,8 @@ export function RewardsView() {
 
       {/* ---- Tab panels ----------------------------------------------------- */}
       {selectedTab === '' && (
-        <WalletGate buttonText={t('Connect Wallet to view rewards')} fullWidth>
+        <WalletGate buttonText={t('Connect wallet to view rewards')} fullWidth>
           <RewardsOverview
-            referralLink={referralLink}
             referralsCount={REWARDS_OVERVIEW.referralsCount}
             zealyUrl={REWARDS_OVERVIEW.zealyUrl}
             zealyXP={REWARDS_OVERVIEW.zealyXP}
@@ -148,7 +146,7 @@ export function RewardsView() {
         </WalletGate>
       )}
       {selectedTab === 'zealy' && (
-        <WalletGate buttonText={t('Connect Wallet to view Zealy')} fullWidth>
+        <WalletGate buttonText={t('Connect wallet to view Zealy')} fullWidth>
           <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Button
               variant="contained"
@@ -174,7 +172,7 @@ export function RewardsView() {
       )}
 
       {selectedTab === 'protocol' && (
-        <WalletGate buttonText={t('Connect Wallet to view Protocol Points')} fullWidth>
+        <WalletGate buttonText={t('Connect wallet to view Protocol Points')} fullWidth>
           <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
         </WalletGate>
       )}

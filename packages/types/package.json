@@ -1,6 +1,6 @@
 {
-  "version": "0.0.1",
   "name": "@normalfinance/types",
+  "version": "1.0.0",
   "files": [
     "build/**/*"
   ],
@@ -23,7 +23,7 @@
     "@mui/system": "6.1.7",
     "@mui/utils": "6.1.7",
     "@normalfinance/contracts": "workspace:^",
-    "@stellar/stellar-sdk": "^13.3.0",
+    "@stellar/stellar-sdk": "14.1.1",
     "bignumber.js": "^9.1.1"
   }
 }

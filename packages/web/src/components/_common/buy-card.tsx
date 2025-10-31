@@ -1,19 +1,19 @@
 import type { CardProps } from '@mui/material';
+import type { Token } from '@normalfinance/types';
 import type { BuyQueryParams } from '@/types/query-params';
-import type { StateToken as Token } from '@normalfinance/types';
 
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { convertFiatToCoin } from '@/utils/conversion-helpers';
+import { convertFiatToCoin, sanitizeAmountInput } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
 
 import PickToken from './pick-token';
 import { WalletGate } from './wallet-gate';
-import CheckoutDialog from './checkout-dialog';
+import OnrampDialog from './onramp-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
@@ -55,10 +55,6 @@ const BuyCard: React.FC<BuyCardProps> = ({
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Close Buy Card',
-    //   location: 'Insurance',
-    // });
     setOpen(false);
   };
 
@@ -68,7 +64,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
 
   const fiatValue = parseFloat(amount) || 0;
   const buyableAmt =
-    buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, buyToken.usdValue) : 0;
+    buyToken && fiatValue > 0 ? convertFiatToCoin(fiatValue, BigNumber(buyToken.price)) : 0;
 
   // State for review dialog
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -162,6 +158,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
+  const connectedAddress = persist.wallet.address;
 
   return (
     <Stack sx={{ gap: '2px' }}>
@@ -354,7 +351,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
               {getButtonLabel()}
             </Button>
           ) : (
-            <WalletGate buttonText="Connect Wallet to Buy" fullWidth variant="soft">
+            <WalletGate buttonText="Connect wallet to Buy" fullWidth variant="soft">
               {null}
             </WalletGate>
           )}
@@ -367,11 +364,12 @@ const BuyCard: React.FC<BuyCardProps> = ({
         />
 
         {reviewOpen && (
-          <CheckoutDialog
+          <OnrampDialog
             open={reviewOpen}
             token={buyToken?.symbol ?? 'USDC'}
             amount={amount}
             onClose={handleReviewClose}
+            walletAddress={connectedAddress}
           />
         )}
       </Stack>

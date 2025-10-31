@@ -1,56 +1,34 @@
-import { captureException } from '@sentry/nextjs';
+import { BigNumber } from 'bignumber.js';
 import { useState, useEffect, useCallback } from 'react';
-import { constants, getOraclePrice } from '@normalfinance/utils';
+import { format, logger, getReflectorExternalPrice } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
 interface ReturnType {
   error: any | null;
   loading: boolean;
-  price: number | undefined;
+  price: BigNumber;
 }
 
 // ----------------------------------------------------------------------
 
-// const defaultAction: OracleRegistryContract.NormalAction = {
-//   tag: 'UpdateTwap',
-//   values: undefined,
-// };
-
-export const useTokenPrice = (asset: string): ReturnType => {
+export const useTokenPrice = (tokenSymbol: string): ReturnType => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [price, setPrice] = useState<number | undefined>(undefined);
+  const [price, setPrice] = useState<BigNumber>(BigNumber(0));
 
   const getPrice = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
 
-      const data = await getOraclePrice(constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS, asset);
+      const data = await getReflectorExternalPrice(tokenSymbol);
 
       if (data && data.price) {
-        setPrice(Number(data.price));
+        setPrice(BigNumber(format.fTokenAmount(data.price, 14)));
       }
-      // const OracleRegistry = new OracleRegistryContract.Client({
-      //   contractId: constants.StellarConfig.ORACLE_REGISTRY_ADDRESS,
-      //   networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-      //   rpcUrl: constants.StellarConfig.RPC_URL,
-      // });
-
-      // const oraclePriceData = await OracleRegistry.get_price({
-      //   asset,
-      //   cached: false,
-      //   action: defaultAction,
-      //   skip_validation: true,
-      // });
-
-      // if (oraclePriceData.result) {
-      //   setPrice(oraclePriceData.result.price);
-      // }
     } catch (e: any) {
-      captureException(e);
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 

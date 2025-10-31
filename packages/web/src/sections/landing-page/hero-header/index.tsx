@@ -4,9 +4,8 @@ import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
-import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
-import { useAppStore } from '@normalfinance/state';
+import { cdn } from '@normalfinance/utils';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
@@ -23,6 +22,7 @@ type Props = {
   heading: string;
   description: string;
   image: ImageProps;
+  halbornImage: ImageProps;
   tagline: string;
   taglineLogo: ImageProps;
   swapParams?: SwapQueryParams;
@@ -38,34 +38,21 @@ const swapFeeInfo: SwapFeeInfo = {
 };
 
 export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
-  const { heading, description, image, tagline, taglineLogo, swapParams, ...sectionProps } = {
+  const {
+    heading,
+    description,
+    image,
+    halbornImage,
+    tagline,
+    taglineLogo,
+    swapParams,
+    ...sectionProps
+  } = {
     ...HeroHeaderDefaults,
     ...incomingProps,
   } as Props;
 
   const { t } = useTranslate();
-
-  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
-
-  useEffect(() => {
-    if (tokens.length === 0) {
-      setGlobalIsLoading(true);
-
-      getAllTokens()
-        .catch((error) => console.error(error))
-        .finally(() => {
-          setGlobalIsLoading(false);
-        });
-    }
-  }, []);
-
-  const allowedTokens = React.useMemo(
-    () =>
-      tokens.filter(
-        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
-      ),
-    [tokens]
-  );
 
   return (
     <Box
@@ -90,7 +77,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
       >
         {/* animated waves */}
         <WavyBackground
-          containerClassName="w-full h-full"
+          sizing="viewport"
+          baseline="center" // or "top"
+          yOffset={0}
           colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
           waveOpacity={0.35}
           speed="slow"
@@ -212,22 +201,33 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard
-                tokensList={allowedTokens}
-                swapFeeInfo={swapFeeInfo}
-                queryParams={swapParams}
-              />
+              <SwapCard swapFeeInfo={swapFeeInfo} queryParams={swapParams} />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
               {t(description)}
             </Typography>
-            <Box
-              component="img"
-              src={image.src}
-              alt={image.alt ?? ''}
-              sx={{ width: '82px', height: 'auto', objectFit: 'cover', mt: '20px' }}
-            />
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="center"
+              gap={2}
+              flexWrap="wrap"
+            >
+              <Box
+                component="img"
+                src={image.src}
+                alt={image.alt ?? ''}
+                sx={{ width: '82px', height: 'auto', objectFit: 'cover', mt: '20px' }}
+              />
+
+              <Box
+                component="img"
+                src={halbornImage.src}
+                alt={halbornImage.alt ?? ''}
+                sx={{ width: '112px', height: 'auto', objectFit: 'cover', mt: '20px' }}
+              />
+            </Stack>
           </Box>
         </Stack>
       </Container>
@@ -240,14 +240,18 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
 export const HeroHeaderDefaults: Props = {
   heading: 'Medium length hero heading goes here',
   description:
-    'The largest on-chain catalogue of synthetic crypto and real-world assets built on Stellar.',
+    'The largest on-chain catalogue of synthetic crypto and real-world assets built on Stellar, secured by Halborn.',
   image: {
-    src: '/assets/images/landing-page/stellar-logo.webp',
+    src: cdn('homepage/stellar-logo.webp'),
+    alt: 'Stellar Logo Long',
+  },
+  halbornImage: {
+    src: cdn('homepage/halborn-logo.webp'),
     alt: 'Stellar Logo Long',
   },
   tagline: 'Crypto that just works',
   taglineLogo: {
-    src: '/assets/images/landing-page/normal-long.svg',
+    src: cdn('homepage/normal-long.svg'),
     alt: 'Normal Logo Long',
   },
 };
