@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.4...v1.0.5) (2025-10-31)
+
+
+### Bug Fixes
+
+* remove servers from /utils ([2a1e972](https://github.com/normalfinance/normal-v1-interface/commit/2a1e97294ae16349dfff816b5553db790f42458d))
+
 ## [1.0.4](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.3...v1.0.4) (2025-10-31)
 
 
