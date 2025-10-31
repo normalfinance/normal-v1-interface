@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.3...v1.0.4) (2025-10-31)
+
+
+### Bug Fixes
+
+* instantiate rpcServer in API route instead of /utils ([12e6d90](https://github.com/normalfinance/normal-v1-interface/commit/12e6d901eee15291f163f27aef4935f980575daa))
+
 ## [1.0.3](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.2...v1.0.3) (2025-10-31)
 
 
