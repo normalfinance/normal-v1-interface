@@ -37,7 +37,6 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅'",
-    "validate:address": "node ./scripts/validate-address.js",
     "convert:contract": "node ./scripts/convert-contract-address.js",
     "commit": "cz",
     "semantic-release": "semantic-release",

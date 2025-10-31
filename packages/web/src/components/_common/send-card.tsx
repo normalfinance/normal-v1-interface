@@ -14,7 +14,7 @@ import {
   convertCoinToFiat,
   convertFiatToCoin,
   sanitizeAmountInput,
-  isValidStellarAddress,
+  isValidAccountAddress,
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -167,7 +167,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, .
     const label = getButtonLabel();
 
     if (label === 'Send') {
-      if (!isValidStellarAddress(destination)) {
+      if (!isValidAccountAddress(destination)) {
         enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
         return;
       }
