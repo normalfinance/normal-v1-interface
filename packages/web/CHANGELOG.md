@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.6...v1.0.7) (2025-10-31)
+
+
+### Bug Fixes
+
+* move logger to middleware to avoid /utils import ([1d69dc1](https://github.com/normalfinance/normal-v1-interface/commit/1d69dc166c6ec5a034394bf3dd1945e435cdf0b3))
+
 ## [1.0.6](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.5...v1.0.6) (2025-10-31)
 
 
