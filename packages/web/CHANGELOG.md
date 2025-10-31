@@ -1,3 +1,10 @@
+## [1.0.9](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.8...v1.0.9) (2025-10-31)
+
+
+### Bug Fixes
+
+* posthog naming ([bda20d4](https://github.com/normalfinance/normal-v1-interface/commit/bda20d4296532ba0493c7e09788fd21fa0a7e522))
+
 ## [1.0.8](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.7...v1.0.8) (2025-10-31)
 
 
