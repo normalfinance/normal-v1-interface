@@ -71,21 +71,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
 
   const { publicKey } = useStellarWalletsKit();
 
-  const { addTrustLine, loading: trustlineLoading, error: _ } = useTrustLine();
+  const { addTrustLine } = useTrustLine();
 
   const { loading: loadingSwap, setLoading, onEstimateSwap, onSwap } = useSwap();
 
-  const [loadingSimulate, setLoadingSimulate] = useState<boolean>(false);
   const [swapError, setSwapError] = useState<string | null>(null);
   const [creatingTrustline, setCreatingTrustline] = useState<boolean>(false);
   const [needsTrustline, setNeedsTrustline] = useState<boolean>(false);
   const [checkingTrustline, setCheckingTrustline] = useState<boolean>(false);
-
-  const [maxSlippage, setMaxSlippage] = useState<number>(10_000); // bps
-  const [exchangeRate, setExchangeRate] = useState<string>('');
-  const [networkFee, setNetworkFee] = useState<string>('');
-  const [poolFee, setPoolFee] = useState<string>('');
-  const [priceImpact, setPriceImpact] = useState<number>(0); // bps
 
   // 1) States for tokens, default sell token is first in the list
   const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
@@ -496,12 +489,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
       if (amount === '0') {
         setAmount('0');
         setBuyAmount(0);
-        setExchangeRate('');
-        setNetworkFee('');
         return;
       }
 
-      setLoadingSimulate(true);
       try {
         await onEstimateSwap({
           tokens: [sellToken.contract, buyToken.contract],
@@ -513,7 +503,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
       } catch (e) {
         // Simulation error handled silently
       }
-      setLoadingSimulate(false);
     }
   }, [sellToken?.name, buyToken, amount, buyAmount]);
 
@@ -978,10 +967,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
           conversionText={sellToken && buyToken ? getConversionText(sellToken, buyToken) : ''}
           insufficientBalance={insufficientBalance}
           sellToken={sellToken || undefined}
-          poolFee={0.3} // TODO: fix
+          poolFee={pool ? pool.fee : 30}
           networkCost={0}
-          priceImpact={priceImpact ?? 0}
-          maxSlippage={maxSlippage}
+          priceImpact={0}
+          maxSlippage={10000}
           sellFiatValue={sellFiatValue}
         />
       )}
@@ -993,10 +982,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
           buyToken={buyToken!}
           sellAmount={amount}
           buyAmount={buyAmount}
-          feePercentage="0.3" // TODO: fix
-          networkCost={networkFee ?? '0'}
-          priceImpact={priceImpact ?? 0}
-          maxSlippage={maxSlippage}
+          feePercentage={pool ? pool.fee : 30}
+          networkCost="0"
+          priceImpact={0}
+          maxSlippage={10000}
           sellFiatValue={sellFiatValue}
           onSubmit={() => doSwap()}
         />

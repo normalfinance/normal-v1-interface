@@ -6,7 +6,6 @@ import type { NavSectionProps } from '@/components/template/nav-section';
 import { paths } from '@/routes/paths';
 import { isTestnet } from '@normalfinance/utils';
 import { allLangs, useTranslate } from '@/locales';
-import { usePersistStore } from '@normalfinance/state';
 import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
 
 import Box from '@mui/material/Box';
@@ -53,10 +52,6 @@ export function DashboardLayout({
   layoutQuery = 'lg',
 }: DashboardLayoutProps) {
   const { t } = useTranslate();
-
-  const {
-    tokenState: { tokens },
-  } = usePersistStore();
 
   const theme = useTheme();
 

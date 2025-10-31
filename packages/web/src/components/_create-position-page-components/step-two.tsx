@@ -28,8 +28,6 @@ export const StepTwo: React.FC<StepTwoProps> = ({ tokenA, tokenB }) => {
   // -- keep field in sync with the text input ------------------------
   const watchAmountA = watch('amountA') ?? '';
   const watchAmountB = watch('amountB') ?? '';
-  const watchTokenA = watch('tokenA');
-  const watchTokenB = watch('tokenB');
 
   const handleChange = (index: 0 | 1, value: string) => {
     let valueKey: 'amountA' | 'amountB' = 'amountA';

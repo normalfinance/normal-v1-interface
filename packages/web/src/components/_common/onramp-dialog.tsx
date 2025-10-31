@@ -109,7 +109,6 @@ const OnrampDialog: React.FC<OnrampDialogProps> = ({
       onClick: handleCoinbaseClick,
     },
   ];
-  const disableButtons = !amount || Number(amount) <= 0 || !token || !walletAddress;
 
   return (
     <Dialog

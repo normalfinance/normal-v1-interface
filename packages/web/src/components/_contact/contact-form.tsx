@@ -74,7 +74,7 @@ export const ContactFormDefaults: Props = {
 export const ContactForm: React.FC<ContactFormProps> = (props) => {
   const { t } = useTranslate();
 
-  const { tagline, heading, description, email, socialLinks, ...sectionProps } = {
+  const { heading, description, email, socialLinks, ...sectionProps } = {
     ...ContactFormDefaults,
     ...props,
   };

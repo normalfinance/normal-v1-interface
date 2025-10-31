@@ -32,7 +32,7 @@ export interface SwapReviewProps {
   buyToken?: Token;
   sellAmount: string;
   buyAmount: number;
-  feePercentage: string;
+  feePercentage: number;
   networkCost: string;
   priceImpact: number;
   maxSlippage: number;

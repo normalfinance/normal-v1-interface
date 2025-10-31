@@ -17,7 +17,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
 
   const validContractAddress = isValidContractAddress(poolAddress);
 
-  const { globalIsLoading, setGlobalIsLoading } = useAppStore();
+  const { setGlobalIsLoading } = useAppStore();
   const {
     getAllTokens,
     poolState: { pools },

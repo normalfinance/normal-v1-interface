@@ -1,7 +1,6 @@
 export * from './tokens';
 export * from './events';
 
-export * from './use-tvl';
 export * from './use-swap';
 export * from './use-liquidity';
 export * from './use-liquidity-positions';

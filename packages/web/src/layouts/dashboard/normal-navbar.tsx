@@ -82,7 +82,7 @@ export type NormalNavbarProps = React.ComponentPropsWithoutRef<'section'> & Part
 
 export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   const { t } = useTranslate();
-  const { logo, links = [], buttons = [], searchbar, language, account } = props;
+  const { links = [], searchbar, language, account } = props;
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
@@ -116,7 +116,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const toggleMobile = () => setMobileOpen((p) => !p);
-  const closeMobile = () => setMobileOpen(false);
+  // const closeMobile = () => setMobileOpen(false);
 
   // eslint-disable-next-line consistent-return
   useEffect(() => {

@@ -6,7 +6,6 @@ import type { SwapQueryParams } from '@/types/query-params';
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
-import { usePersistStore } from '@normalfinance/state';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
@@ -54,10 +53,6 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   } as Props;
 
   const { t } = useTranslate();
-
-  const {
-    tokenState: { tokens },
-  } = usePersistStore();
 
   return (
     <Box

@@ -4,7 +4,6 @@ import type { PoolTxRow } from '@/types/pools';
 import type { Pool, events } from '@normalfinance/types';
 
 import BigNumber from 'bignumber.js';
-import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { usePoolEvents, usePoolPriceChart } from '@/hooks';
@@ -18,7 +17,6 @@ import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-t
 
 export default function PoolDetailsView({ pool }: { pool: Pool }) {
   const theme = useTheme();
-  const { t } = useTranslate();
   const {
     tokenState: { tokens },
   } = usePersistStore();

@@ -44,7 +44,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, .
   const [amount, setAmount] = useState<string>('0');
   const [isFiatMode, setIsFiatMode] = useState<boolean>(true);
   const [open, setOpen] = useState<boolean>(false);
-  const [activeButton, setActiveButton] = useState<'sell' | 'buy' | 'send' | ''>('');
 
   // For dynamic width measurement
   const [inputWidth, setInputWidth] = useState<number>(0);
@@ -302,7 +301,6 @@ const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, .
         {/* Pick token */}
         <Button
           onClick={() => {
-            setActiveButton('send');
             setOpen(true);
           }}
           sx={{

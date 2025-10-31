@@ -14,19 +14,19 @@ interface ReturnType {
   chartData: ExplorerChartData; //Record<ChartTimeframeKey, RealtimeChartData>;
 }
 
-const timeframeDurations: Record<ChartTimeframeKey, number> = {
-  '24h': 1 * 24 * 60 * 60 * 1000,
-  '7d': 7 * 24 * 60 * 60 * 1000,
-  '30d': 30 * 24 * 60 * 60 * 1000,
-  '12m': 365 * 24 * 60 * 60 * 1000,
-};
+// const timeframeDurations: Record<ChartTimeframeKey, number> = {
+//   '24h': 1 * 24 * 60 * 60 * 1000,
+//   '7d': 7 * 24 * 60 * 60 * 1000,
+//   '30d': 30 * 24 * 60 * 60 * 1000,
+//   '12m': 365 * 24 * 60 * 60 * 1000,
+// };
 
-const bucketCounts: Record<ChartTimeframeKey, number> = {
-  '24h': 24,
-  '7d': 7,
-  '30d': 31,
-  '12m': 12,
-};
+// const bucketCounts: Record<ChartTimeframeKey, number> = {
+//   '24h': 24,
+//   '7d': 7,
+//   '30d': 31,
+//   '12m': 12,
+// };
 
 // ----------------------------------------------------------------------
 
