@@ -5,7 +5,9 @@ import { rateLimiter } from '@/server/rateLimiter';
 import { logger, constants } from '@normalfinance/utils';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
-import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
+import { logWithConfig, createNodeConfigHandler } from '@/lib/edge-config-middleware';
+
+export const runtime = 'nodejs';
 
 async function transactionHandler(req: NextRequest) {
   try {
@@ -158,4 +160,5 @@ async function transactionHandler(req: NextRequest) {
   }
 }
 
-export const POST = createEdgeConfigHandler(transactionHandler, 'transaction');
+// export const POST = createEdgeConfigHandler(transactionHandler, 'transaction');
+export const POST = createNodeConfigHandler(transactionHandler, 'transaction');
