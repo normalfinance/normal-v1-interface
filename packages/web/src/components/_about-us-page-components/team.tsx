@@ -5,6 +5,7 @@ import type { ButtonProps } from '@mui/material';
 import React from 'react';
 import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 
 import Link from '@mui/material/Link';
 import GitHubIcon from '@mui/icons-material/GitHub';
@@ -62,7 +63,7 @@ export const TeamDefaults: Props = {
   teamMembers: [
     {
       image: {
-        src: '/assets/images/about/josh.webp',
+        src: cdn('about-page/josh.webp'),
         alt: 'Joshua Blew',
       },
       name: 'Joshua Blew',
@@ -87,7 +88,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/just.webp',
+        src: cdn('about-page/just.webp'),
         alt: 'Justin Benjamin',
       },
       name: 'Justin Benjamin',
@@ -111,7 +112,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/avm.webp',
+        src: cdn('about-page/avm.webp'),
         alt: 'Amit Anand',
       },
       name: 'Amit Anand',
@@ -132,7 +133,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/jake.webp',
+        src: cdn('about-page/jake.webp'),
         alt: 'Jake Penzato',
       },
       name: 'Jake Penzato',
@@ -153,7 +154,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/niko.webp',
+        src: cdn('about-page/niko.webp'),
         alt: 'Niko Gorjan',
       },
       name: 'Niko Gorjan',
@@ -177,7 +178,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/jay.webp',
+        src: cdn('about-page/jay.webp'),
         alt: 'Jay Malve',
       },
       name: 'Jay Malve',
@@ -201,7 +202,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/anth.webp',
+        src: cdn('about-page/anth.webp'),
         alt: 'Anthony Benjamin',
       },
       name: 'Anthony Benjamin',
@@ -225,7 +226,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/john.webp',
+        src: cdn('about-page/john.webp'),
         alt: 'John Reyes',
       },
       name: 'John Reyes',
@@ -246,7 +247,7 @@ export const TeamDefaults: Props = {
     },
     {
       image: {
-        src: '/assets/images/about/zeal.webp',
+        src: cdn('about-page/zeal.webp'),
         alt: 'Chief Doge',
       },
       name: 'Zeal',
@@ -281,7 +282,7 @@ export const Team: React.FC<TeamProps> = (props) => {
       component="section"
       {...sectionProps}
       py={{ xs: 8, md: 12, lg: 14 }}
-      sx={{ backgroundColor: '#F9FAFB' }}
+      sx={{ backgroundColor: '#F8FAFC' }}
     >
       <Container>
         <Box maxWidth={600} mb={{ xs: 6, md: 9, lg: 10 }}>
@@ -317,8 +318,18 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
   const { t } = useTranslate();
 
   return (
-    <Box display="flex" flexDirection="column">
-      <Box position="relative" width="100%" paddingTop="100%" mb={2} sx={{ overflow: 'hidden' }}>
+    <Box
+      display="flex"
+      flexDirection="column"
+      p={1}
+      bgcolor="white"
+      sx={{
+        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+        transition: 'transform 120ms ease, box-shadow 120ms ease',
+        borderRadius: 2,
+      }}
+    >
+      <Box position="relative" width="100%" paddingTop="100%" mb={1} sx={{ overflow: 'hidden' }}>
         <Box
           component="img"
           src={member.image.src}
@@ -330,20 +341,14 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
             width: '100%',
             objectFit: 'cover',
             borderRadius: 2,
-            border: 2,
-            borderStyle: 'solid',
-            borderColor: 'divider',
             aspectRatio: 1 / 1,
           }}
         />
       </Box>
       <Box
-        mb={1.5}
         sx={{
-          backgroundColor: 'background.paper',
+          backgroundColor: 'grey.100',
           borderRadius: 2,
-          border: 2,
-          borderColor: 'divider',
           p: 3,
         }}
       >

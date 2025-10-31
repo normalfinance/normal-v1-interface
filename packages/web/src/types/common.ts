@@ -17,7 +17,7 @@ export type IAddressItem = {
 
 export type IDateValue = string | number | null;
 
-export type IDatePickerControl = import('@/utils/format-time').DatePickerFormat;
+export type IDatePickerControl = import('@normalfinance/utils').format.DatePickerFormat;
 
 export type ISocialLink = {
   twitter: string;

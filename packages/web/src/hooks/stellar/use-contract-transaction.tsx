@@ -7,19 +7,20 @@ import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
-import { constants, trackEvent } from '@normalfinance/utils';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
+import { logger, constants, trackEvent } from '@normalfinance/utils';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
   PoolContract,
-  LpTokenContract,
+  PoolPlaneContract,
+  TokenShareContract,
   PoolRouterContract,
-  PoolSwapFeeContract,
+  PoolElasticContract,
+  RewardsGaugeContract,
   SorobanTokenContract,
-  InsuranceFundContract,
-  OracleRegistryContract,
+  ConfigStorageContract,
   LiquidityCalculatorContract,
 } from '@normalfinance/contracts';
 
@@ -29,33 +30,36 @@ import Button from '@mui/material/Button';
 import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
 
 const contractClients = {
-  oracle_registry: OracleRegistryContract.Client,
-  pool_swap_fee: PoolSwapFeeContract.Client,
-  pool: PoolContract.Client,
   pool_router: PoolRouterContract.Client,
-  insurance_fund: InsuranceFundContract.Client,
+  pool: PoolContract.Client,
+  pool_elastic: PoolElasticContract.Client,
+  pool_plane: PoolPlaneContract.Client,
   liquidity_calculator: LiquidityCalculatorContract.Client,
-  lp_token: LpTokenContract.Client,
+  rewards_gauge: RewardsGaugeContract.Client,
+  config_storage: ConfigStorageContract.Client,
+  token_share: TokenShareContract.Client,
   token: SorobanTokenContract.Client,
 };
 
-type ContractClientType<T extends ContractType> = T extends 'oracle_registry'
-  ? OracleRegistryContract.Client
-  : T extends 'pool_swap_fee'
-    ? PoolSwapFeeContract.Client
-    : T extends 'pool'
-      ? PoolContract.Client
-      : T extends 'pool_router'
-        ? PoolRouterContract.Client
-        : T extends 'insurance_fund'
-          ? InsuranceFundContract.Client
-          : T extends 'liquidity_calculator'
-            ? LiquidityCalculatorContract.Client
-            : T extends 'lp_token'
-              ? LpTokenContract.Client
-              : T extends 'token'
-                ? SorobanTokenContract.Client
-                : never;
+type ContractClientType<T extends ContractType> = T extends 'pool_router'
+  ? PoolRouterContract.Client
+  : T extends 'pool'
+    ? PoolContract.Client
+    : T extends 'pool_elastic'
+      ? PoolElasticContract.Client
+      : T extends 'liquidity_calculator'
+        ? LiquidityCalculatorContract.Client
+        : T extends 'pool_plane'
+          ? PoolPlaneContract.Client
+          : T extends 'config_storage'
+            ? ConfigStorageContract.Client
+            : T extends 'rewards_gauge'
+              ? RewardsGaugeContract.Client
+              : T extends 'token_share'
+                ? TokenShareContract.Client
+                : T extends 'token'
+                  ? SorobanTokenContract.Client
+                  : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;
@@ -113,11 +117,11 @@ export const useContractTransaction = () => {
         throw new Error('No wallet connected');
       }
 
-      console.log('[USE CONTRACT TRANSACTION] Wallet address:', walletAddress);
-      console.log('[USE CONTRACT TRANSACTION] PublicKey from kit:', publicKey);
-      console.log('[USE CONTRACT TRANSACTION] Address from persist:', storePersist.wallet.address);
+      logger.log('[USE CONTRACT TRANSACTION] Wallet address:', walletAddress);
+      logger.log('[USE CONTRACT TRANSACTION] PublicKey from kit:', publicKey);
+      logger.log('[USE CONTRACT TRANSACTION] Address from persist:', storePersist.wallet.address);
 
-      console.log('[USE CONTRACT TRANSACTION] Network passphrase:', networkPassphrase);
+      logger.log('[USE CONTRACT TRANSACTION] Network passphrase:', networkPassphrase);
 
       const run = async (
         restore: boolean = false
@@ -125,15 +129,15 @@ export const useContractTransaction = () => {
         // Add safety check for signTransaction function
         const safeSignTransaction = async (xdr: string) => {
           try {
-            console.log('[USE CONTRACT TRANSACTION] Attempting to sign transaction...');
+            logger.log('[USE CONTRACT TRANSACTION] Attempting to sign transaction...');
             if (!signTransaction) {
               throw new Error('Sign transaction function not available');
             }
             const result = await signTransaction(xdr);
-            console.log('[USE CONTRACT TRANSACTION] Transaction signed successfully');
+            logger.log('[USE CONTRACT TRANSACTION] Transaction signed successfully');
             return result;
           } catch (error) {
-            console.error('[USE CONTRACT TRANSACTION] Error during transaction signing:', error);
+            logger.error('[USE CONTRACT TRANSACTION] Error during transaction signing:', error);
             throw error;
           }
         };
@@ -149,11 +153,11 @@ export const useContractTransaction = () => {
 
         const transaction = await transactionFunction(contractClient, restore);
 
-        console.log('Transaction from backend: ', transaction);
+        logger.log('Transaction from backend: ', transaction);
 
         try {
           if (restore) {
-            console.log('Restoring transaction state...');
+            logger.log('Restoring transaction state...');
             await transaction.simulate({ restore: true });
             return { notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP };
           }
@@ -162,11 +166,11 @@ export const useContractTransaction = () => {
           if (txHash) {
             const timestamp = new Date().toISOString();
             const transactionType = transactionDetails.type || 'unknown';
-            console.log('[USE CONTRACT TRANSACTION] Transactionn hash:', txHash);
-            console.log('[USE CONTRACT TRANSACTION] Transactionn type:', transactionType);
-            console.log('[USE CONTRACT TRANSACTION] Transactionn Time:', timestamp);
+            logger.log('[USE CONTRACT TRANSACTION] Transactionn hash:', txHash);
+            logger.log('[USE CONTRACT TRANSACTION] Transactionn type:', transactionType);
+            logger.log('[USE CONTRACT TRANSACTION] Transactionn Time:', timestamp);
 
-            console.log(
+            logger.log(
               `[${timestamp}] Transaction ${transactionType} completed for ${walletAddress}: ${txHash}`
             );
           }
@@ -183,7 +187,7 @@ export const useContractTransaction = () => {
             notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP,
           };
         } catch (error) {
-          console.error('Error during returning transaction hash: ', error);
+          logger.error('Error during returning transaction hash: ', error);
 
           trackEvent('transaction_failed', {
             error: (error as any).toString(),
@@ -199,7 +203,7 @@ export const useContractTransaction = () => {
                   const result = await run(true);
                   resolve(result);
                 } catch (restoreError) {
-                  console.error('Error during restoring transaction:', restoreError);
+                  logger.error('Error during restoring transaction:', restoreError);
                   reject(restoreError);
                 } finally {
                   closeRestoreModal();
@@ -267,7 +271,7 @@ export const useContractTransaction = () => {
           return result;
         })
         .catch((error) => {
-          console.error('Error during contract transaction: ', error);
+          logger.error('Error during contract transaction: ', error);
           if (loadingKey) closeSnackbar(loadingKey);
 
           enqueueSnackbar(messages.error, {

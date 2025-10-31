@@ -1,6 +1,6 @@
 import { BigNumber } from 'bignumber.js';
 import { useState, useEffect, useCallback } from 'react';
-import { format, constants, getOraclePrice } from '@normalfinance/utils';
+import { format, logger, getReflectorExternalPrice } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export const useTokenPrice = (asset: string): ReturnType => {
+export const useTokenPrice = (tokenSymbol: string): ReturnType => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [price, setPrice] = useState<BigNumber>(BigNumber(0));
@@ -22,13 +22,13 @@ export const useTokenPrice = (asset: string): ReturnType => {
       setError(null);
       setLoading(true);
 
-      const data = await getOraclePrice(constants.StellarConfig.REFLECTOR_ORACLE_ADDRESS, asset);
+      const data = await getReflectorExternalPrice(tokenSymbol);
 
       if (data && data.price) {
-        setPrice(BigNumber(format.formatTokenAmount(data.price, 14)));
+        setPrice(BigNumber(format.fTokenAmount(data.price, 14)));
       }
     } catch (e: any) {
-      console.log(e);
+      logger.log(e);
       setError(e.toString());
     }
 

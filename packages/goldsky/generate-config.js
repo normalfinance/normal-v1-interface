@@ -8,9 +8,6 @@ const NETWORKS = {
     table: 'normal_contract_events_testnet',
     contracts: {
       poolRouter: process.env.NEXT_PUBLIC_TESTNET_POOL_ROUTER || '',
-      oracleRegistry: process.env.NEXT_PUBLIC_TESTNET_ORACLE_REGISTRY || '',
-      insuranceFund: process.env.NEXT_PUBLIC_TESTNET_INSURANCE_FUND || '',
-      poolSwapFee: process.env.NEXT_PUBLIC_TESTNET_POOL_SWAP_FEE || '',
       poolPlane: process.env.NEXT_PUBLIC_TESTNET_POOL_PLANE || '',
       liquidityCalc: process.env.NEXT_PUBLIC_TESTNET_LIQUIDITY_CALCULATOR || '',
     },
@@ -21,9 +18,6 @@ const NETWORKS = {
     table: 'normal_contract_events_mainnet',
     contracts: {
       poolRouter: process.env.NEXT_PUBLIC_MAINNET_POOL_ROUTER || '',
-      oracleRegistry: process.env.NEXT_PUBLIC_MAINNET_ORACLE_REGISTRY || '',
-      insuranceFund: process.env.NEXT_PUBLIC_MAINNET_INSURANCE_FUND || '',
-      poolSwapFee: process.env.NEXT_PUBLIC_MAINNET_POOL_SWAP_FEE || '',
       poolPlane: process.env.NEXT_PUBLIC_MAINNET_POOL_PLANE || '',
       liquidityCalc: process.env.NEXT_PUBLIC_MAINNET_LIQUIDITY_CALCULATOR || '',
     },

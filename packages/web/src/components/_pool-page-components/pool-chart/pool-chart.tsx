@@ -45,7 +45,7 @@ type Props = CardProps & {
   subheader?: string;
   color?: string;
   chart: ExplorerChartData;
-  pairInfo?: TokenPairInfo;
+  pairInfo: TokenPairInfo;
   metadata?: PoolMetadata;
   exchangeRate?: ExchangeRateInfo;
   performance?: PerformanceInfo;
@@ -191,13 +191,13 @@ export function PoolChart({
           }}
         >
           <Avatar
-            src={getCryptoIconUrl(pairInfo?.tokenA.name ?? '')}
+            src={pairInfo.tokenA.icon ?? getCryptoIconUrl(pairInfo.tokenA.symbol)}
             alt="Token A"
             sx={{ width: 27, height: 27 }}
           />
 
           <Avatar
-            src={getCryptoIconUrl(pairInfo?.tokenB.name ?? '')}
+            src={pairInfo.tokenB.icon ?? getCryptoIconUrl(pairInfo.tokenB.symbol)}
             alt="Token B"
             sx={{
               width: 27,
@@ -209,9 +209,9 @@ export function PoolChart({
         </Box>
 
         <Typography component="span" color="text.primary" variant="h6" ml={1}>
-          {pairInfo?.tokenA.name}
+          {pairInfo.tokenA.symbol}
           {t('/')}
-          {pairInfo?.tokenB.name}
+          {pairInfo.tokenB.symbol}
         </Typography>
 
         <Box

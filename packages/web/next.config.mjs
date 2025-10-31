@@ -75,8 +75,8 @@ const getPostHogConfig = () => {
     host: isMainnet
       ? process.env.NEXT_PUBLIC_MAINNET_POSTHOG_HOST
       : process.env.NEXT_PUBLIC_TESTNET_POSTHOG_HOST,
-    envId: isMainnet ? process.env.MAINNET_POSTHOG_ENV_ID : process.env.TESTNET_POSTHOG_ENV_ID,
-    apiKey: isMainnet ? process.env.MAINNET_POSTHOG_API_KEY : process.env.TESTNET_POSTHOG_API_KEY,
+    envId: isMainnet ? process.env.POSTHOG_MAINNET_ENV_ID : process.env.POSTHOG_TESTNET_ENV_ID,
+    apiKey: isMainnet ? process.env.POSTHOG_MAINNET_API_KEY : process.env.POSTHOG_TESTNET_API_KEY,
   };
 };
 
@@ -91,7 +91,7 @@ const getPostHogProjectName = () => {
   }
 
   return (
-    posthogConfig.projectName || (network === 'mainnet' ? 'Normal - mainnet' : 'Normal - Testnet')
+    posthogConfig.projectName || (network === 'mainnet' ? 'Normal - Mainnet' : 'Normal - Testnet')
   );
 };
 

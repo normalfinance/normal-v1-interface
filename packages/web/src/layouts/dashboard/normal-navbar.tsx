@@ -82,7 +82,7 @@ export type NormalNavbarProps = React.ComponentPropsWithoutRef<'section'> & Part
 
 export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   const { t } = useTranslate();
-  const { logo, links = [], buttons = [], searchbar, language, account } = props;
+  const { links = [], searchbar, language, account } = props;
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
@@ -116,7 +116,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const toggleMobile = () => setMobileOpen((p) => !p);
-  const closeMobile = () => setMobileOpen(false);
+  // const closeMobile = () => setMobileOpen(false);
 
   // eslint-disable-next-line consistent-return
   useEffect(() => {
@@ -150,9 +150,9 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
 
   const lineStyle: React.CSSProperties = {
     display: 'block',
-    width: '1.5rem',
+    width: '1.0rem',
     height: 2,
-    margin: '3px 0',
+    margin: '2px 0',
     backgroundColor: 'currentColor',
     borderRadius: 9999,
   };
@@ -192,8 +192,8 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
             aria-label={mobileOpen ? t('Close menu') : t('Open menu')}
             sx={{
               display: { xs: 'inline-flex', lg: 'none' },
-              width: 48,
-              height: 48,
+              width: 32,
+              height: 32,
               p: 0,
               color: 'text.primary',
             }}
@@ -226,7 +226,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           }}
         >
           <Box sx={{ width: '100%', maxWidth: 320, mx: 'auto' }}>
-            <Searchbar data={navData} />
+            <Searchbar />
           </Box>
         </Box>
 
@@ -656,10 +656,21 @@ function MobileMega({
   searchbar?: React.ReactNode;
 }) {
   const { t: tMobile } = useTranslate();
+  const href = megaMenu.button.href;
+  const isExternal = !!href && /^https?:\/\//i.test(href);
+  const btnDefaults = {
+    component: megaMenu.button.component ?? (href ? 'a' : undefined),
+    target: megaMenu.button.target ?? (isExternal ? '_blank' : undefined),
+    rel:
+      megaMenu.button.rel ??
+      ((megaMenu.button.target ?? (isExternal ? '_blank' : '')) === '_blank'
+        ? 'noopener noreferrer'
+        : undefined),
+  };
   return (
     <Box sx={{ py: 0 }}>
       <Box sx={{ width: '100%', mb: 4 }}>
-        <Searchbar data={navData} />
+        <Searchbar />
       </Box>
 
       <Box
@@ -855,22 +866,45 @@ function MobileMega({
             </a>
           ))}
         </Box>
+        <Box sx={{ mt: 2 }}>
+          <Button
+            {...btnDefaults}
+            {...megaMenu.button}
+            fullWidth
+            sx={{
+              bgcolor: '#2b2b2b',
+              color: '#fff',
+              justifyContent: 'center',
+              textAlign: 'center',
+              fontWeight: 500,
+              borderRadius: 1.5,
+              py: 3,
+              '&:hover': {
+                bgcolor: '#1f1f1f',
+              },
+            }}
+          >
+            {tMobile(megaMenu.button.title)}
+          </Button>
+        </Box>
       </Box>
     </Box>
   );
 }
 
 const topLineVariants = {
-  open: { translateY: 8, transition: { delay: 0.1 } },
+  open: { translateY: 6, transition: { delay: 0.1 } },
   rotatePhase: { rotate: -45, transition: { delay: 0.2 } },
   closed: { translateY: 0, rotate: 0, transition: { duration: 0.2 } },
 };
+
 const middleLineVariants = {
   open: { width: 0, transition: { duration: 0.1 } },
-  closed: { width: '1.5rem', transition: { delay: 0.3, duration: 0.2 } },
+  closed: { width: '1.0rem', transition: { delay: 0.3, duration: 0.2 } },
 };
+
 const bottomLineVariants = {
-  open: { translateY: -8, transition: { delay: 0.1 } },
+  open: { translateY: -6, transition: { delay: 0.1 } },
   rotatePhase: { rotate: 45, transition: { delay: 0.2 } },
   closed: { translateY: 0, rotate: 0, transition: { duration: 0.2 } },
 };

@@ -5,10 +5,7 @@
 import type { Activity } from '@/types/activity';
 
 import { useTranslate } from '@/locales';
-import { ago } from '@/utils/format-time';
-import { fShortenNumber } from '@/utils/format-number';
-import { shortenAddress } from '@/utils/format-address';
-import { getCryptoIconUrl } from '@normalfinance/utils';
+import { format, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -19,15 +16,15 @@ import Typography from '@mui/material/Typography';
 /* ------------------------------------------------------------------ */
 /* Split avatar helper                                                */
 /* ------------------------------------------------------------------ */
-function SplitAvatar({ left, right }: { left: string; right: string }) {
+export function SplitAvatar({ left, right }: { left: string; right: string }) {
   return (
     <Box sx={{ width: 32, height: 32, position: 'relative' }}>
       <Avatar
-        src={getCryptoIconUrl(left)}
+        src={left ?? getCryptoIconUrl(left)}
         sx={{ width: 32, height: 32, position: 'absolute', clipPath: 'inset(0 16px 0 0)' }}
       />
       <Avatar
-        src={getCryptoIconUrl(right)}
+        src={right ?? getCryptoIconUrl(right)}
         sx={{ width: 32, height: 32, position: 'absolute', clipPath: 'inset(0 0 0 16px)' }}
       />
     </Box>
@@ -40,8 +37,7 @@ function SplitAvatar({ left, right }: { left: string; right: string }) {
 export function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslate();
 
-  const time = ago(activity.timestamp / 1000);
-  // new Date(activity.timestamp).toLocaleTimeString();
+  const time = format.ago(activity.timestamp / 1000);
 
   /* ---------- derive icon + sentence ---------------------------- */
   let icon: React.ReactNode;
@@ -49,9 +45,9 @@ export function ActivityRow({ activity }: { activity: Activity }) {
 
   switch (activity.type) {
     case 'Sent':
-    case 'Received': {
+    case 'Receive': {
       const {
-        token: { address, symbol, amount, iconUrl },
+        token: { symbol, amount, iconUrl },
         address: otherAddress, // <— comes from the activity, not asset
         type,
       } = activity;
@@ -62,29 +58,22 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       const preposition = type === 'Sent' ? 'to' : 'from';
 
       // Sent / Received use fShortenNumber; others use fCurrencyCompact
-      sentence = `${fShortenNumber(amount)} ${symbol} ${preposition} ${shortenAddress(otherAddress)}`;
+      sentence = `${amount} ${symbol} ${preposition} ${format.shortenAddress(otherAddress)}`;
 
-      break;
-    }
-    case 'Stake':
-    case 'Unstake': {
-      const { symbol, amount, iconUrl } = activity.token;
-      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${fShortenNumber(amount)} ${symbol}`;
       break;
     }
     case 'Add Liquidity':
     case 'Remove Liquidity': {
-      const { symbol, amount } = activity.tokenB;
-      icon = <Avatar src={getCryptoIconUrl(activity.asset)} sx={{ width: 32, height: 32 }} />;
-      sentence = `${fShortenNumber(amount)} ${symbol}`;
+      const { tokenA, tokenB } = activity;
+      icon = <SplitAvatar left={tokenA.iconUrl} right={tokenB.iconUrl} />;
+      sentence = `${tokenA.amount} ${tokenA.symbol} and ${tokenB.amount} ${tokenB.symbol}`;
       break;
     }
-    case 'Swapped': {
+    case 'Swap': {
       const { sell, buy } = activity;
 
-      icon = <SplitAvatar left={sell.symbol} right={buy.symbol} />;
-      sentence = `${fShortenNumber(sell.amount)} ${sell.symbol} for ${fShortenNumber(buy.amount)} ${buy.symbol}`;
+      icon = <SplitAvatar left={sell.iconUrl} right={buy.iconUrl} />;
+      sentence = `${sell.amount} ${sell.symbol} for ${buy.amount} ${buy.symbol}`;
       break;
     }
     default:

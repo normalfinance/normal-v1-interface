@@ -7,7 +7,7 @@ import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/event
 import { BigNumber } from 'bignumber.js';
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
-import { constants, parseEvent } from '@normalfinance/utils';
+import { logger, constants, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ type GetSwapVolumeParams =
   | undefined
   | {
       since?: Date;
-      asset?: string;
+      poolAddress?: string;
     };
 
 // windows (in ms) for each timeframe
@@ -52,15 +52,15 @@ export function useSwapVolume(): ReturnType {
 
   const getSwapVolume = useCallback(
     async (params?: GetSwapVolumeParams): Promise<SwapVolumeStats> => {
-      const { asset, since } = params ?? {};
+      const { poolAddress, since } = params ?? {};
 
       setError(null);
       setLoading(true);
 
       // Build topics filter
       let topicsPattern = '%swap%';
-      if (asset && String(asset).trim()) {
-        topicsPattern += `%${String(asset).trim()}%`;
+      if (poolAddress && String(poolAddress).trim()) {
+        topicsPattern += `%${String(poolAddress).trim()}%`;
       }
 
       // Map timeframe to a Date
@@ -118,7 +118,7 @@ export function useSwapVolume(): ReturnType {
 
       if (e) {
         setError(e as any);
-        console.error('Error fetching swap volume:', e);
+        logger.error('Error fetching swap volume:', e);
         return emptyStats();
       } else {
         const rows = data as GoldskyTableRow[];
@@ -162,10 +162,9 @@ export function useSwapVolume(): ReturnType {
               r.transaction_hash
             ) as events.RouterSwapEvent;
 
-            const buying = parsedEvent.direction === 'Buy';
             const inAmt = parsedEvent.inAmount;
-            const outAmt = parsedEvent.outAmount;
-            const amount = buying ? inAmt : outAmt;
+            // const outAmt = parsedEvent.outAmount;
+            const amount = inAmt;
 
             // Increment every applicable timeframe bucket
             for (const key of keysToCompute) {

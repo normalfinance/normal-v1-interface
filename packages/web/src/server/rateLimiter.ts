@@ -1,6 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
-import { constants } from '@normalfinance/utils';
+import { logger, constants } from '@normalfinance/utils';
 
 function getUpstashConfig() {
   const network = constants.getCurrentNetwork();
@@ -8,23 +8,23 @@ function getUpstashConfig() {
   switch (network) {
     case 'testnet':
       return {
-        url: process.env.TESTNET_UPSTASH_REDIS_REST_URL!,
-        token: process.env.TESTNET_UPSTASH_REDIS_REST_TOKEN!,
+        url: process.env.UPSTASH_REDIS_TESTNET_REST_URL!,
+        token: process.env.UPSTASH_REDIS_TESTNET_REST_TOKEN!,
       };
     case 'mainnet':
       return {
-        url: process.env.MAINNET_UPSTASH_REDIS_REST_URL!,
-        token: process.env.MAINNET_UPSTASH_REDIS_REST_TOKEN!,
+        url: process.env.UPSTASH_REDIS_MAINNET_REST_URL!,
+        token: process.env.UPSTASH_REDIS_MAINNET_REST_TOKEN!,
       };
     default:
       return {
-        url: process.env.TESTNET_UPSTASH_REDIS_REST_URL!,
-        token: process.env.TESTNET_UPSTASH_REDIS_REST_TOKEN!,
+        url: process.env.UPSTASH_REDIS_TESTNET_REST_URL!,
+        token: process.env.UPSTASH_REDIS_TESTNET_REST_TOKEN!,
       };
   }
 }
 
-console.log('getUpstashConfig', getUpstashConfig());
+logger.log('getUpstashConfig', getUpstashConfig());
 
 // Create a Redis client from your .env
 const redis = new Redis(getUpstashConfig());

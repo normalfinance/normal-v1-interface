@@ -1,7 +1,7 @@
 import { Horizon } from '@stellar/stellar-sdk';
 import { AppStorePersist } from '@normalfinance/types';
 import { usePersistStore } from '../store';
-import { constants } from '@normalfinance/utils';
+import { constants, logger } from '@normalfinance/utils';
 
 
 export const createConnectWalletActions = () => {
@@ -16,7 +16,7 @@ export const createConnectWalletActions = () => {
     // This function stores wallet connection details after the Stellar Wallets Kit
     // has already handled the connection process
     connectWallet: async (walletAddress: string, walletType?: string) => {
-      console.log('[WALLET ACTIONS] Storing wallet connection details:', { walletAddress, walletType });
+      logger.log('[WALLET ACTIONS] Storing wallet connection details:', { walletAddress, walletType });
       
       // Get the network details
       const network = (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET' 
@@ -45,14 +45,14 @@ export const createConnectWalletActions = () => {
         },
       }));
 
-      console.log('[WALLET ACTIONS] Wallet state updated successfully');
+      logger.log('[WALLET ACTIONS] Wallet state updated successfully');
 
       // Check invite code status for this wallet address
       try {
         const persistStore = usePersistStore.getState();
         await persistStore.checkWalletInviteStatus(walletAddress);
       } catch (error) {
-        console.error('Error checking wallet invite status:', error);
+        logger.error('Error checking wallet invite status:', error);
       }
 
       return;

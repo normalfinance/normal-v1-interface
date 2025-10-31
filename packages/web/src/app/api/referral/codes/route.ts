@@ -33,7 +33,7 @@ async function createReferralHandler(request: NextRequest) {
       );
     }
 
-    const { referrerWalletAddress, customCode, source, campaign } = validation.data;
+    const { referrerWalletAddress, customCode } = validation.data;
 
     // Get Edge Config for rate limiting
     const rateLimitConfig = await getRateLimitConfig('referral-codes');
@@ -116,7 +116,6 @@ async function getReferralHandler(request: NextRequest) {
     }
 
     // Get Edge Config for rate limiting
-    const rateLimitConfig = await getRateLimitConfig('referral-codes');
     const apiConfig = await getApiConfig('referral-codes');
 
     // Get client IP address

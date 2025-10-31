@@ -1,7 +1,7 @@
 'use client';
 
 import type { Activity } from '@/types/activity';
-import type { events } from '@normalfinance/types';
+import type { events, TokenState } from '@normalfinance/types';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
@@ -9,7 +9,13 @@ import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { format, constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
+import {
+  format,
+  constants,
+  parseEvent,
+  getCryptoIconUrl,
+  sortTokenAddreses,
+} from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -24,7 +30,10 @@ interface ReturnType {
 const server = new rpc.Server(constants.StellarConfig.RPC_URL);
 
 export function useUserActivity(): ReturnType {
-  const store = usePersistStore();
+  const {
+    wallet,
+    tokenState: { tokensByAddress },
+  } = usePersistStore();
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +41,7 @@ export function useUserActivity(): ReturnType {
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
 
   useEffect(() => {
-    const userAddress = store.wallet.address;
+    const userAddress = wallet.address;
 
     if (!userAddress) return;
 
@@ -73,7 +82,7 @@ export function useUserActivity(): ReturnType {
                   parsedEvent.timestamp = tx.createdAt * 1000;
                 }
 
-                return parseEventToActivity(r.id, parsedEvent);
+                return parseEventToActivity(r.transaction_hash, parsedEvent, tokensByAddress);
               })
           )
         );
@@ -109,7 +118,11 @@ export function useUserActivity(): ReturnType {
               parsed.timestamp = tx.createdAt * 1000;
             }
 
-            const activityParsed = parseEventToActivity(payload.new.id, parsed);
+            const activityParsed = await parseEventToActivity(
+              transaction_hash,
+              parsed,
+              tokensByAddress
+            );
 
             if (activityParsed) setRecentActivity((prev) => [activityParsed, ...prev]);
           }
@@ -121,7 +134,7 @@ export function useUserActivity(): ReturnType {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [store.wallet.address]);
+  }, [wallet.address]);
 
   return {
     error,
@@ -130,72 +143,82 @@ export function useUserActivity(): ReturnType {
   };
 }
 
-function parseEventToActivity(id: string, event: events.UserActivityEvent): Activity | null {
+async function parseEventToActivity(
+  id: string,
+  event: events.UserActivityEvent,
+  tokensByAddress: TokenState['tokensByAddress']
+): Promise<Activity | null> {
   switch (event.type) {
     case 'swap': {
-      const buy = event.direction == 'Buy';
-      const normalTokenSymbol = format.formatNormalToken(event.asset, 'with-n');
+      const tokenIn = tokensByAddress[event.tokenIn];
+      const tokenOut = tokensByAddress[event.tokenOut];
+
       return {
         id,
-        type: 'Swapped',
+        type: 'Swap',
         timestamp: event.timestamp ?? 0,
-        asset: normalTokenSymbol,
         sell: {
-          address: buy ? constants.StellarConfig.XLM_ADDRESS : event.pool,
-          symbol: buy ? 'XLM' : normalTokenSymbol,
-          iconUrl: getCryptoIconUrl(buy ? 'XLM' : normalTokenSymbol),
-          amount: Number(format.formatTokenAmount(event.inAmount.toString())),
+          address: event.tokenIn,
+          symbol: tokenIn.symbol,
+          iconUrl: tokenIn.icon ?? getCryptoIconUrl(tokenIn.symbol),
+          amount: Number(format.fTokenAmount(event.inAmount.toString())),
         },
         buy: {
-          address: buy ? event.pool : constants.StellarConfig.XLM_ADDRESS,
-          symbol: buy ? normalTokenSymbol : 'XLM',
-          iconUrl: getCryptoIconUrl(buy ? normalTokenSymbol : 'XLM'),
-          amount: Number(format.formatTokenAmount(event.outAmount.toString())),
+          address: event.tokenOut,
+          symbol: tokenOut.symbol,
+          iconUrl: tokenOut.icon ?? getCryptoIconUrl(tokenOut.symbol),
+          amount: Number(format.fTokenAmount(event.outAmount.toString())),
         },
       };
     }
-    case 'deposit_liquidity':
+    case 'deposit': {
+      const { idx: tokenIdx } = sortTokenAddreses(event.tokens[0], event.tokens[1]);
+      const tokenA = tokensByAddress[event.tokens[tokenIdx.a]];
+      const tokenB = tokensByAddress[event.tokens[tokenIdx.b]];
+
       return {
         id,
         type: 'Add Liquidity',
         timestamp: event.timestamp ?? 0,
-        asset: format.formatNormalToken(event.asset, 'with-n'),
+        tokenA: {
+          address: tokenA.contract,
+          symbol: tokenA.symbol,
+          iconUrl: tokenA.icon ?? getCryptoIconUrl(tokenA.symbol),
+          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.a].toString())),
+        },
         tokenB: {
-          address: constants.StellarConfig.XLM_ADDRESS,
-          symbol: 'XLM',
-          iconUrl: getCryptoIconUrl('XLM'),
-          amount: Number(format.formatTokenAmount(event.amount.toString())),
+          address: tokenB.contract,
+          symbol: tokenB.symbol,
+          iconUrl: tokenB.icon ?? getCryptoIconUrl(tokenB.symbol),
+          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.b].toString())),
         },
       };
-    case 'withdraw_liquidity':
+    }
+
+    case 'withdraw': {
+      const { idx: tokenIdx } = sortTokenAddreses(event.tokens[0], event.tokens[1]);
+      const tokenA = tokensByAddress[event.tokens[tokenIdx.a]];
+      const tokenB = tokensByAddress[event.tokens[tokenIdx.b]];
+
       return {
         id,
         type: 'Remove Liquidity',
         timestamp: event.timestamp ?? 0,
-        asset: format.formatNormalToken(event.asset, 'with-n'),
+        tokenA: {
+          address: tokenA.contract,
+          symbol: tokenA.symbol,
+          iconUrl: tokenA.icon ?? getCryptoIconUrl(tokenA.symbol),
+          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.a].toString())),
+        },
         tokenB: {
-          address: constants.StellarConfig.XLM_ADDRESS,
-          symbol: 'XLM',
-          iconUrl: getCryptoIconUrl('XLM'),
-          amount: Number(format.formatTokenAmount(event.amount.toString())),
+          address: tokenB.contract,
+          symbol: tokenB.symbol,
+          iconUrl: tokenB.icon ?? getCryptoIconUrl(tokenB.symbol),
+          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.b].toString())),
         },
       };
-    case 'insurance_stake_record': {
-      if (event.action == 'stake' || event.action == 'unstake') {
-        return {
-          id,
-          type: event.action == 'stake' ? 'Stake' : 'Unstake',
-          timestamp: event.timestamp ?? 0,
-          token: {
-            address: constants.StellarConfig.XLM_ADDRESS,
-            symbol: 'XLM',
-            iconUrl: getCryptoIconUrl('XLM'),
-            amount: Number(format.formatTokenAmount(event.amount.toString())),
-          },
-        };
-      }
-      return null;
     }
+
     default:
       return null;
   }

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
-import { createTrustline } from '@normalfinance/utils';
+import { logger, createTrustline } from '@normalfinance/utils';
 
 import { useStellarWalletsKit } from '../use-stellar-wallets-kit';
 
@@ -47,14 +47,14 @@ export function useTrustLine(): ReturnType {
           throw new Error('No wallet connected');
         }
 
-        console.log('[TRUSTLINE] Creating trustline for:', assetCode, 'with issuer:', assetIssuer);
+        logger.log('[TRUSTLINE] Creating trustline for:', assetCode, 'with issuer:', assetIssuer);
 
         await createTrustline(walletAddress, assetCode, assetIssuer, signTransaction);
 
-        console.log('[TRUSTLINE] Trustline created successfully');
+        logger.log('[TRUSTLINE] Trustline created successfully');
         setTrustlineButtonActive(false);
       } catch (e: any) {
-        console.error('[TRUSTLINE] Error creating trustline:', e);
+        logger.error('[TRUSTLINE] Error creating trustline:', e);
         setError(e);
       }
 

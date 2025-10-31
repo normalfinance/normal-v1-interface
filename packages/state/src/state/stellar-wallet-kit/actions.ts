@@ -1,6 +1,7 @@
 import { GetState, SetState } from 'zustand';
 import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit';
 import type { ISupportedWallet } from '@creit.tech/stellar-wallets-kit';
+import { logger } from '@normalfinance/utils';
 import {
   HANA_ID,
   XBULL_ID,
@@ -85,7 +86,7 @@ export function createStellarWalletKitActions(
 
       set({ kit, isInitialized: true });
     } catch (error) {
-      console.error('Failed to initialize wallet kit:', error);
+      logger.error('Failed to initialize wallet kit:', error);
       set({ isInitialized: false });
     }
   };
@@ -128,53 +129,61 @@ export function createStellarWalletKitActions(
               let walletType: string = 'stellar-wallets-kit';
               switch (wallet.id) {
                 case HANA_ID:
-                  walletType = 'hana-stellar-kit';
+                  walletType = 'hana';
                   break;
                 case XBULL_ID:
-                  walletType = 'xbull-stellar-kit';
+                  walletType = 'xbull';
                   break;
                 case FREIGHTER_ID:
-                  walletType = 'freighter-stellar-kit';
+                  walletType = 'freighter';
                   break;
                 case LOBSTR_ID:
-                  walletType = 'lobstr-stellar-kit';
+                  walletType = 'lobstr';
                   break;
                 case WALLET_CONNECT_ID:
-                  walletType = 'wallet-connect-stellar-kit';
+                  walletType = 'wallet-connect';
                   break;
                 case LEDGER_ID:
-                  walletType = 'ledger-stellar-kit';
+                  walletType = 'ledger';
                   break;
                 default:
                   walletType = 'stellar-wallets-kit';
                   break;
               }
 
-              try {
-                await kit.signMessage('Welcome to Normal Finance', {
-                  networkPassphrase:
-                    process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
-                      ? Networks.PUBLIC
-                      : Networks.TESTNET,
-                  address: address.address,
-                });
-              } catch (signError) {
-                console.error('Signature rejected or failed:', signError);
-                enqueueSnackbar('Please sign the message to connect your wallet.', {
-                  variant: 'error',
-                  autoHideDuration: 5000,
-                });
-                set({
-                  publicKey: null,
-                  isConnected: false,
-                  selectedWallet: null,
-                });
-                reject(
-                  new Error(
-                    'Wallet connection requires signature verification. Please sign the message to proceed.'
-                  )
+              const walletsWithoutMessageSigning = [LOBSTR_ID];
+
+              if (!walletsWithoutMessageSigning.includes(wallet.id)) {
+                try {
+                  await kit.signMessage('Welcome to Normal', {
+                    networkPassphrase:
+                      process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
+                        ? Networks.PUBLIC
+                        : Networks.TESTNET,
+                    address: address.address,
+                  });
+                } catch (signError) {
+                  logger.error('Signature rejected or failed:', signError);
+                  enqueueSnackbar('Please sign the message to connect your wallet.', {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                  });
+                  set({
+                    publicKey: null,
+                    isConnected: false,
+                    selectedWallet: null,
+                  });
+                  reject(
+                    new Error(
+                      'Wallet connection requires signature verification. Please sign the message to proceed.'
+                    )
+                  );
+                  return;
+                }
+              } else {
+                logger.info(
+                  `Skipping message signing for ${wallet.id} as it doesn't support signMessage`
                 );
-                return;
               }
 
               if (persistStore?.connectWallet) {
@@ -252,7 +261,7 @@ export function createStellarWalletKitActions(
         await kit.disconnect();
       }
     } catch (error) {
-      console.error('Error disconnecting wallet:', error);
+      logger.error('Error disconnecting wallet:', error);
     }
 
     set({
