@@ -1,11 +1,11 @@
-import BigNumber from 'bignumber.js';
+import { BigNumber } from 'bignumber.js';
 
 // Token BigNumber to human redeable
 // With a tokens set number of decimals, display the formatted value for an amount.
 // Returns a string
 // Example - User A has 1000000001 of a token set to 7 decimals,
 // display should be 100.0000001
-export const formatTokenAmount = (
+export const fTokenAmount = (
   amount: BigNumber | string | number | bigint,
   decimals: number = 7
 ): string => {

@@ -2,7 +2,7 @@
 
 import type { PoolPosition } from '@/hooks';
 import type { Activity } from '@/types/activity';
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import { useState } from 'react';
 import { paths } from '@/routes/paths';
@@ -24,8 +24,8 @@ import { Iconify } from '@/components/template/iconify';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
+import PositionsTab from './positions-tab';
 import ReceiveModal from '../receive-modal';
-import PositioinsTab from './positions-tab';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
@@ -54,10 +54,6 @@ export default function ConnectedWallet({
       label: 'Send',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => {
-        // trackEvent('button_clicked', {
-        //   label: 'Manage Stake',
-        //   location: 'Insurance',
-        // });
         router.push(`${paths.swap}?tab=send`);
       },
     },
@@ -65,10 +61,6 @@ export default function ConnectedWallet({
       label: 'Receive',
       icon: 'mingcute:add-line',
       onClick: () => {
-        // trackEvent('button_clicked', {
-        //   label: 'Manage Stake',
-        //   location: 'Insurance',
-        // });
         setShowReceiveModal(true);
       },
     },
@@ -213,22 +205,15 @@ export default function ConnectedWallet({
       </CustomTabsSwapSend>
 
       {/* ------- tab panels ---------------------------------------- */}
-      {tabs.value === 'tokens' && <TokensTab tokens={tokens?.filter((tkn) => tkn.balance > 0)} />}
-      {tabs.value === 'positions' && (
-        <PositioinsTab
-          positions={positions ?? []}
-          xlmPrice={BigNumber(tokens?.find((tkn) => tkn.symbol === 'XLM')?.usdValue || 0)}
-        />
+      {tabs.value === 'tokens' && (
+        <TokensTab tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0))} />
       )}
+      {tabs.value === 'positions' && <PositionsTab positions={positions ?? []} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
 
       <ReceiveModal
         open={showReceiveModal}
         onClose={() => {
-          // trackEvent('button_clicked', {
-          //   label: 'Learn more',
-          //   location: 'Home',
-          // });
           setShowReceiveModal(false);
         }}
       />

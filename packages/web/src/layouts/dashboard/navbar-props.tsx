@@ -86,15 +86,6 @@ export const NormalNavbarDefaults: Props = {
             title: 'Safety & Rewards',
             links: [
               {
-                url: paths.insurance,
-                image: {
-                  src: cdn('nav/insurance.svg'),
-                  alt: 'Insurance',
-                },
-                title: 'Insurance',
-                description: 'Protect your positions.',
-              },
-              {
                 url: paths.rewards,
                 image: {
                   src: cdn('nav/rewards.svg'),

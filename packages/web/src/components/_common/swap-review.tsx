@@ -1,6 +1,7 @@
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import React from 'react';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
@@ -162,7 +163,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {buyAmount.toFixed(4)} {buyToken?.symbol}
+                  {buyAmount.toFixed(8)} {buyToken?.symbol}
                 </Typography>
                 <Typography
                   variant="body1"
@@ -178,7 +179,9 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                     minWidth: 0,
                   }}
                 >
-                  {buyToken ? fCurrencyTwoDecimals(buyToken.usdValue * buyAmount) : ''}
+                  {buyToken
+                    ? fCurrencyTwoDecimals(BigNumber(buyToken.price).multipliedBy(buyAmount))
+                    : ''}
                 </Typography>
               </Box>
 

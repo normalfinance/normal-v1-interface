@@ -1,14 +1,14 @@
 'use client';
 
+import type { Token } from '@normalfinance/types';
 import type { SwapQueryParams } from '@/types/query-params';
-import type { StateToken as Token } from '@normalfinance/types';
 
 import { useEffect } from 'react';
 import { cdn } from '@/utils/cdn';
 import { Icon } from '@iconify/react';
 import { logger } from '@normalfinance/utils';
-import { useAppStore } from '@normalfinance/state';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import AnimatedDevFeature2 from '@/components/ui/animated-dev-feature';
 import AnimatedPoolsFeature from '@/components/ui/animated-pools-feature';
@@ -24,47 +24,59 @@ import type { SmallCard } from './features-grid';
 
 export const tokens: Token[] = [
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'Bitcoin',
     symbol: 'BTC',
     icon: cdn('tokens/bitcoin.webp'),
-    usdValue: 67600.18,
+    price: '67600.18',
     percentageChange: 2.45435,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'Ethereum',
     symbol: 'ETH',
     icon: cdn('tokens/ethereum.webp'),
-    usdValue: 3150,
+    price: '3150',
     percentageChange: 1.1,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'Solana',
     symbol: 'SOL',
     icon: cdn('tokens/solana.webp'),
-    usdValue: 141,
+    price: '141',
     percentageChange: -0.8,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'XRP',
     symbol: 'XRP',
     icon: cdn('tokens/xrp.webp'),
-    usdValue: 0.48,
+    price: '0.48',
     percentageChange: 0.5,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
 ];
@@ -110,14 +122,15 @@ export const featureCardWide = {
 export default function LandingPage() {
   const { params } = useQueryParams<SwapQueryParams>();
 
-  const { getAllTokens, setGlobalIsLoading } = useAppStore();
+  const { setGlobalIsLoading } = useAppStore();
+  const { getAllTokens, getAllPools } = usePersistStore();
 
-  // Effect hook to fetch all tokens once the component mounts
+  // Effect hook to fetch all tokens and pools once the component mounts
   useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
+    const refreshData = async (): Promise<void> => {
       setGlobalIsLoading(true);
       try {
-        await getAllTokens();
+        await Promise.all([await getAllTokens(), await getAllPools()]);
         setGlobalIsLoading(false);
       } catch (e) {
         logger.error(e);
@@ -125,7 +138,7 @@ export default function LandingPage() {
         setGlobalIsLoading(false);
       }
     };
-    refreshTokens();
+    refreshData();
   }, []);
 
   return (

@@ -8,15 +8,13 @@ export const metadata: Metadata = {
     default: 'Contact | Normal',
     template: '%s · Normal',
   },
-  description:
-    'Reach out to the Normal Finance team for questions, support, or partnership inquiries.',
+  description: 'Reach out to the Normal team for questions, support, or partnership inquiries.',
   alternates: {
     canonical: '/contact',
   },
   openGraph: {
     title: 'Contact | Normal',
-    description:
-      'Reach out to the Normal Finance team for questions, support, or partnership inquiries.',
+    description: 'Reach out to the Normal team for questions, support, or partnership inquiries.',
     url: `${CONFIG.siteUrl}/contact`,
     siteName: 'Normal',
     images: [
@@ -24,7 +22,7 @@ export const metadata: Metadata = {
         url: '/og/home.png',
         width: 1200,
         height: 630,
-        alt: 'Normal Finance – Contact',
+        alt: 'Normal – Contact',
       },
     ],
     locale: 'en_US',
@@ -33,8 +31,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Contact | Normal',
-    description:
-      'Reach out to the Normal Finance team for questions, support, or partnership inquiries.',
+    description: 'Reach out to the Normal team for questions, support, or partnership inquiries.',
     images: ['/og/home.png'],
   },
   robots: {

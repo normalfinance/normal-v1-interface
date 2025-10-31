@@ -38,7 +38,7 @@ const DEFAULT_PROPS = {
   testimonials: [
     {
       quote:
-        '"Whether you’re new to crypto or a long standing investor I would highly recommend checking out Normal Finance. Through Normal’s investment indexes, you have the opportunity to invest in many components within the market, as well as still zeroing in on individual crypto’s should choose that direction."',
+        '"Whether you’re new to crypto or a long standing investor I would highly recommend checking out Normal. Through Normal’s investment indexes, you have the opportunity to invest in many components within the market, as well as still zeroing in on individual crypto’s should choose that direction."',
       avatar: { src: cdn('testimonials/4.webp') },
       name: 'Dr. McGuire',
       position: 'Doctor of Education (Ed. D.)',

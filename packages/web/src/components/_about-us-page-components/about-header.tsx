@@ -93,7 +93,7 @@ export const AboutHeader: React.FC = () => {
           <Grid2 size={{ xs: 12, md: 5 }}>
             <Typography variant="body1" color="grey.700">
               {t(
-                'At Normal Finance, our mission is to make crypto normal—giving everyone friction‑free exposure to the entire digital‑asset ecosystem.'
+                'At Normal, our mission is to make crypto normal—giving everyone friction‑free exposure to the entire digital‑asset ecosystem.'
               )}
             </Typography>
             <Stack direction="row" gap={2} mt={4}>

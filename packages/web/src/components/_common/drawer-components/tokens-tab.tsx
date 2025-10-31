@@ -1,7 +1,8 @@
 'use client';
 
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { varAlpha } from 'minimal-shared/utils';
 import { getCryptoIconUrl } from '@normalfinance/utils';
@@ -9,7 +10,7 @@ import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
-import { Stack, Button, Typography } from '@mui/material';
+import { Stack, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 
@@ -21,38 +22,18 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
-  const handleRequestAsset = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
-    window.open('https://forms.fillout.com/t/tQuo1BRFJeus', '_blank', 'noopener');
-  };
-
   return (
     <Box sx={{ p: 2, pt: 0 }}>
-      <Button
-        fullWidth
-        variant="soft"
-        color="info"
-        size="large"
-        startIcon={<Iconify icon="eva:question-mark-circle-outline" />}
-        onClick={handleRequestAsset}
-        sx={{ mb: 2 }}
-      >
-        {t("Don't see a token? Request it!")}
-      </Button>
-
       {tokens.length > 0 ? (
         [...tokens]
           .sort((a, b) => {
             const aBal = a.balance;
             const bBal = b.balance;
-            return bBal - aBal;
+            return BigNumber(bBal).minus(aBal).toNumber();
           })
           .map((token) => (
-            <Button
-              key={token.id}
+            <Box
+              key={token.contract}
               sx={{
                 display: 'flex',
                 padding: '16px 0px',
@@ -84,7 +65,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                     variant="body2"
                     sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                   >
-                    {token.balance}
+                    {BigNumber(token.balance).toFixed(token.decimals)}
                   </Typography>
                   <Typography
                     variant="body2"
@@ -112,7 +93,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                       variant="body2"
                       sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                     >
-                      {fCurrency(token.usdValue * token.balance)}
+                      {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
                     </Typography>
                     <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                       <Box
@@ -170,7 +151,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                   </Box>
                 </Box>
               </Box>
-            </Button>
+            </Box>
           ))
       ) : (
         <Typography>{t('No tokens found.')}</Typography>

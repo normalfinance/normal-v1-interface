@@ -1,4 +1,4 @@
-import type { Token } from './token';
+import { Token } from '../state';
 
 export type WeightingStrategyType = 'MARKET_CAP' | 'EQUAL' | 'CUSTOM';
 

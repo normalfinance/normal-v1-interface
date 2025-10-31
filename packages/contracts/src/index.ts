@@ -1,19 +1,21 @@
-import * as InsuranceFundContract from './insurance_fund'
+import * as ConfigStorageContract from './config_storage'
 import * as LiquidityCalculatorContract from './liquidity_calculator'
-import * as LpTokenContract from './lp_token'
-import * as OracleRegistryContract from './oracle_registry'
 import * as PoolContract from './pool'
+import * as PoolElasticContract from './pool_elastic'
+import * as PoolPlaneContract from './pool_plane'
 import * as PoolRouterContract from './pool_router'
-import * as PoolSwapFeeContract from './pool_swap_fee'
+import * as RewardsGaugeContract from './rewards_gauge'
 import * as SorobanTokenContract from './soroban_token_contract'
+import * as TokenShareContract from './token_share'
 
 export {
-  InsuranceFundContract,
+  ConfigStorageContract,
   LiquidityCalculatorContract,
-  LpTokenContract,
-  OracleRegistryContract,
   PoolContract,
+  PoolElasticContract,
+  PoolPlaneContract,
   PoolRouterContract,
-  PoolSwapFeeContract,
+  RewardsGaugeContract,
   SorobanTokenContract,
+  TokenShareContract,
 }

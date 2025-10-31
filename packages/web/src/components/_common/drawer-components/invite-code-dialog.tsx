@@ -96,7 +96,7 @@ export default function InviteCodeDialog({ open, walletAddress, onClose }: Invit
       <DialogContent dividers>
         {success ? (
           <Alert severity="success" sx={{ mb: 2 }}>
-            🎉 {t('Welcome to the Normal Finance testnet! Access granted.')}
+            🎉 {t('Welcome to the Normal testnet! Access granted.')}
           </Alert>
         ) : (
           <>

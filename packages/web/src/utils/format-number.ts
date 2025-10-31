@@ -1,4 +1,3 @@
-import { logger } from '@normalfinance/utils';
 import { formatNumberLocale } from '@/locales';
 
 // ----------------------------------------------------------------------
@@ -8,7 +7,7 @@ import { formatNumberLocale } from '@/locales';
  * https://gist.github.com/raushankrjha/d1c7e35cf87e69aa8b4208a8171a8416
  */
 
-export type InputNumberValue = string | number | null | undefined;
+export type InputNumberValue = BigNumber | string | number | null | undefined;
 
 type Options = Intl.NumberFormatOptions;
 
@@ -157,60 +156,60 @@ export function fCurrencyCompact(inputValue: InputNumberValue, options?: Options
 // ----------------------------------------------------------------------
 // 6) Format on-chain token balances (BigInt → human-readable)
 // ----------------------------------------------------------------------
-export function fTokenAmount(
-  rawAmount: bigint | string | number | null | undefined,
-  decimals = 18,
-  { maxFractionDigits = 4 }: { maxFractionDigits?: number } = {}
-): string {
-  if (rawAmount == null) return '';
+// export function fTokenAmount(
+//   rawAmount: BigNumber | bigint | string | number | null | undefined,
+//   decimals = 7,
+//   { maxFractionDigits = 4 }: { maxFractionDigits?: number } = {}
+// ): string {
+//   if (rawAmount == null) return '';
 
-  // --- 1. Canonical BigInt ----------------------------
-  let value: bigint;
-  try {
-    value = BigInt(rawAmount);
-  } catch (err) {
-    logger.error('fTokenAmount › invalid value:', rawAmount);
-    return '';
-  }
+//   // --- 1. Canonical BigInt ----------------------------
+//   let value: bigint;
+//   try {
+//     value = BigInt(rawAmount);
+//   } catch (err) {
+//     logger.error('fTokenAmount › invalid value:', rawAmount);
+//     return '';
+//   }
 
-  const ZERO = BigInt(0);
-  const ONE = BigInt(1);
-  const TEN = BigInt(10);
+//   const ZERO = BigInt(0);
+//   const ONE = BigInt(1);
+//   const TEN = BigInt(10);
 
-  const negative = value < ZERO;
-  if (negative) value = -value;
+//   const negative = value < ZERO;
+//   if (negative) value = -value;
 
-  // --- 2. Split integer / fractional parts ------------
-  let divisor = ONE;
-  for (let i = 0; i < decimals; i += 1) divisor *= TEN; // 10 ** decimals
+//   // --- 2. Split integer / fractional parts ------------
+//   let divisor = ONE;
+//   for (let i = 0; i < decimals; i += 1) divisor *= TEN; // 10 ** decimals
 
-  const integerPart = value / divisor;
-  const fractionPart = value % divisor;
+//   const integerPart = value / divisor;
+//   const fractionPart = value % divisor;
 
-  // pad → "0000123", trim trailing zeros
-  let fractionStr = fractionPart.toString().padStart(decimals, '0').replace(/0+$/, '');
+//   // pad → "0000123", trim trailing zeros
+//   let fractionStr = fractionPart.toString().padStart(decimals, '0').replace(/0+$/, '');
 
-  if (maxFractionDigits >= 0) {
-    fractionStr = fractionStr.slice(0, maxFractionDigits);
-  }
+//   if (maxFractionDigits >= 0) {
+//     fractionStr = fractionStr.slice(0, maxFractionDigits);
+//   }
 
-  // --- 3. Add locale thousands separators -------------
-  const locale = formatNumberLocale() ?? DEFAULT_LOCALE;
-  const localeCode = locale.code ?? 'en-US'; // <-- now always a string
+//   // --- 3. Add locale thousands separators -------------
+//   const locale = formatNumberLocale() ?? DEFAULT_LOCALE;
+//   const localeCode = locale.code ?? 'en-US'; // <-- now always a string
 
-  const integerStr =
-    integerPart <= BigInt(Number.MAX_SAFE_INTEGER)
-      ? new Intl.NumberFormat(localeCode, { maximumFractionDigits: 0 }).format(Number(integerPart))
-      : integerPart
-          .toString()
-          .replace(/\B(?=(\d{3})+(?!\d))/g, localeCode.startsWith('en') ? ',' : '.');
+//   const integerStr =
+//     integerPart <= BigInt(Number.MAX_SAFE_INTEGER)
+//       ? new Intl.NumberFormat(localeCode, { maximumFractionDigits: 0 }).format(Number(integerPart))
+//       : integerPart
+//           .toString()
+//           .replace(/\B(?=(\d{3})+(?!\d))/g, localeCode.startsWith('en') ? ',' : '.');
 
-  let result = integerStr;
-  if (fractionStr) result += `.${fractionStr}`;
-  if (negative) result = `-${result}`;
+//   let result = integerStr;
+//   if (fractionStr) result += `.${fractionStr}`;
+//   if (negative) result = `-${result}`;
 
-  return result;
-}
+//   return result;
+// }
 
 // 7) Parse a human string -> raw bigint for contract calls
 //    "10,000.5" with decimals=6   -> 10000500000n

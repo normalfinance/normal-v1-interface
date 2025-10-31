@@ -1,9 +1,9 @@
 'use client';
 
+import type { Token } from '@normalfinance/types';
+
 import { paths } from '@/routes/paths';
-import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
-import { format } from '@normalfinance/utils';
 import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Stack from '@mui/material/Stack';
@@ -22,11 +22,13 @@ export interface ExplorePoolsRow {
   tokenAName: string;
   tokenBName: string;
   fee: number;
-  tvl: number;
+  tvl: string;
   apr: number;
-  volume1d: number;
-  volume30d: number;
-  ratio: number;
+  volume1d: string;
+  volume30d: string;
+  ratio: string;
+  tokenA: Token;
+  tokenB: Token;
 }
 
 type Props = {
@@ -37,19 +39,15 @@ type Props = {
 /* ------------------------------------------------------------------ */
 
 export function ExplorePoolsTableRow({ row, index }: Props) {
-  const { t } = useTranslate();
-
   const router = useRouter();
 
-  const normalTokenSymbol = format.formatNormalToken(row.tokenAName, 'with-n');
-
-  const onClickRow = () => router.push(paths.pools.details(normalTokenSymbol));
+  const onClickRow = () => router.push(paths.pools.details(row.address));
 
   return (
     <TableRow
       hover
       sx={{ cursor: 'pointer' }}
-      onClick={() => router.push(paths.pools.details(normalTokenSymbol))}
+      onClick={onClickRow}
       data-testid={`explore-pools-table-row-${index}`}
     >
       {/* Rank (#) ---------------------------------------------------- */}
@@ -58,7 +56,9 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       {/* Name + symbol + avatar ------------------------------------ */}
       <TableCell sx={{ minWidth: 160 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          <PoolTokensAvatarGroup tokenAName={row.tokenAName} tokenBName={row.tokenBName} />
+          {row.tokenA && row.tokenB && (
+            <PoolTokensAvatarGroup tokenA={row.tokenA} tokenB={row.tokenB} />
+          )}
           <Stack>
             <Typography variant="subtitle2">{`${row.tokenAName} / ${row.tokenBName}`}</Typography>
           </Stack>

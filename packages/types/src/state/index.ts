@@ -8,3 +8,4 @@ export * from './error';
 export * from './referral';
 export * from './invite-code';
 export * from './pool';
+export * from './token';

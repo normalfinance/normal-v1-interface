@@ -1,6 +1,6 @@
 'use client';
 
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import * as React from 'react';
 import { paths } from '@/routes/paths';
@@ -208,7 +208,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                       fontWeight={500}
                       sx={{ fontSize: { xs: 14, md: 20 }, color: 'text.primary' }}
                     >
-                      {fCurrency(tkn.usdValue)}
+                      {fCurrency(tkn.price.toString())}
                     </Typography>
 
                     <Box

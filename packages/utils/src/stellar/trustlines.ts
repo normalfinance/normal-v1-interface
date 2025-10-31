@@ -49,7 +49,6 @@ export async function checkTrustline(publicKey: string, assetCode: string, asset
   const balances = account.balances;
 
   // Check if trustline exists
-
   const trustlineExists = balances.some((a) => {
     const hasIssuer = 'asset_issuer' in a;
     const hasCode = 'asset_code' in a;

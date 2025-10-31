@@ -1,6 +1,6 @@
 'use client';
 
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
 import React from 'react';
 import { cdn } from '@/utils/cdn';
@@ -77,47 +77,59 @@ export const VisionDefaults: Props = {
 
 export const tokens: Token[] = [
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'Bitcoin',
     symbol: 'BTC',
     icon: cdn('about-page/btc-flat.svg'),
-    usdValue: 67600.18,
+    price: '67600.18',
     percentageChange: 2.45435,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'Ethereum',
     symbol: 'ETH',
     icon: cdn('about-page/eth-flat.svg'),
-    usdValue: 3150,
+    price: '3150',
     percentageChange: 1.1,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'XRP',
     symbol: 'XRP',
     icon: cdn('about-page/xrp-flat.svg'),
-    usdValue: 0.48,
+    price: '0.48',
     percentageChange: 0.5,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
   {
-    id: '<insert_pool_address>',
+    contract: '<insert_pool_address>',
+    issuer: '',
+    org: 'Normal',
+    domain: 'normalfinance.io',
     name: 'Cardano',
     symbol: 'ADA',
     icon: cdn('about-page/ada-flat.svg'),
-    usdValue: 0.32,
+    price: '0.32',
     percentageChange: -0.8,
     decimals: 7,
-    balance: 0,
+    balance: '0',
     featured: false,
   },
 ];

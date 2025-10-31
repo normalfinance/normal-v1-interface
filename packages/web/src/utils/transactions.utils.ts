@@ -21,8 +21,8 @@ export const getTransactionMessages = (details: TransactionDetails) => {
       };
     case TransactionType.DEPOSIT_LIQUIDITY:
       return {
-        loading: `Depositing ${token1?.amount} ${token1?.name}...`,
-        success: `Successfully deposited ${token1?.amount} ${token1?.name}.`,
+        loading: `Depositing ${token1?.amount} ${token1?.name} and ${token2?.amount} ${token2?.name}...`,
+        success: `Successfully deposited ${token1?.amount} ${token1?.name} and ${token2?.amount} ${token2?.name}.`,
         error: `Failed to deposit ${token1?.name}.`,
       };
     case TransactionType.REMOVE_LIQUIDITY:

@@ -57,7 +57,6 @@
   },
   "packageManager": "yarn@3.6.4",
   "dependencies": {
-    "@coinbase/cdp-sdk": "^1.38.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/figtree": "^5.2.8",

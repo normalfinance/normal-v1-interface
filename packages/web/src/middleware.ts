@@ -374,7 +374,6 @@ export const config = {
   matcher: [
     '/explore',
     '/swap',
-    '/insurance',
     '/rewards',
     '/positions',
     '/positions/create',

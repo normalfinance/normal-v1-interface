@@ -1,8 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
-import { getCdpBearerToken } from '@/utils/coinbase-auth';
+import { logger, getCdpBearerToken } from '@normalfinance/utils';
 
 export async function POST(req: NextRequest) {
   try {
