@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.2...v1.0.3) (2025-10-31)
+
+
+### Bug Fixes
+
+* remove build blocking util and other unused code ([a413249](https://github.com/normalfinance/normal-v1-interface/commit/a4132497ff0979e69d825bb38357da16fadc95ee))
+
 ## [1.0.2](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.1...v1.0.2) (2025-10-31)
 
 
