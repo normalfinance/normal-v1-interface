@@ -27,7 +27,6 @@ const nextConfig = {
   },
   experimental: {
     // reactCompiler: true, // <-- remove/gate this on Next 14
-    runtime: 'nodejs',
     turbo: {
       resolveAlias: {
         '@normalfinance/types': '../types/src',

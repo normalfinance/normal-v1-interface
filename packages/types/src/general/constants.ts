@@ -1,8 +1,5 @@
-import { Account } from '@stellar/stellar-sdk';
-
 export interface NetworkConfig {
   // network
-  TESTING_SOURCE: Account;
   NETWORK_PASSPHRASE: string;
   HORIZON_URL: string;
   RPC_URL: string;
