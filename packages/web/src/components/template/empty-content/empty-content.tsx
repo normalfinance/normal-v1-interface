@@ -2,12 +2,12 @@ import type { BoxProps } from '@mui/material/Box';
 import type { Theme, SxProps } from '@mui/material/styles';
 import type { TypographyProps } from '@mui/material/Typography';
 
+import { cdn } from '@normalfinance/utils';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 import { styled } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
-import { cdn } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
