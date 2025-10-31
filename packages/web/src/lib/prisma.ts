@@ -7,13 +7,13 @@ const globalForPrisma = globalThis as unknown as {
 
 const getDatabaseUrl = () =>
   constants.getNetworkConfig(
-    process.env.DATABASE_URL!,
+    process.env.DATABASE_TESTNET_URL!,
     process.env.DATABASE_MAINNET_URL || process.env.DATABASE_URL!
   );
 
 const getDirectUrl = () =>
   constants.getNetworkConfig(
-    process.env.DIRECT_URL,
+    process.env.DIRECT_TESTNET_URL,
     process.env.DIRECT_MAINNET_URL || process.env.DIRECT_URL
   );
 
