@@ -86,11 +86,11 @@ const getPostHogProjectName = () => {
   const branch = process.env.VERCEL_GIT_BRANCH;
 
   if (branch === 'develop') {
-    return 'Normal - Development';
+    return 'Normal_Development';
   }
 
   return (
-    posthogConfig.projectName || (network === 'mainnet' ? 'Normal - Mainnet' : 'Normal - Testnet')
+    posthogConfig.projectName || (network === 'mainnet' ? 'Normal_Mainnet' : 'Normal_Testnet')
   );
 };
 
