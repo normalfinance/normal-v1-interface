@@ -1,3 +1,10 @@
+## [1.0.8](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.7...v1.0.8) (2025-10-31)
+
+
+### Bug Fixes
+
+* turbo env vars ([eb8c8b4](https://github.com/normalfinance/normal-v1-interface/commit/eb8c8b40272861096ae8d22c2ce7840cabede25c))
+
 ## [1.0.7](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.6...v1.0.7) (2025-10-31)
 
 
