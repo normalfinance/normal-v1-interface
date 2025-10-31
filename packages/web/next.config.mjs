@@ -46,7 +46,6 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      { source: '/.well-known/stellar.toml', destination: '/api/stellar' },
       {
         source: '/ingest/static/:path*',
         destination: 'https://us-assets.i.posthog.com/static/:path*',
