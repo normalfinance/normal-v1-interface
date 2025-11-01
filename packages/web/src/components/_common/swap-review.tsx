@@ -134,7 +134,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={sellToken ? getCryptoIconUrl(sellToken.symbol) : ''}
+                src={sellToken ? (sellToken.icon ?? getCryptoIconUrl(sellToken.symbol)) : ''}
                 sx={{
                   width: 40,
                   height: 40,
@@ -187,7 +187,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={buyToken ? getCryptoIconUrl(buyToken.symbol) : ''}
+                src={buyToken ? (buyToken.icon ?? getCryptoIconUrl(buyToken.symbol)) : ''}
                 sx={{
                   width: 40,
                   height: 40,
