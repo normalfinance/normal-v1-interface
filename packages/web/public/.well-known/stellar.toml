@@ -40,7 +40,7 @@ twitter = "justinbenjaminn"
 # Synthetics
 [[CURRENCIES]]
 code = "nBTC"
-issuer = "GBPH7PWUDCTRDTC2GIEKSLINSNE754FGO26RIX5B7F6DDRNLG6MKOTDW"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Bitcoin"
@@ -49,7 +49,7 @@ image = "https://cdn.normalapi.com/tokens/normal/nBTC.webp"
 
 [[CURRENCIES]]
 code = "nETH"
-issuer = "GBPH7PWUDCTRDTC2GIEKSLINSNE754FGO26RIX5B7F6DDRNLG6MKOTDW"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Ethereum"
@@ -58,7 +58,7 @@ image = "https://cdn.normalapi.com/tokens/normal/nETH.webp"
 
 [[CURRENCIES]]
 code = "nSOL"
-issuer = "GBPH7PWUDCTRDTC2GIEKSLINSNE754FGO26RIX5B7F6DDRNLG6MKOTDW"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
 is_asset_anchored = false
 display_decimals = 7
 name = "Normal Solana"
