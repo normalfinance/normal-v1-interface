@@ -6,7 +6,6 @@ export * from './ui';
 export * from './analytics';
 export * from './network';
 export { logger } from './logger';
-export * from './address-validator';
 export * from './helpers';
 export * from './cdn';
 

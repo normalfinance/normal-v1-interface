@@ -46,7 +46,6 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      { source: '/.well-known/stellar.toml', destination: '/api/stellar' },
       {
         source: '/ingest/static/:path*',
         destination: 'https://us-assets.i.posthog.com/static/:path*',
@@ -87,11 +86,11 @@ const getPostHogProjectName = () => {
   const branch = process.env.VERCEL_GIT_BRANCH;
 
   if (branch === 'develop') {
-    return 'Normal - Development';
+    return 'Normal_Development';
   }
 
   return (
-    posthogConfig.projectName || (network === 'mainnet' ? 'Normal - Mainnet' : 'Normal - Testnet')
+    posthogConfig.projectName || (network === 'mainnet' ? 'Normal_Mainnet' : 'Normal_Testnet')
   );
 };
 

@@ -119,3 +119,17 @@ export async function logWithConfig(level: 'info' | 'warn' | 'error', message: s
     console[level](message, data);
   }
 }
+
+export function createNodeConfigHandler(
+  handler: (req: NextRequest) => Promise<NextResponse>,
+  name: string
+) {
+  return async (req: NextRequest) => {
+    try {
+      return await handler(req);
+    } catch (error) {
+      console.error(`[${name}] Node handler error:`, error);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+  };
+}
