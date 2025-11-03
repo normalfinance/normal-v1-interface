@@ -2,11 +2,11 @@ import { useTranslate } from '@/locales';
 import { fPercent } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
+import { Chip } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
-import { Chip } from '@mui/material';
 
 // ----------------------------------------------------------------------
 

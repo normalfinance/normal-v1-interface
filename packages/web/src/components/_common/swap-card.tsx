@@ -3,8 +3,10 @@ import type { Pool, Token } from '@normalfinance/types';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
+import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
 import { useSwap, useTrustLine } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { getConversionText } from '@/utils/conversion-helpers';
@@ -32,8 +34,6 @@ import ReceiveModal from './receive-modal';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-import { useRouter } from 'next/navigation';
-import { paths } from '@/routes/paths';
 
 enum ButtonState {
   SELECT_TOKEN = 'SELECT_TOKEN',
