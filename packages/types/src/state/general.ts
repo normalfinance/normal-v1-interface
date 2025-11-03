@@ -1,15 +1,9 @@
 import { AppStorePersist } from './persist';
-import { Horizon } from '@stellar/stellar-sdk';
 import { WalletActions } from './wallet';
 import { LoadingActions } from './loading';
-import { PoolActions } from './pool';
+import { ModalActions } from './modal';
 
-interface GeneralStore {
-  server: Horizon.Server;
-  networkPassphrase: string;
-}
-
-export type AppStore = WalletActions & GeneralStore & LoadingActions & PoolActions;
+export type AppStore = WalletActions & LoadingActions & ModalActions;
 
 export { AppStorePersist };
 

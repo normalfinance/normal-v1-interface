@@ -7,9 +7,9 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useSwap, useTrustLine } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
-import { usePersistStore } from '@normalfinance/state';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import {
   logger,
@@ -21,20 +21,24 @@ import {
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Button, InputBase, Typography } from '@mui/material';
+import { Box, Alert, Stack, Button, InputBase, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
 import { WalletGate } from './wallet-gate';
+import ReceiveModal from './receive-modal';
 import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
+import { useRouter } from 'next/navigation';
+import { paths } from '@/routes/paths';
 
 enum ButtonState {
   SELECT_TOKEN = 'SELECT_TOKEN',
   ENTER_AMOUNT = 'ENTER_AMOUNT',
+  ZERO_BALANCE = 'ZERO_BALANCE',
   CHECKING_TRUSTLINE = 'CHECKING_TRUSTLINE',
   CREATE_TRUSTLINE = 'CREATE_TRUSTLINE',
   CREATING_TRUSTLINE = 'CREATING_TRUSTLINE',
@@ -55,11 +59,14 @@ interface ButtonConfig {
 interface SwapCardProps extends CardProps {
   swapFeeInfo?: SwapFeeInfo;
   queryParams?: SwapQueryParams;
+  changeTab?: React.Dispatch<React.SetStateAction<false | 'swap' | 'send' | 'buy'>>;
 }
 
-const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
+const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+
+  const router = useRouter();
 
   // Using the store
   const {
@@ -68,6 +75,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
     tokenState: { tokens },
     poolState: { poolsByTokens },
   } = usePersistStore();
+
+  const { modalState, setModalView } = useAppStore();
 
   const { publicKey } = useStellarWalletsKit();
 
@@ -353,6 +362,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
     if (!pool) {
       return ButtonState.NO_POOL_FOUND;
     }
+    if (!tokens.some((tkn) => tkn.balance != '0')) {
+      return ButtonState.ZERO_BALANCE;
+    }
     if (checkingTrustline) {
       return ButtonState.CHECKING_TRUSTLINE;
     }
@@ -390,6 +402,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
         label: 'Enter an amount',
         disabled: true,
         action: () => {},
+      },
+      [ButtonState.ZERO_BALANCE]: {
+        label: 'Fund your account',
+        disabled: true,
+        action: () => {},
+        color: 'error' as const,
       },
       [ButtonState.CHECKING_TRUSTLINE]: {
         label: 'Checking trustline...',
@@ -933,26 +951,65 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, ...other }) => {
           const buttonConfig = getButtonConfig(buttonState);
 
           return (
-            <Button
-              fullWidth
-              variant={buttonConfig.variant || 'contained'}
-              size="large"
-              onClick={handleMainButtonClick}
-              disabled={buttonConfig.disabled}
-              color={buttonConfig.color}
-              sx={{
-                backgroundColor:
-                  buttonConfig.color === 'error' ? undefined : 'rgba(148,123,255,0.29)',
-                color: buttonConfig.color === 'error' ? undefined : '#6E4BFF',
-                '&:hover': {
+            <>
+              <Button
+                fullWidth
+                variant={buttonConfig.variant || 'contained'}
+                size="large"
+                onClick={handleMainButtonClick}
+                disabled={buttonConfig.disabled}
+                color={buttonConfig.color}
+                sx={{
                   backgroundColor:
-                    buttonConfig.color === 'error' ? undefined : 'rgba(148,123,255,0.20)',
-                },
-                borderRadius: '20px',
-              }}
-            >
-              {buttonConfig.label}
-            </Button>
+                    buttonConfig.color === 'error' ? undefined : 'rgba(148,123,255,0.29)',
+                  color: buttonConfig.color === 'error' ? undefined : '#6E4BFF',
+                  '&:hover': {
+                    backgroundColor:
+                      buttonConfig.color === 'error' ? undefined : 'rgba(148,123,255,0.20)',
+                  },
+                  borderRadius: '20px',
+                  mt: 2,
+                }}
+              >
+                {buttonConfig.label}
+              </Button>
+              {buttonState === ButtonState.ZERO_BALANCE && (
+                <>
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    {t(
+                      'You must fund your wallet with XLM before investing. Please deposit or buy XLM below.'
+                    )}
+                  </Alert>
+                  <Stack direction="row" spacing={1} width="100%" mt={2}>
+                    <Button
+                      fullWidth
+                      variant="soft"
+                      color="info"
+                      onClick={() => setModalView('receive', true)}
+                    >
+                      {t('Deposit')}
+                    </Button>
+                    <Button
+                      fullWidth
+                      variant="soft"
+                      color="success"
+                      onClick={() => {
+                        if (changeTab) changeTab('buy');
+                        else router.push(`${paths.swap}?tab=buy`);
+                      }}
+                    >
+                      {t('Buy')}
+                    </Button>
+                  </Stack>
+                </>
+              )}
+              <ReceiveModal
+                open={modalState.receive}
+                onClose={() => {
+                  setModalView('receive', false);
+                }}
+              />
+            </>
           );
         })()
       ) : (

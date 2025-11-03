@@ -114,7 +114,11 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
       case 'swap':
         return (
           <Box data-testid="swap-card" sx={{ position: 'relative' }}>
-            <SwapCard swapFeeInfo={swapFeeInfo} queryParams={queryParams} />
+            <SwapCard
+              swapFeeInfo={swapFeeInfo}
+              queryParams={queryParams}
+              changeTab={tabs.setValue}
+            />
           </Box>
         );
       case 'send':
@@ -124,6 +128,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
             networkCost={0}
             queryParams={queryParams}
             data-testid="send-card"
+            changeTab={tabs.setValue}
           />
         );
       case 'buy':
@@ -133,6 +138,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
             cashBalance={cashBalance}
             queryParams={queryParams}
             data-testid="buy-card"
+            changeTab={tabs.setValue}
           />
         );
       default:

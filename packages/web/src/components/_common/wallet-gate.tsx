@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
-import { usePersistStore } from '@normalfinance/state';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import { Button } from '@mui/material';
@@ -38,12 +38,12 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
-  const [showTos, setShowTos] = useState(false);
+  const { modalState, setModalView } = useAppStore();
 
   /** Handle connecting wallet - show Stellar Wallets Kit popup OR ToS */
   const handleConnectClick = async () => {
     if (disclaimerVersion < CURRENT_TOS_VERSION) {
-      setShowTos(true);
+      setModalView('disclaimer', true);
       return;
     }
 
@@ -72,7 +72,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
 
   /** Called when ToS dialog closes */
   const handleTosClose = async () => {
-    setShowTos(false);
+    setModalView('disclaimer', false);
 
     // Check if user accepted ToS, then connect wallet
     const latestVersion = usePersistStore.getState().disclaimer.version;
@@ -96,7 +96,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
       >
         {t(buttonText)}
       </Button>
-      <TermsOfServiceDialog open={showTos} onClose={handleTosClose} />
+      <TermsOfServiceDialog open={modalState.disclaimer} onClose={handleTosClose} />
     </>
   );
 };
