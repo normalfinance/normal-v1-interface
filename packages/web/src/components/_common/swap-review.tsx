@@ -4,8 +4,8 @@ import React from 'react';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fCurrencyTwoDecimals } from '@/utils/format-number';
 import { getSwapConversionText } from '@/utils/conversion-helpers';
+import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -308,8 +308,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         {t('Fee')}&nbsp;
                         <Box component="span">
                           {t('(')}
-                          {feePercentage}
-                          {t('%)')}
+                          {fPercent(feePercentage / 10000)}
+                          {t(')')}
                         </Box>{' '}
                       </Typography>
                       <Iconify
@@ -327,7 +327,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fCurrencyTwoDecimals(sellFiatValue * (Number(feePercentage) / 100))}
+                      {fCurrencyTwoDecimals((sellFiatValue * feePercentage) / 10000)}
                     </Typography>
                   </Box>
 
