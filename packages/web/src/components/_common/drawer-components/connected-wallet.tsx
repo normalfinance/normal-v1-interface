@@ -4,13 +4,13 @@ import type { PoolPosition } from '@/hooks';
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
-import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
+import { useAppStore } from '@normalfinance/state';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -47,7 +47,8 @@ export default function ConnectedWallet({
   const { t } = useTranslate();
   const theme = useTheme();
   const router = useRouter();
-  const [showReceiveModal, setShowReceiveModal] = useState(false);
+
+  const { modalState, setModalView } = useAppStore();
 
   const actionButtons = [
     {
@@ -61,7 +62,7 @@ export default function ConnectedWallet({
       label: 'Receive',
       icon: 'mingcute:add-line',
       onClick: () => {
-        setShowReceiveModal(true);
+        setModalView('receive', true);
       },
     },
   ];
@@ -212,9 +213,9 @@ export default function ConnectedWallet({
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
 
       <ReceiveModal
-        open={showReceiveModal}
+        open={modalState.receive}
         onClose={() => {
-          setShowReceiveModal(false);
+          setModalView('receive', false);
         }}
       />
     </Stack>

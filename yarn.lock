@@ -19559,13 +19559,13 @@ __metadata:
   linkType: hard
 
 "ripple-binary-codec@npm:^2.5.0":
-  version: 2.5.1
-  resolution: "ripple-binary-codec@npm:2.5.1"
+  version: 2.5.0
+  resolution: "ripple-binary-codec@npm:2.5.0"
   dependencies:
     "@xrplf/isomorphic": ^1.0.1
     bignumber.js: ^9.0.0
     ripple-address-codec: ^5.0.0
-  checksum: 6df2dccfcda1b98dd657870a48aa892c0bdb71f726ec2e741224e6638beae31bde813f0ade7ea91f92800f9eeece7644c01772d5b85b20ef925ad1514700abde
+  checksum: 755b6e6b1cfbc55312bb87c2481a58bd2fe4b5640d3b42d300e2af122d2ea3a0086658d272f64817291a4dd0c38b7bb6d34ea56b19ec2a985fe38365cc80905b
   languageName: node
   linkType: hard
 
@@ -21481,8 +21481,8 @@ __metadata:
   linkType: hard
 
 "tsx@npm:^4.20.4":
-  version: 4.20.6
-  resolution: "tsx@npm:4.20.6"
+  version: 4.20.5
+  resolution: "tsx@npm:4.20.5"
   dependencies:
     esbuild: ~0.25.0
     fsevents: ~2.3.3
@@ -21492,7 +21492,7 @@ __metadata:
       optional: true
   bin:
     tsx: dist/cli.mjs
-  checksum: d514bea59ec58fe7746271dd287b52e6e482a2236dd486d2fbf2eab11810ad2bc37e064210580824ce1c91a3e1ddd952499e6f48055e087abff5472468ac0d7b
+  checksum: f7d3716075e3dc858ecd8b6760e860d55074606a182029fcba7cc7341c3631bfb2a0a9e1d1b10bd8c2f411bf4b50c498c443dbe4a83ec83b1464b049c51c380b
   languageName: node
   linkType: hard
 

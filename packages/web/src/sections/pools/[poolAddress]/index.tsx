@@ -18,7 +18,9 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const validContractAddress = isValidContractAddress(poolAddress);
 
   const { setGlobalIsLoading } = useAppStore();
+
   const {
+    wallet,
     getAllTokens,
     poolState: { pools },
     getAllPools,
@@ -26,19 +28,34 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
 
   // Effect hook to fetch all tokens and pools once the component mounts
   useEffect(() => {
-    const refreshData = async (): Promise<void> => {
-      setGlobalIsLoading(true);
+    const refreshTokens = async (): Promise<void> => {
       try {
-        await Promise.all([await getAllTokens(), await getAllPools()]);
-        setGlobalIsLoading(false);
+        setGlobalIsLoading(true);
+        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }
     };
-    if (validContractAddress) refreshData();
-  }, []);
+    refreshTokens();
+  }, [wallet.address]);
+
+  // Effect hook to fetch all pools once the component mounts
+  useEffect(() => {
+    const refreshPools = async (): Promise<void> => {
+      try {
+        setGlobalIsLoading(true);
+        await getAllPools();
+      } catch (e) {
+        logger.error(e);
+      } finally {
+        setGlobalIsLoading(false);
+      }
+    };
+
+    if (poolAddress && validContractAddress) refreshPools();
+  }, [poolAddress, validContractAddress]);
 
   const pool = useMemo(() => {
     if (!validContractAddress) return undefined;

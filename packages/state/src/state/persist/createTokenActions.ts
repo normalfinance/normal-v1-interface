@@ -57,6 +57,7 @@ export const createTokenActions = (): TokenActions => {
   const initialState: TokenState = {
     tokens: [],
     tokensByAddress: {},
+    lastUpdated: 0,
   };
 
   return {
@@ -64,6 +65,18 @@ export const createTokenActions = (): TokenActions => {
 
     getAllTokens: async () => {
       try {
+        const now = Date.now();
+        const lastFetched = usePersistStore.getState().tokenState.lastUpdated;
+        const refreshInterval = 1000 * 60 * 5; // 5 minutes
+
+        const zeroTokenBalance = usePersistStore
+          .getState()
+          .tokenState.tokens.every((tkn) => tkn.balance === '0');
+
+        if (lastFetched && !zeroTokenBalance && now - lastFetched < refreshInterval) {
+          return;
+        }
+
         let tokens: ApiToken[] = [];
 
         // Load 3rd party tokens
@@ -86,6 +99,18 @@ export const createTokenActions = (): TokenActions => {
           : [];
 
         await Promise.all(allTokens);
+
+        usePersistStore.setState((state: AppStorePersist) => {
+          const newState: TokenState = {
+            ...state.tokenState,
+            lastUpdated: now,
+          };
+
+          return {
+            ...state,
+            tokenState: newState,
+          };
+        });
 
         return;
       } catch (error) {
@@ -148,6 +173,7 @@ export const createTokenActions = (): TokenActions => {
           const newState: TokenState = {
             tokens: updatedTokens,
             tokensByAddress: tokensRecord,
+            lastUpdated: state.tokenState.lastUpdated,
           };
 
           return {

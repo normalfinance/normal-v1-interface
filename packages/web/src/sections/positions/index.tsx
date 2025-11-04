@@ -22,15 +22,14 @@ export default function PositionsView() {
 
   const { setGlobalIsLoading } = useAppStore();
 
-  const { getAllTokens, getAllPools } = usePersistStore();
+  const { wallet, getAllTokens, getAllPools } = usePersistStore();
 
-  // Effect hook to fetch all tokens once the component mounts
+  // Effect hook to fetch all tokens and pools once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
-      setGlobalIsLoading(true);
       try {
-        await Promise.all([await getAllTokens(), await getAllPools()]);
-        setGlobalIsLoading(false);
+        setGlobalIsLoading(true);
+        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
@@ -38,6 +37,21 @@ export default function PositionsView() {
       }
     };
     refreshTokens();
+  }, [wallet.address]);
+
+  // Effect hook to fetch all pools once the component mounts
+  useEffect(() => {
+    const refreshPools = async (): Promise<void> => {
+      try {
+        setGlobalIsLoading(true);
+        await getAllPools();
+      } catch (e) {
+        logger.error(e);
+      } finally {
+        setGlobalIsLoading(false);
+      }
+    };
+    refreshPools();
   }, []);
 
   return (

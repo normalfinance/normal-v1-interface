@@ -40,7 +40,7 @@ export function EmptyContent({
       <Box
         component="img"
         alt="Empty content"
-        src={imgUrl ?? cdn('/icons/empty/ic-content.svg')}
+        src={imgUrl ?? cdn('/icons/empty/ic_content.svg')}
         {...slotProps?.img}
         sx={[
           {
