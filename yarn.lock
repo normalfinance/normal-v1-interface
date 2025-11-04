@@ -11186,6 +11186,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dotted-map@npm:^2.2.3":
+  version: 2.2.3
+  resolution: "dotted-map@npm:2.2.3"
+  dependencies:
+    "@turf/boolean-point-in-polygon": ^6.0.1
+    proj4: ^2.6.1
+  checksum: a7104c755750050e24e2a7627291d2fbf18508bcf33955428960571f40f8f43f4879edd95efc85fd84843fb236dc60dec7213558a2ff3a30baa9a3818cafd74e
+  languageName: node
+  linkType: hard
+
 "dunder-proto@npm:^1.0.0, dunder-proto@npm:^1.0.1":
   version: 1.0.1
   resolution: "dunder-proto@npm:1.0.1"

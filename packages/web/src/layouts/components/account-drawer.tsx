@@ -27,7 +27,7 @@ function WalletConnected({ address }: { address: string }) {
   const { setGlobalIsLoading } = useAppStore();
 
   const {
-    tokenState: { tokens, lastUpdated },
+    tokenState: { tokens },
     getAllTokens,
   } = usePersistStore();
 
