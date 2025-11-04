@@ -1,5 +1,5 @@
 import { Horizon } from '@stellar/stellar-sdk';
-import { AppStorePersist, Wallet } from '@normalfinance/types';
+import { AppStorePersist, Token, TokenState, Wallet } from '@normalfinance/types';
 import { usePersistStore } from '../store';
 import { constants, logger } from '@normalfinance/utils';
 
@@ -63,15 +63,36 @@ export const createConnectWalletActions = () => {
     // Disconnect the wallet
     disconnectWallet: () => {
       // Update the state
-      usePersistStore.setState((state: AppStorePersist) => ({
-        ...state,
-        wallet: {
-          address: undefined,
-          activeChain: undefined,
-          server: undefined,
-          walletType: undefined,
-        },
-      }));
+      usePersistStore.setState((state: AppStorePersist) => {
+        const tokensWithoutBalance = state.tokenState.tokens.map((tkn) => ({
+          ...tkn,
+          balance: '0',
+        }));
+
+        const tokensRecord = tokensWithoutBalance.reduce<Record<string, Token>>((acc, token) => {
+          const key = token.contract;
+          if (!acc[key]) acc[key] = token;
+          else acc[key] = token;
+          return acc;
+        }, {});
+
+        const newTokenState: TokenState = {
+          tokens: tokensWithoutBalance,
+          tokensByAddress: tokensRecord,
+          lastUpdated: 0,
+        };
+
+        return {
+          ...state,
+          wallet: {
+            address: undefined,
+            activeChain: undefined,
+            server: undefined,
+            walletType: undefined,
+          },
+          tokenState: newTokenState,
+        };
+      });
     },
   };
 };
