@@ -24,7 +24,7 @@ const LINKS = [
     children: [
       { name: 'Trade', href: paths.swap },
       { name: 'Pools', href: paths.explore },
-      { name: 'Indexes', href: paths.explore },
+      // { name: 'Indexes', href: paths.explore },
       { name: 'Positions', href: paths.positions.root },
     ],
   },

@@ -1,18 +1,12 @@
 import { NetworkConfig } from '@normalfinance/types';
-import { Account, Networks } from '@stellar/stellar-sdk';
 import { getCurrentNetwork } from '../network';
 import { logger } from '../logger';
 
-const RPC_API_KEY = process.env.RPC_API_KEY ?? '';
-
 const TESTNET_CONFIG: NetworkConfig = {
-  // network
-  TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
-  NETWORK_PASSPHRASE: Networks.TESTNET,
+  // network,
+  NETWORK_PASSPHRASE: 'Test SDF Network ; September 2015',
   HORIZON_URL: process.env.NEXT_PUBLIC_TESTNET_HORIZON_URL || 'https://horizon-testnet.stellar.org',
-  RPC_URL: RPC_API_KEY
-    ? `https://testnet.stellar.validationcloud.io/v1/${RPC_API_KEY}`
-    : process.env.NEXT_PUBLIC_TESTNET_RPC_URL || 'https://soroban-testnet.stellar.org',
+  RPC_URL: process.env.NEXT_PUBLIC_TESTNET_RPC_URL || 'https://soroban-testnet.stellar.org',
 
   // accounts
   NORMAL_TOKEN_ISSUER: process.env.NEXT_PUBLIC_TESTNET_TOKEN_ISSUER || '',
@@ -41,8 +35,7 @@ const TESTNET_CONFIG: NetworkConfig = {
 
 const MAINNET_CONFIG: NetworkConfig = {
   // network
-  TESTING_SOURCE: new Account('GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO', '123'),
-  NETWORK_PASSPHRASE: Networks.PUBLIC,
+  NETWORK_PASSPHRASE: 'Public Global Stellar Network ; September 2015',
   HORIZON_URL: process.env.NEXT_PUBLIC_MAINNET_HORIZON_URL || 'https://horizon.stellar.org',
   RPC_URL: process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://rpc.lightsail.network/',
 

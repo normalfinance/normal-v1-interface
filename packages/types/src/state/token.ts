@@ -29,6 +29,7 @@ export type TokenBalancesMap = {
 export interface TokenState {
   tokens: Token[];
   tokensByAddress: Record<string, Token>;
+  lastUpdated: number;
 }
 export interface TokenActions {
   tokenState: TokenState;

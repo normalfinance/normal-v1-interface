@@ -35,6 +35,20 @@ export const isValidContractAddress = (address: string): boolean => {
   }
 };
 
+export const isValidAccountAddress = (address: string): boolean => {
+  if (typeof address !== 'string' || address.length !== 56 || !address.startsWith('G')) {
+    return false;
+  }
+
+  try {
+    // This will throw if the checksum or format is invalid
+    StrKey.decodeEd25519PublicKey(address);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Returns two strings sorted in ascending (lexicographical) order.
  *

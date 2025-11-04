@@ -3,11 +3,10 @@ import {
   Asset,
   Horizon,
   Operation,
-  rpc as SorobanRpc,
   StrKey,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
-import { constants, horizonServer, rpcServer } from '..';
+import { constants } from '..';
 import { logger } from '../logger';
 
 /**
@@ -21,6 +20,10 @@ import { logger } from '../logger';
 export async function fetchAccount(publicKey: string) {
   if (StrKey.isValidEd25519PublicKey(publicKey)) {
     try {
+      const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
+        allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+      });
+
       let account: Horizon.ServerApi.AccountRecord = await horizonServer
         .accounts()
         .accountId(publicKey)
@@ -87,6 +90,9 @@ export async function createTrustline(
 
   // Build transaction
   const stellarAccount = new Account(account.account_id, account.sequence);
+  const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
+    allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+  });
   const transaction = new TransactionBuilder(stellarAccount, {
     fee: await horizonServer.feeStats().then((fs) => fs.fee_charged.p90),
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,

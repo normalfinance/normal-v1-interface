@@ -91,6 +91,11 @@ export function RewardsOverview({
       return;
     }
 
+    if (hasMaxLinks) {
+      setError('Too many referral links');
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
 
@@ -116,6 +121,8 @@ export function RewardsOverview({
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
   };
+
+  const hasMaxLinks = existingReferrals.length >= 1;
 
   return (
     <Stack spacing={3}>
@@ -168,8 +175,7 @@ export function RewardsOverview({
                         .slice(0, 2)
                         .map((referral) => {
                           logger.log(referral, 'referral object');
-                          // const referralLink = `${window.location.origin}?ref=${referral.code}`;
-                          const referralLink = `https://testnet.normal.finance?ref=${referral.code}`;
+                          const referralLink = `${window.location.origin}?ref=${referral.code}`;
                           const isCopied = copied === referral.code;
 
                           return (
@@ -218,32 +224,34 @@ export function RewardsOverview({
                   )}
 
                   {/* Generate Button Section */}
-                  <Stack
-                    spacing={1}
-                    alignItems="center"
-                    sx={{
-                      mt: 'auto',
-                      pt: existingReferrals.length > 0 ? 1 : 0,
-                      borderTop: existingReferrals.length > 0 ? '1px dashed' : 'none',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    <Button
-                      size="small"
-                      variant={existingReferrals.length > 0 ? 'outlined' : 'contained'}
-                      onClick={handleGenerateReferralCode}
-                      disabled={isGenerating || !walletAddress}
-                      startIcon={
-                        isGenerating ? (
-                          <CircularProgress size={16} />
-                        ) : (
-                          <Iconify icon="solar:add-circle-bold" width={16} />
-                        )
-                      }
+                  {!hasMaxLinks && (
+                    <Stack
+                      spacing={1}
+                      alignItems="center"
+                      sx={{
+                        mt: 'auto',
+                        pt: existingReferrals.length > 0 ? 1 : 0,
+                        borderTop: existingReferrals.length > 0 ? '1px dashed' : 'none',
+                        borderColor: 'divider',
+                      }}
                     >
-                      {isGenerating ? t('Generating...') : t('Generate New Link')}
-                    </Button>
-                  </Stack>
+                      <Button
+                        size="small"
+                        variant={existingReferrals.length > 0 ? 'outlined' : 'contained'}
+                        onClick={handleGenerateReferralCode}
+                        disabled={isGenerating || !walletAddress || hasMaxLinks}
+                        startIcon={
+                          isGenerating ? (
+                            <CircularProgress size={16} />
+                          ) : (
+                            <Iconify icon="solar:add-circle-bold" width={16} />
+                          )
+                        }
+                      >
+                        {isGenerating ? t('Generating...') : t('Generate New Link')}
+                      </Button>
+                    </Stack>
+                  )}
                 </Stack>
               )}
             </Paper>

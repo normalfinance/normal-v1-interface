@@ -303,7 +303,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   </Button>
                 ))}
               </Box>
-              {ownedTokens && (
+              {ownedTokens.length > 0 && (
                 <Box sx={{ mt: '12px' }} width="100%">
                   <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <Iconify icon="carbon:skill-level-basic" width={14} />
@@ -426,7 +426,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                 <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <Iconify icon="eva:star-outline" width={14} />
 
-                  <Typography variant="caption">{t('Tokens by 24h')}</Typography>
+                  <Typography variant="caption">{t('All tokens')}</Typography>
                 </Box>
                 <Box
                   sx={{

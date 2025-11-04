@@ -14,7 +14,7 @@ import {
   convertCoinToFiat,
   convertFiatToCoin,
   sanitizeAmountInput,
-  isValidStellarAddress,
+  isValidAccountAddress,
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -29,11 +29,18 @@ interface SendCardProps extends CardProps {
   tokens: Token[];
   networkCost?: number;
   queryParams?: SendQueryParams;
+  changeTab?: React.Dispatch<React.SetStateAction<false | 'swap' | 'send' | 'buy'>>;
 }
 
 const DEFAULT_DESTINATION = 'Wallet address';
 
-const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, ...other }) => {
+const SendCard: React.FC<SendCardProps> = ({
+  tokens,
+  networkCost,
+  queryParams,
+  changeTab,
+  ...other
+}) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
@@ -167,7 +174,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, .
     const label = getButtonLabel();
 
     if (label === 'Send') {
-      if (!isValidStellarAddress(destination)) {
+      if (!isValidAccountAddress(destination)) {
         enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
         return;
       }
@@ -321,7 +328,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, .
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Box
                   component="img"
-                  src={sendToken.icon ? getCryptoIconUrl(sendToken.symbol) : ''}
+                  src={sendToken ? (sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)) : ''}
                   sx={{
                     width: 36,
                     height: 36,

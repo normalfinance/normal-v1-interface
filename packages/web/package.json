@@ -1,6 +1,6 @@
 {
   "name": "@normalfinance/web",
-  "version": "0.1.4",
+  "version": "1.0.9",
   "private": true,
   "scripts": {
     "i18n:extract": "npx i18next-parser && node ./scripts/fix-empty-i18n-values.js",
@@ -37,14 +37,13 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅'",
-    "validate:address": "node ./scripts/validate-address.js",
     "convert:contract": "node ./scripts/convert-contract-address.js",
     "commit": "cz",
     "semantic-release": "semantic-release",
     "test:e2e": "playwright test"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "packageManager": "yarn@1.22.22",
   "dependencies": {
@@ -72,7 +71,6 @@
     "@normalfinance/utils": "workspace:^",
     "@posthog/nextjs-config": "^1.3.0",
     "@prisma/client": "^6.11.1",
-    "@privy-io/react-auth": "^2.17.2",
     "@stellar/stellar-sdk": "14.1.1",
     "@supabase/supabase-js": "^2.51.0",
     "@types/qrcode": "^1.5.5",

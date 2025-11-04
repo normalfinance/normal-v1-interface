@@ -71,6 +71,11 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       {/* TVL ------------------------------------------------------- */}
       <TableCell>{fCurrency(row.tvl)}</TableCell>
 
+      {/* Rewards % ------------------------------------------------------- */}
+      <TableCell>
+        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+      </TableCell>
+
       {/* APR % ------------------------------------------------------- */}
       <TableCell>
         <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />

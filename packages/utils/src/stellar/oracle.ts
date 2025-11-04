@@ -5,6 +5,7 @@ import {
   scValToNative,
   TransactionBuilder,
   Address,
+  Account,
 } from '@stellar/stellar-sdk';
 import { constants } from '..';
 
@@ -13,8 +14,13 @@ export interface PriceData {
   timestamp: number;
 }
 
+const TESTING_SOURCE = new Account(
+  'GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO',
+  '123'
+);
+
 export async function getReflectorExternalPrice(tokenSymbol: string): Promise<PriceData> {
-  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
@@ -49,7 +55,7 @@ export async function getReflectorExternalPrice(tokenSymbol: string): Promise<Pr
 }
 
 export async function getReflectorPubnetPrice(tokenAddress: string): Promise<PriceData> {
-  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
@@ -89,7 +95,7 @@ export async function getReflectorPubnetPrice(tokenAddress: string): Promise<Pri
 export async function getOracleDecimals(
   oracle_id: string
 ): Promise<{ decimals: number; latestLedger: number }> {
-  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,

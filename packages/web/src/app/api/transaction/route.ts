@@ -2,10 +2,12 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
-import { Keypair, Transaction } from '@stellar/stellar-sdk';
-import { logger, constants, rpcServer } from '@normalfinance/utils';
+import { logger, constants } from '@normalfinance/utils';
+import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
-import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
+import { logWithConfig, createNodeConfigHandler } from '@/lib/edge-config-middleware';
+
+export const runtime = 'nodejs';
 
 async function transactionHandler(req: NextRequest) {
   try {
@@ -110,9 +112,9 @@ async function transactionHandler(req: NextRequest) {
 
     // Execute the contract transaction server-side
     try {
-      // const server = new rpc.Server(constants.StellarConfig.RPC_URL, {
-      //   allowHttp: process.env.NODE_ENV === 'development',
-      // });
+      const rpcServer = new rpc.Server(constants.StellarConfig.RPC_URL, {
+        allowHttp: constants.StellarConfig.RPC_URL.startsWith('http://'),
+      });
 
       logger.log('[Transaction API] Stellar Server: ', rpcServer);
 
@@ -158,4 +160,5 @@ async function transactionHandler(req: NextRequest) {
   }
 }
 
-export const POST = createEdgeConfigHandler(transactionHandler, 'transaction');
+// export const POST = createEdgeConfigHandler(transactionHandler, 'transaction');
+export const POST = createNodeConfigHandler(transactionHandler, 'transaction');
