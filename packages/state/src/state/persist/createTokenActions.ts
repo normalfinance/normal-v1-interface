@@ -69,7 +69,11 @@ export const createTokenActions = (): TokenActions => {
         const lastFetched = usePersistStore.getState().tokenState.lastUpdated;
         const refreshInterval = 1000 * 60 * 5; // 5 minutes
 
-        if (lastFetched && now - lastFetched < refreshInterval) {
+        const zeroTokenBalance = usePersistStore
+          .getState()
+          .tokenState.tokens.every((tkn) => tkn.balance === '0');
+
+        if (lastFetched && !zeroTokenBalance && now - lastFetched < refreshInterval) {
           return;
         }
 
