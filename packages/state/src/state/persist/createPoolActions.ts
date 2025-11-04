@@ -39,6 +39,7 @@ export function createPoolActions(): PoolActions {
 
     pools: [],
     poolsByTokens: {},
+    lastUpdated: 0,
   };
 
   const PoolRouter = new PoolRouterContract.Client({
@@ -52,6 +53,14 @@ export function createPoolActions(): PoolActions {
 
     getAllPools: async () => {
       try {
+        const now = Date.now();
+        const lastFetched = usePersistStore.getState().poolState.lastUpdated;
+        const refreshInterval = 1000 * 60 * 5; // 5 minutes
+
+        if (lastFetched && now - lastFetched < refreshInterval) {
+          return;
+        }
+
         const tokensSetsCountResponse = await PoolRouter.get_tokens_sets_count();
 
         const tokensSetsEnd =
@@ -183,6 +192,7 @@ export function createPoolActions(): PoolActions {
           error: null,
           pools: poolsFiltered,
           poolsByTokens,
+          lastUpdated: now,
         };
 
         // Update the state
