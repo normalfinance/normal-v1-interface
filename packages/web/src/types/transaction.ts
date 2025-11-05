@@ -6,10 +6,6 @@ export enum TransactionType {
   REMOVE_LIQUIDITY = 'Remove Liquidity',
   CLAIM_REWARD = 'Claim Reward',
   CLAIM_FEES = 'Claim Fees',
-  STAKE = 'Stake',
-  REQUEST_UNSTAKE = 'Request Unstake',
-  CANCEL_REQUEST_UNSTAKE = 'Cancel Request Unstake',
-  UNSTAKE = 'Unstake',
 }
 
 interface BaseTransactionDetails {

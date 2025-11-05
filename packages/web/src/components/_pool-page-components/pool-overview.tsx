@@ -1,10 +1,10 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
+import type BigNumber from 'bignumber.js';
 import type { Token } from '@normalfinance/types';
 import type { CardProps } from '@mui/material/Card';
 
 import { useState } from 'react';
-import BigNumber from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
@@ -26,6 +26,7 @@ import SwapCard from '../_common/swap-card';
 // ── Prop types ---------------------------------------------------------
 
 export interface PoolBalance {
+  address: string;
   tokenSymbol: string;
   amount: BigNumber;
   fiatValue: BigNumber;
@@ -82,10 +83,7 @@ export function PoolOverview({
     },
   ];
 
-  const [balA, balB] = poolBalances || [
-    { tokenSymbol: '', amount: BigNumber(0), value: BigNumber(0) },
-    { tokenSymbol: '', amount: BigNumber(0), value: BigNumber(0) },
-  ];
+  const [balA, balB] = poolBalances;
   const totalFiatValue = balA.fiatValue.plus(balB.fiatValue);
   const pctA = balA.fiatValue.div(totalFiatValue);
   const pctB = balB.fiatValue.div(totalFiatValue);
@@ -184,7 +182,7 @@ export function PoolOverview({
       </Stack>
       {showSwap && (
         <Box sx={{ mt: 2 }}>
-          <SwapCard />
+          <SwapCard queryParams={{ token_in: balB.address, token_out: balA.address }} />
         </Box>
       )}
       <Stack
@@ -291,47 +289,55 @@ export function PoolOverview({
               </Typography>
               <Box>
                 <Stack direction="row" spacing={1} alignItems="end">
-                  <Typography variant="h3">{fCurrency(value.toFixed(2))}</Typography>
-                  {percentage != null && (
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Box
-                        component="span"
-                        sx={{
-                          width: 24,
-                          height: 24,
-                          display: 'flex',
-                          borderRadius: '50%',
-                          position: 'relative',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: varAlpha(theme.vars.palette.success.mainChannel, 0.16),
-                          color: 'success.dark',
-                          ...theme.applyStyles('dark', {
-                            color: 'success.light',
-                          }),
-                          ...(percentage < 0 && {
-                            bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
-                            color: 'error.dark',
-                            ...theme.applyStyles('dark', {
-                              color: 'error.light',
-                            }),
-                          }),
-                        }}
-                      >
-                        <Iconify
-                          width={16}
-                          icon={percentage < 0 ? 'eva:trending-down-fill' : 'eva:trending-up-fill'}
-                          color={percentage < 0 ? 'error.main' : 'success.main'}
-                        />
-                      </Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ color: percentage < 0 ? 'error.main' : 'success.main' }}
-                      >
-                        {percentage >= 0 && '+'}
-                        {fPercent(percentage)}
-                      </Typography>
-                    </Stack>
+                  {statName !== 'TVL' ? (
+                    <Chip label="Coming soon" color="info" size="small" sx={{ mt: 1 }} />
+                  ) : (
+                    <>
+                      <Typography variant="h3">{fCurrency(value.toFixed(2))}</Typography>
+                      {percentage != null && (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Box
+                            component="span"
+                            sx={{
+                              width: 24,
+                              height: 24,
+                              display: 'flex',
+                              borderRadius: '50%',
+                              position: 'relative',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: varAlpha(theme.vars.palette.success.mainChannel, 0.16),
+                              color: 'success.dark',
+                              ...theme.applyStyles('dark', {
+                                color: 'success.light',
+                              }),
+                              ...(percentage < 0 && {
+                                bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
+                                color: 'error.dark',
+                                ...theme.applyStyles('dark', {
+                                  color: 'error.light',
+                                }),
+                              }),
+                            }}
+                          >
+                            <Iconify
+                              width={16}
+                              icon={
+                                percentage < 0 ? 'eva:trending-down-fill' : 'eva:trending-up-fill'
+                              }
+                              color={percentage < 0 ? 'error.main' : 'success.main'}
+                            />
+                          </Box>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{ color: percentage < 0 ? 'error.main' : 'success.main' }}
+                          >
+                            {percentage >= 0 && '+'}
+                            {fPercent(percentage)}
+                          </Typography>
+                        </Stack>
+                      )}
+                    </>
                   )}
                 </Stack>
               </Box>
