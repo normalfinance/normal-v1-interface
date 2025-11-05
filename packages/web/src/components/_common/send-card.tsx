@@ -372,20 +372,28 @@ const SendCard: React.FC<SendCardProps> = ({
                   gap: '6px',
                 }}
               >
-                <Button
-                  variant="soft"
-                  color="secondary"
-                  size="small"
-                  sx={{ fontWeight: 500, fontSize: '12px', p: 0, height: '24px', minWidth: '36px' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (sendToken) {
-                      setAmount(getMaxAmount(sendToken, isFiatMode));
-                    }
-                  }}
-                >
-                  {t('Max')}
-                </Button>
+                <div>
+                  <Button
+                    variant="soft"
+                    color="secondary"
+                    size="small"
+                    sx={{
+                      fontWeight: 500,
+                      fontSize: '12px',
+                      p: 0,
+                      height: '24px',
+                      minWidth: '36px',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (sendToken) {
+                        setAmount(getMaxAmount(sendToken, isFiatMode));
+                      }
+                    }}
+                  >
+                    {t('Max')}
+                  </Button>
+                </div>
                 <Iconify
                   width={24}
                   icon="eva:arrow-ios-downward-fill"
@@ -456,7 +464,7 @@ const SendCard: React.FC<SendCardProps> = ({
             size="large"
             disabled={!isSendReady}
             onClick={handleMainButtonClick}
-            sx={{ borderRadius: 2.5 }}
+            sx={{ borderRadius: 2.5, mt: 2 }}
           >
             {getButtonLabel()}
           </Button>

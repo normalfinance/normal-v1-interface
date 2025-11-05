@@ -426,7 +426,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
         color: 'error' as const,
       },
       [ButtonState.FINALIZING_QUOTE]: {
-        label: 'Finalizing quote...',
+        label: 'Fetching quote...',
         disabled: true,
         action: () => {},
       },

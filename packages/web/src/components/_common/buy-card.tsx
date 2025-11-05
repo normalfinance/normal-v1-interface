@@ -346,7 +346,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
               variant="soft"
               color="secondary"
               size="large"
-              sx={{ borderRadius: 2.5 }}
+              sx={{ borderRadius: 2.5, mt: 2 }}
               onClick={handleMainButtonClick}
               disabled={getButtonLabel() !== 'Buy'}
             >

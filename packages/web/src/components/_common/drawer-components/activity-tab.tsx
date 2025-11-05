@@ -15,8 +15,8 @@ export default function ActivityTab({ activity = [] }: { activity?: Activity[] }
       {activity
         .sort((a, b) => b.timestamp - a.timestamp)
         .map((item) => (
-          <Box py={2}>
-            <ActivityRow key={item.id} activity={item} />
+          <Box key={item.id} py={2}>
+            <ActivityRow activity={item} />
           </Box>
         ))}
     </Box>

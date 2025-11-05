@@ -36,7 +36,16 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
   const { chartData } = usePoolPriceChart(pool.addresses.pool, []);
 
   const past24hVolume = BigNumber(0);
-  const tvl = BigNumber(0);
+
+  const reserveAValue = tokenA
+    ? BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price)
+    : BigNumber(0);
+
+  const reserveBValue = tokenB
+    ? BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price)
+    : BigNumber(0);
+
+  const tvl = reserveAValue.plus(reserveBValue);
 
   return (
     <DashboardContent maxWidth="xl">
@@ -69,11 +78,13 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
             totalAprPercentage={0}
             poolBalances={[
               {
+                address: tokenA.contract,
                 tokenSymbol: tokenA.symbol,
                 amount: BigNumber(pool.reserves.tokenA),
                 fiatValue: BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price),
               },
               {
+                address: tokenB.contract,
                 tokenSymbol: tokenB.symbol,
                 amount: BigNumber(pool.reserves.tokenB),
                 fiatValue: BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price),
