@@ -182,7 +182,7 @@ export function PoolOverview({
       </Stack>
       {showSwap && (
         <Box sx={{ mt: 2 }}>
-          <SwapCard queryParams={{ token_in: balB.address, token_out: balA.address }} />
+          <SwapCard />
         </Box>
       )}
       <Stack

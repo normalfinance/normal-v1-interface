@@ -1,6 +1,5 @@
 'use client';
 
-import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
@@ -29,13 +28,6 @@ type Props = {
 };
 
 type HeroHeaderProps = Partial<Props>;
-
-const swapFeeInfo: SwapFeeInfo = {
-  feePercentage: 0.25,
-  networkCost: 1.0,
-  priceImpact: -0.3,
-  maxSlippage: 0.5,
-};
 
 export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   const {
@@ -201,7 +193,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard swapFeeInfo={swapFeeInfo} queryParams={swapParams} />
+              <SwapCard queryParams={swapParams} />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>

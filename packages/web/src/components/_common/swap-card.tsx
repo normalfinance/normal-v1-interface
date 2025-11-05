@@ -566,7 +566,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
         setTimeout(async () => {
           await updateTokenInfo(sellToken);
           await updateTokenInfo(buyToken);
-        }, 7000);
+        }, 5000);
       } catch (error) {
         setSwapError('Error during swap transaction');
       }
@@ -929,7 +929,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
             backgroundColor: alpha(theme.palette.error.main, 0.1),
             border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
             borderRadius: '12px',
-            mb: 1,
+            mt: 2,
           }}
         >
           <Typography
