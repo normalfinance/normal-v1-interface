@@ -19,6 +19,7 @@ import {
   ExplorePoolsTable,
   type ExplorePoolsRow,
 } from '@/components/_explore-page-components';
+import { useTotal1dSwapVolume } from '@/hooks';
 
 export default function ExploreView() {
   const { t } = useTranslate();
@@ -46,8 +47,10 @@ export default function ExploreView() {
 
   const totalTvl = tableData.reduce((acc, p) => acc.plus(p.tvl), BigNumber(0));
 
+  const { total1dVolume } = useTotal1dSwapVolume();
+
   const stats: SingleStat[] = [
-    { title: '1D Volume', total: 0, percent: 0, formatter: fCurrency },
+    { title: '1D Volume', total: total1dVolume.toNumber(), percent: 0, formatter: fCurrency },
     { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
     {
       title: 'Total Pools',

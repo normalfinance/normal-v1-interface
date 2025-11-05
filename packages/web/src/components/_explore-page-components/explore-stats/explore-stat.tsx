@@ -2,7 +2,6 @@ import { useTranslate } from '@/locales';
 import { fPercent } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
-import { Chip } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
@@ -39,11 +38,7 @@ export function ExploreStat({ title, total, percent, formatter }: Props) {
         </Typography>
 
         <Box component="span" sx={{ my: 1.5, typography: 'h3', fontSize: 32 }} mt={8}>
-          {title === '1D Volume' ? (
-            <Chip label="Coming soon" color="info" size="small" />
-          ) : (
-            formatter(total)
-          )}
+          {formatter(total)}
         </Box>
         <Stack direction="row" spacing={0.5} alignItems="center">
           <Box
