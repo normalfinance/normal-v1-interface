@@ -34,5 +34,5 @@ export interface TokenState {
 export interface TokenActions {
   tokenState: TokenState;
   updateTokenInfo: (token: ApiToken) => Promise<void>;
-  getAllTokens: () => Promise<void>;
+  getAllTokens: (override: boolean) => Promise<void>;
 }

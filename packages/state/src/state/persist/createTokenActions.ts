@@ -63,7 +63,7 @@ export const createTokenActions = (): TokenActions => {
   return {
     tokenState: initialState,
 
-    getAllTokens: async () => {
+    getAllTokens: async (override: boolean = false) => {
       try {
         const now = Date.now();
         const lastFetched = usePersistStore.getState().tokenState.lastUpdated;
@@ -73,7 +73,7 @@ export const createTokenActions = (): TokenActions => {
           .getState()
           .tokenState.tokens.every((tkn) => tkn.balance === '0');
 
-        if (lastFetched && !zeroTokenBalance && now - lastFetched < refreshInterval) {
+        if (lastFetched && !zeroTokenBalance && now - lastFetched < refreshInterval && !override) {
           return;
         }
 
