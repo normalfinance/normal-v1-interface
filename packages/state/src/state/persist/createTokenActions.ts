@@ -131,6 +131,8 @@ export const createTokenActions = (): TokenActions => {
           token.contract
         );
 
+        // TODO: add rate limiter
+
         let balance = BigNumber(0);
 
         if (walletAddress) balance = await fetchTokenBalance(token, walletAddress);
