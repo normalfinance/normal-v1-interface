@@ -2,13 +2,17 @@ import type { UseSetStateReturn } from 'minimal-shared/hooks';
 import type { IMarketTableFilters } from '@/types/marketTable';
 
 import { useCallback } from 'react';
+import { logger } from '@/middleware';
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from '@/components/template/iconify';
+import RefreshButton from '@/components/_common/refresh-button';
 
 // ----------------------------------------------------------------------
 
@@ -19,19 +23,32 @@ type Props = {
 
 export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
   const { t } = useTranslate();
+
+  const { enqueueSnackbar } = useSnackbar();
+
+  const { getAllPools } = usePersistStore();
+
   const { state: currentFilters, setState: updateFilters } = filters;
 
   const handleFilterName = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      // trackEvent('button_clicked', {
-      //   label: 'Learn more',
-      //   location: 'Home',
-      // });
       onResetPage();
       updateFilters({ name: event.target.value });
     },
     [onResetPage, updateFilters]
   );
+
+  const onRefresh = async () => {
+    enqueueSnackbar('Refreshing pools', { variant: 'info' });
+
+    try {
+      await getAllPools();
+    } catch (error) {
+      logger.error('Pools refresh error:', error);
+    } finally {
+      // setCreatingTrustline(false);
+    }
+  };
 
   return (
     <Box
@@ -95,6 +112,7 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
           }}
         />
       </Box>
+      <RefreshButton onRefresh={onRefresh} />
     </Box>
   );
 }

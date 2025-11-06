@@ -42,7 +42,7 @@ function WalletConnected({ address }: { address: string }) {
 
       setGlobalIsLoading(true);
       try {
-        await getAllTokens();
+        await getAllTokens(true);
       } catch (e) {
         logger.error(e);
       } finally {

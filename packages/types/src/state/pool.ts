@@ -8,6 +8,7 @@ export interface PoolState {
   lastUpdated: number;
 }
 export interface PoolActions {
+  getPool: (poolAddress: string) => Promise<void>;
   getAllPools: () => Promise<void>;
   poolState: PoolState;
 }

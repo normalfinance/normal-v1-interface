@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createTokenActions } from './persist/createTokenActions';
 import { persist } from 'zustand/middleware';
-import { AppStore, AppStorePersist } from '@normalfinance/types';
+import { AppStore, AppStorePersist, AppStorePersistV1 } from '@normalfinance/types';
 import { createConnectWalletActions } from './persist/createConnectWalletActions';
 import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
@@ -56,6 +56,25 @@ export const usePersistStore = create<AppStorePersist>()(
     },
     {
       name: 'just-some-normal-storage',
+      version: 1,
+      migrate: (persistedState, version) => {
+        if (!persistedState) return {};
+
+        // Upgrade from v0 → v1 schema
+        if (version === 0) {
+          const oldState = persistedState as AppStorePersistV1;
+
+          oldState.poolState['lastUpdated'] = 0;
+          oldState.poolState.error = null;
+          oldState.poolState.loading = false;
+
+          oldState.tokenState['lastUpdated'] = 0;
+
+          return oldState;
+        }
+
+        return persistedState as AppStorePersistV1;
+      },
     }
   )
 );

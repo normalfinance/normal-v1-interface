@@ -11,9 +11,11 @@ export interface PersistWalletActions {
   wallet: Wallet;
 }
 
-export type AppStorePersist = PersistWalletActions &
+export type AppStorePersistV1 = PersistWalletActions &
   DisclaimerActions &
   ReferralActions &
   InviteCodeActions &
   PoolActions &
   TokenActions;
+
+export type AppStorePersist = AppStorePersistV1;

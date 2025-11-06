@@ -32,6 +32,88 @@ function extractInnerAddresses(
   return result;
 }
 
+async function getPoolDetails(poolAddress: string, poolIndex: Buffer) {
+  const PoolClient = new PoolContract.Client({
+    contractId: poolAddress,
+    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+    rpcUrl: constants.StellarConfig.RPC_URL,
+  });
+
+  const [feeResponse, reservesResponse, tokensResponse, tokenShareResponse, totalSharesResponse] =
+    await Promise.all([
+      PoolClient.get_fee_fraction(),
+      PoolClient.get_reserves(),
+      PoolClient.get_tokens(),
+      PoolClient.share_id(),
+      PoolClient.get_total_shares(),
+    ]);
+
+  // Tokens
+  const tokens =
+    tokensResponse && tokensResponse.result ? Array.from<Address>(tokensResponse.result) : [];
+
+  // We can't render anything without the token addresses
+  if (!tokens || !tokens.length) return;
+
+  // Reserves
+  const reserves =
+    reservesResponse && reservesResponse.result ? Array.from<u128>(reservesResponse.result) : [];
+
+  // We can't render anything without both reserves
+  if (reserves.length !== 2) return;
+
+  const reserveA = BigNumber(format.fTokenAmount(reserves[0], 7));
+  const reserveB = BigNumber(format.fTokenAmount(reserves[1], 7));
+
+  const priceA = reserveA.eq(0) || reserveB.eq(0) ? BigNumber(0) : reserveB.div(reserveA);
+  const priceB = reserveA.eq(0) || reserveB.eq(0) ? BigNumber(0) : reserveA.div(reserveB);
+
+  // LP Token
+  const tokenShareAddress: Address =
+    tokenShareResponse && tokenShareResponse.result ? tokenShareResponse.result : '';
+
+  const tokenShareSymbol = tokenShareAddress
+    ? ((await getTokenSymbol(tokenShareAddress)) ?? 'LP Token')
+    : '';
+
+  const totalShares =
+    totalSharesResponse && totalSharesResponse.result
+      ? BigNumber(format.fTokenAmount(totalSharesResponse.result, 7))
+      : BigNumber(0);
+
+  // Fee
+  const fee = feeResponse && feeResponse.result ? Number(feeResponse.result) : 30;
+
+  const poolDetails: Pool = {
+    index: poolIndex,
+    version: 'v1',
+    fee,
+    addresses: {
+      pool: poolAddress,
+      tokenA: tokens[0],
+      tokenB: tokens[1],
+      tokenShare: tokenShareAddress,
+    },
+    reserves: {
+      tokenA: reserveA.toString(),
+      tokenB: reserveB.toString(),
+    },
+    prices: {
+      tokenA: priceA.toString(),
+      tokenB: priceB.toString(),
+    },
+    shares: {
+      address: tokenShareAddress,
+      symbol: tokenShareSymbol,
+      total: totalShares.toString(),
+    },
+
+    client: PoolClient,
+  };
+
+  return poolDetails;
+}
+
 export function createPoolActions(): PoolActions {
   const initialState: PoolState = {
     loading: false,
@@ -61,6 +143,8 @@ export function createPoolActions(): PoolActions {
           return;
         }
 
+        // TODO: add rate limiter
+
         const tokensSetsCountResponse = await PoolRouter.get_tokens_sets_count();
 
         const tokensSetsEnd =
@@ -83,94 +167,7 @@ export function createPoolActions(): PoolActions {
 
         const pools = await Promise.all(
           poolsData.map(async ({ address: poolAddress, index: poolIndex }) => {
-            const PoolClient = new PoolContract.Client({
-              contractId: poolAddress,
-              networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-              rpcUrl: constants.StellarConfig.RPC_URL,
-            });
-
-            const [
-              feeResponse,
-              reservesResponse,
-              tokensResponse,
-              tokenShareResponse,
-              totalSharesResponse,
-            ] = await Promise.all([
-              PoolClient.get_fee_fraction(),
-              PoolClient.get_reserves(),
-              PoolClient.get_tokens(),
-              PoolClient.share_id(),
-              PoolClient.get_total_shares(),
-            ]);
-
-            // Tokens
-            const tokens =
-              tokensResponse && tokensResponse.result
-                ? Array.from<Address>(tokensResponse.result)
-                : [];
-
-            // We can't render anything without the token addresses
-            if (!tokens || !tokens.length) return;
-
-            // Reserves
-            const reserves =
-              reservesResponse && reservesResponse.result
-                ? Array.from<u128>(reservesResponse.result)
-                : [];
-
-            // We can't render anything without both reserves
-            if (reserves.length !== 2) return;
-
-            const reserveA = BigNumber(format.fTokenAmount(reserves[0], 7));
-            const reserveB = BigNumber(format.fTokenAmount(reserves[1], 7));
-
-            const priceA = reserveA.eq(0) || reserveB.eq(0) ? BigNumber(0) : reserveB.div(reserveA);
-            const priceB = reserveA.eq(0) || reserveB.eq(0) ? BigNumber(0) : reserveA.div(reserveB);
-
-            // LP Token
-            const tokenShareAddress: Address =
-              tokenShareResponse && tokenShareResponse.result ? tokenShareResponse.result : '';
-
-            const tokenShareSymbol = tokenShareAddress
-              ? ((await getTokenSymbol(tokenShareAddress)) ?? 'LP Token')
-              : '';
-
-            const totalShares =
-              totalSharesResponse && totalSharesResponse.result
-                ? BigNumber(format.fTokenAmount(totalSharesResponse.result, 7))
-                : BigNumber(0);
-
-            // Fee
-            const fee = feeResponse && feeResponse.result ? Number(feeResponse.result) : 30;
-
-            const poolDetails: Pool = {
-              index: poolIndex,
-              version: 'v1',
-              fee,
-              addresses: {
-                pool: poolAddress,
-                tokenA: tokens[0],
-                tokenB: tokens[1],
-                tokenShare: tokenShareAddress,
-              },
-              reserves: {
-                tokenA: reserveA.toString(),
-                tokenB: reserveB.toString(),
-              },
-              prices: {
-                tokenA: priceA.toString(),
-                tokenB: priceB.toString(),
-              },
-              shares: {
-                address: tokenShareAddress,
-                symbol: tokenShareSymbol,
-                total: totalShares.toString(),
-              },
-
-              client: PoolClient,
-            };
-
-            return poolDetails;
+            return await getPoolDetails(poolAddress, poolIndex);
           })
         );
 
@@ -202,6 +199,58 @@ export function createPoolActions(): PoolActions {
         }));
       } catch (error) {
         logger.error('Failed to get all pools:', error);
+      }
+    },
+
+    getPool: async (poolAddress: string) => {
+      try {
+        const pools = usePersistStore.getState().poolState.pools;
+        const pool = pools.find((p) => p.addresses.pool === poolAddress);
+
+        if (!pools || !pools.length || !pool) {
+          return;
+        }
+
+        const poolDetails = await getPoolDetails(pool.addresses.pool, pool.index);
+
+        // Update the state
+
+        usePersistStore.setState((state: AppStorePersist) => {
+          const updatedPools = state.poolState.pools.map((existingPool) =>
+            existingPool.addresses.pool === poolAddress ? poolDetails : existingPool
+          );
+
+          // Safely remove all undefined values
+          const poolsFiltered = updatedPools.filter(
+            (r): r is NonNullable<typeof r> => r !== undefined && r !== null
+          );
+
+          // Map pools by their tokens
+          const poolsByTokens = poolsFiltered.reduce<Record<string, Pool[]>>((acc, pool) => {
+            const key = [pool.addresses.tokenA, pool.addresses.tokenB].join(':');
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(pool);
+            return acc;
+          }, {});
+
+          const newState: PoolState = {
+            loading: false,
+            error: null,
+            pools: poolsFiltered,
+            poolsByTokens,
+            lastUpdated: Date.now(),
+          };
+
+          return {
+            ...state,
+            poolState: newState,
+          };
+        });
+
+        return;
+      } catch (error) {
+        logger.error('Error updating pool:', error);
+        return;
       }
     },
   };
