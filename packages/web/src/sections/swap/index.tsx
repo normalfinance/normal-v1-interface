@@ -61,7 +61,7 @@ export default function SwapView() {
     }
   };
 
-  // Effect hook to fetch all tokens and pools once the component mounts
+  // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {

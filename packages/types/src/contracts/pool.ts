@@ -1,5 +1,4 @@
 import { PoolContract, PoolElasticContract } from '@normalfinance/contracts';
-import { BigNumber } from 'bignumber.js';
 
 export type Address = string;
 
