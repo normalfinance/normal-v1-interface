@@ -372,7 +372,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      <Chip label="Coming soon" color="info" size="small" />
+                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
                       {/* {fCurrencyTwoDecimals(networkCost)} */}
                     </Typography>
                   </Box>
@@ -463,7 +463,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      <Chip label="Coming soon" color="info" size="small" />
+                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
                       {/* {fRawPercent(priceImpact)} */}
                     </Typography>
                   </Box>
@@ -509,7 +509,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      <Chip label="Coming soon" color="info" size="small" />
+                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
                       {/* {fRawPercent(maxSlippage)} */}
                     </Typography>
                   </Box>

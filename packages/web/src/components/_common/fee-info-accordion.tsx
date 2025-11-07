@@ -219,7 +219,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
               >
                 {fCurrencyTwoDecimals(networkCost)}
               </Typography> */}
-              <Chip label="Coming soon" color="info" size="small" />
+              <Chip label="Coming soon" color="info" size="small" variant="soft" />
             </Box>
             <Box
               sx={{
@@ -263,7 +263,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
               >
                 {fRawPercent(priceImpact)}
               </Typography> */}
-              <Chip label="Coming soon" color="info" size="small" />
+              <Chip label="Coming soon" color="info" size="small" variant="soft" />
             </Box>
             <Box
               sx={{
@@ -307,7 +307,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
               >
                 {fRawPercent(maxSlippage)}
               </Typography> */}
-              <Chip label="Coming soon" color="info" size="small" />
+              <Chip label="Coming soon" color="info" size="small" variant="soft" />
             </Box>
           </Box>
         </Box>
