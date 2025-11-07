@@ -21,6 +21,9 @@ import { Iconify } from '@/components/template/iconify';
 import { WalletGate } from '@/components/_common/wallet-gate';
 
 import SwapCard from '../_common/swap-card';
+import { usePersistStore } from '@normalfinance/state';
+import { format } from '@normalfinance/utils';
+import { useAgo } from '@/hooks';
 
 // ----------------------------------------------------------------------
 // ── Prop types ---------------------------------------------------------
@@ -51,7 +54,6 @@ export type PoolsOverviewProps = CardProps & {
   stats: PoolStat[]; // any length (e.g. 3-4)
   actionButtons?: PoolActionButton[];
   loading?: boolean;
-  tokens?: Token[];
 };
 
 // ----------------------------------------------------------------------
@@ -61,12 +63,17 @@ export function PoolOverview({
   poolBalances,
   stats,
   loading,
-  tokens,
   sx,
   ...other
 }: PoolsOverviewProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+
+  const {
+    poolState: { lastUpdated },
+  } = usePersistStore();
+
+  const poolLastUpdated = useAgo(lastUpdated);
 
   const [showSwap, setShowSwap] = useState(false);
 
@@ -199,7 +206,7 @@ export function PoolOverview({
           {t('Total APR')}
         </Typography>
         <Typography variant="h3" color="text.primary">
-          <Chip label="Coming soon" color="info" size="small" />
+          <Chip label="Coming soon" color="info" size="small" variant="soft" />
           {/* TODO: */}
           {/* {totalAprPercentage}
           {t('%')} */}
@@ -219,6 +226,10 @@ export function PoolOverview({
       >
         <Typography variant="h5" color="text.primary">
           {t('Stats')}
+        </Typography>
+
+        <Typography variant="caption" sx={{ mt: -2 }}>
+          {t('as of')} {poolLastUpdated}
         </Typography>
 
         <Stack
@@ -290,7 +301,13 @@ export function PoolOverview({
               <Box>
                 <Stack direction="row" spacing={1} alignItems="end">
                   {statName !== 'TVL' ? (
-                    <Chip label="Coming soon" color="info" size="small" sx={{ mt: 1 }} />
+                    <Chip
+                      label="Coming soon"
+                      color="info"
+                      size="small"
+                      variant="soft"
+                      sx={{ mt: 1 }}
+                    />
                   ) : (
                     <>
                       <Typography variant="h3">{fCurrency(value.toFixed(2))}</Typography>

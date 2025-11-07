@@ -6,6 +6,7 @@ import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useMemo, useEffect } from 'react';
 import { logger } from '@normalfinance/utils';
+import { useAgo, useTotal1dSwapVolume } from '@/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -19,7 +20,6 @@ import {
   ExplorePoolsTable,
   type ExplorePoolsRow,
 } from '@/components/_explore-page-components';
-import { useTotal1dSwapVolume } from '@/hooks';
 
 export default function ExploreView() {
   const { t } = useTranslate();
@@ -27,11 +27,13 @@ export default function ExploreView() {
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
   const {
     wallet,
-    tokenState: { tokensByAddress },
+    tokenState: { tokensByAddress, lastUpdated: tokensLastUpdated },
     getAllTokens,
-    poolState: { pools },
+    poolState: { pools, lastUpdated: poolsLastUpdated },
     getAllPools,
   } = usePersistStore();
+
+  const lastUpdated = useAgo(Math.min(tokensLastUpdated, poolsLastUpdated));
 
   const tableData = useMemo(() => {
     if (
@@ -97,11 +99,15 @@ export default function ExploreView() {
           <Typography variant="h4" color="text.primary">
             {t('Explore')}
           </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {t('as of ')}
+            {lastUpdated}
+          </Typography>
         </Stack>
         <Grid2 width={1} sx={{ mt: 3 }}>
           <ExploreStats stats={stats} />
         </Grid2>
-        <Grid2 sx={{ mt: 3 }}>
+        <Grid2>
           <ExplorePoolsTable pools={tableData} loading={globalIsLoading} />
         </Grid2>
       </DashboardContent>
