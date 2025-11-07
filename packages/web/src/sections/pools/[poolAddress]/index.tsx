@@ -15,7 +15,7 @@ import PoolDetailsView from './pool-details-view';
 export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const { t } = useTranslate();
 
-  const validContractAddress = isValidContractAddress(poolAddress);
+  const isAddressValid = isValidContractAddress(poolAddress);
 
   const { setGlobalIsLoading } = useAppStore();
 
@@ -23,7 +23,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
     wallet,
     getAllTokens,
     poolState: { pools },
-    getAllPools,
+    getPool,
   } = usePersistStore();
 
   // Effect hook to fetch all tokens and pools once the component mounts
@@ -31,6 +31,7 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
+        if (poolAddress && isAddressValid) await getPool(poolAddress);
         await getAllTokens();
       } catch (e) {
         logger.error(e);
@@ -39,32 +40,15 @@ export default function PoolView({ poolAddress }: { poolAddress: string }) {
       }
     };
     refreshTokens();
-  }, [wallet.address]);
-
-  // Effect hook to fetch all pools once the component mounts
-  useEffect(() => {
-    const refreshPools = async (): Promise<void> => {
-      try {
-        setGlobalIsLoading(true);
-        await getAllPools();
-      } catch (e) {
-        logger.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-
-    if (poolAddress && validContractAddress) refreshPools();
-  }, [poolAddress, validContractAddress]);
+  }, [poolAddress, isAddressValid, wallet.address]);
 
   const pool = useMemo(() => {
-    if (!validContractAddress) return undefined;
-    if (!pools || pools.length === 0) return undefined;
+    if (!poolAddress || !isAddressValid || !pools || !pools.length) return undefined;
 
     return pools.find((p) => p.addresses.pool === poolAddress);
-  }, [poolAddress, validContractAddress, pools]);
+  }, [poolAddress, isAddressValid, pools]);
 
-  if (validContractAddress === false) {
+  if (isAddressValid === false) {
     return (
       <DashboardContent maxWidth="xl">
         <Alert severity="info">{t('Invalid pool contract address.')}</Alert>
