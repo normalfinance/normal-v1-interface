@@ -1,13 +1,14 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
 import type BigNumber from 'bignumber.js';
-import type { Token } from '@normalfinance/types';
 import type { CardProps } from '@mui/material/Card';
 
 import { useState } from 'react';
+import { useAgo } from '@/hooks';
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
+import { usePersistStore } from '@normalfinance/state';
 import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -21,9 +22,6 @@ import { Iconify } from '@/components/template/iconify';
 import { WalletGate } from '@/components/_common/wallet-gate';
 
 import SwapCard from '../_common/swap-card';
-import { usePersistStore } from '@normalfinance/state';
-import { format } from '@normalfinance/utils';
-import { useAgo } from '@/hooks';
 
 // ----------------------------------------------------------------------
 // ── Prop types ---------------------------------------------------------

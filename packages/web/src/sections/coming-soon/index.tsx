@@ -2,11 +2,10 @@
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
-import { useRouter } from 'next/navigation';
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Grid2 from '@mui/material/Grid2';
-import { Link, Stack, Button, Typography } from '@mui/material';
+import { Stack, Button, Typography } from '@mui/material';
 
 export default function ComingSoonView() {
   const { t } = useTranslate();
@@ -40,7 +39,7 @@ export default function ComingSoonView() {
           <Button
             color="info"
             variant="contained"
-            href={'https://forms.fillout.com/t/oKPvL5FQJzus'}
+            href="https://forms.fillout.com/t/oKPvL5FQJzus"
             target="_blank"
             rel="noopener noreferrer"
           >
