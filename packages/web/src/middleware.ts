@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 // import { logger } from '@normalfinance/utils';
 
-const isDev = process.env.NODE_ENV === 'development';
+// const isDev = process.env.NODE_ENV === 'development';
+const isDev = 
 
 export const logger = {
   log: isDev ? console.log : () => {},
