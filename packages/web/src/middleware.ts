@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 // import { logger } from '@normalfinance/utils';
 
 // const isDev = process.env.NODE_ENV === 'development';
-const isDev = 
+const isDev = true;
 
 export const logger = {
   log: isDev ? console.log : () => {},
@@ -197,8 +197,15 @@ function setCacheResponse(response: NextResponse, geoData: any): void {
 export async function middleware(req: NextRequest) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
+  console.log('request', req);
   logger.log(`\n[${requestId}] MIDDLEWARE START - Path: ${req.nextUrl.pathname}`);
   logger.log(`⏱[${requestId}] Start time: ${new Date().toISOString()}`);
+
+  // Skip geo-blocking for mobile app requests
+  if (req.headers.get('x-mobile-app') === 'true') {
+    logger.log(`[${requestId}] Mobile app request, skipping geo-blocking`);
+    return NextResponse.next();
+  }
 
   // Handle referral tracking first
   logger.log(`[${requestId}] Handling referral tracking...`);
