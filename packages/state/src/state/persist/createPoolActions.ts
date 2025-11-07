@@ -1,6 +1,6 @@
 import { PoolContract, PoolRouterContract } from '@normalfinance/contracts';
 import { AppStorePersist, PoolActions, Pool, PoolState, Address } from '@normalfinance/types';
-import { constants, format, getTokenSymbol, logger } from '@normalfinance/utils';
+import { constants, format, getTokenSymbol, logger, sortTokenAddreses } from '@normalfinance/utils';
 import { usePersistStore } from '../store';
 import { BigNumber } from 'bignumber.js';
 import { u128 } from '@stellar/stellar-sdk/lib/contract';
@@ -178,7 +178,11 @@ export function createPoolActions(): PoolActions {
 
         // Map pools by their tokens
         const poolsByTokens = poolsFiltered.reduce<Record<string, Pool[]>>((acc, pool) => {
-          const key = [pool.addresses.tokenA, pool.addresses.tokenB].join(':');
+          const { tokens: sortedTokens } = sortTokenAddreses(
+            pool.addresses.tokenA,
+            pool.addresses.tokenB
+          );
+          const key = sortedTokens.join(':');
           if (!acc[key]) acc[key] = [];
           acc[key].push(pool);
           return acc;
@@ -227,7 +231,11 @@ export function createPoolActions(): PoolActions {
 
           // Map pools by their tokens
           const poolsByTokens = poolsFiltered.reduce<Record<string, Pool[]>>((acc, pool) => {
-            const key = [pool.addresses.tokenA, pool.addresses.tokenB].join(':');
+            const { tokens: sortedTokens } = sortTokenAddreses(
+              pool.addresses.tokenA,
+              pool.addresses.tokenB
+            );
+            const key = sortedTokens.join(':');
             if (!acc[key]) acc[key] = [];
             acc[key].push(pool);
             return acc;

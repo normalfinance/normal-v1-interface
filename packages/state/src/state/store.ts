@@ -56,7 +56,7 @@ export const usePersistStore = create<AppStorePersist>()(
     },
     {
       name: 'just-some-normal-storage',
-      version: 1,
+      version: 2,
       migrate: (persistedState, version) => {
         if (!persistedState) return {};
 
@@ -69,6 +69,17 @@ export const usePersistStore = create<AppStorePersist>()(
           oldState.poolState.loading = false;
 
           oldState.tokenState['lastUpdated'] = 0;
+
+          return oldState;
+        }
+
+        // Upgrade from v1 → v2 schema
+        if (version === 1) {
+          const oldState = persistedState as AppStorePersistV1;
+
+          oldState.poolState.pools = [];
+          oldState.poolState.poolsByTokens = {};
+          oldState.poolState.lastUpdated = 0;
 
           return oldState;
         }

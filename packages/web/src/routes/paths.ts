@@ -27,6 +27,11 @@ export const paths = {
   pools: {
     details: (poolAddress: string) => `/pools/${poolAddress}`,
   },
+  indexes: {
+    root: '/indexes',
+    create: '/indexes/create',
+    details: (indexAddress: string) => `/indexes/${indexAddress}`,
+  },
   positions: {
     root: '/positions',
     create: '/positions/create',

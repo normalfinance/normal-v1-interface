@@ -4,8 +4,10 @@ import { usePersistStore } from '../store';
 import {
   constants,
   format,
+  getReflectorExternalPrice,
   getReflectorPubnetPrice,
   getTokenBalance,
+  isNormalToken,
   logger,
   sortTokenAddreses,
 } from '@normalfinance/utils';
@@ -22,33 +24,45 @@ const fetchTokenBalance = async (token: ApiToken, address: string): Promise<BigN
   return balance;
 };
 
-const fetchTokenPrices = async (token: ApiToken): Promise<BigNumber> => {
-  // Oracle price
-  let isNormalToken = token.issuer === constants.StellarConfig.NORMAL_TOKEN_ISSUER;
-
-  if (isNormalToken) {
-    // Compute price from the pool
-    const { tokens: sortedTokens } = sortTokenAddreses(
+const fetchTokenPrice = async (token: ApiToken): Promise<BigNumber> => {
+  if (isNormalToken(token.issuer)) {
+    // Find the Normal Tokens corresponding Pool
+    const { tokens: sortedTokens, idx } = sortTokenAddreses(
       token.contract,
-      constants.StellarConfig.USDC_ADDRESS
+      constants.StellarConfig.USDC_ADDRESS // Normal tokens are always paired with USDC
     );
     const tokensKey = sortedTokens.join(':');
 
-    const pools = usePersistStore.getState().poolState.poolsByTokens[tokensKey];
-    if (!pools || pools.length === 0) return BigNumber(0);
+    const poolsByTokens = usePersistStore.getState().poolState.poolsByTokens;
+    if (!poolsByTokens || !Object.keys(poolsByTokens).length) return BigNumber(0);
+
+    const pools = poolsByTokens[tokensKey];
+    if (!pools || !pools.length) return BigNumber(0);
+
     const pool = pools[0];
 
-    return BigNumber(pool.prices.tokenA);
+    const isTokenA = token.contract === pool.addresses.tokenA;
+    return BigNumber(isTokenA ? pool.prices.tokenA : pool.prices.tokenB);
   } else {
-    if (token.symbol === 'USDC') return BigNumber(1); // FIXME: REMOVE THIS ASAP
     let oraclePrice = BigNumber(0);
-    try {
-      const { price } = await getReflectorPubnetPrice(token.contract);
-      oraclePrice = BigNumber(format.fTokenAmount(price, 14));
-    } catch (error) {
-      console.log({ error });
-      // Some tokens might not have oracle prices
+
+    if (token.symbol === 'USDC') {
+      try {
+        const { price } = await getReflectorExternalPrice('USDC');
+        oraclePrice = BigNumber(format.fTokenAmount(price, 14));
+      } catch (error) {
+        logger.error('Failed getting USDC oracle price: ', error);
+        oraclePrice = BigNumber(1); // falback
+      }
+    } else {
+      try {
+        const { price } = await getReflectorPubnetPrice(token.contract);
+        oraclePrice = BigNumber(format.fTokenAmount(price, 14));
+      } catch (error) {
+        logger.error('Failed getting token oracle price: ', error);
+      }
     }
+
     return oraclePrice;
   }
 };
@@ -137,7 +151,7 @@ export const createTokenActions = (): TokenActions => {
 
         if (walletAddress) balance = await fetchTokenBalance(token, walletAddress);
 
-        const price = await fetchTokenPrices(token);
+        const price = await fetchTokenPrice(token);
 
         // Update state
         usePersistStore.setState((state: AppStorePersist) => {

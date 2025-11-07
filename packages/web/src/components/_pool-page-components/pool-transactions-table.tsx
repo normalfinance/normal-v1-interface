@@ -5,8 +5,6 @@ import type { TxType, PoolTxRow } from '@/types/pools';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import React, { useMemo, useState } from 'react';
-import { fCurrency } from '@/utils/format-number';
-import { fTruncate } from '@normalfinance/utils/build/format';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -29,6 +27,8 @@ import {
 
 import { TableSkeleton } from '@/components/template/table';
 
+import AddressChip from '../_common/address-chip';
+
 const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
   Buy: 'success',
   Sell: 'error',
@@ -40,7 +40,7 @@ const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
 // Types
 // ----------------------------------------------------------------
 type Order = 'asc' | 'desc' | undefined;
-type ColumnKey = 'timestamp' | 'tokenAAmount' | 'tokenBAmount' | 'user';
+type ColumnKey = 'timestamp' | 'tokenAAmount' | 'tokenBAmount' | 'user' | 'txHash';
 
 // ----------------------------------------------------------------------
 
@@ -48,9 +48,8 @@ export const PoolTransactionsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
   rows: PoolTxRow[];
-  quoteTokenPrice: number;
   loading?: boolean;
-}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, quoteTokenPrice, loading }) => {
+}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, loading }) => {
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -95,6 +94,7 @@ export const PoolTransactionsTable: React.FC<{
       <CardHeader
         sx={{ mb: 3 }}
         title={<Typography variant="h5">{t('Transactions')}</Typography>}
+        subheader={<Typography variant="caption">{t('Realtime (last 20 txs)')}</Typography>}
       />
       <Paper sx={{ width: '100%', overflow: 'auto' }}>
         <TableContainer
@@ -178,6 +178,14 @@ export const PoolTransactionsTable: React.FC<{
                 >
                   <Typography variant="subtitle2">{t('Wallet')}</Typography>
                 </TableCell>
+
+                <TableCell
+                  sortDirection={orderBy === 'txHash' ? order : false}
+                  onClick={() => toggleSort('txHash')}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <Typography variant="subtitle2">{t('Tx Hash')}</Typography>
+                </TableCell>
               </TableRow>
             </TableHead>
 
@@ -185,19 +193,13 @@ export const PoolTransactionsTable: React.FC<{
               {loading ? (
                 <TableSkeleton rowCount={8} cellCount={5} />
               ) : (
-                ordered.map((row, idx) => {
+                ordered.map((row) => {
                   const stellarExpertUrl = createStellarExpertUrl('tx', row.txHash);
-
-                  const poolPrice = row.tokenBAmount.dividedBy(row.tokenAAmount);
-                  const baseFiatValue = poolPrice
-                    .multipliedBy(row.tokenAAmount)
-                    .multipliedBy(quoteTokenPrice);
-                  const quoteFiatValue = row.tokenBAmount.multipliedBy(quoteTokenPrice);
 
                   return (
                     <TableRow
                       hover
-                      key={idx}
+                      key={row.txHash}
                       sx={{ cursor: 'pointer' }}
                       onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
                     >
@@ -205,17 +207,19 @@ export const PoolTransactionsTable: React.FC<{
                         {row.timestamp ? `${format.ago(row.timestamp / 1000)} ago` : ''}
                       </TableCell>
                       <TableCell>
-                        <Chip label={row.type} color={typeColor[row.type]} size="small" />
+                        <Chip
+                          label={row.type}
+                          color={typeColor[row.type]}
+                          size="small"
+                          variant="soft"
+                        />
                       </TableCell>
+                      <TableCell>{format.fTokenAmount(row.tokenAAmount, 7)}</TableCell>
+                      <TableCell>{format.fTokenAmount(row.tokenBAmount, 7)}</TableCell>
                       <TableCell>
-                        {format.fTokenAmount(row.tokenAAmount)} (
-                        {fCurrency(format.fTokenAmount(baseFiatValue))})
+                        <AddressChip address={row.user} />
                       </TableCell>
-                      <TableCell>
-                        {format.fTokenAmount(row.tokenBAmount)} (
-                        {fCurrency(format.fTokenAmount(quoteFiatValue))})
-                      </TableCell>
-                      <TableCell>{fTruncate(row.user, 15)}</TableCell>
+                      <TableCell>{format.fTruncate(row.txHash, 15)}</TableCell>
                     </TableRow>
                   );
                 })

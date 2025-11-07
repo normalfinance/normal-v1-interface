@@ -420,7 +420,7 @@ export function PoolChart({
           ))}
         </CustomTabsSwapSend>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Chip label="Coming soon" color="info" size="small" />
+          <Chip label="Coming soon" color="info" size="small" variant="soft" />
           <ChartSelect
             options={['price', 'volume']}
             value={selectedMetric}

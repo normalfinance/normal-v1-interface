@@ -24,7 +24,6 @@ import MenuList from '@mui/material/MenuList';
 import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import ListItemText from '@mui/material/ListItemText';
-// import useMediaQuery from '@mui/material/useMediaQuery';
 import InputAdornment from '@mui/material/InputAdornment';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
@@ -47,17 +46,17 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   const { t } = useTranslate('auto');
   const theme = useTheme();
   const router = useRouter();
-  // const smUp = useMediaQuery(theme.breakpoints.up(breakpoint));
 
-  const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Get tokens from the app store
   const { globalIsLoading } = useAppStore();
+
   const {
     tokenState: { tokens },
     getAllTokens,
+    poolState: { pools },
   } = usePersistStore();
+
+  const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleClose = useCallback(() => {
     onClose();
@@ -92,9 +91,22 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   const handleTokenClick = useCallback(
     (token: Token) => {
       setTimeout(() => handleClose(), 50);
-      router.push(paths.explore);
+
+      if (!pools || !pools.length) {
+        router.push(paths.explore);
+      }
+
+      const tokenPools = pools.filter(
+        (p) => p.addresses.tokenA === token.contract || p.addresses.tokenB === token.contract
+      );
+
+      if (!tokenPools || !tokenPools.length) {
+        router.push(paths.explore);
+      }
+
+      router.push(paths.pools.details(tokenPools[0].addresses.pool));
     },
-    [router, handleClose]
+    [router, handleClose, pools]
   );
 
   const handleSearch = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -165,20 +177,20 @@ export function Searchbar({ sx, ...other }: BoxProps) {
         {t('Search tokens...')}
       </Box>
 
-      {/* ⌘K helper shown at sm+ 
+      {/* ⌘K helper shown at sm+  */}
       <Label
-        sx={(t) => ({
+        sx={(_theme) => ({
           ml: 'auto',
           color: 'grey.800',
           cursor: 'inherit',
           bgcolor: 'common.white',
-          fontSize: t.typography.pxToRem(12),
-          boxShadow: t.vars.customShadows.z1,
+          fontSize: _theme.typography.pxToRem(12),
+          boxShadow: _theme.vars.customShadows.z1,
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
         })}
       >
-        ⌘K
-      </Label>*/}
+        {t('⌘K')}
+      </Label>
     </Box>
   );
 
