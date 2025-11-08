@@ -25,7 +25,7 @@ export default function SwapView() {
   const { params } = useQueryParams<TokenActionQueryParams>();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
-  const { getAllTokens, getAllPools } = usePersistStore();
+  const { wallet, getAllTokens, getAllPools } = usePersistStore();
 
   // Determine which tab to show based on query params, default to 'swap'
   const activeTab: TokenActionKey = params?.tab || 'swap';
@@ -61,21 +61,21 @@ export default function SwapView() {
     }
   };
 
-  // Effect hook to fetch all tokens and pools once the component mounts
+  // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
-    const refreshData = async (): Promise<void> => {
-      setGlobalIsLoading(true);
+    const refreshTokens = async (): Promise<void> => {
       try {
-        await Promise.all([await getAllTokens(), await getAllPools()]);
-        setGlobalIsLoading(false);
+        setGlobalIsLoading(true);
+        await getAllPools();
+        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }
     };
-    refreshData();
-  }, []);
+    refreshTokens();
+  }, [wallet.address]);
 
   return (
     <DashboardContent maxWidth="xl">

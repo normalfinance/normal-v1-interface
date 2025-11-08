@@ -1,36 +1,32 @@
 import { create } from 'zustand';
 import { createTokenActions } from './persist/createTokenActions';
 import { persist } from 'zustand/middleware';
-import { Horizon } from '@stellar/stellar-sdk';
-import { AppStore, AppStorePersist } from '@normalfinance/types';
+import { AppStore, AppStorePersist, AppStorePersistV1 } from '@normalfinance/types';
 import { createConnectWalletActions } from './persist/createConnectWalletActions';
 import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
-import { constants } from '@normalfinance/utils';
 import { createReferralActions } from './persist/createReferralActions';
 import { createInviteCodeActions } from './persist/createInviteCodeActions';
 import { createPoolActions } from './persist/createPoolActions';
+import { createModalActions } from './modal/actions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
-  // Create a new server instance.
-  const server = new Horizon.Server(constants.StellarConfig.RPC_URL);
-
   // Create a loading state
   const loading = createLoadingActions(set, get);
 
+  // Create modal state
+  const modal = createModalActions(set, get);
+
   return {
-    server,
     ...loading,
+    ...modal,
   };
 });
 
 export const usePersistStore = create<AppStorePersist>()(
   persist(
     (set, get) => {
-      // Create a new server instance.
-      const server = new Horizon.Server(constants.StellarConfig.RPC_URL);
-
       // Create a wallet with the given server and network passphrase.
       const walletPersist = createConnectWalletActions();
 
@@ -50,7 +46,6 @@ export const usePersistStore = create<AppStorePersist>()(
       const tokenActions = createTokenActions();
 
       return {
-        server,
         ...walletPersist,
         ...disclaimer,
         ...referralActions,
@@ -61,6 +56,36 @@ export const usePersistStore = create<AppStorePersist>()(
     },
     {
       name: 'just-some-normal-storage',
+      version: 2,
+      migrate: (persistedState, version) => {
+        if (!persistedState) return {};
+
+        // Upgrade from v0 → v1 schema
+        if (version === 0) {
+          const oldState = persistedState as AppStorePersistV1;
+
+          oldState.poolState['lastUpdated'] = 0;
+          oldState.poolState.error = null;
+          oldState.poolState.loading = false;
+
+          oldState.tokenState['lastUpdated'] = 0;
+
+          return oldState;
+        }
+
+        // Upgrade from v1 → v2 schema
+        if (version === 1) {
+          const oldState = persistedState as AppStorePersistV1;
+
+          oldState.poolState.pools = [];
+          oldState.poolState.poolsByTokens = {};
+          oldState.poolState.lastUpdated = 0;
+
+          return oldState;
+        }
+
+        return persistedState as AppStorePersistV1;
+      },
     }
   )
 );

@@ -6,6 +6,7 @@ import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useMemo, useEffect } from 'react';
 import { logger } from '@normalfinance/utils';
+import { useAgo, useTotal1dSwapVolume } from '@/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -25,11 +26,14 @@ export default function ExploreView() {
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
   const {
-    tokenState: { tokensByAddress },
+    wallet,
+    tokenState: { tokensByAddress, lastUpdated: tokensLastUpdated },
     getAllTokens,
-    poolState: { pools },
+    poolState: { pools, lastUpdated: poolsLastUpdated },
     getAllPools,
   } = usePersistStore();
+
+  const lastUpdated = useAgo(Math.min(tokensLastUpdated, poolsLastUpdated));
 
   const tableData = useMemo(() => {
     if (
@@ -45,8 +49,10 @@ export default function ExploreView() {
 
   const totalTvl = tableData.reduce((acc, p) => acc.plus(p.tvl), BigNumber(0));
 
+  const { total1dVolume } = useTotal1dSwapVolume();
+
   const stats: SingleStat[] = [
-    { title: '1D Volume', total: 0, percent: 0, formatter: fCurrency },
+    { title: '1D Volume', total: total1dVolume.toNumber(), percent: 0, formatter: fCurrency },
     { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
     {
       title: 'Total Pools',
@@ -56,21 +62,21 @@ export default function ExploreView() {
     },
   ];
 
-  // Effect hook to fetch all tokens and pools once the component mounts
+  // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
-    const refreshData = async (): Promise<void> => {
-      setGlobalIsLoading(true);
+    const refreshTokens = async (): Promise<void> => {
       try {
-        await Promise.all([await getAllTokens(), await getAllPools()]);
-        setGlobalIsLoading(false);
+        setGlobalIsLoading(true);
+        await getAllPools();
+        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }
     };
-    refreshData();
-  }, []);
+    refreshTokens();
+  }, [wallet.address]);
 
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
@@ -79,11 +85,15 @@ export default function ExploreView() {
           <Typography variant="h4" color="text.primary">
             {t('Explore')}
           </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {t('as of ')}
+            {lastUpdated}
+          </Typography>
         </Stack>
         <Grid2 width={1} sx={{ mt: 3 }}>
           <ExploreStats stats={stats} />
         </Grid2>
-        <Grid2 sx={{ mt: 3 }}>
+        <Grid2>
           <ExplorePoolsTable pools={tableData} loading={globalIsLoading} />
         </Grid2>
       </DashboardContent>

@@ -4,6 +4,7 @@ import type { PoolTxRow } from '@/types/pools';
 import type { Pool, events } from '@normalfinance/types';
 
 import BigNumber from 'bignumber.js';
+import { constants } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { usePoolEvents, usePoolPriceChart } from '@/hooks';
@@ -24,6 +25,8 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
   const tokenA = tokens.find((tkn) => tkn.contract === pool.addresses.tokenA)!;
   const tokenB = tokens.find((tkn) => tkn.contract === pool.addresses.tokenB)!;
 
+  const displaySwap = tokenA.contract === constants.StellarConfig.USDC_ADDRESS;
+
   // Load recent pool events
   const { events } = usePoolEvents(pool.addresses.pool, 20);
 
@@ -36,7 +39,16 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
   const { chartData } = usePoolPriceChart(pool.addresses.pool, []);
 
   const past24hVolume = BigNumber(0);
-  const tvl = BigNumber(0);
+
+  const reserveAValue = tokenA
+    ? BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price)
+    : BigNumber(0);
+
+  const reserveBValue = tokenB
+    ? BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price)
+    : BigNumber(0);
+
+  const tvl = reserveAValue.plus(reserveBValue);
 
   return (
     <DashboardContent maxWidth="xl">
@@ -53,11 +65,11 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
               feeTier: fPercent(pool.fee / 100),
             }}
             exchangeRate={{
-              label: `1 ${tokenA.symbol} = ${BigNumber(pool.prices.tokenA).toFixed(tokenB.decimals)} ${tokenB.symbol}`,
-              usdEquivalent: fCurrency(pool.prices.tokenA),
-              tokenSymbol: tokenA.symbol,
-              tokenRate: `${BigNumber(pool.prices.tokenA).toFixed(tokenB.decimals)} ${tokenB.symbol}`,
-              tokenUSDValue: fCurrency(pool.prices.tokenB),
+              label: `1 ${!displaySwap ? tokenA.symbol : tokenB.symbol} = ${BigNumber(!displaySwap ? pool.prices.tokenA : pool.prices.tokenB).toFixed(!displaySwap ? tokenB.decimals : tokenA.decimals)} ${!displaySwap ? tokenB.symbol : tokenA.symbol}`,
+              usdEquivalent: fCurrency(!displaySwap ? pool.prices.tokenA : pool.prices.tokenB),
+              tokenSymbol: !displaySwap ? tokenA.symbol : tokenB.symbol,
+              tokenRate: `${BigNumber(!displaySwap ? pool.prices.tokenA : pool.prices.tokenB).toFixed(!displaySwap ? tokenB.decimals : tokenA.decimals)} ${!displaySwap ? tokenB.symbol : tokenA.symbol}`,
+              tokenUSDValue: fCurrency(!displaySwap ? pool.prices.tokenB : pool.prices.tokenA),
             }}
             performance={{ percentageChange: 0 }}
             chart={chartData}
@@ -69,11 +81,13 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
             totalAprPercentage={0}
             poolBalances={[
               {
+                address: tokenA.contract,
                 tokenSymbol: tokenA.symbol,
                 amount: BigNumber(pool.reserves.tokenA),
                 fiatValue: BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price),
               },
               {
+                address: tokenB.contract,
                 tokenSymbol: tokenB.symbol,
                 amount: BigNumber(pool.reserves.tokenB),
                 fiatValue: BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price),
@@ -87,7 +101,6 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
                 value: past24hVolume.multipliedBy(300 / 10000).dividedBy(2),
               },
             ]}
-            tokens={tokens}
           />
         </Grid2>
       </Grid2>
@@ -97,7 +110,6 @@ export default function PoolDetailsView({ pool }: { pool: Pool }) {
             baseTokenSymbol={tokenA.symbol}
             quoteTokenSymbol={tokenB.symbol}
             rows={rows}
-            quoteTokenPrice={BigNumber(tokenB.price).toNumber()}
           />
         </Grid2>
       </Grid2>

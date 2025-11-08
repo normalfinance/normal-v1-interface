@@ -105,3 +105,6 @@ export async function getTokenBalance(tokenAddress: string, address: string): Pr
     throw Error(`unable to fetch balance for token: ${tokenAddress}`);
   }
 }
+
+export const isNormalToken = (issuer: string): boolean =>
+  issuer === constants.StellarConfig.NORMAL_ISSUER;

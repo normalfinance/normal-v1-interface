@@ -21,6 +21,7 @@ interface BuyCardProps extends CardProps {
   tokensList?: Token[];
   cashBalance?: number;
   queryParams?: BuyQueryParams;
+  changeTab: React.Dispatch<React.SetStateAction<false | 'swap' | 'send' | 'buy'>>;
 }
 
 export interface QuickAmountButton {
@@ -43,6 +44,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
   tokensList = [],
   cashBalance,
   queryParams,
+  changeTab,
   ...other
 }) => {
   const theme = useTheme();
@@ -344,7 +346,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
               variant="soft"
               color="secondary"
               size="large"
-              sx={{ borderRadius: 2.5 }}
+              sx={{ borderRadius: 2.5, mt: 2 }}
               onClick={handleMainButtonClick}
               disabled={getButtonLabel() !== 'Buy'}
             >

@@ -25,15 +25,15 @@ export default function CreatePositionView() {
 
   const { setGlobalIsLoading } = useAppStore();
 
-  const { getAllTokens, getAllPools } = usePersistStore();
+  const { wallet, getAllTokens, getAllPools } = usePersistStore();
 
-  // Effect hook to fetch all tokens once the component mounts
+  // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
-      setGlobalIsLoading(true);
       try {
-        await Promise.all([await getAllTokens(), await getAllPools()]);
-        setGlobalIsLoading(false);
+        setGlobalIsLoading(true);
+        await getAllPools();
+        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
@@ -41,7 +41,7 @@ export default function CreatePositionView() {
       }
     };
     refreshTokens();
-  }, []);
+  }, [wallet.address]);
 
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>

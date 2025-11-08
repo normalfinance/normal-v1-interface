@@ -4,8 +4,8 @@ import React from 'react';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fCurrencyTwoDecimals } from '@/utils/format-number';
 import { getSwapConversionText } from '@/utils/conversion-helpers';
+import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -134,7 +134,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={sellToken ? getCryptoIconUrl(sellToken.symbol) : ''}
+                src={sellToken ? (sellToken.icon ?? getCryptoIconUrl(sellToken.symbol)) : ''}
                 sx={{
                   width: 40,
                   height: 40,
@@ -187,7 +187,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={buyToken ? getCryptoIconUrl(buyToken.symbol) : ''}
+                src={buyToken ? (buyToken.icon ?? getCryptoIconUrl(buyToken.symbol)) : ''}
                 sx={{
                   width: 40,
                   height: 40,
@@ -308,8 +308,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         {t('Fee')}&nbsp;
                         <Box component="span">
                           {t('(')}
-                          {feePercentage}
-                          {t('%)')}
+                          {fPercent(feePercentage / 100)}
+                          {t(')')}
                         </Box>{' '}
                       </Typography>
                       <Iconify
@@ -327,7 +327,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fCurrencyTwoDecimals(sellFiatValue * (Number(feePercentage) / 100))}
+                      {fCurrencyTwoDecimals((sellFiatValue * feePercentage) / 10000)}
                     </Typography>
                   </Box>
 
@@ -372,7 +372,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      <Chip label="Coming soon" color="info" size="small" />
+                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
                       {/* {fCurrencyTwoDecimals(networkCost)} */}
                     </Typography>
                   </Box>
@@ -463,7 +463,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      <Chip label="Coming soon" color="info" size="small" />
+                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
                       {/* {fRawPercent(priceImpact)} */}
                     </Typography>
                   </Box>
@@ -509,7 +509,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      <Chip label="Coming soon" color="info" size="small" />
+                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
                       {/* {fRawPercent(maxSlippage)} */}
                     </Typography>
                   </Box>

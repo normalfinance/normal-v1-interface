@@ -29,11 +29,18 @@ interface SendCardProps extends CardProps {
   tokens: Token[];
   networkCost?: number;
   queryParams?: SendQueryParams;
+  changeTab?: React.Dispatch<React.SetStateAction<false | 'swap' | 'send' | 'buy'>>;
 }
 
 const DEFAULT_DESTINATION = 'Wallet address';
 
-const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, ...other }) => {
+const SendCard: React.FC<SendCardProps> = ({
+  tokens,
+  networkCost,
+  queryParams,
+  changeTab,
+  ...other
+}) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
@@ -321,7 +328,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, .
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Box
                   component="img"
-                  src={sendToken.icon ? getCryptoIconUrl(sendToken.symbol) : ''}
+                  src={sendToken ? (sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)) : ''}
                   sx={{
                     width: 36,
                     height: 36,
@@ -365,20 +372,28 @@ const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, .
                   gap: '6px',
                 }}
               >
-                <Button
-                  variant="soft"
-                  color="secondary"
-                  size="small"
-                  sx={{ fontWeight: 500, fontSize: '12px', p: 0, height: '24px', minWidth: '36px' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (sendToken) {
-                      setAmount(getMaxAmount(sendToken, isFiatMode));
-                    }
-                  }}
-                >
-                  {t('Max')}
-                </Button>
+                <div>
+                  <Button
+                    variant="soft"
+                    color="secondary"
+                    size="small"
+                    sx={{
+                      fontWeight: 500,
+                      fontSize: '12px',
+                      p: 0,
+                      height: '24px',
+                      minWidth: '36px',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (sendToken) {
+                        setAmount(getMaxAmount(sendToken, isFiatMode));
+                      }
+                    }}
+                  >
+                    {t('Max')}
+                  </Button>
+                </div>
                 <Iconify
                   width={24}
                   icon="eva:arrow-ios-downward-fill"
@@ -449,7 +464,7 @@ const SendCard: React.FC<SendCardProps> = ({ tokens, networkCost, queryParams, .
             size="large"
             disabled={!isSendReady}
             onClick={handleMainButtonClick}
-            sx={{ borderRadius: 2.5 }}
+            sx={{ borderRadius: 2.5, mt: 2 }}
           >
             {getButtonLabel()}
           </Button>

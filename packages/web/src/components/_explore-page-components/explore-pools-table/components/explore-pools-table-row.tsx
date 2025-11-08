@@ -71,25 +71,30 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       {/* TVL ------------------------------------------------------- */}
       <TableCell>{fCurrency(row.tvl)}</TableCell>
 
+      {/* Rewards % ------------------------------------------------------- */}
+      <TableCell>
+        <Chip label="Coming soon" color="info" size="small" variant="soft" />
+      </TableCell>
+
       {/* APR % ------------------------------------------------------- */}
       <TableCell>
-        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        <Chip label="Coming soon" color="info" size="small" variant="soft" />
         {/* {fPercent(row.apr)} */}
       </TableCell>
 
       {/* Volume ---------------------------------------------- */}
       <TableCell>
-        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        <Chip label="Coming soon" color="info" size="small" variant="soft" />
         {/* {fCurrency(row.volume1d)} */}
       </TableCell>
       <TableCell>
-        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        <Chip label="Coming soon" color="info" size="small" variant="soft" />
         {/* {fCurrency(row.volume30d)} */}
       </TableCell>
 
       {/* Ratio -------------------------------------------------- */}
       <TableCell>
-        <Chip label="Coming soon" color="info" size="small" sx={{ mb: 2 }} />
+        <Chip label="Coming soon" color="info" size="small" variant="soft" />
         {/* {fShortenNumber(row.ratio)} */}
       </TableCell>
 

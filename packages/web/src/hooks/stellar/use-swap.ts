@@ -5,6 +5,7 @@ import type { Client as PoolClient } from '@normalfinance/contracts/build/pool';
 import type { Client as PoolRouterClient } from '@normalfinance/contracts/build/pool_router';
 
 import { useState } from 'react';
+import { logger } from '@/middleware';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { constants, sortTokenAddreses } from '@normalfinance/utils';
@@ -74,6 +75,7 @@ export function useSwap(): ReturnType {
       tokens: sortedTokens,
       in_amount: BigInt((args.in_amount * 10 ** tokenIn.decimals).toFixed(0)),
     };
+    logger.log({ processedArgs });
 
     await executeContractTransaction({
       contractType: 'pool_router',
@@ -109,7 +111,7 @@ export function useSwap(): ReturnType {
         token2: { name: tokenOut.symbol, amount: args.out_min },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.swap(processedArgs, { simulate: !restore });
+        const tx = await client.swap(processedArgs, { fee: 1000, simulate: !restore });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;

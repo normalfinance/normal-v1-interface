@@ -29,9 +29,10 @@ export type TokenBalancesMap = {
 export interface TokenState {
   tokens: Token[];
   tokensByAddress: Record<string, Token>;
+  lastUpdated: number;
 }
 export interface TokenActions {
   tokenState: TokenState;
   updateTokenInfo: (token: ApiToken) => Promise<void>;
-  getAllTokens: () => Promise<void>;
+  getAllTokens: (override?: boolean) => Promise<void>;
 }

@@ -122,23 +122,23 @@ export default function LandingPage() {
   const { params } = useQueryParams<SwapQueryParams>();
 
   const { setGlobalIsLoading } = useAppStore();
-  const { getAllTokens, getAllPools } = usePersistStore();
+  const { wallet, getAllTokens, getAllPools } = usePersistStore();
 
-  // Effect hook to fetch all tokens and pools once the component mounts
+  // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
-    const refreshData = async (): Promise<void> => {
-      setGlobalIsLoading(true);
+    const refreshTokens = async (): Promise<void> => {
       try {
-        await Promise.all([await getAllTokens(), await getAllPools()]);
-        setGlobalIsLoading(false);
+        setGlobalIsLoading(true);
+        await getAllPools();
+        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }
     };
-    refreshData();
-  }, []);
+    refreshTokens();
+  }, [wallet.address]);
 
   return (
     <>

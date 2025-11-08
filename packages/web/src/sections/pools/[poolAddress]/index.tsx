@@ -15,39 +15,40 @@ import PoolDetailsView from './pool-details-view';
 export default function PoolView({ poolAddress }: { poolAddress: string }) {
   const { t } = useTranslate();
 
-  const validContractAddress = isValidContractAddress(poolAddress);
+  const isAddressValid = isValidContractAddress(poolAddress);
 
   const { setGlobalIsLoading } = useAppStore();
+
   const {
+    wallet,
     getAllTokens,
     poolState: { pools },
-    getAllPools,
+    getPool,
   } = usePersistStore();
 
   // Effect hook to fetch all tokens and pools once the component mounts
   useEffect(() => {
-    const refreshData = async (): Promise<void> => {
-      setGlobalIsLoading(true);
+    const refreshTokens = async (): Promise<void> => {
       try {
-        await Promise.all([await getAllTokens(), await getAllPools()]);
-        setGlobalIsLoading(false);
+        setGlobalIsLoading(true);
+        if (poolAddress && isAddressValid) await getPool(poolAddress);
+        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }
     };
-    if (validContractAddress) refreshData();
-  }, []);
+    refreshTokens();
+  }, [poolAddress, isAddressValid, wallet.address]);
 
   const pool = useMemo(() => {
-    if (!validContractAddress) return undefined;
-    if (!pools || pools.length === 0) return undefined;
+    if (!poolAddress || !isAddressValid || !pools || !pools.length) return undefined;
 
     return pools.find((p) => p.addresses.pool === poolAddress);
-  }, [poolAddress, validContractAddress, pools]);
+  }, [poolAddress, isAddressValid, pools]);
 
-  if (validContractAddress === false) {
+  if (isAddressValid === false) {
     return (
       <DashboardContent maxWidth="xl">
         <Alert severity="info">{t('Invalid pool contract address.')}</Alert>

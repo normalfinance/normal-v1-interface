@@ -3,7 +3,6 @@ import {
   Asset,
   Horizon,
   Operation,
-  rpc as SorobanRpc,
   StrKey,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
