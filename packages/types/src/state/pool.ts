@@ -1,8 +1,5 @@
 import { Pool } from '../contracts';
 export interface PoolState {
-  loading: boolean;
-  error: string | null;
-
   pools: Pool[];
   poolsByTokens: Record<string, Pool[]>;
   lastUpdated: number;
