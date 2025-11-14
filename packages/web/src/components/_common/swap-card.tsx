@@ -359,12 +359,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
     if (!sellToken || !buyToken) {
       return ButtonState.SELECT_TOKEN;
     }
-    if (!pool) {
-      return ButtonState.NO_POOL_FOUND;
-    }
-    if (!tokens.some((tkn) => tkn.balance != '0')) {
-      return ButtonState.ZERO_BALANCE;
-    }
     if (checkingTrustline) {
       return ButtonState.CHECKING_TRUSTLINE;
     }
@@ -376,6 +370,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
       logger.log('[BUTTON STATE] Returning CREATE_TRUSTLINE');
       return ButtonState.CREATE_TRUSTLINE;
     }
+    if (!pool) {
+      return ButtonState.NO_POOL_FOUND;
+    }
+    if (!tokens.some((tkn) => tkn.balance != '0')) {
+      return ButtonState.ZERO_BALANCE;
+    }
+
     if (sellVal <= 0) {
       return ButtonState.ENTER_AMOUNT;
     }
@@ -675,6 +676,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
+                disabled={getButtonState() == ButtonState.CREATE_TRUSTLINE}
                 inputProps={{
                   min: 0,
                   style: {

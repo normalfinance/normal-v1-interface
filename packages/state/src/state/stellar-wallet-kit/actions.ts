@@ -72,7 +72,7 @@ export function createStellarWalletKitActions(
             url: 'https://normalfinance.io',
             projectId: 'c23b8cc582d9a0db289b74ddda7bfc6e',
             method: WalletConnectAllowedMethods.SIGN,
-            description: 'Synthetic asset and index funds on Stellar',
+            description: 'Synthetic asset and index fund protocol on Stellar',
             name: 'Normal',
             icons: ['https://normalfinance.io/favicon.ico'],
             network:
