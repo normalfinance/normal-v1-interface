@@ -116,9 +116,6 @@ async function getPoolDetails(poolAddress: string, poolIndex: Buffer) {
 
 export function createPoolActions(): PoolActions {
   const initialState: PoolState = {
-    loading: false,
-    error: null,
-
     pools: [],
     poolsByTokens: {},
     lastUpdated: 0,
@@ -189,8 +186,6 @@ export function createPoolActions(): PoolActions {
         }, {});
 
         const newState: PoolState = {
-          loading: false,
-          error: null,
           pools: poolsFiltered,
           poolsByTokens,
           lastUpdated: now,
@@ -242,8 +237,6 @@ export function createPoolActions(): PoolActions {
           }, {});
 
           const newState: PoolState = {
-            loading: false,
-            error: null,
             pools: poolsFiltered,
             poolsByTokens,
             lastUpdated: Date.now(),
