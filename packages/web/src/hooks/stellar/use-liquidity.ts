@@ -104,7 +104,7 @@ export function useLiquidity(): ReturnType {
         token2: { name: tokenB.symbol, amount: args.desired_amounts[tokenIdx.b] },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.deposit(processedArgs, { simulate: !restore });
+        const tx = await client.deposit(processedArgs, { fee: 1000, simulate: !restore });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -162,7 +162,7 @@ export function useLiquidity(): ReturnType {
         token1: { name: 'POOL', amount: args.share_amount },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.withdraw(processedArgs, { simulate: !restore });
+        const tx = await client.withdraw(processedArgs, { fee: 1000, simulate: !restore });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;

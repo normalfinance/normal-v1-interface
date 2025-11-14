@@ -159,7 +159,10 @@ export function useSwap(): ReturnType {
         token2: { name: tokenOut.symbol, amount: args.out_amount },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.swap_strict_receive(processedArgs, { simulate: !restore });
+        const tx = await client.swap_strict_receive(processedArgs, {
+          fee: 1000,
+          simulate: !restore,
+        });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
