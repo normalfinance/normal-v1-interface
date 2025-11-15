@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.2...v1.2.3) (2025-11-15)
+
+
+### Bug Fixes
+
+* **next:** remove untested middleware ([8150902](https://github.com/normalfinance/normal-v1-interface/commit/8150902b84d8d61daff52d546267c7b93175c164))
+
 ## [1.2.2](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.1...v1.2.2) (2025-11-14)
 
 
