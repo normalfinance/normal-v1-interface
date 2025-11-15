@@ -53,10 +53,10 @@ const nextConfig = {
       { source: '/ingest/:path*', destination: 'https://us.i.posthog.com/:path*' },
       { source: '/ingest/decide', destination: 'https://us.i.posthog.com/decide' },
       // Rewrite API routes with trailing slash to without trailing slash to prevent redirects
-      {
-        source: '/api/:path*/',
-        destination: '/api/:path*',
-      },
+      // {
+      //   source: '/api/:path*/',
+      //   destination: '/api/:path*',
+      // },
     ];
   },
   ...(isStaticExport === 'true' && { output: 'export' }),
