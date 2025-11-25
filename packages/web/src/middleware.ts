@@ -239,149 +239,149 @@ export async function middleware(req: NextRequest) {
   }
 
   // Check for cached geo data first
-  const cacheCheckStart = Date.now();
-  const geoCookie = req.cookies.get(GEO_CACHE_COOKIE_NAME);
-  let cachedGeoData: GeoCacheData | null = null;
+  // const cacheCheckStart = Date.now();
+  // const geoCookie = req.cookies.get(GEO_CACHE_COOKIE_NAME);
+  // let cachedGeoData: GeoCacheData | null = null;
 
-  logger.log(`[${requestId}] Checking cache... Cookie present: ${!!geoCookie?.value}`);
+  // logger.log(`[${requestId}] Checking cache... Cookie present: ${!!geoCookie?.value}`);
 
-  if (geoCookie?.value) {
-    cachedGeoData = parseGeoCookie(geoCookie.value);
+  // if (geoCookie?.value) {
+  //   cachedGeoData = parseGeoCookie(geoCookie.value);
 
-    if (cachedGeoData) {
-      const cacheAge = Date.now() - cachedGeoData.timestamp;
-      const isValid = isCacheValid(cachedGeoData.timestamp);
+  //   if (cachedGeoData) {
+  //     const cacheAge = Date.now() - cachedGeoData.timestamp;
+  //     const isValid = isCacheValid(cachedGeoData.timestamp);
 
-      logger.log(`[${requestId}] Cached data found:`);
-      logger.log(`   • Country: ${cachedGeoData.country}`);
-      logger.log(`   • VPN: ${cachedGeoData.isVpn}`);
-      logger.log(`   • Dangerous: ${cachedGeoData.isDangerous}`);
-      logger.log(
-        `   • Age: ${Math.round(cacheAge / 1000)}s (${Math.round(cacheAge / (1000 * 60))}min)`
-      );
-      logger.log(`   • Valid: ${isValid}`);
-      logger.log(`   • Version: ${cachedGeoData.version}`);
+  //     logger.log(`[${requestId}] Cached data found:`);
+  //     logger.log(`   • Country: ${cachedGeoData.country}`);
+  //     logger.log(`   • VPN: ${cachedGeoData.isVpn}`);
+  //     logger.log(`   • Dangerous: ${cachedGeoData.isDangerous}`);
+  //     logger.log(
+  //       `   • Age: ${Math.round(cacheAge / 1000)}s (${Math.round(cacheAge / (1000 * 60))}min)`
+  //     );
+  //     logger.log(`   • Valid: ${isValid}`);
+  //     logger.log(`   • Version: ${cachedGeoData.version}`);
 
-      if (isValid) {
-        const cacheCheckDuration = Date.now() - cacheCheckStart;
-        const totalDuration = Date.now() - startTime;
+  //     if (isValid) {
+  //       const cacheCheckDuration = Date.now() - cacheCheckStart;
+  //       const totalDuration = Date.now() - startTime;
 
-        logger.log(
-          `[${requestId}] CACHE HIT! Using cached data (cache check: ${cacheCheckDuration}ms, total: ${totalDuration}ms)`
-        );
+  //       logger.log(
+  //         `[${requestId}] CACHE HIT! Using cached data (cache check: ${cacheCheckDuration}ms, total: ${totalDuration}ms)`
+  //       );
 
-        // Use cached data for blocking decisions
-        if (BLOCKED_COUNTRIES.has(cachedGeoData.country) || cachedGeoData.isDangerous) {
-          const blockReason = BLOCKED_COUNTRIES.has(cachedGeoData.country) ? 'country' : 'security';
-          logger.log(`[${requestId}] BLOCKED via cache (${blockReason}): ${cachedGeoData.country}`);
-          const url = req.nextUrl.clone();
-          url.pathname = '/blocked';
-          url.search = '';
-          return NextResponse.redirect(url);
-        }
+  //       // Use cached data for blocking decisions
+  //       if (BLOCKED_COUNTRIES.has(cachedGeoData.country) || cachedGeoData.isDangerous) {
+  //         const blockReason = BLOCKED_COUNTRIES.has(cachedGeoData.country) ? 'country' : 'security';
+  //         logger.log(`[${requestId}] BLOCKED via cache (${blockReason}): ${cachedGeoData.country}`);
+  //         const url = req.nextUrl.clone();
+  //         url.pathname = '/blocked';
+  //         url.search = '';
+  //         return NextResponse.redirect(url);
+  //       }
 
-        logger.log(`✅ [${requestId}] ALLOWED via cache - Request completed in ${totalDuration}ms`);
-        return referralResponse || NextResponse.next();
-      } else {
-        logger.log(`❌ [${requestId}] Cache expired, will fetch fresh data`);
-      }
-    } else {
-      logger.log(`❌ [${requestId}] Failed to parse cached data`);
-    }
-  } else {
-    logger.log(`❌ [${requestId}] No cache cookie found`);
-  }
+  //       logger.log(`✅ [${requestId}] ALLOWED via cache - Request completed in ${totalDuration}ms`);
+  //       return referralResponse || NextResponse.next();
+  //     } else {
+  //       logger.log(`❌ [${requestId}] Cache expired, will fetch fresh data`);
+  //     }
+  //   } else {
+  //     logger.log(`❌ [${requestId}] Failed to parse cached data`);
+  //   }
+  // } else {
+  //   logger.log(`❌ [${requestId}] No cache cookie found`);
+  // }
 
   // Check for active request to prevent duplicate API calls
-  let lookupPromise = activeRequests.get(ip);
-  const apiStart = Date.now();
+  // let lookupPromise = activeRequests.get(ip);
+  // const apiStart = Date.now();
 
-  if (lookupPromise) {
-    logger.log(`🔄 [${requestId}] DEDUPLICATION: Reusing active request for IP: ${ip}`);
-    logger.log(`📊 [${requestId}] Total active requests: ${activeRequests.size}`);
-  } else {
-    logger.log(`🌍 [${requestId}] CACHE MISS: Starting new API call for IP: ${ip}`);
-    lookupPromise = lookup(ip);
-    activeRequests.set(ip, lookupPromise);
-    logger.log(`📈 [${requestId}] Active requests after adding: ${activeRequests.size}`);
-  }
+  // if (lookupPromise) {
+  //   logger.log(`🔄 [${requestId}] DEDUPLICATION: Reusing active request for IP: ${ip}`);
+  //   logger.log(`📊 [${requestId}] Total active requests: ${activeRequests.size}`);
+  // } else {
+  //   logger.log(`🌍 [${requestId}] CACHE MISS: Starting new API call for IP: ${ip}`);
+  //   lookupPromise = lookup(ip);
+  //   activeRequests.set(ip, lookupPromise);
+  //   logger.log(`📈 [${requestId}] Active requests after adding: ${activeRequests.size}`);
+  // }
 
-  try {
-    const geoData = await lookupPromise;
-    const apiDuration = Date.now() - apiStart;
+  // try {
+  //   const geoData = await lookupPromise;
+  //   const apiDuration = Date.now() - apiStart;
 
-    logger.log(`[${requestId}] API Response received (${apiDuration}ms):`);
-    logger.log(`   • Country: ${geoData.country}`);
-    logger.log(`   • VPN: ${geoData.isVpn}`);
-    logger.log(`   • Dangerous: ${geoData.isDangerous}`);
-    logger.log(`   • API call duration: ${apiDuration}ms`);
+  //   logger.log(`[${requestId}] API Response received (${apiDuration}ms):`);
+  //   logger.log(`   • Country: ${geoData.country}`);
+  //   logger.log(`   • VPN: ${geoData.isVpn}`);
+  //   logger.log(`   • Dangerous: ${geoData.isDangerous}`);
+  //   logger.log(`   • API call duration: ${apiDuration}ms`);
 
-    // Create response object to set cookies
-    const response = referralResponse || NextResponse.next();
+  //   // Create response object to set cookies
+  //   const response = referralResponse || NextResponse.next();
 
-    // Cache the geo data
-    const cacheStart = Date.now();
-    setCacheResponse(response, geoData);
-    const cacheDuration = Date.now() - cacheStart;
+  //   // Cache the geo data
+  //   const cacheStart = Date.now();
+  //   setCacheResponse(response, geoData);
+  //   const cacheDuration = Date.now() - cacheStart;
 
-    logger.log(`[${requestId}] Data cached successfully (${cacheDuration}ms)`);
+  //   logger.log(`[${requestId}] Data cached successfully (${cacheDuration}ms)`);
 
-    // Check for blocking conditions
-    if (BLOCKED_COUNTRIES.has(geoData.country) || geoData.isDangerous) {
-      const blockReason = BLOCKED_COUNTRIES.has(geoData.country) ? 'country' : 'security';
-      const totalDuration = Date.now() - startTime;
+  //   // Check for blocking conditions
+  //   if (BLOCKED_COUNTRIES.has(geoData.country) || geoData.isDangerous) {
+  //     const blockReason = BLOCKED_COUNTRIES.has(geoData.country) ? 'country' : 'security';
+  //     const totalDuration = Date.now() - startTime;
 
-      logger.log(
-        `[${requestId}] BLOCKED via API (${blockReason}): ${geoData.country} - Total: ${totalDuration}ms`
-      );
+  //     logger.log(
+  //       `[${requestId}] BLOCKED via API (${blockReason}): ${geoData.country} - Total: ${totalDuration}ms`
+  //     );
 
-      const url = req.nextUrl.clone();
-      url.pathname = '/blocked';
-      url.search = '';
-      return NextResponse.redirect(url);
-    }
+  //     const url = req.nextUrl.clone();
+  //     url.pathname = '/blocked';
+  //     url.search = '';
+  //     return NextResponse.redirect(url);
+  //   }
 
-    const totalDuration = Date.now() - startTime;
-    logger.log(`[${requestId}] ALLOWED via API - Total duration: ${totalDuration}ms`);
+  //   const totalDuration = Date.now() - startTime;
+  //   logger.log(`[${requestId}] ALLOWED via API - Total duration: ${totalDuration}ms`);
 
-    return response;
-  } catch (e) {
-    const apiDuration = Date.now() - apiStart;
-    const totalDuration = Date.now() - startTime;
+  //   return response;
+  // } catch (e) {
+  //   const apiDuration = Date.now() - apiStart;
+  //   const totalDuration = Date.now() - startTime;
 
-    logger.error(`[${requestId}] API ERROR after ${apiDuration}ms:`, e);
+  //   logger.error(`[${requestId}] API ERROR after ${apiDuration}ms:`, e);
 
-    // If we have stale cached data, use it as fallback
-    if (cachedGeoData) {
-      logger.log(`[${requestId}] Using stale cached data as fallback:`);
-      logger.log(`   • Country: ${cachedGeoData.country}`);
-      logger.log(`   • VPN: ${cachedGeoData.isVpn}`);
-      logger.log(`   • Dangerous: ${cachedGeoData.isDangerous}`);
+  //   // If we have stale cached data, use it as fallback
+  //   if (cachedGeoData) {
+  //     logger.log(`[${requestId}] Using stale cached data as fallback:`);
+  //     logger.log(`   • Country: ${cachedGeoData.country}`);
+  //     logger.log(`   • VPN: ${cachedGeoData.isVpn}`);
+  //     logger.log(`   • Dangerous: ${cachedGeoData.isDangerous}`);
 
-      if (BLOCKED_COUNTRIES.has(cachedGeoData.country) || cachedGeoData.isDangerous) {
-        const blockReason = BLOCKED_COUNTRIES.has(cachedGeoData.country) ? 'country' : 'security';
-        logger.log(
-          `[${requestId}] BLOCKED via stale cache (${blockReason}): ${cachedGeoData.country}`
-        );
+  //     if (BLOCKED_COUNTRIES.has(cachedGeoData.country) || cachedGeoData.isDangerous) {
+  //       const blockReason = BLOCKED_COUNTRIES.has(cachedGeoData.country) ? 'country' : 'security';
+  //       logger.log(
+  //         `[${requestId}] BLOCKED via stale cache (${blockReason}): ${cachedGeoData.country}`
+  //       );
 
-        const url = req.nextUrl.clone();
-        url.pathname = '/blocked';
-        url.search = '';
-        return NextResponse.redirect(url);
-      }
+  //       const url = req.nextUrl.clone();
+  //       url.pathname = '/blocked';
+  //       url.search = '';
+  //       return NextResponse.redirect(url);
+  //     }
 
-      logger.log(`[${requestId}] ALLOWED via stale cache - Total: ${totalDuration}ms`);
-    } else {
-      logger.log(
-        `[${requestId}] No cache fallback available, allowing by default - Total: ${totalDuration}ms`
-      );
-    }
-  } finally {
-    // Clean up active request
-    activeRequests.delete(ip);
-    const remainingActive = activeRequests.size;
-    logger.log(`[${requestId}] Cleaned up request. Remaining active: ${remainingActive}`);
-  }
+  //     logger.log(`[${requestId}] ALLOWED via stale cache - Total: ${totalDuration}ms`);
+  //   } else {
+  //     logger.log(
+  //       `[${requestId}] No cache fallback available, allowing by default - Total: ${totalDuration}ms`
+  //     );
+  //   }
+  // } finally {
+  //   // Clean up active request
+  //   activeRequests.delete(ip);
+  //   const remainingActive = activeRequests.size;
+  //   logger.log(`[${requestId}] Cleaned up request. Remaining active: ${remainingActive}`);
+  // }
 
   const totalDuration = Date.now() - startTime;
   logger.log(`[${requestId}] MIDDLEWARE END - Total duration: ${totalDuration}ms\n`);

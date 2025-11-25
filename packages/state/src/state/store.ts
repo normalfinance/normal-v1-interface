@@ -64,6 +64,8 @@ export const usePersistStore = create<AppStorePersist>()(
         if (version < 3) {
           return {};
         }
+
+        return persistedState;
       },
     }
   )

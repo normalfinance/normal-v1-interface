@@ -94,13 +94,22 @@ export function useSwap(): ReturnType {
     const tokenIn = tokensByAddress[args.token_in];
     const tokenOut = tokensByAddress[args.token_out];
 
+    if (!tokenIn || !tokenOut) {
+      throw new Error('Token metadata not found for swap');
+    }
+
+    // Build only the fields the contract expects – no spreading `args`
     const processedArgs: Parameters<PoolRouterClient['swap']>[0] = {
-      ...args,
-      user: wallet.address!,
-      tokens: sortedTokens,
-      in_amount: BigInt((args.in_amount * 10 ** tokenIn.decimals).toFixed(0)),
-      out_min: BigInt((args.out_min * 10 ** tokenOut.decimals).toFixed(0)),
+      user: wallet.address!, // Address
+      tokens: sortedTokens, // Address[]
+      token_in: args.token_in, // Address
+      token_out: args.token_out, // Address
+      pool_index: args.pool_index, // normalizeBytes((args as any).pool_index) as Buffer, // Buffer
+      in_amount: BigInt((args.in_amount * 10 ** tokenIn.decimals).toFixed(0)), // i128 / u128
+      out_min: BigInt((args.out_min * 10 ** tokenOut.decimals).toFixed(0)), // i128 / u128
     };
+
+    logger.log('[SWAP] processedArgs', processedArgs);
 
     await executeContractTransaction({
       contractType: 'pool_router',
