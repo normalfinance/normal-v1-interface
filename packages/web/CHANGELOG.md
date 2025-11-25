@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.3...v1.2.4) (2025-11-25)
+
+
+### Bug Fixes
+
+* add missing store return, remove unused middleware, improve swap typing ([2aac2bf](https://github.com/normalfinance/normal-v1-interface/commit/2aac2bf1c2c7bd99a72d379a587d4980e3452382))
+
 ## [1.2.3](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.2...v1.2.3) (2025-11-15)
 
 
