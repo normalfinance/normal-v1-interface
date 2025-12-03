@@ -38,7 +38,11 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   const persist = usePersistStore();
   const { t } = useTranslate();
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
-  const { connectWallet: connectNormalWallet, publicKey: normalPublicKey, isConnected: isNormalConnected } = useNormalWallet();
+  const {
+    connectWallet: connectNormalWallet,
+    publicKey: normalPublicKey,
+    isConnected: isNormalConnected,
+  } = useNormalWallet();
   const isWalletConnected = !!persist.wallet.address || isConnected || isNormalConnected;
 
   /* ↓ drawer UI toggle (only used when wallet is connected) -------- */
@@ -109,6 +113,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     try {
       await disconnectWallet();
       persist.disconnectWallet();
+
       onClose();
     } catch (error) {
       logger.error('Error disconnecting wallet:', error);

@@ -106,7 +106,8 @@ const getContractClient = <T extends ContractType>(
 
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
-  const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } = useStellarWalletsKit();
+  const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
+    useStellarWalletsKit();
   const { signTransaction: signNormalWallet, publicKey: normalPublicKey } = useNormalWallet();
   const { t } = useTranslate();
 
@@ -121,13 +122,13 @@ export const useContractTransaction = () => {
     }: ExecuteContractTransactionParams<T>) => {
       const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
       const rpcUrl = constants.StellarConfig.RPC_URL;
-      
+
       // Determine wallet type and get appropriate address and sign function
       const walletType = storePersist.wallet.walletType;
       const isNormalWallet = walletType === 'normal-wallet';
-      const walletAddress = isNormalWallet 
-        ? (normalPublicKey || storePersist.wallet.address)
-        : (stellarPublicKey || storePersist.wallet.address);
+      const walletAddress = isNormalWallet
+        ? normalPublicKey || storePersist.wallet.address
+        : stellarPublicKey || storePersist.wallet.address;
       const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
       if (!walletAddress) {
@@ -154,7 +155,7 @@ export const useContractTransaction = () => {
               throw new Error('Sign transaction function not available');
             }
             // For Normal wallet, pass network passphrase
-            const result = isNormalWallet 
+            const result = isNormalWallet
               ? await signTransaction(xdr, networkPassphrase)
               : await signTransaction(xdr);
             logger.log('[USE CONTRACT TRANSACTION] Transaction signed successfully');
@@ -306,7 +307,16 @@ export const useContractTransaction = () => {
           throw error;
         });
     },
-    [storePersist, signStellarWalletKit, signNormalWallet, stellarPublicKey, normalPublicKey, openRestoreModal, closeRestoreModal, t]
+    [
+      storePersist,
+      signStellarWalletKit,
+      signNormalWallet,
+      stellarPublicKey,
+      normalPublicKey,
+      openRestoreModal,
+      closeRestoreModal,
+      t,
+    ]
   );
 
   return {

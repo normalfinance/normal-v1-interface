@@ -41,7 +41,7 @@ export const hasSeenWalletSelectionModal = (): boolean => {
  */
 export const markWalletSelectionModalSeen = (): void => {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(WALLET_SELECTION_SEEN_KEY, 'true');
+//   localStorage.setItem(WALLET_SELECTION_SEEN_KEY, 'true');
 };
 
 export default function WalletSelectionModal({
@@ -77,6 +77,9 @@ export default function WalletSelectionModal({
       onClose={onClose}
       fullWidth
       maxWidth="sm"
+      style={{
+        padding: 10,
+      }}
       slotProps={{
         paper: {
           sx: {
@@ -103,7 +106,7 @@ export default function WalletSelectionModal({
         </IconButton>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ py: 5 }}>
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t('Select how you would like to connect your wallet')}
@@ -127,9 +130,6 @@ export default function WalletSelectionModal({
               <Typography variant="subtitle1" fontWeight={600}>
                 {t('Create Normal Wallet')}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t('Create a new wallet with a recovery phrase')}
-              </Typography>
             </Box>
           </Button>
 
@@ -149,10 +149,7 @@ export default function WalletSelectionModal({
           >
             <Box sx={{ textAlign: 'left', flex: 1 }}>
               <Typography variant="subtitle1" fontWeight={600}>
-                {t('Connect Normal Wallet')}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t('Import an existing Normal wallet')}
+                {t('Import Existing Normal Wallet')}
               </Typography>
             </Box>
           </Button>
@@ -175,9 +172,6 @@ export default function WalletSelectionModal({
             <Box sx={{ textAlign: 'left', flex: 1 }}>
               <Typography variant="subtitle1" fontWeight={600}>
                 {t('Continue to other wallets')}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t('Connect with Freighter, xBull, or other Stellar wallets')}
               </Typography>
             </Box>
           </Button>

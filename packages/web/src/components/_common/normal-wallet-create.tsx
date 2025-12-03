@@ -48,11 +48,7 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
   return result;
 };
 
-export default function NormalWalletCreate({
-  open,
-  onClose,
-  onSuccess,
-}: NormalWalletCreateProps) {
+export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalWalletCreateProps) {
   const { t } = useTranslate();
   const { createWallet } = useNormalWallet();
 
@@ -72,7 +68,7 @@ export default function NormalWalletCreate({
   React.useEffect(() => {
     if (open && stage === 'creating') {
       let cancelled = false;
-      
+
       const createWalletAsync = async () => {
         try {
           setError(null);
@@ -88,9 +84,9 @@ export default function NormalWalletCreate({
           }
         }
       };
-      
+
       createWalletAsync();
-      
+
       return () => {
         cancelled = true;
       };
@@ -102,7 +98,13 @@ export default function NormalWalletCreate({
   };
 
   const handleSkipBackup = () => {
-    if (window.confirm(t('Skip Backup? Without backing up your wallet, you won\'t be able to recover it if you lose access. Are you sure?'))) {
+    if (
+      window.confirm(
+        t(
+          "Skip Backup? Without backing up your wallet, you won't be able to recover it if you lose access. Are you sure?"
+        )
+      )
+    ) {
       handleComplete();
     }
   };
@@ -131,9 +133,7 @@ export default function NormalWalletCreate({
         .filter((item) => item.index !== index)
         .map((item) => item.word);
 
-      const distractors = otherOptions
-        .sort(() => 0.5 - Math.random())
-        .slice(0, 3);
+      const distractors = otherOptions.sort(() => 0.5 - Math.random()).slice(0, 3);
 
       const options = [...distractors, word].sort(() => 0.5 - Math.random());
 
@@ -217,16 +217,14 @@ export default function NormalWalletCreate({
       return;
     }
 
-    if (window.confirm(t('Are you sure you want to close? Your wallet creation progress will be lost.'))) {
-      setMnemonic(null);
-      setStage('creating');
-      setVerificationQuestions([]);
-      setSelectedAnswers({});
-      setAnswerErrors({});
-      setCurrentQuestionIndex(0);
-      setError(null);
-      onClose();
-    }
+    setMnemonic(null);
+    setStage('creating');
+    setVerificationQuestions([]);
+    setSelectedAnswers({});
+    setAnswerErrors({});
+    setCurrentQuestionIndex(0);
+    setError(null);
+    onClose();
   };
 
   return (
@@ -264,7 +262,7 @@ export default function NormalWalletCreate({
         </IconButton>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ py: 5 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -274,9 +272,6 @@ export default function NormalWalletCreate({
         {stage === 'creating' && (
           <Stack spacing={2} alignItems="center" sx={{ py: 4 }}>
             <CircularProgress />
-            <Typography variant="body2" color="text.secondary">
-              {t('Creating your wallet...')}
-            </Typography>
           </Stack>
         )}
 
@@ -296,12 +291,7 @@ export default function NormalWalletCreate({
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {t('Backup your recovery phrase to ensure you can recover your wallet later.')}
               </Typography>
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={handleBackupWallet}
-                sx={{ mb: 1 }}
-              >
+              <Button variant="contained" fullWidth onClick={handleBackupWallet} sx={{ mb: 1 }}>
                 {t('Back up')}
               </Button>
               <Button variant="outlined" fullWidth onClick={handleSkipBackup}>
@@ -324,7 +314,9 @@ export default function NormalWalletCreate({
             </Box>
 
             <Typography variant="body2" color="text.secondary">
-              {t('Write down these words in order and keep them in a safe place. You will need them to recover your wallet.')}
+              {t(
+                'Write down these words in order and keep them in a safe place. You will need them to recover your wallet.'
+              )}
             </Typography>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
@@ -349,7 +341,7 @@ export default function NormalWalletCreate({
 
             <Stack spacing={2}>
               <Button variant="contained" fullWidth onClick={startVerification}>
-                {t('I\'ve Written It Down')}
+                {t("I've Written It Down")}
               </Button>
               <Button variant="outlined" fullWidth onClick={handleCopyMnemonic}>
                 {t('Copy to Clipboard')}
@@ -375,13 +367,7 @@ export default function NormalWalletCreate({
                 {(() => {
                   const index = verificationQuestions[currentQuestionIndex]?.index;
                   const ordinal =
-                    index === 1
-                      ? 'st'
-                      : index === 2
-                      ? 'nd'
-                      : index === 3
-                      ? 'rd'
-                      : 'th';
+                    index === 1 ? 'st' : index === 2 ? 'nd' : index === 3 ? 'rd' : 'th';
                   return t('Select the') + ` ${index}${ordinal} ` + t('word');
                 })()}
               </Typography>
@@ -399,8 +385,8 @@ export default function NormalWalletCreate({
                         index === currentQuestionIndex
                           ? 'primary.main'
                           : index < currentQuestionIndex
-                          ? 'success.main'
-                          : 'divider',
+                            ? 'success.main'
+                            : 'divider',
                     }}
                   />
                 ))}
@@ -410,8 +396,7 @@ export default function NormalWalletCreate({
                 {verificationQuestions[currentQuestionIndex]?.options.map((option, optIndex) => {
                   const isSelected =
                     selectedAnswers[verificationQuestions[currentQuestionIndex].index] === option;
-                  const hasError =
-                    answerErrors[verificationQuestions[currentQuestionIndex].index];
+                  const hasError = answerErrors[verificationQuestions[currentQuestionIndex].index];
 
                   return (
                     <Button
@@ -451,4 +436,3 @@ export default function NormalWalletCreate({
     </Dialog>
   );
 }
-

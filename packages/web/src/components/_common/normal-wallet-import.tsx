@@ -142,7 +142,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
     >
       <DialogTitle sx={{ pb: 2, position: 'relative' }}>
         <Typography variant="h5" component="div">
-          {t('Import Normal Wallet')}
+          {t('Import Existing Normal Wallet')}
         </Typography>
         <IconButton
           aria-label="close"
@@ -158,7 +158,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         </IconButton>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ py: 5 }}>
         <Stack spacing={3}>
           {error && <Alert severity="error">{error}</Alert>}
 

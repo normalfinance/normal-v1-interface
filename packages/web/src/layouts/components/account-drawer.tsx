@@ -166,6 +166,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
       } else {
         await disconnectWallet();
       }
+      const WALLET_SELECTION_SEEN_KEY = 'wallet-selection-modal-seen';
+
+      localStorage.removeItem(WALLET_SELECTION_SEEN_KEY);
 
       posthog.reset();
 
