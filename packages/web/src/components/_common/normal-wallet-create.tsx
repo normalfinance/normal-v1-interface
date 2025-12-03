@@ -1,0 +1,454 @@
+'use client';
+
+import React, { useState, useCallback, useMemo } from 'react';
+import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
+import {
+  formatMnemonicForDisplay,
+  getRandomVerificationWords,
+  splitMnemonicToWords,
+} from '@normalfinance/utils';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Button,
+  Stack,
+  Typography,
+  IconButton,
+  Box,
+  Paper,
+  CircularProgress,
+  Alert,
+} from '@mui/material';
+
+import { Iconify } from '@/components/template/iconify';
+
+export type NormalWalletCreateProps = {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+};
+
+type CreateStage = 'creating' | 'summary' | 'backup' | 'verify';
+
+interface VerificationQuestion {
+  index: number;
+  correctWord: string;
+  options: string[];
+}
+
+const chunkArray = <T,>(array: T[], size: number): T[][] => {
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+};
+
+export default function NormalWalletCreate({
+  open,
+  onClose,
+  onSuccess,
+}: NormalWalletCreateProps) {
+  const { t } = useTranslate();
+  const { createWallet } = useNormalWallet();
+
+  const [stage, setStage] = useState<CreateStage>('creating');
+  const [mnemonic, setMnemonic] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [verificationQuestions, setVerificationQuestions] = useState<VerificationQuestion[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
+  const [answerErrors, setAnswerErrors] = useState<Record<number, string>>({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+  const formattedMnemonic = useMemo(() => {
+    return mnemonic ? formatMnemonicForDisplay(mnemonic) : [];
+  }, [mnemonic]);
+
+  // Create wallet on mount
+  React.useEffect(() => {
+    if (open && stage === 'creating') {
+      let cancelled = false;
+      
+      const createWalletAsync = async () => {
+        try {
+          setError(null);
+          const result = await createWallet();
+          if (!cancelled) {
+            setMnemonic(result.mnemonic);
+            setStage('summary');
+          }
+        } catch (err: any) {
+          if (!cancelled) {
+            logger.error('Failed to create wallet:', err);
+            setError(err.message || 'Failed to create wallet');
+          }
+        }
+      };
+      
+      createWalletAsync();
+      
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [open, stage]); // Removed createWallet from dependencies to prevent infinite loop
+
+  const handleBackupWallet = () => {
+    setStage('backup');
+  };
+
+  const handleSkipBackup = () => {
+    if (window.confirm(t('Skip Backup? Without backing up your wallet, you won\'t be able to recover it if you lose access. Are you sure?'))) {
+      handleComplete();
+    }
+  };
+
+  const handleCopyMnemonic = async () => {
+    if (!mnemonic) return;
+    try {
+      await navigator.clipboard.writeText(mnemonic);
+      // You could show a toast notification here
+    } catch (err) {
+      logger.error('Failed to copy mnemonic:', err);
+    }
+  };
+
+  const startVerification = useCallback(() => {
+    if (!mnemonic) return;
+
+    const words = splitMnemonicToWords(mnemonic);
+    const requiredCount = words.length >= 24 ? 3 : 2;
+    const verificationWords = getRandomVerificationWords(mnemonic, requiredCount);
+    const formatted = formatMnemonicForDisplay(mnemonic);
+
+    // Create questions with options (correct word + 3 distractors)
+    const questions: VerificationQuestion[] = verificationWords.map(({ index, word }) => {
+      const otherOptions = formatted
+        .filter((item) => item.index !== index)
+        .map((item) => item.word);
+
+      const distractors = otherOptions
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3);
+
+      const options = [...distractors, word].sort(() => 0.5 - Math.random());
+
+      return {
+        index,
+        correctWord: word,
+        options,
+      };
+    });
+
+    setVerificationQuestions(questions);
+    setSelectedAnswers({});
+    setAnswerErrors({});
+    setCurrentQuestionIndex(0);
+    setStage('verify');
+  }, [mnemonic]);
+
+  const handleSelectAnswer = useCallback(
+    (index: number, value: string) => {
+      setSelectedAnswers((prev) => ({
+        ...prev,
+        [index]: value,
+      }));
+
+      if (answerErrors[index]) {
+        setAnswerErrors((prev) => ({
+          ...prev,
+          [index]: '',
+        }));
+      }
+
+      // Automatically move to next question after a short delay
+      if (currentQuestionIndex < verificationQuestions.length - 1) {
+        setTimeout(() => {
+          setCurrentQuestionIndex((prev) => prev + 1);
+        }, 300);
+      }
+    },
+    [answerErrors, currentQuestionIndex, verificationQuestions.length]
+  );
+
+  const handleVerifyBackup = () => {
+    if (!mnemonic) return;
+
+    const newErrors: Record<number, string> = {};
+    let hasError = false;
+
+    verificationQuestions.forEach(({ index, correctWord }) => {
+      const answer = selectedAnswers[index];
+      if (!answer) {
+        newErrors[index] = t('Please select an option');
+        hasError = true;
+      } else if (answer.toLowerCase() !== correctWord.toLowerCase()) {
+        newErrors[index] = t('Incorrect word');
+        hasError = true;
+      }
+    });
+
+    if (hasError) {
+      setAnswerErrors(newErrors);
+      return;
+    }
+
+    handleComplete();
+  };
+
+  const handleComplete = () => {
+    setMnemonic(null);
+    setStage('creating');
+    setVerificationQuestions([]);
+    setSelectedAnswers({});
+    setAnswerErrors({});
+    setCurrentQuestionIndex(0);
+    setError(null);
+    onSuccess();
+  };
+
+  const handleClose = () => {
+    if (stage === 'creating') {
+      onClose();
+      return;
+    }
+
+    if (window.confirm(t('Are you sure you want to close? Your wallet creation progress will be lost.'))) {
+      setMnemonic(null);
+      setStage('creating');
+      setVerificationQuestions([]);
+      setSelectedAnswers({});
+      setAnswerErrors({});
+      setCurrentQuestionIndex(0);
+      setError(null);
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      fullWidth
+      maxWidth="sm"
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 2,
+          },
+        },
+      }}
+    >
+      <DialogTitle sx={{ pb: 2, position: 'relative' }}>
+        <Typography variant="h5" component="div">
+          {stage === 'creating' && t('Creating Wallet...')}
+          {stage === 'summary' && t('Wallet Created Successfully!')}
+          {stage === 'backup' && t('Backup Your Wallet')}
+          {stage === 'verify' && t('Verify Your Backup')}
+        </Typography>
+        <IconButton
+          aria-label="close"
+          onClick={handleClose}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: (theme) => theme.palette.grey[500],
+          }}
+        >
+          <Iconify icon="mingcute:close-line" />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {stage === 'creating' && (
+          <Stack spacing={2} alignItems="center" sx={{ py: 4 }}>
+            <CircularProgress />
+            <Typography variant="body2" color="text.secondary">
+              {t('Creating your wallet...')}
+            </Typography>
+          </Stack>
+        )}
+
+        {stage === 'summary' && mnemonic && (
+          <Stack spacing={3}>
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+              <Iconify icon="solar:wallet-bold" width={80} sx={{ color: 'primary.main' }} />
+            </Box>
+
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 3,
+                backgroundColor: 'background.neutral',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {t('Backup your recovery phrase to ensure you can recover your wallet later.')}
+              </Typography>
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={handleBackupWallet}
+                sx={{ mb: 1 }}
+              >
+                {t('Back up')}
+              </Button>
+              <Button variant="outlined" fullWidth onClick={handleSkipBackup}>
+                {t('Skip for Now')}
+              </Button>
+            </Paper>
+          </Stack>
+        )}
+
+        {stage === 'backup' && mnemonic && (
+          <Stack spacing={3}>
+            <Box>
+              <Button
+                startIcon={<Iconify icon="mingcute:left-line" />}
+                onClick={() => setStage('summary')}
+                sx={{ mb: 2 }}
+              >
+                {t('Back')}
+              </Button>
+            </Box>
+
+            <Typography variant="body2" color="text.secondary">
+              {t('Write down these words in order and keep them in a safe place. You will need them to recover your wallet.')}
+            </Typography>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+              {chunkArray(formattedMnemonic, 3).map((row, rowIndex) =>
+                row.map((item) => (
+                  <Paper
+                    key={item.index}
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      textAlign: 'center',
+                      backgroundColor: 'background.paper',
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={600}>
+                      {item.word}
+                    </Typography>
+                  </Paper>
+                ))
+              )}
+            </Box>
+
+            <Stack spacing={2}>
+              <Button variant="contained" fullWidth onClick={startVerification}>
+                {t('I\'ve Written It Down')}
+              </Button>
+              <Button variant="outlined" fullWidth onClick={handleCopyMnemonic}>
+                {t('Copy to Clipboard')}
+              </Button>
+            </Stack>
+          </Stack>
+        )}
+
+        {stage === 'verify' && verificationQuestions.length > 0 && (
+          <Stack spacing={3}>
+            <Box>
+              <Button
+                startIcon={<Iconify icon="mingcute:left-line" />}
+                onClick={() => setStage('backup')}
+                sx={{ mb: 2 }}
+              >
+                {t('Back')}
+              </Button>
+            </Box>
+
+            <Box>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                {(() => {
+                  const index = verificationQuestions[currentQuestionIndex]?.index;
+                  const ordinal =
+                    index === 1
+                      ? 'st'
+                      : index === 2
+                      ? 'nd'
+                      : index === 3
+                      ? 'rd'
+                      : 'th';
+                  return t('Select the') + ` ${index}${ordinal} ` + t('word');
+                })()}
+              </Typography>
+
+              {/* Progress indicators */}
+              <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
+                {verificationQuestions.map((_, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      flex: 1,
+                      height: 4,
+                      borderRadius: 1,
+                      backgroundColor:
+                        index === currentQuestionIndex
+                          ? 'primary.main'
+                          : index < currentQuestionIndex
+                          ? 'success.main'
+                          : 'divider',
+                    }}
+                  />
+                ))}
+              </Stack>
+
+              <Stack spacing={1}>
+                {verificationQuestions[currentQuestionIndex]?.options.map((option, optIndex) => {
+                  const isSelected =
+                    selectedAnswers[verificationQuestions[currentQuestionIndex].index] === option;
+                  const hasError =
+                    answerErrors[verificationQuestions[currentQuestionIndex].index];
+
+                  return (
+                    <Button
+                      key={optIndex}
+                      variant={isSelected ? 'contained' : 'outlined'}
+                      color={hasError && isSelected ? 'error' : 'primary'}
+                      fullWidth
+                      onClick={() =>
+                        handleSelectAnswer(
+                          verificationQuestions[currentQuestionIndex].index,
+                          option
+                        )
+                      }
+                      sx={{ textTransform: 'none' }}
+                    >
+                      {option}
+                    </Button>
+                  );
+                })}
+              </Stack>
+
+              {answerErrors[verificationQuestions[currentQuestionIndex]?.index] && (
+                <Alert severity="error">
+                  {answerErrors[verificationQuestions[currentQuestionIndex].index]}
+                </Alert>
+              )}
+
+              {currentQuestionIndex === verificationQuestions.length - 1 && (
+                <Button variant="contained" fullWidth onClick={handleVerifyBackup} sx={{ mt: 2 }}>
+                  {t('Verify Backup')}
+                </Button>
+              )}
+            </Box>
+          </Stack>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+

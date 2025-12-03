@@ -6,3 +6,4 @@ export * from './events';
 export * from './oracle';
 export * from './token';
 export * from './pool';
+export * from './normal-wallet';

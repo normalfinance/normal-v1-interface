@@ -12,6 +12,7 @@ export type Wallet = {
     | 'stellar-wallets-kit'
     | 'wallet-connect'
     | 'ledger'
+    | 'normal-wallet'
     | undefined;
 };
 
