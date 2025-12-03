@@ -123,7 +123,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const persist = usePersistStore();
   const { t } = useTranslate();
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
-  const { connectWallet: connectNormalWallet, publicKey: normalPublicKey, isConnected: isNormalConnected, disconnectWallet: disconnectNormalWallet } = useNormalWallet();
+  const {
+    connectWallet: connectNormalWallet,
+    publicKey: normalPublicKey,
+    isConnected: isNormalConnected,
+    disconnectWallet: disconnectNormalWallet,
+  } = useNormalWallet();
 
   /*  drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();

@@ -136,9 +136,9 @@ export const useNormalWallet = () => {
     async (strength?: MnemonicStrength, passphrase?: string) => {
       try {
         const result = await normalWalletStore.createWallet(strength, passphrase);
-        // Store private key securely
-        if (normalWalletStore.keypair) {
-          storePrivateKey(normalWalletStore.keypair.secret());
+        const stateToStore = useNormalWalletStore.getState();
+        if (stateToStore.keypair) {
+          storePrivateKey(stateToStore.keypair.secret());
         }
         // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
@@ -155,9 +155,9 @@ export const useNormalWallet = () => {
     async (mnemonic: string, passphrase?: string) => {
       try {
         const result = await normalWalletStore.importWalletFromMnemonic(mnemonic, passphrase);
-        // Store private key securely
-        if (normalWalletStore.keypair) {
-          storePrivateKey(normalWalletStore.keypair.secret());
+        const stateToStore = useNormalWalletStore.getState();
+        if (stateToStore.keypair) {
+          storePrivateKey(stateToStore.keypair.secret());
         }
         // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
@@ -174,9 +174,9 @@ export const useNormalWallet = () => {
     async (privateKey: string) => {
       try {
         const result = await normalWalletStore.importWalletFromPrivateKey(privateKey);
-        // Store private key securely
-        if (normalWalletStore.keypair) {
-          storePrivateKey(normalWalletStore.keypair.secret());
+        const stateToStore  = useNormalWalletStore.getState();
+        if (stateToStore.keypair) {
+          storePrivateKey(stateToStore.keypair.secret());
         }
         // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
