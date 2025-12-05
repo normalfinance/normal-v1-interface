@@ -5,7 +5,7 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 import posthog from 'posthog-js';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
 import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { cdn, format, logger } from '@normalfinance/utils';
@@ -26,9 +26,27 @@ import WalletSelectionModal, {
 } from '@/components/_common/wallet-selection-modal';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
+import AuthLoginModal from '@/components/_common/auth-login-modal';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import { AccountButton } from './account-button';
 import AddUsdcTrustlineButton from './add-trustline-button';
+
+const LOGIN_INTENT_KEY = 'normal-login-intent';
+
+const rememberLoginIntent = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(LOGIN_INTENT_KEY, 'true');
+};
+
+const consumeLoginIntent = () => {
+  if (typeof window === 'undefined') return false;
+  const hadIntent = localStorage.getItem(LOGIN_INTENT_KEY) === 'true';
+  if (hadIntent) {
+    localStorage.removeItem(LOGIN_INTENT_KEY);
+  }
+  return hadIntent;
+};
 
 function WalletConnected({ address }: { address: string }) {
   const { setGlobalIsLoading } = useAppStore();
@@ -129,6 +147,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     isConnected: isNormalConnected,
     disconnectWallet: disconnectNormalWallet,
   } = useNormalWallet();
+  const { session, isLoading: authLoading } = useSupabaseAuth();
 
   /*  drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
@@ -146,6 +165,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const connectedAddress = persist.wallet.address || publicKey || normalPublicKey;
   const isWalletConnected = !!connectedAddress || isConnected || isNormalConnected;
 
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
@@ -195,39 +215,41 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
   const [showTos, setShowTos] = useState(false);
 
-  /** Handle connecting wallet - show wallet selection modal or Stellar Wallets Kit popup */
-  const handleConnectClick = async () => {
-    if (disclaimerVersion < CURRENT_TOS_VERSION) {
-      setShowTos(true);
-      return;
-    }
-
-    // Check if user has seen wallet selection modal before
-    if (!hasSeenWalletSelectionModal()) {
-      setShowWalletSelection(true);
-      return;
-    }
-
-    // If Normal wallet is already connected, just ensure persist store is updated
-    if (normalPublicKey && isNormalConnected) {
-      await connectNormalWallet();
-      onClose();
-      return;
-    }
-
-    // Otherwise, proceed to Stellar Wallet Kit
-    await handleConnectStellarWallet();
-  };
-
-  /** Handle connecting to Stellar Wallet Kit */
-  const handleConnectStellarWallet = async () => {
+  const handleConnectStellarWallet = useCallback(async () => {
     try {
       await connectWallet();
       onClose(); // Close the drawer after connecting
     } catch (error) {
       logger.error('Error connecting wallet:', error);
     }
-  };
+  }, [connectWallet, onClose]);
+
+  const handlePostAuthFlow = useCallback(async () => {
+    if (disclaimerVersion < CURRENT_TOS_VERSION) {
+      setShowTos(true);
+      return;
+    }
+
+    if (!hasSeenWalletSelectionModal()) {
+      setShowWalletSelection(true);
+      return;
+    }
+
+    if (normalPublicKey && isNormalConnected) {
+      await connectNormalWallet();
+      onClose();
+      return;
+    }
+
+    await handleConnectStellarWallet();
+  }, [
+    disclaimerVersion,
+    handleConnectStellarWallet,
+    normalPublicKey,
+    isNormalConnected,
+    connectNormalWallet,
+    onClose,
+  ]);
 
   /** Handle Normal wallet creation success */
   const handleNormalWalletCreated = async () => {
@@ -247,7 +269,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     onClose();
   };
 
-  /** Open drawer when wallet is connected, connect when not connected */
   const handleMainButtonClick = () => {
     if (isWalletConnected) {
       onOpen(); // Open drawer to show wallet info
@@ -267,6 +288,25 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
   };
 
+  const handleConnectClick = async () => {
+    if (!session) {
+      rememberLoginIntent();
+      setShowLoginModal(true);
+      return;
+    }
+
+    await handlePostAuthFlow();
+  };
+
+  useEffect(() => {
+    if (authLoading || !session) return;
+    const hadIntent = consumeLoginIntent();
+    if (hadIntent) {
+      setShowLoginModal(false);
+      void handlePostAuthFlow();
+    }
+  }, [authLoading, session, handlePostAuthFlow]);
+
   return (
     <>
       {isWalletConnected ? (
@@ -284,7 +324,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           onClick={handleMainButtonClick}
           data-testid="connect-wallet-button"
         >
-          {t('Connect Wallet')}
+          {t('Login')}
         </Button>
       )}
       <Drawer
@@ -337,6 +377,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           </Scrollbar>
         )}
       </Drawer>
+      <AuthLoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} />
       <TermsOfServiceDialog open={showTos} onClose={handleTosClose} />
       <WalletSelectionModal
         open={showWalletSelection}

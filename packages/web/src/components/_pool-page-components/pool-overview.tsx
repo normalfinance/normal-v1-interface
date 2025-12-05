@@ -149,7 +149,7 @@ export function PoolOverview({
         {actionButtons.map((btn, idx) => (
           <WalletGate
             key={idx}
-            buttonText={`Connect wallet to ${btn.label}`}
+            buttonText={`Login to ${btn.label}`}
             fullWidth
             variant="soft"
             color="success"
