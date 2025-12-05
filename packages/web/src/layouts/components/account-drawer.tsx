@@ -14,7 +14,7 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 
-import { Box, Stack, Button, Drawer, Tooltip, IconButton, Typography } from '@mui/material';
+import { Avatar, Box, Stack, Button, Drawer, Tooltip, IconButton, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
@@ -158,7 +158,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     onFalse: stopDisconnecting,
   } = useBoolean();
 
-  /* ↓ main button uses dummy avatar ------------------------------ */
   const avatarURL = cdn('logo/logo-single.svg');
 
   /* ↓ derived state ---------------------------------------------- */
@@ -201,6 +200,13 @@ export function AccountDrawer(props: AccountDrawerProps) {
       stopDisconnecting();
     }
   };
+
+  const userMetadata = session?.user?.user_metadata as
+    | { picture?: string; avatar_url?: string; name?: string }
+    | undefined;
+  const userEmail = session?.user?.email ?? '';
+  const userAvatar = userMetadata?.picture || userMetadata?.avatar_url || avatarURL;
+  const displayName = userMetadata?.name || userEmail || ' ';
 
   useEffect(() => {
     if (connectedAddress) {
@@ -313,8 +319,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
         <AccountButton
           data-testid="account-button"
           onClick={handleMainButtonClick}
-          photoURL={avatarURL}
-          displayName=" "
+          photoURL={userAvatar}
+          displayName={displayName}
           {...props}
         />
       ) : (
@@ -373,6 +379,17 @@ export function AccountDrawer(props: AccountDrawerProps) {
         </Box>
         {isWalletConnected && connectedAddress && (
           <Scrollbar>
+            <Stack spacing={2} sx={{ px: 2, pt: 8 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Avatar src={userAvatar} alt={displayName} />
+                <Box>
+                  <Typography variant="subtitle1">{displayName}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {userEmail}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Stack>
             <WalletConnected address={connectedAddress} />
           </Scrollbar>
         )}
