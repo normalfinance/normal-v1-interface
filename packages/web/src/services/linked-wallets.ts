@@ -1,4 +1,5 @@
 import { logger } from '@normalfinance/utils';
+import { supabase } from '@/lib/createSupabaseClient';
 
 export interface LinkedWallet {
   id: string;
@@ -17,6 +18,22 @@ export interface GetLinkedWalletsResponse {
   wallets: LinkedWallet[];
 }
 
+async function buildAuthHeaders(): Promise<HeadersInit> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+
+  return headers;
+}
+
 /**
  * Link a wallet to the current user's account
  */
@@ -25,11 +42,11 @@ export async function linkWallet(
   walletName?: string
 ): Promise<LinkWalletResponse> {
   try {
+    const headers = await buildAuthHeaders();
     const response = await fetch('/api/wallets/link', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ walletAddress, walletName }),
     });
 
@@ -50,11 +67,11 @@ export async function linkWallet(
  */
 export async function getLinkedWallets(): Promise<LinkedWallet[]> {
   try {
+    const headers = await buildAuthHeaders();
     const response = await fetch('/api/wallets/linked', {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -73,16 +90,13 @@ export async function getLinkedWallets(): Promise<LinkedWallet[]> {
 /**
  * Update a linked wallet's name
  */
-export async function updateWalletName(
-  walletAddress: string,
-  walletName: string
-): Promise<void> {
+export async function updateWalletName(walletAddress: string, walletName: string): Promise<void> {
   try {
+    const headers = await buildAuthHeaders();
     const response = await fetch('/api/wallets/link', {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ walletAddress, walletName }),
     });
 
@@ -101,11 +115,11 @@ export async function updateWalletName(
  */
 export async function updateLastUsed(walletAddress: string): Promise<void> {
   try {
+    const headers = await buildAuthHeaders();
     const response = await fetch('/api/wallets/link', {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ walletAddress }),
     });
 
@@ -124,12 +138,15 @@ export async function updateLastUsed(walletAddress: string): Promise<void> {
  */
 export async function unlinkWallet(walletAddress: string): Promise<void> {
   try {
-    const response = await fetch(`/api/wallets/link?walletAddress=${encodeURIComponent(walletAddress)}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const headers = await buildAuthHeaders();
+    const response = await fetch(
+      `/api/wallets/link?walletAddress=${encodeURIComponent(walletAddress)}`,
+      {
+        method: 'DELETE',
+        headers,
+        credentials: 'include',
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -140,5 +157,3 @@ export async function unlinkWallet(walletAddress: string): Promise<void> {
     throw error;
   }
 }
-
-

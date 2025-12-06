@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
@@ -7,10 +8,13 @@ import { LinkedWalletService } from '@/lib/linked-wallet-service';
  * GET /api/wallets/linked
  * Get all wallets linked to the authenticated user's account
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : undefined;
+
     // Verify authentication
-    const user = await getAuthenticatedUser();
+    const user = await getAuthenticatedUser(token);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -37,5 +41,3 @@ export async function GET() {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-
-

@@ -37,12 +37,12 @@ export async function createSupabaseServerClient() {
  * Get the authenticated user from a request.
  * Returns null if not authenticated.
  */
-export async function getAuthenticatedUser() {
+export async function getAuthenticatedUser(accessToken?: string) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = accessToken ? await supabase.auth.getUser(accessToken) : await supabase.auth.getUser();
 
   if (error || !user) {
     return null;
@@ -50,5 +50,3 @@ export async function getAuthenticatedUser() {
 
   return user;
 }
-
-

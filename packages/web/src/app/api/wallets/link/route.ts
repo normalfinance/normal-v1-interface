@@ -22,14 +22,26 @@ const UpdateWalletSchema = z.object({
   walletName: z.string().max(50, 'Wallet name must be 50 characters or less').optional(),
 });
 
+function getAccessToken(request: NextRequest): string | undefined {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader) return undefined;
+
+  const token = authHeader.split(' ')[1];
+
+  if (!token) return undefined;
+
+  return token;
+}
+
 /**
  * POST /api/wallets/link
  * Link a wallet to the authenticated user's account
  */
 export async function POST(request: NextRequest) {
   try {
+    const token = getAccessToken(request);
     // Verify authentication
-    const user = await getAuthenticatedUser();
+    const user = await getAuthenticatedUser(token);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -80,8 +92,9 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
+    const token = getAccessToken(request);
     // Verify authentication
-    const user = await getAuthenticatedUser();
+    const user = await getAuthenticatedUser(token);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -131,8 +144,9 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const token = getAccessToken(request);
     // Verify authentication
-    const user = await getAuthenticatedUser();
+    const user = await getAuthenticatedUser(token);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -165,5 +179,3 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-
-

@@ -28,7 +28,7 @@ import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import AuthLoginModal from '@/components/_common/auth-login-modal';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { rememberLoginIntent, consumeLoginIntent } from '@/lib/loginIntent';
+import { rememberLoginIntent, consumeLoginIntent, clearLoginIntent } from '@/lib/loginIntent';
 
 import { AccountButton } from './account-button';
 import AddUsdcTrustlineButton from './add-trustline-button';
@@ -292,7 +292,16 @@ export function AccountDrawer(props: AccountDrawerProps) {
   };
 
   useEffect(() => {
-    if (authLoading || !session) return;
+    if (authLoading) return;
+
+    console.log('session before handlePostAuthFlow', session);
+
+    if (!session) {
+      clearLoginIntent();
+      setShowLoginModal(false);
+      return;
+    }
+
     const hadIntent = consumeLoginIntent();
     if (hadIntent) {
       setShowLoginModal(false);

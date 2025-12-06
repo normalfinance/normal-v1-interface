@@ -64,9 +64,9 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
   }, []);
 
   const signOut = useCallback(async () => {
+    setSession(null);
     await supabase.auth.signOut();
     clearLoginIntent();
-    setSession(null);
   }, []);
 
   const value = useMemo(
