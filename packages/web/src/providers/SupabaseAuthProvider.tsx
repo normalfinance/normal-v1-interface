@@ -12,6 +12,7 @@ import {
 import type { Session, User } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/createSupabaseClient';
+import { clearLoginIntent } from '@/lib/loginIntent';
 
 type SupabaseAuthContextValue = {
   supabase: typeof supabase;
@@ -64,6 +65,7 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    clearLoginIntent();
     setSession(null);
   }, []);
 

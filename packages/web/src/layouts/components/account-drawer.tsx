@@ -28,25 +28,10 @@ import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import AuthLoginModal from '@/components/_common/auth-login-modal';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { rememberLoginIntent, consumeLoginIntent } from '@/lib/loginIntent';
 
 import { AccountButton } from './account-button';
 import AddUsdcTrustlineButton from './add-trustline-button';
-
-const LOGIN_INTENT_KEY = 'normal-login-intent';
-
-const rememberLoginIntent = () => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(LOGIN_INTENT_KEY, 'true');
-};
-
-const consumeLoginIntent = () => {
-  if (typeof window === 'undefined') return false;
-  const hadIntent = localStorage.getItem(LOGIN_INTENT_KEY) === 'true';
-  if (hadIntent) {
-    localStorage.removeItem(LOGIN_INTENT_KEY);
-  }
-  return hadIntent;
-};
 
 function WalletConnected({ address }: { address: string }) {
   const { setGlobalIsLoading } = useAppStore();
@@ -147,7 +132,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     isConnected: isNormalConnected,
     disconnectWallet: disconnectNormalWallet,
   } = useNormalWallet();
-  const { session, isLoading: authLoading } = useSupabaseAuth();
+  const { session, isLoading: authLoading, signOut } = useSupabaseAuth();
 
   /*  drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
@@ -178,6 +163,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
       startDisconnecting();
 
       persist.disconnectWallet();
+
+      await signOut();
 
       // Disconnect based on wallet type
       if (persist.wallet.walletType === 'normal-wallet') {
