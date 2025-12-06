@@ -9,6 +9,7 @@ import {
   splitMnemonicToWords,
 } from '@normalfinance/utils';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { updateWalletName } from '@/services/linked-wallets';
 
 import {
   Dialog,
@@ -22,6 +23,7 @@ import {
   Paper,
   CircularProgress,
   Alert,
+  TextField,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -54,6 +56,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
   const [stage, setStage] = useState<CreateStage>('creating');
   const [mnemonic, setMnemonic] = useState<string | null>(null);
+  const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [walletName, setWalletName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [verificationQuestions, setVerificationQuestions] = useState<VerificationQuestion[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
@@ -75,6 +79,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           const result = await createWallet();
           if (!cancelled) {
             setMnemonic(result.mnemonic);
+            setPublicKey(result.publicKey);
             setStage('summary');
           }
         } catch (err: any) {
@@ -200,8 +205,20 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     handleComplete();
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    // Update wallet name if provided
+    if (walletName.trim() && publicKey) {
+      try {
+        await updateWalletName(publicKey, walletName.trim());
+      } catch (err) {
+        // Non-critical error, just log it
+        logger.warn('Failed to update wallet name:', err);
+      }
+    }
+
     setMnemonic(null);
+    setPublicKey(null);
+    setWalletName('');
     setStage('creating');
     setVerificationQuestions([]);
     setSelectedAnswers({});
@@ -218,6 +235,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     }
 
     setMnemonic(null);
+    setPublicKey(null);
+    setWalletName('');
     setStage('creating');
     setVerificationQuestions([]);
     setSelectedAnswers({});
@@ -280,6 +299,17 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
             <Box sx={{ textAlign: 'center', py: 2 }}>
               <Iconify icon="solar:wallet-bold" width={80} sx={{ color: 'primary.main' }} />
             </Box>
+
+            {/* Wallet Name Input */}
+            <TextField
+              label={t('Wallet Name (Optional)')}
+              placeholder={t('e.g., Trading Wallet, Savings')}
+              value={walletName}
+              onChange={(e) => setWalletName(e.target.value)}
+              fullWidth
+              inputProps={{ maxLength: 50 }}
+              helperText={t('Give your wallet a friendly name to identify it later')}
+            />
 
             <Paper
               variant="outlined"

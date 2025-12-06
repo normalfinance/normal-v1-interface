@@ -3,6 +3,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
 import { createKeypairFromSecret } from '@normalfinance/utils';
 import type { MnemonicStrength } from '@normalfinance/utils';
+import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
 
 const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
 
@@ -133,7 +134,7 @@ export const useNormalWallet = () => {
   ]);
 
   const createWallet = useCallback(
-    async (strength?: MnemonicStrength, passphrase?: string) => {
+    async (strength?: MnemonicStrength, passphrase?: string, walletName?: string) => {
       try {
         const result = await normalWalletStore.createWallet(strength, passphrase);
         const stateToStore = useNormalWalletStore.getState();
@@ -142,6 +143,12 @@ export const useNormalWallet = () => {
         }
         // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
+
+        // Link wallet to user's auth account (fire and forget - don't block on this)
+        linkWallet(result.publicKey, walletName).catch((error) => {
+          logger.warn('[NORMAL WALLET] Failed to link wallet to account:', error);
+        });
+
         return result;
       } catch (error) {
         logger.error('[NORMAL WALLET] Failed to create wallet:', error);
@@ -152,7 +159,7 @@ export const useNormalWallet = () => {
   );
 
   const importWalletFromMnemonic = useCallback(
-    async (mnemonic: string, passphrase?: string) => {
+    async (mnemonic: string, passphrase?: string, walletName?: string) => {
       try {
         const result = await normalWalletStore.importWalletFromMnemonic(mnemonic, passphrase);
         const stateToStore = useNormalWalletStore.getState();
@@ -161,6 +168,12 @@ export const useNormalWallet = () => {
         }
         // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
+
+        // Link wallet to user's auth account (fire and forget - don't block on this)
+        linkWallet(result.publicKey, walletName).catch((error) => {
+          logger.warn('[NORMAL WALLET] Failed to link wallet to account:', error);
+        });
+
         return result;
       } catch (error) {
         logger.error('[NORMAL WALLET] Failed to import wallet from mnemonic:', error);
@@ -171,15 +184,21 @@ export const useNormalWallet = () => {
   );
 
   const importWalletFromPrivateKey = useCallback(
-    async (privateKey: string) => {
+    async (privateKey: string, walletName?: string) => {
       try {
         const result = await normalWalletStore.importWalletFromPrivateKey(privateKey);
-        const stateToStore  = useNormalWalletStore.getState();
+        const stateToStore = useNormalWalletStore.getState();
         if (stateToStore.keypair) {
           storePrivateKey(stateToStore.keypair.secret());
         }
         // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
+
+        // Link wallet to user's auth account (fire and forget - don't block on this)
+        linkWallet(result.publicKey, walletName).catch((error) => {
+          logger.warn('[NORMAL WALLET] Failed to link wallet to account:', error);
+        });
+
         return result;
       } catch (error) {
         logger.error('[NORMAL WALLET] Failed to import wallet from private key:', error);
@@ -191,6 +210,14 @@ export const useNormalWallet = () => {
 
   const connectWallet = useCallback(async () => {
     await normalWalletStore.connectWallet(persistStore);
+
+    // Update lastUsedAt for the linked wallet (fire and forget)
+    const publicKey = normalWalletStore.publicKey;
+    if (publicKey) {
+      updateLastUsed(publicKey).catch(() => {
+        // Silently ignore - non-critical operation
+      });
+    }
   }, [normalWalletStore, persistStore]);
 
   const signTransaction = useCallback(

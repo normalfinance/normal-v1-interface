@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql" // Can be changed to "sqlite" for local dev
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_MAINNET_URL")
 }
 
 // User model - identified by wallet address
@@ -90,6 +90,20 @@ model TestnetUser {
   source          String?  // "admin", "tweet", etc.
   
   @@map("testnet_users")
+}
+
+// Linked wallets for Normal wallet auth
+model LinkedWallet {
+  id            String   @id @default(cuid())
+  supabaseUid   String   // Supabase auth user ID
+  walletAddress String   // Stellar public key (G...)
+  walletName    String?  // User-friendly nickname
+  createdAt     DateTime @default(now())
+  lastUsedAt    DateTime @default(now())
+  
+  @@unique([supabaseUid, walletAddress])
+  @@index([supabaseUid])
+  @@map("linked_wallets")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

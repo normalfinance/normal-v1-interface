@@ -95,3 +95,4 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
 };
 
 export default AuthLoginModal;
+
