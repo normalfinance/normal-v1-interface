@@ -6,4 +6,6 @@ export type ContractType =
   | 'rewards_gauge'
   | 'config_storage'
   | 'token_share'
-  | 'token';
+  | 'token'
+  | 'index'
+  | 'index_factory';

@@ -7,6 +7,9 @@ import * as PoolRouterContract from './pool_router'
 import * as RewardsGaugeContract from './rewards_gauge'
 import * as SorobanTokenContract from './soroban_token_contract'
 import * as TokenShareContract from './token_share'
+//TODO: Add IndexContract and IndexFactoryContract
+// import * as IndexContract from './index'
+// import * as IndexFactoryContract from './index_factory'
 
 export {
   ConfigStorageContract,
