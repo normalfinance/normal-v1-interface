@@ -1,13 +1,15 @@
 'use client';
 
+// @ts-ignore TODO: IndexContract is not defined in contracts, remove once added
 import type { IndexContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
-// import { captureException } from '@sentry/nextjs';
+import { captureException } from '@sentry/nextjs';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 
+// @ts-ignore TODO: IndexContract is not defined in contracts, remove once added
 import { IndexContract as IndexContractClient } from '@normalfinance/contracts';
 
 import { useContractTransaction } from './use-contract-transaction';
@@ -42,6 +44,10 @@ export type SetBlacklistStatusIndexArgs = Omit<
   Parameters<IndexContract.Client['set_blacklist_status']>[0],
   'admin'
 >;
+export type SetManagerFeeIndexArgs = Omit<
+  Parameters<IndexContract.Client['set_manager_fee_amount']>[0],
+  'admin'
+>;
 
 interface ReturnType {
   error: any | null;
@@ -57,6 +63,7 @@ interface ReturnType {
   setIndexPublicStatus: (args: SetPublicStatusIndexArgs) => Promise<void>;
   setIndexWhitelistStatus: (args: SetWhitelistStatusIndexArgs) => Promise<void>;
   setIndexBlacklistStatus: (args: SetBlacklistStatusIndexArgs) => Promise<void>;
+  distributeIndexManagerFees: (args: SetManagerFeeIndexArgs) => Promise<void>;
 }
 
 // ----------------------------------------------------------------------
@@ -135,7 +142,7 @@ export function useIndex(indexAddress: string): ReturnType {
         setIndex(data);
       }
     } catch (e: any) {
-      // captureException(e);
+      captureException(e);
       setError(e);
     } finally {
       setLoading(false);
@@ -481,6 +488,48 @@ export function useIndex(indexAddress: string): ReturnType {
     setLoading(false);
   };
 
+  const distributeIndexManagerFees = async (args: SetManagerFeeIndexArgs) => {
+    if (!index || !index.address) return;
+
+    setLoading(true);
+
+    await rateLimitCheck();
+
+    const processedArgs = {
+      ...args,
+      admin: storePersist.wallet.address!,
+    };
+
+    await executeContractTransaction({
+      contractType: 'index',
+      contractAddress: index.address,
+      transactionDetails: {
+        type: TransactionType.UPDATE_INDEX,
+      },
+      transactionFunction: async (client, restore) => {
+        const tx = await client.set_manager_fee_amount(processedArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
+
+          if (signedXDR) {
+            const apiRes = await executeIndex(signedXDR, 'Distribute Index Manager Fees');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
+
+          return tx;
+        }
+      },
+    });
+
+    setLoading(false);
+  };
+
   // On component mount, fetch index
   useEffect(() => {
     fetchIndex();
@@ -500,5 +549,6 @@ export function useIndex(indexAddress: string): ReturnType {
     setIndexPublicStatus,
     setIndexWhitelistStatus,
     setIndexBlacklistStatus,
+    distributeIndexManagerFees,
   };
 }

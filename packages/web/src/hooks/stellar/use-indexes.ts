@@ -3,7 +3,7 @@
 import type { IndexContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
-// import { captureException } from '@sentry/nextjs';
+import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import {
   IndexFactoryContract,
@@ -29,6 +29,8 @@ interface ReturnType {
 // ----------------------------------------------------------------------
 
 export function useIndexes(): ReturnType {
+  const storePersist = usePersistStore();
+
   const [error, setError] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [indexes, setIndexes] = useState<IndexListItem[]>([]);
@@ -81,7 +83,7 @@ export function useIndexes(): ReturnType {
             }
             return null;
           } catch (e) {
-            // captureException(e);
+            captureException(e);
             return null;
           }
         });
@@ -91,7 +93,7 @@ export function useIndexes(): ReturnType {
         setIndexes(validIndexes);
       }
     } catch (e: any) {
-      // captureException(e);
+      captureException(e);
       setError(e);
     } finally {
       setLoading(false);
