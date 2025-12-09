@@ -4,7 +4,7 @@
 import type { IndexContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
+// import { captureException } from '@sentry/nextjs';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
@@ -142,7 +142,7 @@ export function useIndex(indexAddress: string): ReturnType {
         setIndex(data);
       }
     } catch (e: any) {
-      captureException(e);
+      // captureException(e);
       setError(e);
     } finally {
       setLoading(false);

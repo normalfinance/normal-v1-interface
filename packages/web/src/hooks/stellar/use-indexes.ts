@@ -4,7 +4,7 @@
 import type { IndexContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
-import { captureException } from '@sentry/nextjs';
+// import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import {
   // @ts-ignore
@@ -88,7 +88,7 @@ export function useIndexes(): ReturnType {
             }
             return null;
           } catch (e) {
-            captureException(e);
+            // captureException(e);
             return null;
           }
         });
@@ -98,7 +98,7 @@ export function useIndexes(): ReturnType {
         setIndexes(validIndexes);
       }
     } catch (e: any) {
-      captureException(e);
+      // captureException(e);
       setError(e);
     } finally {
       setLoading(false);
