@@ -1,14 +1,19 @@
 'use client';
 
+// @ts-ignore
 import type { IndexContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
 import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import {
+  // @ts-ignore
   IndexFactoryContract,
+  // @ts-ignore
   IndexContract as IndexContractClient,
 } from '@normalfinance/contracts';
+
+import { usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
 
