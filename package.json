@@ -71,7 +71,7 @@
     "dotted-map": "^2.2.3",
     "jose": "^6.1.0",
     "motion": "^10",
-    "next": "15.0.3",
+    "next": "15.0.5",
     "simplex-noise": "^4.0.3",
     "tailwind-merge": "^3.3.1"
   }
