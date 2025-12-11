@@ -5,7 +5,7 @@ import IndexesView from '@/sections/indexes';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Indexes | Normal',
+    default: 'Index Create | Normal',
     template: '%s · Normal',
   },
   description: 'Browse and invest in index funds on Normal.',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
         url: '/og/home.png',
         width: 1200,
         height: 630,
-        alt: 'Normal Indexes overview',
+        alt: 'Normal Index overview',
       },
     ],
     locale: 'en_US',

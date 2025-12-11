@@ -92,7 +92,7 @@ export const CtaImage: React.FC<CtaImageProps> = ({
           </Typography>
 
           <Button
-            href={paths.swap}
+            href={paths.invest}
             sx={{
               border: '1px solid #6E4BFF',
               backgroundColor: '#E0D9FF',

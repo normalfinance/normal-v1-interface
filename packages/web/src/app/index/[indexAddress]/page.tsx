@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   },
   description: 'Detailed view of a specific index fund on Normal.',
   alternates: {
-    canonical: '/indexes',
+    canonical: '/index',
   },
   openGraph: {
     title: 'Index Details | Normal',

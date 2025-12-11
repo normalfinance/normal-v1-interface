@@ -1,30 +1,30 @@
 import type { Metadata } from 'next';
 
+import InvestView from '@/sections/invest';
 import { CONFIG } from '@/global-config';
-import ComingSoonView from '@/sections/coming-soon';
 
 // ----------------------------------------------------------------------
 
 export const metadata: Metadata = {
   title: {
-    default: 'Indexes Create | Normal',
+    default: 'Invest | Normal',
     template: '%s · Normal',
   },
-  description: 'Review and manage your positions on Normal.',
+  description: 'Invest tokens quickly and securely on Normal.',
   alternates: {
-    canonical: '/positions',
+    canonical: '/invest',
   },
   openGraph: {
-    title: 'Indexes | Normal',
-    description: 'Review and manage your positions on Normal.',
-    url: `${CONFIG.siteUrl}/positions`,
+    title: 'Invest | Normal',
+    description: 'Invest tokens quickly and securely on Normal.',
+    url: `${CONFIG.siteUrl}/invest`,
     siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
-        alt: 'Normal Indexes overview',
+        alt: 'Normal Invest overview',
       },
     ],
     locale: 'en_US',
@@ -32,8 +32,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Indexes | Normal',
-    description: 'Review and manage your positions on Normal.',
+    title: 'Invest | Normal',
+    description: 'Invest tokens quickly and securely on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -41,9 +41,9 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'positions', 'portfolio', 'crypto positions'],
+  keywords: ['Normal', 'Normal Finance', 'token swap', 'crypto exchange', 'DEX'],
 };
 
 export default function Page() {
-  return <ComingSoonView />;
+  return <InvestView />;
 }

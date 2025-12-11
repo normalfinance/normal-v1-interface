@@ -21,7 +21,7 @@ const swapFeeInfo: SwapFeeInfo = {
   maxSlippage: 0.5,
 };
 
-export default function SwapView() {
+export default function InvestView() {
   const { params } = useQueryParams<TokenActionQueryParams>();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();

@@ -1,30 +1,30 @@
 import type { Metadata } from 'next';
 
-import SwapView from '@/sections/swap';
 import { CONFIG } from '@/global-config';
+import ComingSoonView from '@/sections/coming-soon';
 
 // ----------------------------------------------------------------------
 
 export const metadata: Metadata = {
   title: {
-    default: 'Swap | Normal',
+    default: 'Index | Normal',
     template: '%s · Normal',
   },
-  description: 'Swap tokens quickly and securely on Normal.',
+  description: 'Review and manage your positions on Normal.',
   alternates: {
-    canonical: '/swap',
+    canonical: '/positions',
   },
   openGraph: {
-    title: 'Swap | Normal',
-    description: 'Swap tokens quickly and securely on Normal.',
-    url: `${CONFIG.siteUrl}/swap`,
+    title: 'Index | Normal',
+    description: 'Review and manage your positions on Normal.',
+    url: `${CONFIG.siteUrl}/positions`,
     siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
-        alt: 'Normal Swap overview',
+        alt: 'Normal Index overview',
       },
     ],
     locale: 'en_US',
@@ -32,8 +32,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Swap | Normal',
-    description: 'Swap tokens quickly and securely on Normal.',
+    title: 'Index | Normal',
+    description: 'Review and manage your positions on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -41,9 +41,9 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'token swap', 'crypto exchange', 'DEX'],
+  keywords: ['Normal', 'Normal Finance', 'positions', 'portfolio', 'crypto positions'],
 };
 
 export default function Page() {
-  return <SwapView />;
+  return <ComingSoonView />;
 }

@@ -149,7 +149,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   width={1}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (tkn.icon) router.push(paths.pools.details(tkn.symbol));
+                    if (tkn.icon) router.push(paths.asset.details(tkn.symbol));
                   }}
                   role={tkn.icon ? 'link' : undefined}
                   tabIndex={tkn.icon ? 0 : undefined}

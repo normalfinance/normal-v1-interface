@@ -61,7 +61,7 @@ export default function ConnectedWallet({
       label: 'Send',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => {
-        router.push(`${paths.swap}?tab=send`);
+        router.push(`${paths.invest}?tab=send`);
       },
     },
     {

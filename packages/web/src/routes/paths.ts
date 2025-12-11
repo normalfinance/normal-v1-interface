@@ -24,19 +24,17 @@ export const paths = {
   docs: 'https://normalfinance.gitbook.io/docs',
   // main
   explore: '/explore',
-  pools: {
-    details: (poolAddress: string) => `/pools/${poolAddress}`,
+  invest: '/invest',
+  asset: {
+    root: '/asset',
+    details: (poolAddress: string) => `/asset/${poolAddress}`,
   },
-  indexes: {
-    root: '/indexes',
-    create: '/indexes/create',
-    details: (indexAddress: string) => `/indexes/${indexAddress}`,
+  index: {
+    root: '/index',
+    create: '/index/create',
+    details: (indexAddress: string) => `/index/${indexAddress}`,
   },
-  positions: {
-    root: '/positions',
-    create: '/positions/create',
-  },
-  swap: '/swap',
+  earn: '/earn',
   rewards: '/rewards',
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready

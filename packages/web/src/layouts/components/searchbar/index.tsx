@@ -104,7 +104,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
         router.push(paths.explore);
       }
 
-      router.push(paths.pools.details(tokenPools[0].addresses.pool));
+      router.push(paths.asset.details(tokenPools[0].addresses.pool));
     },
     [router, handleClose, pools]
   );

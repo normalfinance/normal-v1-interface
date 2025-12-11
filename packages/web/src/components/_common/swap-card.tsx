@@ -995,7 +995,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
                       color="success"
                       onClick={() => {
                         if (changeTab) changeTab('buy');
-                        else router.push(`${paths.swap}?tab=buy`);
+                        else router.push(`${paths.invest}?tab=buy`);
                       }}
                     >
                       {t('Buy')}

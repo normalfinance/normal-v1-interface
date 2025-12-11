@@ -1,30 +1,30 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
-import PositionsView from '@/sections/positions';
+import EarnView from '@/sections/positions';
 
 // ----------------------------------------------------------------------
 
 export const metadata: Metadata = {
   title: {
-    default: 'Positions | Normal',
+    default: 'Earn | Normal',
     template: '%s · Normal',
   },
   description: 'Review and manage your positions on Normal.',
   alternates: {
-    canonical: '/positions',
+    canonical: '/earn',
   },
   openGraph: {
-    title: 'Positions | Normal',
+    title: 'Earn | Normal',
     description: 'Review and manage your positions on Normal.',
-    url: `${CONFIG.siteUrl}/positions`,
+    url: `${CONFIG.siteUrl}/earn`,
     siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
-        alt: 'Normal Positions overview',
+        alt: 'Normal Earn overview',
       },
     ],
     locale: 'en_US',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Positions | Normal',
+    title: 'Earn | Normal',
     description: 'Review and manage your positions on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
@@ -45,5 +45,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <PositionsView />;
+  return <EarnView />;
 }

@@ -26,7 +26,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push(paths.pools.details(position.pool.addresses.pool));
+    router.push(paths.asset.details(position.pool.addresses.pool));
   };
 
   return (
