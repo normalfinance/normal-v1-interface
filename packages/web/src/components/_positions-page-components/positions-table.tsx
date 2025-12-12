@@ -5,7 +5,6 @@ import type { PoolQueryParams } from '@/types/query-params';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import Skeleton from 'react-loading-skeleton';
-import { ZEALY_QUEST_IDS } from '@/global-config';
 import { useBoolean, type PoolPosition } from '@/hooks';
 
 import Box from '@mui/material/Box';
@@ -15,7 +14,6 @@ import { Grid2, Stack, Button } from '@mui/material';
 import { Iconify } from '@/components/template/iconify';
 
 import PositionItem from './position-item';
-import ZealyHighlight from '../_common/zealy/zealy-highlight';
 import WithdrawLiquidityDialog from './withdraw-liquidity-dialog';
 
 // ----------------------------------------------------------------------
@@ -105,21 +103,9 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
                   sx={{ color: theme.palette.primary.dark, rotate: '-90deg' }}
                 />
               }
-              // onClick={() =>
-              //   trackEvent('button_clicked', {
-              //     label: 'Manage Stake',
-              //     location: 'Insurance',
-              //   })
-              // }
             >
               {btn.label}
             </Button>
-
-            {/* Zealy badge */}
-            <ZealyHighlight
-              questId={ZEALY_QUEST_IDS.addLiquidity}
-              position={{ top: -10, right: -10 }}
-            />
           </Box>
         ))}
       </Stack>
@@ -127,7 +113,7 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
       {/* Positions grid */}
       <Grid2 container spacing={2}>
         {positions.map((position) => (
-          <Grid2 key={position.poolAddress} size={{ xs: 12, sm: 6, md: 4 }}>
+          <Grid2 key={position.pool.addresses.pool} size={{ xs: 12, sm: 6, md: 4 }}>
             <PositionItem
               position={position}
               onWithdraw={() => {

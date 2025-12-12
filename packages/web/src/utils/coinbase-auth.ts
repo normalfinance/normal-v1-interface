@@ -1,4 +1,4 @@
-import { generateJwt } from '@coinbase/cdp-sdk/auth';
+// import { generateJwt } from '@coinbase/cdp-sdk/auth';
 
 const ONRAMP_HOST = 'api.developer.coinbase.com';
 const ONRAMP_PATH = '/onramp/v1/token';
@@ -10,14 +10,14 @@ export async function getCdpBearerToken() {
 
   // Build a JWT specifically for the Session Token request
   // (JWTs expire quickly; generate per request)
-  const jwt = await generateJwt({
-    apiKeyId,
-    apiKeySecret,
-    requestMethod: 'POST',
-    requestHost: ONRAMP_HOST,
-    requestPath: ONRAMP_PATH,
-    // expiresIn: 120, // optional, defaults to 120s
-  });
+  // const jwt = await generateJwt({
+  //   apiKeyId,
+  //   apiKeySecret,
+  //   requestMethod: 'POST',
+  //   requestHost: ONRAMP_HOST,
+  //   requestPath: ONRAMP_PATH,
+  //   // expiresIn: 120, // optional, defaults to 120s
+  // });
 
-  return { jwt, host: ONRAMP_HOST, path: ONRAMP_PATH };
+  return { jwt: '', host: ONRAMP_HOST, path: ONRAMP_PATH };
 }

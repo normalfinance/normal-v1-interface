@@ -1,3 +1,4 @@
+export * from './use-ago';
 export * from './stellar';
 export * from './use-boolean';
 export * from './use-previous';

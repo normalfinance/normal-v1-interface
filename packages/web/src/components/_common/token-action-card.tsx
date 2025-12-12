@@ -1,14 +1,15 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
+import type { Token } from '@normalfinance/types';
 import type { CardProps } from '@mui/material/Card';
 import type { SwapFeeInfo } from '@/types/swap-fee-info';
-import type { StateToken as Token } from '@normalfinance/types';
 
 import React from 'react';
+import { BigNumber } from 'bignumber.js';
 import Skeleton from 'react-loading-skeleton';
 import { logger } from '@normalfinance/utils';
 import { useTabs } from 'minimal-shared/hooks';
-import { ZEALY_QUEST_IDS } from '@/global-config';
+import { usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -20,7 +21,6 @@ import { alpha, useTheme } from '@mui/material/styles';
 import BuyCard from './buy-card';
 import SwapCard from './swap-card';
 import SendCard from './send-card';
-import ZealyHighlight from './zealy/zealy-highlight';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
@@ -47,8 +47,6 @@ export interface TokenActionCardProps extends CardProps {
   title?: string;
   /** Optional subtitle displayed under the title */
   subheader?: string;
-  /** Tokens available for the child action components */
-  tokensList?: Token[];
   /** Swap‑fee info, forwarded to **SwapCard** and **SendCard** */
   swapFeeInfo?: SwapFeeInfo;
   /**
@@ -71,7 +69,6 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   sx,
   title,
   subheader,
-  tokensList,
   swapFeeInfo,
   enabledTabs,
   cashBalance,
@@ -81,6 +78,10 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   ...other
 }) => {
   const theme = useTheme();
+
+  const {
+    tokenState: { tokens },
+  } = usePersistStore();
 
   // Determine which tabs are active for this instance ------------------
   const activeTabs = React.useMemo<ActionConfig[]>(
@@ -103,8 +104,8 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   const tabs = useTabs(getInitialTab());
 
   const buyCardTokens = React.useMemo<Token[]>(
-    () => tokensList!.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol === 'USDC'),
-    [tokensList]
+    () => tokens!.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol === 'USDC'),
+    [tokens]
   );
 
   // Helper – render the body matching the active tab -------------------
@@ -113,17 +114,21 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
       case 'swap':
         return (
           <Box data-testid="swap-card" sx={{ position: 'relative' }}>
-            <SwapCard tokensList={tokensList} swapFeeInfo={swapFeeInfo} queryParams={queryParams} />
-            <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />
+            <SwapCard
+              swapFeeInfo={swapFeeInfo}
+              queryParams={queryParams}
+              changeTab={tabs.setValue}
+            />
           </Box>
         );
       case 'send':
         return (
           <SendCard
-            tokensList={tokensList}
+            tokens={tokens.filter((tkn) => BigNumber(tkn.balance).gt(0))}
             networkCost={0}
             queryParams={queryParams}
             data-testid="send-card"
+            changeTab={tabs.setValue}
           />
         );
       case 'buy':
@@ -133,6 +138,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
             cashBalance={cashBalance}
             queryParams={queryParams}
             data-testid="buy-card"
+            changeTab={tabs.setValue}
           />
         );
       default:

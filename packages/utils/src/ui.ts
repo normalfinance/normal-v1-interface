@@ -1,3 +1,5 @@
+import { cdn } from './cdn';
+
 export function getCryptoIconUrl(symbol: string): string {
   if (!symbol) return '';
 
@@ -6,7 +8,7 @@ export function getCryptoIconUrl(symbol: string): string {
 
   // Special case: always use 'XLM.webp'
   if (sanitized === 'XLM') {
-    return `/assets/icons/crypto-icons/XLM.webp`;
+    return cdn('/tokens/XLM.webp');
   }
 
   // Check if original symbol started with lowercase 'n' and was followed by an uppercase letter
@@ -15,5 +17,5 @@ export function getCryptoIconUrl(symbol: string): string {
   // If Normal token, lowercase `n` prefix is preserved and attached to the uppercase remainder
   const fileName = isNormalToken ? `n${sanitized.slice(1)}` : sanitized;
 
-  return `/assets/icons/crypto-icons/${fileName}.webp`;
+  return cdn(`/tokens/${fileName}.webp`);
 }

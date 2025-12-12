@@ -1,13 +1,10 @@
 'use client';
 
-import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import * as React from 'react';
-import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
-import { logger } from '@normalfinance/utils';
-import { useAppStore } from '@normalfinance/state';
+import { cdn } from '@normalfinance/utils';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
@@ -32,13 +29,6 @@ type Props = {
 
 type HeroHeaderProps = Partial<Props>;
 
-const swapFeeInfo: SwapFeeInfo = {
-  feePercentage: 0.25,
-  networkCost: 1.0,
-  priceImpact: -0.3,
-  maxSlippage: 0.5,
-};
-
 export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   const {
     heading,
@@ -55,28 +45,6 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   } as Props;
 
   const { t } = useTranslate();
-
-  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
-
-  useEffect(() => {
-    if (tokens.length === 0) {
-      setGlobalIsLoading(true);
-
-      getAllTokens()
-        .catch((error) => logger.error(error))
-        .finally(() => {
-          setGlobalIsLoading(false);
-        });
-    }
-  }, []);
-
-  const allowedTokens = React.useMemo(
-    () =>
-      tokens.filter(
-        (token) => token.symbol === 'XLM' || token.symbol?.toLowerCase().startsWith('n')
-      ),
-    [tokens]
-  );
 
   return (
     <Box
@@ -225,11 +193,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard
-                tokensList={allowedTokens}
-                swapFeeInfo={swapFeeInfo}
-                queryParams={swapParams}
-              />
+              <SwapCard queryParams={swapParams} />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
@@ -270,16 +234,16 @@ export const HeroHeaderDefaults: Props = {
   description:
     'The largest on-chain catalogue of synthetic crypto and real-world assets built on Stellar, secured by Halborn.',
   image: {
-    src: '/assets/images/landing-page/stellar-logo.webp',
+    src: cdn('homepage/stellar-logo.webp'),
     alt: 'Stellar Logo Long',
   },
   halbornImage: {
-    src: '/assets/images/landing-page/halborn-logo.webp',
+    src: cdn('homepage/halborn-logo.webp'),
     alt: 'Stellar Logo Long',
   },
   tagline: 'Crypto that just works',
   taglineLogo: {
-    src: '/assets/images/landing-page/normal-long.svg',
+    src: cdn('homepage/normal-long.svg'),
     alt: 'Normal Logo Long',
   },
 };

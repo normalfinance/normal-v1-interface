@@ -1,29 +1,32 @@
-import { Account } from '@stellar/stellar-sdk';
-
 export interface NetworkConfig {
-  // network
-  TESTING_SOURCE: Account;
+  // Network
   NETWORK_PASSPHRASE: string;
   HORIZON_URL: string;
   RPC_URL: string;
 
-  // accounts
-  NORMAL_TOKEN_ISSUER: string;
+  // Normal Accounts
+  NORMAL_ISSUER: string;
+  NORMAL_ADMIN: string;
+  NORMAL_DISTRIBUTOR: string;
+  NORMAL_HOT_A: string;
 
-  // contracts
+  // Normal Contracts
   POOL_ROUTER_ADDRESS: string;
-  POOL_SWAP_FEE_ADDRESS: string;
-  INSURANCE_FUND_ADDRESS: string;
-  ORACLE_REGISTRY_ADDRESS: string;
+  POOL_PLANE_ADDRESS: string;
   LIQUIDITY_CALCULATOR_ADDRESS: string;
+  CONFIG_STORAGE_ADDRESS: string;
+  REWARDS_GAUGE_ADDRESS: string;
 
-  // stellar
+  // Stellar
   XLM_ADDRESS: string;
   XLM_DECIMALS: number;
+  USDC_ADDRESS: string;
+  USDC_DECIMALS: number;
 
-  // oracle
-  REFLECTOR_ORACLE_ADDRESS: string;
+  // Oracle
+  REFLECTOR_EXTERNAL_ORACLE_ADDRESS: string;
+  REFLECTOR_PUBNET_ORACLE_ADDRESS: string;
 
-  // supabase
+  // Supabase
   EVENTS_TABLENAME: string;
 }

@@ -14,8 +14,8 @@ import {
 } from '@mui/material';
 
 const steps = [
-  { label: 'Step 1', description: 'Select Normal Token.' },
-  { label: 'Step 2', description: 'Set XLM deposit amount.' },
+  { label: 'Step 1', description: 'Select token pair and fees.' },
+  { label: 'Step 2', description: 'Set deposit amounts.' },
 ];
 
 interface ResponsiveStepperProps {

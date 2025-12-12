@@ -134,8 +134,9 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
                 sx={{
                   mt: 0.5,
                   borderRadius: 1,
-                  bgcolor: '#6E4BFF',
-                  '&:hover': { bgcolor: '#6E4BFF' },
+                  bgcolor: 'secondary.light',
+                  '&:hover': { bgcolor: 'secondary.light' },
+                  color: 'text.primary',
                 }}
                 // onClick={() =>
                 //   trackEvent('button_clicked', {

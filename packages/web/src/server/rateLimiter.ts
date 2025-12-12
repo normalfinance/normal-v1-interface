@@ -8,18 +8,18 @@ function getUpstashConfig() {
   switch (network) {
     case 'testnet':
       return {
-        url: process.env.TESTNET_UPSTASH_REDIS_REST_URL!,
-        token: process.env.TESTNET_UPSTASH_REDIS_REST_TOKEN!,
+        url: process.env.UPSTASH_REDIS_TESTNET_REST_URL!,
+        token: process.env.UPSTASH_REDIS_TESTNET_REST_TOKEN!,
       };
     case 'mainnet':
       return {
-        url: process.env.MAINNET_UPSTASH_REDIS_REST_URL!,
-        token: process.env.MAINNET_UPSTASH_REDIS_REST_TOKEN!,
+        url: process.env.UPSTASH_REDIS_MAINNET_REST_URL!,
+        token: process.env.UPSTASH_REDIS_MAINNET_REST_TOKEN!,
       };
     default:
       return {
-        url: process.env.TESTNET_UPSTASH_REDIS_REST_URL!,
-        token: process.env.TESTNET_UPSTASH_REDIS_REST_TOKEN!,
+        url: process.env.UPSTASH_REDIS_TESTNET_REST_URL!,
+        token: process.env.UPSTASH_REDIS_TESTNET_REST_TOKEN!,
       };
   }
 }

@@ -1,45 +1,32 @@
 import { create } from 'zustand';
-import { createWalletActions } from './wallet/actions';
+import { createTokenActions } from './persist/createTokenActions';
 import { persist } from 'zustand/middleware';
-import { Horizon } from '@stellar/stellar-sdk';
 import { AppStore, AppStorePersist } from '@normalfinance/types';
 import { createConnectWalletActions } from './persist/createConnectWalletActions';
 import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
-import { constants } from '@normalfinance/utils';
 import { createReferralActions } from './persist/createReferralActions';
 import { createInviteCodeActions } from './persist/createInviteCodeActions';
-import { createPoolActions } from './pool/actions';
+import { createPoolActions } from './persist/createPoolActions';
+import { createModalActions } from './modal/actions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
-  // Create a new server instance.
-  const server = new Horizon.Server(constants.StellarConfig.RPC_URL);
-
-  // Create a wallet with the given server and network passphrase.
-  const wallet = createWalletActions(set, get);
-
   // Create a loading state
   const loading = createLoadingActions(set, get);
 
-  // Create
-  const pool = createPoolActions(set, get);
+  // Create modal state
+  const modal = createModalActions(set, get);
 
   return {
-    server,
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-    ...wallet,
     ...loading,
-    ...pool,
+    ...modal,
   };
 });
 
 export const usePersistStore = create<AppStorePersist>()(
   persist(
     (set, get) => {
-      // Create a new server instance.
-      const server = new Horizon.Server(constants.StellarConfig.RPC_URL);
-
       // Create a wallet with the given server and network passphrase.
       const walletPersist = createConnectWalletActions();
 
@@ -52,17 +39,32 @@ export const usePersistStore = create<AppStorePersist>()(
       // Create invite code actions
       const inviteCodeActions = createInviteCodeActions();
 
+      // Create pool actions
+      const poolActions = createPoolActions();
+
+      // Create token actions
+      const tokenActions = createTokenActions();
+
       return {
-        server,
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         ...walletPersist,
         ...disclaimer,
         ...referralActions,
         ...inviteCodeActions,
+        ...poolActions,
+        ...tokenActions,
       };
     },
     {
-      name: 'app-storage', // name of the item in the storage (must be unique)
+      name: 'just-some-normal-storage',
+      version: 3,
+      migrate: (persistedState, version) => {
+        if (!persistedState) return {};
+
+        // Upgrade from v0, v1, v2 → v3 schema
+        if (version < 3) {
+          return {};
+        }
+      },
     }
   )
 );

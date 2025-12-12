@@ -54,7 +54,7 @@ export const themeConfig: ThemeConfig = {
     },
     secondary: {
       lighter: '#e1d9ff',
-      light: '#e0d9ff',
+      light: '#EFD6FF',
       main: '#6E4BFF',
       dark: '#7a65d9',
       darker: '#5f4fb2',
@@ -94,7 +94,7 @@ export const themeConfig: ThemeConfig = {
     },
     grey: {
       '50': '#FCFDFD',
-      '100': '#F9FAFB',
+      '100': '#F8FAFC',
       '200': '#F4F6F8',
       '250': '#f1f3f4',
       '300': '#DFE3E8',

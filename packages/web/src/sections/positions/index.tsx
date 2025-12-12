@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
+import { logger } from '@normalfinance/utils';
 import { useLiquidityPositions } from '@/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box } from '@mui/material';
 
@@ -17,12 +20,32 @@ export default function PositionsView() {
 
   const { positions } = useLiquidityPositions();
 
+  const { setGlobalIsLoading } = useAppStore();
+
+  const { wallet, getAllTokens, getAllPools } = usePersistStore();
+
+  // Effect hook to fetch all pools and tokens once the component mounts
+  useEffect(() => {
+    const refreshTokens = async (): Promise<void> => {
+      try {
+        setGlobalIsLoading(true);
+        await getAllPools();
+        await getAllTokens();
+      } catch (e) {
+        logger.error(e);
+      } finally {
+        setGlobalIsLoading(false);
+      }
+    };
+    refreshTokens();
+  }, [wallet.address]);
+
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
       <DashboardContent maxWidth="xl">
         <PageHeader title={t('Your positions')} />
 
-        <WalletGate buttonText={t('Connect Wallet to view positions')} fullWidth>
+        <WalletGate buttonText={t('Connect wallet to view positions')} fullWidth>
           <PositionsTable positions={positions ?? []} />
         </WalletGate>
       </DashboardContent>

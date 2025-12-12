@@ -1,8 +1,11 @@
-import { PoolRouterContract } from '@normalfinance/contracts';
-
+import { Pool } from '../contracts';
+export interface PoolState {
+  pools: Pool[];
+  poolsByTokens: Record<string, Pool[]>;
+  lastUpdated: number;
+}
 export interface PoolActions {
-  getAllPools: () => Promise<PoolRouterContract.PoolInfo[]>;
-  setPools: (_pools: PoolRouterContract.PoolInfo[]) => void;
-  getPool: (asset: string) => Promise<PoolRouterContract.PoolInfo>;
-  pools: PoolRouterContract.PoolInfo[];
+  getPool: (poolAddress: string) => Promise<void>;
+  getAllPools: () => Promise<void>;
+  poolState: PoolState;
 }

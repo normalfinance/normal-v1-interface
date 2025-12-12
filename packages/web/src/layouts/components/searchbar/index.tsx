@@ -1,19 +1,21 @@
 'use client';
 
 import type { BoxProps } from '@mui/material/Box';
+import type { Token } from '@normalfinance/types';
 import type { Breakpoint } from '@mui/material/styles';
-import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
+// import type { NavSectionProps } from '@/components/template/nav-section';
+import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from '@/routes/hooks';
 import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
 import { useBoolean } from 'minimal-shared/hooks';
 import { fCurrency } from '@/utils/format-number';
-import { useAppStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -22,7 +24,6 @@ import MenuList from '@mui/material/MenuList';
 import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import ListItemText from '@mui/material/ListItemText';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import InputAdornment from '@mui/material/InputAdornment';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
@@ -39,29 +40,25 @@ import { applyFilter } from './utils';
 
 // ----------------------------------------------------------------------
 
-export type SearchbarProps = BoxProps & {
-  data?: NavSectionProps['data'];
-};
-
 const breakpoint: Breakpoint = 'sm';
 
-export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps) {
+export function Searchbar({ sx, ...other }: BoxProps) {
   const { t } = useTranslate('auto');
   const theme = useTheme();
   const router = useRouter();
-  const smUp = useMediaQuery(theme.breakpoints.up(breakpoint));
+
+  const { globalIsLoading } = useAppStore();
+
+  const {
+    tokenState: { tokens },
+    getAllTokens,
+    poolState: { pools },
+  } = usePersistStore();
 
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Get tokens from the app store
-  const { tokens, getAllTokens, globalIsLoading } = useAppStore();
-
   const handleClose = useCallback(() => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
     onClose();
     setSearchQuery('');
   }, [onClose]);
@@ -92,16 +89,24 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
   }, [open, getAllTokens, tokens.length]);
 
   const handleTokenClick = useCallback(
-    (token: any) => {
-      const isNormalToken = token.symbol.toLowerCase().startsWith('n');
-      const destination = isNormalToken
-        ? paths.pools.details(token.symbol)
-        : `${paths.swap}?token_in=${token.symbol}`;
-
+    (token: Token) => {
       setTimeout(() => handleClose(), 50);
-      router.push(destination);
+
+      if (!pools || !pools.length) {
+        router.push(paths.explore);
+      }
+
+      const tokenPools = pools.filter(
+        (p) => p.addresses.tokenA === token.contract || p.addresses.tokenB === token.contract
+      );
+
+      if (!tokenPools || !tokenPools.length) {
+        router.push(paths.explore);
+      }
+
+      router.push(paths.pools.details(tokenPools[0].addresses.pool));
     },
-    [router, handleClose]
+    [router, handleClose, pools]
   );
 
   const handleSearch = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -172,20 +177,20 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
         {t('Search tokens...')}
       </Box>
 
-      {/* ⌘K helper shown at sm+ 
+      {/* ⌘K helper shown at sm+  */}
       <Label
-        sx={(t) => ({
+        sx={(_theme) => ({
           ml: 'auto',
           color: 'grey.800',
           cursor: 'inherit',
           bgcolor: 'common.white',
-          fontSize: t.typography.pxToRem(12),
-          boxShadow: t.vars.customShadows.z1,
+          fontSize: _theme.typography.pxToRem(12),
+          boxShadow: _theme.vars.customShadows.z1,
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
         })}
       >
-        ⌘K
-      </Label>*/}
+        {t('⌘K')}
+      </Label>
     </Box>
   );
 
@@ -227,85 +232,91 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           },
         }}
       >
-        {dataFiltered.map((item) => {
-          const partsTitle = parse(item.name, match(item.name, searchQuery));
-          const partsSymbol = parse(item.symbol, match(item.symbol, searchQuery));
+        {dataFiltered.length &&
+          dataFiltered.map((item) => {
+            const partsTitle = parse(item.name, match(item.name, searchQuery));
+            const partsSymbol = parse(item.symbol, match(item.symbol, searchQuery));
 
-          return (
-            <MenuItem disableRipple key={item.symbol}>
-              <ListItemButton
-                onClick={() => handleTokenClick(item)}
-                sx={{
-                  borderWidth: 1,
-                  borderStyle: 'dashed',
-                  borderColor: 'transparent',
-                  borderBottomColor: theme.vars?.palette.divider || theme.palette.divider,
-                  '&:hover': {
-                    borderRadius: 1,
-                    borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
-                    backgroundColor: theme.vars?.palette.action.hover || theme.palette.action.hover,
-                  },
-                }}
-              >
-                <ListItemAvatar>
-                  <Avatar src={getCryptoIconUrl(item.symbol)} sx={{ width: 32, height: 32 }}>
-                    {item.symbol.substring(0, 2)}
-                  </Avatar>
-                </ListItemAvatar>
+            return (
+              <MenuItem disableRipple key={item.symbol}>
+                <ListItemButton
+                  onClick={() => handleTokenClick(item)}
+                  sx={{
+                    borderWidth: 1,
+                    borderStyle: 'dashed',
+                    borderColor: 'transparent',
+                    borderBottomColor: theme.vars?.palette.divider || theme.palette.divider,
+                    '&:hover': {
+                      borderRadius: 1,
+                      borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
+                      backgroundColor:
+                        theme.vars?.palette.action.hover || theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <ListItemAvatar>
+                    <Avatar
+                      src={item.icon ?? getCryptoIconUrl(item.symbol)}
+                      sx={{ width: 32, height: 32 }}
+                    >
+                      {item.symbol.substring(0, 2)}
+                    </Avatar>
+                  </ListItemAvatar>
 
-                <ListItemText
-                  primary={
-                    <Box component="span">
-                      {partsTitle.map((part, index) => (
-                        <Box
-                          key={index}
-                          component="span"
-                          sx={{
-                            color: part.highlight
-                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
-                              : theme.vars?.palette.text.primary || theme.palette.text.primary,
-                          }}
-                        >
-                          {part.text}
-                        </Box>
-                      ))}
-                    </Box>
-                  }
-                  secondary={
-                    <Box component="span">
-                      {partsSymbol.map((part, index) => (
-                        <Box
-                          key={index}
-                          component="span"
-                          sx={{
-                            color: part.highlight
-                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
-                              : theme.vars?.palette.text.secondary || theme.palette.text.secondary,
-                          }}
-                        >
-                          {part.text}
-                        </Box>
-                      ))}
-                    </Box>
-                  }
-                />
+                  <ListItemText
+                    primary={
+                      <Box component="span">
+                        {partsTitle.map((part, index) => (
+                          <Box
+                            key={index}
+                            component="span"
+                            sx={{
+                              color: part.highlight
+                                ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                                : theme.vars?.palette.text.primary || theme.palette.text.primary,
+                            }}
+                          >
+                            {part.text}
+                          </Box>
+                        ))}
+                      </Box>
+                    }
+                    secondary={
+                      <Box component="span">
+                        {partsSymbol.map((part, index) => (
+                          <Box
+                            key={index}
+                            component="span"
+                            sx={{
+                              color: part.highlight
+                                ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                                : theme.vars?.palette.text.secondary ||
+                                  theme.palette.text.secondary,
+                            }}
+                          >
+                            {part.text}
+                          </Box>
+                        ))}
+                      </Box>
+                    }
+                  />
 
-                <Box sx={{ textAlign: 'right', minWidth: 80 }}>
-                  {item.balance > 0 && (
-                    <Typography variant="body2" color="text.primary">
-                      {fCurrency(item.balance)}
-                    </Typography>
-                  )}
-                  {item.usdValue > 0 && (
-                    <Typography variant="caption" color="text.secondary">
-                      {fCurrency(item.usdValue)}
-                    </Typography>
-                  )}
-                </Box>
-              </ListItemButton>
-            </MenuItem>
-          );
-        })}
+                  <Box sx={{ textAlign: 'right', minWidth: 80 }}>
+                    {BigNumber(item.balance).gt(0) && (
+                      <Typography variant="body2" color="text.primary">
+                        {t('Balance: ')} {fCurrency(item.balance)}
+                      </Typography>
+                    )}
+                    {BigNumber(item.price).gt(0) && (
+                      <Typography variant="caption" color="text.secondary">
+                        {fCurrency(item.price)}
+                      </Typography>
+                    )}
+                  </Box>
+                </ListItemButton>
+              </MenuItem>
+            );
+          })}
       </MenuList>
     );
   };

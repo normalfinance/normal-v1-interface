@@ -82,7 +82,7 @@ export type NormalNavbarProps = React.ComponentPropsWithoutRef<'section'> & Part
 
 export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   const { t } = useTranslate();
-  const { logo, links = [], buttons = [], searchbar, language, account } = props;
+  const { links = [], searchbar, language, account } = props;
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
@@ -116,7 +116,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const toggleMobile = () => setMobileOpen((p) => !p);
-  const closeMobile = () => setMobileOpen(false);
+  // const closeMobile = () => setMobileOpen(false);
 
   // eslint-disable-next-line consistent-return
   useEffect(() => {
@@ -226,7 +226,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           }}
         >
           <Box sx={{ width: '100%', maxWidth: 320, mx: 'auto' }}>
-            <Searchbar data={navData} />
+            <Searchbar />
           </Box>
         </Box>
 
@@ -670,7 +670,7 @@ function MobileMega({
   return (
     <Box sx={{ py: 0 }}>
       <Box sx={{ width: '100%', mb: 4 }}>
-        <Searchbar data={navData} />
+        <Searchbar />
       </Box>
 
       <Box

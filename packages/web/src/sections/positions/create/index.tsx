@@ -1,20 +1,18 @@
 'use client';
 
-import type { PositionQueryParams } from '@/types/query-params';
+import type { DepositLiquidityQueryParams } from '@/types/query-params';
 
 import { useEffect } from 'react';
 // mui
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
-import { ZEALY_QUEST_IDS } from '@/global-config';
-import { useAppStore } from '@normalfinance/state';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useQueryParams } from '@/hooks/use-query-params';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box, Grid2 } from '@mui/material';
 
-import ZealyHighlight from '@/components/_common/zealy/zealy-highlight';
 import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
 import { CreatePosition } from '@/components/_create-position-page-components/create-position';
 
@@ -22,16 +20,20 @@ import { CreatePosition } from '@/components/_create-position-page-components/cr
 
 export default function CreatePositionView() {
   const { t } = useTranslate();
-  const { tokens, getAllTokens, setGlobalIsLoading } = useAppStore();
-  const { params } = useQueryParams<PositionQueryParams>();
 
-  // Effect hook to fetch all tokens once the component mounts
+  const { params } = useQueryParams<DepositLiquidityQueryParams>();
+
+  const { setGlobalIsLoading } = useAppStore();
+
+  const { wallet, getAllTokens, getAllPools } = usePersistStore();
+
+  // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
-      setGlobalIsLoading(true);
       try {
+        setGlobalIsLoading(true);
+        await getAllPools();
         await getAllTokens();
-        setGlobalIsLoading(false);
       } catch (e) {
         logger.error(e);
       } finally {
@@ -39,7 +41,7 @@ export default function CreatePositionView() {
       }
     };
     refreshTokens();
-  }, []);
+  }, [wallet.address]);
 
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
@@ -57,11 +59,7 @@ export default function CreatePositionView() {
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12, md: 12 }}>
             <Box sx={{ position: 'relative' }}>
-              <CreatePosition
-                tokens={tokens.filter((tkn) => tkn.symbol.startsWith('n'))}
-                queryParams={params}
-              />
-              <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />
+              <CreatePosition queryParams={params} />
             </Box>
           </Grid2>
         </Grid2>

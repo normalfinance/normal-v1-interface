@@ -4,10 +4,13 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
 
+import { logger } from '@/middleware';
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
+import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fPercent, fShortenNumber } from '@/utils/format-number';
 
@@ -18,6 +21,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Tab, Chip, Stack, Avatar } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import RefreshButton from '@/components/_common/refresh-button';
 import { Chart, useChart, ChartSelect } from '@/components/template/chart';
 
 import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
@@ -45,7 +49,7 @@ type Props = CardProps & {
   subheader?: string;
   color?: string;
   chart: ExplorerChartData;
-  pairInfo?: TokenPairInfo;
+  pairInfo: TokenPairInfo;
   metadata?: PoolMetadata;
   exchangeRate?: ExchangeRateInfo;
   performance?: PerformanceInfo;
@@ -67,6 +71,11 @@ export function PoolChart({
 }: Props) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+
+  const { enqueueSnackbar } = useSnackbar();
+
+  const { getPool } = usePersistStore();
+
   const effectiveColor = color || theme.palette.primary.main;
 
   const [selectedMetric, setSelectedMetric] = useState<ChartMetricKey>('price');
@@ -170,6 +179,18 @@ export function PoolChart({
     '12m': '1Y',
   };
 
+  const onRefresh = async () => {
+    enqueueSnackbar('Refreshing pool', { variant: 'info' });
+
+    try {
+      await getPool(pairInfo.address);
+    } catch (error) {
+      logger.error('Pool refresh error:', error);
+    } finally {
+      // setCreatingTrustline(false);
+    }
+  };
+
   return (
     <Card sx={sx} {...other}>
       <CardHeader title={title} subheader={subheader} sx={{ mb: 2 }} />
@@ -191,13 +212,13 @@ export function PoolChart({
           }}
         >
           <Avatar
-            src={getCryptoIconUrl(pairInfo?.tokenA.name ?? '')}
+            src={pairInfo.tokenA.icon ?? getCryptoIconUrl(pairInfo.tokenA.symbol)}
             alt="Token A"
             sx={{ width: 27, height: 27 }}
           />
 
           <Avatar
-            src={getCryptoIconUrl(pairInfo?.tokenB.name ?? '')}
+            src={pairInfo.tokenB.icon ?? getCryptoIconUrl(pairInfo.tokenB.symbol)}
             alt="Token B"
             sx={{
               width: 27,
@@ -209,9 +230,9 @@ export function PoolChart({
         </Box>
 
         <Typography component="span" color="text.primary" variant="h6" ml={1}>
-          {pairInfo?.tokenA.name}
+          {pairInfo.tokenA.symbol}
           {t('/')}
-          {pairInfo?.tokenB.name}
+          {pairInfo.tokenB.symbol}
         </Typography>
 
         <Box
@@ -265,6 +286,8 @@ export function PoolChart({
               {metadata?.version}
             </Typography>
           </Box>
+
+          <RefreshButton onRefresh={onRefresh} sx={{ ml: 1 }} />
         </Box>
       </Box>
       <Stack sx={{ px: 2.5, mb: '20px' }}>
@@ -397,7 +420,7 @@ export function PoolChart({
           ))}
         </CustomTabsSwapSend>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Chip label="Coming soon" color="info" size="small" />
+          <Chip label="Coming soon" color="info" size="small" variant="soft" />
           <ChartSelect
             options={['price', 'volume']}
             value={selectedMetric}

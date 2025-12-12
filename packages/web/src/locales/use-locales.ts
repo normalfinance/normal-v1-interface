@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useSettingsContext } from '@/components/template/settings';
 
 import { allLangs } from './all-langs';
-import { fallbackLng, changeLangMessages as messages } from './locales-config';
+import { fallbackLng } from './locales-config';
 
 import type { LanguageValue } from './locales-config';
 
@@ -29,9 +29,9 @@ export function useTranslate(ns?: string) {
   const onChangeLang = useCallback(
     async (newLang: LanguageValue) => {
       try {
-        const langChangePromise = i18n.changeLanguage(newLang);
+        // const langChangePromise = i18n.changeLanguage(newLang);
 
-        const currentMessages = messages[newLang] || messages.en;
+        // const currentMessages = messages[newLang] || messages.en;
 
         // toast.promise(langChangePromise, {
         //   loading: currentMessages?.loading,

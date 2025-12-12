@@ -2,9 +2,8 @@
 
 import type { PoolPosition } from '@/hooks';
 import type { Activity } from '@/types/activity';
-import type { StateToken as Token } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
-import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -13,6 +12,7 @@ import { enqueueSnackbar } from 'notistack';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
 import { runDepositFlow, runWithdrawFlow } from '@/lib/mgi/client';
+import { useAppStore } from '@normalfinance/state';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
@@ -28,8 +28,8 @@ import AmountDialog from '@/components/deposit-amount-dialog';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
+import PositionsTab from './positions-tab';
 import ReceiveModal from '../receive-modal';
-import PositioinsTab from './positions-tab';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
@@ -53,7 +53,8 @@ export default function ConnectedWallet({
   const { t } = useTranslate();
   const theme = useTheme();
   const router = useRouter();
-  const [showReceiveModal, setShowReceiveModal] = useState(false);
+
+  const { modalState, setModalView } = useAppStore();
 
   const actionButtons = [
     {
@@ -67,7 +68,7 @@ export default function ConnectedWallet({
       label: 'Receive',
       icon: 'mingcute:add-line',
       onClick: () => {
-        setShowReceiveModal(true);
+        setModalView('receive', true);
       },
     },
   ];
@@ -311,19 +312,16 @@ export default function ConnectedWallet({
       </CustomTabsSwapSend>
 
       {/* ------- tab panels ---------------------------------------- */}
-      {tabs.value === 'tokens' && <TokensTab tokens={tokens?.filter((tkn) => tkn.balance > 0)} />}
-      {tabs.value === 'positions' && (
-        <PositioinsTab
-          positions={positions ?? []}
-          xlmPrice={BigNumber(tokens?.find((tkn) => tkn.symbol === 'XLM')?.usdValue || 0)}
-        />
+      {tabs.value === 'tokens' && (
+        <TokensTab tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0))} />
       )}
+      {tabs.value === 'positions' && <PositionsTab positions={positions ?? []} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
 
       <ReceiveModal
-        open={showReceiveModal}
+        open={modalState.receive}
         onClose={() => {
-          setShowReceiveModal(false);
+          setModalView('receive', false);
         }}
       />
     </Stack>

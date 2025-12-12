@@ -1,10 +1,15 @@
 //! Utilities for interacting with token contracts
 
-import { rpc, Contract, scValToNative, TransactionBuilder } from '@stellar/stellar-sdk';
+import { rpc, Contract, scValToNative, TransactionBuilder, Account } from '@stellar/stellar-sdk';
 import { addressToScVal, constants, scValToJs } from '..';
 
+const TESTING_SOURCE = new Account(
+  'GCRVHVIR7B6PBUYIAKHS24RKALHZLIRM7GPLOAYRCZXQF6SSV3IJU3XO',
+  '123'
+);
+
 export const getTokenName = async (tokenAddress: string): Promise<string> => {
-  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
@@ -28,7 +33,7 @@ export const getTokenName = async (tokenAddress: string): Promise<string> => {
 };
 
 export const getTokenSymbol = async (tokenAddress: string): Promise<string> => {
-  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
@@ -52,7 +57,7 @@ export const getTokenSymbol = async (tokenAddress: string): Promise<string> => {
 };
 
 export const getTokenDecimals = async (tokenAddress: string): Promise<number> => {
-  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
@@ -78,7 +83,7 @@ export const getTokenDecimals = async (tokenAddress: string): Promise<number> =>
 export async function getTokenBalance(tokenAddress: string, address: string): Promise<bigint> {
   const user = addressToScVal(address);
 
-  const tx_builder = new TransactionBuilder(constants.StellarConfig.TESTING_SOURCE, {
+  const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
     networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
@@ -100,3 +105,6 @@ export async function getTokenBalance(tokenAddress: string, address: string): Pr
     throw Error(`unable to fetch balance for token: ${tokenAddress}`);
   }
 }
+
+export const isNormalToken = (issuer: string): boolean =>
+  issuer === constants.StellarConfig.NORMAL_ISSUER;

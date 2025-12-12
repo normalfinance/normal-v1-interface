@@ -4,9 +4,10 @@ import type { events } from '@normalfinance/types';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
+import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
-import { constants, rpcServer, parseEvent } from '@normalfinance/utils';
+import { constants, parseEvent } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -25,6 +26,10 @@ export function usePoolEvents(poolAddress: string | undefined, limit: number): R
   const [events, setEvents] = useState<events.PoolRouterEvent[]>([]);
 
   useEffect(() => {
+    const rpcServer = new rpc.Server(constants.StellarConfig.RPC_URL, {
+      allowHttp: constants.StellarConfig.RPC_URL.startsWith('http://'),
+    });
+
     const fetchInitialData = async () => {
       if (!poolAddress) return;
 
@@ -38,7 +43,7 @@ export function usePoolEvents(poolAddress: string | undefined, limit: number): R
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
         .eq('transaction_successful', true)
-        .ilike('topics', `%${poolAddress}%`)
+        .ilike('data', `%${poolAddress}%`)
         .or(`topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%`)
         .order('id', { ascending: false })
         .limit(limit);
@@ -49,7 +54,7 @@ export function usePoolEvents(poolAddress: string | undefined, limit: number): R
         const rows = data as GoldskyTableRow[];
 
         const parsed = rows
-          .filter((r) => r.topics !== undefined && r.data !== undefined)
+          // .filter((r) => r.topics !== undefined && r.data !== undefined)
           .map(async (r) => {
             const parsedEvent = parseEvent(
               JSON.parse(r.topics!),
@@ -83,7 +88,7 @@ export function usePoolEvents(poolAddress: string | undefined, limit: number): R
           event: 'INSERT',
           schema: 'public',
           table: constants.StellarConfig.EVENTS_TABLENAME,
-          filter: `contract_id=eq.${constants.StellarConfig.POOL_ROUTER_ADDRESS}&topics=ilike.%${poolAddress}%&or=(topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%)`,
+          filter: `contract_id=eq.${constants.StellarConfig.POOL_ROUTER_ADDRESS}&data=ilike.%${poolAddress}%&or=(topics.ilike.%deposit%,topics.ilike.%swap%,topics.ilike.%withdraw%)`,
         },
         async (payload: RealtimePostgresInsertPayload<GoldskyTableRow>) => {
           const { topics, data, transaction_hash } = payload.new;

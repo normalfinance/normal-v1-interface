@@ -255,7 +255,7 @@ export function RewardsView() {
 
       {/* ---- Tab panels ----------------------------------------------------- */}
       {selectedTab === '' && (
-        <WalletGate buttonText={t('Connect Wallet to view rewards')} fullWidth>
+        <WalletGate buttonText={t('Connect wallet to view rewards')} fullWidth>
           <RewardsOverview
             referralsCount={REWARDS_OVERVIEW.referralsCount}
             zealyUrl={REWARDS_OVERVIEW.zealyUrl}
@@ -266,7 +266,7 @@ export function RewardsView() {
         </WalletGate>
       )}
       {selectedTab === 'zealy' && (
-        <WalletGate buttonText={t('Connect Wallet to view Zealy')} fullWidth>
+        <WalletGate buttonText={t('Connect wallet to view Zealy')} fullWidth>
           <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Button
               variant="contained"
@@ -292,7 +292,7 @@ export function RewardsView() {
       )}
 
       {selectedTab === 'protocol' && (
-        <WalletGate buttonText={t('Connect Wallet to view Protocol Points')} fullWidth>
+        <WalletGate buttonText={t('Connect wallet to view Protocol Points')} fullWidth>
           <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
         </WalletGate>
       )}

@@ -3,8 +3,7 @@
 'use client';
 
 import type { CardProps } from '@mui/material/Card';
-import type { StateToken as Token } from '@normalfinance/types';
-import type { PositionQueryParams } from '@/types/query-params';
+import type { DepositLiquidityQueryParams } from '@/types/query-params';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
@@ -18,16 +17,10 @@ import { StepContentPanel } from './step-content-panel';
 import { ResponsiveLinearStepper } from './responsive-linear-stepper';
 
 interface CreatePositionProps extends CardProps {
-  tokens: Token[];
-  queryParams?: PositionQueryParams;
+  queryParams?: DepositLiquidityQueryParams;
 }
 
-export const CreatePosition: React.FC<CreatePositionProps> = ({
-  tokens,
-  queryParams,
-  sx,
-  ...other
-}) => {
+export const CreatePosition: React.FC<CreatePositionProps> = ({ queryParams, sx, ...other }) => {
   const theme = useTheme();
 
   const { t } = useTranslate('auto');
@@ -36,10 +29,10 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
   /* wizard navigation state                                             */
   /* ------------------------------------------------------------------ */
   const totalSteps = 2; // bump to 3 when you add step-3
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeStep, setActiveStep] = useState(1);
 
   const handleNext = () => setActiveStep((s) => Math.min(s + 1, totalSteps));
-  const handleBack = () => setActiveStep((s) => Math.max(s - 1, 0));
+  const handleBack = () => setActiveStep((s) => Math.max(s - 1, 1));
 
   /* ------------------------------------------------------------------ */
   /* form reset → remount StepContentPanel                               */
@@ -47,12 +40,8 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
   const [formKey, setFormKey] = useState(0); // ¦– bumping it forces remount
 
   const handleReset = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
     setFormKey((k) => k + 1); // clears RHF + Zod
-    setActiveStep(0); // back to step-1
+    setActiveStep(1); // back to step-1
   };
 
   /* ------------------------------------------------------------------ */
@@ -98,12 +87,6 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
               bgcolor: alpha(theme.palette.grey[500], 0.08),
               p: 1,
             }}
-            // onClick={() =>
-            //   trackEvent('button_clicked', {
-            //     label: 'Manage Stake',
-            //     location: 'Insurance',
-            //   })
-            // }
           >
             <Iconify icon="ic-settings" width={24} />
           </Button>
@@ -128,7 +111,6 @@ export const CreatePosition: React.FC<CreatePositionProps> = ({
             onBack={handleBack}
             onReset={handleReset}
             isLastStep={activeStep === totalSteps}
-            tokens={tokens}
             queryParams={queryParams}
           />
         </Box>

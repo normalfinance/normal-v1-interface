@@ -1,15 +1,14 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
+import type BigNumber from 'bignumber.js';
 import type { CardProps } from '@mui/material/Card';
-import type { StateToken as Token } from '@normalfinance/types';
 
 import { useState } from 'react';
-import BigNumber from 'bignumber.js';
+import { useAgo } from '@/hooks';
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
-import { format } from '@normalfinance/utils';
 import { varAlpha } from 'minimal-shared/utils';
-import { ZEALY_QUEST_IDS } from '@/global-config';
+import { usePersistStore } from '@normalfinance/state';
 import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
@@ -23,12 +22,12 @@ import { Iconify } from '@/components/template/iconify';
 import { WalletGate } from '@/components/_common/wallet-gate';
 
 import SwapCard from '../_common/swap-card';
-import ZealyHighlight from '../_common/zealy/zealy-highlight';
 
 // ----------------------------------------------------------------------
 // ── Prop types ---------------------------------------------------------
 
 export interface PoolBalance {
+  address: string;
   tokenSymbol: string;
   amount: BigNumber;
   fiatValue: BigNumber;
@@ -53,7 +52,6 @@ export type PoolsOverviewProps = CardProps & {
   stats: PoolStat[]; // any length (e.g. 3-4)
   actionButtons?: PoolActionButton[];
   loading?: boolean;
-  tokens?: Token[];
 };
 
 // ----------------------------------------------------------------------
@@ -63,12 +61,17 @@ export function PoolOverview({
   poolBalances,
   stats,
   loading,
-  tokens,
   sx,
   ...other
 }: PoolsOverviewProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+
+  const {
+    poolState: { lastUpdated },
+  } = usePersistStore();
+
+  const poolLastUpdated = useAgo(lastUpdated);
 
   const [showSwap, setShowSwap] = useState(false);
 
@@ -77,20 +80,15 @@ export function PoolOverview({
       label: 'Swap',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => setShowSwap((prev) => !prev),
-      quest: <ZealyHighlight questId={ZEALY_QUEST_IDS.swap} />,
     },
     {
       label: 'Add liquidity',
       icon: 'mingcute:add-line',
       href: '/positions/create',
-      quest: <ZealyHighlight questId={ZEALY_QUEST_IDS.addLiquidity} />,
     },
   ];
 
-  const [balA, balB] = poolBalances || [
-    { tokenSymbol: '', amount: BigNumber(0), value: BigNumber(0) },
-    { tokenSymbol: '', amount: BigNumber(0), value: BigNumber(0) },
-  ];
+  const [balA, balB] = poolBalances;
   const totalFiatValue = balA.fiatValue.plus(balB.fiatValue);
   const pctA = balA.fiatValue.div(totalFiatValue);
   const pctB = balB.fiatValue.div(totalFiatValue);
@@ -151,7 +149,7 @@ export function PoolOverview({
         {actionButtons.map((btn, idx) => (
           <WalletGate
             key={idx}
-            buttonText={`Connect Wallet to ${btn.label}`}
+            buttonText={`Connect wallet to ${btn.label}`}
             fullWidth
             variant="soft"
             color="success"
@@ -184,13 +182,12 @@ export function PoolOverview({
                 {btn.label}
               </Box>
             </Button>
-            {btn.quest}
           </WalletGate>
         ))}
       </Stack>
       {showSwap && (
         <Box sx={{ mt: 2 }}>
-          <SwapCard tokensList={tokens} />
+          <SwapCard />
         </Box>
       )}
       <Stack
@@ -207,7 +204,7 @@ export function PoolOverview({
           {t('Total APR')}
         </Typography>
         <Typography variant="h3" color="text.primary">
-          <Chip label="Coming soon" color="info" size="small" />
+          <Chip label="Coming soon" color="info" size="small" variant="soft" />
           {/* TODO: */}
           {/* {totalAprPercentage}
           {t('%')} */}
@@ -229,6 +226,10 @@ export function PoolOverview({
           {t('Stats')}
         </Typography>
 
+        <Typography variant="caption" sx={{ mt: -2 }}>
+          {t('as of')} {poolLastUpdated}
+        </Typography>
+
         <Stack
           sx={{
             width: '100%',
@@ -247,10 +248,10 @@ export function PoolOverview({
             }}
           >
             <Typography variant="subtitle2" color="text.primary">
-              {format.formatTokenAmount(balA.amount)} {balA.tokenSymbol}
+              {balA.amount.toFixed(7)} {balA.tokenSymbol}
             </Typography>
             <Typography variant="subtitle2" color="text.primary">
-              {format.formatTokenAmount(balB.amount)} {balB.tokenSymbol}
+              {balB.amount.toFixed(7)} {balB.tokenSymbol}
             </Typography>
           </Box>
           <Box
@@ -297,47 +298,61 @@ export function PoolOverview({
               </Typography>
               <Box>
                 <Stack direction="row" spacing={1} alignItems="end">
-                  <Typography variant="h3">{fCurrency(value.toFixed(2))}</Typography>
-                  {percentage != null && (
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Box
-                        component="span"
-                        sx={{
-                          width: 24,
-                          height: 24,
-                          display: 'flex',
-                          borderRadius: '50%',
-                          position: 'relative',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: varAlpha(theme.vars.palette.success.mainChannel, 0.16),
-                          color: 'success.dark',
-                          ...theme.applyStyles('dark', {
-                            color: 'success.light',
-                          }),
-                          ...(percentage < 0 && {
-                            bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
-                            color: 'error.dark',
-                            ...theme.applyStyles('dark', {
-                              color: 'error.light',
-                            }),
-                          }),
-                        }}
-                      >
-                        <Iconify
-                          width={16}
-                          icon={percentage < 0 ? 'eva:trending-down-fill' : 'eva:trending-up-fill'}
-                          color={percentage < 0 ? 'error.main' : 'success.main'}
-                        />
-                      </Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ color: percentage < 0 ? 'error.main' : 'success.main' }}
-                      >
-                        {percentage >= 0 && '+'}
-                        {fPercent(percentage)}
-                      </Typography>
-                    </Stack>
+                  {statName !== 'TVL' ? (
+                    <Chip
+                      label="Coming soon"
+                      color="info"
+                      size="small"
+                      variant="soft"
+                      sx={{ mt: 1 }}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="h3">{fCurrency(value.toFixed(2))}</Typography>
+                      {percentage != null && (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Box
+                            component="span"
+                            sx={{
+                              width: 24,
+                              height: 24,
+                              display: 'flex',
+                              borderRadius: '50%',
+                              position: 'relative',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: varAlpha(theme.vars.palette.success.mainChannel, 0.16),
+                              color: 'success.dark',
+                              ...theme.applyStyles('dark', {
+                                color: 'success.light',
+                              }),
+                              ...(percentage < 0 && {
+                                bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
+                                color: 'error.dark',
+                                ...theme.applyStyles('dark', {
+                                  color: 'error.light',
+                                }),
+                              }),
+                            }}
+                          >
+                            <Iconify
+                              width={16}
+                              icon={
+                                percentage < 0 ? 'eva:trending-down-fill' : 'eva:trending-up-fill'
+                              }
+                              color={percentage < 0 ? 'error.main' : 'success.main'}
+                            />
+                          </Box>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{ color: percentage < 0 ? 'error.main' : 'success.main' }}
+                          >
+                            {percentage >= 0 && '+'}
+                            {fPercent(percentage)}
+                          </Typography>
+                        </Stack>
+                      )}
+                    </>
                   )}
                 </Stack>
               </Box>

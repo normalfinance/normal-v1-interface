@@ -129,22 +129,22 @@ export function createStellarWalletKitActions(
               let walletType: string = 'stellar-wallets-kit';
               switch (wallet.id) {
                 case HANA_ID:
-                  walletType = 'hana-stellar-kit';
+                  walletType = 'hana';
                   break;
                 case XBULL_ID:
-                  walletType = 'xbull-stellar-kit';
+                  walletType = 'xbull';
                   break;
                 case FREIGHTER_ID:
-                  walletType = 'freighter-stellar-kit';
+                  walletType = 'freighter';
                   break;
                 case LOBSTR_ID:
-                  walletType = 'lobstr-stellar-kit';
+                  walletType = 'lobstr';
                   break;
                 case WALLET_CONNECT_ID:
-                  walletType = 'wallet-connect-stellar-kit';
+                  walletType = 'wallet-connect';
                   break;
                 case LEDGER_ID:
-                  walletType = 'ledger-stellar-kit';
+                  walletType = 'ledger';
                   break;
                 default:
                   walletType = 'stellar-wallets-kit';
@@ -155,7 +155,7 @@ export function createStellarWalletKitActions(
 
               if (!walletsWithoutMessageSigning.includes(wallet.id)) {
                 try {
-                  await kit.signMessage('Welcome to Normal Finance', {
+                  await kit.signMessage('Welcome to Normal', {
                     networkPassphrase:
                       process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
                         ? Networks.PUBLIC

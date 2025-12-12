@@ -3,7 +3,8 @@
 import type { PoolPosition } from '@/hooks';
 
 import { useTranslate } from '@/locales';
-import { format, getCryptoIconUrl } from '@normalfinance/utils';
+import { fCurrency } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -11,83 +12,77 @@ import { Stack, Avatar, Button, Typography } from '@mui/material';
 
 export interface PoolsTabsProps {
   positions?: PoolPosition[];
-  xlmPrice?: BigNumber;
 }
 
-export default function PositioinsTab({ positions = [], xlmPrice = BigNumber(0) }: PoolsTabsProps) {
+export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
   return (
     <Box sx={{ p: 2, pt: 0 }}>
       {positions.length > 0 ? (
-        positions?.map((position) => {
-          const positionFiatValue = xlmPrice.multipliedBy(
-            format.formatTokenAmount(position.balance)
-          );
+        positions.map((position) => (
+          <Button
+            key={position.pool.addresses.pool}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 2,
+              mb: 2,
+              width: '100%',
+              alignItems: 'center',
+              borderRadius: '16px',
+              border: `1px solid ${theme.palette.divider}`,
+            }}
+          >
+            <Stack direction="row" width={1} alignItems="center">
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                }}
+              >
+                <Avatar
+                  src={position.tokenA.icon ?? getCryptoIconUrl(position.tokenA.symbol)}
+                  alt="Token A"
+                  sx={{ width: 25, height: 25, zIndex: 1 }}
+                />
 
-          return (
-            <Button
-              key={position.poolAddress}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                padding: 2,
-                mb: 2,
-                width: '100%',
-                alignItems: 'center',
-                borderRadius: '16px',
-                border: `1px solid ${theme.palette.divider}`,
-              }}
-            >
-              <Stack direction="row" width={1} alignItems="center">
-                <Box
+                <Avatar
+                  src={position.tokenB.icon ?? getCryptoIconUrl(position.tokenB.symbol)}
+                  alt="Token B"
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-start',
+                    width: 25,
+                    height: 25,
+                    ml: '-12px',
                   }}
-                >
-                  <Avatar
-                    src={getCryptoIconUrl(position.tokenA.name ?? '')}
-                    alt="Token A"
-                    sx={{ width: 25, height: 25, zIndex: 1 }}
-                  />
-
-                  <Avatar
-                    src={getCryptoIconUrl(position.tokenB.name ?? '')}
-                    alt="Token B"
-                    sx={{
-                      width: 25,
-                      height: 25,
-                      ml: '-12px',
-                    }}
-                  />
-                </Box>
-                <Stack direction="column" width={1} alignItems="start">
-                  <Typography component="span" color="text.primary" variant="h6" ml={1}>
-                    {position.tokenA.name}
-                    {t('/')}
-                    {position.tokenB.name}
-                  </Typography>
-                </Stack>
+                />
+              </Box>
+              <Stack direction="column" width={1} alignItems="start">
+                <Typography component="span" color="text.primary" variant="h6" ml={1}>
+                  {position.tokenA.symbol}
+                  {t('/')}
+                  {position.tokenB.symbol}
+                </Typography>
               </Stack>
+            </Stack>
 
-              <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
-                <Stack direction="column" alignItems="start">
-                  <Typography color="text.primary" variant="body1">
-                    {/* eslint-disable-next-line i18next/no-literal-string */}
-                    {format.formatTokenAmount(position.balance)} XLM (
-                    {format.fCurrency(positionFiatValue.toFixed(2))})
-                  </Typography>
-                  <Typography color="text.secondary" variant="caption">
-                    {t('Liquidity Provided')}
-                  </Typography>
-                </Stack>
+            <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
+              <Stack direction="column" alignItems="start">
+                <Typography color="text.primary" variant="body1">
+                  {position.balances.tokenA.toFixed(position.tokenA.decimals)}{' '}
+                  {position.tokenA.symbol} ({fCurrency(position.usdValues.tokenA)})
+                  {position.balances.tokenB.toFixed(position.tokenB.decimals)}{' '}
+                  {position.tokenB.symbol} ({fCurrency(position.usdValues.tokenB)})
+                </Typography>
+                <Typography color="text.secondary" variant="caption">
+                  {t('Liquidity Provided')}
+                </Typography>
               </Stack>
-            </Button>
-          );
-        })
+            </Stack>
+          </Button>
+        ))
       ) : (
         <Typography>{t('No positions found.')}</Typography>
       )}
