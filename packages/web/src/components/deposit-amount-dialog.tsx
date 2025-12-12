@@ -15,6 +15,7 @@ import {
   DialogActions,
   InputAdornment,
 } from '@mui/material';
+import { cdn } from '@normalfinance/utils';
 
 type Props = {
   open: boolean;
@@ -104,12 +105,7 @@ export default function AmountDialog({
         }}
       >
         <Avatar sx={{ width: 56, height: 56, bgcolor: 'transparent', mb: 1 }}>
-          <Image
-            src="/assets/images/token-action-card/usdc.webp"
-            alt={t(tokenLabel)}
-            width={48}
-            height={48}
-          />
+          <Image src={cdn('/tokens/usdc.webp')} alt={t(tokenLabel)} width={48} height={48} />
         </Avatar>
         {title}
       </DialogTitle>
@@ -143,7 +139,7 @@ export default function AmountDialog({
                     }}
                   >
                     <Image
-                      src="/assets/images/token-action-card/usdc.webp"
+                      src={cdn('/tokens/usdc.webp')}
                       alt={t(tokenLabel)}
                       width={20}
                       height={20}

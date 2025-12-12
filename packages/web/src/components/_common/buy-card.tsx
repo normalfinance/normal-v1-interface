@@ -9,10 +9,8 @@ import { useTranslate } from '@/locales';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
-import { sanitizeAmountInput } from '@/utils/input-helpers';
-import { convertFiatToCoin } from '@/utils/conversion-helpers';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import { convertFiatToCoin, sanitizeAmountInput } from '@normalfinance/utils';
+import { cdn, convertFiatToCoin, sanitizeAmountInput } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
@@ -264,7 +262,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
               }}
             >
               <Image
-                src="/assets/images/token-action-card/mgi.webp"
+                src={cdn('/icons/moneygram/mgi.webp')}
                 alt="MoneyGram"
                 width={20}
                 height={20}
