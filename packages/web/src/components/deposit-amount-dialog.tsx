@@ -1,6 +1,7 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 
 import {
   Box,
@@ -15,7 +16,6 @@ import {
   DialogActions,
   InputAdornment,
 } from '@mui/material';
-import { cdn } from '@normalfinance/utils';
 
 type Props = {
   open: boolean;

@@ -11,8 +11,8 @@ import { useRouter } from 'next/navigation';
 import { enqueueSnackbar } from 'notistack';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
-import { runDepositFlow, runWithdrawFlow } from '@/lib/mgi/client';
 import { useAppStore } from '@normalfinance/state';
+import { runDepositFlow, runWithdrawFlow } from '@/lib/mgi/client';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 

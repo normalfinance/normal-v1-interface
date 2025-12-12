@@ -85,23 +85,6 @@ function WalletConnected({ address }: { address: string }) {
       </Stack>
 
       <Stack direction="row" width={1} spacing={1} alignItems="stretch" py={2}>
-        {/* Left: faucet (wrapped for Zealy badge) */}
-        <Box sx={{ position: 'relative', display: 'flex', flex: 1 }}>
-          <Button
-            fullWidth
-            variant="soft"
-            color="info"
-            size="large"
-            startIcon={<Iconify icon="eva:droplet-fill" />}
-            onClick={handleFaucetRequest}
-            disabled={faucetOff}
-            sx={{ borderRadius: 2, height: '100%', textTransform: 'none' }}
-          >
-            {t('Get testnet XLM')}
-          </Button>
-          <ZealyHighlight questId={ZEALY_QUEST_IDS.receiveFaucet} position={{ right: -10 }} />
-        </Box>
-
         <Box sx={{ flex: 1, display: 'flex' }}>
           <AddUsdcTrustlineButton
             fullWidth
@@ -113,6 +96,7 @@ function WalletConnected({ address }: { address: string }) {
       </Stack>
 
       <ConnectedWallet
+        address={address}
         balance={totalBalance.toNumber()}
         percentageChange={0}
         tokens={tokens}

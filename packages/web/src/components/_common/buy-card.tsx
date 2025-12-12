@@ -9,8 +9,8 @@ import { useTranslate } from '@/locales';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
-import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 import { cdn, convertFiatToCoin, sanitizeAmountInput } from '@normalfinance/utils';
+import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
