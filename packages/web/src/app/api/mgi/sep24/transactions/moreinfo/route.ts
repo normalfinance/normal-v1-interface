@@ -1,0 +1,61 @@
+import { NextResponse } from 'next/server';
+
+function j(status: number, payload: any) {
+  return NextResponse.json(payload, { status });
+}
+
+/**
+ * POST /api/mgi/sep24/transaction/moreinfo
+ * Body: { token: string; id: string }
+ *
+ * Uses adapterservice `GET /sep24/transaction?id=...` with SEP-10 Bearer token
+ * and returns a fresh more_info_url (these JWT URLs can expire quickly).
+ */
+export async function POST(req: Request) {
+  try {
+    const { token, id } = (await req.json()) as { token?: string; id?: string };
+    if (!token) return j(400, { error: 'Missing token' });
+    if (!id) return j(400, { error: 'Missing transaction id' });
+
+    const host = process.env.MGI_ACCESS_HOST;
+    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
+
+    // Adapterservice transaction details
+    const url = `https://${host}/stellaradapterservice/sep24/transaction?id=${encodeURIComponent(id)}`;
+
+    const r = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const text = await r.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+
+    if (!r.ok) {
+      return j(r.status || 502, {
+        error: 'Fetching transaction failed',
+        status: r.status,
+        details: typeof data === 'string' ? { raw: data } : data,
+        sentTo: url,
+      });
+    }
+
+    const tx = data?.transaction ?? data;
+    const more = tx?.more_info_url;
+    if (!more) {
+      return j(502, { error: 'No more_info_url in response', details: tx });
+    }
+
+    return j(200, { more_info_url: more });
+  } catch (e: any) {
+    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
+  }
+}
