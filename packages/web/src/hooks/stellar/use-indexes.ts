@@ -1,19 +1,14 @@
 'use client';
 
-// @ts-ignore
 import type { IndexContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
 // import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import {
-  // @ts-ignore
   IndexFactoryContract,
-  // @ts-ignore
   IndexContract as IndexContractClient,
 } from '@normalfinance/contracts';
-
-import { usePersistStore } from '@normalfinance/state';
 
 // ----------------------------------------------------------------------
 
@@ -34,8 +29,6 @@ interface ReturnType {
 // ----------------------------------------------------------------------
 
 export function useIndexes(): ReturnType {
-  const storePersist = usePersistStore();
-
   const [error, setError] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [indexes, setIndexes] = useState<IndexListItem[]>([]);
