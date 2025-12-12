@@ -2,11 +2,15 @@ import type { CardProps } from '@mui/material';
 import type { Token } from '@normalfinance/types';
 import type { BuyQueryParams } from '@/types/query-params';
 
+import Image from 'next/image';
+import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { runDepositFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
-import { convertFiatToCoin, sanitizeAmountInput } from '@normalfinance/utils';
+import { cdn, convertFiatToCoin, sanitizeAmountInput } from '@normalfinance/utils';
+import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
@@ -14,6 +18,7 @@ import { Box, Stack, Button, InputBase, Typography } from '@mui/material';
 import PickToken from './pick-token';
 import { WalletGate } from './wallet-gate';
 import OnrampDialog from './onramp-dialog';
+import AmountDialog from '../deposit-amount-dialog';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
@@ -158,9 +163,51 @@ const BuyCard: React.FC<BuyCardProps> = ({
   };
 
   // Main button with multiple states
+  const { enqueueSnackbar } = useSnackbar();
   const persist = usePersistStore();
-  const isConnected = !!persist.wallet.address;
-  const connectedAddress = persist.wallet.address;
+  const userAddress = persist.wallet.address;
+  const isConnected = !!userAddress;
+
+  const [mgiLoading, setMgiLoading] = useState(false);
+
+  // NEW: control the amount popup
+  const [amountDialogOpen, setAmountDialogOpen] = useState(false);
+
+  const ensureUSDCSelected = () => {
+    if (buyToken?.symbol?.toUpperCase() !== 'USDC') {
+      const usdc = tokensList.find((token) => token.symbol.toUpperCase() === 'USDC');
+      if (usdc) setBuyToken(usdc);
+    }
+  };
+  // UPDATED: on click, open amount dialog (don’t start flow yet)
+  const handleBuyWithMoneyGram = async () => {
+    if (!isConnected) {
+      enqueueSnackbar('Connect your wallet to continue', { variant: 'warning' });
+      return;
+    }
+    setAmountDialogOpen(true);
+  };
+
+  // NEW: called when user submits amount in the dialog
+  const startMgiAfterAmount = async (usdcAmount: string) => {
+    try {
+      setMgiLoading(true);
+
+      // Optional – sanity preflight (gives user actionable errors)
+      const env = await detectWalletEnv();
+      assertTestnetAndAccountMatch(env, userAddress!);
+
+      ensureUSDCSelected();
+
+      await runDepositFlow(userAddress!, usdcAmount, () => {
+        enqueueSnackbar('MoneyGram ready — awaiting USDC deposit', { variant: 'info' });
+      });
+    } catch (e: any) {
+      enqueueSnackbar(e?.message || 'MoneyGram deposit failed', { variant: 'error' });
+    } finally {
+      setMgiLoading(false);
+    }
+  };
 
   return (
     <Stack sx={{ gap: '2px' }}>
@@ -179,11 +226,50 @@ const BuyCard: React.FC<BuyCardProps> = ({
             overflow: 'hidden',
           }}
         >
-          <Box sx={{ height: '82px' }}>
-            <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-              {t("You're buying")}
-            </Typography>
-          </Box>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            width={1}
+            mb="48px"
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
+                {t("You're buying")}
+              </Typography>
+            </Box>
+
+            <Button
+              variant="outlined"
+              onClick={handleBuyWithMoneyGram}
+              disabled={!isConnected || mgiLoading}
+              sx={{
+                border: `1px solid ${theme.palette.divider}`,
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.grey[500], 0.16),
+                  border: `1px solid ${theme.palette.divider}`,
+                },
+                gap: 1,
+                borderRadius: '32px',
+                px: '12px',
+                py: '6px',
+                minWidth: 0,
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <Image
+                src={cdn('/icons/moneygram/mgi.webp')}
+                alt="MoneyGram"
+                width={20}
+                height={20}
+              />
+              {mgiLoading ? 'Opening…' : 'Buy USDC with MoneyGram'}
+            </Button>
+          </Stack>
           <Box
             sx={{
               display: 'flex',
@@ -371,9 +457,20 @@ const BuyCard: React.FC<BuyCardProps> = ({
             token={buyToken?.symbol ?? 'USDC'}
             amount={amount}
             onClose={handleReviewClose}
-            walletAddress={connectedAddress}
+            walletAddress={userAddress || ''}
           />
         )}
+
+        <AmountDialog
+          open={amountDialogOpen}
+          onCancel={() => setAmountDialogOpen(false)}
+          onConfirm={(val) => {
+            setAmountDialogOpen(false);
+            startMgiAfterAmount(val);
+          }}
+          min={1}
+          max={900}
+        />
       </Stack>
     </Stack>
   );

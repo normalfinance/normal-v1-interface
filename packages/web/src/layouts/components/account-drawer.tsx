@@ -22,6 +22,7 @@ import ConnectedWallet from '@/components/_common/drawer-components/connected-wa
 import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 
 import { AccountButton } from './account-button';
+import AddUsdcTrustlineButton from './add-trustline-button';
 
 function WalletConnected({ address }: { address: string }) {
   const { setGlobalIsLoading } = useAppStore();
@@ -83,7 +84,19 @@ function WalletConnected({ address }: { address: string }) {
         <CopyIconButton value={address} alert="Address copied" />
       </Stack>
 
+      <Stack direction="row" width={1} spacing={1} alignItems="stretch" py={2}>
+        <Box sx={{ flex: 1, display: 'flex' }}>
+          <AddUsdcTrustlineButton
+            fullWidth
+            size="large"
+            variant="outlined"
+            sx={{ borderRadius: 2, height: '100%' }}
+          />
+        </Box>
+      </Stack>
+
       <ConnectedWallet
+        address={address}
         balance={totalBalance.toNumber()}
         percentageChange={0}
         tokens={tokens}
@@ -100,12 +113,12 @@ function WalletConnected({ address }: { address: string }) {
 export type AccountDrawerProps = IconButtonProps;
 
 export function AccountDrawer(props: AccountDrawerProps) {
-  /* ↓ stores ------------------------------------------------------ */
+  /*  stores ------------------------------------------------------ */
   const persist = usePersistStore();
   const { t } = useTranslate();
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
 
-  /* ↓ drawer UI toggle ------------------------------------------- */
+  /*  drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
   const {

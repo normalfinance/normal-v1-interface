@@ -84,7 +84,7 @@ export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
           </Button>
         ))
       ) : (
-        <Typography>{t('No tokens match your search.')}</Typography>
+        <Typography>{t('No positions found.')}</Typography>
       )}
     </Box>
   );

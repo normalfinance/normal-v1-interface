@@ -1,8 +1,11 @@
 'use client';
 
+import React from 'react';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { RouterLink } from '@/routes/components';
+import { getMgiAuthToken } from '@/lib/mgi/client';
+import { listTransactions } from '@/lib/mgi/history';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { usePathname, useSearchParams } from '@/routes/hooks';
@@ -15,11 +18,14 @@ import { Button } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { WalletGate } from '@/components/_common/wallet-gate';
+import MoneyGramTransactionsTable from '@/components/_common/moneygram-history-table';
 
 import { ProfileCover } from './profile-cover';
 import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
+
+const MOCK_MODE = process.env.NEXT_PUBLIC_MGI_MOCK === '1';
 
 interface User {
   id: string;
@@ -54,6 +60,7 @@ const NAV_ITEMS = [
     label: 'Protocol',
     icon: <Iconify width={24} icon="eva:more-horizontal-fill" />,
   },
+  { value: 'moneygram', label: 'MoneyGram', icon: <Iconify width={24} icon="mdi:bank-outline" /> }, // ← NEW
 ];
 
 const TAB_PARAM = 'tab';
@@ -88,6 +95,119 @@ export function RewardsView() {
   const selectedTab = searchParams.get(TAB_PARAM) ?? '';
   const walletAddress = usePersistStore((s) => s.wallet.address);
   const { t } = useTranslate();
+
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let on = true;
+    (async () => {
+      if (selectedTab !== 'moneygram' || !walletAddress) return;
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Mock: no token needed
+        if (MOCK_MODE) {
+          const tx = await listTransactions({ account: walletAddress });
+          if (on) setRows(tx as any[]);
+          return;
+        }
+
+        // Live: need SEP-10 token
+        let token = await getMgiAuthToken(walletAddress);
+        try {
+          const tx = await listTransactions({ account: walletAddress, authToken: token });
+          if (on) setRows(tx as any[]);
+        } catch (e: any) {
+          const msg = String(e?.message || '');
+          const is401 =
+            /401/.test(msg) ||
+            /unauthorized/i.test(msg) ||
+            /expired/i.test(msg) ||
+            /invalid/i.test(msg);
+
+          if (is401) {
+            // Re-auth once if expired
+            token = await getMgiAuthToken(walletAddress);
+            const tx = await listTransactions({ account: walletAddress, authToken: token });
+            if (on) setRows(tx as any[]);
+          } else {
+            throw e;
+          }
+        }
+      } catch (e: any) {
+        if (on) setError(e?.message || 'Failed to load MoneyGram history');
+      } finally {
+        if (on) setLoading(false);
+      }
+    })();
+    return () => {
+      on = false;
+    };
+  }, [selectedTab, walletAddress]);
+
+  React.useEffect(() => {
+    let on = true;
+
+    (async () => {
+      // only run on MoneyGram tab with a connected wallet
+      if (selectedTab !== 'moneygram' || !walletAddress) {
+        // optional: clear state when leaving the tab or disconnecting
+        if (on) {
+          setRows([]);
+          setError(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        if (MOCK_MODE) {
+          const tx = await listTransactions({ account: walletAddress });
+          if (on) setRows(tx as any[]);
+          return;
+        }
+
+        // 1) Try with a cached/valid SEP-10 token (no popup if still valid)
+        let token = await getMgiAuthToken(walletAddress);
+
+        try {
+          const tx = await listTransactions({ account: walletAddress, authToken: token });
+          if (on) setRows(tx as any[]);
+        } catch (e: any) {
+          const msg = String(e?.message || '');
+          const is401 =
+            /401/.test(msg) ||
+            /unauthorized/i.test(msg) ||
+            /expired/i.test(msg) ||
+            /invalid/i.test(msg);
+
+          if (!is401) throw e;
+
+          // 2) If server rejected the token, clear cache & re-auth ONCE
+          const { clearMgiToken } = await import('@/lib/mgi/client');
+          clearMgiToken(walletAddress);
+
+          token = await getMgiAuthToken(walletAddress); // will prompt once if needed
+          const tx = await listTransactions({ account: walletAddress, authToken: token });
+          if (on) setRows(tx as any[]);
+        }
+      } catch (e: any) {
+        if (on) setError(e?.message || 'Failed to load MoneyGram history');
+      } finally {
+        if (on) setLoading(false);
+      }
+    })();
+
+    return () => {
+      on = false;
+    };
+  }, [selectedTab, walletAddress]);
 
   const createRedirectPath = (currentPath: string, query: string) => {
     const q = new URLSearchParams({ [TAB_PARAM]: query }).toString();
@@ -174,6 +294,13 @@ export function RewardsView() {
       {selectedTab === 'protocol' && (
         <WalletGate buttonText={t('Connect wallet to view Protocol Points')} fullWidth>
           <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
+        </WalletGate>
+      )}
+
+      {selectedTab === 'moneygram' && (
+        <WalletGate buttonText={t('Connect Wallet to view MoneyGram history')} fullWidth>
+          {error && <Box sx={{ color: 'error.main', fontSize: 13, mb: 1 }}>{error}</Box>}
+          <MoneyGramTransactionsTable rows={rows} loading={loading} />
         </WalletGate>
       )}
     </DashboardContent>

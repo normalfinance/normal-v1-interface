@@ -8,10 +8,13 @@ import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
+import { enqueueSnackbar } from 'notistack';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
 import { useAppStore } from '@normalfinance/state';
+import { runDepositFlow, runWithdrawFlow } from '@/lib/mgi/client';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -21,6 +24,7 @@ import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
+import AmountDialog from '@/components/deposit-amount-dialog';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
@@ -30,6 +34,7 @@ import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {
+  address: string;
   balance?: number;
   percentageChange?: number;
   tokens?: Token[];
@@ -38,6 +43,7 @@ export interface ConnectedWalletProps {
 }
 
 export default function ConnectedWallet({
+  address,
   balance,
   percentageChange,
   tokens,
@@ -74,6 +80,44 @@ export default function ConnectedWallet({
     { value: 'positions', label: 'Positions' },
     { value: 'activity', label: 'Activity' },
   ] as const;
+
+  const [buyDialogOpen, setBuyDialogOpen] = useState(false);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [mgiBusy, setMgiBusy] = useState(false);
+
+  const openBuyDialog = () => setBuyDialogOpen(true);
+  const openWithdrawDialog = () => setWithdrawDialogOpen(true);
+  const closeBuyDialog = () => setBuyDialogOpen(false);
+  const closeWithdrawDialog = () => setWithdrawDialogOpen(false);
+
+  // common start (preflight + flow wrapper)
+  async function startMgi(kind: 'deposit' | 'withdraw', addr: string, amountStr: string) {
+    setMgiBusy(true);
+    try {
+      const env = await detectWalletEnv();
+      assertTestnetAndAccountMatch(env, addr);
+
+      const amount = Number(amountStr);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        enqueueSnackbar(t('Enter a valid USDC amount'), { variant: 'warning' });
+        return;
+      }
+
+      if (kind === 'deposit') {
+        await runDepositFlow(addr, amount, () => {
+          enqueueSnackbar(t('MoneyGram ready — awaiting your cash deposit'), { variant: 'info' });
+        });
+      } else {
+        await runWithdrawFlow(addr, amount, () => {
+          enqueueSnackbar(t('MoneyGram ready — send USDC when prompted'), { variant: 'info' });
+        });
+      }
+    } catch (e: any) {
+      enqueueSnackbar(t('MoneyGram {{kind}} failed', { kind }), { variant: 'error' });
+    } finally {
+      setMgiBusy(false);
+    }
+  }
 
   return (
     <Stack spacing={2} sx={{ width: 1 }} mt={2}>
@@ -173,12 +217,74 @@ export default function ConnectedWallet({
                     rotate: '-90deg',
                   }}
                 />
-                {btn.label}
+                {t(btn.label)}
               </Box>
             </Button>
           ))}
         </Stack>
       </Stack>
+
+      <Stack direction="row" width={1} spacing={1} alignItems="stretch" py={1}>
+        <Box sx={{ flex: 1, display: 'flex' }}>
+          <Button
+            fullWidth
+            variant="contained"
+            color="secondary"
+            size="large"
+            startIcon={<Iconify icon="mdi:cash-plus" />}
+            onClick={openBuyDialog}
+            disabled={mgiBusy}
+            sx={{ borderRadius: 2, height: '100%', textTransform: 'none' }}
+          >
+            {t('Buy USDC')}
+          </Button>
+        </Box>
+
+        <Box sx={{ flex: 1, display: 'flex' }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            color="secondary"
+            size="large"
+            startIcon={<Iconify icon="mdi:cash-minus" />}
+            onClick={openWithdrawDialog}
+            disabled={mgiBusy}
+            sx={{ borderRadius: 2, height: '100%', textTransform: 'none' }}
+          >
+            {t('Sell USDC')}
+          </Button>
+        </Box>
+      </Stack>
+
+      {/* Deposit dialog */}
+      <AmountDialog
+        open={buyDialogOpen}
+        onCancel={closeBuyDialog}
+        onConfirm={async (val) => {
+          closeBuyDialog();
+          await startMgi('deposit', address, val);
+        }}
+        defaultAmount=""
+        min={1}
+        max={900}
+        kind="deposit"
+        tokenLabel="USDC"
+      />
+
+      {/* Withdraw dialog */}
+      <AmountDialog
+        open={withdrawDialogOpen}
+        onCancel={closeWithdrawDialog}
+        onConfirm={async (val) => {
+          closeWithdrawDialog();
+          await startMgi('withdraw', address, val);
+        }}
+        defaultAmount=""
+        min={1}
+        max={900}
+        kind="withdraw"
+        tokenLabel="USDC"
+      />
       <CustomTabsSwapSend
         value={tabs.value}
         onChange={tabs.onChange}
