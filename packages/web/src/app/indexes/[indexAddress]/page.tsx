@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
-import ComingSoonView from '@/sections/coming-soon';
-
-// ----------------------------------------------------------------------
+import IndexView from '@/sections/indexes/[indexAddress]';
 
 export const metadata: Metadata = {
   title: {
@@ -17,11 +15,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Index Details | Normal',
     description: 'Detailed view of a specific index fund on Normal.',
-    url: `${CONFIG.siteUrl}/pools`,
+    url: `${CONFIG.siteUrl}/indexes`,
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
+        url: '/og/home.png',
         width: 1200,
         height: 630,
         alt: 'Normal Index details',
@@ -34,7 +32,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Index Details | Normal',
     description: 'Detailed view of a specific index fund on Normal.',
-    images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
+    images: ['/og/home.png'],
   },
   robots: {
     index: true,
@@ -49,5 +47,5 @@ interface PageProps {
 }
 
 export default function Page({ params }: PageProps) {
-  return <ComingSoonView />;
+  return <IndexView indexAddress={params.indexAddress} />;
 }

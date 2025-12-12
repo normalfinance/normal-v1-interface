@@ -22,6 +22,8 @@ import {
   SorobanTokenContract,
   ConfigStorageContract,
   LiquidityCalculatorContract,
+  IndexContract,
+  IndexFactoryContract,
 } from '@normalfinance/contracts';
 
 import Box from '@mui/material/Box';
@@ -39,6 +41,8 @@ const contractClients = {
   config_storage: ConfigStorageContract.Client,
   token_share: TokenShareContract.Client,
   token: SorobanTokenContract.Client,
+  index: IndexContract.Client,
+  index_factory: IndexFactoryContract.Client,
 };
 
 type ContractClientType<T extends ContractType> = T extends 'pool_router'
@@ -59,7 +63,11 @@ type ContractClientType<T extends ContractType> = T extends 'pool_router'
                 ? TokenShareContract.Client
                 : T extends 'token'
                   ? SorobanTokenContract.Client
-                  : never;
+                  : T extends 'index'
+                    ? IndexContract.Client
+                    : T extends 'index_factory'
+                      ? IndexFactoryContract.Client
+                      : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;

@@ -6,6 +6,11 @@ export enum TransactionType {
   REMOVE_LIQUIDITY = 'Remove Liquidity',
   CLAIM_REWARD = 'Claim Reward',
   CLAIM_FEES = 'Claim Fees',
+  MINT_INDEX = 'Mint Index',
+  REDEEM_INDEX = 'Redeem Index',
+  REFACTOR_INDEX = 'Refactor Index',
+  REBALANCE_INDEX = 'Rebalance Index',
+  UPDATE_INDEX = 'Update Index',
 }
 
 interface BaseTransactionDetails {
