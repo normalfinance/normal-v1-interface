@@ -16,6 +16,7 @@ export interface NetworkConfig {
   LIQUIDITY_CALCULATOR_ADDRESS: string;
   CONFIG_STORAGE_ADDRESS: string;
   REWARDS_GAUGE_ADDRESS: string;
+  INDEX_FACTORY_ADDRESS: string;
 
   // Stellar
   XLM_ADDRESS: string;
