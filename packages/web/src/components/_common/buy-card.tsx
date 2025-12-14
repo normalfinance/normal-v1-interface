@@ -26,7 +26,7 @@ interface BuyCardProps extends CardProps {
   tokensList?: Token[];
   cashBalance?: number;
   queryParams?: BuyQueryParams;
-  changeTab: React.Dispatch<React.SetStateAction<false | 'swap' | 'send' | 'buy'>>;
+  changeTab: React.Dispatch<React.SetStateAction<false | 'trade' | 'deposit' | 'withdraw'>>;
 }
 
 export interface QuickAmountButton {
@@ -103,11 +103,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
 
   //prevent "-" ot "," in input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
-    setAmount(sanitizeAmountInput(e.target.value));
+    sanitizeAmountInput(e.target.value);
   };
 
   // Toggle mode, handle focus/blur, etc...
@@ -129,22 +125,17 @@ const BuyCard: React.FC<BuyCardProps> = ({
 
   const getButtonLabel = (): string => {
     if (!buyToken) {
-      return 'Select a token';
+      return 'Select an asset';
     }
     const amt = parseFloat(amount) || 0;
     if (amt <= 0) {
       return 'Enter an amount';
     }
 
-    return 'Buy';
+    return 'Deposit';
   };
 
   const handleMainButtonClick = () => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
-
     const label = getButtonLabel();
 
     if (label !== 'Buy') {
@@ -155,10 +146,6 @@ const BuyCard: React.FC<BuyCardProps> = ({
   };
 
   const handleTokenSelect = (token: Token) => {
-    // trackEvent('button_clicked', {
-    //   label: 'Manage Stake',
-    //   location: 'Insurance',
-    // });
     setBuyToken(token);
   };
 
@@ -235,7 +222,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
           >
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-                {t("You're buying")}
+                {t("You'd like to deposit")}
               </Typography>
             </Box>
 

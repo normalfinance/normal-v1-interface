@@ -29,7 +29,7 @@ interface SendCardProps extends CardProps {
   tokens: Token[];
   networkCost?: number;
   queryParams?: SendQueryParams;
-  changeTab?: React.Dispatch<React.SetStateAction<false | 'swap' | 'send' | 'buy'>>;
+  changeTab?: React.Dispatch<React.SetStateAction<false | 'trade' | 'deposit' | 'withdraw'>>;
 }
 
 const DEFAULT_DESTINATION = 'Wallet address';
@@ -155,10 +155,10 @@ const SendCard: React.FC<SendCardProps> = ({
 
   const getButtonLabel = (): string => {
     if (destination === DEFAULT_DESTINATION) {
-      return 'Input wallet address';
+      return 'Enter account';
     }
     if (!sendToken) {
-      return 'Select a token';
+      return 'Select an asset';
     }
     const amt = parseFloat(amount) || 0;
     if (amt <= 0) {
@@ -167,19 +167,19 @@ const SendCard: React.FC<SendCardProps> = ({
     if (insufficientBalance) {
       return `Insufficient ${sendToken.symbol}`;
     }
-    return 'Send';
+    return 'Withdraw';
   };
 
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
 
-    if (label === 'Send') {
+    if (label === 'Withdraw') {
       if (!isValidAccountAddress(destination)) {
-        enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
+        enqueueSnackbar(t('Invalid accound'), { variant: 'error' });
         return;
       }
       if (destination == persist.wallet.address) {
-        enqueueSnackbar(t('Cannot send tokens to yourself'), { variant: 'error' });
+        enqueueSnackbar(t('Cannot send assets to yourself'), { variant: 'error' });
         return;
       }
       setReviewOpen(true);
@@ -189,7 +189,7 @@ const SendCard: React.FC<SendCardProps> = ({
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
-  const isSendReady = getButtonLabel() === 'Send';
+  const isSendReady = getButtonLabel() === 'Withdraw';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1 }} width={1}>
@@ -210,7 +210,7 @@ const SendCard: React.FC<SendCardProps> = ({
         >
           <Box sx={{ height: '82px' }}>
             <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-              {t("You're sending")}
+              {t("You'd like to withdraw")}
             </Typography>
           </Box>
           <Box

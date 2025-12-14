@@ -17,8 +17,6 @@ import TokenActionCard from '@/components/_common/token-action-card';
 const swapFeeInfo: SwapFeeInfo = {
   feePercentage: 0.25,
   networkCost: 1.0,
-  priceImpact: -0.3,
-  maxSlippage: 0.5,
 };
 
 export default function InvestView() {
@@ -27,34 +25,34 @@ export default function InvestView() {
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
   const { wallet, getAllTokens, getAllPools } = usePersistStore();
 
-  // Determine which tab to show based on query params, default to 'swap'
-  const activeTab: TokenActionKey = params?.tab || 'swap';
+  // Determine which tab to show based on query params, default to 'trade'
+  const activeTab: TokenActionKey = params?.tab || 'trade';
 
   // Determine which tabs should be enabled (you can customize this logic)
-  const enabledTabs: TokenActionKey[] = ['swap', 'send', 'buy'];
+  const enabledTabs: TokenActionKey[] = ['trade', 'deposit', 'withdraw'];
 
   // Convert TokenActionQueryParams to the format expected by different cards
   const getCardQueryParams = () => {
     if (!params) return undefined;
 
     switch (activeTab) {
-      case 'swap':
+      case 'trade':
         return {
           token_in: params.token_in,
           token_out: params.token_out,
           in_amount: params.in_amount,
           out_minimum: params.out_minimum,
         };
-      case 'send':
+      case 'deposit':
+        return {
+          token: params.token,
+          amount: params.amount,
+        };
+      case 'withdraw':
         return {
           token: params.token,
           amount: params.amount,
           destination: params.destination,
-        };
-      case 'buy':
-        return {
-          token: params.token,
-          amount: params.amount,
         };
       default:
         return undefined;

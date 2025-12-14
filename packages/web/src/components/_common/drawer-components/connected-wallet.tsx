@@ -58,26 +58,26 @@ export default function ConnectedWallet({
 
   const actionButtons = [
     {
-      label: 'Send',
+      label: 'Deposit',
+      icon: 'mingcute:add-line',
+      onClick: () => {
+        setModalView('deposit', true);
+      },
+    },
+    {
+      label: 'Withdraw',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => {
         router.push(`${paths.invest}?tab=send`);
       },
     },
-    {
-      label: 'Receive',
-      icon: 'mingcute:add-line',
-      onClick: () => {
-        setModalView('receive', true);
-      },
-    },
   ];
 
-  const tabs = useTabs('tokens');
+  const tabs = useTabs('assets');
 
   const TAB_ITEMS = [
-    { value: 'tokens', label: 'Tokens' },
-    { value: 'positions', label: 'Positions' },
+    { value: 'assets', label: 'Assets' },
+    { value: 'earn', label: 'Earn' },
     { value: 'activity', label: 'Activity' },
   ] as const;
 

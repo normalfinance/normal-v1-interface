@@ -23,8 +23,8 @@ const LINKS = [
     headline: 'App',
     children: [
       { name: 'Invest', href: paths.invest },
-      { name: 'Assets', href: paths.explore },
-      { name: 'Index', href: paths.index.root },
+      { name: 'Assets', href: paths.assets },
+      { name: 'Index', href: paths.indexes.root },
       { name: 'Earn', href: paths.earn },
     ],
   },
@@ -144,7 +144,7 @@ export function FooterSection({
               })}
             >
               {t(
-                'Crypto indexes & synthetic assets - Invest in top 100 cryptocurrencies in just one click.'
+                'A universal investing app - Trade and diversify any global asset in just one click.'
               )}
             </Typography>
 

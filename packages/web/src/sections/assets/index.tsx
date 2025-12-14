@@ -21,7 +21,7 @@ import {
   type ExplorePoolsRow,
 } from '@/components/_explore-page-components';
 
-export default function ExploreView() {
+export default function AssetsView() {
   const { t } = useTranslate();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();

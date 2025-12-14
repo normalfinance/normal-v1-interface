@@ -79,7 +79,7 @@ const PickToken: React.FC<PickTokenProps> = ({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div">
-            {t('Select a token')}
+            {t('Select an asset')}
           </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
@@ -107,7 +107,7 @@ const PickToken: React.FC<PickTokenProps> = ({
             variant="outlined"
             fullWidth
             size="small"
-            placeholder={t('Search tokens')}
+            placeholder={t('Search assets')}
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -308,7 +308,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <Iconify icon="carbon:skill-level-basic" width={14} />
 
-                    <Typography variant="caption">{t('Your tokens')}</Typography>
+                    <Typography variant="caption">{t('Your assets')}</Typography>
                   </Box>
                   <Box
                     sx={{
@@ -426,7 +426,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                 <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <Iconify icon="eva:star-outline" width={14} />
 
-                  <Typography variant="caption">{t('All tokens')}</Typography>
+                  <Typography variant="caption">{t('All asset')}</Typography>
                 </Box>
                 <Box
                   sx={{

@@ -1,30 +1,30 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
-import ExploreView from '@/sections/explore';
+import AssetView from '@/sections/assets/[symbol]';
 
 // ----------------------------------------------------------------------
 
 export const metadata: Metadata = {
   title: {
-    default: 'Explore | Normal',
+    default: 'Asset Details | Normal',
     template: '%s · Normal',
   },
-  description: 'Discover trending crypto indices and assets built with Normal.',
+  description: 'Detailed view of a specific asset on Normal.',
   alternates: {
-    canonical: '/explore',
+    canonical: '/assets',
   },
   openGraph: {
-    title: 'Explore | Normal',
-    description: 'Discover trending crypto indices and assets built with Normal.',
-    url: `${CONFIG.siteUrl}/explore`,
+    title: 'Asset Details | Normal',
+    description: 'Detailed view of a specific asset on Normal.',
+    url: `${CONFIG.siteUrl}/assets`,
     siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
-        alt: 'Normal Explore overview',
+        alt: 'Normal Asset details',
       },
     ],
     locale: 'en_US',
@@ -32,8 +32,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Explore | Normal',
-    description: 'Discover trending crypto indices and assets built with Normal.',
+    title: 'Asset Details | Normal',
+    description: 'Detailed view of a specific asset on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -41,9 +41,13 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'crypto index', 'crypto investing', 'web3 portfolio'],
+  keywords: ['Normal', 'Normal Finance', 'liquidity pool', 'APY', 'crypto yield'],
 };
 
-export default function Page() {
-  return <ExploreView />;
+interface PageProps {
+  params: { symbol: string };
+}
+
+export default function Page({ params }: PageProps) {
+  return <AssetView symbol={params.symbol} />;
 }

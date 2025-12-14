@@ -31,15 +31,12 @@ export interface Referral {
 
 export interface RewardsOverviewProps {
   referralsCount: number;
-  zealyUrl?: string;
-  zealyXP: number;
   protocolPoints: number;
   referrals: Referral[];
 }
 
 export function RewardsOverview({
   referralsCount,
-  zealyXP,
   protocolPoints,
   referrals,
 }: RewardsOverviewProps) {
@@ -261,7 +258,6 @@ export function RewardsOverview({
           <Grid2 container spacing={3}>
             {[
               { label: t('Referrals'), value: referralsCount },
-              { label: t('Zealy XP'), value: zealyXP },
               { label: t('Protocol Points'), value: protocolPoints },
             ].map((stat) => (
               <Grid2 size={{ xs: 12, md: 4 }} key={stat.label}>

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
-import InvestView from '@/sections/invest';
 import { CONFIG } from '@/global-config';
+import InvestView from '@/sections/invest';
 
 // ----------------------------------------------------------------------
 

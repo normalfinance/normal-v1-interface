@@ -20,10 +20,10 @@ export const NormalNavbarDefaults: Props = {
       megaMenu: {
         categoryLinks: [
           {
-            title: 'Trading',
+            title: 'Trade',
             links: [
               {
-                url: paths.explore,
+                url: paths.assets,
                 image: {
                   src: cdn('nav/explore.svg'),
                   alt: 'Explore',
@@ -46,13 +46,13 @@ export const NormalNavbarDefaults: Props = {
             title: 'Diversify',
             links: [
               {
-                url: paths.index.root,
+                url: paths.indexes.root,
                 image: { src: cdn('nav/indexes.svg'), alt: 'Browse Index Funds' },
                 title: 'Browse index funds',
                 description: 'Discover curated index funds.',
               },
               {
-                url: paths.index.create,
+                url: paths.indexes.create,
                 image: { src: cdn('nav/create-index.svg'), alt: 'Create Index Fund' },
                 title: 'Create a fund',
                 description: 'Build your own index fund.',

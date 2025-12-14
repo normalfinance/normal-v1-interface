@@ -136,7 +136,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 },
               }}
             >
-              {t('Instant crypto swaps, finally made')}{' '}
+              {t('Trade and diversify any asset,')}{' '}
               <Box
                 component="span"
                 sx={{
@@ -154,7 +154,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   backgroundClip: 'text',
                 }}
               >
-                {t('Normal')}
+                {t('in seconds')}
               </Box>
             </Typography>
 
@@ -176,9 +176,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
             >
               <span>💸 {t('Low fees')}</span>
               <span>•</span>
-              <span>🌍 {t('Global access')}</span>
+              <span>🌍 {t('Global support')}</span>
               <span>•</span>
-              <span>⚡ {t('Built on Stellar')}</span>
+              <span>⚡ {t('Instant settlement')}</span>
             </Typography>
 
             <Box
@@ -241,7 +241,7 @@ export const HeroHeaderDefaults: Props = {
     src: cdn('homepage/halborn-logo.webp'),
     alt: 'Stellar Logo Long',
   },
-  tagline: 'Crypto that just works',
+  tagline: 'Investing that works for you',
   taglineLogo: {
     src: cdn('homepage/normal-long.svg'),
     alt: 'Normal Logo Long',

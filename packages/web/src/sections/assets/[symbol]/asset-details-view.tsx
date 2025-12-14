@@ -16,7 +16,9 @@ import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
 import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-transactions-table';
 
-export default function PoolDetailsView({ pool }: { pool: Pool }) {
+export default function AssetDetailsView({ symbol, pools }: { symbol: string; pools: Pool[] }) {
+  const pool = pools[0];
+
   const theme = useTheme();
   const {
     tokenState: { tokens },

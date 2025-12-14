@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
+import EarnView from '@/sections/earn';
 import { CONFIG } from '@/global-config';
-import EarnView from '@/sections/positions';
 
 // ----------------------------------------------------------------------
 

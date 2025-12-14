@@ -1,30 +1,30 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
-import PoolView from '@/sections/pools/[poolAddress]';
+import AssetsView from '@/sections/assets';
 
 // ----------------------------------------------------------------------
 
 export const metadata: Metadata = {
   title: {
-    default: 'Pool Details | Normal',
+    default: 'Assets | Normal',
     template: '%s · Normal',
   },
-  description: 'Detailed view of a specific liquidity pool on Normal.',
+  description: 'Discover trending assets on Normal.',
   alternates: {
-    canonical: '/pools',
+    canonical: '/assets',
   },
   openGraph: {
-    title: 'Pool Details | Normal',
-    description: 'Detailed view of a specific liquidity pool on Normal.',
-    url: `${CONFIG.siteUrl}/pools`,
+    title: 'Assets | Normal',
+    description: 'Discover trending assets on Normal.',
+    url: `${CONFIG.siteUrl}/assets`,
     siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
-        alt: 'Normal Pool details',
+        alt: 'Normal Assets overview',
       },
     ],
     locale: 'en_US',
@@ -32,8 +32,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Pool Details | Normal',
-    description: 'Detailed view of a specific liquidity pool on Normal.',
+    title: 'Assets | Normal',
+    description: 'Discover trending assets on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -41,13 +41,9 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'liquidity pool', 'APY', 'crypto yield'],
+  keywords: ['Normal', 'Normal Finance', 'crypto index', 'crypto investing', 'web3 portfolio'],
 };
 
-interface PageProps {
-  params: { poolAddress: string };
-}
-
-export default function Page({ params }: PageProps) {
-  return <PoolView poolAddress={params.poolAddress} />;
+export default function Page() {
+  return <AssetsView />;
 }

@@ -26,7 +26,7 @@ export type CtaImageProps = React.ComponentPropsWithoutRef<'section'> & Partial<
 /* ------------------------------------------------------------------ */
 
 export const CtaImage: React.FC<CtaImageProps> = ({
-  heading = 'Ready to make crypto feel Normal? Start swapping, investing, and exploring.',
+  heading = 'Ready to make your investing Normal? Start investing, diversifying, and exploring.',
   description = '',
   buttons = [
     { title: 'Button', variant: 'contained', color: 'primary' },
@@ -99,14 +99,8 @@ export const CtaImage: React.FC<CtaImageProps> = ({
               color: '#6E4BFF',
               fontWeight: 500,
             }}
-            // onClick={() =>
-            //   trackEvent('button_clicked', {
-            //     label: 'Start swapping now',
-            //     location: 'Home',
-            //   })
-            // }
           >
-            {t('Start swapping now')}
+            {t('Get started')}
           </Button>
         </Stack>
       </Container>

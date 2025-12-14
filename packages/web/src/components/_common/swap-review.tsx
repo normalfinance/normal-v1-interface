@@ -10,7 +10,6 @@ import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { useTheme } from '@mui/material/styles';
 import {
   Box,
-  Chip,
   Dialog,
   Button,
   Accordion,
@@ -34,8 +33,6 @@ export interface SwapReviewProps {
   buyAmount: number;
   feePercentage: number;
   networkCost: string;
-  priceImpact: number;
-  maxSlippage: number;
   sellFiatValue: number;
   onSubmit: () => void;
 }
@@ -49,8 +46,6 @@ const SwapReview: React.FC<SwapReviewProps> = ({
   buyAmount,
   feePercentage,
   networkCost,
-  priceImpact,
-  maxSlippage,
   sellFiatValue,
   onSubmit,
 }) => {
@@ -78,7 +73,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div" color="text.primary">
-            {t("You're swapping")}
+            {t("You're trading")}
           </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
@@ -305,7 +300,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           fontSize: '12px',
                         }}
                       >
-                        {t('Fee')}&nbsp;
+                        {t('Total Fee')}&nbsp;
                         <Box component="span">
                           {t('(')}
                           {fPercent(feePercentage / 100)}
@@ -327,53 +322,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fCurrencyTwoDecimals((sellFiatValue * feePercentage) / 10000)}
-                    </Typography>
-                  </Box>
-
-                  <Box
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
-                        {t('Network cost')}
-                      </Typography>
-                      <Iconify
-                        icon="solar:info-circle-bold"
-                        width={14}
-                        sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                      />
-                    </Box>
-
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
-                      {/* {fCurrencyTwoDecimals(networkCost)} */}
+                      {fCurrencyTwoDecimals((sellFiatValue * feePercentage) / 10000 + networkCost)}
                     </Typography>
                   </Box>
 
@@ -419,98 +368,6 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                       }}
                     >
                       {sellToken && buyToken ? getSwapConversionText(sellToken, buyToken) : ''}
-                    </Typography>
-                  </Box>
-
-                  <Box
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
-                        {t('Price impact')}
-                      </Typography>
-                      <Iconify
-                        icon="solar:info-circle-bold"
-                        width={14}
-                        sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                      />
-                    </Box>
-
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
-                      {/* {fRawPercent(priceImpact)} */}
-                    </Typography>
-                  </Box>
-
-                  <Box
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
-                        {t('Max slippage')}
-                      </Typography>
-                      <Iconify
-                        icon="solar:info-circle-bold"
-                        width={14}
-                        sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                      />
-                    </Box>
-
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
-                      {/* {fRawPercent(maxSlippage)} */}
                     </Typography>
                   </Box>
                 </Box>
