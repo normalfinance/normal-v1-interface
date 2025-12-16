@@ -4,14 +4,22 @@ import { useState } from 'react';
 import {
   Box,
   Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
+  Link as MuiLink,
   Stack,
   Typography,
 } from '@mui/material';
 
+import type { AppStorePersist } from '@normalfinance/types';
+
+import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
 import { Iconify } from '@/components/template/iconify';
 import { signInWithGoogle } from '@/services/auth';
 
@@ -21,14 +29,20 @@ type AuthLoginModalProps = {
 };
 
 const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
+  const { t } = useTranslate();
+  const setDisclaimerAccepted = usePersistStore((s: AppStorePersist) => s.setDisclaimerAccepted);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tosAccepted, setTosAccepted] = useState(false);
 
   const handleGoogle = async () => {
     setLoading(true);
     setError(null);
 
     try {
+      // Persist TOS acceptance before signing in
+      await setDisclaimerAccepted(true);
       await signInWithGoogle();
     } catch (err) {
       console.error('Error signing in with Google:', err);
@@ -61,19 +75,53 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
         </IconButton>
       </DialogTitle>
       <DialogContent>
-        <Stack spacing={3}>
+        <Stack spacing={2}>
           <Typography color="text.secondary">
-            Continue with Google to access your wallet options.
+            {t('Continue with Google to access your wallet options.')}
           </Typography>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={tosAccepted}
+                onChange={(e) => setTosAccepted(e.target.checked)}
+                data-testid="tos-checkbox"
+              />
+            }
+            label={
+              <Typography variant="body2" color="text.secondary">
+                {t('I understand and agree to the')}{' '}
+                <MuiLink
+                  href={`${paths.docs}/other/legal/terms-of-service`}
+                  underline="always"
+                  color="secondary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('Normal Terms of Service')}
+                </MuiLink>{' '}
+                {t('and')}{' '}
+                <MuiLink
+                  href={`${paths.docs}/other/legal/disclaimer`}
+                  underline="always"
+                  color="secondary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('Normal Protocol Disclaimer')}
+                </MuiLink>
+              </Typography>
+            }
+            sx={{ alignItems: 'flex-start', mt: 1 }}
+          />
           <Button
             variant="outlined"
             color="inherit"
             size="large"
             onClick={handleGoogle}
-            disabled={loading}
+            disabled={loading || !tosAccepted}
             startIcon={<Iconify icon="logos:google-icon" width={24} />}
           >
-            {loading ? 'Redirecting…' : 'Sign in with Google'}
+            {loading ? t('Redirecting…') : t('Sign in with Google')}
           </Button>
           {error && (
             <Box

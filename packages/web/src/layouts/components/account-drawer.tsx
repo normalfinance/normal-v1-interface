@@ -7,7 +7,6 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useCallback, useEffect, useState } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
-import { CURRENT_TOS_VERSION } from '@normalfinance/types';
 import { cdn, format, logger } from '@normalfinance/utils';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -20,7 +19,6 @@ import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
-import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 import WalletSelectionModal, {
   hasSeenWalletSelectionModal,
 } from '@/components/_common/wallet-selection-modal';
@@ -205,9 +203,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
   }, [connectedAddress]);
 
-  const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
-  const [showTos, setShowTos] = useState(false);
-
   const handleConnectStellarWallet = useCallback(async () => {
     try {
       await connectWallet();
@@ -218,11 +213,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [connectWallet, onClose]);
 
   const handlePostAuthFlow = useCallback(async () => {
-    if (disclaimerVersion < CURRENT_TOS_VERSION) {
-      setShowTos(true);
-      return;
-    }
-
+    // TOS is now handled in AuthLoginModal, proceed directly to wallet selection
     if (!hasSeenWalletSelectionModal()) {
       setShowWalletSelection(true);
       return;
@@ -235,14 +226,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
 
     await handleConnectStellarWallet();
-  }, [
-    disclaimerVersion,
-    handleConnectStellarWallet,
-    normalPublicKey,
-    isNormalConnected,
-    connectNormalWallet,
-    onClose,
-  ]);
+  }, [handleConnectStellarWallet, normalPublicKey, isNormalConnected, connectNormalWallet, onClose]);
 
   /** Handle Normal wallet creation success */
   const handleNormalWalletCreated = async () => {
@@ -267,17 +251,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
       onOpen(); // Open drawer to show wallet info
     } else {
       handleConnectClick(); // Connect wallet
-    }
-  };
-
-  /** Called when ToS dialog closes */
-  const handleTosClose = async () => {
-    setShowTos(false);
-
-    // Check if user accepted ToS, then connect wallet
-    const latestVersion = usePersistStore.getState().disclaimer.version;
-    if (latestVersion >= CURRENT_TOS_VERSION) {
-      await handleConnectClick();
     }
   };
 
@@ -391,7 +364,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
         )}
       </Drawer>
       <AuthLoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} />
-      <TermsOfServiceDialog open={showTos} onClose={handleTosClose} />
       <WalletSelectionModal
         open={showWalletSelection}
         onClose={() => setShowWalletSelection(false)}

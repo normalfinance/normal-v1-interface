@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
-import { CURRENT_TOS_VERSION } from '@normalfinance/types';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 
 import { Button } from '@mui/material';
 
-import TermsOfServiceDialog from '@/components/_common/drawer-components/terms-of-service-dialog';
 import WalletSelectionModal, {
   hasSeenWalletSelectionModal,
 } from '@/components/_common/wallet-selection-modal';
@@ -48,20 +46,13 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   /* ↓ drawer UI toggle (only used when wallet is connected) -------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
-  const disclaimerVersion = usePersistStore((s: any) => s.disclaimer.version);
-  const { modalState, setModalView } = useAppStore();
-
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
 
   /** Handle connecting wallet - show wallet selection modal or Stellar Wallets Kit popup */
   const handleConnectClick = async () => {
-    if (disclaimerVersion < CURRENT_TOS_VERSION) {
-      setModalView('disclaimer', true);
-      return;
-    }
-
+    // TOS is now handled in AuthLoginModal
     // Check if user has seen wallet selection modal before
     if (!hasSeenWalletSelectionModal()) {
       setShowWalletSelection(true);
@@ -120,17 +111,6 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     }
   };
 
-  /** Called when ToS dialog closes */
-  const handleTosClose = async () => {
-    setModalView('disclaimer', false);
-
-    // Check if user accepted ToS, then connect wallet
-    const latestVersion = usePersistStore.getState().disclaimer.version;
-    if (latestVersion >= CURRENT_TOS_VERSION) {
-      await handleConnectClick();
-    }
-  };
-
   if (isWalletConnected) {
     return children;
   }
@@ -146,7 +126,6 @@ export const WalletGate: React.FC<WalletGateProps> = ({
       >
         {t(buttonText)}
       </Button>
-      <TermsOfServiceDialog open={modalState.disclaimer} onClose={handleTosClose} />
       <WalletSelectionModal
         open={showWalletSelection}
         onClose={() => setShowWalletSelection(false)}
