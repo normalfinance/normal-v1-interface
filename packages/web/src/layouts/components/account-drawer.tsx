@@ -81,7 +81,7 @@ function WalletConnected({ address }: { address: string }) {
       data-testid="wallet-connected"
       sx={{
         p: 2,
-        pt: 10,
+        pt: 4,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'start',
@@ -352,15 +352,19 @@ export function AccountDrawer(props: AccountDrawerProps) {
           </Tooltip>
 
           {isWalletConnected && (
-            <Tooltip title={isDisconnecting ? 'Disconnecting...' : 'Disconnect'}>
-              <IconButton
+            <Tooltip title={isDisconnecting ? 'Logging out...' : 'Logout'}>
+              <Button
+                variant="soft"
+                color="error"
+                size="small"
                 onClick={handleDisconnect}
-                sx={{ ml: 'auto' }}
                 disabled={isDisconnecting}
-                data-testid="disconnect-wallet-button"
+                sx={{ ml: 'auto' }}
+                data-testid="logout-button"
+                startIcon={<Iconify icon="solar:logout-2-bold" />}
               >
-                <Iconify icon="solar:power-bold" />
-              </IconButton>
+                {t('Logout')}
+              </Button>
             </Tooltip>
           )}
         </Box>

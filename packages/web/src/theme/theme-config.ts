@@ -85,11 +85,11 @@ export const themeConfig: ThemeConfig = {
       contrastText: '#000000',
     },
     error: {
-      lighter: '#fcd0e7',
-      light: '#f972c0',
-      main: '#f8279c',
-      dark: '#d02183',
-      darker: '#a81b6a',
+      lighter: '#ffd6d6',
+      light: '#ff8a8a',
+      main: '#ff0000',
+      dark: '#c20000',
+      darker: '#8a0000',
       contrastText: '#FFFFFF',
     },
     grey: {
