@@ -6,6 +6,7 @@ import posthog from 'posthog-js';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, format, logger } from '@normalfinance/utils';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
@@ -124,6 +125,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /*  stores ------------------------------------------------------ */
   const persist = usePersistStore();
   const { t } = useTranslate();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
@@ -150,9 +153,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const isWalletConnected = !!connectedAddress || isConnected || isNormalConnected;
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
+  const [resetEmail, setResetEmail] = useState<string | null>(null);
 
   const handleDisconnect = async () => {
     if (isDisconnecting) {
@@ -279,6 +284,19 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const hasHandledAuthRef = useRef(false);
 
   useEffect(() => {
+    const passwordResetParam = searchParams.get('passwordResetSuccess');
+    const emailParam = searchParams.get('email');
+    if (passwordResetParam === 'true') {
+      setPasswordResetSuccess(true);
+      if (emailParam) {
+        setResetEmail(decodeURIComponent(emailParam));
+      }
+      setShowLoginModal(true);
+      router.replace('/', { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
     if (authLoading) return;
 
     console.log('session before handlePostAuthFlow', session);
@@ -288,7 +306,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
         clearLoginIntent();
         hasHandledAuthRef.current = false;
       }
-      setShowLoginModal(false);
+      if (!passwordResetSuccess) {
+        setShowLoginModal(false);
+      }
       return;
     }
 
@@ -298,7 +318,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
       setShowLoginModal(false);
       void handlePostAuthFlow();
     }
-  }, [authLoading, session, handlePostAuthFlow]);
+  }, [authLoading, session, handlePostAuthFlow, passwordResetSuccess]);
 
   return (
     <>
@@ -385,7 +405,16 @@ export function AccountDrawer(props: AccountDrawerProps) {
           </Scrollbar>
         )}
       </Drawer>
-      <AuthLoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} />
+      <AuthLoginModal
+        open={showLoginModal}
+        onClose={() => {
+          setShowLoginModal(false);
+          setPasswordResetSuccess(false);
+          setResetEmail(null);
+        }}
+        passwordResetSuccess={passwordResetSuccess}
+        resetEmail={resetEmail}
+      />
       <WalletSelectionModal
         open={showWalletSelection}
         onClose={() => setShowWalletSelection(false)}

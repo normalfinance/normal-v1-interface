@@ -7,6 +7,7 @@ import { Box, Button, CircularProgress, Stack, TextField, Typography } from '@mu
 import { useTranslate } from '@/locales';
 import { updatePassword } from '@/services/auth';
 import { createSupabaseClientWithUrlDetection } from '@/lib/createSupabaseClient';
+import { clearLoginIntent } from '@/lib/loginIntent';
 
 const supabase = createSupabaseClientWithUrlDetection();
 
@@ -22,6 +23,7 @@ const ResetPasswordPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    clearLoginIntent();
     let mounted = true;
 
     const checkSession = async () => {
@@ -134,9 +136,16 @@ const ResetPasswordPage = () => {
 
     try {
       await updatePassword(password);
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
+      const userEmail = currentSession?.user?.email || '';
       setStatus('success');
       setTimeout(() => {
-        router.replace('/');
+        const redirectUrl = userEmail
+          ? `/?passwordResetSuccess=true&email=${encodeURIComponent(userEmail)}`
+          : '/?passwordResetSuccess=true';
+        router.replace(redirectUrl);
       }, 2000);
     } catch (err) {
       setStatus('error');

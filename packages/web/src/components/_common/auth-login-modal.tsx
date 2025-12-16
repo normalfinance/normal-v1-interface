@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -37,11 +37,18 @@ import {
 type AuthLoginModalProps = {
   open: boolean;
   onClose: () => void;
+  passwordResetSuccess?: boolean;
+  resetEmail?: string | null;
 };
 
 type AuthMode = 'password' | 'magic-link';
 
-const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
+const AuthLoginModal = ({
+  open,
+  onClose,
+  passwordResetSuccess = false,
+  resetEmail = null,
+}: AuthLoginModalProps) => {
   const { t } = useTranslate();
   const setDisclaimerAccepted = usePersistStore((s: AppStorePersist) => s.setDisclaimerAccepted);
 
@@ -56,6 +63,15 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [forgotPassword, setForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+
+  useEffect(() => {
+    if (passwordResetSuccess && open) {
+      setAuthMode('password');
+      if (resetEmail) {
+        setEmail(resetEmail);
+      }
+    }
+  }, [passwordResetSuccess, open, resetEmail]);
 
   const handleGoogle = async () => {
     setLoading(true);
@@ -217,6 +233,21 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2}>
+          {passwordResetSuccess && (
+            <Box
+              sx={{
+                backgroundColor: 'success.light',
+                color: 'success.dark',
+                borderRadius: 1,
+                px: 2,
+                py: 1,
+              }}
+            >
+              <Typography variant="body2">
+                {t('Password updated successfully! You can now login with your new password.')}
+              </Typography>
+            </Box>
+          )}
           <FormControlLabel
             control={
               <Checkbox
