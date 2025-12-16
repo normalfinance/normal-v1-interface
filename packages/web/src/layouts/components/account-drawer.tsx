@@ -5,7 +5,7 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 import posthog from 'posthog-js';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, format, logger } from '@normalfinance/utils';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
@@ -226,7 +226,13 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
 
     await handleConnectStellarWallet();
-  }, [handleConnectStellarWallet, normalPublicKey, isNormalConnected, connectNormalWallet, onClose]);
+  }, [
+    handleConnectStellarWallet,
+    normalPublicKey,
+    isNormalConnected,
+    connectNormalWallet,
+    onClose,
+  ]);
 
   /** Handle Normal wallet creation success */
   const handleNormalWalletCreated = async () => {
@@ -264,19 +270,25 @@ export function AccountDrawer(props: AccountDrawerProps) {
     await handlePostAuthFlow();
   };
 
+  const hasHandledAuthRef = useRef(false);
+
   useEffect(() => {
     if (authLoading) return;
 
     console.log('session before handlePostAuthFlow', session);
 
     if (!session) {
-      clearLoginIntent();
+      if (hasHandledAuthRef.current) {
+        clearLoginIntent();
+        hasHandledAuthRef.current = false;
+      }
       setShowLoginModal(false);
       return;
     }
 
     const hadIntent = consumeLoginIntent();
-    if (hadIntent) {
+    if (hadIntent && !hasHandledAuthRef.current) {
+      hasHandledAuthRef.current = true;
       setShowLoginModal(false);
       void handlePostAuthFlow();
     }
