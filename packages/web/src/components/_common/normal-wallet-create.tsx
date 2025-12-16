@@ -237,6 +237,12 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
       return;
     }
 
+    // Show confirmation if wallet is created but not backed up yet
+    if (stage === 'summary' || stage === 'backup' || stage === 'verify') {
+      confirmSkip.onTrue();
+      return;
+    }
+
     setMnemonic(null);
     setPublicKey(null);
     setWalletName('');
