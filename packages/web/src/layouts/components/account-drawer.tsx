@@ -12,6 +12,7 @@ import { useUserActivity, useLiquidityPositions } from '@/hooks';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { useSnackbar } from 'notistack';
 
 import { Avatar, Box, Stack, Button, Drawer, Tooltip, IconButton, Typography } from '@mui/material';
 
@@ -131,6 +132,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     disconnectWallet: disconnectNormalWallet,
   } = useNormalWallet();
   const { session, isLoading: authLoading, signOut } = useSupabaseAuth();
+  const { enqueueSnackbar } = useSnackbar();
 
   /*  drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
@@ -160,29 +162,33 @@ export function AccountDrawer(props: AccountDrawerProps) {
     try {
       startDisconnecting();
 
-      persist.disconnectWallet();
+      const walletTypeBeforeDisconnect = persist.wallet.walletType;
 
       await signOut();
 
-      // Disconnect based on wallet type
-      if (persist.wallet.walletType === 'normal-wallet') {
+      if (walletTypeBeforeDisconnect === 'normal-wallet') {
         await disconnectNormalWallet();
       } else {
         await disconnectWallet();
       }
-      const WALLET_SELECTION_SEEN_KEY = 'wallet-selection-modal-seen';
 
+      persist.disconnectWallet();
+
+      const WALLET_SELECTION_SEEN_KEY = 'wallet-selection-modal-seen';
       localStorage.removeItem(WALLET_SELECTION_SEEN_KEY);
 
       posthog.reset();
 
-      onClose();
+      enqueueSnackbar('Logged out successfully', { variant: 'success' });
+
+      window.location.reload();
     } catch (error) {
       logger.error('Error disconnecting wallet:', error);
 
-      onClose();
+      enqueueSnackbar('Error disconnecting wallet', { variant: 'error' });
     } finally {
       stopDisconnecting();
+      onClose();
     }
   };
 

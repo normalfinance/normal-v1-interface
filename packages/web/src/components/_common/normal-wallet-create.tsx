@@ -403,7 +403,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
             <Alert severity="warning" sx={{ mb: 2 }}>
               <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                {t('Final Step: Verify Your Backup')}
+                {t('Final Step')}
               </Typography>
               <Typography variant="body2">
                 {t(
