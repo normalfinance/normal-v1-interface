@@ -165,5 +165,11 @@
   "Your positions": "당신의 위치",
   "Your Referrals": "귀하의 추천",
   "Your tokens": "귀하의 토큰",
-  "Zealy XP": "젤리 XP"
+  "Zealy XP": "젤리 XP",
+  "Backup phrase copied to clipboard": "Backup phrase copied to clipboard",
+  "Failed to copy backup phrase": "Failed to copy backup phrase",
+  "Final Step: Verify Your Backup": "Final Step: Verify Your Backup",
+  "This is your only chance to verify your backup phrase. Once you complete this step, the phrase will be permanently removed for security. Make sure you have safely written it down before proceeding.": "This is your only chance to verify your backup phrase. Once you complete this step, the phrase will be permanently removed for security. Make sure you have safely written it down before proceeding.",
+  "Skip Anyway": "Skip Anyway",
+  "Skip Backup?": "Skip Backup?"
 }

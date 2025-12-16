@@ -10,6 +10,9 @@ import {
 } from '@normalfinance/utils';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { updateWalletName } from '@/services/linked-wallets';
+import { useSnackbar } from '@/components/template/snackbar';
+import { useBoolean } from '@/hooks/use-boolean';
+import { ConfirmDialog } from '@/components/template/custom-dialog';
 
 import {
   Dialog,
@@ -52,7 +55,9 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
 
 export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalWalletCreateProps) {
   const { t } = useTranslate();
+  const { enqueueSnackbar } = useSnackbar();
   const { createWallet } = useNormalWallet();
+  const confirmSkip = useBoolean();
 
   const [stage, setStage] = useState<CreateStage>('creating');
   const [mnemonic, setMnemonic] = useState<string | null>(null);
@@ -103,24 +108,22 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   };
 
   const handleSkipBackup = () => {
-    if (
-      window.confirm(
-        t(
-          "Skip Backup? Without backing up your wallet, you won't be able to recover it if you lose access. Are you sure?"
-        )
-      )
-    ) {
-      handleComplete();
-    }
+    confirmSkip.onTrue();
+  };
+
+  const handleConfirmSkip = () => {
+    confirmSkip.onFalse();
+    handleComplete();
   };
 
   const handleCopyMnemonic = async () => {
     if (!mnemonic) return;
     try {
       await navigator.clipboard.writeText(mnemonic);
-      // You could show a toast notification here
+      enqueueSnackbar(t('Backup phrase copied to clipboard'), { variant: 'success' });
     } catch (err) {
       logger.error('Failed to copy mnemonic:', err);
+      enqueueSnackbar(t('Failed to copy backup phrase'), { variant: 'error' });
     }
   };
 
@@ -308,7 +311,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               onChange={(e) => setWalletName(e.target.value)}
               fullWidth
               inputProps={{ maxLength: 50 }}
-              helperText={t('Give your wallet a friendly name to identify it later')}
+              helperText={""}
             />
 
             <Paper
@@ -392,6 +395,17 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               </Button>
             </Box>
 
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+                {t('Final Step: Verify Your Backup')}
+              </Typography>
+              <Typography variant="body2">
+                {t(
+                  'This is your only chance to verify your backup phrase. Once you complete this step, the phrase will be permanently removed for security. Make sure you have safely written it down before proceeding.'
+                )}
+              </Typography>
+            </Alert>
+
             <Box>
               <Typography variant="h6" sx={{ mb: 1 }}>
                 {(() => {
@@ -463,6 +477,20 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           </Stack>
         )}
       </DialogContent>
+
+      <ConfirmDialog
+        open={confirmSkip.value}
+        onClose={confirmSkip.onFalse}
+        title={t('Skip Backup?')}
+        content={t(
+          "Without backing up your wallet, you won't be able to recover it if you lose access. Are you sure?"
+        )}
+        action={
+          <Button variant="contained" onClick={handleConfirmSkip}>
+            {t('Skip Anyway')}
+          </Button>
+        }
+      />
     </Dialog>
   );
 }

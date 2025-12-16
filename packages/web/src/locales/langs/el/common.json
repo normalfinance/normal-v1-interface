@@ -165,5 +165,11 @@
   "Your positions": "Οι θέσεις σας",
   "Your Referrals": "Οι Παραπομπές Σας",
   "Your tokens": "Τα διακριτικά σας",
-  "Zealy XP": "Zealy XP"
+  "Zealy XP": "Zealy XP",
+  "Backup phrase copied to clipboard": "Backup phrase copied to clipboard",
+  "Failed to copy backup phrase": "Failed to copy backup phrase",
+  "Final Step: Verify Your Backup": "Final Step: Verify Your Backup",
+  "This is your only chance to verify your backup phrase. Once you complete this step, the phrase will be permanently removed for security. Make sure you have safely written it down before proceeding.": "This is your only chance to verify your backup phrase. Once you complete this step, the phrase will be permanently removed for security. Make sure you have safely written it down before proceeding.",
+  "Skip Anyway": "Skip Anyway",
+  "Skip Backup?": "Skip Backup?"
 }
