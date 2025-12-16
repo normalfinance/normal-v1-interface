@@ -33,3 +33,43 @@ export const exchangeCodeForSession = async (code: string) => {
 
   return data.session;
 };
+
+export const signInWithPassword = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data.session;
+};
+
+export const signUpWithPassword = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  return data;
+};
+
+export const signInWithOtp = async (email: string) => {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: true },
+  });
+  if (error) throw error;
+};
+
+export const verifyOtp = async (email: string, token: string) => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'email',
+  });
+  if (error) throw error;
+  return data.session;
+};
+
+export const resetPassword = async (email: string) => {
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/reset-password` : undefined;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+  if (error) throw error;
+};

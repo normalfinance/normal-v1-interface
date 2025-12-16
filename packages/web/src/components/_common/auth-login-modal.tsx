@@ -8,10 +8,14 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControlLabel,
   IconButton,
   Link as MuiLink,
   Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 
@@ -21,12 +25,21 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { Iconify } from '@/components/template/iconify';
-import { signInWithGoogle } from '@/services/auth';
+import {
+  signInWithGoogle,
+  signInWithPassword,
+  signUpWithPassword,
+  signInWithOtp,
+  verifyOtp,
+  resetPassword,
+} from '@/services/auth';
 
 type AuthLoginModalProps = {
   open: boolean;
   onClose: () => void;
 };
+
+type AuthMode = 'password' | 'magic-link';
 
 const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
   const { t } = useTranslate();
@@ -35,13 +48,20 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tosAccepted, setTosAccepted] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authMode, setAuthMode] = useState<AuthMode>('password');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpToken, setOtpToken] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [forgotPassword, setForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
   const handleGoogle = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Persist TOS acceptance before signing in
       await setDisclaimerAccepted(true);
       await signInWithGoogle();
     } catch (err) {
@@ -52,10 +72,130 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
     }
   };
 
+  const handleEmailAuth = async () => {
+    if (!email.trim()) {
+      setError(t('Please enter your email address'));
+      return;
+    }
+
+    if (authMode === 'password') {
+      if (!password.trim()) {
+        setError(t('Please enter your password'));
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        await setDisclaimerAccepted(true);
+        if (isSignUp) {
+          await signUpWithPassword(email.trim(), password);
+          setError(t('Account created! Please check your email to verify your account.'));
+          setLoading(false);
+        } else {
+          await signInWithPassword(email.trim(), password);
+          onClose();
+        }
+      } catch (err) {
+        console.error('Error signing in with password:', err);
+        const message =
+          err instanceof Error ? err.message : t('Unable to sign in. Please try again.');
+        setError(message);
+        setLoading(false);
+      }
+    } else {
+      setLoading(true);
+      setError(null);
+
+      try {
+        await signInWithOtp(email.trim());
+        setOtpSent(true);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error sending magic link:', err);
+        const message =
+          err instanceof Error ? err.message : t('Unable to send magic link. Please try again.');
+        setError(message);
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleVerifyOtp = async (token?: string) => {
+    const codeToVerify = token ?? otpToken;
+    if (!codeToVerify.trim() || codeToVerify.trim().length !== 6) {
+      setError(t('Please enter the 6-digit code'));
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await setDisclaimerAccepted(true);
+      await verifyOtp(email.trim(), codeToVerify.trim());
+      onClose();
+    } catch (err) {
+      console.error('Error verifying OTP:', err);
+      const message = err instanceof Error ? err.message : t('Invalid code. Please try again.');
+      setError(message);
+      setLoading(false);
+    }
+  };
+
+  const handleOtpChange = (value: string) => {
+    const numericValue = value.replace(/\D/g, '').slice(0, 6);
+    setOtpToken(numericValue);
+    setError(null);
+
+    if (numericValue.length === 6) {
+      handleVerifyOtp(numericValue);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError(t('Please enter your email address'));
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await resetPassword(email.trim());
+      setResetEmailSent(true);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error sending password reset email:', err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : t('Unable to send password reset email. Please try again.');
+      setError(message);
+      setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setEmail('');
+    setPassword('');
+    setOtpToken('');
+    setOtpSent(false);
+    setError(null);
+    setAuthMode('password');
+    setIsSignUp(false);
+    setTosAccepted(false);
+    setForgotPassword(false);
+    setResetEmailSent(false);
+    onClose();
+  };
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       fullWidth
       maxWidth="xs"
       slotProps={{
@@ -70,15 +210,12 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="h6">Login to Normal</Typography>
-        <IconButton onClick={onClose} aria-label="Close login modal">
+        <IconButton onClick={handleClose} aria-label="Close login modal">
           <Iconify icon="mingcute:close-line" />
         </IconButton>
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2}>
-          <Typography color="text.secondary">
-            {t('Continue with Google to access your wallet options.')}
-          </Typography>
           <FormControlLabel
             control={
               <Checkbox
@@ -123,6 +260,199 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
           >
             {loading ? t('Redirecting…') : t('Sign in with Google')}
           </Button>
+
+          <Divider sx={{ my: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('or')}
+            </Typography>
+          </Divider>
+
+          {!otpSent && !forgotPassword ? (
+            <>
+              <TextField
+                label={t('Email')}
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError(null);
+                }}
+                fullWidth
+                disabled={loading}
+                autoComplete="email"
+              />
+
+              <ToggleButtonGroup
+                value={authMode}
+                exclusive
+                onChange={(_, newMode) => {
+                  if (newMode !== null) {
+                    setAuthMode(newMode);
+                    setError(null);
+                  }
+                }}
+                fullWidth
+                disabled={loading}
+              >
+                <ToggleButton value="password">{t('Password')}</ToggleButton>
+                <ToggleButton value="magic-link">{t('Magic Link')}</ToggleButton>
+              </ToggleButtonGroup>
+
+              {authMode === 'password' && (
+                <>
+                  <TextField
+                    label={t('Password')}
+                    type="password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError(null);
+                    }}
+                    fullWidth
+                    disabled={loading}
+                    autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  />
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => {
+                        setIsSignUp(!isSignUp);
+                        setError(null);
+                      }}
+                      disabled={loading}
+                    >
+                      {isSignUp ? t('Already have an account?') : t('Need an account?')}
+                    </Button>
+                    {!isSignUp && (
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => {
+                          setForgotPassword(true);
+                          setError(null);
+                        }}
+                        disabled={loading}
+                      >
+                        {t('Forgot Password?')}
+                      </Button>
+                    )}
+                  </Box>
+                </>
+              )}
+
+              <Button
+                variant="contained"
+                size="large"
+                onClick={handleEmailAuth}
+                disabled={loading || !email.trim() || (authMode === 'password' && !password.trim())}
+                fullWidth
+              >
+                {loading
+                  ? t('Processing…')
+                  : authMode === 'password'
+                    ? isSignUp
+                      ? t('Sign Up')
+                      : t('Sign In')
+                    : t('Send Magic Link')}
+              </Button>
+            </>
+          ) : forgotPassword ? (
+            <>
+              {resetEmailSent ? (
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('Password reset email sent! Please check your inbox at')} {email}
+                  </Typography>
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => {
+                      setForgotPassword(false);
+                      setResetEmailSent(false);
+                      setError(null);
+                    }}
+                    disabled={loading}
+                  >
+                    {t('Back to Sign In')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    {t(
+                      'Enter your email address and we will send you a link to reset your password.'
+                    )}
+                  </Typography>
+                  <TextField
+                    label={t('Email')}
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError(null);
+                    }}
+                    fullWidth
+                    disabled={loading}
+                    autoComplete="email"
+                  />
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleForgotPassword}
+                    disabled={loading || !email.trim()}
+                    fullWidth
+                  >
+                    {loading ? t('Sending…') : t('Send Reset Link')}
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => {
+                      setForgotPassword(false);
+                      setError(null);
+                    }}
+                    disabled={loading}
+                  >
+                    {t('Back to Sign In')}
+                  </Button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                {t('We sent a 6-digit code to')} {email}
+              </Typography>
+              <TextField
+                label={t('Enter 6-digit code')}
+                value={otpToken}
+                onChange={(e) => handleOtpChange(e.target.value)}
+                fullWidth
+                disabled={loading}
+                inputProps={{
+                  maxLength: 6,
+                  style: { textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.5rem' },
+                }}
+                autoFocus
+              />
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => {
+                  setOtpSent(false);
+                  setOtpToken('');
+                  setError(null);
+                }}
+                disabled={loading}
+              >
+                {t('Change email')}
+              </Button>
+            </>
+          )}
+
           {error && (
             <Box
               sx={{
@@ -143,4 +473,3 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
 };
 
 export default AuthLoginModal;
-
