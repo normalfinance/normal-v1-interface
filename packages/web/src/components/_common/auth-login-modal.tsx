@@ -164,7 +164,8 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
     setError(null);
 
     try {
-      await resetPassword(email.trim());
+      const result = await resetPassword(email.trim());
+      console.log('Password reset request result:', result);
       setResetEmailSent(true);
       setLoading(false);
     } catch (err) {
@@ -363,8 +364,12 @@ const AuthLoginModal = ({ open, onClose }: AuthLoginModalProps) => {
             <>
               {resetEmailSent ? (
                 <>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('Password reset email sent! Please check your inbox at')} {email}
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    {t('If an account exists for')} {email},{' '}
+                    {t('we have sent a password reset link to your email address.')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {t('Please check your inbox and spam folder. The link will expire in 1 hour.')}
                   </Typography>
                   <Button
                     variant="text"
