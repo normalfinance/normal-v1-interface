@@ -1,59 +1,114 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material';
 
 import { useTranslate } from '@/locales';
 import { updatePassword } from '@/services/auth';
-import { supabase } from '@/lib/createSupabaseClient';
+import { createSupabaseClientWithUrlDetection } from '@/lib/createSupabaseClient';
+
+const supabase = createSupabaseClientWithUrlDetection();
 
 type Status = 'pending' | 'ready' | 'loading' | 'success' | 'error';
 
 const ResetPasswordPage = () => {
   const { t } = useTranslate();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>('pending');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     const checkSession = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       if (session) {
-        setStatus('ready');
-      } else {
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const type = hashParams.get('type');
+        if (mounted) {
+          setStatus('ready');
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        return;
+      }
 
-        if (accessToken && type === 'recovery') {
+      const hash = window.location.hash.substring(1);
+      const hashParams = new URLSearchParams(hash);
+      const accessToken = hashParams.get('access_token');
+      const type = hashParams.get('type');
+
+      if (accessToken && type === 'recovery') {
+        try {
+          const refreshToken = hashParams.get('refresh_token') || '';
           const {
             data: { session: newSession },
             error: sessionError,
           } = await supabase.auth.setSession({
             access_token: accessToken,
-            refresh_token: hashParams.get('refresh_token') || '',
+            refresh_token: refreshToken,
           });
+
+          if (!mounted) return;
 
           if (sessionError) {
             setStatus('error');
-            setError(t('Invalid or expired reset link. Please request a new one.'));
+            setError(
+              sessionError.message || t('Invalid or expired reset link. Please request a new one.')
+            );
           } else if (newSession) {
             setStatus('ready');
+            window.history.replaceState(null, '', window.location.pathname);
+          } else {
+            setStatus('error');
+            setError(t('Unable to establish session. Please try again.'));
           }
-        } else {
+        } catch (err) {
+          if (!mounted) return;
+          console.error('Error setting session:', err);
           setStatus('error');
-          setError(t('Invalid reset link. Please check your email and try again.'));
+          setError(t('Invalid or expired reset link. Please request a new one.'));
+        }
+      } else if (!hash) {
+        if (mounted) {
+          setStatus('error');
+          setError(
+            t(
+              'Invalid reset link. Please make sure you clicked the link directly from your email, or request a new reset link.'
+            )
+          );
+        }
+      } else {
+        if (mounted) {
+          setStatus('error');
+          setError(t('Invalid reset link. Missing required parameters.'));
         }
       }
     };
 
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        setStatus('ready');
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    });
+
     void checkSession();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
