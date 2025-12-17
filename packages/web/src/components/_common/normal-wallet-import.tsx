@@ -10,7 +10,6 @@ import {
   createKeypairFromSecret,
   createWalletFromMnemonic,
 } from '@normalfinance/utils';
-import { decryptMnemonic } from '@normalfinance/utils';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
@@ -130,15 +129,9 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
           throw new Error('Could not load stored phrase');
         }
 
-        const { encryptedMnemonic, encryptionIV, encryptionSalt } = await response.json();
+        const { mnemonic: decryptedMnemonic } = await response.json();
 
-        const userIdentifier = `${session.user.id}:${session.user.email}`;
-        const decrypted = await decryptMnemonic(
-          { encryptedMnemonic, iv: encryptionIV, salt: encryptionSalt },
-          userIdentifier
-        );
-
-        setMnemonic(decrypted);
+        setMnemonic(decryptedMnemonic);
         setImportType('mnemonic');
         setAutoFilledMnemonic(true);
         enqueueSnackbar(t('Recovery phrase loaded from secure storage'), { variant: 'success' });

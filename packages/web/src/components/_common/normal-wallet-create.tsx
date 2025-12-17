@@ -8,13 +8,13 @@ import {
   getRandomVerificationWords,
   splitMnemonicToWords,
 } from '@normalfinance/utils';
-import { encryptMnemonic } from '@normalfinance/utils';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { updateWalletName, linkWallet } from '@/services/linked-wallets';
 import { useSnackbar } from '@/components/template/snackbar';
 import { useBoolean } from '@/hooks/use-boolean';
 import { ConfirmDialog } from '@/components/template/custom-dialog';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { supabase } from '@/lib/createSupabaseClient';
 
 import {
   Dialog,
@@ -144,14 +144,39 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
     setIsSavingCustody(true);
     try {
-      const userIdentifier = `${user.id}:${user.email}`;
-      const encrypted = await encryptMnemonic(mnemonic, userIdentifier);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      const encryptResponse = await fetch('/api/wallets/encrypt-mnemonic', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          walletAddress: publicKey,
+          mnemonic,
+        }),
+      });
+
+      if (!encryptResponse.ok) {
+        const error = await encryptResponse.json();
+        throw new Error(error.error || 'Failed to encrypt mnemonic');
+      }
+
+      const { encryptedMnemonic, encryptionIV, encryptionSalt } = await encryptResponse.json();
 
       await linkWallet(publicKey, walletName.trim() || undefined, {
         custodyChoice: 'platform',
-        encryptedMnemonic: encrypted.encryptedMnemonic,
-        encryptionIV: encrypted.iv,
-        encryptionSalt: encrypted.salt,
+        encryptedMnemonic,
+        encryptionIV,
+        encryptionSalt,
         custodyConsentEmail: user.email,
       });
     } finally {

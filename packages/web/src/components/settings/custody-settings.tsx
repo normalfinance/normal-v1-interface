@@ -21,12 +21,8 @@ import {
 import { useSnackbar } from '@/components/template/snackbar';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { updateWalletCustody, removePlatformCustody } from '@/services/linked-wallets';
-import {
-  encryptMnemonic,
-  decryptMnemonic,
-  validateMnemonic,
-  normalizeMnemonic,
-} from '@normalfinance/utils';
+import { supabase } from '@/lib/createSupabaseClient';
+import { validateMnemonic, normalizeMnemonic } from '@normalfinance/utils';
 import { useBoolean } from '@/hooks/use-boolean';
 
 export interface CustodySettingsProps {
@@ -68,14 +64,39 @@ export function CustodySettings({
     setMnemonicError('');
 
     try {
-      const userIdentifier = `${user.id}:${user.email}`;
-      const encrypted = await encryptMnemonic(normalized, userIdentifier);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      const encryptResponse = await fetch('/api/wallets/encrypt-mnemonic', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          walletAddress,
+          mnemonic: normalized,
+        }),
+      });
+
+      if (!encryptResponse.ok) {
+        const error = await encryptResponse.json();
+        throw new Error(error.error || 'Failed to encrypt mnemonic');
+      }
+
+      const { encryptedMnemonic, encryptionIV, encryptionSalt } = await encryptResponse.json();
 
       await updateWalletCustody(walletAddress, {
         custodyChoice: 'platform',
-        encryptedMnemonic: encrypted.encryptedMnemonic,
-        encryptionIV: encrypted.iv,
-        encryptionSalt: encrypted.salt,
+        encryptedMnemonic,
+        encryptionIV,
+        encryptionSalt,
         custodyConsentEmail: user.email,
       });
 
