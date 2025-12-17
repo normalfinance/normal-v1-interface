@@ -264,10 +264,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
   };
 
   const handleMainButtonClick = () => {
-    if (isWalletConnected) {
-      onOpen(); // Open drawer to show wallet info
+    if (session) {
+      onOpen(); // Open drawer to show account info
     } else {
-      handleConnectClick(); // Connect wallet
+      handleConnectClick(); // Show login modal
     }
   };
 
@@ -322,7 +322,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   return (
     <>
-      {isWalletConnected ? (
+      {session ? (
         <AccountButton
           data-testid="account-button"
           onClick={handleMainButtonClick}
@@ -371,7 +371,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
             </IconButton>
           </Tooltip>
 
-          {isWalletConnected && (
+          {session && (
             <Tooltip title={isDisconnecting ? 'Logging out...' : 'Logout'}>
               <Button
                 variant="soft"
@@ -388,7 +388,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
             </Tooltip>
           )}
         </Box>
-        {isWalletConnected && connectedAddress && (
+        {session && (
           <Scrollbar>
             <Stack spacing={2} sx={{ px: 2, pt: 8 }}>
               <Stack direction="row" alignItems="center" spacing={2}>
@@ -400,8 +400,28 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   </Typography>
                 </Box>
               </Stack>
+              {isWalletConnected && connectedAddress ? (
+                <WalletConnected address={connectedAddress} />
+              ) : (
+                <Box sx={{ px: 2, py: 4 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    {t('Connect a Wallet')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    {t('Connect a wallet to start using Normal Finance')}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    onClick={handleConnectClick}
+                    sx={{ mb: 2 }}
+                  >
+                    Connect Wallet
+                  </Button>
+                </Box>
+              )}
             </Stack>
-            <WalletConnected address={connectedAddress} />
           </Scrollbar>
         )}
       </Drawer>
