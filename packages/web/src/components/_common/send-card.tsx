@@ -469,7 +469,7 @@ const SendCard: React.FC<SendCardProps> = ({
             {getButtonLabel()}
           </Button>
         ) : (
-          <WalletGate buttonText="Connect wallet to Send" fullWidth variant="soft">
+          <WalletGate buttonText="Login to Send" fullWidth variant="soft">
             {null}
           </WalletGate>
         )}

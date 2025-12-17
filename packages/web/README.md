@@ -39,6 +39,15 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 To configure the application, you can use a `.env.local` file in the `packages/web` directory. Create one based on `.env.example` if it exists.
 
+### Mnemonic Encryption
+
+The application uses server-side encryption for storing wallet mnemonics when platform custody is enabled. This requires a server secret:
+
+- `MNEMONIC_ENCRYPTION_SECRET`: A secure random secret used for server-side mnemonic encryption. Must be at least 32 characters long.
+  - **Generate a secure secret**: `openssl rand -base64 32`
+  - **Security**: Never commit this to git. Use different secrets for each environment (development, staging, production).
+  - **Required**: This variable is required for the application to start. The server will fail to start if it's missing or too short.
+
 ### Announcement Modal
 
 The application can display a global announcement modal. The content is controlled by the following environment variables:
