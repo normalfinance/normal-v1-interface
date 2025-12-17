@@ -12,6 +12,11 @@ const LinkWalletSchema = z.object({
     .min(1, 'Wallet address is required')
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
   walletName: z.string().max(50, 'Wallet name must be 50 characters or less').optional(),
+  custodyChoice: z.enum(['self', 'platform']).optional(),
+  encryptedMnemonic: z.string().optional(),
+  encryptionIV: z.string().optional(),
+  encryptionSalt: z.string().optional(),
+  custodyConsentEmail: z.string().email().optional(),
 });
 
 const UpdateWalletSchema = z.object({
@@ -57,10 +62,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { walletAddress, walletName } = validation.data;
+    const {
+      walletAddress,
+      walletName,
+      custodyChoice,
+      encryptedMnemonic,
+      encryptionIV,
+      encryptionSalt,
+      custodyConsentEmail,
+    } = validation.data;
+
+    // Validate custody data if platform custody is chosen
+    if (custodyChoice === 'platform') {
+      if (!encryptedMnemonic || !encryptionIV || !encryptionSalt || !custodyConsentEmail) {
+        return NextResponse.json(
+          {
+            error:
+              'Platform custody requires encryptedMnemonic, encryptionIV, encryptionSalt, and custodyConsentEmail',
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // Link the wallet
-    const linkedWallet = await LinkedWalletService.linkWallet(user.id, walletAddress, walletName);
+    const linkedWallet = await LinkedWalletService.linkWallet(
+      user.id,
+      walletAddress,
+      walletName,
+      custodyChoice
+        ? {
+            custodyChoice,
+            encryptedMnemonic,
+            encryptionIV,
+            encryptionSalt,
+            custodyConsentEmail,
+          }
+        : undefined
+    );
 
     logger.log('[API /wallets/link] Wallet linked successfully:', {
       userId: user.id.substring(0, 8) + '...',
@@ -76,6 +115,7 @@ export async function POST(request: NextRequest) {
           walletName: linkedWallet.walletName,
           createdAt: linkedWallet.createdAt,
           lastUsedAt: linkedWallet.lastUsedAt,
+          custodyChoice: linkedWallet.custodyChoice,
         },
       },
       { status: 201 }

@@ -8,11 +8,13 @@ import {
   getRandomVerificationWords,
   splitMnemonicToWords,
 } from '@normalfinance/utils';
+import { encryptMnemonic } from '@normalfinance/utils';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
-import { updateWalletName } from '@/services/linked-wallets';
+import { updateWalletName, linkWallet } from '@/services/linked-wallets';
 import { useSnackbar } from '@/components/template/snackbar';
 import { useBoolean } from '@/hooks/use-boolean';
 import { ConfirmDialog } from '@/components/template/custom-dialog';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import {
   Dialog,
@@ -27,6 +29,10 @@ import {
   CircularProgress,
   Alert,
   TextField,
+  FormControlLabel,
+  Checkbox,
+  Radio,
+  RadioGroup,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -37,7 +43,7 @@ export type NormalWalletCreateProps = {
   onSuccess: () => void;
 };
 
-type CreateStage = 'creating' | 'summary' | 'backup' | 'verify';
+type CreateStage = 'creating' | 'summary' | 'backup' | 'custody-choice' | 'verify';
 
 interface VerificationQuestion {
   index: number;
@@ -57,6 +63,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { createWallet } = useNormalWallet();
+  const { user } = useSupabaseAuth();
   const confirmSkip = useBoolean();
 
   const [stage, setStage] = useState<CreateStage>('creating');
@@ -68,6 +75,9 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [answerErrors, setAnswerErrors] = useState<Record<number, string>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [custodyChoice, setCustodyChoice] = useState<'self' | 'platform' | null>(null);
+  const [custodyConsent, setCustodyConsent] = useState(false);
+  const [isSavingCustody, setIsSavingCustody] = useState(false);
 
   const formattedMnemonic = useMemo(() => {
     return mnemonic ? formatMnemonicForDisplay(mnemonic) : [];
@@ -127,6 +137,28 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     }
   };
 
+  const encryptAndSaveMnemonic = useCallback(async () => {
+    if (!mnemonic || !publicKey || !user?.id || !user?.email) {
+      throw new Error('Missing required data for encryption');
+    }
+
+    setIsSavingCustody(true);
+    try {
+      const userIdentifier = `${user.id}:${user.email}`;
+      const encrypted = await encryptMnemonic(mnemonic, userIdentifier);
+
+      await linkWallet(publicKey, walletName.trim() || undefined, {
+        custodyChoice: 'platform',
+        encryptedMnemonic: encrypted.encryptedMnemonic,
+        encryptionIV: encrypted.iv,
+        encryptionSalt: encrypted.salt,
+        custodyConsentEmail: user.email,
+      });
+    } finally {
+      setIsSavingCustody(false);
+    }
+  }, [mnemonic, publicKey, walletName, user]);
+
   const startVerification = useCallback(() => {
     if (!mnemonic) return;
 
@@ -135,7 +167,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     const verificationWords = getRandomVerificationWords(mnemonic, requiredCount);
     const formatted = formatMnemonicForDisplay(mnemonic);
 
-    // Create questions with options (correct word + 3 distractors)
     const questions: VerificationQuestion[] = verificationWords.map(({ index, word }) => {
       const otherOptions = formatted
         .filter((item) => item.index !== index)
@@ -158,6 +189,63 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setCurrentQuestionIndex(0);
     setStage('verify');
   }, [mnemonic]);
+
+  const handleComplete = useCallback(async () => {
+    if (walletName.trim() && publicKey) {
+      try {
+        await updateWalletName(publicKey, walletName.trim());
+      } catch (err) {
+        logger.warn('Failed to update wallet name:', err);
+      }
+    }
+
+    setMnemonic(null);
+    setPublicKey(null);
+    setWalletName('');
+    setStage('creating');
+    setVerificationQuestions([]);
+    setSelectedAnswers({});
+    setAnswerErrors({});
+    setCurrentQuestionIndex(0);
+    setError(null);
+    setCustodyChoice(null);
+    setCustodyConsent(false);
+    setIsSavingCustody(false);
+    onSuccess();
+  }, [walletName, publicKey, onSuccess]);
+
+  const handleCustodyConfirm = useCallback(async () => {
+    if (custodyChoice === 'self') {
+      startVerification();
+    } else if (custodyChoice === 'platform') {
+      if (!custodyConsent) {
+        enqueueSnackbar(t('Please provide consent to store your recovery phrase'), {
+          variant: 'warning',
+        });
+        return;
+      }
+
+      try {
+        await encryptAndSaveMnemonic();
+        await handleComplete();
+      } catch (err: any) {
+        logger.error('Failed to save encrypted mnemonic:', err);
+        enqueueSnackbar(
+          err.message || t('Failed to save encrypted recovery phrase. Please try self-custody.'),
+          { variant: 'error' }
+        );
+        setError(err.message || t('Failed to save encrypted recovery phrase'));
+      }
+    }
+  }, [
+    custodyChoice,
+    custodyConsent,
+    encryptAndSaveMnemonic,
+    handleComplete,
+    startVerification,
+    enqueueSnackbar,
+    t,
+  ]);
 
   const handleSelectAnswer = useCallback(
     (index: number, value: string) => {
@@ -208,37 +296,18 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     handleComplete();
   };
 
-  const handleComplete = async () => {
-    // Update wallet name if provided
-    if (walletName.trim() && publicKey) {
-      try {
-        await updateWalletName(publicKey, walletName.trim());
-      } catch (err) {
-        // Non-critical error, just log it
-        logger.warn('Failed to update wallet name:', err);
-      }
-    }
-
-    setMnemonic(null);
-    setPublicKey(null);
-    setWalletName('');
-    setStage('creating');
-    setVerificationQuestions([]);
-    setSelectedAnswers({});
-    setAnswerErrors({});
-    setCurrentQuestionIndex(0);
-    setError(null);
-    onSuccess();
-  };
-
   const handleClose = () => {
     if (stage === 'creating') {
       onClose();
       return;
     }
 
-    // Show confirmation if wallet is created but not backed up yet
-    if (stage === 'summary' || stage === 'backup' || stage === 'verify') {
+    if (
+      stage === 'summary' ||
+      stage === 'backup' ||
+      stage === 'custody-choice' ||
+      stage === 'verify'
+    ) {
       confirmSkip.onTrue();
       return;
     }
@@ -252,6 +321,9 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setAnswerErrors({});
     setCurrentQuestionIndex(0);
     setError(null);
+    setCustodyChoice(null);
+    setCustodyConsent(false);
+    setIsSavingCustody(false);
     onClose();
   };
 
@@ -274,6 +346,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           {stage === 'creating' && t('Creating Wallet...')}
           {stage === 'summary' && t('Wallet Created Successfully!')}
           {stage === 'backup' && t('Backup Your Wallet')}
+          {stage === 'custody-choice' && t('Choose Custody Option')}
           {stage === 'verify' && t('Verify Your Backup')}
         </Typography>
         <IconButton
@@ -317,7 +390,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               onChange={(e) => setWalletName(e.target.value)}
               fullWidth
               inputProps={{ maxLength: 50 }}
-              helperText={""}
+              helperText={''}
             />
 
             <Paper
@@ -379,13 +452,132 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
             </Box>
 
             <Stack spacing={2}>
-              <Button variant="contained" fullWidth onClick={startVerification}>
+              <Button variant="contained" fullWidth onClick={() => setStage('custody-choice')}>
                 {t("I've Written It Down")}
               </Button>
               <Button variant="outlined" fullWidth onClick={handleCopyMnemonic}>
                 {t('Copy to Clipboard')}
               </Button>
             </Stack>
+          </Stack>
+        )}
+
+        {stage === 'custody-choice' && (
+          <Stack spacing={3}>
+            <Box>
+              <Button
+                startIcon={<Iconify icon="mingcute:left-line" />}
+                onClick={() => setStage('backup')}
+                sx={{ mb: 2 }}
+              >
+                {t('Back')}
+              </Button>
+            </Box>
+
+            <Typography variant="h6">
+              {t('How would you like to secure your recovery phrase?')}
+            </Typography>
+
+            <RadioGroup
+              value={custodyChoice || ''}
+              onChange={(e) => {
+                setCustodyChoice(e.target.value as 'self' | 'platform');
+                if (e.target.value === 'self') {
+                  setCustodyConsent(false);
+                }
+              }}
+            >
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  mb: 2,
+                  cursor: 'pointer',
+                  borderColor: custodyChoice === 'self' ? 'primary.main' : 'divider',
+                  bgcolor: custodyChoice === 'self' ? 'action.selected' : 'background.paper',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                  },
+                }}
+                onClick={() => {
+                  setCustodyChoice('self');
+                  setCustodyConsent(false);
+                }}
+              >
+                <FormControlLabel
+                  value="self"
+                  control={<Radio />}
+                  label={
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        {t("I'll Store It Myself (Self-Custody)")}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('Maximum security. You keep your phrase.')}
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ m: 0 }}
+                />
+              </Paper>
+
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  mb: 2,
+                  cursor: 'pointer',
+                  borderColor: custodyChoice === 'platform' ? 'primary.main' : 'divider',
+                  bgcolor: custodyChoice === 'platform' ? 'action.selected' : 'background.paper',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                  },
+                }}
+                onClick={() => setCustodyChoice('platform')}
+              >
+                <FormControlLabel
+                  value="platform"
+                  control={<Radio />}
+                  label={
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        {t('Store Securely with Normal Finance')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('Convenience. Auto-reconnect without re-entering.')}
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ m: 0 }}
+                />
+              </Paper>
+            </RadioGroup>
+
+            {custodyChoice === 'platform' && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={custodyConsent}
+                    onChange={(e) => setCustodyConsent(e.target.checked)}
+                  />
+                }
+                label={t('I authorize Normal Finance to store my encrypted recovery phrase')}
+              />
+            )}
+
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleCustodyConfirm}
+              disabled={
+                !custodyChoice ||
+                (custodyChoice === 'platform' && !custodyConsent) ||
+                isSavingCustody
+              }
+              startIcon={isSavingCustody ? <CircularProgress size={16} /> : null}
+            >
+              {isSavingCustody ? t('Saving...') : t('Continue')}
+            </Button>
           </Stack>
         )}
 

@@ -1,106 +1,86 @@
-// Prisma schema for referral tracking system
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql" // Can be changed to "sqlite" for local dev
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DATABASE_MAINNET_URL")
 }
 
-// User model - identified by wallet address
 model User {
-  id              String   @id @default(cuid())
-  walletAddress   String   @unique
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Referral relationships
-  referralsGiven  Referral[] @relation("Referrer")
-  referralsReceived Referral[] @relation("Referee")
-  
-  // Actions performed by this user
-  actions         ReferralAction[]
-  
+  id                String           @id @default(cuid())
+  walletAddress     String           @unique
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  actions           ReferralAction[]
+  referralsReceived Referral[]       @relation("Referee")
+  referralsGiven    Referral[]       @relation("Referrer")
+
   @@map("users")
 }
 
-// Referral relationship model
 model Referral {
-  id            String   @id @default(cuid())
-  code          String   @unique
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  // Relationship
-  referrerId    String
-  referrer      User     @relation("Referrer", fields: [referrerId], references: [id])
-  
-  refereeId     String?
-  referee       User?    @relation("Referee", fields: [refereeId], references: [id])
-  
-  // Status tracking
-  isActive      Boolean  @default(true)
-  isUsed        Boolean  @default(false)
-  usedAt        DateTime?
-  
-  // Metadata
-  source        String?  // Where the referral came from (e.g., "twitter", "telegram")
-  campaign      String?  // Campaign identifier
-  
-  // Actions performed for this referral
-  actions       ReferralAction[]
-  
+  id         String           @id @default(cuid())
+  code       String           @unique
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  referrerId String
+  refereeId  String?
+  isActive   Boolean          @default(true)
+  isUsed     Boolean          @default(false)
+  usedAt     DateTime?
+  source     String?
+  campaign   String?
+  actions    ReferralAction[]
+  referee    User?            @relation("Referee", fields: [refereeId], references: [id])
+  referrer   User             @relation("Referrer", fields: [referrerId], references: [id])
+
   @@map("referrals")
 }
 
-// Individual referral actions/events
 model ReferralAction {
   id          String   @id @default(cuid())
   createdAt   DateTime @default(now())
-  
-  // Relations
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  
   referralId  String
+  action      String
+  amount      String?
+  tokenSymbol String?
+  metadata    Json?
   referral    Referral @relation(fields: [referralId], references: [id])
-  
-  // Action details
-  action      String   // "signup", "first_swap", "first_liquidity", etc.
-  amount      String?  // Optional amount for financial actions
-  tokenSymbol String?  // Optional token symbol for swap/liquidity actions
-  
-  // Metadata
-  metadata    Json?    // Additional action-specific data
-  
-  @@unique([userId, referralId, action]) // Prevent duplicate actions per user per referral
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, referralId, action])
   @@map("referral_actions")
 }
 
-// Testnet access control model
 model TestnetUser {
-  id              String   @id @default(cuid())
-  inviteCode      String   @unique
-  walletAddress   String?  @unique  // Optional, set when code is used
-  isUsed          Boolean  @default(false)
-  usedAt          DateTime?
-  createdAt       DateTime @default(now())
-  source          String?  // "admin", "tweet", etc.
-  
+  id            String    @id @default(cuid())
+  inviteCode    String    @unique
+  walletAddress String?   @unique
+  isUsed        Boolean   @default(false)
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+  source        String?
+
   @@map("testnet_users")
 }
 
-// Linked wallets for Normal wallet auth
 model LinkedWallet {
-  id            String   @id @default(cuid())
-  supabaseUid   String   // Supabase auth user ID
-  walletAddress String   // Stellar public key (G...)
-  walletName    String?  // User-friendly nickname
-  createdAt     DateTime @default(now())
-  lastUsedAt    DateTime @default(now())
-  
+  id                  String    @id @default(cuid())
+  supabaseUid         String
+  walletAddress       String
+  walletName          String?
+  createdAt           DateTime  @default(now())
+  lastUsedAt          DateTime  @default(now())
+  custodyChoice       String?
+  encryptedMnemonic   String?
+  encryptionIV        String?
+  encryptionSalt      String?
+  custodyConsentEmail String?
+  custodyConsentDate  DateTime?
+
   @@unique([supabaseUid, walletAddress])
   @@index([supabaseUid])
   @@map("linked_wallets")
@@ -108,16 +88,17 @@ model LinkedWallet {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model normal_contract_events {
-  id                          String   @id(map: "normal_contracts_pkey")
+  id                          String   @id
   type                        String
   contract_id                 String?
   topics                      String?
   data                        String?
   in_successful_contract_call Boolean
-  transaction_hash            String
-  transaction_account         String
+  transaction_hash            String?
+  transaction_account         String?
   transaction_fee_account     String?
-  transaction_successful      Boolean
+  transaction_successful      Boolean?
+  transaction_index           Int?
   operation_body              String?
   operation_result_code       String?
   operation_type              String?
@@ -126,8 +107,3 @@ model normal_contract_events {
   ledger_closed_at            DateTime @db.Timestamp(6)
   ledger_signature            String?
 }
-
-// Indexes for performance
-// Index on wallet address for fast user lookups
-// Index on referral code for fast referral lookups
-// Index on action type for analytics 

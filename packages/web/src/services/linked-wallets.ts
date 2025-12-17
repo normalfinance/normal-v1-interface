@@ -7,6 +7,12 @@ export interface LinkedWallet {
   walletName: string | null;
   createdAt: string;
   lastUsedAt: string;
+  custodyChoice: 'self' | 'platform' | null;
+  encryptedMnemonic?: string | null;
+  encryptionIV?: string | null;
+  encryptionSalt?: string | null;
+  custodyConsentEmail?: string | null;
+  custodyConsentDate?: string | null;
 }
 
 export interface LinkWalletResponse {
@@ -39,7 +45,14 @@ async function buildAuthHeaders(): Promise<HeadersInit> {
  */
 export async function linkWallet(
   walletAddress: string,
-  walletName?: string
+  walletName?: string,
+  custodyData?: {
+    custodyChoice: 'self' | 'platform';
+    encryptedMnemonic?: string;
+    encryptionIV?: string;
+    encryptionSalt?: string;
+    custodyConsentEmail?: string;
+  }
 ): Promise<LinkWalletResponse> {
   try {
     const headers = await buildAuthHeaders();
@@ -47,7 +60,7 @@ export async function linkWallet(
       method: 'POST',
       headers,
       credentials: 'include',
-      body: JSON.stringify({ walletAddress, walletName }),
+      body: JSON.stringify({ walletAddress, walletName, ...custodyData }),
     });
 
     if (!response.ok) {
@@ -58,6 +71,61 @@ export async function linkWallet(
     return await response.json();
   } catch (error) {
     logger.error('[linked-wallets] Failed to link wallet:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update wallet custody choice
+ */
+export async function updateWalletCustody(
+  walletAddress: string,
+  custodyData: {
+    custodyChoice: 'self' | 'platform';
+    encryptedMnemonic?: string;
+    encryptionIV?: string;
+    encryptionSalt?: string;
+    custodyConsentEmail?: string;
+  }
+): Promise<void> {
+  try {
+    const headers = await buildAuthHeaders();
+    const response = await fetch('/api/wallets/custody', {
+      method: 'PATCH',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify({ walletAddress, ...custodyData }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update wallet custody');
+    }
+  } catch (error) {
+    logger.error('[linked-wallets] Failed to update wallet custody:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove platform custody (delete encrypted mnemonic)
+ */
+export async function removePlatformCustody(walletAddress: string): Promise<void> {
+  try {
+    const headers = await buildAuthHeaders();
+    const response = await fetch('/api/wallets/custody', {
+      method: 'DELETE',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify({ walletAddress }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to remove platform custody');
+    }
+  } catch (error) {
+    logger.error('[linked-wallets] Failed to remove platform custody:', error);
     throw error;
   }
 }

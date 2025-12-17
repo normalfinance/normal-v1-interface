@@ -10,9 +10,12 @@ import {
   createKeypairFromSecret,
   createWalletFromMnemonic,
 } from '@normalfinance/utils';
+import { decryptMnemonic } from '@normalfinance/utils';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { supabase } from '@/lib/createSupabaseClient';
+import { useSnackbar } from '@/components/template/snackbar';
 
 import {
   Dialog,
@@ -30,6 +33,7 @@ import {
   CircularProgress,
   Paper,
   Skeleton,
+  Chip,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -45,6 +49,7 @@ type ImportType = 'mnemonic' | 'private-key';
 
 export default function NormalWalletImport({ open, onClose, onSuccess }: NormalWalletImportProps) {
   const { t } = useTranslate();
+  const { enqueueSnackbar } = useSnackbar();
   const { importWalletFromMnemonic, importWalletFromPrivateKey } = useNormalWallet();
   const { session } = useSupabaseAuth();
 
@@ -64,6 +69,8 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
   const [privateKeyError, setPrivateKeyError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoFilledMnemonic, setAutoFilledMnemonic] = useState(false);
+  const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
 
   // Fetch linked wallets when modal opens
   useEffect(() => {
@@ -97,10 +104,65 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
     fetchLinkedWallets();
   }, [open, session]);
 
-  const handleSelectWallet = (wallet: LinkedWallet) => {
+  const autoFillMnemonic = useCallback(
+    async (walletAddress: string) => {
+      if (!session?.user?.id || !session?.user?.email) {
+        return;
+      }
+
+      setIsLoadingMnemonic(true);
+      try {
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+
+        const response = await fetch(`/api/wallets/mnemonic/${walletAddress}`, {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Could not load stored phrase');
+        }
+
+        const { encryptedMnemonic, encryptionIV, encryptionSalt } = await response.json();
+
+        const userIdentifier = `${session.user.id}:${session.user.email}`;
+        const decrypted = await decryptMnemonic(
+          { encryptedMnemonic, iv: encryptionIV, salt: encryptionSalt },
+          userIdentifier
+        );
+
+        setMnemonic(decrypted);
+        setImportType('mnemonic');
+        setAutoFilledMnemonic(true);
+        enqueueSnackbar(t('Recovery phrase loaded from secure storage'), { variant: 'success' });
+      } catch (err: any) {
+        logger.warn('[NormalWalletImport] Failed to auto-fill mnemonic:', err);
+        enqueueSnackbar(t('Could not load stored phrase. Enter manually.'), { variant: 'warning' });
+      } finally {
+        setIsLoadingMnemonic(false);
+      }
+    },
+    [session, t]
+  );
+
+  const handleSelectWallet = async (wallet: LinkedWallet) => {
     setSelectedWallet(wallet);
     setStage('import');
     setError(null);
+    setAutoFilledMnemonic(false);
+    setMnemonic('');
+    setPrivateKey('');
+
+    if (wallet.custodyChoice === 'platform') {
+      await autoFillMnemonic(wallet.walletAddress);
+    }
   };
 
   const handleImportNew = () => {
@@ -300,9 +362,14 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
                   <Iconify icon="solar:wallet-bold" width={24} sx={{ color: 'primary.main' }} />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="subtitle2" noWrap>
-                    {wallet.walletName || t('Unnamed Wallet')}
-                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="subtitle2" noWrap>
+                      {wallet.walletName || t('Unnamed Wallet')}
+                    </Typography>
+                    {wallet.custodyChoice === 'platform' && (
+                      <Chip label={t('Auto-Connect')} size="small" color="primary" />
+                    )}
+                  </Stack>
                   <Typography variant="body2" color="text.secondary" noWrap>
                     {format.fTruncate(wallet.walletAddress, 20)}
                   </Typography>
@@ -349,7 +416,22 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         </Alert>
       )}
 
+      {autoFilledMnemonic && (
+        <Alert severity="success" sx={{ mb: 1 }}>
+          {t('Recovery phrase loaded from secure storage. Click "Reconnect Wallet".')}
+        </Alert>
+      )}
+
       {error && <Alert severity="error">{error}</Alert>}
+
+      {isLoadingMnemonic && (
+        <Alert severity="info" sx={{ mb: 1 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <CircularProgress size={16} />
+            <Typography variant="body2">{t('Loading stored recovery phrase...')}</Typography>
+          </Stack>
+        </Alert>
+      )}
 
       <Tabs
         value={importType}
@@ -374,7 +456,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
             onChange={(e) => handleMnemonicChange(e.target.value)}
             error={!!mnemonicError}
             helperText={mnemonicError}
-            disabled={isImporting}
+            disabled={isImporting || isLoadingMnemonic}
           />
         </Stack>
       ) : (
