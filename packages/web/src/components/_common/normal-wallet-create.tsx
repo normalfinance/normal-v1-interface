@@ -85,6 +85,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   );
 
   // Create wallet on mount
+  // eslint-disable-next-line consistent-return
   React.useEffect(() => {
     if (open && stage === 'creating') {
       let cancelled = false;
