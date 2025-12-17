@@ -71,7 +71,7 @@ export class LinkedWalletService {
         custodyChoice: custodyData?.custodyChoice ?? 'none',
       });
 
-      return linkedWallet;
+      return linkedWallet as LinkedWallet;
     } catch (error) {
       logger.error('[LinkedWalletService] Failed to link wallet:', error);
       throw error;
@@ -88,7 +88,7 @@ export class LinkedWalletService {
         orderBy: { lastUsedAt: 'desc' },
       });
 
-      return wallets;
+      return wallets as LinkedWallet[];
     } catch (error) {
       logger.error('[LinkedWalletService] Failed to get linked wallets:', error);
       throw error;
@@ -114,7 +114,7 @@ export class LinkedWalletService {
         data: { walletName },
       });
 
-      return wallet;
+      return wallet as LinkedWallet;
     } catch (error) {
       logger.error('[LinkedWalletService] Failed to update wallet name:', error);
       throw error;
@@ -224,7 +224,7 @@ export class LinkedWalletService {
         custodyChoice: custodyData.custodyChoice,
       });
 
-      return wallet;
+      return wallet as LinkedWallet;
     } catch (error) {
       logger.error('[LinkedWalletService] Failed to update wallet custody:', error);
       throw error;
@@ -261,7 +261,7 @@ export class LinkedWalletService {
         walletAddress: walletAddress.substring(0, 8) + '...',
       });
 
-      return wallet;
+      return wallet as LinkedWallet;
     } catch (error) {
       logger.error('[LinkedWalletService] Failed to remove platform custody:', error);
       throw error;

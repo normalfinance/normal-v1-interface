@@ -208,7 +208,7 @@ const ResetPasswordPage = () => {
                   }}
                   fullWidth
                   required
-                  disabled={status === 'loading'}
+                  disabled={status !== 'ready'}
                   autoComplete="new-password"
                 />
 
@@ -222,12 +222,12 @@ const ResetPasswordPage = () => {
                   }}
                   fullWidth
                   required
-                  disabled={status === 'loading'}
+                  disabled={status !== 'ready'}
                   autoComplete="new-password"
                 />
 
                 {error && (
-                  <Box
+                  <Box  
                     sx={{
                       backgroundColor: 'error.light',
                       color: 'error.dark',
@@ -245,9 +245,9 @@ const ResetPasswordPage = () => {
                   variant="contained"
                   size="large"
                   fullWidth
-                  disabled={status === 'loading'}
+                  disabled={status !== 'ready'}
                 >
-                  {status === 'loading' ? t('Updating...') : t('Update Password')}
+                  {status !== 'ready' ? t('Updating...') : t('Update Password')}
                 </Button>
               </Stack>
             </form>
