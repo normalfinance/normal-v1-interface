@@ -104,9 +104,9 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
   }, [open, session]);
 
   const autoFillMnemonic = useCallback(
-    async (walletAddress: string) => {
+    async (walletAddress: string): Promise<string | null> => {
       if (!session?.user?.id || !session?.user?.email) {
-        return;
+        return null;
       }
 
       setIsLoadingMnemonic(true);
@@ -134,15 +134,16 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         setMnemonic(decryptedMnemonic);
         setImportType('mnemonic');
         setAutoFilledMnemonic(true);
-        enqueueSnackbar(t('Recovery phrase loaded from secure storage'), { variant: 'success' });
+        return decryptedMnemonic;
       } catch (err: any) {
         logger.warn('[NormalWalletImport] Failed to auto-fill mnemonic:', err);
         enqueueSnackbar(t('Could not load stored phrase. Enter manually.'), { variant: 'warning' });
+        return null;
       } finally {
         setIsLoadingMnemonic(false);
       }
     },
-    [session, t]
+    [session, enqueueSnackbar, t]
   );
 
   const handleSelectWallet = async (wallet: LinkedWallet) => {
@@ -154,7 +155,13 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
     setPrivateKey('');
 
     if (wallet.custodyChoice === 'platform') {
-      await autoFillMnemonic(wallet.walletAddress);
+      const fetchedMnemonic = await autoFillMnemonic(wallet.walletAddress);
+      if (fetchedMnemonic) {
+        enqueueSnackbar(t('Recovery phrase loaded. Connecting automatically...'), {
+          variant: 'success',
+        });
+        await handleAutoImport(fetchedMnemonic, wallet);
+      }
     }
   };
 
@@ -217,6 +224,55 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
       return true;
     },
     [selectedWallet, t]
+  );
+
+  const handleAutoImport = useCallback(
+    async (mnemonicToImport: string, wallet: LinkedWallet) => {
+      if (!mnemonicToImport || !wallet) {
+        return;
+      }
+
+      try {
+        setIsImporting(true);
+        setError(null);
+
+        const normalized = normalizeMnemonic(mnemonicToImport);
+        if (!validateMnemonic(normalized)) {
+          setMnemonicError(t('Invalid mnemonic phrase'));
+          setIsImporting(false);
+          return;
+        }
+
+        // Verify the key matches the selected wallet
+        try {
+          const walletData = createWalletFromMnemonic(normalized);
+          if (walletData.publicKey !== wallet.walletAddress) {
+            setError(
+              t(
+                'This key does not match the selected wallet. Please make sure you are using the correct recovery phrase or private key.'
+              )
+            );
+            setIsImporting(false);
+            return;
+          }
+        } catch {
+          setMnemonicError(t('Invalid mnemonic phrase'));
+          setIsImporting(false);
+          return;
+        }
+
+        await importWalletFromMnemonic(normalized, undefined, wallet.walletName ?? undefined);
+
+        // Reset form
+        resetForm();
+        onSuccess();
+      } catch (err: any) {
+        logger.error('Failed to auto-import wallet:', err);
+        setError(err.message || t('Failed to import wallet. Please try manually.'));
+        setIsImporting(false);
+      }
+    },
+    [importWalletFromMnemonic, t, onSuccess]
   );
 
   const handleImport = async () => {
@@ -409,9 +465,9 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         </Alert>
       )}
 
-      {autoFilledMnemonic && (
+      {autoFilledMnemonic && !isImporting && (
         <Alert severity="success" sx={{ mb: 1 }}>
-          {t('Recovery phrase loaded from secure storage. Click "Reconnect Wallet".')}
+          {t('Recovery phrase loaded from secure storage.')}
         </Alert>
       )}
 
