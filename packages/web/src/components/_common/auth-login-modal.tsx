@@ -1,38 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  Checkbox,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  FormControlLabel,
-  IconButton,
-  Link as MuiLink,
-  Stack,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography,
-} from '@mui/material';
-
 import type { AppStorePersist } from '@normalfinance/types';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
-import { Iconify } from '@/components/template/iconify';
 import {
+  verifyOtp,
+  signInWithOtp,
+  resetPassword,
   signInWithGoogle,
   signInWithPassword,
   signUpWithPassword,
-  signInWithOtp,
-  verifyOtp,
-  resetPassword,
 } from '@/services/auth';
+
+import {
+  Box,
+  Stack,
+  Button,
+  Dialog,
+  Divider,
+  Checkbox,
+  TextField,
+  IconButton,
+  Typography,
+  DialogTitle,
+  ToggleButton,
+  DialogContent,
+  Link as MuiLink,
+  FormControlLabel,
+  ToggleButtonGroup,
+} from '@mui/material';
+
+import { Iconify } from '@/components/template/iconify';
 
 type AuthLoginModalProps = {
   open: boolean;
@@ -226,7 +227,7 @@ const AuthLoginModal = ({
       }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="h6">Login to Normal</Typography>
+        <Typography variant="h6">{t('Login to Normal')}</Typography>
         <IconButton onClick={handleClose} aria-label="Close login modal">
           <Iconify icon="mingcute:close-line" />
         </IconButton>

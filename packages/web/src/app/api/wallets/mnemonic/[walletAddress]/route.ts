@@ -2,8 +2,8 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { decryptMnemonicServer } from '@/lib/server-mnemonic-encryption';
 
 function getAccessToken(request: NextRequest): string | undefined {

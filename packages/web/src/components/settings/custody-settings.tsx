@@ -1,29 +1,30 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
 import { useTranslate } from '@/locales';
-import { logger } from '@normalfinance/utils';
+import { useBoolean } from '@/hooks/use-boolean';
+import React, { useState, useCallback } from 'react';
+import { supabase } from '@/lib/createSupabaseClient';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { logger, validateMnemonic, normalizeMnemonic } from '@normalfinance/utils';
+import { updateWalletCustody, removePlatformCustody } from '@/services/linked-wallets';
+
 import {
   Card,
-  CardHeader,
-  CardContent,
-  Button,
   Stack,
-  Typography,
   Alert,
+  Button,
   Dialog,
+  TextField,
+  CardHeader,
+  Typography,
+  CardContent,
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   CircularProgress,
 } from '@mui/material';
+
 import { useSnackbar } from '@/components/template/snackbar';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { updateWalletCustody, removePlatformCustody } from '@/services/linked-wallets';
-import { supabase } from '@/lib/createSupabaseClient';
-import { validateMnemonic, normalizeMnemonic } from '@normalfinance/utils';
-import { useBoolean } from '@/hooks/use-boolean';
 
 export interface CustodySettingsProps {
   walletAddress: string;

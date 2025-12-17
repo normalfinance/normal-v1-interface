@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const LinkWalletSchema = z.object({
   walletAddress: z

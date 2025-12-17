@@ -1,9 +1,9 @@
-import { logger } from '@normalfinance/utils';
-import { useRef, useEffect, useCallback } from 'react';
-import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
-import { createKeypairFromSecret } from '@normalfinance/utils';
 import type { MnemonicStrength } from '@normalfinance/utils';
+
+import { useRef, useEffect, useCallback } from 'react';
 import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
+import { logger, createKeypairFromSecret } from '@normalfinance/utils';
+import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
 
 const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
 
@@ -221,9 +221,8 @@ export const useNormalWallet = () => {
   }, [normalWalletStore, persistStore]);
 
   const signTransaction = useCallback(
-    async (xdr: string, networkPassphrase?: string) => {
-      return await normalWalletStore.signTransaction(xdr, networkPassphrase);
-    },
+    async (xdr: string, networkPassphrase?: string) =>
+      await normalWalletStore.signTransaction(xdr, networkPassphrase),
     [normalWalletStore]
   );
 

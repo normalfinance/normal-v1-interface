@@ -1,41 +1,41 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
 import { useTranslate } from '@/locales';
-import { logger } from '@normalfinance/utils';
+import { useBoolean } from '@/hooks/use-boolean';
+import { supabase } from '@/lib/createSupabaseClient';
+import React, { useMemo, useState, useCallback } from 'react';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { linkWallet, updateWalletName } from '@/services/linked-wallets';
 import {
+  logger,
+  splitMnemonicToWords,
   formatMnemonicForDisplay,
   getRandomVerificationWords,
-  splitMnemonicToWords,
 } from '@normalfinance/utils';
-import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
-import { updateWalletName, linkWallet } from '@/services/linked-wallets';
-import { useSnackbar } from '@/components/template/snackbar';
-import { useBoolean } from '@/hooks/use-boolean';
-import { ConfirmDialog } from '@/components/template/custom-dialog';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { supabase } from '@/lib/createSupabaseClient';
 
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Button,
+  Box,
   Stack,
+  Paper,
+  Alert,
+  Radio,
+  Dialog,
+  Button,
+  Checkbox,
+  TextField,
   Typography,
   IconButton,
-  Box,
-  Paper,
-  CircularProgress,
-  Alert,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-  Radio,
   RadioGroup,
+  DialogTitle,
+  DialogContent,
+  CircularProgress,
+  FormControlLabel,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import { useSnackbar } from '@/components/template/snackbar';
+import { ConfirmDialog } from '@/components/template/custom-dialog';
 
 export type NormalWalletCreateProps = {
   open: boolean;
@@ -79,9 +79,10 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   const [custodyConsent, setCustodyConsent] = useState(false);
   const [isSavingCustody, setIsSavingCustody] = useState(false);
 
-  const formattedMnemonic = useMemo(() => {
-    return mnemonic ? formatMnemonicForDisplay(mnemonic) : [];
-  }, [mnemonic]);
+  const formattedMnemonic = useMemo(
+    () => (mnemonic ? formatMnemonicForDisplay(mnemonic) : []),
+    [mnemonic]
+  );
 
   // Create wallet on mount
   React.useEffect(() => {
@@ -166,8 +167,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
       });
 
       if (!encryptResponse.ok) {
-        const error = await encryptResponse.json();
-        throw new Error(error.error || 'Failed to encrypt mnemonic');
+        const e = await encryptResponse.json();
+        throw new Error(e.error || 'Failed to encrypt mnemonic');
       }
 
       const { encryptedMnemonic, encryptionIV, encryptionSalt } = await encryptResponse.json();
@@ -415,7 +416,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               onChange={(e) => setWalletName(e.target.value)}
               fullWidth
               inputProps={{ maxLength: 50 }}
-              helperText={''}
+              helperText=""
             />
 
             <Paper

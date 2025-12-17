@@ -4,14 +4,14 @@ import React from 'react';
 import { useTranslate } from '@/locales';
 
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Button,
+  Box,
   Stack,
+  Dialog,
+  Button,
   Typography,
   IconButton,
-  Box,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -41,7 +41,7 @@ export const hasSeenWalletSelectionModal = (): boolean => {
  */
 export const markWalletSelectionModalSeen = (): void => {
   if (typeof window === 'undefined') return;
-//   localStorage.setItem(WALLET_SELECTION_SEEN_KEY, 'true');
+  //   localStorage.setItem(WALLET_SELECTION_SEEN_KEY, 'true');
 };
 
 export default function WalletSelectionModal({

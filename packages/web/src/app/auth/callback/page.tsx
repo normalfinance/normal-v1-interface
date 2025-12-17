@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Box, CircularProgress, Stack, Typography } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { exchangeCodeForSession } from '@/services/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { exchangeCodeForSession } from '@/services/auth';
+import { Box, Stack, Typography, CircularProgress } from '@mui/material';
 
 type Status = 'pending' | 'success' | 'error';
 

@@ -18,4 +18,3 @@ export const clearLoginIntent = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(LOGIN_INTENT_KEY);
 };
-

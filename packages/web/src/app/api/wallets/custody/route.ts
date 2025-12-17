@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const UpdateCustodySchema = z.object({
   walletAddress: z
@@ -161,5 +161,3 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-
-

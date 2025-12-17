@@ -21,8 +21,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-export const createSupabaseClientWithUrlDetection = () => {
-  return createClient(supabaseUrl, supabaseAnonKey, {
+export const createSupabaseClientWithUrlDetection = () =>
+  createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -30,7 +30,6 @@ export const createSupabaseClientWithUrlDetection = () => {
       flowType: 'pkce',
     },
   });
-};
 
 if (typeof window !== 'undefined') {
   logger.log(`[Supabase] Connected to ${constants.getCurrentNetwork()} database`);

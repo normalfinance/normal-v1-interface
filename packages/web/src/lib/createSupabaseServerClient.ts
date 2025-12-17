@@ -1,6 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { constants } from '@normalfinance/utils';
+import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = constants.getNetworkConfig(
   process.env.NEXT_PUBLIC_TESTNET_SUPABASE_URL!,

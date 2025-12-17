@@ -1,41 +1,41 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslate } from '@/locales';
-import { logger, format } from '@normalfinance/utils';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
 import {
+  logger,
+  format,
   validateMnemonic,
-  validatePrivateKey,
   normalizeMnemonic,
+  validatePrivateKey,
   createKeypairFromSecret,
   createWalletFromMnemonic,
 } from '@normalfinance/utils';
-import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
-import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { supabase } from '@/lib/createSupabaseClient';
-import { useSnackbar } from '@/components/template/snackbar';
 
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Button,
+  Box,
+  Tab,
+  Tabs,
+  Chip,
   Stack,
+  Alert,
+  Paper,
+  Dialog,
+  Button,
+  Skeleton,
+  TextField,
   Typography,
   IconButton,
-  Box,
-  TextField,
-  Tabs,
-  Tab,
-  Alert,
+  DialogTitle,
+  DialogContent,
   CircularProgress,
-  Paper,
-  Skeleton,
-  Chip,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import { useSnackbar } from '@/components/template/snackbar';
 
 export type NormalWalletImportProps = {
   open: boolean;

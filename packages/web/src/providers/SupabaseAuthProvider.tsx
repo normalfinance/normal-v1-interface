@@ -1,18 +1,18 @@
 'use client';
 
+import type { User, Session } from '@supabase/supabase-js';
+
+import { clearLoginIntent } from '@/lib/loginIntent';
+import { supabase } from '@/lib/createSupabaseClient';
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
   useMemo,
   useState,
+  useEffect,
+  useContext,
+  useCallback,
+  createContext,
   type ReactNode,
 } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
-
-import { supabase } from '@/lib/createSupabaseClient';
-import { clearLoginIntent } from '@/lib/loginIntent';
 
 type SupabaseAuthContextValue = {
   supabase: typeof supabase;

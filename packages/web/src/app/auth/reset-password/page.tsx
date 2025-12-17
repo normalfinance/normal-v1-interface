@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material';
-
 import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
 import { updatePassword } from '@/services/auth';
-import { createSupabaseClientWithUrlDetection } from '@/lib/createSupabaseClient';
 import { clearLoginIntent } from '@/lib/loginIntent';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createSupabaseClientWithUrlDetection } from '@/lib/createSupabaseClient';
+
+import { Box, Stack, Button, TextField, Typography, CircularProgress } from '@mui/material';
 
 const supabase = createSupabaseClientWithUrlDetection();
 
@@ -227,7 +227,7 @@ const ResetPasswordPage = () => {
                 />
 
                 {error && (
-                  <Box  
+                  <Box
                     sx={{
                       backgroundColor: 'error.light',
                       color: 'error.dark',

@@ -3,16 +3,16 @@ import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { usePersistStore } from '@normalfinance/state';
-import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import { Button } from '@mui/material';
 
+import NormalWalletCreate from '@/components/_common/normal-wallet-create';
+import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import WalletSelectionModal, {
   hasSeenWalletSelectionModal,
 } from '@/components/_common/wallet-selection-modal';
-import NormalWalletCreate from '@/components/_common/normal-wallet-create';
-import NormalWalletImport from '@/components/_common/normal-wallet-import';
 
 interface WalletGateProps {
   children: React.ReactNode;

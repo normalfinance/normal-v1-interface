@@ -8,9 +8,9 @@ import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { logger, constants, trackEvent } from '@normalfinance/utils';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {

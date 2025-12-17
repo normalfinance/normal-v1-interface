@@ -3,32 +3,32 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import posthog from 'posthog-js';
+import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, format, logger } from '@normalfinance/utils';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useUserActivity, useLiquidityPositions } from '@/hooks';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
-import { useSnackbar } from 'notistack';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
-import { Avatar, Box, Stack, Button, Drawer, Tooltip, IconButton, Typography } from '@mui/material';
+import { Box, Stack, Avatar, Button, Drawer, Tooltip, IconButton, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
+import AuthLoginModal from '@/components/_common/auth-login-modal';
+import NormalWalletCreate from '@/components/_common/normal-wallet-create';
+import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import WalletSelectionModal, {
   hasSeenWalletSelectionModal,
 } from '@/components/_common/wallet-selection-modal';
-import NormalWalletCreate from '@/components/_common/normal-wallet-create';
-import NormalWalletImport from '@/components/_common/normal-wallet-import';
-import AuthLoginModal from '@/components/_common/auth-login-modal';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { rememberLoginIntent, consumeLoginIntent, clearLoginIntent } from '@/lib/loginIntent';
 
 import { AccountButton } from './account-button';
 import AddUsdcTrustlineButton from './add-trustline-button';
@@ -408,7 +408,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     {t('Connect a Wallet')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    {t('Connect a wallet to start using Normal Finance')}
+                    {t('Connect a wallet to start using Normal')}
                   </Typography>
                   <Button
                     variant="contained"
@@ -417,7 +417,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     onClick={handleConnectClick}
                     sx={{ mb: 2 }}
                   >
-                    Connect Wallet
+                    {t('Connect Wallet')}
                   </Button>
                 </Box>
               )}
