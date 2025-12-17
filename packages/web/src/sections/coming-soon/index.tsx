@@ -33,7 +33,7 @@ export default function ComingSoonView() {
               'Normal indexes are not yet publically available. We plan to launch them in the next week or two.'
             )}
           </Typography>
-          <Button variant="contained" href={paths.explore}>
+          <Button variant="contained" href={paths.assets}>
             {t('Go back')}
           </Button>
           <Button

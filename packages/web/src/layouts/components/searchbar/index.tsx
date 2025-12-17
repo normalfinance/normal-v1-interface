@@ -93,7 +93,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
       setTimeout(() => handleClose(), 50);
 
       if (!pools || !pools.length) {
-        router.push(paths.explore);
+        router.push(paths.assets);
       }
 
       const tokenPools = pools.filter(
@@ -101,10 +101,10 @@ export function Searchbar({ sx, ...other }: BoxProps) {
       );
 
       if (!tokenPools || !tokenPools.length) {
-        router.push(paths.explore);
+        router.push(paths.assets);
       }
 
-      router.push(paths.pools.details(tokenPools[0].addresses.pool));
+      router.push(paths.assets.details(tokenPools[0].addresses.pool));
     },
     [router, handleClose, pools]
   );
@@ -174,7 +174,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
 
       {/* “Placeholder” text */}
       <Box component="span" sx={{ typography: 'body2', flexShrink: 0 }}>
-        {t('Search tokens...')}
+        {t('Search assets...')}
       </Box>
 
       {/* ⌘K helper shown at sm+  */}
@@ -341,7 +341,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
         <InputBase
           fullWidth
           autoFocus={open}
-          placeholder="Search tokens..."
+          placeholder="Search assets..."
           value={searchQuery}
           onChange={handleSearch}
           startAdornment={

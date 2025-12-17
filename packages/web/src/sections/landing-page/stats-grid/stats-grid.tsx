@@ -25,21 +25,21 @@ const DEFAULT_PROPS = {
   tagline: 'Tagline',
   heading: 'Trusted by thousands',
   description:
-    'Normal powers the largest catalogue of synthetic crypto and real-world assets, with thousands of dollars in weekly volume across 100+ assets and index funds.',
+    'Normal powers the largest catalogue of on-chain real-world assets and index funds, with thousands of dollars in weekly volume across 100+ assets and funds.',
   stats: [
     {
-      percentage: '$340K',
-      heading: 'All time volume',
+      percentage: '$400K+',
+      heading: 'AUM',
       description: '',
     },
     {
       percentage: '2,000+',
-      heading: 'All time swappers',
+      heading: 'Investors',
       description: '',
     },
     {
       percentage: 'Soon',
-      heading: 'All time LP fees',
+      heading: 'Average APY',
       description: '',
     },
     {

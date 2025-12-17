@@ -22,7 +22,7 @@ export interface BuyQueryParams extends BaseQueryParams {
 }
 
 export interface TokenActionQueryParams extends BaseQueryParams {
-  tab?: 'swap' | 'send' | 'buy';
+  tab?: 'trade' | 'deposit' | 'withdraw';
   asset?: string;
   token_in?: string;
   token_out?: string;

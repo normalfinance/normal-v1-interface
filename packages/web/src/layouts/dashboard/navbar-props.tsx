@@ -16,75 +16,61 @@ export const NormalNavbarDefaults: Props = {
   links: [
     {
       title: 'App',
-      url: '/app',
+      url: '/',
       megaMenu: {
         categoryLinks: [
           {
-            title: 'Trading',
+            title: 'Trade',
             links: [
               {
-                url: '/explore',
+                url: paths.assets,
                 image: {
                   src: cdn('nav/explore.svg'),
                   alt: 'Explore',
                 },
                 title: 'Explore',
-                description: 'Browse markets and pools.',
+                description: 'Browse global assets.',
               },
               {
-                url: paths.swap,
+                url: paths.invest,
                 image: {
                   src: cdn('nav/swap.svg'),
-                  alt: 'Swap',
+                  alt: 'Invest',
                 },
-                title: 'Swap',
-                description: 'Trade tokens instantly.',
+                title: 'Invest',
+                description: 'Trade global assets instantly.',
               },
             ],
           },
           {
-            title: 'Indexes',
+            title: 'Diversify',
             links: [
               {
-                url: '/indexes',
-                image: { src: cdn('nav/indexes.svg'), alt: 'Browse Indexes' },
-                title: 'Browse indexes',
-                description: 'Discover curated on-chain indexes.',
+                url: paths.indexes.root,
+                image: { src: cdn('nav/indexes.svg'), alt: 'Browse Index Funds' },
+                title: 'Browse index funds',
+                description: 'Discover curated index funds.',
               },
               {
-                url: '/indexes/create',
-                image: { src: cdn('nav/create-index.svg'), alt: 'Create Index' },
-                title: 'Create index',
-                description: 'Build and manage your own index.',
+                url: paths.indexes.create,
+                image: { src: cdn('nav/create-index.svg'), alt: 'Create Index Fund' },
+                title: 'Create a fund',
+                description: 'Build your own index fund.',
               },
             ],
           },
           {
-            title: 'Liquidity',
+            title: 'Earn',
             links: [
               {
-                url: paths.positions.root,
-                image: {
-                  src: cdn('nav/positions.svg'),
-                  alt: 'Positions',
-                },
-                title: 'Positions',
-                description: 'View & manage LP positions.',
-              },
-              {
-                url: paths.positions.create,
+                url: paths.earn,
                 image: {
                   src: cdn('nav/provide-liquidity.svg'),
-                  alt: 'Provide',
+                  alt: 'Provide liquidity',
                 },
                 title: 'Provide liquidity',
-                description: 'Deposit tokens to earn fees.',
+                description: 'Manage LP positions & earn yield',
               },
-            ],
-          },
-          {
-            title: 'Safety & Rewards',
-            links: [
               {
                 url: paths.rewards,
                 image: {
@@ -92,10 +78,11 @@ export const NormalNavbarDefaults: Props = {
                   alt: 'Rewards',
                 },
                 title: 'Rewards',
-                description: 'Current incentives & APRs.',
+                description: 'Refer friends & earn bonuses',
               },
             ],
           },
+
           {
             title: 'Support',
             links: [

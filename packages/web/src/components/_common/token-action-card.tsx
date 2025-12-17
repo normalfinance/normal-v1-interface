@@ -26,7 +26,7 @@ import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
 
-export type TokenActionKey = 'swap' | 'send' | 'buy';
+export type TokenActionKey = 'trade' | 'deposit' | 'withdraw';
 
 interface ActionConfig {
   value: TokenActionKey;
@@ -34,9 +34,9 @@ interface ActionConfig {
 }
 
 const ALL_TABS: readonly ActionConfig[] = [
-  { value: 'swap', label: 'Swap' },
-  { value: 'send', label: 'Send' },
-  { value: 'buy', label: 'Buy' },
+  { value: 'trade', label: 'Trade' },
+  { value: 'deposit', label: 'Deposit' },
+  { value: 'withdraw', label: 'Withdraw' },
 ] as const;
 
 // ----------------------------------------------------------------------
@@ -111,9 +111,9 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   // Helper – render the body matching the active tab -------------------
   const renderTabBody = () => {
     switch (tabs.value) {
-      case 'swap':
+      case 'trade':
         return (
-          <Box data-testid="swap-card" sx={{ position: 'relative' }}>
+          <Box data-testid="trade-card" sx={{ position: 'relative' }}>
             <SwapCard
               swapFeeInfo={swapFeeInfo}
               queryParams={queryParams}
@@ -121,23 +121,23 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
             />
           </Box>
         );
-      case 'send':
-        return (
-          <SendCard
-            tokens={tokens.filter((tkn) => BigNumber(tkn.balance).gt(0))}
-            networkCost={0}
-            queryParams={queryParams}
-            data-testid="send-card"
-            changeTab={tabs.setValue}
-          />
-        );
-      case 'buy':
+      case 'deposit':
         return (
           <BuyCard
             tokensList={buyCardTokens}
             cashBalance={cashBalance}
             queryParams={queryParams}
-            data-testid="buy-card"
+            data-testid="deposit-card"
+            changeTab={tabs.setValue}
+          />
+        );
+      case 'withdraw':
+        return (
+          <SendCard
+            tokens={tokens.filter((tkn) => BigNumber(tkn.balance).gt(0))}
+            networkCost={0}
+            queryParams={queryParams}
+            data-testid="withdraw-card"
             changeTab={tabs.setValue}
           />
         );

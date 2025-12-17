@@ -24,7 +24,7 @@ test.describe('Home page', () => {
 
     await expect(
       page.getByRole('heading', {
-        name: /Ready to make crypto feel Normal\? Start swapping, investing, and exploring./i,
+        name: /Ready to make your investing Normal\? Start investing, diversifying, and exploring./i,
       })
     ).toBeVisible();
   });

@@ -23,20 +23,17 @@ export const paths = {
   blog: 'https://normalfi.substack.com/',
   docs: 'https://normalfinance.gitbook.io/docs',
   // main
-  explore: '/explore',
-  pools: {
-    details: (poolAddress: string) => `/pools/${poolAddress}`,
+  invest: '/invest',
+  assets: {
+    root: '/assets',
+    details: (symbol: string) => `/assets/${symbol}`,
   },
   indexes: {
     root: '/indexes',
     create: '/indexes/create',
     details: (indexAddress: string) => `/indexes/${indexAddress}`,
   },
-  positions: {
-    root: '/positions',
-    create: '/positions/create',
-  },
-  swap: '/swap',
+  earn: '/earn',
   rewards: '/rewards',
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready

@@ -1,7 +1,5 @@
 'use client';
 
-import type { Token } from '@normalfinance/types';
-
 import * as React from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
@@ -12,6 +10,8 @@ import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import IndexBasketArt from '@/components/ui/index-basket-art';
+
+import type { TokenMeta } from '..';
 
 /* ––––– Types ––––– */
 
@@ -32,7 +32,7 @@ interface CardBase {
 }
 
 export interface SmallCard extends CardBase {
-  tokens?: Token[];
+  tokens?: TokenMeta[];
 }
 
 interface TallCard extends CardBase {}
@@ -149,7 +149,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   width={1}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (tkn.icon) router.push(paths.pools.details(tkn.symbol));
+                    if (tkn.icon) router.push(paths.assets.details(tkn.symbol));
                   }}
                   role={tkn.icon ? 'link' : undefined}
                   tabIndex={tkn.icon ? 0 : undefined}
@@ -449,7 +449,7 @@ export const FeatureGrid: React.FC<FeatureGridProps> = ({
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, px: 0 }}>
         <Stack spacing={2} maxWidth={640} textAlign="left" mb={{ xs: 3, md: 4 }}>
           <Typography variant="h2" fontWeight={500}>
-            {t('Crypto made normal')}
+            {t('A new universal investment layer')}
           </Typography>
         </Stack>
 

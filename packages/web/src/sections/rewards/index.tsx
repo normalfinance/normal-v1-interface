@@ -14,14 +14,12 @@ import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
-import { Button } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { WalletGate } from '@/components/_common/wallet-gate';
 import MoneyGramTransactionsTable from '@/components/_common/moneygram-history-table';
 
 import { ProfileCover } from './profile-cover';
-import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
 
@@ -54,7 +52,6 @@ const USER_DATA = {
 
 const NAV_ITEMS = [
   { value: '', label: 'Overview', icon: <Iconify width={24} icon="solar:user-id-bold" /> },
-  { value: 'zealy', label: 'Zealy', icon: <Iconify width={24} icon="solar:heart-bold" /> },
   {
     value: 'protocol',
     label: 'Protocol',
@@ -68,8 +65,6 @@ const TAB_PARAM = 'tab';
 const REWARDS_OVERVIEW = {
   referralLink: 'https://normal.finance/ref/Jane123',
   referralsCount: 0,
-  zealyUrl: 'https://zealy.io/c/normal',
-  zealyXP: 0,
   protocolPoints: 0,
   referrals: [
     // { id: '1', address: '0xA1...C4', joined: '2025-06-01', points: 120 },
@@ -258,36 +253,9 @@ export function RewardsView() {
         <WalletGate buttonText={t('Connect wallet to view rewards')} fullWidth>
           <RewardsOverview
             referralsCount={REWARDS_OVERVIEW.referralsCount}
-            zealyUrl={REWARDS_OVERVIEW.zealyUrl}
-            zealyXP={REWARDS_OVERVIEW.zealyXP}
             protocolPoints={REWARDS_OVERVIEW.protocolPoints}
             referrals={REWARDS_OVERVIEW.referrals}
           />
-        </WalletGate>
-      )}
-      {selectedTab === 'zealy' && (
-        <WalletGate buttonText={t('Connect wallet to view Zealy')} fullWidth>
-          <Box sx={{ mt: 3, textAlign: 'center' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              href="https://zealy.io/cw/normalfinance/questboard"
-              target="_blank"
-              rel="noopener"
-              sx={{ mb: 2 }}
-              startIcon={<Iconify icon="eva:external-link-outline" width={18} />}
-              // onClick={() =>
-              //   trackEvent('button_clicked', {
-              //     label: 'Manage Stake',
-              //     location: 'Insurance',
-              //   })
-              // }
-            >
-              {t('Go to Zealy')}
-            </Button>
-
-            <ZealyProgress community="normalfinance" />
-          </Box>
         </WalletGate>
       )}
 

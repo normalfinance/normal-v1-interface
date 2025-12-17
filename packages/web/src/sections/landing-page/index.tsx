@@ -21,62 +21,36 @@ import { TestimonialGrid } from './testimonials/testimonials';
 
 import type { SmallCard } from './features-grid';
 
-export const tokens: Token[] = [
+export type TokenMeta = Pick<Token, 'name' | 'symbol' | 'icon' | 'price' | 'percentageChange'>;
+
+export const tokens: TokenMeta[] = [
   {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
     name: 'Bitcoin',
     symbol: 'BTC',
     icon: cdn('tokens/bitcoin.webp'),
     price: '67600.18',
     percentageChange: 2.45435,
-    decimals: 7,
-    balance: '0',
-    featured: false,
   },
   {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'Ethereum',
-    symbol: 'ETH',
-    icon: cdn('tokens/ethereum.webp'),
-    price: '3150',
+    name: 'Vanguard S&P 500 ETF',
+    symbol: 'VOO',
+    icon: cdn('tokens/voo.webp'),
+    price: '626.87',
     percentageChange: 1.1,
-    decimals: 7,
-    balance: '0',
-    featured: false,
   },
   {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'Solana',
-    symbol: 'SOL',
-    icon: cdn('tokens/solana.webp'),
-    price: '141',
-    percentageChange: -0.8,
-    decimals: 7,
-    balance: '0',
-    featured: false,
+    name: 'Gold',
+    symbol: 'XAU',
+    icon: cdn('tokens/xau.webp'),
+    price: '4300.4',
+    percentageChange: 0.43,
   },
   {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'XRP',
-    symbol: 'XRP',
-    icon: cdn('tokens/xrp.webp'),
+    name: 'Top 20 Crypto Index',
+    symbol: 'TOP20',
+    icon: cdn('tokens/top20.webp'),
     price: '0.48',
-    percentageChange: 0.5,
-    decimals: 7,
-    balance: '0',
-    featured: false,
+    percentageChange: -0.5,
   },
 ];
 
@@ -86,14 +60,16 @@ export const featureCardsSmall: [SmallCard, SmallCard] = [
   {
     icon: <Icon icon="streamline-ultimate:crypto-currency-bitcoin-laptop" width={14} height={14} />,
     tagline: 'Invest',
-    heading: 'Swap anything, from anywhere. 100+ crypto and RWAs on one exchange.',
+    heading:
+      'Long and short any global asset including crypto, equities, commodities, ETFs and more.',
     tokens,
     url: 'https://normalfinance.gitbook.io/docs/getting-started/guides/trading-on-normal',
   },
   {
     icon: <Icon icon="ph:spinner-bold" width={14} height={14} />,
-    tagline: 'Indexes',
-    heading: 'Diversify with ease. Custom crypto baskets in seconds.',
+    tagline: 'Diversify',
+    heading:
+      'Use popular index funds to manage risk and automate your portfolio - or build your own!',
     image: {
       src: '/assets/images/landing-page/basket.svg',
       alt: 'Indexes',
@@ -104,16 +80,17 @@ export const featureCardsSmall: [SmallCard, SmallCard] = [
 
 export const featureCardTall = {
   icon: <Icon icon="mage:chart-fill" width={14} height={14} />,
-  tagline: 'Liquidity',
-  heading: 'Provide liquidity to pools on Normal and create indexes to earn yield.',
+  tagline: 'Earn',
+  heading: 'Put every dollar to work and earn 7-15% APY in seconds.',
   image: { component: <AnimatedPoolsFeature /> },
   url: 'https://normalfinance.gitbook.io/docs/getting-started/guides/providing-liquidity',
 } as const;
 
 export const featureCardWide = {
   icon: <Icon icon="mdi:code-tags" width={14} />,
-  tagline: 'Developer docs',
-  heading: 'Expand the possibilities of your applications with Normal Tokens.',
+  tagline: 'Develop',
+  heading:
+    'Integrate hedging and diversification to your application with our new DeFi primitives.',
   image: { component: <AnimatedDevFeature2 imageSrc={cdn('homepage/chart.webp')} /> },
   url: 'https://normalfinance.gitbook.io/docs/developers/the-normal-amm',
 };
@@ -148,9 +125,9 @@ export default function LandingPage() {
         cardTall={featureCardTall}
         cardWide={featureCardWide}
       />
+      <StatsGrid />
       <TestimonialGrid />
       <FaqAccordion />
-      <StatsGrid />
       <CtaImage />
     </>
   );

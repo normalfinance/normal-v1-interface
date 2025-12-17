@@ -7,6 +7,7 @@ import { useTranslate } from '@/locales';
 
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import { Box, Grid, Button, Container, Typography } from '@mui/material';
+import { paths } from '@/routes/paths';
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
@@ -52,16 +53,16 @@ export const ContactFormDefaults: Props = {
   email: 'hello@normalfinance.io',
   socialLinks: [
     {
-      href: 'https://x.com/normalfi',
-      icon: <Icon icon="fa6-brands:x-twitter" width={28} height={28} color={BRAND.x} />,
+      href: paths.socials.twitter,
+      icon: <Icon icon="bxl:twitter" width={28} height={28} color={BRAND.x} />,
     },
     {
-      href: 'https://www.linkedin.com/company/normalfi/',
-      icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} fontSize="large" />,
+      href: paths.socials.telegram,
+      icon: <Icon icon="bxl:telegram" width={28} height={28} color={BRAND.telegram} />,
     },
     {
-      href: 'https://discord.gg/normalfinance',
-      icon: <Icon icon="mdi:discord" width={32} height={32} color={BRAND.discord} />,
+      href: paths.socials.discord,
+      icon: <Icon icon="bxl:discord-alt" width={32} height={32} color={BRAND.discord} />,
     },
   ],
   button: { title: 'Submit', variant: 'contained' },

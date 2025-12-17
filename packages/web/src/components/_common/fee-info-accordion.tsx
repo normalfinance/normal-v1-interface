@@ -6,14 +6,7 @@ import { useTranslate } from '@/locales';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import {
-  Box,
-  Chip,
-  Accordion,
-  Typography,
-  AccordionSummary,
-  AccordionDetails,
-} from '@mui/material';
+import { Box, Accordion, Typography, AccordionSummary, AccordionDetails } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
 
@@ -23,8 +16,6 @@ interface FeeInfoAccordionProps {
   sellToken?: Token;
   poolFee: number;
   networkCost: number;
-  priceImpact: number;
-  maxSlippage: number;
   sellFiatValue: number;
 }
 
@@ -34,8 +25,6 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
   sellToken,
   poolFee,
   networkCost,
-  priceImpact,
-  maxSlippage,
   sellFiatValue,
 }) => {
   const theme = useTheme();
@@ -153,7 +142,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     fontSize: '12px',
                   }}
                 >
-                  {t('Fee')}&nbsp;
+                  {t('Total Fee')}&nbsp;
                   <Box component="span">
                     {t('(')}
                     {fPercent(poolFee / 100)}
@@ -174,140 +163,8 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {fCurrencyTwoDecimals(sellFiatValue * (poolFee / 10000))}
+                {fCurrencyTwoDecimals(sellFiatValue * (poolFee / 10000) + networkCost)}
               </Typography>
-            </Box>
-            <Box
-              sx={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 1,
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 500,
-                    color: theme.palette.text.secondary,
-                    fontSize: '12px',
-                  }}
-                >
-                  {t('Network cost')}
-                </Typography>
-                <Iconify
-                  icon="solar:info-circle-bold"
-                  width={14}
-                  sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                />
-              </Box>
-              {/* <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 500,
-                  color: theme.palette.text.secondary,
-                  fontSize: '12px',
-                }}
-              >
-                {fCurrencyTwoDecimals(networkCost)}
-              </Typography> */}
-              <Chip label="Coming soon" color="info" size="small" variant="soft" />
-            </Box>
-            <Box
-              sx={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 1,
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 500,
-                    color: theme.palette.text.secondary,
-                    fontSize: '12px',
-                  }}
-                >
-                  {t('Price impact')}
-                </Typography>
-                <Iconify
-                  icon="solar:info-circle-bold"
-                  width={14}
-                  sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                />
-              </Box>
-              {/* <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 500,
-                  color: theme.palette.text.secondary,
-                  fontSize: '12px',
-                }}
-              >
-                {fRawPercent(priceImpact)}
-              </Typography> */}
-              <Chip label="Coming soon" color="info" size="small" variant="soft" />
-            </Box>
-            <Box
-              sx={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 1,
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 500,
-                    color: theme.palette.text.secondary,
-                    fontSize: '12px',
-                  }}
-                >
-                  {t('Max slippage')}
-                </Typography>
-                <Iconify
-                  icon="solar:info-circle-bold"
-                  width={14}
-                  sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                />
-              </Box>
-              {/* <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 500,
-                  color: theme.palette.text.secondary,
-                  fontSize: '12px',
-                }}
-              >
-                {fRawPercent(maxSlippage)}
-              </Typography> */}
-              <Chip label="Coming soon" color="info" size="small" variant="soft" />
             </Box>
           </Box>
         </Box>

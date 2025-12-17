@@ -41,19 +41,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: 'https://normalfinance.io/positions',
+      url: 'https://normalfinance.io/earn',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: 'https://normalfinance.io/positions/create',
+      url: 'https://normalfinance.io/invest',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: 'https://normalfinance.io/swap',
+      url: 'https://normalfinance.io/index',
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: 'https://normalfinance.io/index/create',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,

@@ -59,7 +59,7 @@ interface ButtonConfig {
 interface SwapCardProps extends CardProps {
   swapFeeInfo?: SwapFeeInfo;
   queryParams?: SwapQueryParams;
-  changeTab?: React.Dispatch<React.SetStateAction<false | 'swap' | 'send' | 'buy'>>;
+  changeTab?: React.Dispatch<React.SetStateAction<false | 'trade' | 'deposit' | 'withdraw'>>;
 }
 
 const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other }) => {
@@ -88,6 +88,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
   const [creatingTrustline, setCreatingTrustline] = useState<boolean>(false);
   const [needsTrustline, setNeedsTrustline] = useState<boolean>(false);
   const [checkingTrustline, setCheckingTrustline] = useState<boolean>(false);
+
+  const [showQuoteToken, setShowQuoteToken] = useState(false);
 
   // 1) States for tokens, default sell token is first in the list
   const [sellToken, setSellToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
@@ -394,7 +396,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
   const getButtonConfig = (state: ButtonState): ButtonConfig => {
     const configs: Record<ButtonState, ButtonConfig> = {
       [ButtonState.SELECT_TOKEN]: {
-        label: 'Select a token',
+        label: 'Select an asset',
         disabled: true,
         action: () => {},
       },
@@ -410,17 +412,17 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
         color: 'error' as const,
       },
       [ButtonState.CHECKING_TRUSTLINE]: {
-        label: 'Checking trustline...',
+        label: 'Checking asset...',
         disabled: true,
         action: () => {},
       },
       [ButtonState.CREATING_TRUSTLINE]: {
-        label: 'Creating trustline...',
+        label: 'Enabling asset...',
         disabled: true,
         action: () => {},
       },
       [ButtonState.NO_POOL_FOUND]: {
-        label: 'No pool found',
+        label: 'No asset found',
         disabled: true,
         action: () => {},
         color: 'error' as const,
@@ -431,13 +433,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
         action: () => {},
       },
       [ButtonState.INSUFFICIENT_BALANCE]: {
-        label: `Insufficient ${sellToken?.symbol || ''}`,
+        label: 'Insufficient balance',
         disabled: true,
         action: () => {},
         color: 'error' as const,
       },
       [ButtonState.CREATE_TRUSTLINE]: {
-        label: 'Create Trustline',
+        label: 'Enable asset',
         disabled: false,
         action: handleCreateTrustline,
         variant: 'contained' as const,
@@ -471,8 +473,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
       // After successful trustline creation, check status again
       await checkTrustlineStatus();
     } catch (error) {
-      setSwapError('Failed to create trustline');
-      logger.error('Trustline creation error:', error);
+      setSwapError('Failed to enable asset');
+      logger.error('Enable asset error:', error);
     } finally {
       setCreatingTrustline(false);
     }
@@ -548,7 +550,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
           );
 
           if (!trustlineStatus.exists) {
-            setSwapError('Trustline required before swap. Please create trustline first.');
+            setSwapError('Trustline required before trade. Please create trustline first.');
             return;
           }
         }
@@ -568,7 +570,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
           await updateTokenInfo(buyToken);
         }, 5000);
       } catch (error) {
-        setSwapError('Error during swap transaction');
+        setSwapError('Error during trade');
       }
     }
   };
@@ -581,245 +583,251 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
       <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {/* Invert tokens button in the middle */}
-        <Box
-          onClick={handleInvertTokens}
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            width: '44px',
-            height: '44px',
-            transform: 'translate(-50%, -50%)',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            zIndex: 2,
-            cursor: 'pointer',
-            padding: '4px',
-            backgroundColor: theme.palette.background.paper,
-          }}
-        >
+        {showQuoteToken && (
           <Box
+            onClick={handleInvertTokens}
             sx={{
-              width: '100%',
-              height: '100%',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: '44px',
+              height: '44px',
+              transform: 'translate(-50%, -50%)',
               borderRadius: '8px',
-              backgroundColor:
-                theme.palette.mode === 'light' ? theme.palette.grey[300] : theme.palette.grey[900],
-              transition: 'background-color 0.3s',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              '&:hover': {
-                backgroundColor:
-                  theme.palette.mode === 'light'
-                    ? theme.palette.grey[400]
-                    : theme.palette.grey[700],
-              },
+              overflow: 'hidden',
+              zIndex: 2,
+              cursor: 'pointer',
+              padding: '4px',
+              backgroundColor: theme.palette.background.paper,
             }}
           >
-            <Iconify
-              width={24}
-              icon="eva:arrow-downward-fill"
+            <Box
               sx={{
-                color:
+                width: '100%',
+                height: '100%',
+                borderRadius: '8px',
+                backgroundColor:
                   theme.palette.mode === 'light'
-                    ? theme.palette.text.primary
-                    : theme.palette.common.white,
+                    ? theme.palette.grey[300]
+                    : theme.palette.grey[900],
+                transition: 'background-color 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                '&:hover': {
+                  backgroundColor:
+                    theme.palette.mode === 'light'
+                      ? theme.palette.grey[400]
+                      : theme.palette.grey[700],
+                },
               }}
-            />
+            >
+              <Iconify
+                width={24}
+                icon="eva:arrow-downward-fill"
+                sx={{
+                  color:
+                    theme.palette.mode === 'light'
+                      ? theme.palette.text.primary
+                      : theme.palette.common.white,
+                }}
+              />
+            </Box>
           </Box>
-        </Box>
+        )}
 
         {/* SELL Section */}
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'row',
-            gap: 2,
-            height: '160px',
-            padding: theme.spacing(2),
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            borderRadius: '20px',
-            border: `1px solid ${theme.palette.divider}`,
-            backgroundColor: alpha(theme.palette.grey[500], 0.08),
-            overflow: 'hidden',
-          }}
-        >
+        {showQuoteToken && (
           <Box
             sx={{
               display: 'flex',
-              flexGrow: 1,
-              minWidth: 0,
+              flexDirection: 'row',
+              gap: 2,
+              height: '160px',
+              padding: theme.spacing(2),
+              justifyContent: 'space-between',
               alignItems: 'flex-start',
+              borderRadius: '20px',
+              border: `1px solid ${theme.palette.divider}`,
+              backgroundColor: alpha(theme.palette.grey[500], 0.08),
               overflow: 'hidden',
-              textAlign: 'left',
             }}
           >
             <Box
               sx={{
                 display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
                 flexGrow: 1,
                 minWidth: 0,
+                alignItems: 'flex-start',
+                overflow: 'hidden',
+                textAlign: 'left',
               }}
             >
-              <Typography variant="body1" noWrap data-testid="sell-token-picker">
-                {t('Sell')}
-              </Typography>
-              <InputBase
-                type="number"
-                value={amount}
-                onChange={handleInputChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
-                inputProps={{
-                  min: 0,
-                  style: {
-                    fontSize: 'var(--h3-size, 32px)',
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  flexGrow: 1,
+                  minWidth: 0,
+                }}
+              >
+                <Typography variant="body1" noWrap data-testid="sell-token-picker">
+                  {t('Sell')}
+                </Typography>
+                <InputBase
+                  type="number"
+                  value={amount}
+                  onChange={handleInputChange}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  onKeyDown={handleKeyDown}
+                  inputProps={{
+                    min: 0,
+                    style: {
+                      fontSize: 'var(--h3-size, 32px)',
+                      fontStyle: 'normal',
+                      fontWeight: 'var(--h3-weight, 700)',
+                      lineHeight: 'var(--h3-line-height, 48px)',
+                      letterSpacing: 'var(--h3-letter-spacing, 0px)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'clip',
+                    },
+                  }}
+                  sx={{
+                    width: '100%',
+                    border: 'none',
+                    padding: 0,
+                    color: insufficientBalance
+                      ? theme.palette.error.main
+                      : amount === '0' || amount === ''
+                        ? theme.palette.text.secondary
+                        : theme.palette.text.primary,
+                    flexGrow: 1,
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'clip',
+                    whiteSpace: 'nowrap',
+                  }}
+                />
+                <Typography
+                  noWrap
+                  sx={{
+                    fontSize: 'var(--components-nav-item-size, 14px)',
                     fontStyle: 'normal',
-                    fontWeight: 'var(--h3-weight, 700)',
-                    lineHeight: 'var(--h3-line-height, 48px)',
-                    letterSpacing: 'var(--h3-letter-spacing, 0px)',
+                    fontWeight: 'var(--components-nav-item-weight, 500)',
+                    lineHeight: 'var(--components-nav-item-line-height, 22px)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'clip',
-                  },
-                }}
-                sx={{
-                  width: '100%',
-                  border: 'none',
-                  padding: 0,
-                  color: insufficientBalance
-                    ? theme.palette.error.main
-                    : amount === '0' || amount === ''
-                      ? theme.palette.text.secondary
-                      : theme.palette.text.primary,
-                  flexGrow: 1,
-                  minWidth: 0,
-                  overflow: 'hidden',
-                  textOverflow: 'clip',
-                  whiteSpace: 'nowrap',
-                }}
-              />
-              <Typography
-                noWrap
-                sx={{
-                  fontSize: 'var(--components-nav-item-size, 14px)',
-                  fontStyle: 'normal',
-                  fontWeight: 'var(--components-nav-item-weight, 500)',
-                  lineHeight: 'var(--components-nav-item-line-height, 22px)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'clip',
-                  minWidth: 0,
-                }}
-              >
-                {`${fCurrency(sellFiatValue)}`}
-              </Typography>
+                    minWidth: 0,
+                  }}
+                >
+                  {`${fCurrency(sellFiatValue)}`}
+                </Typography>
+              </Box>
             </Box>
-          </Box>
 
-          <Box
-            sx={{
-              flexShrink: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'flex-end',
-              height: '128px',
-              overflow: 'hidden',
-            }}
-          >
-            {sellToken ? (
-              <Box
-                sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
-              >
-                <SwapSendPopupButton
-                  imgUrl={sellToken.icon ?? getCryptoIconUrl(sellToken.symbol)}
-                  label={sellToken.symbol}
+            <Box
+              sx={{
+                flexShrink: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'flex-end',
+                height: '128px',
+                overflow: 'hidden',
+              }}
+            >
+              {sellToken ? (
+                <Box
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
+                >
+                  <SwapSendPopupButton
+                    imgUrl={sellToken.icon ?? getCryptoIconUrl(sellToken.symbol)}
+                    label={sellToken.symbol}
+                    onClick={() => {
+                      setActiveButton('sell');
+                      handleOpen();
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        height: '100%',
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 500,
+                          color: insufficientBalance
+                            ? theme.palette.error.main
+                            : theme.palette.text.secondary,
+                          fontSize: '12px',
+                        }}
+                      >
+                        {BigNumber(sellToken.balance).toFixed(sellToken.decimals)}{' '}
+                        <Box
+                          component="span"
+                          sx={{
+                            color: insufficientBalance
+                              ? theme.palette.error.main
+                              : theme.palette.text.primary,
+                          }}
+                        >
+                          {sellToken?.symbol}
+                        </Box>
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleMaxClick}
+                      disabled={loadingSwap}
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '12px',
+                        p: 0,
+                        height: '24px',
+                        minWidth: '36px',
+                        backgroundColor: 'rgba(148,123,255,0.29)',
+                        color: '#6E4BFF',
+                        '&:hover': {
+                          backgroundColor: 'rgba(148,123,255,0.20)',
+                        },
+                      }}
+                    >
+                      {t('Max')}
+                    </Button>
+                  </Box>
+                </Box>
+              ) : (
+                <SwapSendEmptyPopupButton
+                  label="Select asset"
                   onClick={() => {
                     setActiveButton('sell');
                     handleOpen();
                   }}
                 />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'flex-end',
-                    justifyContent: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      height: '100%',
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: insufficientBalance
-                          ? theme.palette.error.main
-                          : theme.palette.text.secondary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      {BigNumber(sellToken.balance).toFixed(sellToken.decimals)}{' '}
-                      <Box
-                        component="span"
-                        sx={{
-                          color: insufficientBalance
-                            ? theme.palette.error.main
-                            : theme.palette.text.primary,
-                        }}
-                      >
-                        {sellToken?.symbol}
-                      </Box>
-                    </Typography>
-                  </Box>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={handleMaxClick}
-                    disabled={loadingSwap}
-                    sx={{
-                      fontWeight: 500,
-                      fontSize: '12px',
-                      p: 0,
-                      height: '24px',
-                      minWidth: '36px',
-                      backgroundColor: 'rgba(148,123,255,0.29)',
-                      color: '#6E4BFF',
-                      '&:hover': {
-                        backgroundColor: 'rgba(148,123,255,0.20)',
-                      },
-                    }}
-                  >
-                    {t('Max')}
-                  </Button>
-                </Box>
-              </Box>
-            ) : (
-              <SwapSendEmptyPopupButton
-                label="Select token"
-                onClick={() => {
-                  setActiveButton('sell');
-                  handleOpen();
-                }}
-              />
-            )}
+              )}
+            </Box>
           </Box>
-        </Box>
+        )}
 
         {/* BUY Section */}
         <Box
@@ -911,7 +919,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
               />
             ) : (
               <SwapSendEmptyPopupButton
-                label="Select token"
+                label="Select asset"
                 onClick={() => {
                   setActiveButton('buy');
                   handleOpen();
@@ -921,6 +929,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
           </Box>
         </Box>
       </Box>
+
       {/* Display swap error if exists */}
       {swapError && (
         <Box
@@ -976,9 +985,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
               {buttonState === ButtonState.ZERO_BALANCE && (
                 <>
                   <Alert severity="warning" sx={{ mt: 2 }}>
-                    {t(
-                      'You must fund your wallet with XLM before investing. Please deposit or buy XLM below.'
-                    )}
+                    {t('You must fund your account before investing. Please deposit fiat below.')}
                   </Alert>
                   <Stack direction="row" spacing={1} width="100%" mt={2}>
                     <Button
@@ -994,8 +1001,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
                       variant="soft"
                       color="success"
                       onClick={() => {
-                        if (changeTab) changeTab('buy');
-                        else router.push(`${paths.swap}?tab=buy`);
+                        if (changeTab) changeTab('deposit');
+                        else router.push(`${paths.invest}?tab=deposit`);
                       }}
                     >
                       {t('Buy')}
@@ -1026,8 +1033,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
           sellToken={sellToken || undefined}
           poolFee={pool ? pool.fee : 30}
           networkCost={0}
-          priceImpact={0}
-          maxSlippage={10000}
           sellFiatValue={sellFiatValue}
         />
       )}
@@ -1041,8 +1046,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
           buyAmount={buyAmount}
           feePercentage={pool ? pool.fee : 30}
           networkCost="0"
-          priceImpact={0}
-          maxSlippage={10000}
           sellFiatValue={sellFiatValue}
           onSubmit={() => doSwap()}
         />

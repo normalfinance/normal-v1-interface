@@ -130,7 +130,7 @@ const OnrampDialog: React.FC<OnrampDialogProps> = ({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" color="text.primary">
-            {t('Onramp with')}
+            {t('Deposit via')}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <GetHelpButton url={paths.help.buy} />
@@ -195,9 +195,7 @@ const OnrampDialog: React.FC<OnrampDialogProps> = ({
           variant="body2"
           sx={{ fontWeight: 500, color: 'text.primary', fontSize: '12px', textAlign: 'center' }}
         >
-          {t(
-            "You'll continue to the provider's portal to see the fees associated with your transaction"
-          )}
+          {t("You'll continue to the provider's website to complete your transaction")}
         </Typography>
       </Box>
     </Dialog>
