@@ -109,7 +109,7 @@ export default function WalletSelectionModal({
       <DialogContent sx={{ py: 5 }}>
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {t('Select how you would like to connect your wallet')}
+            {t('Select how you would like to connect your account')}
           </Typography>
 
           {/* Create Normal Wallet */}
@@ -128,7 +128,7 @@ export default function WalletSelectionModal({
           >
             <Box sx={{ textAlign: 'left', flex: 1 }}>
               <Typography variant="subtitle1" fontWeight={600}>
-                {t('Create Normal Wallet')}
+                {t('Create A Normal Account')}
               </Typography>
             </Box>
           </Button>
@@ -149,7 +149,7 @@ export default function WalletSelectionModal({
           >
             <Box sx={{ textAlign: 'left', flex: 1 }}>
               <Typography variant="subtitle1" fontWeight={600}>
-                {t('Import Existing Normal Wallet')}
+                {t('Import Existing Normal Account')}
               </Typography>
             </Box>
           </Button>
@@ -171,7 +171,7 @@ export default function WalletSelectionModal({
           >
             <Box sx={{ textAlign: 'left', flex: 1 }}>
               <Typography variant="subtitle1" fontWeight={600}>
-                {t('Continue to other wallets')}
+                {t('Continue With Other Stellar Wallets')}
               </Typography>
             </Box>
           </Button>

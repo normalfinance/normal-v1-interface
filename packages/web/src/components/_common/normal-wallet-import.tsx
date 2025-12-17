@@ -413,7 +413,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Typography variant="subtitle2" noWrap>
-                      {wallet.walletName || t('Unnamed Wallet')}
+                      {wallet.walletName || t('Unnamed Account')}
                     </Typography>
                     {wallet.custodyChoice === 'platform' && (
                       <Chip label={t('Auto-Connect')} size="small" color="primary" />
@@ -511,7 +511,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
       ) : (
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
-            {t('Enter your private key below to import your Stellar wallet.')}
+            {t('Enter your private key below to import your account.')}
           </Typography>
           <TextField
             multiline
@@ -568,10 +568,10 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
       <DialogTitle sx={{ pb: 2, position: 'relative' }}>
         <Typography variant="h5" component="div">
           {stage === 'select'
-            ? t('Your Linked Wallets')
+            ? t('Your Linked Accounts')
             : selectedWallet
-              ? t('Reconnect Wallet')
-              : t('Import Existing Normal Wallet')}
+              ? t('Reconnect Account')
+              : t('Import Existing Normal Account')}
         </Typography>
         <IconButton
           aria-label="close"

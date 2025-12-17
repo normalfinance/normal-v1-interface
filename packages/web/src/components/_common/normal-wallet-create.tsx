@@ -368,11 +368,11 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     >
       <DialogTitle sx={{ pb: 2, position: 'relative' }}>
         <Typography variant="h5" component="div">
-          {stage === 'creating' && t('Creating Wallet...')}
-          {stage === 'summary' && t('Wallet Created Successfully!')}
-          {stage === 'backup' && t('Backup Your Wallet')}
+          {stage === 'creating' && t('Creating Account...')}
+          {stage === 'summary' && t('Account Created Successfully!')}
+          {stage === 'backup' && t('Backup Your Account')}
           {stage === 'custody-choice' && t('Choose Custody Option')}
-          {stage === 'verify' && t('Verify Your Backup')}
+          {stage === 'verify' && t('Verify Your Account')}
         </Typography>
         <IconButton
           aria-label="close"
@@ -409,8 +409,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
             {/* Wallet Name Input */}
             <TextField
-              label={t('Wallet Name (Optional)')}
-              placeholder={t('e.g., Trading Wallet, Savings')}
+              label={t('Account Name (Optional)')}
+              placeholder={t('e.g., Trading Account, Savings')}
               value={walletName}
               onChange={(e) => setWalletName(e.target.value)}
               fullWidth
@@ -426,7 +426,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               }}
             >
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t('Backup your recovery phrase to ensure you can recover your wallet later.')}
+                {t('Backup your recovery phrase to ensure you can recover your account later.')}
               </Typography>
               <Button variant="contained" fullWidth onClick={handleBackupWallet} sx={{ mb: 1 }}>
                 {t('Back up')}
