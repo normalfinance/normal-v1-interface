@@ -1,7 +1,5 @@
-// @ts-ignore - IndexContract is not defined in contracts, remove once added
 import type { IndexContract } from '@normalfinance/contracts';
-//TODO: Add IndexContract and IndexFactoryContract in contracts and import once added
-import type { IndexDetails, WeightedToken, WeightingStrategy } from '@normalfinance/types';
+import type { IndexDetails, WeightingStrategy } from '@normalfinance/types';
 
 /**
  * Maps IndexContract.IndexInfo from on-chain to a partial IndexDetails format for UI.
@@ -46,18 +44,13 @@ export interface IndexSummary {
   managerAddress: string;
   tokenAddress: string;
   totalShares: number;
-  totalMints: number;
-  totalRedemptions: number;
+  totalDeposits: number;
+  totalWithdrawals: number;
   baseNav: number;
   sharePrice: number;
   accumulatedFees: number;
   lastRebalanceDate: Date | null;
   lastUpdatedDate: Date | null;
-  status: {
-    canMint: boolean;
-    canRedeem: boolean;
-    canRebalance: boolean;
-  };
 }
 
 export function createIndexSummary(
@@ -72,8 +65,8 @@ export function createIndexSummary(
     managerAddress: info.manager_address,
     tokenAddress: info.token_address,
     totalShares: formatContractAmount(info.total_shares),
-    totalMints: formatContractAmount(info.total_mints),
-    totalRedemptions: formatContractAmount(info.total_redemptions),
+    totalDeposits: formatContractAmount(info.total_mints),
+    totalWithdrawals: formatContractAmount(info.total_redemptions),
     baseNav: formatContractAmount(info.base_nav),
     sharePrice: formatContractAmount(info.initial_price),
     accumulatedFees: formatContractAmount(info.total_fees),
@@ -81,11 +74,6 @@ export function createIndexSummary(
       ? new Date(Number(info.last_rebalance_ts) * 1000)
       : null,
     lastUpdatedDate: info.last_updated_ts ? new Date(Number(info.last_updated_ts) * 1000) : null,
-    status: {
-      canMint: !info.is_killed_mint,
-      canRedeem: !info.is_killed_redeem,
-      canRebalance: !info.is_killed_rebalance,
-    },
   };
 }
 
@@ -93,15 +81,6 @@ export function createIndexSummary(
  * Formats an index status for display
  */
 export function getIndexStatusLabel(info: IndexContract.IndexInfo): string {
-  if (info.is_killed_mint && info.is_killed_redeem) {
-    return 'Frozen';
-  }
-  if (info.is_killed_mint) {
-    return 'Minting Disabled';
-  }
-  if (info.is_killed_redeem) {
-    return 'Redemption Disabled';
-  }
   if (!info.is_public) {
     return 'Private';
   }
@@ -114,12 +93,6 @@ export function getIndexStatusLabel(info: IndexContract.IndexInfo): string {
 export function getIndexStatusColor(
   info: IndexContract.IndexInfo
 ): 'success' | 'warning' | 'error' | 'info' {
-  if (info.is_killed_mint && info.is_killed_redeem) {
-    return 'error';
-  }
-  if (info.is_killed_mint || info.is_killed_redeem) {
-    return 'warning';
-  }
   if (!info.is_public) {
     return 'info';
   }

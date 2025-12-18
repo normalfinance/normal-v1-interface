@@ -22,6 +22,7 @@ import {
   Radio,
   Dialog,
   Button,
+  Divider,
   Checkbox,
   TextField,
   Typography,
@@ -43,7 +44,7 @@ export type NormalWalletCreateProps = {
   onSuccess: () => void;
 };
 
-type CreateStage = 'creating' | 'summary' | 'backup' | 'custody-choice' | 'verify';
+type CreateStage = 'creating' | 'summary' | 'custody-choice' | 'backup' | 'verify';
 
 interface VerificationQuestion {
   index: number;
@@ -116,7 +117,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   }, [open, stage]); // Removed createWallet from dependencies to prevent infinite loop
 
   const handleBackupWallet = () => {
-    setStage('backup');
+    setStage('custody-choice');
   };
 
   const handleSkipBackup = () => {
@@ -243,7 +244,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
   const handleCustodyConfirm = useCallback(async () => {
     if (custodyChoice === 'self') {
-      startVerification();
+      // startVerification();
+      setStage('backup');
     } else if (custodyChoice === 'platform') {
       if (!custodyConsent) {
         enqueueSnackbar(t('Please provide consent to store your recovery phrase'), {
@@ -310,7 +312,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         newErrors[index] = t('Please select an option');
         hasError = true;
       } else if (answer.toLowerCase() !== correctWord.toLowerCase()) {
-        newErrors[index] = t('Incorrect word');
+        newErrors[index] = t('Incorrect selection');
         hasError = true;
       }
     });
@@ -372,8 +374,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         <Typography variant="h5" component="div">
           {stage === 'creating' && t('Creating Account...')}
           {stage === 'summary' && t('Account Created Successfully!')}
-          {stage === 'backup' && t('Backup Your Account')}
-          {stage === 'custody-choice' && t('Choose Custody Option')}
+          {stage === 'backup' && t('Manual Account Backup')}
+          {stage === 'custody-choice' && t('Backup Your Account')}
           {stage === 'verify' && t('Verify Your Account')}
         </Typography>
         <IconButton
@@ -406,7 +408,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         {stage === 'summary' && mnemonic && (
           <Stack spacing={3}>
             <Box sx={{ textAlign: 'center', py: 2 }}>
-              <Iconify icon="solar:wallet-bold" width={80} sx={{ color: 'primary.main' }} />
+              <Iconify icon="solar:banknote-2-bold" width={80} sx={{ color: 'success.main' }} />
             </Box>
 
             {/* Wallet Name Input */}
@@ -419,6 +421,15 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               inputProps={{ maxLength: 50 }}
               helperText=""
             />
+
+            <Alert severity="warning">
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+                {t('IMPORTANT')}
+              </Typography>
+              <Typography variant="body2">
+                {t('Backup your account to ensure you can recover it later!')}
+              </Typography>
+            </Alert>
 
             <Paper
               variant="outlined"
@@ -446,15 +457,23 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               <Button
                 startIcon={<Iconify icon="mingcute:left-line" />}
                 onClick={() => setStage('summary')}
-                sx={{ mb: 2 }}
+                sx={{ mb: 1 }}
               >
                 {t('Back')}
               </Button>
             </Box>
 
+            <Alert severity="error">
+              <Typography variant="body2">
+                {t(
+                  'This is your Recovery Phrase. Do NOT share it with anyone, ever! Otherwise, you risk losing all funds.'
+                )}
+              </Typography>
+            </Alert>
+
             <Typography variant="body2" color="text.secondary">
               {t(
-                'Write down these words in order and keep them in a safe place. You will need them to recover your wallet.'
+                'Write down these words in order and keep them in a safe place. You will need them to recover your account.'
               )}
             </Typography>
 
@@ -479,11 +498,11 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
             </Box>
 
             <Stack spacing={2}>
-              <Button variant="contained" fullWidth onClick={() => setStage('custody-choice')}>
-                {t("I've Written It Down")}
+              <Button variant="contained" fullWidth onClick={() => setStage('verify')}>
+                {t("I've Written Them Down")}
               </Button>
               <Button variant="outlined" fullWidth onClick={handleCopyMnemonic}>
-                {t('Copy to Clipboard')}
+                {t('Copy Recovery Phrase')}
               </Button>
             </Stack>
           </Stack>
@@ -514,6 +533,49 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
                 }
               }}
             >
+              <Alert severity="success" sx={{ mb: 1 }}>
+                <Typography variant="body2">{t('Recommended for most users.')}</Typography>
+              </Alert>
+
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  mb: 2,
+                  cursor: 'pointer',
+                  borderColor: custodyChoice === 'platform' ? 'primary.main' : 'divider',
+                  bgcolor: custodyChoice === 'platform' ? 'action.selected' : 'background.paper',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                  },
+                }}
+                onClick={() => setCustodyChoice('platform')}
+              >
+                <FormControlLabel
+                  value="platform"
+                  control={<Radio />}
+                  label={
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        {t('Store Securely with Normal')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t(
+                          'Fast. Convenient. AES-256 Encryption. Auto-reconnect without re-entering.'
+                        )}
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ m: 0 }}
+                />
+              </Paper>
+
+              <Divider sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {t('or')}
+                </Typography>
+              </Divider>
+
               <Paper
                 variant="outlined"
                 sx={{
@@ -536,42 +598,12 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
                   control={<Radio />}
                   label={
                     <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('Tedious. Maximum security. You keep your backup.')}
+                      </Typography>
+
                       <Typography variant="subtitle1" fontWeight={600}>
                         {t("I'll Store It Myself (Self-Custody)")}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('Maximum security. You keep your phrase.')}
-                      </Typography>
-                    </Box>
-                  }
-                  sx={{ m: 0 }}
-                />
-              </Paper>
-
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  mb: 2,
-                  cursor: 'pointer',
-                  borderColor: custodyChoice === 'platform' ? 'primary.main' : 'divider',
-                  bgcolor: custodyChoice === 'platform' ? 'action.selected' : 'background.paper',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                  },
-                }}
-                onClick={() => setCustodyChoice('platform')}
-              >
-                <FormControlLabel
-                  value="platform"
-                  control={<Radio />}
-                  label={
-                    <Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        {t('Store Securely with Normal Finance')}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('Convenience. Auto-reconnect without re-entering.')}
                       </Typography>
                     </Box>
                   }
@@ -588,7 +620,21 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
                     onChange={(e) => setCustodyConsent(e.target.checked)}
                   />
                 }
-                label={t('I authorize Normal Finance to store my encrypted recovery phrase')}
+                label={t('I authorize Normal to store my encrypted recovery phrase')}
+              />
+            )}
+
+            {custodyChoice === 'self' && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={custodyConsent}
+                    onChange={(e) => setCustodyConsent(e.target.checked)}
+                  />
+                }
+                label={t(
+                  'I understand the risks of self-custody and accept all liability if I lose my recovery phrase.'
+                )}
               />
             )}
 
@@ -599,6 +645,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               disabled={
                 !custodyChoice ||
                 (custodyChoice === 'platform' && !custodyConsent) ||
+                (custodyChoice === 'self' && !custodyConsent) ||
                 isSavingCustody
               }
               startIcon={isSavingCustody ? <CircularProgress size={16} /> : null}
@@ -621,12 +668,12 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
             </Box>
 
             <Alert severity="warning" sx={{ mb: 2 }}>
-              <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
                 {t('Final Step')}
               </Typography>
               <Typography variant="body2">
                 {t(
-                  'This is your only chance to verify your backup phrase. Once you complete this step, the phrase will be permanently removed for security. Make sure you have safely written it down before proceeding.'
+                  'This is your only chance to save your backup phrase. Once you complete this step, the phrase will be permanently removed for security. Make sure you have safely written it down before proceeding.'
                 )}
               </Typography>
             </Alert>
@@ -637,7 +684,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
                   const index = verificationQuestions[currentQuestionIndex]?.index;
                   const ordinal =
                     index === 1 ? 'st' : index === 2 ? 'nd' : index === 3 ? 'rd' : 'th';
-                  return t('Select the') + ` ${index}${ordinal} ` + t('word');
+                  return t('Select the') + ` ${index}${ordinal} ` + t('word of your backup phrase');
                 })()}
               </Typography>
 
@@ -688,7 +735,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               </Stack>
 
               {answerErrors[verificationQuestions[currentQuestionIndex]?.index] && (
-                <Alert severity="error">
+                <Alert severity="error" sx={{ mt: 1 }}>
                   {answerErrors[verificationQuestions[currentQuestionIndex].index]}
                 </Alert>
               )}

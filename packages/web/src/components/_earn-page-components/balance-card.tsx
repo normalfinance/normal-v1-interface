@@ -1,10 +1,9 @@
 import type { CardProps } from '@mui/material/Card';
 
 import { useEffect } from 'react';
-import { useBoolean } from '@/hooks';
 import { useTranslate } from '@/locales';
-import { format } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
+import { useAppStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -12,7 +11,6 @@ import Button from '@mui/material/Button';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
-import { useAppStore } from '@normalfinance/state';
 
 // Define a type for each balance row
 export type BalanceRow = {
@@ -107,7 +105,7 @@ export function BalanceCard({
               onClick={() => setModalView('addLiquidity', true)}
               data-testid="add-liquidity-button"
             >
-              {t('Add liquidity')}
+              {t('Deposit')}
             </Button>
             <Button
               fullWidth

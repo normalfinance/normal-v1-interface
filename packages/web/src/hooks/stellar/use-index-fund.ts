@@ -1,14 +1,16 @@
 'use client';
 
-import type { IndexContract } from '@normalfinance/contracts';
+import type { IndexFundContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
 // import { captureException } from '@sentry/nextjs';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
-
-import { IndexContract as IndexContractClient } from '@normalfinance/contracts';
+import {
+  IndexFundContract as IndexFundContractClient,
+  IndexFundFactoryContract as IndexFundFactoryContractClient,
+} from '@normalfinance/contracts';
 
 import { useContractTransaction } from './use-contract-transaction';
 
@@ -19,7 +21,6 @@ export interface MintIndexArgs {
   token: string;
   amount: number; // Amount in human-readable units (will be converted to bigint)
   destination?: string;
-  _max_slippage?: bigint;
 }
 
 export interface RedeemIndexArgs {
@@ -27,41 +28,44 @@ export interface RedeemIndexArgs {
 }
 
 // Admin
-export type RefactorIndexArgs = Omit<Parameters<IndexContract.Client['refactor']>[0], 'caller'>;
-export type RebalanceIndexArgs = Omit<Parameters<IndexContract.Client['rebalance']>[0], 'caller'>;
+export type RefactorIndexArgs = Omit<Parameters<IndexFundContract.Client['refactor']>[0], 'caller'>;
+export type RebalanceIndexArgs = Omit<
+  Parameters<IndexFundContract.Client['rebalance']>[0],
+  'caller'
+>;
 export type SetIndexRebalanceAuthorityArgs = Omit<
-  Parameters<IndexContract.Client['set_rebalance_authority']>[0],
+  Parameters<IndexFundContract.Client['set_rebalance_authority']>[0],
   'admin'
 >;
-export type SetPublicStatusIndexArgs = Parameters<IndexContract.Client['set_public_status']>[0];
+export type SetPublicStatusIndexArgs = Parameters<IndexFundContract.Client['set_public_status']>[0];
 export type SetWhitelistStatusIndexArgs = Omit<
-  Parameters<IndexContract.Client['set_whitelist_status']>[0],
+  Parameters<IndexFundContract.Client['set_whitelist_status']>[0],
   'admin'
 >;
 export type SetBlacklistStatusIndexArgs = Omit<
-  Parameters<IndexContract.Client['set_blacklist_status']>[0],
+  Parameters<IndexFundContract.Client['set_blacklist_status']>[0],
   'admin'
 >;
 
 interface ReturnType {
   error: any | null;
   loading: boolean;
-  index: IndexContract.IndexInfo | undefined;
-  fetchIndex: () => void;
+  index: IndexFundContract.IndexFundInfo | undefined;
+  fetchIndexById: (indexId: number) => void;
+  fetchIndexByAddress: (indexAddress: string) => void;
   mintIndex: (args: MintIndexArgs) => Promise<void>;
   redeemIndex: (args: RedeemIndexArgs) => Promise<void>;
   // admin
   refactorIndex: (args: RefactorIndexArgs) => Promise<void>;
   rebalanceIndex: (args: RebalanceIndexArgs) => Promise<void>;
   setRebalanceAuthority: (args: SetIndexRebalanceAuthorityArgs) => Promise<void>;
-  setIndexPublicStatus: (args: SetPublicStatusIndexArgs) => Promise<void>;
   setIndexWhitelistStatus: (args: SetWhitelistStatusIndexArgs) => Promise<void>;
   setIndexBlacklistStatus: (args: SetBlacklistStatusIndexArgs) => Promise<void>;
 }
 
 // ----------------------------------------------------------------------
 
-export function useIndex(indexAddress: string): ReturnType {
+export function useIndexFund(id: number): ReturnType {
   const storePersist = usePersistStore();
 
   const { executeContractTransaction } = useContractTransaction();
@@ -69,7 +73,7 @@ export function useIndex(indexAddress: string): ReturnType {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [index, setIndex] = useState<IndexContract.IndexInfo | undefined>(undefined);
+  const [index, setIndex] = useState<IndexFundContract.IndexFundInfo | undefined>(undefined);
 
   const executeIndex = async (
     signedTransactionXDR: string,
@@ -114,15 +118,44 @@ export function useIndex(indexAddress: string): ReturnType {
     }
   };
 
-  const fetchIndex = useCallback(async () => {
-    if (!indexAddress) return;
+  const fetchIndexById = useCallback(
+    async (indexId: number) => {
+      if (!indexId) return;
 
+      try {
+        setError(null);
+        setLoading(true);
+
+        // Query the index contract directly using its address
+        const indexFactoryClient = new IndexFundFactoryContractClient.Client({
+          contractId: constants.StellarConfig.INDEX_FACTORY_ADDRESS,
+          networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+          rpcUrl: constants.StellarConfig.RPC_URL,
+        });
+
+        const indexInfo = await indexFactoryClient.get_index_by_id({ id: indexId });
+
+        if (indexInfo && indexInfo.result) {
+          const data = indexInfo.result as IndexFundContract.IndexFundInfo;
+          setIndex(data);
+        }
+      } catch (e: any) {
+        // captureException(e);
+        setError(e);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [indexId]
+  );
+
+  const fetchIndexByAddress = useCallback(async (indexAddress: string) => {
     try {
       setError(null);
       setLoading(true);
 
       // Query the index contract directly using its address
-      const indexClient = new IndexContractClient.Client({
+      const indexClient = new IndexFundContractClient.Client({
         contractId: indexAddress,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         rpcUrl: constants.StellarConfig.RPC_URL,
@@ -131,7 +164,7 @@ export function useIndex(indexAddress: string): ReturnType {
       const indexInfo = await indexClient.get_index_info();
 
       if (indexInfo && indexInfo.result) {
-        const data = indexInfo.result as IndexContract.IndexInfo;
+        const data = indexInfo.result as IndexFundContract.IndexFundInfo;
         setIndex(data);
       }
     } catch (e: any) {
@@ -140,7 +173,7 @@ export function useIndex(indexAddress: string): ReturnType {
     } finally {
       setLoading(false);
     }
-  }, [indexAddress]);
+  }, []);
 
   const mintIndex = async (args: MintIndexArgs) => {
     if (!index || !index.address) return;
@@ -154,15 +187,14 @@ export function useIndex(indexAddress: string): ReturnType {
       token: args.token,
       amount: BigInt((args.amount * 10 ** constants.StellarConfig.XLM_DECIMALS).toFixed(0)),
       destination: args.destination || storePersist.wallet.address!,
-      _max_slippage: args._max_slippage || BigInt(100), // Default 1% slippage
     };
 
     await executeContractTransaction({
-      contractType: 'index',
+      contractType: 'index_fund',
       contractAddress: index.address,
       transactionDetails: {
         type: TransactionType.MINT_INDEX,
-        token1: { name: 'Token', amount: String(args.amount) },
+        token1: { name: 'USDC', amount: String(args.amount) },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.mint(processedArgs, { simulate: !restore });
@@ -202,11 +234,11 @@ export function useIndex(indexAddress: string): ReturnType {
     };
 
     await executeContractTransaction({
-      contractType: 'index',
+      contractType: 'index_fund',
       contractAddress: index.address,
       transactionDetails: {
         type: TransactionType.REDEEM_INDEX,
-        token1: { name: 'XLM', amount: String(args.share_amount) },
+        token1: { name: 'USDC', amount: String(args.share_amount) },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.redeem(processedArgs, { simulate: !restore });
@@ -247,7 +279,7 @@ export function useIndex(indexAddress: string): ReturnType {
     };
 
     await executeContractTransaction({
-      contractType: 'index',
+      contractType: 'index_fund',
       contractAddress: index.address,
       transactionDetails: {
         type: TransactionType.REFACTOR_INDEX,
@@ -289,7 +321,7 @@ export function useIndex(indexAddress: string): ReturnType {
     };
 
     await executeContractTransaction({
-      contractType: 'index',
+      contractType: 'index_fund',
       contractAddress: index.address,
       transactionDetails: {
         type: TransactionType.REBALANCE_INDEX,
@@ -331,7 +363,7 @@ export function useIndex(indexAddress: string): ReturnType {
     };
 
     await executeContractTransaction({
-      contractType: 'index',
+      contractType: 'index_fund',
       contractAddress: index.address,
       transactionDetails: {
         type: TransactionType.UPDATE_INDEX,
@@ -360,43 +392,6 @@ export function useIndex(indexAddress: string): ReturnType {
     setLoading(false);
   };
 
-  const setIndexPublicStatus = async (args: SetPublicStatusIndexArgs) => {
-    if (!index || !index.address) return;
-
-    setLoading(true);
-
-    await rateLimitCheck();
-
-    await executeContractTransaction({
-      contractType: 'index',
-      contractAddress: index.address,
-      transactionDetails: {
-        type: TransactionType.UPDATE_INDEX,
-      },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.set_public_status(args, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
-
-          if (signedXDR) {
-            const apiRes = await executeIndex(signedXDR, 'Update Index Public Status');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
-          }
-
-          return tx;
-        }
-      },
-    });
-
-    setLoading(false);
-  };
-
   const setIndexWhitelistStatus = async (args: SetWhitelistStatusIndexArgs) => {
     if (!index || !index.address) return;
 
@@ -410,7 +405,7 @@ export function useIndex(indexAddress: string): ReturnType {
     };
 
     await executeContractTransaction({
-      contractType: 'index',
+      contractType: 'index_fund',
       contractAddress: index.address,
       transactionDetails: {
         type: TransactionType.UPDATE_INDEX,
@@ -452,7 +447,7 @@ export function useIndex(indexAddress: string): ReturnType {
     };
 
     await executeContractTransaction({
-      contractType: 'index',
+      contractType: 'index_fund',
       contractAddress: index.address,
       transactionDetails: {
         type: TransactionType.UPDATE_INDEX,
@@ -483,21 +478,21 @@ export function useIndex(indexAddress: string): ReturnType {
 
   // On component mount, fetch index
   useEffect(() => {
-    fetchIndex();
-  }, [fetchIndex]);
+    fetchIndexById(id);
+  }, [fetchIndexById, id]);
 
   return {
     error,
     loading,
     index,
-    fetchIndex,
+    fetchIndexById,
+    fetchIndexByAddress,
     mintIndex,
     redeemIndex,
     // admin
     refactorIndex,
     rebalanceIndex,
     setRebalanceAuthority,
-    setIndexPublicStatus,
     setIndexWhitelistStatus,
     setIndexBlacklistStatus,
   };

@@ -8,3 +8,4 @@ export * from './token';
 export * from './pool';
 export * from './normal-wallet';
 export * from './mnemonic-encryption';
+export * from './asset';

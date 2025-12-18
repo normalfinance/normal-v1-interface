@@ -28,9 +28,9 @@ interface WalletGateProps {
 
 export const WalletGate: React.FC<WalletGateProps> = ({
   children,
-  buttonText = 'Connect Wallet',
+  buttonText = 'Login',
   fullWidth = true,
-  variant = 'contained',
+  variant = 'soft',
   color = 'info',
 }) => {
   const persist = usePersistStore();

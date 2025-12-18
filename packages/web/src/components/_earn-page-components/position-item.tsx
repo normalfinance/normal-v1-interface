@@ -130,7 +130,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
             {fCurrency(position.usdValues.tokenB)})
           </Typography>
           <Typography color="text.secondary" variant="caption">
-            {t('Liquidity Provided')}
+            {t('Balance')}
           </Typography>
         </Stack>
 
@@ -145,7 +145,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
             {fCurrency(position.usdValues.feeB)})
           </Typography>
           <Typography color="text.secondary" variant="caption">
-            {t('Fees')}
+            {t('Interest')}
           </Typography>
         </Stack>
       </Stack>

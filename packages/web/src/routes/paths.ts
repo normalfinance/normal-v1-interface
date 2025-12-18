@@ -31,7 +31,7 @@ export const paths = {
   indexes: {
     root: '/indexes',
     create: '/indexes/create',
-    details: (indexAddress: string) => `/indexes/${indexAddress}`,
+    details: (id: string) => `/indexes/${id}`,
   },
   earn: '/earn',
   rewards: '/rewards',

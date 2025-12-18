@@ -1,4 +1,4 @@
-import type { Option, u128, u32, u64 } from '@stellar/stellar-sdk/contract'
+import type { i128, Option, u128, u32, u64 } from '@stellar/stellar-sdk/contract'
 import {
   AssembledTransaction,
   Client as ContractClient,
@@ -59,6 +59,96 @@ export const AccessControlError = {
   2908: { message: 'ActionNotReadyYet' },
 }
 
+export interface PrivilegedAddresses {
+  emergency_admin: string
+  emergency_pause_admins: Array<string>
+  operations_admin: string
+  pause_admin: string
+  rewards_admin: string
+}
+
+export interface IndexParams {
+  admin: string
+  base_nav: u128
+  components: Array<ComponentUpdate>
+  description: string
+  initial_deposit: u128
+  initial_price: u128
+  is_public: boolean
+  name: string
+  symbol: string
+}
+
+export interface IndexFundInfo {
+  address: string
+  base_nav: u128
+  initial_price: u128
+  is_public: boolean
+  last_rebalance_ts: u64
+  last_updated_ts: u64
+  manager_address: string
+  token_address: string
+  total_mints: u128
+  total_redemptions: u128
+  total_shares: u128
+}
+
+export interface IndexFundMetrics {
+  current_nav: u128
+  share_price: u128
+  total_mints: u128
+  total_redemptions: u128
+  total_shares: u128
+}
+
+export interface IndexFundStatus {
+  can_rebalance: boolean
+  is_public: boolean
+  last_rebalance_ts: u64
+  rebalance_threshold: u64
+}
+
+export interface Component {
+  asset: string
+  normal: boolean
+  weight: u128
+}
+
+export type ComponentAction =
+  | { tag: 'Add'; values: void }
+  | { tag: 'Remove'; values: void }
+  | { tag: 'UpdateWeight'; values: void }
+
+export interface ComponentUpdate {
+  action: ComponentAction
+  new_weight: u128
+  token: string
+}
+
+export interface RefactorParams {
+  component_updates: Array<ComponentUpdate>
+}
+
+export interface RebalanceParams {
+  target_nav: Option<i128>
+}
+
+export interface ComponentAllocation {
+  component: Component
+  current_balance: u128
+  percentage_of_nav: u128
+  target_balance: u128
+}
+
+export interface RebalanceStatus {
+  authorized_rebalancers: Array<string>
+  can_rebalance: boolean
+  is_public: boolean
+  last_rebalance_ts: u64
+  rebalance_threshold: u64
+  time_until_next_rebalance: u64
+}
+
 export const UpgradeError = {
   /**
    * UpgradeError
@@ -97,22 +187,6 @@ export interface PrivilegedAddresses {
   operations_admin: string
   pause_admin: string
   rewards_admin: string
-}
-
-export interface IndexParams {
-  admin: string
-  base_nav: u128
-  blacklist_accounts: Array<string>
-  components: Array<string>
-  description: string
-  initial_deposit: u128
-  initial_price: u128
-  is_public: boolean
-  manager_fee_amount: u128
-  name: string
-  rebalance_authorities: Array<string>
-  token_symbol: string
-  whitelist_accounts: Array<string>
 }
 
 export interface Client {
@@ -418,6 +492,26 @@ export interface Client {
   }) => Promise<AssembledTransaction<u32>>
 
   /**
+   * Construct and simulate a contract_name transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  contract_name: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean
+  }) => Promise<AssembledTransaction<string>>
+
+  /**
    * Construct and simulate a commit_upgrade transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
   commit_upgrade: (
@@ -662,6 +756,7 @@ export class Client extends ContractClient {
         'AAAAAAAAAAAAAAAUY29udmVydF90b2tlbl90b191c2QAAAACAAAAAAAAAAV0b2tlbgAAAAAAABMAAAAAAAAABmFtb3VudAAAAAAACgAAAAEAAAAK',
         'AAAAAAAAAAAAAAAZY29udmVydF90b2tlbl90b191c2Rfc2FmZQAAAAAAAAIAAAAAAAAABXRva2VuAAAAAAAAEwAAAAAAAAAGYW1vdW50AAAAAAAKAAAAAQAAA+gAAAAK',
         'AAAAAAAAAAAAAAAHdmVyc2lvbgAAAAAAAAAAAQAAAAQ=',
+        'AAAAAAAAAAAAAAANY29udHJhY3RfbmFtZQAAAAAAAAAAAAABAAAAEQ==',
         'AAAAAAAAAAAAAAAOY29tbWl0X3VwZ3JhZGUAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAANbmV3X3dhc21faGFzaAAAAAAAA+4AAAAgAAAAAA==',
         'AAAAAAAAAAAAAAANYXBwbHlfdXBncmFkZQAAAAAAAAEAAAAAAAAABWFkbWluAAAAAAAAEwAAAAEAAAPuAAAAIA==',
         'AAAAAAAAAAAAAAAOcmV2ZXJ0X3VwZ3JhZGUAAAAAAAEAAAAAAAAABWFkbWluAAAAAAAAEwAAAAA=',
@@ -676,12 +771,23 @@ export class Client extends ContractClient {
         'AAAAAQAAAAAAAAAAAAAAD0RleERpc3RyaWJ1dGlvbgAAAAADAAAAAAAAAAVwYXJ0cwAAAAAAAAQAAAAAAAAABHBhdGgAAAPqAAAAEwAAAAAAAAALcHJvdG9jb2xfaWQAAAAAEA==',
         'AAAAAQAAAAAAAAAAAAAAD1VzZXJWb2x1bWVFbnRyeQAAAAADAAAAAAAAAA1pbmRleF9hZGRyZXNzAAAAAAAAEwAAAAAAAAAJdGltZXN0YW1wAAAAAAAABgAAAAAAAAAKdXNkX2Ftb3VudAAAAAAACg==',
         'AAAABAAAAAAAAAAAAAAAEkFjY2Vzc0NvbnRyb2xFcnJvcgAAAAAABwAAABJBY2Nlc3NDb250cm9sRXJyb3IAAAAAAAxSb2xlTm90Rm91bmQAAABlAAAAAAAAAAxVbmF1dGhvcml6ZWQAAABmAAAAAAAAAA9BZG1pbkFscmVhZHlTZXQAAAAAZwAAAAAAAAAMQmFkUm9sZVVzYWdlAAAAaAAAAAAAAAATQW5vdGhlckFjdGlvbkFjdGl2ZQAAAAtaAAAAAAAAAA5Ob0FjdGlvbkFjdGl2ZQAAAAALWwAAAAAAAAARQWN0aW9uTm90UmVhZHlZZXQAAAAAAAtc',
+        'AAAAAQAAAAAAAAAAAAAAE1ByaXZpbGVnZWRBZGRyZXNzZXMAAAAABQAAAAAAAAAPZW1lcmdlbmN5X2FkbWluAAAAABMAAAAAAAAAFmVtZXJnZW5jeV9wYXVzZV9hZG1pbnMAAAAAA+oAAAATAAAAAAAAABBvcGVyYXRpb25zX2FkbWluAAAAEwAAAAAAAAALcGF1c2VfYWRtaW4AAAAAEwAAAAAAAAANcmV3YXJkc19hZG1pbgAAAAAAABM=',
+        'AAAAAQAAAAAAAAAAAAAAC0luZGV4UGFyYW1zAAAAAAkAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAIYmFzZV9uYXYAAAAKAAAAAAAAAApjb21wb25lbnRzAAAAAAPqAAAH0AAAAA9Db21wb25lbnRVcGRhdGUAAAAAAAAAAAtkZXNjcmlwdGlvbgAAAAAQAAAAAAAAAA9pbml0aWFsX2RlcG9zaXQAAAAACgAAAAAAAAANaW5pdGlhbF9wcmljZQAAAAAAAAoAAAAAAAAACWlzX3B1YmxpYwAAAAAAAAEAAAAAAAAABG5hbWUAAAAQAAAAAAAAAAZzeW1ib2wAAAAAABA=',
+        'AAAAAQAAAAAAAAAAAAAADUluZGV4RnVuZEluZm8AAAAAAAALAAAAAAAAAAdhZGRyZXNzAAAAABMAAAAAAAAACGJhc2VfbmF2AAAACgAAAAAAAAANaW5pdGlhbF9wcmljZQAAAAAAAAoAAAAAAAAACWlzX3B1YmxpYwAAAAAAAAEAAAAAAAAAEWxhc3RfcmViYWxhbmNlX3RzAAAAAAAABgAAAAAAAAAPbGFzdF91cGRhdGVkX3RzAAAAAAYAAAAAAAAAD21hbmFnZXJfYWRkcmVzcwAAAAATAAAAAAAAAA10b2tlbl9hZGRyZXNzAAAAAAAAEwAAAAAAAAALdG90YWxfbWludHMAAAAACgAAAAAAAAARdG90YWxfcmVkZW1wdGlvbnMAAAAAAAAKAAAAAAAAAAx0b3RhbF9zaGFyZXMAAAAK',
+        'AAAAAQAAAAAAAAAAAAAAEEluZGV4RnVuZE1ldHJpY3MAAAAFAAAAAAAAAAtjdXJyZW50X25hdgAAAAAKAAAAAAAAAAtzaGFyZV9wcmljZQAAAAAKAAAAAAAAAAt0b3RhbF9taW50cwAAAAAKAAAAAAAAABF0b3RhbF9yZWRlbXB0aW9ucwAAAAAAAAoAAAAAAAAADHRvdGFsX3NoYXJlcwAAAAo=',
+        'AAAAAQAAAAAAAAAAAAAAD0luZGV4RnVuZFN0YXR1cwAAAAAEAAAAAAAAAA1jYW5fcmViYWxhbmNlAAAAAAAAAQAAAAAAAAAJaXNfcHVibGljAAAAAAAAAQAAAAAAAAARbGFzdF9yZWJhbGFuY2VfdHMAAAAAAAAGAAAAAAAAABNyZWJhbGFuY2VfdGhyZXNob2xkAAAAAAY=',
+        'AAAAAQAAAAAAAAAAAAAACUNvbXBvbmVudAAAAAAAAAMAAAAAAAAABWFzc2V0AAAAAAAAEQAAAAAAAAAGbm9ybWFsAAAAAAABAAAAAAAAAAZ3ZWlnaHQAAAAAAAo=',
+        'AAAAAgAAAAAAAAAAAAAAD0NvbXBvbmVudEFjdGlvbgAAAAADAAAAAAAAAAAAAAADQWRkAAAAAAAAAAAAAAAABlJlbW92ZQAAAAAAAAAAAAAAAAAMVXBkYXRlV2VpZ2h0',
+        'AAAAAQAAAAAAAAAAAAAAD0NvbXBvbmVudFVwZGF0ZQAAAAADAAAAAAAAAAZhY3Rpb24AAAAAB9AAAAAPQ29tcG9uZW50QWN0aW9uAAAAAAAAAAAKbmV3X3dlaWdodAAAAAAACgAAAAAAAAAFdG9rZW4AAAAAAAAT',
+        'AAAAAQAAAAAAAAAAAAAADlJlZmFjdG9yUGFyYW1zAAAAAAABAAAAAAAAABFjb21wb25lbnRfdXBkYXRlcwAAAAAAA+oAAAfQAAAAD0NvbXBvbmVudFVwZGF0ZQA=',
+        'AAAAAQAAAAAAAAAAAAAAD1JlYmFsYW5jZVBhcmFtcwAAAAABAAAAAAAAAAp0YXJnZXRfbmF2AAAAAAPoAAAACw==',
+        'AAAAAQAAAAAAAAAAAAAAE0NvbXBvbmVudEFsbG9jYXRpb24AAAAABAAAAAAAAAAJY29tcG9uZW50AAAAAAAH0AAAAAlDb21wb25lbnQAAAAAAAAAAAAAD2N1cnJlbnRfYmFsYW5jZQAAAAAKAAAAAAAAABFwZXJjZW50YWdlX29mX25hdgAAAAAAAAoAAAAAAAAADnRhcmdldF9iYWxhbmNlAAAAAAAK',
+        'AAAAAQAAAAAAAAAAAAAAD1JlYmFsYW5jZVN0YXR1cwAAAAAGAAAAAAAAABZhdXRob3JpemVkX3JlYmFsYW5jZXJzAAAAAAPqAAAAEwAAAAAAAAANY2FuX3JlYmFsYW5jZQAAAAAAAAEAAAAAAAAACWlzX3B1YmxpYwAAAAAAAAEAAAAAAAAAEWxhc3RfcmViYWxhbmNlX3RzAAAAAAAABgAAAAAAAAATcmViYWxhbmNlX3RocmVzaG9sZAAAAAAGAAAAAAAAABl0aW1lX3VudGlsX25leHRfcmViYWxhbmNlAAAAAAAABg==',
         'AAAABAAAAAAAAAAAAAAADFVwZ3JhZGVFcnJvcgAAAAMAAAAMVXBncmFkZUVycm9yAAAAE0Fub3RoZXJBY3Rpb25BY3RpdmUAAAALWgAAAAAAAAAOTm9BY3Rpb25BY3RpdmUAAAAAC1sAAAAAAAAAEUFjdGlvbk5vdFJlYWR5WWV0AAAAAAALXA==',
         'AAAABAAAAAAAAAAAAAAACU1hdGhFcnJvcgAAAAAAAAIAAAAZTWF0aEVycm9yOiBOdW1iZXJPdmVyZmxvdwAAAAAAAA5OdW1iZXJPdmVyZmxvdwAAAAAB/gAAAAAAAAAJTWF0aEVycm9yAAAAAAAB/w==',
         'AAAABAAAAAAAAAAAAAAADFN0b3JhZ2VFcnJvcgAAAAIAAAAMU3RvcmFnZUVycm9yAAAAE1ZhbHVlTm90SW5pdGlhbGl6ZWQAAAAB9QAAAAAAAAAMVmFsdWVNaXNzaW5nAAAB9g==',
         'AAAABAAAAAAAAAAAAAAAD1ZhbGlkYXRpb25FcnJvcgAAAAABAAAAD1ZhbGlkYXRpb25FcnJvcgAAAAAMSW52YWxpZFRva2VuAAADIQ==',
         'AAAAAQAAAAAAAAAAAAAAE1ByaXZpbGVnZWRBZGRyZXNzZXMAAAAABQAAAAAAAAAPZW1lcmdlbmN5X2FkbWluAAAAABMAAAAAAAAAFmVtZXJnZW5jeV9wYXVzZV9hZG1pbnMAAAAAA+oAAAATAAAAAAAAABBvcGVyYXRpb25zX2FkbWluAAAAEwAAAAAAAAALcGF1c2VfYWRtaW4AAAAAEwAAAAAAAAANcmV3YXJkc19hZG1pbgAAAAAAABM=',
-        'AAAAAQAAAAAAAAAAAAAAC0luZGV4UGFyYW1zAAAAAA0AAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAIYmFzZV9uYXYAAAAKAAAAAAAAABJibGFja2xpc3RfYWNjb3VudHMAAAAAA+oAAAATAAAAAAAAAApjb21wb25lbnRzAAAAAAPqAAAAEwAAAAAAAAALZGVzY3JpcHRpb24AAAAAEAAAAAAAAAAPaW5pdGlhbF9kZXBvc2l0AAAAAAoAAAAAAAAADWluaXRpYWxfcHJpY2UAAAAAAAAKAAAAAAAAAAlpc19wdWJsaWMAAAAAAAABAAAAAAAAABJtYW5hZ2VyX2ZlZV9hbW91bnQAAAAAAAoAAAAAAAAABG5hbWUAAAAQAAAAAAAAABVyZWJhbGFuY2VfYXV0aG9yaXRpZXMAAAAAAAPqAAAAEwAAAAAAAAAMdG9rZW5fc3ltYm9sAAAAEAAAAAAAAAASd2hpdGVsaXN0X2FjY291bnRzAAAAAAPqAAAAEw==',
       ]),
       options,
     )
@@ -701,6 +807,7 @@ export class Client extends ContractClient {
     convert_token_to_usd: this.txFromJSON<u128>,
     convert_token_to_usd_safe: this.txFromJSON<Option<u128>>,
     version: this.txFromJSON<u32>,
+    contract_name: this.txFromJSON<string>,
     commit_upgrade: this.txFromJSON<null>,
     apply_upgrade: this.txFromJSON<Buffer>,
     revert_upgrade: this.txFromJSON<null>,

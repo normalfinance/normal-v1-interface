@@ -2,25 +2,39 @@
 
 import { useEffect } from 'react';
 import { paths } from '@/routes/paths';
+import { useIndexFunds } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { RouterLink } from '@/routes/components';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useAppStore } from '@normalfinance/state';
+import { fShortenNumber } from '@/utils/format-number';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { createIndexSummary, getIndexStatusLabel, getIndexStatusColor } from '@/utils/index-mapper';
 
 import Grid2 from '@mui/material/Grid2';
-import { Box, Card, Chip, Stack, Table, Paper, TableRow, Typography, TableBody, TableCell, TableHead, TableContainer, CircularProgress } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-
-import { useIndexes } from '@/hooks';
-import { createIndexSummary, getIndexStatusLabel, getIndexStatusColor } from '@/utils/index-mapper';
-import { fCurrency, fShortenNumber } from '@/utils/format-number';
-import { RouterLink } from '@/routes/components';
+import {
+  Box,
+  Card,
+  Chip,
+  Stack,
+  Table,
+  Paper,
+  TableRow,
+  TableBody,
+  TableCell,
+  TableHead,
+  Typography,
+  TableContainer,
+  CircularProgress,
+} from '@mui/material';
 
 export default function IndexesView() {
   const { t } = useTranslate();
   const theme = useTheme();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
-  const { indexes, totalCount, loading, error, fetchIndexes } = useIndexes();
+  const { wallet } = usePersistStore();
+  const { indexes, totalCount, loading, error, fetchIndexes } = useIndexFunds();
 
   // Effect hook to set global loading state
   useEffect(() => {
@@ -36,7 +50,7 @@ export default function IndexesView() {
       <DashboardContent maxWidth="xl">
         <Stack spacing={1}>
           <Typography variant="h4" color="text.primary">
-            {t('Indexes')}
+            {t('Index Funds')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {t('Browse and invest in index funds')}
@@ -55,7 +69,7 @@ export default function IndexesView() {
               }}
             >
               <Typography variant="subtitle2" color="text.secondary">
-                {t('Total Indexes')}
+                {t('Total Funds')}
               </Typography>
               <Typography variant="h4">{fShortenNumber(totalCount)}</Typography>
             </Card>
@@ -70,10 +84,10 @@ export default function IndexesView() {
               }}
             >
               <Typography variant="subtitle2" color="text.secondary">
-                {t('Active Indexes')}
+                {t('Your Funds')}
               </Typography>
               <Typography variant="h4">
-                {indexSummaries.filter((s) => s.status.canMint && s.status.canRedeem).length}
+                {indexSummaries.filter((s) => s.managerAddress === wallet.address).length}
               </Typography>
             </Card>
           </Grid2>
@@ -87,7 +101,7 @@ export default function IndexesView() {
               }}
             >
               <Typography variant="subtitle2" color="text.secondary">
-                {t('Public Indexes')}
+                {t('Public Funds')}
               </Typography>
               <Typography variant="h4">
                 {indexSummaries.filter((s) => s.isPublic).length}
@@ -112,11 +126,11 @@ export default function IndexesView() {
                 </Box>
               ) : error ? (
                 <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <Typography color="error">{t('Error loading indexes')}</Typography>
+                  <Typography color="error">{t('Error loading index funds')}</Typography>
                 </Box>
               ) : indexes.length === 0 ? (
                 <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <Typography color="text.secondary">{t('No indexes found')}</Typography>
+                  <Typography color="text.secondary">{t('No index funds found')}</Typography>
                 </Box>
               ) : (
                 <TableContainer>
@@ -126,7 +140,7 @@ export default function IndexesView() {
                         <TableCell>{t('Index')}</TableCell>
                         <TableCell align="right">{t('Total Shares')}</TableCell>
                         <TableCell align="right">{t('Base NAV')}</TableCell>
-                        <TableCell align="right">{t('Total Mints')}</TableCell>
+                        <TableCell align="right">{t('Total Deposits')}</TableCell>
                         <TableCell align="center">{t('Status')}</TableCell>
                       </TableRow>
                     </TableHead>
@@ -148,7 +162,8 @@ export default function IndexesView() {
                           <TableCell>
                             <Stack>
                               <Typography variant="subtitle2">
-                                Index #{summary.sequence}
+                                {t('Index #')}
+                                {summary.sequence}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 {summary.address.slice(0, 8)}...{summary.address.slice(-6)}
@@ -167,13 +182,17 @@ export default function IndexesView() {
                           </TableCell>
                           <TableCell align="right">
                             <Typography variant="body2">
-                              {fShortenNumber(summary.totalMints)}
+                              {fShortenNumber(summary.totalDeposits)}
                             </Typography>
                           </TableCell>
                           <TableCell align="center">
                             <Chip
-                              label={getIndexStatusLabel(indexes.find((i) => i.address === summary.address)!.info)}
-                              color={getIndexStatusColor(indexes.find((i) => i.address === summary.address)!.info)}
+                              label={getIndexStatusLabel(
+                                indexes.find((i) => i.address === summary.address)!.info
+                              )}
+                              color={getIndexStatusColor(
+                                indexes.find((i) => i.address === summary.address)!.info
+                              )}
                               size="small"
                               sx={{
                                 borderRadius: 9999,

@@ -1,13 +1,13 @@
 'use client';
 
-import type { IndexContract } from '@normalfinance/contracts';
+import type { IndexFundContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
 // import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import {
-  IndexFactoryContract,
-  IndexContract as IndexContractClient,
+  IndexFundFactoryContract,
+  IndexFundContract as IndexFundContractClient,
 } from '@normalfinance/contracts';
 
 // ----------------------------------------------------------------------
@@ -15,7 +15,7 @@ import {
 export interface IndexListItem {
   address: string;
   sequence: number;
-  info: IndexContract.IndexInfo;
+  info: IndexFundContract.IndexFundInfo;
 }
 
 interface ReturnType {
@@ -28,7 +28,7 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-export function useIndexes(): ReturnType {
+export function useIndexFunds(): ReturnType {
   const [error, setError] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [indexes, setIndexes] = useState<IndexListItem[]>([]);
@@ -39,7 +39,7 @@ export function useIndexes(): ReturnType {
       setError(null);
       setLoading(true);
 
-      const IndexFactory = new IndexFactoryContract.Client({
+      const IndexFactory = new IndexFundFactoryContract.Client({
         contractId: constants.StellarConfig.INDEX_FACTORY_ADDRESS,
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
         rpcUrl: constants.StellarConfig.RPC_URL,
@@ -65,7 +65,7 @@ export function useIndexes(): ReturnType {
         // Fetch info for each index by querying the index contract directly
         const indexPromises = indexAddresses.map(async (address, sequence) => {
           try {
-            const indexClient = new IndexContractClient.Client({
+            const indexClient = new IndexFundContractClient.Client({
               contractId: address,
               networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
               rpcUrl: constants.StellarConfig.RPC_URL,
@@ -76,7 +76,7 @@ export function useIndexes(): ReturnType {
               return {
                 address,
                 sequence,
-                info: indexInfo.result as IndexContract.IndexInfo,
+                info: indexInfo.result as IndexFundContract.IndexFundInfo,
               };
             }
             return null;

@@ -250,7 +250,7 @@ export function RewardsView() {
 
       {/* ---- Tab panels ----------------------------------------------------- */}
       {selectedTab === '' && (
-        <WalletGate buttonText={t('Connect wallet to view rewards')} fullWidth>
+        <WalletGate buttonText={t('Login to view rewards')} fullWidth>
           <RewardsOverview
             referralsCount={REWARDS_OVERVIEW.referralsCount}
             protocolPoints={REWARDS_OVERVIEW.protocolPoints}
@@ -260,13 +260,13 @@ export function RewardsView() {
       )}
 
       {selectedTab === 'protocol' && (
-        <WalletGate buttonText={t('Connect wallet to view Protocol Points')} fullWidth>
+        <WalletGate buttonText={t('Login to view points')} fullWidth>
           <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
         </WalletGate>
       )}
 
       {selectedTab === 'moneygram' && (
-        <WalletGate buttonText={t('Connect Wallet to view MoneyGram history')} fullWidth>
+        <WalletGate buttonText={t('Login to view MoneyGram history')} fullWidth>
           {error && <Box sx={{ color: 'error.main', fontSize: 13, mb: 1 }}>{error}</Box>}
           <MoneyGramTransactionsTable rows={rows} loading={loading} />
         </WalletGate>

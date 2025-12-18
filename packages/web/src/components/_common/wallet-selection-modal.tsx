@@ -6,8 +6,10 @@ import { useTranslate } from '@/locales';
 import {
   Box,
   Stack,
+  Alert,
   Dialog,
   Button,
+  Divider,
   Typography,
   IconButton,
   DialogTitle,
@@ -90,7 +92,7 @@ export default function WalletSelectionModal({
     >
       <DialogTitle sx={{ pb: 2, position: 'relative' }}>
         <Typography variant="h5" component="div">
-          {t('Choose Wallet Type')}
+          {t('Account Setup')}
         </Typography>
         <IconButton
           aria-label="close"
@@ -109,8 +111,12 @@ export default function WalletSelectionModal({
       <DialogContent sx={{ py: 5 }}>
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {t('Select how you would like to connect your account')}
+            {t('Select how you would like to setup your account')}
           </Typography>
+
+          <Alert severity="success">
+            <Typography variant="body2">{t('Recommended for most users.')}</Typography>
+          </Alert>
 
           {/* Create Normal Wallet */}
           <Button
@@ -124,11 +130,11 @@ export default function WalletSelectionModal({
               justifyContent: 'flex-start',
               textTransform: 'none',
             }}
-            startIcon={<Iconify icon="solar:wallet-bold" width={24} />}
+            startIcon={<Iconify icon="solar:check-circle-bold" width={24} />}
           >
             <Box sx={{ textAlign: 'left', flex: 1 }}>
               <Typography variant="subtitle1" fontWeight={600}>
-                {t('Create A Normal Account')}
+                {t('Create a Normal account')}
               </Typography>
             </Box>
           </Button>
@@ -136,7 +142,7 @@ export default function WalletSelectionModal({
           {/* Connect Normal Wallet */}
           <Button
             variant="outlined"
-            color="primary"
+            color="secondary"
             fullWidth
             size="large"
             onClick={handleConnectNormalWallet}
@@ -145,14 +151,24 @@ export default function WalletSelectionModal({
               justifyContent: 'flex-start',
               textTransform: 'none',
             }}
-            startIcon={<Iconify icon="solar:wallet-money-bold" width={24} />}
+            startIcon={<Iconify icon="solar:import-bold" width={24} />}
           >
             <Box sx={{ textAlign: 'left', flex: 1 }}>
               <Typography variant="subtitle1" fontWeight={600}>
-                {t('Import Existing Normal Account')}
+                {t('Import an existing account')}
               </Typography>
             </Box>
           </Button>
+
+          <Divider sx={{ my: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('or')}
+            </Typography>
+          </Divider>
+
+          <Alert severity="warning">
+            <Typography variant="body2">{t('For advanced users only.')}</Typography>
+          </Alert>
 
           {/* Continue to Other Wallets */}
           <Button
@@ -167,11 +183,11 @@ export default function WalletSelectionModal({
               textTransform: 'none',
               mt: 1,
             }}
-            startIcon={<Iconify icon="solar:link-circle-bold" width={24} />}
+            startIcon={<Iconify icon="solar:wallet-bold" width={24} />}
           >
             <Box sx={{ textAlign: 'left', flex: 1 }}>
               <Typography variant="subtitle1" fontWeight={600}>
-                {t('Continue With Other Stellar Wallets')}
+                {t('Connect a crypto wallet')}
               </Typography>
             </Box>
           </Button>

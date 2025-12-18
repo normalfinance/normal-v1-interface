@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
-import IndexesView from '@/sections/indexes';
+import CreateIndexView from '@/sections/indexes/create';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Index Create | Normal',
+    default: 'Create Index | Normal',
     template: '%s · Normal',
   },
   description: 'Browse and invest in index funds on Normal.',
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     canonical: '/indexes',
   },
   openGraph: {
-    title: 'Indexes | Normal',
+    title: 'Create Index | Normal',
     description: 'Browse and invest in index funds on Normal.',
     url: `${CONFIG.siteUrl}/indexes`,
     siteName: 'Normal',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Indexes | Normal',
+    title: 'Create Index | Normal',
     description: 'Browse and invest in index funds on Normal.',
     images: ['/og/home.png'],
   },
@@ -39,9 +39,9 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'indexes', 'index funds', 'crypto yield'],
+  keywords: ['Normal', 'Normal Finance', 'indexes', 'index funds', 'ETF'],
 };
 
 export default function Page() {
-  return <IndexesView />;
+  return <CreateIndexView />;
 }

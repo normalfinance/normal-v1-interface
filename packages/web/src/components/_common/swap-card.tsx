@@ -1020,7 +1020,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ queryParams, changeTab, ...other })
           );
         })()
       ) : (
-        <WalletGate buttonText="Login to Swap" fullWidth variant="contained">
+        <WalletGate buttonText="Login to invest" fullWidth>
           {null}
         </WalletGate>
       )}

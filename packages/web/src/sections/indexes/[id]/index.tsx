@@ -1,27 +1,26 @@
 'use client';
 
+import { useIndex } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
-import { isValidContractAddress } from '@normalfinance/utils';
 
-import { Alert, CircularProgress, Box } from '@mui/material';
+import { Box, Alert, CircularProgress } from '@mui/material';
 
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
-import { useIndex } from '@/hooks';
 
 import IndexDetailsView from './index-details-view';
 
-export default function IndexView({ indexAddress }: { indexAddress: string }) {
+export default function IndexView({ id }: { id: string }) {
   const { t } = useTranslate();
 
-  const isAddressValid = isValidContractAddress(indexAddress);
+  const indexId = Number(id);
 
-  const { index, loading, error } = useIndex(indexAddress);
+  const { index, loading, error } = useIndex(indexId);
 
-  if (!isAddressValid) {
+  if (!Number.isInteger(indexId)) {
     return (
       <DashboardContent maxWidth="xl">
-        <Alert severity="info">{t('Invalid index contract address.')}</Alert>
+        <Alert severity="info">{t('Invalid index fund ID.')}</Alert>
       </DashboardContent>
     );
   }
@@ -29,7 +28,14 @@ export default function IndexView({ indexAddress }: { indexAddress: string }) {
   if (loading) {
     return (
       <DashboardContent maxWidth="xl">
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '50vh',
+          }}
+        >
           <CircularProgress />
         </Box>
       </DashboardContent>
@@ -48,5 +54,5 @@ export default function IndexView({ indexAddress }: { indexAddress: string }) {
     return <SpecificNotFound type="index" />;
   }
 
-  return <IndexDetailsView index={index} indexAddress={indexAddress} />;
+  return <IndexDetailsView id={indexId} index={index} />;
 }

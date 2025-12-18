@@ -137,8 +137,8 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
   const getButtonLabel = (): string => {
     if (!shareAmount) return 'Enter amount';
-    if (!isWalletConnected) return 'Connect Wallet';
-    if (hasInsufficientBalance()) return 'Insufficient LP tokens';
+    if (!isWalletConnected) return 'Login';
+    if (hasInsufficientBalance()) return 'Insufficient balance';
     return 'Withdraw';
   };
 
@@ -159,11 +159,11 @@ export const Content: React.FC<ContentProps> = ({ position, queryParams }) => {
 
   return (
     <>
-      <DialogTitle>{t('Withdraw liquidity')}</DialogTitle>
+      <DialogTitle>{t('Withdraw')}</DialogTitle>
       <DialogContent dividers sx={{ maxHeight: 600 }}>
         <Alert severity="warning" sx={{ mt: 1 }}>
           {t(
-            'This will remove your depoisted tokens from this pool back to your wallet, plus any accrued yield.'
+            'This will withdraw funds from your Earn balance back to your account, plus any accrued interest.'
           )}
         </Alert>
 

@@ -1,13 +1,14 @@
 'use client';
 
 import type { LegendValue } from '@/components/_common/area-chart-card';
+import type { DepositLiquidityQueryParams } from '@/types/query-params';
 import type { RealtimeChartData } from '@/utils/portfolio-value-chart-series';
 
 import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
-import { useLiquidityPositions, useQueryParams } from '@/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useQueryParams, useLiquidityPositions } from '@/hooks';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { createChartData } from '@/utils/portfolio-value-chart-series';
 import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
@@ -18,7 +19,6 @@ import { Box, Grid2, Stack, Typography } from '@mui/material';
 import { AreaChartCard } from '@/components/_common/area-chart-card';
 import { BalanceCard } from '@/components/_earn-page-components/balance-card';
 import { PositionsTable } from '@/components/_earn-page-components/positions-table';
-import { DepositLiquidityQueryParams } from '@/types/query-params';
 import AddLiquidityDialog from '@/components/_earn-page-components/add-liquidity-dialog';
 
 // ----------------------------------------------------------------------

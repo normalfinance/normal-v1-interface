@@ -16,15 +16,15 @@ import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transact
 import {
   PoolContract,
   PoolPlaneContract,
+  IndexFundContract,
   TokenShareContract,
   PoolRouterContract,
   PoolElasticContract,
   RewardsGaugeContract,
   SorobanTokenContract,
   ConfigStorageContract,
+  IndexFundFactoryContract,
   LiquidityCalculatorContract,
-  IndexContract,
-  IndexFactoryContract,
 } from '@normalfinance/contracts';
 
 import Box from '@mui/material/Box';
@@ -42,8 +42,8 @@ const contractClients = {
   config_storage: ConfigStorageContract.Client,
   token_share: TokenShareContract.Client,
   token: SorobanTokenContract.Client,
-  index: IndexContract.Client,
-  index_factory: IndexFactoryContract.Client,
+  index_fund: IndexFundContract.Client,
+  index_fund_factory: IndexFundFactoryContract.Client,
 };
 
 type ContractClientType<T extends ContractType> = T extends 'pool_router'
@@ -64,10 +64,10 @@ type ContractClientType<T extends ContractType> = T extends 'pool_router'
                 ? TokenShareContract.Client
                 : T extends 'token'
                   ? SorobanTokenContract.Client
-                  : T extends 'index'
-                    ? IndexContract.Client
-                    : T extends 'index_factory'
-                      ? IndexFactoryContract.Client
+                  : T extends 'index_fund'
+                    ? IndexFundContract.Client
+                    : T extends 'index_fund_factory'
+                      ? IndexFundFactoryContract.Client
                       : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {

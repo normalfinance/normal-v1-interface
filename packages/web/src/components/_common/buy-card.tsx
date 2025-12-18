@@ -254,7 +254,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
                 width={20}
                 height={20}
               />
-              {mgiLoading ? 'Opening…' : 'Buy USDC with MoneyGram'}
+              {mgiLoading ? 'Opening…' : 'Deposit cash with MoneyGram'}
             </Button>
           </Stack>
           <Box
@@ -426,7 +426,7 @@ const BuyCard: React.FC<BuyCardProps> = ({
               {getButtonLabel()}
             </Button>
           ) : (
-            <WalletGate buttonText="Login to Buy" fullWidth variant="soft">
+            <WalletGate buttonText="Login to deposit" fullWidth variant="soft">
               {null}
             </WalletGate>
           )}
@@ -448,6 +448,8 @@ const BuyCard: React.FC<BuyCardProps> = ({
           />
         )}
 
+        {/* onClick={openBuyDialog}
+            disabled={mgiBusy} */}
         <AmountDialog
           open={amountDialogOpen}
           onCancel={() => setAmountDialogOpen(false)}

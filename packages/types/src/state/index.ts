@@ -10,3 +10,4 @@ export * from './invite-code';
 export * from './pool';
 export * from './token';
 export * from './modal';
+export * from './index_fund';

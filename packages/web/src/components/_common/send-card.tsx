@@ -2,12 +2,15 @@ import type { CardProps } from '@mui/material';
 import type { Token } from '@normalfinance/types';
 import type { SendQueryParams } from '@/types/query-params';
 
+import { useBoolean } from '@/hooks';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { runWithdrawFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
+import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 import {
   getMaxAmount,
   getCryptoIconUrl,
@@ -24,6 +27,7 @@ import PickToken from './pick-token';
 import SendReview from './send-review';
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
+import AmountDialog from '../deposit-amount-dialog';
 
 interface SendCardProps extends CardProps {
   tokens: Token[];
@@ -185,6 +189,32 @@ const SendCard: React.FC<SendCardProps> = ({
       setReviewOpen(true);
     }
   };
+
+  const moneygramWithdraw = useBoolean();
+  const [mgiBusy, setMgiBusy] = useState(false);
+
+  // common start (preflight + flow wrapper)
+  async function startMgiWithdraw(addr: string, amountStr: string) {
+    setMgiBusy(true);
+    try {
+      const env = await detectWalletEnv();
+      assertTestnetAndAccountMatch(env, addr);
+
+      const withdrawAmount = Number(amountStr);
+      if (!Number.isFinite(withdrawAmount) || withdrawAmount <= 0) {
+        enqueueSnackbar(t('Enter a valid USDC amount'), { variant: 'warning' });
+        return;
+      }
+
+      await runWithdrawFlow(addr, withdrawAmount, () => {
+        enqueueSnackbar(t('MoneyGram ready — send USDC when prompted'), { variant: 'info' });
+      });
+    } catch (e: any) {
+      enqueueSnackbar(t('MoneyGram withdrawal failed'), { variant: 'error' });
+    } finally {
+      setMgiBusy(false);
+    }
+  }
 
   // Main button with multiple states
   const persist = usePersistStore();
@@ -469,7 +499,7 @@ const SendCard: React.FC<SendCardProps> = ({
             {getButtonLabel()}
           </Button>
         ) : (
-          <WalletGate buttonText="Login to Send" fullWidth variant="soft">
+          <WalletGate buttonText="Login to withdraw" fullWidth variant="soft">
             {null}
           </WalletGate>
         )}
@@ -497,6 +527,21 @@ const SendCard: React.FC<SendCardProps> = ({
           setSendToken(token);
           setOpen(false);
         }}
+      />
+
+      {/* Withdraw dialog */}
+      <AmountDialog
+        open={moneygramWithdraw.value}
+        onCancel={moneygramWithdraw.onFalse}
+        onConfirm={async (val) => {
+          moneygramWithdraw.onFalse();
+          await startMgiWithdraw(persist.wallet.address!, val);
+        }}
+        defaultAmount=""
+        min={1}
+        max={900}
+        kind="withdraw"
+        tokenLabel="USDC"
       />
     </Box>
   );

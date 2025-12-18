@@ -199,7 +199,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
               {t(description)}
             </Typography>
-            <Stack
+            {/* <Stack
               direction="row"
               alignItems="center"
               justifyContent="center"
@@ -219,7 +219,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 alt={halbornImage.alt ?? ''}
                 sx={{ width: '112px', height: 'auto', objectFit: 'cover', mt: '20px' }}
               />
-            </Stack>
+            </Stack> */}
           </Box>
         </Stack>
       </Container>

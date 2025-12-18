@@ -1,25 +1,15 @@
-import type { Token } from '@normalfinance/types';
-
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { fCurrency } from '@/utils/format-number';
-import { format, getCryptoIconUrl } from '@normalfinance/utils';
 
-import { alpha, useTheme } from '@mui/material/styles';
-import {
-  Box,
-  Dialog,
-  Button,
-  TextField,
-  Typography,
-  IconButton,
-  DialogTitle,
-  DialogContent,
-  InputAdornment,
-} from '@mui/material';
+import { LoadingButton } from '@mui/lab';
+import { useTheme } from '@mui/material/styles';
+import { Box, Dialog, Typography, IconButton, DialogTitle, DialogContent } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+
+import WalletGate from '../_common/wallet-gate';
 
 /* ------------------------------------------------------------------ */
 /* Zod schema                                                          */
@@ -123,10 +113,10 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose, butto
 
   const getButtonLabel = () => {
     if (!watchToken) return 'Select asset';
-    if (!pool) return 'No pool found';
+    if (!pool) return 'No asset found';
 
     if (!watchAmount) return 'Enter amount';
-    if (!isWalletConnected) return 'Connect Wallet';
+    if (!isWalletConnected) return 'Login';
     if (hasInsufficientBalance()) return 'Insufficient balance';
     return 'Continue';
   };
@@ -151,7 +141,7 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose, butto
       }
 
       if (!pool) {
-        alert('No pool found');
+        alert('No asset found');
         return;
       }
 
@@ -224,7 +214,7 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose, butto
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div">
-            {t('Add Liquidity')}
+            {t('Deposit')}
           </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />

@@ -277,7 +277,7 @@ const AuthLoginModal = ({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {t('Normal Protocol Disclaimer')}
+                  {t('Normal Security Disclaimer')}
                 </MuiLink>
               </Typography>
             }

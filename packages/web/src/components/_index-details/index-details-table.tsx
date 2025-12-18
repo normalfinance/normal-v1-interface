@@ -188,7 +188,9 @@ export const IndexDetailsTable: React.FC<{
 
                 return (
                   <TableRow hover key={idx}>
-                    <TableCell>{row.timestamp ? `${format.ago(row.timestamp / 1000)} ago` : ''}</TableCell>
+                    <TableCell>
+                      {row.timestamp ? `${format.ago(row.timestamp / 1000)} ago` : ''}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={row.type}

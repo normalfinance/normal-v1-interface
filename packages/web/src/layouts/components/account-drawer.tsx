@@ -31,7 +31,6 @@ import WalletSelectionModal, {
 } from '@/components/_common/wallet-selection-modal';
 
 import { AccountButton } from './account-button';
-import AddUsdcTrustlineButton from './add-trustline-button';
 
 function WalletConnected({ address }: { address: string }) {
   const { setGlobalIsLoading } = useAppStore();
@@ -82,28 +81,12 @@ function WalletConnected({ address }: { address: string }) {
       data-testid="wallet-connected"
       sx={{
         p: 2,
-        pt: 4,
+        // pt: 4,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'start',
       }}
     >
-      <Stack direction="row" width={1} justifyContent="space-between" alignItems="center">
-        <Typography variant="subtitle1">{format.fTruncate(address, 25)}</Typography>
-        <CopyIconButton value={address} alert="Address copied" />
-      </Stack>
-
-      <Stack direction="row" width={1} spacing={1} alignItems="stretch" py={2}>
-        <Box sx={{ flex: 1, display: 'flex' }}>
-          <AddUsdcTrustlineButton
-            fullWidth
-            size="large"
-            variant="outlined"
-            sx={{ borderRadius: 2, height: '100%' }}
-          />
-        </Box>
-      </Stack>
-
       <ConnectedWallet
         address={address}
         balance={totalBalance.toNumber()}
@@ -398,6 +381,19 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   <Typography variant="body2" color="text.secondary">
                     {userEmail}
                   </Typography>
+                  {connectedAddress && (
+                    <Stack
+                      direction="row"
+                      width={1}
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography variant="subtitle2">
+                        {format.fTruncate(connectedAddress, 25)}
+                      </Typography>
+                      <CopyIconButton value={connectedAddress} alert="Account ID copied" />
+                    </Stack>
+                  )}
                 </Box>
               </Stack>
               {isWalletConnected && connectedAddress ? (
@@ -405,10 +401,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
               ) : (
                 <Box sx={{ px: 2, py: 4 }}>
                   <Typography variant="h6" sx={{ mb: 2 }}>
-                    {t('Connect a Wallet')}
+                    {t('Account Setup')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    {t('Connect a wallet to start using Normal')}
+                    {t('Complete your account to start investing')}
                   </Typography>
                   <Button
                     variant="contained"
@@ -417,7 +413,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     onClick={handleConnectClick}
                     sx={{ mb: 2 }}
                   >
-                    {t('Connect Wallet')}
+                    {t('Complete')}
                   </Button>
                 </Box>
               )}

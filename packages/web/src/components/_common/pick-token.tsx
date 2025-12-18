@@ -426,7 +426,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                 <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <Iconify icon="eva:star-outline" width={14} />
 
-                  <Typography variant="caption">{t('All asset')}</Typography>
+                  <Typography variant="caption">{t('All assets')}</Typography>
                 </Box>
                 <Box
                   sx={{
@@ -473,7 +473,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             variant="body2"
                             sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                           >
-                            {token.name}
+                            {token.name.replace('Normal ', '')}
                           </Typography>
                           <Box
                             sx={{

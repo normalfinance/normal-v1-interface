@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from '@/global-config';
-import IndexView from '@/sections/indexes/[indexAddress]';
+import IndexView from '@/sections/indexes/[id]';
 
 export const metadata: Metadata = {
   title: {
@@ -43,9 +43,9 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  params: { indexAddress: string };
+  params: { id: string };
 }
 
 export default function Page({ params }: PageProps) {
-  return <IndexView indexAddress={params.indexAddress} />;
+  return <IndexView id={params.id} />;
 }

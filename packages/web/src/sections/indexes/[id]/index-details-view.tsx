@@ -3,10 +3,12 @@
 import type { IndexContract } from '@normalfinance/contracts';
 
 import { useState } from 'react';
+import { useIndex } from '@/hooks';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
+import { createIndexSummary, getIndexStatusLabel, getIndexStatusColor } from '@/utils/index-mapper';
 
 import Grid2 from '@mui/material/Grid2';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -28,20 +30,13 @@ import {
 } from '@mui/material';
 
 import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
-import { useIndex } from '@/hooks';
-import {
-  createIndexSummary,
-  getIndexStatusLabel,
-  getIndexStatusColor,
-  formatContractAmount,
-} from '@/utils/index-mapper';
 
 interface Props {
+  id: number;
   index: IndexContract.IndexInfo;
-  indexAddress: string;
 }
 
-export default function IndexDetailsView({ index, indexAddress }: Props) {
+export default function IndexDetailsView({ id, index }: Props) {
   const { t } = useTranslate();
   const theme = useTheme();
   const { wallet } = usePersistStore();
@@ -91,10 +86,7 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
       <DashboardContent maxWidth="xl">
         <CustomBreadcrumbs
           heading={`Index #${summary.sequence}`}
-          links={[
-            { name: t('Indexes'), href: paths.indexes.root },
-            { name: `Index ${indexAddress.slice(0, 8)}...` },
-          ]}
+          links={[{ name: t('Indexes'), href: paths.indexes.root }, { name: `Index ${id}...` }]}
           sx={{ mb: 3 }}
         />
 
@@ -110,8 +102,10 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
               }}
             >
               <Stack spacing={3}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h5">{t('Index Overview')}</Typography>
+                <Box
+                  sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <Typography variant="h5">{t('Overview')}</Typography>
                   <Chip
                     label={getIndexStatusLabel(index)}
                     color={getIndexStatusColor(index)}
@@ -151,7 +145,7 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
                   <Grid2 size={{ xs: 6, sm: 4 }}>
                     <Stack>
                       <Typography variant="caption" color="text.secondary">
-                        {t('Total Mints')}
+                        {t('Total Investments')}
                       </Typography>
                       <Typography variant="h6">{summary.totalMints.toLocaleString()}</Typography>
                     </Stack>
@@ -161,7 +155,9 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
                       <Typography variant="caption" color="text.secondary">
                         {t('Total Redemptions')}
                       </Typography>
-                      <Typography variant="h6">{summary.totalRedemptions.toLocaleString()}</Typography>
+                      <Typography variant="h6">
+                        {summary.totalRedemptions.toLocaleString()}
+                      </Typography>
                     </Stack>
                   </Grid2>
                   <Grid2 size={{ xs: 6, sm: 4 }}>
@@ -169,7 +165,9 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
                       <Typography variant="caption" color="text.secondary">
                         {t('Accumulated Fees')}
                       </Typography>
-                      <Typography variant="h6">{summary.accumulatedFees.toLocaleString()}</Typography>
+                      <Typography variant="h6">
+                        {summary.accumulatedFees.toLocaleString()}
+                      </Typography>
                     </Stack>
                   </Grid2>
                 </Grid2>
@@ -179,23 +177,29 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
                 {/* Contract Details */}
                 <Stack spacing={1}>
                   <Typography variant="subtitle2">{t('Contract Details')}</Typography>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                      gap: 1,
+                    }}
+                  >
                     <Typography variant="body2" color="text.secondary">
-                      {t('Index Address')}:
+                      {t('Index Id / Address')}:
                     </Typography>
                     <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                      {index.address}
+                      {index.address} / {index.id}
                     </Typography>
 
                     <Typography variant="body2" color="text.secondary">
-                      {t('Manager Address')}:
+                      {t('Manager')}:
                     </Typography>
                     <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
                       {index.manager_address}
                     </Typography>
 
                     <Typography variant="body2" color="text.secondary">
-                      {t('Token Address')}:
+                      {t('Token')}:
                     </Typography>
                     <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
                       {index.token_address}
@@ -236,7 +240,7 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
                 <Typography variant="h6">{t('Actions')}</Typography>
 
                 {!isWalletConnected && (
-                  <Alert severity="info">{t('Connect wallet to interact with this index')}</Alert>
+                  <Alert severity="info">{t('Login to use this index fund')}</Alert>
                 )}
 
                 <Stack spacing={2}>
@@ -245,9 +249,9 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
                     color="primary"
                     fullWidth
                     onClick={() => setMintDialogOpen(true)}
-                    disabled={!isWalletConnected || index.is_killed_mint || loading}
+                    disabled={!isWalletConnected || loading}
                   >
-                    {loading ? <CircularProgress size={20} /> : t('Mint Shares')}
+                    {loading ? <CircularProgress size={20} /> : t('Deposit')}
                   </Button>
 
                   <Button
@@ -255,9 +259,9 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
                     color="primary"
                     fullWidth
                     onClick={() => setRedeemDialogOpen(true)}
-                    disabled={!isWalletConnected || index.is_killed_redeem || loading}
+                    disabled={!isWalletConnected || loading}
                   >
-                    {loading ? <CircularProgress size={20} /> : t('Redeem Shares')}
+                    {loading ? <CircularProgress size={20} /> : t('Withdraw')}
                   </Button>
                 </Stack>
 
@@ -265,33 +269,21 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
                 <Stack spacing={1}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">
-                      {t('Minting')}
+                      {t('Deposits')}
                     </Typography>
-                    <Chip
-                      label={index.is_killed_mint ? t('Disabled') : t('Enabled')}
-                      color={index.is_killed_mint ? 'error' : 'success'}
-                      size="small"
-                    />
+                    <Chip label={t('Enabled')} color="success" size="small" />
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">
-                      {t('Redemption')}
+                      {t('Withdrawal')}
                     </Typography>
-                    <Chip
-                      label={index.is_killed_redeem ? t('Disabled') : t('Enabled')}
-                      color={index.is_killed_redeem ? 'error' : 'success'}
-                      size="small"
-                    />
+                    <Chip label={t('Enabled')} color="success" size="small" />
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">
                       {t('Rebalancing')}
                     </Typography>
-                    <Chip
-                      label={index.is_killed_rebalance ? t('Disabled') : t('Enabled')}
-                      color={index.is_killed_rebalance ? 'error' : 'success'}
-                      size="small"
-                    />
+                    <Chip label={t('Enabled')} color="success" size="small" />
                   </Box>
                 </Stack>
 
@@ -302,7 +294,7 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
                       {t('Manager Actions')}
                     </Typography>
                     <Alert severity="info" sx={{ fontSize: 12 }}>
-                      {t('You are the manager of this index')}
+                      {t('You are the manager of this index fund')}
                     </Alert>
                   </>
                 )}
@@ -312,15 +304,20 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
         </Grid2>
 
         {/* Mint Dialog */}
-        <Dialog open={mintDialogOpen} onClose={() => setMintDialogOpen(false)} maxWidth="xs" fullWidth>
-          <DialogTitle>{t('Mint Index Shares')}</DialogTitle>
+        <Dialog
+          open={mintDialogOpen}
+          onClose={() => setMintDialogOpen(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>{t('Deposit')}</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                {t('Enter the amount of XLM you want to deposit to mint index shares.')}
+                {t('Enter the amount you want to invest.')}
               </Typography>
               <TextField
-                label={t('Amount (XLM)')}
+                label={t('Amount (USD)')}
                 type="number"
                 value={mintAmount}
                 onChange={(e) => setMintAmount(e.target.value)}
@@ -336,18 +333,23 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
               onClick={handleMint}
               disabled={loading || !mintAmount || parseFloat(mintAmount) <= 0}
             >
-              {loading ? <CircularProgress size={20} /> : t('Mint')}
+              {loading ? <CircularProgress size={20} /> : t('Deposit')}
             </Button>
           </DialogActions>
         </Dialog>
 
         {/* Redeem Dialog */}
-        <Dialog open={redeemDialogOpen} onClose={() => setRedeemDialogOpen(false)} maxWidth="xs" fullWidth>
-          <DialogTitle>{t('Redeem Index Shares')}</DialogTitle>
+        <Dialog
+          open={redeemDialogOpen}
+          onClose={() => setRedeemDialogOpen(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>{t('Withdraw')}</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                {t('Enter the amount of shares you want to redeem.')}
+                {t('Enter the amount of shares you want to withdraw.')}
               </Typography>
               <TextField
                 label={t('Share Amount')}
@@ -366,7 +368,7 @@ export default function IndexDetailsView({ index, indexAddress }: Props) {
               onClick={handleRedeem}
               disabled={loading || !redeemAmount || parseFloat(redeemAmount) <= 0}
             >
-              {loading ? <CircularProgress size={20} /> : t('Redeem')}
+              {loading ? <CircularProgress size={20} /> : t('Withdraw')}
             </Button>
           </DialogActions>
         </Dialog>

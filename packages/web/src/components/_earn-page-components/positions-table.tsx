@@ -36,9 +36,9 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
 
   const actionButtons = [
     {
-      label: t('Add liquidity'),
+      label: t('Deposit'),
       icon: 'mingcute:add-line',
-      href: '/positions/create',
+      href: '/earn',
     },
   ];
 

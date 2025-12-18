@@ -7,5 +7,5 @@ export type ContractType =
   | 'config_storage'
   | 'token_share'
   | 'token'
-  | 'index'
-  | 'index_factory';
+  | 'index_fund'
+  | 'index_fund_factory';

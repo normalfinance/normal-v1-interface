@@ -126,7 +126,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         });
 
         if (!response.ok) {
-          throw new Error('Could not load stored phrase');
+          throw new Error('Could not load stored recovery phrase');
         }
 
         const { mnemonic: decryptedMnemonic } = await response.json();
@@ -137,7 +137,9 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         return decryptedMnemonic;
       } catch (err: any) {
         logger.warn('[NormalWalletImport] Failed to auto-fill mnemonic:', err);
-        enqueueSnackbar(t('Could not load stored phrase. Enter manually.'), { variant: 'warning' });
+        enqueueSnackbar(t('Could not load stored recovery phrase. Enter manually.'), {
+          variant: 'warning',
+        });
         return null;
       } finally {
         setIsLoadingMnemonic(false);
@@ -216,7 +218,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
       if (derivedPublicKey !== selectedWallet.walletAddress) {
         setError(
           t(
-            'This key does not match the selected wallet. Please make sure you are using the correct recovery phrase or private key.'
+            'This key does not match the selected account. Please make sure you are using the correct recovery phrase or password.'
           )
         );
         return false;
@@ -238,7 +240,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
 
         const normalized = normalizeMnemonic(mnemonicToImport);
         if (!validateMnemonic(normalized)) {
-          setMnemonicError(t('Invalid mnemonic phrase'));
+          setMnemonicError(t('Invalid recovery phrase'));
           setIsImporting(false);
           return;
         }
@@ -249,7 +251,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
           if (walletData.publicKey !== wallet.walletAddress) {
             setError(
               t(
-                'This key does not match the selected wallet. Please make sure you are using the correct recovery phrase or private key.'
+                'This key does not match the selected account. Please make sure you are using the correct recovery phrase or password.'
               )
             );
             setIsImporting(false);
@@ -267,8 +269,8 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         resetForm();
         onSuccess();
       } catch (err: any) {
-        logger.error('Failed to auto-import wallet:', err);
-        setError(err.message || t('Failed to import wallet. Please try manually.'));
+        logger.error('Failed to auto-import account:', err);
+        setError(err.message || t('Failed to import account. Please try manually.'));
         setIsImporting(false);
       }
     },
@@ -283,7 +285,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
       if (importType === 'mnemonic') {
         const normalized = normalizeMnemonic(mnemonic);
         if (!validateMnemonic(normalized)) {
-          setMnemonicError(t('Invalid mnemonic phrase'));
+          setMnemonicError(t('Invalid recovery phrase'));
           setIsImporting(false);
           return;
         }
@@ -297,7 +299,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
               return;
             }
           } catch {
-            setMnemonicError(t('Invalid mnemonic phrase'));
+            setMnemonicError(t('Invalid recovery phrase'));
             setIsImporting(false);
             return;
           }
@@ -313,7 +315,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         if (!validatePrivateKey(trimmed)) {
           setPrivateKeyError(
             t(
-              'Invalid private key. Please enter a valid Stellar private key (starts with "S" and is 56 characters long)'
+              'Invalid password. Please enter a valid password (starts with "S" and is 56 characters long)'
             )
           );
           setIsImporting(false);
@@ -329,7 +331,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
               return;
             }
           } catch {
-            setPrivateKeyError(t('Invalid private key'));
+            setPrivateKeyError(t('Invalid password'));
             setIsImporting(false);
             return;
           }
@@ -342,8 +344,8 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
       resetForm();
       onSuccess();
     } catch (err: any) {
-      logger.error('Failed to import wallet:', err);
-      setError(err.message || t('Failed to import wallet'));
+      logger.error('Failed to import account:', err);
+      setError(err.message || t('Failed to import account'));
       setIsImporting(false);
     }
   };
@@ -371,7 +373,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
   const renderWalletSelectStage = () => (
     <Stack spacing={3}>
       <Typography variant="body2" color="text.secondary">
-        {t('Select a wallet linked to your account, or import a new wallet.')}
+        {t('Select a linked account, or import a new one.')}
       </Typography>
 
       {isLoadingWallets ? (
@@ -437,7 +439,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         startIcon={<Iconify icon="mingcute:add-line" />}
         disabled={isLoadingWallets}
       >
-        {t('Import New Wallet')}
+        {t('Import New Account')}
       </Button>
     </Stack>
   );
@@ -487,7 +489,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         onChange={handleImportTypeChange}
         sx={{ borderBottom: 1, borderColor: 'divider' }}
       >
-        <Tab label={t('Private Key')} value="private-key" />
+        <Tab label={t('Password')} value="private-key" />
         <Tab label={t('Recovery Phrase')} value="mnemonic" />
       </Tabs>
 
@@ -511,19 +513,18 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
       ) : (
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
-            {t('Enter your private key below to import your account.')}
+            {t('Enter your password (private key) below to import your account.')}
           </Typography>
           <TextField
             multiline
             rows={4}
             fullWidth
-            placeholder={t('Enter your Stellar private key (starts with S...)')}
+            placeholder={t('Enter your password (starts with S...)')}
             value={privateKey}
             onChange={(e) => handlePrivateKeyChange(e.target.value)}
             error={!!privateKeyError}
             helperText={
-              privateKeyError ||
-              t('Your private key should start with "S" and be 56 characters long.')
+              privateKeyError || t('Your password should start with "S" and be 56 characters long.')
             }
             disabled={isImporting}
           />
@@ -544,8 +545,8 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
           {isImporting
             ? t('Importing...')
             : selectedWallet
-              ? t('Reconnect Wallet')
-              : t('Import Wallet')}
+              ? t('Reconnect Account')
+              : t('Import Account')}
         </Button>
       </Stack>
     </Stack>
