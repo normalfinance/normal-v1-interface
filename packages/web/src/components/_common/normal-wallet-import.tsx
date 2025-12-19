@@ -14,6 +14,13 @@ import {
   createKeypairFromSecret,
   createWalletFromMnemonic,
 } from '@normalfinance/utils';
+import {
+  encryptWithRSAPublicKey,
+  generateAESKey,
+  decryptWithAES,
+  exportAESKeyAsBase64,
+  importAESKeyFromBase64,
+} from '@/lib/client-crypto';
 
 import {
   Box,
@@ -119,17 +126,43 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
           headers.Authorization = `Bearer ${session.access_token}`;
         }
 
-        const response = await fetch(`/api/wallets/mnemonic/${walletAddress}`, {
+        const rsaKeysResponse = await fetch('/api/user/rsa-keys', {
           method: 'GET',
           headers,
           credentials: 'include',
+        });
+
+        if (!rsaKeysResponse.ok) {
+          throw new Error('Could not fetch RSA keys');
+        }
+
+        const rsaKeysData = await rsaKeysResponse.json();
+
+        if (!rsaKeysData.hasKeys) {
+          throw new Error('RSA keys not found');
+        }
+
+        const aesKey = await generateAESKey();
+        const aesKeyBase64 = await exportAESKeyAsBase64(aesKey);
+        const encryptedAESKey = await encryptWithRSAPublicKey(aesKeyBase64, rsaKeysData.publicKey);
+
+        const response = await fetch(`/api/wallets/mnemonic/${walletAddress}`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({
+            encryptedAESKey,
+          }),
         });
 
         if (!response.ok) {
           throw new Error('Could not load stored recovery phrase');
         }
 
-        const { mnemonic: decryptedMnemonic } = await response.json();
+        const { encryptedMnemonic, iv } = await response.json();
+
+        const importedAESKey = await importAESKeyFromBase64(aesKeyBase64);
+        const decryptedMnemonic = await decryptWithAES(encryptedMnemonic, iv, importedAESKey);
 
         setMnemonic(decryptedMnemonic);
         setImportType('mnemonic');

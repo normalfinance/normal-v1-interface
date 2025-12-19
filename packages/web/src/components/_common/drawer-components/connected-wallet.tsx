@@ -32,6 +32,8 @@ import PositionsTab from './positions-tab';
 import ReceiveModal from '../receive-modal';
 import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
+import { useState } from 'react';
+
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {
   address: string;

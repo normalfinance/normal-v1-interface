@@ -7,6 +7,14 @@ import { supabase } from '@/lib/createSupabaseClient';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { logger, validateMnemonic, normalizeMnemonic } from '@normalfinance/utils';
 import { updateWalletCustody, removePlatformCustody } from '@/services/linked-wallets';
+import {
+  generateRSAKeyPair,
+  encryptWithRSAPublicKey,
+  generateAESKey,
+  encryptWithAES,
+  exportAESKeyAsBase64,
+  encryptPrivateKeyForStorage,
+} from '@/lib/client-crypto';
 
 import {
   Card,
@@ -73,6 +81,62 @@ export function CustodySettings({
         throw new Error('Authentication required');
       }
 
+      let rsaPublicKey: string;
+
+      const rsaKeysCheckResponse = await fetch('/api/user/rsa-keys', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!rsaKeysCheckResponse.ok) {
+        throw new Error('Failed to check RSA keys');
+      }
+
+      const rsaKeysData = await rsaKeysCheckResponse.json();
+
+      if (!rsaKeysData.hasKeys) {
+        const rsaKeyPair = await generateRSAKeyPair();
+
+        const clientSecret = session.access_token.substring(0, 32);
+        const encryptedPrivateKeyData = await encryptPrivateKeyForStorage(
+          rsaKeyPair.privateKey,
+          user.id,
+          clientSecret
+        );
+
+        const storeRSAKeysResponse = await fetch('/api/user/rsa-keys', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            publicKey: rsaKeyPair.publicKey,
+            encryptedPrivateKey: encryptedPrivateKeyData.encryptedPrivateKey,
+            iv: encryptedPrivateKeyData.iv,
+            salt: encryptedPrivateKeyData.salt,
+          }),
+        });
+
+        if (!storeRSAKeysResponse.ok) {
+          throw new Error('Failed to store RSA keys');
+        }
+
+        rsaPublicKey = rsaKeyPair.publicKey;
+      } else {
+        rsaPublicKey = rsaKeysData.publicKey;
+      }
+
+      const aesKey = await generateAESKey();
+      const aesKeyBase64 = await exportAESKeyAsBase64(aesKey);
+      const encryptedMnemonicData = await encryptWithAES(normalized, aesKey);
+      const encryptedAESKey = await encryptWithRSAPublicKey(aesKeyBase64, rsaPublicKey);
+
       const encryptResponse = await fetch('/api/wallets/encrypt-mnemonic', {
         method: 'POST',
         headers: {
@@ -82,7 +146,9 @@ export function CustodySettings({
         credentials: 'include',
         body: JSON.stringify({
           walletAddress,
-          mnemonic: normalized,
+          encryptedMnemonic: encryptedMnemonicData.ciphertext,
+          encryptedAESKey,
+          iv: encryptedMnemonicData.iv,
         }),
       });
 

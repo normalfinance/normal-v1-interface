@@ -6,13 +6,18 @@ import { logger } from '@normalfinance/utils';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { encryptMnemonicServer } from '@/lib/server-mnemonic-encryption';
+import { UserRSAService } from '@/lib/user-rsa-service';
+import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
+import crypto from 'crypto';
 
 const EncryptSchema = z.object({
   walletAddress: z
     .string()
     .min(1, 'Wallet address is required')
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
-  mnemonic: z.string().min(1, 'Mnemonic is required'),
+  encryptedMnemonic: z.string().min(1, 'Encrypted mnemonic is required'),
+  encryptedAESKey: z.string().min(1, 'Encrypted AES key is required'),
+  iv: z.string().min(1, 'IV is required'),
 });
 
 function getAccessToken(request: NextRequest): string | undefined {
@@ -49,7 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { walletAddress, mnemonic } = validation.data;
+    const { walletAddress, encryptedMnemonic, encryptedAESKey, iv } = validation.data;
 
     const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     if (!isLinked) {
@@ -57,7 +62,33 @@ export async function POST(request: NextRequest) {
     }
 
     const userIdentifier = `${user.id}:${user.email}`;
-    const encrypted = await encryptMnemonicServer(mnemonic, userIdentifier);
+
+    const rsaPrivateKey = await UserRSAService.getDecryptedPrivateKey(user.id, userIdentifier);
+
+    const aesKeyBase64 = await decryptWithRSAPrivateKey(encryptedAESKey, rsaPrivateKey);
+
+    const encryptedMnemonicBuffer = Buffer.from(encryptedMnemonic, 'base64');
+    const ivBuffer = Buffer.from(iv, 'base64');
+    const aesKeyBuffer = Buffer.from(aesKeyBase64, 'base64');
+
+    const authTagLength = 16;
+    const encryptedData = encryptedMnemonicBuffer.subarray(
+      0,
+      encryptedMnemonicBuffer.length - authTagLength
+    );
+    const authTag = encryptedMnemonicBuffer.subarray(
+      encryptedMnemonicBuffer.length - authTagLength
+    );
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', aesKeyBuffer, ivBuffer);
+    decipher.setAuthTag(authTag);
+
+    const decryptedMnemonic = Buffer.concat([
+      decipher.update(encryptedData),
+      decipher.final(),
+    ]).toString('utf-8');
+
+    const encrypted = await encryptMnemonicServer(decryptedMnemonic, userIdentifier);
 
     logger.log('[API /encrypt-mnemonic] Mnemonic encrypted successfully:', {
       userId: user.id.substring(0, 8) + '...',
