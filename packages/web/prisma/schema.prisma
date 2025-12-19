@@ -86,6 +86,19 @@ model LinkedWallet {
   @@map("linked_wallets")
 }
 
+model UserRSAKeys {
+  id                  String   @id @default(cuid())
+  supabaseUid         String   @unique
+  publicKey           String   @db.Text
+  encryptedPrivateKey String   @db.Text
+  privateKeyIV        String
+  privateKeySalt      String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("user_rsa_keys")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model normal_contract_events {
   id                          String   @id
