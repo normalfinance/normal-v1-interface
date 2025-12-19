@@ -61,6 +61,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const token = getAccessToken(request);
+    if (!token) {
+      return NextResponse.json({ error: 'Access token required' }, { status: 400 });
+    }
+
     const user = await getAuthenticatedUser(token);
 
     if (!user) {
@@ -82,11 +86,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { publicKey, encryptedPrivateKey, iv, salt } = validation.data;
-
-    const token = getAccessToken(request);
-    if (!token) {
-      return NextResponse.json({ error: 'Access token required' }, { status: 400 });
-    }
 
     const clientSecret = token.substring(0, 32);
     const decryptedPrivateKey = await decryptClientEncryptedRSAPrivateKey(
