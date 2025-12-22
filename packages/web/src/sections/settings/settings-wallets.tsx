@@ -17,6 +17,7 @@ import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
+import InputAdornment from '@mui/material/InputAdornment';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -35,6 +36,7 @@ export function SettingsWallets() {
   const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
   const [walletToUnlink, setWalletToUnlink] = useState<string | null>(null);
   const [isUnlinking, setIsUnlinking] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadWallets = async () => {
     try {
@@ -95,6 +97,13 @@ export function SettingsWallets() {
     }
   };
 
+  const filteredWallets = wallets.filter((wallet) => {
+    const query = searchQuery.toLowerCase();
+    const name = (wallet.walletName || '').toLowerCase();
+    const address = wallet.walletAddress.toLowerCase();
+    return name.includes(query) || address.includes(query);
+  });
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -105,6 +114,23 @@ export function SettingsWallets() {
 
   return (
     <Stack spacing={3}>
+      {wallets.length > 0 && (
+        <TextField
+          size="small"
+          fullWidth
+          placeholder={t('Search by name or address...')}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+      )}
+
       {wallets.length === 0 ? (
         <Card>
           <CardContent>
@@ -113,8 +139,16 @@ export function SettingsWallets() {
             </Typography>
           </CardContent>
         </Card>
+      ) : filteredWallets.length === 0 ? (
+        <Card>
+          <CardContent>
+            <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 3 }}>
+              {t('No wallets found')}
+            </Typography>
+          </CardContent>
+        </Card>
       ) : (
-        wallets.map((wallet) => (
+        filteredWallets.map((wallet) => (
           <Card key={wallet.id}>
             <CardHeader
               title={
