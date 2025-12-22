@@ -396,6 +396,19 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   )}
                 </Box>
               </Stack>
+              <Button
+                variant="soft"
+                color="primary"
+                fullWidth
+                startIcon={<Iconify icon="solar:settings-bold" />}
+                onClick={() => {
+                  router.push('/settings');
+                  onClose();
+                }}
+                sx={{ mb: 1 }}
+              >
+                {t('Settings')}
+              </Button>
               {isWalletConnected && connectedAddress ? (
                 <WalletConnected address={connectedAddress} />
               ) : (
