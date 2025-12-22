@@ -17,6 +17,7 @@ import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
+import Skeleton from '@mui/material/Skeleton';
 import InputAdornment from '@mui/material/InputAdornment';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -106,9 +107,27 @@ export function SettingsWallets() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-        <CircularProgress />
-      </Box>
+      <Stack spacing={3}>
+        {[1, 2].map((index) => (
+          <Card key={index}>
+            <CardHeader title={<Skeleton variant="text" width={150} height={28} />} />
+            <CardContent>
+              <Stack spacing={3}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Skeleton variant="text" width={60} />
+                  <Skeleton variant="text" width={180} />
+                </Stack>
+                <Stack direction="row" justifyContent="space-between">
+                  <Skeleton variant="text" width={70} />
+                  <Skeleton variant="text" width={140} />
+                </Stack>
+                <Skeleton variant="rounded" height={60} />
+                <Skeleton variant="rounded" width={120} height={36} />
+              </Stack>
+            </CardContent>
+          </Card>
+        ))}
+      </Stack>
     );
   }
 
