@@ -3,6 +3,7 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import posthog from 'posthog-js';
+import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -17,7 +18,17 @@ import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
-import { Box, Stack, Avatar, Button, Drawer, Tooltip, IconButton, Typography } from '@mui/material';
+import {
+  Box,
+  Stack,
+  Avatar,
+  Button,
+  Drawer,
+  Tooltip,
+  IconButton,
+  Typography,
+  CircularProgress,
+} from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
@@ -127,6 +138,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
     value: isDisconnecting,
     onTrue: startDisconnecting,
     onFalse: stopDisconnecting,
+  } = useBoolean();
+
+  const {
+    value: isNavigatingToSettings,
+    onTrue: startNavigatingToSettings,
+    onFalse: stopNavigatingToSettings,
   } = useBoolean();
 
   const avatarURL = cdn('logo/logo-single.svg');
@@ -396,6 +413,28 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   )}
                 </Box>
               </Stack>
+              <Button
+                variant="soft"
+                color="primary"
+                fullWidth
+                startIcon={
+                  isNavigatingToSettings ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <Iconify icon="solar:settings-bold" />
+                  )
+                }
+                onClick={() => {
+                  startNavigatingToSettings();
+                  router.push(paths.settings);
+                  stopNavigatingToSettings();
+                  onClose();
+                }}
+                disabled={isNavigatingToSettings}
+                sx={{ mb: 1 }}
+              >
+                {isNavigatingToSettings ? t('Loading...') : t('Settings')}
+              </Button>
               {isWalletConnected && connectedAddress ? (
                 <WalletConnected address={connectedAddress} />
               ) : (

@@ -35,6 +35,7 @@ export const paths = {
   },
   earn: '/earn',
   rewards: '/rewards',
+  settings: '/settings',
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready
     feedbackForm: 'https://forms.fillout.com/t/cumVTceVQeus',

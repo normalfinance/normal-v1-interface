@@ -6,6 +6,13 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
 import {
+  generateAESKey,
+  decryptWithAES,
+  exportAESKeyAsBase64,
+  importAESKeyFromBase64,
+  encryptWithRSAPublicKey,
+} from '@/lib/client-crypto';
+import {
   logger,
   format,
   validateMnemonic,
@@ -14,13 +21,6 @@ import {
   createKeypairFromSecret,
   createWalletFromMnemonic,
 } from '@normalfinance/utils';
-import {
-  encryptWithRSAPublicKey,
-  generateAESKey,
-  decryptWithAES,
-  exportAESKeyAsBase64,
-  importAESKeyFromBase64,
-} from '@/lib/client-crypto';
 
 import {
   Box,
