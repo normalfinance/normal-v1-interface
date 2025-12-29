@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { useSnackbar } from '@/components/template/snackbar';
 import { resetPassword } from '@/services/auth';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
@@ -14,6 +13,8 @@ import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 import CardContent from '@mui/material/CardContent';
 import CircularProgress from '@mui/material/CircularProgress';
+
+import { useSnackbar } from '@/components/template/snackbar';
 
 export function SettingsSecurity() {
   const { t } = useTranslate();
@@ -50,12 +51,7 @@ export function SettingsSecurity() {
             <Typography variant="body2" color="text.secondary">
               {t('Click below to receive a password reset link at your email address.')}
             </Typography>
-            <TextField
-              fullWidth
-              label={t('Email')}
-              value={user?.email || ''}
-              disabled
-            />
+            <TextField fullWidth label={t('Email')} value={user?.email || ''} disabled />
             <Button
               variant="contained"
               onClick={handleSendResetLink}

@@ -8,11 +8,11 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { logger, validateMnemonic, normalizeMnemonic } from '@normalfinance/utils';
 import { updateWalletCustody, removePlatformCustody } from '@/services/linked-wallets';
 import {
-  generateRSAKeyPair,
-  encryptWithRSAPublicKey,
   generateAESKey,
   encryptWithAES,
+  generateRSAKeyPair,
   exportAESKeyAsBase64,
+  encryptWithRSAPublicKey,
   encryptPrivateKeyForStorage,
 } from '@/lib/client-crypto';
 
@@ -203,13 +203,13 @@ export function CustodySettings({
   return (
     <>
       <Card>
-        <CardHeader title={t('Wallet Custody')} />
+        <CardHeader title={t('Account Custody')} />
         <CardContent>
           <Stack spacing={3}>
             {custodyChoice === null && (
               <Alert severity="info">
                 <Typography variant="body2" sx={{ mb: 2 }}>
-                  {t('Your wallet was created before the custody feature was available.')}
+                  {t('Your account was created before the custody feature was available.')}
                 </Typography>
                 <Button variant="contained" size="small" onClick={migrateToPlatformDialog.onTrue}>
                   {t('Upgrade to Platform Custody')}
@@ -309,7 +309,7 @@ export function CustodySettings({
             <Alert severity="warning">
               <Typography variant="body2">
                 {t(
-                  'This will permanently delete your encrypted recovery phrase from our servers. You will need to manually enter your recovery phrase when reconnecting your wallet.'
+                  'This will permanently delete your encrypted recovery phrase from our servers. You will need to manually enter your recovery phrase when reconnecting your account.'
                 )}
               </Typography>
             </Alert>

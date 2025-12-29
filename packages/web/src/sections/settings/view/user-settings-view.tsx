@@ -1,22 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useTabs } from 'minimal-shared/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
-import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
-import { paths } from '@/routes/paths';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
-import { CustomTabs } from '@/components/template/custom-tabs';
 
 import { Iconify } from '@/components/template/iconify';
+import { CustomTabs } from '@/components/template/custom-tabs';
+import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
 
 import { SettingsGeneral } from '../settings-general';
-import { SettingsWallets } from '../settings-wallets';
+import { SettingsAccounts } from '../settings-accounts';
 import { SettingsSecurity } from '../settings-security';
 
 // ----------------------------------------------------------------------
@@ -28,8 +26,8 @@ const TABS = [
     icon: <Iconify width={24} icon="solar:user-id-bold" />,
   },
   {
-    value: 'wallets',
-    label: 'Wallets',
+    value: 'accounts',
+    label: 'Accounts',
     icon: <Iconify width={24} icon="solar:wallet-bold" />,
   },
   {
@@ -67,7 +65,7 @@ export function UserSettingsView() {
 
           <Box sx={{ p: 3 }}>
             {tabs.value === 'general' && <SettingsGeneral />}
-            {tabs.value === 'wallets' && <SettingsWallets />}
+            {tabs.value === 'accounts' && <SettingsAccounts />}
             {tabs.value === 'security' && <SettingsSecurity />}
           </Box>
         </Card>

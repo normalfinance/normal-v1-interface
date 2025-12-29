@@ -14,11 +14,11 @@ import {
   getRandomVerificationWords,
 } from '@normalfinance/utils';
 import {
-  generateRSAKeyPair,
-  encryptWithRSAPublicKey,
   generateAESKey,
   encryptWithAES,
+  generateRSAKeyPair,
   exportAESKeyAsBase64,
+  encryptWithRSAPublicKey,
   encryptPrivateKeyForStorage,
 } from '@/lib/client-crypto';
 

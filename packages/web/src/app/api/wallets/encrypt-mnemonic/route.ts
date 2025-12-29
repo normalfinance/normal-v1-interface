@@ -1,14 +1,14 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { UserRSAService } from '@/lib/user-rsa-service';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
+import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { encryptMnemonicServer } from '@/lib/server-mnemonic-encryption';
-import { UserRSAService } from '@/lib/user-rsa-service';
-import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
-import crypto from 'crypto';
 
 const EncryptSchema = z.object({
   walletAddress: z

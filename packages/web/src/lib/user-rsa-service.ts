@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { logger } from '@normalfinance/utils';
+
 import { decryptRSAPrivateKey } from './server-rsa-encryption';
 
 export interface UserRSAKeys {

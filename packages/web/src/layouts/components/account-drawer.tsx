@@ -3,6 +3,7 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import posthog from 'posthog-js';
+import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -425,7 +426,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 }
                 onClick={() => {
                   startNavigatingToSettings();
-                  router.push('/settings');
+                  router.push(paths.settings);
                   stopNavigatingToSettings();
                   onClose();
                 }}

@@ -1,13 +1,13 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { cdn } from '@normalfinance/utils';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
-import Avatar from '@mui/material/Avatar';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
+import Avatar from '@mui/material/Avatar';
+import Typography from '@mui/material/Typography';
 import CardContent from '@mui/material/CardContent';
 
 export function SettingsGeneral() {
@@ -23,7 +23,8 @@ export function SettingsGeneral() {
     | { picture?: string; avatar_url?: string; name?: string }
     | undefined;
   const userEmail = user.email ?? '';
-  const userAvatar = userMetadata?.picture || userMetadata?.avatar_url || cdn('logo/logo-single.svg');
+  const userAvatar =
+    userMetadata?.picture || userMetadata?.avatar_url || cdn('logo/logo-single.svg');
   const displayName = userMetadata?.name || userEmail || 'User';
   const createdAt = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
   const authProvider = user.app_metadata?.provider || 'email';
@@ -78,4 +79,3 @@ export function SettingsGeneral() {
     </Card>
   );
 }
-

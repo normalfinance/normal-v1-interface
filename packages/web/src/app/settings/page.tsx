@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { UserSettingsView } from '@/sections/settings';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 export default function SettingsPage() {
   const { session, isLoading } = useSupabaseAuth();

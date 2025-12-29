@@ -1,33 +1,35 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import type { LinkedWallet } from '@/services/linked-wallets';
+
 import { useTranslate } from '@/locales';
-import { useSnackbar } from '@/components/template/snackbar';
-import { getLinkedWallets, unlinkWallet, updateWalletName, LinkedWallet } from '@/services/linked-wallets';
-import { CustodySettings } from '@/components/settings/custody-settings';
+import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
+import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import Skeleton from '@mui/material/Skeleton';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import IconButton from '@mui/material/IconButton';
-import CircularProgress from '@mui/material/CircularProgress';
-import Skeleton from '@mui/material/Skeleton';
-import InputAdornment from '@mui/material/InputAdornment';
-import Dialog from '@mui/material/Dialog';
+import CardContent from '@mui/material/CardContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import InputAdornment from '@mui/material/InputAdornment';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
+import { useSnackbar } from '@/components/template/snackbar';
+import { CustodySettings } from '@/components/settings/custody-settings';
 
-export function SettingsWallets() {
+export function SettingsAccounts() {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
@@ -45,7 +47,7 @@ export function SettingsWallets() {
       const linkedWallets = await getLinkedWallets();
       setWallets(linkedWallets);
     } catch (error: any) {
-      enqueueSnackbar(error.message || t('Failed to load wallets'), { variant: 'error' });
+      enqueueSnackbar(error.message || t('Failed to load accounts'), { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -63,11 +65,11 @@ export function SettingsWallets() {
   const handleSaveName = async (walletAddress: string) => {
     try {
       await updateWalletName(walletAddress, walletName);
-      enqueueSnackbar(t('Wallet name updated'), { variant: 'success' });
+      enqueueSnackbar(t('Account name updated'), { variant: 'success' });
       setEditingWallet(null);
       await loadWallets();
     } catch (error: any) {
-      enqueueSnackbar(error.message || t('Failed to update wallet name'), { variant: 'error' });
+      enqueueSnackbar(error.message || t('Failed to update account name'), { variant: 'error' });
     }
   };
 
@@ -87,12 +89,12 @@ export function SettingsWallets() {
     try {
       setIsUnlinking(true);
       await unlinkWallet(walletToUnlink);
-      enqueueSnackbar(t('Wallet unlinked successfully'), { variant: 'success' });
+      enqueueSnackbar(t('Account unlinked successfully'), { variant: 'success' });
       setUnlinkDialogOpen(false);
       setWalletToUnlink(null);
       await loadWallets();
     } catch (error: any) {
-      enqueueSnackbar(error.message || t('Failed to unlink wallet'), { variant: 'error' });
+      enqueueSnackbar(error.message || t('Failed to unlink account'), { variant: 'error' });
     } finally {
       setIsUnlinking(false);
     }
@@ -137,7 +139,7 @@ export function SettingsWallets() {
         <TextField
           size="small"
           fullWidth
-          placeholder={t('Search by name or address...')}
+          placeholder={t('Search by name or id...')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           InputProps={{
@@ -154,7 +156,7 @@ export function SettingsWallets() {
         <Card>
           <CardContent>
             <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 3 }}>
-              {t('No linked wallets')}
+              {t('No linked accounts')}
             </Typography>
           </CardContent>
         </Card>
@@ -162,7 +164,7 @@ export function SettingsWallets() {
         <Card>
           <CardContent>
             <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 3 }}>
-              {t('No wallets found')}
+              {t('No accounts found')}
             </Typography>
           </CardContent>
         </Card>
@@ -177,7 +179,7 @@ export function SettingsWallets() {
                       size="small"
                       value={walletName}
                       onChange={(e) => setWalletName(e.target.value)}
-                      placeholder={t('Wallet Name')}
+                      placeholder={t('Account Name')}
                       sx={{ flex: 1 }}
                     />
                     <IconButton
@@ -193,7 +195,9 @@ export function SettingsWallets() {
                   </Stack>
                 ) : (
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="h6">{wallet.walletName || t('Unnamed Wallet')}</Typography>
+                    <Typography variant="h6">
+                      {wallet.walletName || t('Unnamed Account')}
+                    </Typography>
                     <IconButton size="small" onClick={() => handleEditName(wallet)}>
                       <Iconify icon="solar:pen-bold" width={18} />
                     </IconButton>
@@ -205,11 +209,13 @@ export function SettingsWallets() {
               <Stack spacing={3}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography variant="body2" color="text.secondary">
-                    {t('Address')}
+                    {t('Account ID')}
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="body2">{format.fTruncate(wallet.walletAddress, 20)}</Typography>
-                    <CopyIconButton value={wallet.walletAddress} alert={t('Address copied')} />
+                    <Typography variant="body2">
+                      {format.fTruncate(wallet.walletAddress, 20)}
+                    </Typography>
+                    <CopyIconButton value={wallet.walletAddress} alert={t('ID copied')} />
                   </Stack>
                 </Stack>
 
@@ -240,7 +246,7 @@ export function SettingsWallets() {
                   startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
                   onClick={() => handleUnlinkClick(wallet.walletAddress)}
                 >
-                  {t('Unlink Wallet')}
+                  {t('Disconnect Account')}
                 </Button>
               </Stack>
             </CardContent>
@@ -249,10 +255,10 @@ export function SettingsWallets() {
       )}
 
       <Dialog open={unlinkDialogOpen} onClose={() => !isUnlinking && setUnlinkDialogOpen(false)}>
-        <DialogTitle>{t('Unlink Wallet')}</DialogTitle>
+        <DialogTitle>{t('Disconnect Account')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2">
-            {t('Are you sure you want to unlink this wallet? This action cannot be undone.')}
+            {t('Are you sure you want to disconnect this account? This action cannot be undone.')}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -266,11 +272,10 @@ export function SettingsWallets() {
             disabled={isUnlinking}
             startIcon={isUnlinking ? <CircularProgress size={16} /> : null}
           >
-            {isUnlinking ? t('Unlinking...') : t('Unlink')}
+            {isUnlinking ? t('Disconnecting...') : t('Disconnect')}
           </Button>
         </DialogActions>
       </Dialog>
     </Stack>
   );
 }
-
