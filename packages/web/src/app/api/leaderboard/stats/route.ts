@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { getApiConfig } from '@/lib/edge-config';
 import { rateLimiter } from '@/server/rateLimiter';
 import { LeaderboardService } from '@/lib/leaderboard-service';
-import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 export const dynamic = 'force-dynamic';

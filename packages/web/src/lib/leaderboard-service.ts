@@ -1,8 +1,8 @@
 import type { IndexFund } from '@prisma/client';
 import type { IndexFundContract } from '@normalfinance/contracts';
 
-import { Decimal } from '@prisma/client/runtime/library';
 import { constants } from '@normalfinance/utils';
+import { Decimal } from '@prisma/client/runtime/library';
 import {
   IndexFundFactoryContract,
   IndexFundContract as IndexFundContractClient,

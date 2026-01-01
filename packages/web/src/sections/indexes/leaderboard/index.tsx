@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import type { LeaderboardMetric, LeaderboardVisibility } from '@/hooks/use-leaderboard';
+
 import { paths } from '@/routes/paths';
 import { useLeaderboard } from '@/hooks';
 import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
 import { RouterLink } from '@/routes/components';
-import { DashboardContent } from '@/layouts/dashboard';
-import { fShortenNumber, fCurrency } from '@/utils/format-number';
 import { useAppStore } from '@normalfinance/state';
+import { DashboardContent } from '@/layouts/dashboard';
+import { fCurrency, fShortenNumber } from '@/utils/format-number';
 
 import Grid2 from '@mui/material/Grid2';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -25,8 +27,6 @@ import {
 } from '@mui/material';
 
 import { LeaderboardTable } from '@/components/_leaderboard-components/leaderboard-table';
-
-import type { LeaderboardMetric, LeaderboardVisibility } from '@/hooks/use-leaderboard';
 
 // ----------------------------------------------------------------------
 

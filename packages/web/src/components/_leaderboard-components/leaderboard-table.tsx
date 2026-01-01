@@ -3,10 +3,11 @@
 import type { LeaderboardRanking } from '@/hooks/use-leaderboard';
 
 import { paths } from '@/routes/paths';
-import { useRouter } from 'next/navigation';
 import { useTranslate } from '@/locales';
-import { fShortenNumber, fCurrency } from '@/utils/format-number';
+import { useRouter } from 'next/navigation';
+import { fCurrency, fShortenNumber } from '@/utils/format-number';
 
+import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
   Card,
@@ -22,7 +23,6 @@ import {
   Pagination,
   TableContainer,
 } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 
