@@ -1,4 +1,5 @@
 import * as Stellar from '@stellar/stellar-sdk';
+// @ts-ignore TODO: This is a placeholder, we need to fix this later
 import { signXDRWithConnectedWallet } from '@/lib/mgi/client';
 
 const SDK: any = (Stellar as any).default ?? Stellar;

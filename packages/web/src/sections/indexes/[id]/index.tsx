@@ -1,6 +1,6 @@
 'use client';
 
-import { useIndex } from '@/hooks';
+import { useIndexFund } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 
@@ -15,7 +15,7 @@ export default function IndexView({ id }: { id: string }) {
 
   const indexId = Number(id);
 
-  const { index, loading, error } = useIndex(indexId);
+  const { index, loading, error } = useIndexFund(indexId);
 
   if (!Number.isInteger(indexId)) {
     return (

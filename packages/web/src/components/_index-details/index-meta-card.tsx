@@ -73,17 +73,17 @@ function ConstituentsTable({
         )}
         <TableBody>
           {rows.map((tok) => (
-            <TableRow key={tok.id} hover>
+            <TableRow key={tok.contract} hover>
               <TableCell sx={{ py: 1.25 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
                     component="img"
                     src={tok.icon}
-                    alt={tok.shortname}
+                    alt={tok.symbol}
                     sx={{ width: 20, height: 20, borderRadius: 9999, flexShrink: 0 }}
                   />
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {tok.shortname}
+                    {tok.symbol}
                   </Typography>
                 </Box>
               </TableCell>
@@ -122,7 +122,7 @@ export default function IndexMetaCard({ index }: Props) {
 
     const lg = sorted[0];
     const sm = sorted[sorted.length - 1];
-    const smallestFinal = lg.id === sm.id ? null : sm;
+    const smallestFinal = lg.contract === sm.contract ? null : sm;
 
     return {
       largest: lg,
@@ -211,7 +211,7 @@ export default function IndexMetaCard({ index }: Props) {
                       <Box
                         component="img"
                         src={row.token!.icon}
-                        alt={row.token!.shortname}
+                        alt={row.token!.symbol}
                         sx={{
                           width: 20,
                           height: 20,
@@ -221,7 +221,7 @@ export default function IndexMetaCard({ index }: Props) {
                         }}
                       />
                       <Typography variant="body2" color="text.primary" sx={{ fontWeight: 500 }}>
-                        {row.token!.shortname}
+                        {row.token!.symbol}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {row.token!.weightPct.toFixed(2)} %

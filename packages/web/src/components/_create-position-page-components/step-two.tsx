@@ -12,7 +12,7 @@ import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Stack, Avatar, Button, InputBase, Typography } from '@mui/material';
 
-import type { FormValues } from './step-content-panel';
+import type { FormValues } from '../../types/forms';
 
 interface StepTwoProps {
   tokenA: Token;

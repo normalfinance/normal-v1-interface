@@ -13,7 +13,7 @@ import { Iconify } from '@/components/template/iconify';
 
 import PickToken from '../_common/pick-token';
 
-import type { FormValues } from './step-content-panel';
+import type { FormValues } from '../../types/forms';
 
 interface StepOneProps {
   tokens: Token[];

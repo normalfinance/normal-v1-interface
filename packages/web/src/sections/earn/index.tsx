@@ -19,7 +19,7 @@ import { Box, Grid2, Stack, Typography } from '@mui/material';
 import { AreaChartCard } from '@/components/_common/area-chart-card';
 import { BalanceCard } from '@/components/_earn-page-components/balance-card';
 import { PositionsTable } from '@/components/_earn-page-components/positions-table';
-import AddLiquidityDialog from '@/components/_earn-page-components/add-liquidity-dialog';
+// import AddLiquidityDialog from '@/components/_earn-page-components/add-liquidity-dialog';
 
 // ----------------------------------------------------------------------
 
@@ -130,11 +130,11 @@ export default function EarnView() {
           {/* TODO: transaction history */}
         </Grid2>
 
-        <AddLiquidityDialog
+        {/* <AddLiquidityDialog
           open={modalState.addLiquidity}
           onClose={() => setModalView('addLiquidity', false)}
           // queryParams={queryParams}
-        />
+        /> */}
       </DashboardContent>
     </Box>
   );

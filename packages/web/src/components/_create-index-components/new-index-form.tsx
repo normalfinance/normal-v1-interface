@@ -412,7 +412,11 @@ export function NewIndexForm({ currentIndex }: Props) {
         symbol: data.symbol,
         description: data.description,
         is_public: data.isPublic ?? false,
-        components: data.components,
+        components: data.components.map((component) => ({
+          action: { tag: 'Add' as const, values: undefined },
+          new_weight: BigInt(Math.round((component.indexPercentage ?? 0) * 100)),
+          token: component.contract,
+        })),
         base_nav: BigInt((1 * 10 ** 7).toFixed(0)),
         initial_price: BigInt((data.initialPrice * 10 ** 7).toFixed(0)),
         initial_deposit: BigInt((data.initialDeposit * 10 ** 7).toFixed(0)),
