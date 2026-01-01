@@ -120,3 +120,35 @@ model normal_contract_events {
   ledger_closed_at            DateTime @db.Timestamp(6)
   ledger_signature            String?
 }
+
+model IndexFund {
+  id               String   @id @default(cuid())
+  address          String   @unique
+  sequence         Int
+
+  // Current state (synced from contract)
+  totalShares      String // u128 as string
+  totalMints       String // cumulative deposits
+  totalRedemptions String // cumulative withdrawals
+  baseNav          String
+  sharePrice       String
+
+  // Calculated
+  tvlUsd           Decimal  @db.Decimal(24, 8)
+  netFlow          String // totalMints - totalRedemptions
+
+  // Metadata
+  managerAddress   String
+  isPublic         Boolean  @default(true)
+  tokenAddress     String
+
+  // Timestamps
+  lastSyncedAt     DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tvlUsd(sort: Desc)])
+  @@index([managerAddress])
+  @@index([isPublic])
+  @@map("index_funds")
+}

@@ -32,6 +32,7 @@ export const paths = {
     root: '/indexes',
     create: '/indexes/create',
     details: (id: string) => `/indexes/${id}`,
+    leaderboard: '/indexes/leaderboard',
   },
   earn: '/earn',
   rewards: '/rewards',
