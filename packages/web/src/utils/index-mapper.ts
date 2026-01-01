@@ -1,11 +1,11 @@
-import type { IndexContract } from '@normalfinance/contracts';
+import type { IndexFundContract } from '@normalfinance/contracts';
 import type { IndexDetails, WeightingStrategy } from '@normalfinance/types';
 
 /**
  * Maps IndexContract.IndexInfo from on-chain to a partial IndexDetails format for UI.
  */
 export function mapIndexInfoToDetails(
-  info: IndexContract.IndexInfo,
+  info: IndexFundContract.IndexFundInfo,
   address: string,
   sequence: number
 ): Partial<IndexDetails> {
@@ -54,7 +54,7 @@ export interface IndexSummary {
 }
 
 export function createIndexSummary(
-  info: IndexContract.IndexInfo,
+  info: IndexFundContract.IndexFundInfo,
   address: string,
   sequence: number
 ): IndexSummary {
@@ -69,7 +69,7 @@ export function createIndexSummary(
     totalWithdrawals: formatContractAmount(info.total_redemptions),
     baseNav: formatContractAmount(info.base_nav),
     sharePrice: formatContractAmount(info.initial_price),
-    accumulatedFees: formatContractAmount(info.total_fees),
+    accumulatedFees: formatContractAmount(BigInt(0)), // This is a placeholder, we need to get rid of fees later
     lastRebalanceDate: info.last_rebalance_ts
       ? new Date(Number(info.last_rebalance_ts) * 1000)
       : null,
@@ -80,7 +80,7 @@ export function createIndexSummary(
 /**
  * Formats an index status for display
  */
-export function getIndexStatusLabel(info: IndexContract.IndexInfo): string {
+export function getIndexStatusLabel(info: IndexFundContract.IndexFundInfo): string {
   if (!info.is_public) {
     return 'Private';
   }
@@ -91,7 +91,7 @@ export function getIndexStatusLabel(info: IndexContract.IndexInfo): string {
  * Gets status color for UI
  */
 export function getIndexStatusColor(
-  info: IndexContract.IndexInfo
+  info: IndexFundContract.IndexFundInfo
 ): 'success' | 'warning' | 'error' | 'info' {
   if (!info.is_public) {
     return 'info';

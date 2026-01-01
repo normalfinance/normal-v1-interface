@@ -1,9 +1,9 @@
 'use client';
 
-import type { IndexContract } from '@normalfinance/contracts';
+import type { IndexFundContract } from '@normalfinance/contracts';
 
 import { useState } from 'react';
-import { useIndex } from '@/hooks';
+import { useIndexFund } from '@/hooks';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
@@ -33,7 +33,7 @@ import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
 
 interface Props {
   id: number;
-  index: IndexContract.IndexInfo;
+  index: IndexFundContract.IndexFundInfo;
 }
 
 export default function IndexDetailsView({ id, index }: Props) {
@@ -41,14 +41,14 @@ export default function IndexDetailsView({ id, index }: Props) {
   const theme = useTheme();
   const { wallet } = usePersistStore();
 
-  const { mintIndex, redeemIndex, loading } = useIndex(indexAddress);
+  const { mintIndex, redeemIndex, loading } = useIndexFund(id);
 
   const [mintDialogOpen, setMintDialogOpen] = useState(false);
   const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
   const [mintAmount, setMintAmount] = useState('');
   const [redeemAmount, setRedeemAmount] = useState('');
 
-  const summary = createIndexSummary(index, indexAddress, 0);
+  const summary = createIndexSummary(index, index.address, 0);
 
   const handleMint = async () => {
     if (!mintAmount || parseFloat(mintAmount) <= 0) return;
@@ -147,7 +147,7 @@ export default function IndexDetailsView({ id, index }: Props) {
                       <Typography variant="caption" color="text.secondary">
                         {t('Total Investments')}
                       </Typography>
-                      <Typography variant="h6">{summary.totalMints.toLocaleString()}</Typography>
+                      <Typography variant="h6">{summary.totalDeposits.toLocaleString()}</Typography>
                     </Stack>
                   </Grid2>
                   <Grid2 size={{ xs: 6, sm: 4 }}>
@@ -156,7 +156,7 @@ export default function IndexDetailsView({ id, index }: Props) {
                         {t('Total Redemptions')}
                       </Typography>
                       <Typography variant="h6">
-                        {summary.totalRedemptions.toLocaleString()}
+                        {summary.totalWithdrawals.toLocaleString()}
                       </Typography>
                     </Stack>
                   </Grid2>
@@ -188,7 +188,7 @@ export default function IndexDetailsView({ id, index }: Props) {
                       {t('Index Id / Address')}:
                     </Typography>
                     <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                      {index.address} / {index.id}
+                      {index.address} / {id.toString()}
                     </Typography>
 
                     <Typography variant="body2" color="text.secondary">

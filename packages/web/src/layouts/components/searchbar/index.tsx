@@ -93,7 +93,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
       setTimeout(() => handleClose(), 50);
 
       if (!pools || !pools.length) {
-        router.push(paths.assets);
+        router.push(paths.assets.root);
       }
 
       const tokenPools = pools.filter(
@@ -101,7 +101,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
       );
 
       if (!tokenPools || !tokenPools.length) {
-        router.push(paths.assets);
+        router.push(paths.assets.root);
       }
 
       router.push(paths.assets.details(tokenPools[0].addresses.pool));

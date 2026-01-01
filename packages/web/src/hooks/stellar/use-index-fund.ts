@@ -133,7 +133,10 @@ export function useIndexFund(id: number): ReturnType {
           rpcUrl: constants.StellarConfig.RPC_URL,
         });
 
-        const indexInfo = await indexFactoryClient.get_index_by_id({ id: indexId });
+        // This is a placeholder way to implement index factory
+        const indexInfo = await indexFactoryClient.get_deployed_indexes({
+          operator: storePersist.wallet.address!,
+        });
 
         if (indexInfo && indexInfo.result) {
           const data = indexInfo.result as IndexFundContract.IndexFundInfo;
@@ -146,7 +149,8 @@ export function useIndexFund(id: number): ReturnType {
         setLoading(false);
       }
     },
-    [indexId]
+    // This is a placeholder deps array, need to fix this later
+    [storePersist.wallet.address]
   );
 
   const fetchIndexByAddress = useCallback(async (indexAddress: string) => {
