@@ -1,3 +1,19 @@
+## [1.2.3](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.2...v1.2.3) (2025-11-15)
+
+
+### Bug Fixes
+
+* **next:** remove untested middleware ([8150902](https://github.com/normalfinance/normal-v1-interface/commit/8150902b84d8d61daff52d546267c7b93175c164))
+
+## [1.2.2](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.1...v1.2.2) (2025-11-14)
+
+
+### Bug Fixes
+
+* **hooks:** increase tx fee ([28ff660](https://github.com/normalfinance/normal-v1-interface/commit/28ff6601e37391b2a8de47b406d6c894bb8e983e))
+* **swap:** disable amount when trustline needed ([a78a4fd](https://github.com/normalfinance/normal-v1-interface/commit/a78a4fd00de9f8c0405372375eb4fe3ffd6edac9))
+* **toml:** update Stellar toml ([ea5f469](https://github.com/normalfinance/normal-v1-interface/commit/ea5f469f14eb60499ee23886b2fc40a5a8ab6860))
+
 ## [1.0.9](https://github.com/normalfinance/normal-v1-interface/compare/v1.0.8...v1.0.9) (2025-10-31)
 
 

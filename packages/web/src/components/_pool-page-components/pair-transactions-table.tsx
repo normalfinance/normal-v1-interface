@@ -188,6 +188,14 @@ export const PairTransactionsTable: React.FC<{
                 >
                   <Typography variant="subtitle2">{t('Tx Hash')}</Typography>
                 </TableCell>
+
+                <TableCell
+                  sortDirection={orderBy === 'txHash' ? order : false}
+                  onClick={() => toggleSort('txHash')}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <Typography variant="subtitle2">{t('Tx Hash')}</Typography>
+                </TableCell>
               </TableRow>
             </TableHead>
 

@@ -517,6 +517,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
+                disabled={getButtonState() == ButtonState.CREATE_TRUSTLINE}
                 inputProps={{
                   min: 0,
                   style: {
