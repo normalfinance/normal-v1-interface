@@ -1,9 +1,8 @@
-export type TxType = 'Buy' | 'Sell' | 'Deposit' | 'Withdraw';
+export type TxType = 'Mint' | 'Redeem' | 'Trade' | 'Deposit' | 'Withdraw';
 
-export interface PoolTxRow {
+export interface PairTxRow {
   type: TxType;
-  tokenAAmount: BigNumber;
-  tokenBAmount: BigNumber;
+  amount: BigNumber;
   user: string;
   timestamp: number;
   txHash: string;

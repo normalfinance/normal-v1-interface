@@ -11,7 +11,7 @@ export type ExplorerChartData = {
 };
 
 export type PoolDetails = {
-  poolInfo: TokenPairInfo;
+  pairInfo: TokenPairInfo;
   metadata: PoolMetadata;
   exchangeRate?: ExchangeRateInfo;
   performance: {
@@ -22,8 +22,7 @@ export type PoolDetails = {
 };
 
 export type TokenPairInfo = {
-  tokenA: Token;
-  tokenB: Token;
+  token: Token;
   address: string;
 };
 

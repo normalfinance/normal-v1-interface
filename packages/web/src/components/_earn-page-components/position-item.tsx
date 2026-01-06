@@ -1,22 +1,22 @@
 'use client';
 
-import type { PoolPosition } from '@/hooks';
+import type { LiquidityPosition } from '@/hooks';
 
+import Image from 'next/image';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 import { useRouter } from 'next/navigation';
-import { format } from '@normalfinance/utils';
 import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Stack, Button, Typography, IconButton } from '@mui/material';
+import { Stack, Button, Avatar, Typography, IconButton } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
-import PoolTokensAvatarGroup from '../_common/pool-tokens-avatar-group';
 
 interface PositionItemProps {
-  position: PoolPosition;
+  position: LiquidityPosition;
   onWithdraw: () => void;
 }
 
@@ -26,7 +26,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push(paths.assets.details(position.pool.addresses.pool));
+    router.push(paths.assets.details('LONG')); // FIXME:
   };
 
   return (
@@ -45,13 +45,13 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
       onClick={handleCardClick}
     >
       <Stack direction="row" width={1} alignItems="center">
-        <PoolTokensAvatarGroup tokenA={position.tokenA} tokenB={position.tokenB} />
+        <Avatar sx={{ width: 56, height: 56, bgcolor: 'transparent', mb: 1 }}>
+          <Image src={cdn('/tokens/usdc.webp')} alt={t('testing')} width={48} height={48} />
+        </Avatar>
 
         <Stack direction="column" width={1} alignItems="start">
           <Typography component="span" color="text.primary" variant="h6" ml={1}>
-            {position.tokenA.symbol}
-            {t('/')}
-            {position.tokenB.symbol}
+            {t('Asset Name here')}
           </Typography>
           <Box
             sx={{
@@ -79,7 +79,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
                   py: '2px',
                 }}
               >
-                {fPercent(position.pool.fee / 100)}
+                {fPercent(30)}
               </Typography>
             </Box>
             <Box
@@ -101,7 +101,7 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
                   py: '2px',
                 }}
               >
-                {position.pool.version}
+                {t('v1')}
               </Typography>
             </Box>
           </Box>
@@ -121,31 +121,16 @@ export default function PositionItem({ position, onWithdraw }: PositionItemProps
       <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
-            {position.balances.tokenA.toFixed(position.tokenA.decimals)} {position.tokenA.symbol} (
-            {fCurrency(position.usdValues.tokenA)})
+            {position.balances.tokenLong.toFixed(7)} {t('LONG')} (
+            {fCurrency(position.usdValues.tokenLong)})
           </Typography>
 
           <Typography color="text.primary" variant="body1">
-            {position.balances.tokenB.toFixed(position.tokenA.decimals)} {position.tokenB.symbol} (
-            {fCurrency(position.usdValues.tokenB)})
+            {position.balances.tokenShort.toFixed(7)} {t('SHORT')} (
+            {fCurrency(position.usdValues.tokenShort)})
           </Typography>
           <Typography color="text.secondary" variant="caption">
             {t('Balance')}
-          </Typography>
-        </Stack>
-
-        <Stack direction="column" alignItems="start">
-          <Typography color="text.primary" variant="body1">
-            {format.fTokenAmount(position.balances.feeA)} {position.tokenA.symbol} (
-            {fCurrency(position.usdValues.feeA)})
-          </Typography>
-
-          <Typography color="text.primary" variant="body1">
-            {format.fTokenAmount(position.balances.feeB)} {position.tokenB.symbol} (
-            {fCurrency(position.usdValues.feeB)})
-          </Typography>
-          <Typography color="text.secondary" variant="caption">
-            {t('Interest')}
           </Typography>
         </Stack>
       </Stack>

@@ -13,18 +13,16 @@ import { Iconify } from '../template/iconify';
 interface FeeInfoAccordionProps {
   conversionText: string;
   insufficientBalance: boolean;
-  sellToken?: Token;
-  poolFee: number;
-  networkCost: number;
+  token?: Token;
+  fee: number;
   sellFiatValue: number;
 }
 
 const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
   conversionText,
   insufficientBalance,
-  sellToken,
-  poolFee,
-  networkCost,
+  token,
+  fee,
   sellFiatValue,
 }) => {
   const theme = useTheme();
@@ -77,7 +75,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
             gap: 1,
           }}
         >
-          {insufficientBalance && sellToken && (
+          {insufficientBalance && token && (
             <Box
               sx={{
                 p: 2,
@@ -104,8 +102,8 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                 }}
               >
                 {t('Not enough')}&nbsp;
-                {sellToken.symbol}&nbsp;
-                {t('to swap')}
+                {token.symbol}&nbsp;
+                {t('to trade')}
               </Typography>
             </Box>
           )}
@@ -145,7 +143,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   {t('Total Fee')}&nbsp;
                   <Box component="span">
                     {t('(')}
-                    {fPercent(poolFee / 100)}
+                    {fPercent(fee / 100)}
                     {t(')')}
                   </Box>
                 </Typography>
@@ -163,7 +161,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                   fontSize: '12px',
                 }}
               >
-                {fCurrencyTwoDecimals(sellFiatValue * (poolFee / 10000) + networkCost)}
+                {fCurrencyTwoDecimals(sellFiatValue * (fee / 10000))}
               </Typography>
             </Box>
           </Box>

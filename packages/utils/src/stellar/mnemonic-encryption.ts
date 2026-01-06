@@ -106,5 +106,3 @@ export async function decryptMnemonic(
   const decoder = new TextDecoder();
   return decoder.decode(decrypted);
 }
-
-

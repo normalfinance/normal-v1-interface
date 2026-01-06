@@ -34,21 +34,21 @@ export const tokens: TokenMeta[] = [
   {
     name: 'Vanguard S&P 500 ETF',
     symbol: 'VOO',
-    icon: cdn('tokens/voo.webp'),
+    icon: cdn('icons/voo.svg'),
     price: '626.87',
     percentageChange: 1.1,
   },
   {
     name: 'Gold',
     symbol: 'XAU',
-    icon: cdn('tokens/xau.webp'),
+    icon: cdn('icons/gold.svg'),
     price: '4300.4',
     percentageChange: 0.43,
   },
   {
     name: 'Top 20 Crypto Index',
     symbol: 'TOP20',
-    icon: cdn('tokens/top20.webp'),
+    icon: cdn('logo/logo-single.svg'),
     price: '0.48',
     percentageChange: -0.5,
   },
@@ -99,14 +99,14 @@ export default function LandingPage() {
   const { params } = useQueryParams<SwapQueryParams>();
 
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens, getAllPools } = usePersistStore();
+  const { wallet, getAllTokens, getAllPairs } = usePersistStore();
 
   // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllPools();
+        await getAllPairs();
         await getAllTokens();
       } catch (e) {
         logger.error(e);

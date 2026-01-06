@@ -18,8 +18,7 @@ export default function AssetView({ symbol }: { symbol: string }) {
     wallet,
     tokenState: { tokens },
     getAllTokens,
-    poolState: { pools },
-    getAllPools,
+    pairState: { pairs },
   } = usePersistStore();
 
   // Effect hook to fetch all tokens and pools once the component mounts
@@ -27,7 +26,6 @@ export default function AssetView({ symbol }: { symbol: string }) {
     const refreshData = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllPools();
         await getAllTokens();
       } catch (e) {
         logger.error(e);
@@ -40,10 +38,10 @@ export default function AssetView({ symbol }: { symbol: string }) {
 
   const token = tokens.find((tkn) => tkn.symbol === symbol);
 
-  const assetPools =
+  const pair =
     token &&
-    pools.filter(
-      (p) => p.addresses.tokenA === token.contract || p.addresses.tokenB === token.contract
+    pairs.find(
+      (p) => p.addresses.tokenLong === token.contract || p.addresses.tokenShort === token.contract
     );
 
   // if (error != null) {
@@ -54,9 +52,9 @@ export default function AssetView({ symbol }: { symbol: string }) {
   //   );
   // }
 
-  if (!token || !assetPools) {
+  if (!token || !pair) {
     return <SpecificNotFound type="pool" />;
   }
 
-  return <AssetDetailsView symbol={symbol} pools={assetPools} />;
+  return <AssetDetailsView symbol={symbol} pairAddress={pair.addresses.pair} />;
 }

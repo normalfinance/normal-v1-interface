@@ -1,11 +1,17 @@
 export enum TransactionType {
+  // Standard
   SEND = 'Send',
-  ESTIMATE_SWAP = 'Estimate Swap',
-  SWAP = 'Swap',
+
+  // Pair
+  MINT_PAIR = 'Mint Pair',
+  REDEEM_PAIR = 'Redeem Pair',
+
+  // Treasury
   DEPOSIT_LIQUIDITY = 'Deposit Liquidity',
   REMOVE_LIQUIDITY = 'Remove Liquidity',
-  CLAIM_REWARD = 'Claim Reward',
-  CLAIM_FEES = 'Claim Fees',
+  TRADE = 'Trade',
+
+  // Index
   MINT_INDEX = 'Mint Index',
   REDEEM_INDEX = 'Redeem Index',
   REFACTOR_INDEX = 'Refactor Index',

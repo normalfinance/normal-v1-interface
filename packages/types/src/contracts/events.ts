@@ -1,64 +1,66 @@
-// ─── PoolRouter Events ─────────────────────────────
+// ─── Treasury Events ─────────────────────────────
 
-export interface RouterDepositLiquidityEvent {
+export interface TreasuryDepositEvent {
   type: 'deposit';
-  tokens: string[];
   user: string;
-  poolAddress: string;
-  amounts: bigint[];
-  shareAmount: bigint;
+  pair: string;
+  amount: bigint;
+  ts: bigint;
 }
 
-export interface RouterSwapEvent {
-  type: 'swap';
-  tokens: string[];
-  user: string;
-  poolAddress: string;
-  tokenIn: string;
-  tokenOut: string;
-  inAmount: bigint;
-  outAmount: bigint;
-}
-
-export interface RouterWithdrawLiquidityEvent {
+export interface TreasuryWithdrawEvent {
   type: 'withdraw';
-  tokens: string[];
   user: string;
-  poolAddress: string;
-  amounts: bigint[];
-  shareAmount: bigint;
+  pair: string;
+  amount: bigint;
+  ts: bigint;
 }
 
-export interface ClaimRewardEvent {
-  type: 'claim';
-  pool: string;
+export interface TreasuryTradeEvent {
+  type: 'trade';
   user: string;
-  rewardToken: string;
-  rewardAmount: bigint;
+  pair: string;
+  side: bigint; // 0 = short, 1 = long
+  direction: bigint; // 0 = sell, 1 = buy
+  amount: bigint;
+  ts: bigint;
+}
+
+// ─── LongShortPair Events ─────────────────────────────
+
+export interface PairMintEvent {
+  type: 'mint';
+  user: string;
+  pair: string;
+  collateral: bigint;
+  tokensMinted: bigint;
+  ts: bigint;
+}
+
+export interface PairRedeemEvent {
+  type: 'redeem';
+  user: string;
+  pair: string;
+  collateral: bigint;
+  tokensRedeemed: bigint;
+  ts: bigint;
 }
 
 // ─── Union Type ─────────────────────────────────────────────
 
-export type PoolRouterEvent = (
-  | RouterDepositLiquidityEvent
-  | RouterSwapEvent
-  | RouterWithdrawLiquidityEvent
-  | ClaimRewardEvent
-) & {
-  timestamp?: number;
+export type TreasuryEvent = (TreasuryDepositEvent | TreasuryWithdrawEvent | TreasuryTradeEvent) & {
   txHash: string;
 };
 
-export type UserActivityEvent = (
-  | RouterDepositLiquidityEvent
-  | RouterSwapEvent
-  | RouterWithdrawLiquidityEvent
-) & {
-  timestamp?: number;
+export type PairEvent = (PairMintEvent | PairRedeemEvent) & {
   txHash: string;
 };
 
-export type NormalContractEvent = PoolRouterEvent;
+export type NormalContractEvent = TreasuryEvent | PairEvent;
+
+export type UserActivityEvent = NormalContractEvent & {
+  txHash: string;
+};
 
 export interface GoldskyTableRow {
   id: string;

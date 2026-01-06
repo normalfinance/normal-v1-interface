@@ -1,21 +1,14 @@
 'use client';
 
 import type { Activity } from '@/types/activity';
-import type { events, TokenState } from '@normalfinance/types';
+import type { events, PairState, TokenState } from '@normalfinance/types';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
-import { rpc } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import {
-  format,
-  constants,
-  parseEvent,
-  getCryptoIconUrl,
-  sortTokenAddreses,
-} from '@normalfinance/utils';
+import { format, constants, parseEvent, getCryptoIconUrl } from '@normalfinance/utils';
 
 // ----------------------------------------------------------------------
 
@@ -27,12 +20,11 @@ interface ReturnType {
 
 // ----------------------------------------------------------------------
 
-const server = new rpc.Server(constants.StellarConfig.RPC_URL);
-
 export function useUserActivity(): ReturnType {
   const {
     wallet,
     tokenState: { tokensByAddress },
+    pairState: { pairByAddress },
   } = usePersistStore();
 
   const [error, setError] = useState(null);
@@ -77,12 +69,12 @@ export function useUserActivity(): ReturnType {
                   r.transaction_hash
                 ) as events.UserActivityEvent;
 
-                const tx = await server.getTransaction(r.transaction_hash);
-                if (tx.status === 'SUCCESS') {
-                  parsedEvent.timestamp = tx.createdAt * 1000;
-                }
-
-                return parseEventToActivity(r.transaction_hash, parsedEvent, tokensByAddress);
+                return parseEventToActivity(
+                  r.transaction_hash,
+                  parsedEvent,
+                  pairByAddress,
+                  tokensByAddress
+                );
               })
           )
         );
@@ -113,14 +105,10 @@ export function useUserActivity(): ReturnType {
               transaction_hash
             ) as events.UserActivityEvent;
 
-            const tx = await server.getTransaction(transaction_hash);
-            if (tx.status === 'SUCCESS') {
-              parsed.timestamp = tx.createdAt * 1000;
-            }
-
             const activityParsed = await parseEventToActivity(
               transaction_hash,
               parsed,
+              pairByAddress,
               tokensByAddress
             );
 
@@ -146,75 +134,93 @@ export function useUserActivity(): ReturnType {
 async function parseEventToActivity(
   id: string,
   event: events.UserActivityEvent,
+  pairByAddress: PairState['pairByAddress'],
   tokensByAddress: TokenState['tokensByAddress']
 ): Promise<Activity | null> {
   switch (event.type) {
-    case 'swap': {
-      const tokenIn = tokensByAddress[event.tokenIn];
-      const tokenOut = tokensByAddress[event.tokenOut];
+    case 'mint': {
+      const pair = pairByAddress[event.pair];
+      const token = tokensByAddress[pair.addresses.tokenLong];
 
       return {
         id,
-        type: 'Swap',
-        timestamp: event.timestamp ?? 0,
-        sell: {
-          address: event.tokenIn,
-          symbol: tokenIn.symbol,
-          iconUrl: tokenIn.icon ?? getCryptoIconUrl(tokenIn.symbol),
-          amount: Number(format.fTokenAmount(event.inAmount.toString())),
-        },
-        buy: {
-          address: event.tokenOut,
-          symbol: tokenOut.symbol,
-          iconUrl: tokenOut.icon ?? getCryptoIconUrl(tokenOut.symbol),
-          amount: Number(format.fTokenAmount(event.outAmount.toString())),
+        type: 'Mint',
+        timestamp: Number(event.ts),
+        asset: {
+          address: token.contract,
+          symbol: token.symbol,
+          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
+          amount: Number(format.fTokenAmount(event.tokensMinted.toString())),
         },
       };
     }
+
+    case 'redeem': {
+      const pair = pairByAddress[event.pair];
+      const token = tokensByAddress[pair.addresses.tokenLong];
+
+      return {
+        id,
+        type: 'Redeem',
+        timestamp: Number(event.ts),
+        asset: {
+          address: token.contract,
+          symbol: token.symbol,
+          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
+          amount: Number(format.fTokenAmount(event.tokensRedeemed.toString())),
+        },
+      };
+    }
+
+    case 'trade': {
+      const pair = pairByAddress[event.pair];
+      const isLong = event.side == BigInt(1);
+      const tokenAddress = isLong ? pair.addresses.tokenLong : pair.addresses.tokenShort;
+      const token = tokensByAddress[tokenAddress];
+
+      return {
+        id,
+        type: 'Trade',
+        timestamp: Number(event.ts),
+        asset: {
+          address: token.contract,
+          symbol: token.symbol,
+          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
+          amount: Number(format.fTokenAmount(event.amount.toString())),
+        },
+      };
+    }
+
     case 'deposit': {
-      const { idx: tokenIdx } = sortTokenAddreses(event.tokens[0], event.tokens[1]);
-      const tokenA = tokensByAddress[event.tokens[tokenIdx.a]];
-      const tokenB = tokensByAddress[event.tokens[tokenIdx.b]];
+      const pair = pairByAddress[event.pair];
+      const token = tokensByAddress[pair.addresses.tokenLong];
 
       return {
         id,
         type: 'Add Liquidity',
-        timestamp: event.timestamp ?? 0,
-        tokenA: {
-          address: tokenA.contract,
-          symbol: tokenA.symbol,
-          iconUrl: tokenA.icon ?? getCryptoIconUrl(tokenA.symbol),
-          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.a].toString())),
-        },
-        tokenB: {
-          address: tokenB.contract,
-          symbol: tokenB.symbol,
-          iconUrl: tokenB.icon ?? getCryptoIconUrl(tokenB.symbol),
-          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.b].toString())),
+        timestamp: Number(event.ts),
+        asset: {
+          address: token.contract,
+          symbol: token.symbol,
+          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
+          amount: Number(format.fTokenAmount(event.amount.toString())),
         },
       };
     }
 
     case 'withdraw': {
-      const { idx: tokenIdx } = sortTokenAddreses(event.tokens[0], event.tokens[1]);
-      const tokenA = tokensByAddress[event.tokens[tokenIdx.a]];
-      const tokenB = tokensByAddress[event.tokens[tokenIdx.b]];
+      const pair = pairByAddress[event.pair];
+      const token = tokensByAddress[pair.addresses.tokenLong];
 
       return {
         id,
         type: 'Remove Liquidity',
-        timestamp: event.timestamp ?? 0,
-        tokenA: {
-          address: tokenA.contract,
-          symbol: tokenA.symbol,
-          iconUrl: tokenA.icon ?? getCryptoIconUrl(tokenA.symbol),
-          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.a].toString())),
-        },
-        tokenB: {
-          address: tokenB.contract,
-          symbol: tokenB.symbol,
-          iconUrl: tokenB.icon ?? getCryptoIconUrl(tokenB.symbol),
-          amount: Number(format.fTokenAmount(event.amounts[tokenIdx.b].toString())),
+        timestamp: Number(event.ts),
+        asset: {
+          address: token.contract,
+          symbol: token.symbol,
+          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
+          amount: Number(format.fTokenAmount(event.amount.toString())),
         },
       };
     }

@@ -7,33 +7,29 @@ import type { CardProps } from '@mui/material/Card';
 import { logger } from '@/middleware';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
-import { useState, useCallback } from 'react';
+// import { useState, useCallback } from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
+import { fPercent } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fPercent, fShortenNumber } from '@/utils/format-number';
 
 import Card from '@mui/material/Card';
 import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
+import { Box, Stack, Avatar } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Tab, Chip, Stack, Avatar } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+// import { Chart, useChart, ChartSelect } from '@/components/template/chart';
+// import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
 import RefreshButton from '@/components/_common/refresh-button';
-import { Chart, useChart, ChartSelect } from '@/components/template/chart';
-
-import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
 
 import type {
   PoolMetadata,
   TokenPairInfo,
-  ChartMetricKey,
   PerformanceInfo,
   ExchangeRateInfo,
-  ExplorerChartData,
-  ChartTimeframeKey,
 } from './pool-chart-data';
 
 // Types
@@ -48,7 +44,7 @@ type Props = CardProps & {
   title?: string;
   subheader?: string;
   color?: string;
-  chart: ExplorerChartData;
+  // chart: ExplorerChartData;
   pairInfo: TokenPairInfo;
   metadata?: PoolMetadata;
   exchangeRate?: ExchangeRateInfo;
@@ -59,7 +55,7 @@ type Props = CardProps & {
 export function PoolChart({
   title,
   subheader,
-  chart,
+  // chart,
   color,
   pairInfo,
   metadata,
@@ -74,44 +70,44 @@ export function PoolChart({
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const { getPool } = usePersistStore();
+  const { getPair } = usePersistStore();
 
-  const effectiveColor = color || theme.palette.primary.main;
+  // const effectiveColor = color || theme.palette.primary.main;
 
-  const [selectedMetric, setSelectedMetric] = useState<ChartMetricKey>('price');
-  const availableTimeframes = Object.keys(chart[selectedMetric] || {}) as ChartTimeframeKey[];
-  const [selectedTimeframe, setSelectedTimeframe] = useState<ChartTimeframeKey>(
-    availableTimeframes[0] || '24h'
-  );
+  // const [selectedMetric, setSelectedMetric] = useState<ChartMetricKey>('price');
+  // const availableTimeframes = Object.keys(chart[selectedMetric] || {}) as ChartTimeframeKey[];
+  // const [selectedTimeframe, setSelectedTimeframe] = useState<ChartTimeframeKey>(
+  //   availableTimeframes[0] || '24h'
+  // );
 
-  const handleChangeMetric = useCallback(
-    (newMetric: string) => {
-      const metric = newMetric as ChartMetricKey;
-      const newTFs = Object.keys(chart[metric] || {}) as ChartTimeframeKey[];
-      setSelectedMetric(metric);
-      setSelectedTimeframe(newTFs[0] || '24h');
-    },
-    [chart]
-  );
+  // const handleChangeMetric = useCallback(
+  //   (newMetric: string) => {
+  //     const metric = newMetric as ChartMetricKey;
+  //     const newTFs = Object.keys(chart[metric] || {}) as ChartTimeframeKey[];
+  //     setSelectedMetric(metric);
+  //     setSelectedTimeframe(newTFs[0] || '24h');
+  //   },
+  //   [chart]
+  // );
 
-  const handleChangeTimeframe = useCallback((newTF: string) => {
-    setSelectedTimeframe(newTF as ChartTimeframeKey);
-  }, []);
+  // const handleChangeTimeframe = useCallback((newTF: string) => {
+  //   setSelectedTimeframe(newTF as ChartTimeframeKey);
+  // }, []);
 
-  const realtimeData = chart[selectedMetric]?.[selectedTimeframe];
+  // const realtimeData = chart[selectedMetric]?.[selectedTimeframe];
 
-  const chartOptions = useChart({
-    colors: [effectiveColor],
-    xaxis: {
-      categories: realtimeData?.categories || [],
-      tickAmount: realtimeData?.tickAmount || 0,
-    },
-    yaxis: {
-      labels: {
-        formatter: (value: number) => fShortenNumber(value),
-      },
-    },
-  });
+  // const chartOptions = useChart({
+  //   colors: [effectiveColor],
+  //   xaxis: {
+  //     categories: realtimeData?.categories || [],
+  //     tickAmount: realtimeData?.tickAmount || 0,
+  //   },
+  //   yaxis: {
+  //     labels: {
+  //       formatter: (value: number) => fShortenNumber(value),
+  //     },
+  //   },
+  // });
 
   if (loading) {
     return (
@@ -168,22 +164,22 @@ export function PoolChart({
     );
   }
 
-  if (!realtimeData) {
-    return <div>{t('No chart data available')}</div>;
-  }
+  // if (!realtimeData) {
+  //   return <div>{t('No chart data available')}</div>;
+  // }
 
-  const timeframeLabels: Record<ChartTimeframeKey, string> = {
-    '24h': '1D',
-    '7d': '1W',
-    '30d': '1M',
-    '12m': '1Y',
-  };
+  // const timeframeLabels: Record<ChartTimeframeKey, string> = {
+  //   '24h': '1D',
+  //   '7d': '1W',
+  //   '30d': '1M',
+  //   '12m': '1Y',
+  // };
 
   const onRefresh = async () => {
     enqueueSnackbar('Refreshing pool', { variant: 'info' });
 
     try {
-      await getPool(pairInfo.address);
+      await getPair(pairInfo.address);
     } catch (error) {
       logger.error('Pool refresh error:', error);
     } finally {
@@ -212,27 +208,14 @@ export function PoolChart({
           }}
         >
           <Avatar
-            src={pairInfo.tokenA.icon ?? getCryptoIconUrl(pairInfo.tokenA.symbol)}
+            src={pairInfo.token.icon ?? getCryptoIconUrl(pairInfo.token.symbol)}
             alt="Token A"
             sx={{ width: 27, height: 27 }}
-          />
-
-          <Avatar
-            src={pairInfo.tokenB.icon ?? getCryptoIconUrl(pairInfo.tokenB.symbol)}
-            alt="Token B"
-            sx={{
-              width: 27,
-              height: 27,
-              ml: '-12px',
-              zIndex: 1,
-            }}
           />
         </Box>
 
         <Typography component="span" color="text.primary" variant="h6" ml={1}>
-          {pairInfo.tokenA.symbol}
-          {t('/')}
-          {pairInfo.tokenB.symbol}
+          {pairInfo.token.name}
         </Typography>
 
         <Box
@@ -368,7 +351,7 @@ export function PoolChart({
           </Typography>
         </Stack>
       </Stack>
-      <Chart
+      {/* <Chart
         type="area"
         series={realtimeData.series[0].data}
         options={chartOptions}
@@ -427,7 +410,7 @@ export function PoolChart({
             onChange={handleChangeMetric}
           />
         </div>
-      </Box>
+      </Box> */}
     </Card>
   );
 }
