@@ -8,7 +8,7 @@ import { cdn } from '@normalfinance/utils';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
-import SwapCard from '@/components/_common/swap-card';
+import TradeCard from '@/components/_common/trade-card';
 
 import { WavyBackground } from './wavy-background';
 
@@ -193,7 +193,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard queryParams={swapParams} />
+              <TradeCard queryParams={swapParams} />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning].
 ## [Unreleased]
 
 ### Added
+
 - Initial commits. [general]
 - Added packages/utils, packages/core, packages/contracts. [general]
 - Added some example React Next code to the demo package for testing purposes. [demo]
@@ -15,16 +16,21 @@ and this project adheres to [Semantic Versioning].
 - Added storybook. [ui]
 
 ### Removed
+
 - Removed Soroban React and replaced with Zustand for state management. [state]
 
 ### Changed
+
 - Migrated state management to use Zustand instead of Soroban React. [state]
 
 ### Deprecated
+
 - None.
 
 ### Fixed
+
 - None.
 
 ### Security
+
 - None.

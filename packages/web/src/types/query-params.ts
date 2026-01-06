@@ -4,10 +4,7 @@ export interface BaseQueryParams {
 
 export interface SwapQueryParams extends BaseQueryParams {
   asset?: string;
-  token_in?: string;
-  token_out?: string;
-  in_amount?: string;
-  out_minimum?: string;
+  amount?: string;
 }
 
 export interface SendQueryParams extends BaseQueryParams {
@@ -24,11 +21,6 @@ export interface BuyQueryParams extends BaseQueryParams {
 export interface TokenActionQueryParams extends BaseQueryParams {
   tab?: 'trade' | 'deposit' | 'withdraw';
   asset?: string;
-  token_in?: string;
-  token_out?: string;
-  in_amount?: string;
-  out_minimum?: string;
-  token?: string;
   amount?: string;
   destination?: string;
 }

@@ -1,337 +1,352 @@
-import React, { useState } from 'react';
-import { useTranslate } from '@/locales';
-import { BigNumber } from 'bignumber.js';
-import { fCurrency } from '@/utils/format-number';
+// import React, { useState, useEffect } from 'react';
+// import { useTranslate } from '@/locales';
+// import { BigNumber } from 'bignumber.js';
+// import { fCurrency } from '@/utils/format-number';
+// import { useLiquidity } from '@/hooks';
 
-import { LoadingButton } from '@mui/lab';
-import { useTheme } from '@mui/material/styles';
-import { Box, Dialog, Typography, IconButton, DialogTitle, DialogContent } from '@mui/material';
+// import { LoadingButton } from '@mui/lab';
+// import { useTheme } from '@mui/material/styles';
+// import { Box, Dialog, Typography, IconButton, DialogTitle, DialogContent } from '@mui/material';
 
-import { Iconify } from '@/components/template/iconify';
+// import { Iconify } from '@/components/template/iconify';
 
-import WalletGate from '../_common/wallet-gate';
+// import WalletGate from '../_common/wallet-gate';
 
-/* ------------------------------------------------------------------ */
-/* Zod schema                                                          */
-/* ------------------------------------------------------------------ */
-export const FormSchema = z.object({
-  token: z
-    .string()
-    .min(1, 'Choose token')
-    .max(56, 'Too long')
-    .refine((val) => isValidContractAddress(val), {
-      message: 'Must be a valid token',
-    }),
-  feeTier: z.enum(VALID_FEE_TIERS, { required_error: 'Choose fee tier' }),
-  amount: z
-    .number({ invalid_type_error: 'Enter amount' })
-    .min(0.000001, 'Amount must be positive')
-    .optional(),
-});
+// import z from 'zod';
 
-export type FormValues = z.infer<typeof FormSchema>;
+// import { VALID_FEE_TIERS } from '../../types/forms';
 
-export interface AddLiquidityDialog {
-  open: boolean;
-  onClose: () => void;
-  buttonSource?: string;
-}
+// import { isValidContractAddress } from '@normalfinance/utils';
 
-const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose, buttonSource }) => {
-  const theme = useTheme();
-  const { t } = useTranslate('auto');
+// import { usePersistStore } from '@normalfinance/state';
 
-  const {
-    wallet,
-    tokenState: { tokens },
-    poolState: { poolsByTokens },
-  } = usePersistStore();
+// import { useForm, useWatch, Controller } from 'react-hook-form';
 
-  const { loading, setLoading, depositLiquidity } = useLiquidity();
+// import { zodResolver } from '@hookform/resolvers/zod';
 
-  const [pool, setPool] = useState<Pool | null>(null);
+// import { sortTokenAddreses } from '@normalfinance/utils';
 
-  /* ---------------- RHF ---------------- */
-  const methods = useForm<FormValues>({
-    resolver: zodResolver(FormSchema),
-    defaultValues: {
-      token: '',
-      feeTier: VALID_FEE_TIERS[1], // 30
-      amount: undefined,
-    },
-  });
+// /* ------------------------------------------------------------------ */
+// /* Zod schema                                                          */
+// /* ------------------------------------------------------------------ */
+// export const FormSchema = z.object({
+//   token: z
+//     .string()
+//     .min(1, 'Choose token')
+//     .max(56, 'Too long')
+//     .refine((val) => isValidContractAddress(val), {
+//       message: 'Must be a valid token',
+//     }),
+//   feeTier: z.enum(VALID_FEE_TIERS, { required_error: 'Choose fee tier' }),
+//   amount: z
+//     .number({ invalid_type_error: 'Enter amount' })
+//     .min(0.000001, 'Amount must be positive')
+//     .optional(),
+// });
 
-  // Initialize from query params
-  useEffect(() => {
-    if (!queryParams) return;
+// export type FormValues = z.infer<typeof FormSchema>;
 
-    if (queryParams.tokenA) {
-      if (isValidContractAddress(queryParams.tokenA)) {
-        methods.setValue('tokenA', queryParams.tokenA, { shouldValidate: false });
-      }
-    }
+// export interface AddLiquidityDialog {
+//   open: boolean;
+//   onClose: () => void;
+//   buttonSource?: string;
+// }
 
-    if (queryParams.feeTier) {
-      if (queryParams.feeTier in VALID_FEE_TIERS) {
-        methods.setValue('feeTier', queryParams.feeTier as (typeof VALID_FEE_TIERS)[number], {
-          shouldValidate: false,
-        });
-      }
-    }
+// const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose, buttonSource }) => {
+//   const theme = useTheme();
+//   const { t } = useTranslate('auto');
 
-    if (queryParams.amount) {
-      methods.setValue('amount', Number(queryParams.amount), { shouldValidate: false });
-    }
+//   const {
+//     wallet,
+//     tokenState: { tokens },
+//     poolState: { poolsByTokens },
+//   } = usePersistStore();
 
-    // If action is provided, we could potentially pre-select certain flows
-    // For now, this is just amount handling
-  }, [queryParams, methods]);
+//   const { loading, setLoading, depositLiquidity } = useLiquidity();
 
-  /* Which fields are validated per step */
-  const stepFields: Record<number, (keyof FormValues)[]> = {
-    1: ['token'],
-    2: ['amount'],
-  };
+//   const [pool, setPool] = useState<Pool | null>(null);
 
-  /* ------------- helpers --------------- */
-  const watchToken = methods.watch('token');
-  const watchAmount = methods.watch('amount');
+//   /* ---------------- RHF ---------------- */
+//   const methods = useForm<FormValues>({
+//     resolver: zodResolver(FormSchema),
+//     defaultValues: {
+//       token: '',
+//       feeTier: VALID_FEE_TIERS[1], // 30
+//       amount: undefined,
+//     },
+//   });
 
-  // Check if wallet is connected
-  const isWalletConnected = !!wallet.address;
+//   // Initialize from query params
+//   useEffect(() => {
+//     if (!queryParams) return;
 
-  const token = tokens.find((tkn) => tkn.contract === watchToken);
+//     if (queryParams.tokenA) {
+//       if (isValidContractAddress(queryParams.tokenA)) {
+//         methods.setValue('tokenA', queryParams.tokenA, { shouldValidate: false });
+//       }
+//     }
 
-  // Check if user has insufficient balance
-  const hasInsufficientBalance = () => {
-    if (!isWalletConnected || !watchAmount || !token) {
-      return false;
-    }
+//     if (queryParams.feeTier) {
+//       if (queryParams.feeTier in VALID_FEE_TIERS) {
+//         methods.setValue('feeTier', queryParams.feeTier as (typeof VALID_FEE_TIERS)[number], {
+//           shouldValidate: false,
+//         });
+//       }
+//     }
 
-    return BigNumber(token.balance).lt(watchAmount);
-  };
+//     if (queryParams.amount) {
+//       methods.setValue('amount', Number(queryParams.amount), { shouldValidate: false });
+//     }
 
-  const getButtonLabel = () => {
-    if (!watchToken) return 'Select asset';
-    if (!pool) return 'No asset found';
+//     // If action is provided, we could potentially pre-select certain flows
+//     // For now, this is just amount handling
+//   }, [queryParams, methods]);
 
-    if (!watchAmount) return 'Enter amount';
-    if (!isWalletConnected) return 'Login';
-    if (hasInsufficientBalance()) return 'Insufficient balance';
-    return 'Continue';
-  };
+//   /* Which fields are validated per step */
+//   const stepFields: Record<number, (keyof FormValues)[]> = {
+//     1: ['token'],
+//     2: ['amount'],
+//   };
 
-  const isButtonDisabled = () => {
-    if (loading) return true;
-    return !watchToken || !pool || !watchAmount || hasInsufficientBalance();
-  };
+//   /* ------------- helpers --------------- */
+//   const watchToken = methods.watch('token');
+//   const watchAmount = methods.watch('amount');
 
-  /* ------- main CTA click handler ------------------------------------ */
-  const handleMainButtonClick = async () => {
-    if (loading) return;
+//   // Check if wallet is connected
+//   const isWalletConnected = !!wallet.address;
 
-    if (watchAmount !== undefined) {
-      if (!isWalletConnected) {
-        // Wallet connection is handled by WalletGate component
-        return;
-      }
-      if (hasInsufficientBalance()) {
-        // Button is disabled for insufficient balance
-        return;
-      }
+//   const token = tokens.find((tkn) => tkn.contract === watchToken);
 
-      if (!pool) {
-        alert('No asset found');
-        return;
-      }
+//   // Check if user has insufficient balance
+//   const hasInsufficientBalance = () => {
+//     if (!isWalletConnected || !watchAmount || !token) {
+//       return false;
+//     }
 
-      await depositLiquidity({
-        tokens: [watchTokenA, watchTokenB],
-        pool_index: pool.index,
-        desired_amounts: [watchAmountA, watchAmountB],
-        min_shares: 0,
-      });
-      return;
-    }
+//     return BigNumber(token.balance).lt(watchAmount);
+//   };
 
-    // ----- normal flow (validate & advance) ---------------------------
-    setLoading(true);
-    const ok = await methods.trigger(stepFields[step]);
-    setLoading(false);
+//   const getButtonLabel = () => {
+//     if (!watchToken) return 'Select asset';
+//     if (!pool) return 'No asset found';
 
-    if (ok) (isLastStep ? onReset : onNext)();
-  };
+//     if (!watchAmount) return 'Enter amount';
+//     if (!isWalletConnected) return 'Login';
+//     if (hasInsufficientBalance()) return 'Insufficient balance';
+//     return 'Continue';
+//   };
 
-  // Find pool whenever relevant fields change: sellToken, buyToken
-  useEffect(() => {
-    // Clear old state each time we start a new fetch
-    setLoading(false);
-    setPool(null);
+//   const isButtonDisabled = () => {
+//     if (loading) return true;
+//     return !watchToken || !pool || !watchAmount || hasInsufficientBalance();
+//   };
 
-    // Make sure we have both tokens
-    if (!token) {
-      return;
-    }
+//   /* ------- main CTA click handler ------------------------------------ */
+//   const handleMainButtonClick = async () => {
+//     if (loading) return;
 
-    // Make sure pools are loaded
-    if (!Object.keys(poolsByTokens).length) {
-      return;
-    }
+//     if (watchAmount !== undefined) {
+//       if (!isWalletConnected) {
+//         // Wallet connection is handled by WalletGate component
+//         return;
+//       }
+//       if (hasInsufficientBalance()) {
+//         // Button is disabled for insufficient balance
+//         return;
+//       }
 
-    const { tokens: sortedTokens } = sortTokenAddreses(tokenA.contract, tokenB.contract);
-    const tokensKey = sortedTokens.join(':');
+//       if (!pool) {
+//         alert('No asset found');
+//         return;
+//       }
 
-    const pools = poolsByTokens[tokensKey];
+//       await depositLiquidity({
+//         tokens: [watchTokenA, watchTokenB],
+//         pool_index: pool.index,
+//         desired_amounts: [watchAmountA, watchAmountB],
+//         min_shares: 0,
+//       });
+//       return;
+//     }
 
-    if (!pools || pools.length === 0) {
-      return;
-    }
+//     // ----- normal flow (validate & advance) ---------------------------
+//     setLoading(true);
+//     const ok = await methods.trigger(stepFields[step]);
+//     setLoading(false);
 
-    // TODO: Once we support multiple fee fractions for the same pair, this index can be 1 or 2
-    const selectedpool = pools[0];
+//     if (ok) (isLastStep ? onReset : onNext)();
+//   };
 
-    setPool(selectedpool);
-  }, [tokenA, tokenB]);
+//   // Find pool whenever relevant fields change: sellToken, buyToken
+//   useEffect(() => {
+//     // Clear old state each time we start a new fetch
+//     setLoading(false);
+//     setPool(null);
 
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      slotProps={{
-        paper: {
-          sx: {
-            gap: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            width: '100%',
-            maxWidth: '400px',
-            maxHeight: '600px',
-          },
-        },
-      }}
-    >
-      <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" component="div">
-            {t('Deposit')}
-          </Typography>
-          <IconButton onClick={onClose}>
-            <Iconify icon="mingcute:close-line" width={24} />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-      <DialogContent
-        sx={{
-          p: 2,
-          width: '100%',
-          '&::-webkit-scrollbar': {
-            width: '2px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: theme.palette.divider,
-            borderRadius: '4px',
-          },
-          scrollbarWidth: 'thin',
-          scrollbarColor: `${theme.palette.divider} transparent`,
-        }}
-      >
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'row',
-            gap: 2,
-            height: '160px',
-            padding: theme.spacing(2),
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderRadius: '20px',
-            border: `1px solid ${theme.palette.divider}`,
-            backgroundColor: theme.palette.background.paper,
-            overflow: 'hidden',
-            textAlign: 'left',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              flexGrow: 1,
-              minWidth: 0,
-              overflow: 'hidden',
-              gap: 2,
-            }}
-          >
-            <Typography variant="body1" noWrap data-testid="buy-token-picker">
-              {t('Amount')}
-            </Typography>
+//     // Make sure we have both tokens
+//     if (!token) {
+//       return;
+//     }
 
-            <Box
-              sx={{
-                maxWidth: '100%',
-                overflowX: 'auto',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <Typography
-                sx={{
-                  display: 'inline-block',
-                  fontSize: 'var(--h3-size, 32px)',
-                  fontStyle: 'normal',
-                  fontWeight: 'var(--h3-weight, 700)',
-                  lineHeight: 'var(--h3-line-height, 48px)',
-                  letterSpacing: 'var(--h3-letter-spacing, 0px)',
-                  color: !quoteFetched ? theme.palette.text.secondary : theme.palette.text.primary,
-                }}
-              >
-                {quoteFetched && token ? buyAmount.toFixed(6) : 0}
-              </Typography>
-            </Box>
+//     // Make sure pools are loaded
+//     if (!Object.keys(poolsByTokens).length) {
+//       return;
+//     }
 
-            <Typography
-              sx={{
-                fontSize: 'var(--components-nav-item-size, 14px)',
-                fontStyle: 'normal',
-                fontWeight: 'var(--components-nav-item-weight, 500)',
-                lineHeight: 'var(--components-nav-item-line-height, 22px)',
-                opacity: quoteFetched && token ? 1 : 0,
-                whiteSpace: 'nowrap',
-                overflow: 'visible',
-              }}
-            >
-              {token ? `${fCurrency(BigNumber(token.price).multipliedBy(buyAmount))}` : '$0'}
-            </Typography>
-          </Box>
+//     const { tokens: sortedTokens } = sortTokenAddreses(tokenA.contract, tokenB.contract);
+//     const tokensKey = sortedTokens.join(':');
 
-          <Box
-            sx={{
-              flexShrink: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'flex-end',
-              height: '128px',
-              overflow: 'hidden',
-            }}
-          >
-            <WalletGate buttonText={getButtonLabel()} fullWidth variant="soft" color="success">
-              <LoadingButton
-                fullWidth
-                variant="soft"
-                color="success"
-                size="large"
-                onClick={handleMainButtonClick}
-                disabled={isButtonDisabled()}
-                loading={loading}
-              >
-                {getButtonLabel()}
-              </LoadingButton>
-            </WalletGate>
-          </Box>
-        </Box>
-      </DialogContent>
-    </Dialog>
-  );
-};
+//     const pools = poolsByTokens[tokensKey];
 
-export default AddLiquidityDialog;
+//     if (!pools || pools.length === 0) {
+//       return;
+//     }
+
+//     // TODO: Once we support multiple fee fractions for the same pair, this index can be 1 or 2
+//     const selectedpool = pools[0];
+
+//     setPool(selectedpool);
+//   }, [tokenA, tokenB]);
+
+//   return (
+//     <Dialog
+//       open={open}
+//       onClose={onClose}
+//       slotProps={{
+//         paper: {
+//           sx: {
+//             gap: 1,
+//             display: 'flex',
+//             flexDirection: 'column',
+//             alignItems: 'flex-start',
+//             width: '100%',
+//             maxWidth: '400px',
+//             maxHeight: '600px',
+//           },
+//         },
+//       }}
+//     >
+//       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
+//         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+//           <Typography variant="h6" component="div">
+//             {t('Deposit')}
+//           </Typography>
+//           <IconButton onClick={onClose}>
+//             <Iconify icon="mingcute:close-line" width={24} />
+//           </IconButton>
+//         </Box>
+//       </DialogTitle>
+//       <DialogContent
+//         sx={{
+//           p: 2,
+//           width: '100%',
+//           '&::-webkit-scrollbar': {
+//             width: '2px',
+//           },
+//           '&::-webkit-scrollbar-thumb': {
+//             backgroundColor: theme.palette.divider,
+//             borderRadius: '4px',
+//           },
+//           scrollbarWidth: 'thin',
+//           scrollbarColor: `${theme.palette.divider} transparent`,
+//         }}
+//       >
+//         <Box
+//           sx={{
+//             display: 'flex',
+//             flexDirection: 'row',
+//             gap: 2,
+//             height: '160px',
+//             padding: theme.spacing(2),
+//             justifyContent: 'space-between',
+//             alignItems: 'center',
+//             borderRadius: '20px',
+//             border: `1px solid ${theme.palette.divider}`,
+//             backgroundColor: theme.palette.background.paper,
+//             overflow: 'hidden',
+//             textAlign: 'left',
+//           }}
+//         >
+//           <Box
+//             sx={{
+//               display: 'flex',
+//               flexDirection: 'column',
+//               flexGrow: 1,
+//               minWidth: 0,
+//               overflow: 'hidden',
+//               gap: 2,
+//             }}
+//           >
+//             <Typography variant="body1" noWrap data-testid="buy-token-picker">
+//               {t('Amount')}
+//             </Typography>
+
+//             <Box
+//               sx={{
+//                 maxWidth: '100%',
+//                 overflowX: 'auto',
+//                 whiteSpace: 'nowrap',
+//               }}
+//             >
+//               <Typography
+//                 sx={{
+//                   display: 'inline-block',
+//                   fontSize: 'var(--h3-size, 32px)',
+//                   fontStyle: 'normal',
+//                   fontWeight: 'var(--h3-weight, 700)',
+//                   lineHeight: 'var(--h3-line-height, 48px)',
+//                   letterSpacing: 'var(--h3-letter-spacing, 0px)',
+//                   color: !quoteFetched ? theme.palette.text.secondary : theme.palette.text.primary,
+//                 }}
+//               >
+//                 {quoteFetched && token ? buyAmount.toFixed(6) : 0}
+//               </Typography>
+//             </Box>
+
+//             <Typography
+//               sx={{
+//                 fontSize: 'var(--components-nav-item-size, 14px)',
+//                 fontStyle: 'normal',
+//                 fontWeight: 'var(--components-nav-item-weight, 500)',
+//                 lineHeight: 'var(--components-nav-item-line-height, 22px)',
+//                 opacity: quoteFetched && token ? 1 : 0,
+//                 whiteSpace: 'nowrap',
+//                 overflow: 'visible',
+//               }}
+//             >
+//               {token ? `${fCurrency(BigNumber(token.price).multipliedBy(buyAmount))}` : '$0'}
+//             </Typography>
+//           </Box>
+
+//           <Box
+//             sx={{
+//               flexShrink: 0,
+//               display: 'flex',
+//               flexDirection: 'column',
+//               justifyContent: 'center',
+//               alignItems: 'flex-end',
+//               height: '128px',
+//               overflow: 'hidden',
+//             }}
+//           >
+//             <WalletGate buttonText={getButtonLabel()} fullWidth variant="soft" color="success">
+//               <LoadingButton
+//                 fullWidth
+//                 variant="soft"
+//                 color="success"
+//                 size="large"
+//                 onClick={handleMainButtonClick}
+//                 disabled={isButtonDisabled()}
+//                 loading={loading}
+//               >
+//                 {getButtonLabel()}
+//               </LoadingButton>
+//             </WalletGate>
+//           </Box>
+//         </Box>
+//       </DialogContent>
+//     </Dialog>
+//   );
+// };
+
+// export default AddLiquidityDialog;

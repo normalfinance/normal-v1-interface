@@ -8,9 +8,7 @@ export const createDisclaimerAction = () => {
    *  Bootstrap: read any previously-saved acceptance from localStorage
    * ------------------------------------------------------------- */
   const storedVersion =
-    typeof window !== 'undefined'
-      ? Number(localStorage.getItem('accepted_tos_version') ?? 0)
-      : 0;
+    typeof window !== 'undefined' ? Number(localStorage.getItem('accepted_tos_version') ?? 0) : 0;
 
   const storedTimestamp =
     typeof window !== 'undefined'
@@ -27,7 +25,7 @@ export const createDisclaimerAction = () => {
 
     /* -------- action -------------------------------------------- */
     setDisclaimerAccepted: async (accepted: boolean) => {
-      if (!accepted) return;          // You can add “Decline” behaviour if you wish
+      if (!accepted) return; // You can add “Decline” behaviour if you wish
 
       const now = Date.now();
 

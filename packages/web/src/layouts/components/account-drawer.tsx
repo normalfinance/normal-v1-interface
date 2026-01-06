@@ -51,7 +51,7 @@ function WalletConnected({ address }: { address: string }) {
     getAllTokens,
   } = usePersistStore();
 
-  const { positions } = useLiquidityPositions();
+  const { liquidityPositions } = useLiquidityPositions();
 
   const { recentActivity } = useUserActivity();
 
@@ -103,7 +103,7 @@ function WalletConnected({ address }: { address: string }) {
         balance={totalBalance.toNumber()}
         percentageChange={0}
         tokens={tokens}
-        positions={positions}
+        positions={liquidityPositions}
         activity={recentActivity}
       />
     </Box>

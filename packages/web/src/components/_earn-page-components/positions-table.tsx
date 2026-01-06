@@ -5,7 +5,7 @@ import type { PoolQueryParams } from '@/types/query-params';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import Skeleton from 'react-loading-skeleton';
-import { useBoolean, type PoolPosition } from '@/hooks';
+import { useBoolean, type LiquidityPosition } from '@/hooks';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -14,12 +14,12 @@ import { Grid2, Stack, Button } from '@mui/material';
 import { Iconify } from '@/components/template/iconify';
 
 import PositionItem from './position-item';
-import WithdrawLiquidityDialog from './withdraw-liquidity-dialog';
+// import WithdrawLiquidityDialog from './withdraw-liquidity-dialog';
 
 // ----------------------------------------------------------------------
 
 export type PositionsTableProps = {
-  positions: PoolPosition[];
+  positions: LiquidityPosition[];
   loading?: boolean;
   queryParams?: PoolQueryParams;
 };
@@ -32,7 +32,9 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
 
   const withdraw = useBoolean();
 
-  const [selectedPosition, setSelectedPosition] = useState<PoolPosition | undefined>(undefined);
+  const [selectedPosition, setSelectedPosition] = useState<LiquidityPosition | undefined>(
+    undefined
+  );
 
   const actionButtons = [
     {
@@ -113,7 +115,7 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
       {/* Positions grid */}
       <Grid2 container spacing={2}>
         {positions.map((position) => (
-          <Grid2 key={position.pool.addresses.pool} size={{ xs: 12, sm: 6, md: 4 }}>
+          <Grid2 key={position.pair.addresses.pair} size={{ xs: 12, sm: 6, md: 4 }}>
             <PositionItem
               position={position}
               onWithdraw={() => {
@@ -126,7 +128,7 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
       </Grid2>
 
       {/* Withdraw dialog */}
-      {selectedPosition && (
+      {/* {selectedPosition && (
         <WithdrawLiquidityDialog
           open={withdraw.value}
           position={selectedPosition}
@@ -136,7 +138,7 @@ export function PositionsTable({ positions, loading, queryParams }: PositionsTab
           }}
           queryParams={queryParams}
         />
-      )}
+      )} */}
     </>
   );
 }

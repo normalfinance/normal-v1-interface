@@ -2,7 +2,6 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { Token } from '@normalfinance/types';
 import type { CardProps } from '@mui/material/Card';
-import type { SwapFeeInfo } from '@/types/swap-fee-info';
 
 import React from 'react';
 import { BigNumber } from 'bignumber.js';
@@ -19,8 +18,8 @@ import { Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import BuyCard from './buy-card';
-import SwapCard from './swap-card';
 import SendCard from './send-card';
+import TradeCard from './trade-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
@@ -47,8 +46,6 @@ export interface TokenActionCardProps extends CardProps {
   title?: string;
   /** Optional subtitle displayed under the title */
   subheader?: string;
-  /** Swap‑fee info, forwarded to **SwapCard** and **SendCard** */
-  swapFeeInfo?: SwapFeeInfo;
   /**
    * Which action tabs should be enabled. If omitted, **all** known tabs are shown.
    * Example: `['swap', 'buy']` will hide the **Send** tab.
@@ -69,7 +66,6 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   sx,
   title,
   subheader,
-  swapFeeInfo,
   enabledTabs,
   cashBalance,
   loading,
@@ -114,11 +110,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
       case 'trade':
         return (
           <Box data-testid="trade-card" sx={{ position: 'relative' }}>
-            <SwapCard
-              swapFeeInfo={swapFeeInfo}
-              queryParams={queryParams}
-              changeTab={tabs.setValue}
-            />
+            <TradeCard queryParams={queryParams} changeTab={tabs.setValue} />
           </Box>
         );
       case 'deposit':

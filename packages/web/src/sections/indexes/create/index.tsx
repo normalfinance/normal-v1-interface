@@ -15,14 +15,14 @@ export default function CreateIndexView() {
   const { t } = useTranslate();
 
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens, getAllPools } = usePersistStore();
+  const { wallet, getAllTokens, getAllPairs } = usePersistStore();
 
   // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllPools();
+        await getAllPairs();
         await getAllTokens();
       } catch (e) {
         logger.error(e);

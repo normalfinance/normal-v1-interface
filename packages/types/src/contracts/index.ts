@@ -1,3 +1,4 @@
 export * as events from './events';
 export * from './soroban';
-export * from './pool';
+export * from './pair';
+export * from './treasury';

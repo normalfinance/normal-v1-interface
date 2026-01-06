@@ -7,24 +7,19 @@ import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
+import { type TransactionDetails } from '@/types/transaction';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { logger, constants, trackEvent } from '@normalfinance/utils';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { TransactionType, type TransactionDetails } from '@/types/transaction';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
-  PoolContract,
-  PoolPlaneContract,
+  TreasuryContract,
   IndexFundContract,
-  TokenShareContract,
-  PoolRouterContract,
-  PoolElasticContract,
-  RewardsGaugeContract,
   SorobanTokenContract,
-  ConfigStorageContract,
+  LongShortPairContract,
   IndexFundFactoryContract,
-  LiquidityCalculatorContract,
+  LongShortPairFactoryContract,
 } from '@normalfinance/contracts';
 
 import Box from '@mui/material/Box';
@@ -33,42 +28,27 @@ import Button from '@mui/material/Button';
 import { closeSnackbar, enqueueSnackbar } from '@/components/template/snackbar';
 
 const contractClients = {
-  pool_router: PoolRouterContract.Client,
-  pool: PoolContract.Client,
-  pool_elastic: PoolElasticContract.Client,
-  pool_plane: PoolPlaneContract.Client,
-  liquidity_calculator: LiquidityCalculatorContract.Client,
-  rewards_gauge: RewardsGaugeContract.Client,
-  config_storage: ConfigStorageContract.Client,
-  token_share: TokenShareContract.Client,
+  long_short_pair_factory: LongShortPairFactoryContract.Client,
+  long_short_pair: LongShortPairContract.Client,
+  treasury: TreasuryContract.Client,
   token: SorobanTokenContract.Client,
   index_fund: IndexFundContract.Client,
   index_fund_factory: IndexFundFactoryContract.Client,
 };
 
-type ContractClientType<T extends ContractType> = T extends 'pool_router'
-  ? PoolRouterContract.Client
-  : T extends 'pool'
-    ? PoolContract.Client
-    : T extends 'pool_elastic'
-      ? PoolElasticContract.Client
-      : T extends 'liquidity_calculator'
-        ? LiquidityCalculatorContract.Client
-        : T extends 'pool_plane'
-          ? PoolPlaneContract.Client
-          : T extends 'config_storage'
-            ? ConfigStorageContract.Client
-            : T extends 'rewards_gauge'
-              ? RewardsGaugeContract.Client
-              : T extends 'token_share'
-                ? TokenShareContract.Client
-                : T extends 'token'
-                  ? SorobanTokenContract.Client
-                  : T extends 'index_fund'
-                    ? IndexFundContract.Client
-                    : T extends 'index_fund_factory'
-                      ? IndexFundFactoryContract.Client
-                      : never;
+type ContractClientType<T extends ContractType> = T extends 'treasury'
+  ? TreasuryContract.Client
+  : T extends 'long_short_pair'
+    ? LongShortPairContract.Client
+    : T extends 'long_short_pair_factory'
+      ? LongShortPairFactoryContract.Client
+      : T extends 'token'
+        ? SorobanTokenContract.Client
+        : T extends 'index_fund'
+          ? IndexFundContract.Client
+          : T extends 'index_fund_factory'
+            ? IndexFundFactoryContract.Client
+            : never;
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;
@@ -183,7 +163,7 @@ export const useContractTransaction = () => {
           if (restore) {
             logger.log('Restoring transaction state...');
             await transaction.simulate({ restore: true });
-            return { notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP };
+            return { notify: true }; // transactionDetails.type !== TransactionType.ESTIMATE_SWAP
           }
           const txHash = (transaction as any).hash || null;
 
@@ -208,7 +188,7 @@ export const useContractTransaction = () => {
 
           return {
             txHash,
-            notify: transactionDetails.type !== TransactionType.ESTIMATE_SWAP,
+            notify: true, // transactionDetails.type !== TransactionType.ESTIMATE_SWAP,
           };
         } catch (error) {
           logger.error('Error during returning transaction hash: ', error);
@@ -242,12 +222,12 @@ export const useContractTransaction = () => {
       const messages = getTransactionMessages(transactionDetails);
 
       let loadingKey: SnackbarKey | null = null;
-      if (transactionDetails.type !== TransactionType.ESTIMATE_SWAP) {
-        loadingKey = enqueueSnackbar(messages.loading, {
-          variant: 'info',
-          persist: true,
-        });
-      }
+      // if (transactionDetails.type !== TransactionType.ESTIMATE_SWAP) {
+      loadingKey = enqueueSnackbar(messages.loading, {
+        variant: 'info',
+        persist: true,
+      });
+      // }
 
       return run()
         .then((result) => {

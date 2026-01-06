@@ -1,6 +1,5 @@
 'use client';
 
-import type { SwapFeeInfo } from '@/types/swap-fee-info';
 import type { TokenActionQueryParams } from '@/types/query-params';
 import type { TokenActionKey } from '@/components/_common/token-action-card';
 
@@ -14,16 +13,11 @@ import { Box } from '@mui/material';
 
 import TokenActionCard from '@/components/_common/token-action-card';
 
-const swapFeeInfo: SwapFeeInfo = {
-  feePercentage: 0.25,
-  networkCost: 1.0,
-};
-
 export default function InvestView() {
   const { params } = useQueryParams<TokenActionQueryParams>();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens, getAllPools } = usePersistStore();
+  const { wallet, getAllTokens, getAllPairs } = usePersistStore();
 
   // Determine which tab to show based on query params, default to 'trade'
   const activeTab: TokenActionKey = params?.tab || 'trade';
@@ -38,10 +32,8 @@ export default function InvestView() {
     switch (activeTab) {
       case 'trade':
         return {
-          token_in: params.token_in,
-          token_out: params.token_out,
-          in_amount: params.in_amount,
-          out_minimum: params.out_minimum,
+          asset: params.asset,
+          amount: params.amount,
         };
       case 'deposit':
         return {
@@ -64,7 +56,7 @@ export default function InvestView() {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllPools();
+        await getAllPairs();
         await getAllTokens();
       } catch (e) {
         logger.error(e);
@@ -88,7 +80,6 @@ export default function InvestView() {
         <Box maxWidth={500} width={1}>
           <Box width={1}>
             <TokenActionCard
-              swapFeeInfo={swapFeeInfo}
               cashBalance={0}
               queryParams={getCardQueryParams()}
               loading={globalIsLoading}

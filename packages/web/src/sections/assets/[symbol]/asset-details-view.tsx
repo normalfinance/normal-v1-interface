@@ -1,56 +1,55 @@
 'use client';
 
-import type { PoolTxRow } from '@/types/pools';
-import type { Pool, events } from '@normalfinance/types';
+import type { PairTxRow } from '@/types/pools';
+import type { events } from '@normalfinance/types';
 
 import BigNumber from 'bignumber.js';
-import { constants } from '@normalfinance/utils';
+import { usePair, usePairEvents } from '@/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
-import { usePoolEvents, usePoolPriceChart } from '@/hooks';
 import { fPercent, fCurrency } from '@/utils/format-number';
 
 import { Grid2, useTheme } from '@mui/material';
 
+import { PairTransactionsTable } from '@/components/_pool-page-components';
 import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
-import { PoolTransactionsTable } from '@/components/_pool-page-components/pool-transactions-table';
 
-export default function AssetDetailsView({ symbol, pools }: { symbol: string; pools: Pool[] }) {
-  const pool = pools[0];
-
+export default function AssetDetailsView({
+  symbol,
+  pairAddress,
+}: {
+  symbol: string;
+  pairAddress: string;
+}) {
   const theme = useTheme();
+
   const {
     tokenState: { tokens },
   } = usePersistStore();
 
-  const tokenA = tokens.find((tkn) => tkn.contract === pool.addresses.tokenA)!;
-  const tokenB = tokens.find((tkn) => tkn.contract === pool.addresses.tokenB)!;
+  const { loading, error, pair } = usePair(pairAddress);
 
-  const displaySwap = tokenA.contract === constants.StellarConfig.USDC_ADDRESS;
+  const { events } = usePairEvents(pairAddress, 20);
 
-  // Load recent pool events
-  const { events } = usePoolEvents(pool.addresses.pool, 20);
+  if (!pair) {
+    return <></>;
+  }
 
-  // Format the pool events
+  const isLong = symbol.includes('LONG');
+
+  const token = tokens.find((tkn) =>
+    isLong ? tkn.contract === pair.addresses.tokenLong : tkn.contract === pair.addresses.tokenShort
+  )!;
+
+  // Format the pair events
   const rows = events
-    .map(convertToPoolTxRow)
+    .map(convertToPairTxRow)
     .sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
-
-  // Load price and volume chart data
-  const { chartData } = usePoolPriceChart(pool.addresses.pool, []);
 
   const past24hVolume = BigNumber(0);
 
-  const reserveAValue = tokenA
-    ? BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price)
-    : BigNumber(0);
-
-  const reserveBValue = tokenB
-    ? BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price)
-    : BigNumber(0);
-
-  const tvl = reserveAValue.plus(reserveBValue);
+  const collateralValue = pair ? BigNumber(pair.collateral.amount).multipliedBy(1) : BigNumber(0);
 
   return (
     <DashboardContent maxWidth="xl">
@@ -58,23 +57,22 @@ export default function AssetDetailsView({ symbol, pools }: { symbol: string; po
         <Grid2 size={{ xs: 12, md: 8 }}>
           <PoolChart
             pairInfo={{
-              tokenA,
-              tokenB,
-              address: pool.addresses.pool,
+              token,
+              address: pairAddress,
             }}
             metadata={{
               version: 'v1',
-              feeTier: fPercent(pool.fee / 100),
+              feeTier: fPercent(30),
             }}
             exchangeRate={{
-              label: `1 ${!displaySwap ? tokenA.symbol : tokenB.symbol} = ${BigNumber(!displaySwap ? pool.prices.tokenA : pool.prices.tokenB).toFixed(!displaySwap ? tokenB.decimals : tokenA.decimals)} ${!displaySwap ? tokenB.symbol : tokenA.symbol}`,
-              usdEquivalent: fCurrency(!displaySwap ? pool.prices.tokenA : pool.prices.tokenB),
-              tokenSymbol: !displaySwap ? tokenA.symbol : tokenB.symbol,
-              tokenRate: `${BigNumber(!displaySwap ? pool.prices.tokenA : pool.prices.tokenB).toFixed(!displaySwap ? tokenB.decimals : tokenA.decimals)} ${!displaySwap ? tokenB.symbol : tokenA.symbol}`,
-              tokenUSDValue: fCurrency(!displaySwap ? pool.prices.tokenB : pool.prices.tokenA),
+              label: `1 ${token.symbol} = ${BigNumber(token.price).toFixed(token.decimals)} USD`,
+              usdEquivalent: fCurrency(token.price),
+              tokenSymbol: token.symbol,
+              tokenRate: `${BigNumber(token.price).toFixed(token.decimals)} ${token.symbol}`,
+              tokenUSDValue: fCurrency(token.price),
             }}
             performance={{ percentageChange: 0 }}
-            chart={chartData}
+            // chart={chartData}
             color={theme.palette.primary.main}
           />
         </Grid2>
@@ -83,20 +81,14 @@ export default function AssetDetailsView({ symbol, pools }: { symbol: string; po
             totalAprPercentage={0}
             poolBalances={[
               {
-                address: tokenA.contract,
-                tokenSymbol: tokenA.symbol,
-                amount: BigNumber(pool.reserves.tokenA),
-                fiatValue: BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price),
-              },
-              {
-                address: tokenB.contract,
-                tokenSymbol: tokenB.symbol,
-                amount: BigNumber(pool.reserves.tokenB),
-                fiatValue: BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price),
+                address: pairAddress,
+                tokenSymbol: symbol,
+                amount: BigNumber(0),
+                fiatValue: BigNumber(1).multipliedBy(token.price),
               },
             ]}
             stats={[
-              { statName: 'TVL', value: tvl },
+              { statName: 'TVL', value: collateralValue },
               { statName: '24h Volume', value: past24hVolume },
               {
                 statName: '24h Fees',
@@ -108,52 +100,63 @@ export default function AssetDetailsView({ symbol, pools }: { symbol: string; po
       </Grid2>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 12 }}>
-          <PoolTransactionsTable
-            baseTokenSymbol={tokenA.symbol}
-            quoteTokenSymbol={tokenB.symbol}
-            rows={rows}
-          />
+          <PairTransactionsTable assetSymbol={symbol} rows={rows} />
         </Grid2>
       </Grid2>
     </DashboardContent>
   );
 }
 
-function convertToPoolTxRow(event: events.PoolRouterEvent): PoolTxRow {
+function convertToPairTxRow(event: events.NormalContractEvent): PairTxRow {
   switch (event.type) {
     case 'deposit':
       return {
         type: 'Deposit',
-        tokenAAmount: BigNumber(event.amounts[0]),
-        tokenBAmount: BigNumber(event.amounts[1]),
         user: event.user,
-        timestamp: event.timestamp || 0,
+        amount: BigNumber(event.amount),
+        timestamp: Number(event.ts),
         txHash: event.txHash,
       };
 
     case 'withdraw':
       return {
         type: 'Withdraw',
-        tokenAAmount: BigNumber(event.amounts[0]),
-        tokenBAmount: BigNumber(event.amounts[1]),
         user: event.user,
-        timestamp: event.timestamp || 0,
+        amount: BigNumber(event.amount),
+        timestamp: Number(event.ts),
         txHash: event.txHash,
       };
 
-    case 'swap': {
-      const buying = event.tokenIn === event.tokens[1];
+    case 'mint':
       return {
-        type: buying ? 'Buy' : 'Sell',
-        tokenAAmount: BigNumber(buying ? event.outAmount : event.inAmount),
-        tokenBAmount: BigNumber(buying ? event.inAmount : event.outAmount),
+        type: 'Mint',
+        amount: BigNumber(event.tokensMinted),
         user: event.user,
-        timestamp: event.timestamp || 0,
+        timestamp: Number(event.ts),
+        txHash: event.txHash,
+      };
+
+    case 'redeem':
+      return {
+        type: 'Redeem',
+        amount: BigNumber(event.tokensRedeemed),
+        user: event.user,
+        timestamp: Number(event.ts),
+        txHash: event.txHash,
+      };
+
+    case 'trade': {
+      const buying = event.direction === BigInt(1);
+      return {
+        type: 'Trade',
+        amount: BigNumber(event.amount),
+        user: event.user,
+        timestamp: Number(event.ts),
         txHash: event.txHash,
       };
     }
 
-    default:
-      throw new Error(`Unsupported pool event type: ${event.type}`);
+    // default:
+    //   throw new Error(`Unsupported pair event type: ${event.type}`);
   }
 }

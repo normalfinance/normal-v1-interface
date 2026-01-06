@@ -52,7 +52,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   const {
     tokenState: { tokens },
     getAllTokens,
-    poolState: { pools },
+    pairState: { pairs },
   } = usePersistStore();
 
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
@@ -92,21 +92,21 @@ export function Searchbar({ sx, ...other }: BoxProps) {
     (token: Token) => {
       setTimeout(() => handleClose(), 50);
 
-      if (!pools || !pools.length) {
-        router.push(paths.assets);
+      if (!pairs || !pairs.length) {
+        router.push(paths.assets.root);
       }
 
-      const tokenPools = pools.filter(
-        (p) => p.addresses.tokenA === token.contract || p.addresses.tokenB === token.contract
+      const tokenPairs = pairs.filter(
+        (p) => p.addresses.tokenLong === token.contract || p.addresses.tokenShort === token.contract
       );
 
-      if (!tokenPools || !tokenPools.length) {
-        router.push(paths.assets);
+      if (!tokenPairs || !tokenPairs.length) {
+        router.push(paths.assets.root);
       }
 
-      router.push(paths.assets.details(tokenPools[0].addresses.pool));
+      router.push(paths.assets.details(tokenPairs[0].addresses.tokenLong)); // FIXME:
     },
-    [router, handleClose, pools]
+    [router, handleClose, pairs]
   );
 
   const handleSearch = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {

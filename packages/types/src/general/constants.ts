@@ -11,11 +11,8 @@ export interface NetworkConfig {
   NORMAL_HOT_A: string;
 
   // Normal Contracts
-  POOL_ROUTER_ADDRESS: string;
-  POOL_PLANE_ADDRESS: string;
-  LIQUIDITY_CALCULATOR_ADDRESS: string;
-  CONFIG_STORAGE_ADDRESS: string;
-  REWARDS_GAUGE_ADDRESS: string;
+  LONG_SHORT_PAIR_FACTORY_ADDRESS: string;
+  TREASURY_ADDRESS: string;
   INDEX_FACTORY_ADDRESS: string;
 
   // Stellar

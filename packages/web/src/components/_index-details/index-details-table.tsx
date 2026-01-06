@@ -1,12 +1,10 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
-import type { TxType, PoolTxRow } from '@/types/pools';
+import type { TxType, PairTxRow } from '@/types/pools';
 
-import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import React, { useMemo, useState } from 'react';
-import { fCurrency } from '@/utils/format-number';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -26,9 +24,10 @@ import {
 
 import { TableSkeleton } from '@/components/template/table';
 
-const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
-  Buy: 'success',
-  Sell: 'error',
+const typeColor: Record<TxType, 'success' | 'primary' | 'secondary' | 'warning' | 'info'> = {
+  Trade: 'success',
+  Mint: 'primary',
+  Redeem: 'secondary',
   Deposit: 'info',
   Withdraw: 'warning',
 };
@@ -37,22 +36,23 @@ const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
 // Types
 // ----------------------------------------------------------------
 type Order = 'asc' | 'desc' | undefined;
-type ColumnKey = 'timestamp' | 'tokenAAmount' | 'tokenBAmount' | 'user';
+type ColumnKey = 'timestamp' | 'amount' | 'user';
 
 // ----------------------------------------------------------------------
 
 export const IndexDetailsTable: React.FC<{
   baseTokenSymbol: string;
   quoteTokenSymbol: string;
-  rows: PoolTxRow[];
+  rows: PairTxRow[];
   xlmPrice: number;
   loading?: boolean;
 }> = ({ baseTokenSymbol, quoteTokenSymbol, rows, xlmPrice, loading }) => {
   const theme = useTheme();
 
   const typeTextColor: Record<TxType, string> = {
-    Buy: theme.palette.success.main,
-    Sell: theme.palette.error.main,
+    Trade: theme.palette.success.main,
+    Mint: theme.palette.primary.main,
+    Redeem: theme.palette.secondary.main,
     Deposit: theme.palette.info.main,
     Withdraw: theme.palette.warning.main,
   };
@@ -131,22 +131,24 @@ export const IndexDetailsTable: React.FC<{
                   anchorEl={typeAnchor}
                   onClose={() => setTypeAnchor(null)}
                 >
-                  {(['All', 'Buy', 'Sell', 'Deposit', 'Withdraw'] as const).map((type) => (
-                    <MenuItem
-                      key={type}
-                      selected={typeFilter === type}
-                      onClick={() => {
-                        setTypeFilter(type);
-                        setTypeAnchor(null);
-                      }}
-                    >
-                      {t(type)}
-                    </MenuItem>
-                  ))}
+                  {(['All', 'Trade', 'Mint', 'Redeem', 'Deposit', 'Withdraw'] as const).map(
+                    (type) => (
+                      <MenuItem
+                        key={type}
+                        selected={typeFilter === type}
+                        onClick={() => {
+                          setTypeFilter(type);
+                          setTypeAnchor(null);
+                        }}
+                      >
+                        {t(type)}
+                      </MenuItem>
+                    )
+                  )}
                 </Menu>
               </TableCell>
 
-              {(['tokenAAmount', 'tokenBAmount'] as const).map((key) => (
+              {(['amount'] as const).map((key) => (
                 <TableCell key={key} sortDirection={orderBy === key ? order : false}>
                   <TableSortLabel
                     active={orderBy === key}
@@ -160,7 +162,7 @@ export const IndexDetailsTable: React.FC<{
                       },
                     }}
                   >
-                    {key === 'tokenBAmount' ? quoteTokenSymbol : baseTokenSymbol}
+                    {baseTokenSymbol}
                   </TableSortLabel>
                 </TableCell>
               ))}
@@ -179,44 +181,42 @@ export const IndexDetailsTable: React.FC<{
             {loading ? (
               <TableSkeleton rowCount={8} cellCount={5} />
             ) : (
-              ordered.map((row, idx) => {
-                const tokenANum = BigNumber(row.tokenAAmount).toNumber();
-                const tokenBNum = BigNumber(row.tokenBAmount).toNumber();
-                const poolPrice = tokenANum > 0 ? tokenBNum / tokenANum : 0;
-                const baseFiatValue = poolPrice * tokenANum * xlmPrice;
-                const quoteFiatValue = tokenBNum * xlmPrice;
+              ordered.map((row, idx) => (
+                // const tokenANum = BigNumber(row.tokenAAmount).toNumber();
+                // const tokenBNum = BigNumber(row.tokenBAmount).toNumber();
+                // const poolPrice = tokenANum > 0 ? tokenBNum / tokenANum : 0;
+                // const baseFiatValue = poolPrice * tokenANum * xlmPrice;
+                // const quoteFiatValue = tokenBNum * xlmPrice;
 
-                return (
-                  <TableRow hover key={idx}>
-                    <TableCell>
-                      {row.timestamp ? `${format.ago(row.timestamp / 1000)} ago` : ''}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={row.type}
-                        color={typeColor[row.type]}
-                        size="small"
-                        sx={{
-                          borderRadius: 9999,
-                          px: 1,
-                          height: 32,
-                          border: `1px solid ${theme.palette.divider}`,
-                          backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                          color: typeTextColor[row.type],
-                          fontWeight: 600,
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
+                <TableRow hover key={idx}>
+                  <TableCell>
+                    {row.timestamp ? `${format.ago(row.timestamp / 1000)} ago` : ''}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={row.type}
+                      color={typeColor[row.type]}
+                      size="small"
+                      sx={{
+                        borderRadius: 9999,
+                        px: 1,
+                        height: 32,
+                        border: `1px solid ${theme.palette.divider}`,
+                        backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                        color: typeTextColor[row.type],
+                        fontWeight: 600,
+                      }}
+                    />
+                  </TableCell>
+                  {/* <TableCell>
                       {tokenANum.toFixed(4)} ({fCurrency(baseFiatValue)})
                     </TableCell>
                     <TableCell>
                       {tokenBNum.toFixed(4)} ({fCurrency(quoteFiatValue)})
-                    </TableCell>
-                    <TableCell>{format.fTruncate(row.user, 15)}</TableCell>
-                  </TableRow>
-                );
-              })
+                    </TableCell> */}
+                  <TableCell>{format.fTruncate(row.user, 15)}</TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>

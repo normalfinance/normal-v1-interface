@@ -1,10 +1,8 @@
 import type { Token } from '@normalfinance/types';
 
 import React from 'react';
-import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { getSwapConversionText } from '@/utils/conversion-helpers';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
@@ -27,12 +25,9 @@ import { Iconify } from '../template/iconify';
 export interface SwapReviewProps {
   open: boolean;
   onClose: () => void;
-  sellToken?: Token;
-  buyToken?: Token;
-  sellAmount: string;
-  buyAmount: number;
+  selectedToken?: Token;
+  amount: string;
   feePercentage: number;
-  networkCost: string;
   sellFiatValue: number;
   onSubmit: () => void;
 }
@@ -40,12 +35,9 @@ export interface SwapReviewProps {
 const SwapReview: React.FC<SwapReviewProps> = ({
   open,
   onClose,
-  sellToken,
-  buyToken,
-  sellAmount,
-  buyAmount,
+  selectedToken,
+  amount,
   feePercentage,
-  networkCost,
   sellFiatValue,
   onSubmit,
 }) => {
@@ -107,7 +99,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {sellAmount} {sellToken?.symbol}
+                  {amount} {selectedToken?.symbol}
+                  {/* sellAmount */}
                 </Typography>
                 <Typography
                   variant="body1"
@@ -129,60 +122,11 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={sellToken ? (sellToken.icon ?? getCryptoIconUrl(sellToken.symbol)) : ''}
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                }}
-              />
-            </Box>
-
-            <Iconify
-              width={24}
-              icon="eva:arrow-downward-fill"
-              sx={{
-                my: 2,
-                color: theme.palette.text.primary,
-              }}
-            />
-
-            <Box
-              sx={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Box>
-                <Typography variant="h4">
-                  {buyAmount.toFixed(8)} {buyToken?.symbol}
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    fontSize: 'var(--components-nav-item-size, 14px)',
-                    fontStyle: 'normal',
-                    fontWeight: 'var(--components-nav-item-weight, 500)',
-                    lineHeight: 'var(--components-nav-item-line-height, 22px)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'clip',
-                    minWidth: 0,
-                  }}
-                >
-                  {buyToken
-                    ? fCurrencyTwoDecimals(BigNumber(buyToken.price).multipliedBy(buyAmount))
-                    : ''}
-                </Typography>
-              </Box>
-
-              <Box
-                component="img"
-                src={buyToken ? (buyToken.icon ?? getCryptoIconUrl(buyToken.symbol)) : ''}
+                src={
+                  selectedToken
+                    ? (selectedToken.icon ?? getCryptoIconUrl(selectedToken.symbol))
+                    : ''
+                }
                 sx={{
                   width: 40,
                   height: 40,
@@ -322,7 +266,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {fCurrencyTwoDecimals((sellFiatValue * feePercentage) / 10000 + networkCost)}
+                      {fCurrencyTwoDecimals((sellFiatValue * feePercentage) / 10000)}
                     </Typography>
                   </Box>
 
@@ -359,7 +303,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                       />
                     </Box>
 
-                    <Typography
+                    {/* <Typography
                       variant="body2"
                       sx={{
                         fontWeight: 500,
@@ -367,8 +311,10 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {sellToken && buyToken ? getSwapConversionText(sellToken, buyToken) : ''}
-                    </Typography>
+                      {selectedToken && buyToken
+                        ? getSwapConversionText(selectedToken, buyToken)
+                        : ''}
+                    </Typography> */}
                   </Box>
                 </Box>
               </Box>
@@ -392,7 +338,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
               borderRadius: '20px',
             }}
           >
-            {t('Swap')}
+            {t('Trade')}
           </Button>
         </Box>
       </DialogActions>

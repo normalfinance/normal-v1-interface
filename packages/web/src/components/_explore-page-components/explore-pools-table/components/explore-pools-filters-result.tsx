@@ -1,5 +1,5 @@
+import type { IPairTableFilters } from '@/types/pairTable';
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
-import type { IMarketTableFilters } from '@/types/marketTable';
 import type { FiltersResultProps } from '@/components/template/filters-result';
 
 import { useCallback } from 'react';
@@ -12,7 +12,7 @@ import { chipProps, FiltersBlock, FiltersResult } from '@/components/template/fi
 
 type Props = FiltersResultProps & {
   onResetPage: () => void;
-  filters: UseSetStateReturn<IMarketTableFilters>;
+  filters: UseSetStateReturn<IPairTableFilters>;
 };
 
 export function ExplorePoolsTableFiltersResult({ filters, onResetPage, totalResults, sx }: Props) {

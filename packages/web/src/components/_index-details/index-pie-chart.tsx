@@ -25,7 +25,7 @@ export default function IndexPieChart({
 }: Props) {
   const theme = useTheme();
 
-  const labels = index.constituents.map((c) => c.shortname ?? c.name);
+  const labels = index.constituents.map((c) => c.symbol);
   const values = index.constituents.map((c) => c.weightPct);
 
   const paletteSwatches = [

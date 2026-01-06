@@ -1,12 +1,12 @@
 'use client';
 
-import type { Pool, TokenMapType } from '@normalfinance/types';
+import type { Pair, TokenMapType } from '@normalfinance/types';
 
+import { useAgo } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useMemo, useEffect } from 'react';
 import { logger } from '@normalfinance/utils';
-import { useAgo, useTotal1dSwapVolume } from '@/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fCurrency, fShortenNumber } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -18,7 +18,7 @@ import ExploreStats from '@/components/_explore-page-components/explore-stats/ex
 import {
   type SingleStat,
   ExplorePoolsTable,
-  type ExplorePoolsRow,
+  type ExplorePairsRow,
 } from '@/components/_explore-page-components';
 
 export default function AssetsView() {
@@ -29,34 +29,35 @@ export default function AssetsView() {
     wallet,
     tokenState: { tokensByAddress, lastUpdated: tokensLastUpdated },
     getAllTokens,
-    poolState: { pools, lastUpdated: poolsLastUpdated },
-    getAllPools,
+    pairState: { pairs, lastUpdated: poolsLastUpdated },
+    getAllPairs,
   } = usePersistStore();
 
   const lastUpdated = useAgo(Math.min(tokensLastUpdated, poolsLastUpdated));
 
   const tableData = useMemo(() => {
     if (
-      !pools ||
-      pools.length === 0 ||
+      !pairs ||
+      pairs.length === 0 ||
       !tokensByAddress ||
       Object.keys(tokensByAddress).length === 0
     ) {
       return [];
     }
-    return pools.map((pool) => formatPoolForTable(pool, tokensByAddress));
-  }, [pools, tokensByAddress]);
+    return pairs.map((pair) => formatPairForTable(pair, tokensByAddress));
+  }, [pairs, tokensByAddress]);
 
-  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.tvl), BigNumber(0));
+  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.collateral), BigNumber(0));
 
-  const { total1dVolume } = useTotal1dSwapVolume();
+  // const { total1dVolume } = useTotal1dSwapVolume();
+  const total1dVolume = 0;
 
   const stats: SingleStat[] = [
-    { title: '1D Volume', total: total1dVolume.toNumber(), percent: 0, formatter: fCurrency },
+    { title: '1D Volume', total: total1dVolume, percent: 0, formatter: fCurrency },
     { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
     {
-      title: 'Total Pools',
-      total: pools.length,
+      title: 'Total Assets',
+      total: pairs.length * 2,
       percent: 0,
       formatter: fShortenNumber,
     },
@@ -67,7 +68,7 @@ export default function AssetsView() {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllPools();
+        await getAllPairs();
         await getAllTokens();
       } catch (e) {
         logger.error(e);
@@ -101,56 +102,29 @@ export default function AssetsView() {
   );
 }
 
-const formatPoolForTable = (pool: Pool, tokens: TokenMapType): ExplorePoolsRow => {
-  const tokenA = tokens[pool.addresses.tokenA] ?? undefined;
-  const tokenB = tokens[pool.addresses.tokenB] ?? undefined;
-
-  if (BigNumber(pool.reserves.tokenA).eq(0) || BigNumber(pool.reserves.tokenB).eq(0)) {
-    return {
-      tokenAName: tokenA ? tokenA.symbol : '',
-      tokenBName: tokenB ? tokenB.symbol : '',
-      address: pool.addresses.pool,
-      fee: pool.fee,
-      tvl: '0',
-      apr: 0,
-      volume1d: '0',
-      volume30d: '0',
-      ratio: '0',
-      tokenA,
-      tokenB,
-    };
-  }
+const formatPairForTable = (pair: Pair, tokens: TokenMapType): ExplorePairsRow => {
+  const tokenLong = tokens[pair.addresses.tokenLong] ?? undefined;
+  const tokenShort = tokens[pair.addresses.tokenShort] ?? undefined;
 
   // Volume
   const volume1d = BigNumber(0);
   const volume30d = BigNumber(0);
-
   const volume1dValue = volume1d.multipliedBy(1); // FIXME: finish
   const volume30dValue = volume30d.multipliedBy(1); // FIXME: finish
 
-  const reserveAValue = tokenA
-    ? BigNumber(pool.reserves.tokenA).multipliedBy(tokenA.price)
-    : BigNumber(0);
-
-  const reserveBValue = tokenB
-    ? BigNumber(pool.reserves.tokenB).multipliedBy(tokenB.price)
-    : BigNumber(0);
-
-  const tvl = reserveAValue.plus(reserveBValue);
-
-  const ratio = '0'; // volume1d.dividedBy(tvl);
+  // Collateral
+  const collateral = pair.collateral.amount;
 
   return {
-    tokenAName: tokenA ? tokenA.symbol : '',
-    tokenBName: tokenB ? tokenB.symbol : '',
-    address: pool.addresses.pool,
-    fee: pool.fee,
-    tvl: tvl.toString(),
+    assetName: 'Testing', // tokenA ? tokenA.symbol : '',
+    address: pair.addresses.pair,
+    price: '',
+    fee: 30, // pair.fee,
+    collateral: collateral.toString(),
     apr: 0,
     volume1d: volume1dValue.toString(),
     volume30d: volume30dValue.toString(),
-    ratio,
-    tokenA,
-    tokenB,
+    tokenLong,
+    tokenShort,
   };
 };

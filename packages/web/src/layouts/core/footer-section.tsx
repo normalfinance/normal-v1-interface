@@ -192,7 +192,7 @@ export function FooterSection({
                     <Link
                       key={link.name}
                       component={RouterLink}
-                      href={link.href}
+                      href={link.href as string}
                       color="grey.400"
                       variant="body2"
                     >

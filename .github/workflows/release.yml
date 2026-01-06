@@ -7,7 +7,7 @@ on:
       - master
 
 permissions:
-  contents: write  # needed for semantic-release to push
+  contents: write # needed for semantic-release to push
 
 jobs:
   release:
@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "20"
+          node-version: '20'
       - name: Install dependencies
         working-directory: packages/web
         run: yarn install --frozen-lockfile

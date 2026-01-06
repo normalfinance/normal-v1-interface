@@ -1,45 +1,45 @@
 #!/usr/bin/env node
 
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('@prisma/client')
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 async function getUnusedInviteCode() {
   try {
     const unusedCode = await prisma.testnetUser.findFirst({
-      where: { 
-        isUsed: false 
+      where: {
+        isUsed: false,
       },
-      orderBy: { 
-        createdAt: 'asc' 
+      orderBy: {
+        createdAt: 'asc',
       },
       select: {
         inviteCode: true,
         createdAt: true,
-        source: true
-      }
-    });
+        source: true,
+      },
+    })
 
     if (!unusedCode) {
-      console.log('No unused invite codes available');
-      return null;
+      console.log('No unused invite codes available')
+      return null
     }
 
-    console.log(`Invite Code: ${unusedCode.inviteCode}`);
-    console.log(`Created: ${unusedCode.createdAt}`);
-    console.log(`Source: ${unusedCode.source || 'N/A'}`);
-    
-    return unusedCode.inviteCode;
+    console.log(`Invite Code: ${unusedCode.inviteCode}`)
+    console.log(`Created: ${unusedCode.createdAt}`)
+    console.log(`Source: ${unusedCode.source || 'N/A'}`)
+
+    return unusedCode.inviteCode
   } catch (error) {
-    console.error('Error fetching unused invite code:', error);
-    return null;
+    console.error('Error fetching unused invite code:', error)
+    return null
   } finally {
-    await prisma.$disconnect();
+    await prisma.$disconnect()
   }
 }
 
 if (require.main === module) {
-  getUnusedInviteCode();
+  getUnusedInviteCode()
 }
 
-module.exports = { getUnusedInviteCode };
+module.exports = { getUnusedInviteCode }

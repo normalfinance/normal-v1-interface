@@ -21,7 +21,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Iconify } from '@/components/template/iconify';
 import { WalletGate } from '@/components/_common/wallet-gate';
 
-import SwapCard from '../_common/swap-card';
+import SwapCard from '../_common/trade-card';
 
 // ----------------------------------------------------------------------
 // ── Prop types ---------------------------------------------------------
@@ -48,7 +48,7 @@ export interface PoolActionButton {
 
 export type PoolsOverviewProps = CardProps & {
   totalAprPercentage: number;
-  poolBalances: [PoolBalance, PoolBalance]; // exactly two items
+  poolBalances: [PoolBalance]; // exactly two items
   stats: PoolStat[]; // any length (e.g. 3-4)
   actionButtons?: PoolActionButton[];
   loading?: boolean;
@@ -68,7 +68,7 @@ export function PoolOverview({
   const { t } = useTranslate('auto');
 
   const {
-    poolState: { lastUpdated },
+    pairState: { lastUpdated },
   } = usePersistStore();
 
   const poolLastUpdated = useAgo(lastUpdated);
@@ -88,10 +88,7 @@ export function PoolOverview({
     },
   ];
 
-  const [balA, balB] = poolBalances;
-  const totalFiatValue = balA.fiatValue.plus(balB.fiatValue);
-  const pctA = balA.fiatValue.div(totalFiatValue);
-  const pctB = balB.fiatValue.div(totalFiatValue);
+  const [balA] = poolBalances;
 
   if (loading) {
     return (
@@ -250,9 +247,9 @@ export function PoolOverview({
             <Typography variant="subtitle2" color="text.primary">
               {balA.amount.toFixed(7)} {balA.tokenSymbol}
             </Typography>
-            <Typography variant="subtitle2" color="text.primary">
+            {/* <Typography variant="subtitle2" color="text.primary">
               {balB.amount.toFixed(7)} {balB.tokenSymbol}
-            </Typography>
+            </Typography> */}
           </Box>
           <Box
             sx={{
@@ -265,17 +262,17 @@ export function PoolOverview({
           >
             <Box
               sx={{
-                flexGrow: pctA.toNumber() * 100,
+                flexGrow: 100, // pctA.toNumber() * 100,
                 bgcolor: theme.palette.primary.dark,
               }}
             />
-            <Box
+            {/* <Box
               sx={{
                 flexGrow: pctB.toNumber() * 100,
                 bgcolor: theme.palette.primary.dark,
                 opacity: 0.3,
               }}
-            />
+            /> */}
           </Box>
         </Stack>
         <Stack

@@ -1,6 +1,6 @@
 'use client';
 
-import type { IMarketTableFilters } from '@/types/marketTable';
+import type { IPairTableFilters } from '@/types/pairTable';
 import type { TableHeadCellProps } from '@/components/template/table';
 
 import { useSetState } from 'minimal-shared/hooks';
@@ -22,7 +22,7 @@ import {
 import { ExplorePoolsTableRow } from './components/explore-pools-table-row';
 import { ExplorePoolsTableToolbar } from './components/explore-pools-toolbar';
 
-import type { ExplorePoolsRow } from './components/explore-pools-table-row';
+import type { ExplorePairsRow } from './components/explore-pools-table-row';
 
 /* ------------------------------------------------------------------ */
 /* columns                                                             */
@@ -32,14 +32,13 @@ type HeadCell = TableHeadCellProps;
 
 const TABLE_HEAD: HeadCell[] = [
   { id: 'rank', label: '#', width: 64, align: 'left' },
-  { id: 'pool', label: 'Pool', width: 200 },
+  { id: 'pair', label: 'Asset', width: 200 },
   { id: 'fee', label: 'Fee', align: 'left' },
-  { id: 'tvl', label: 'TVL', align: 'left' },
+  { id: 'collateral', label: 'TVL', align: 'left' },
   { id: 'rewards', label: 'Rewards', align: 'left' },
   { id: 'apr', label: 'Pool APR', align: 'left' },
   { id: 'volume1d', label: '1D vol', align: 'left' },
   { id: 'volume30d', label: '30D vol', align: 'left' },
-  { id: 'ratio', label: '1D vol/TVL', width: 120, align: 'left' },
   { id: '', label: '' },
 ];
 
@@ -48,7 +47,7 @@ const TABLE_HEAD: HeadCell[] = [
 /* ------------------------------------------------------------------ */
 
 export interface ExplorePoolsTableProps {
-  pools: ExplorePoolsRow[];
+  pools: ExplorePairsRow[];
   loading: boolean;
 }
 
@@ -60,7 +59,7 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
   const tableData = pools;
 
   /* ----- search filter state ------------------------------------------- */
-  const filters = useSetState<IMarketTableFilters>({
+  const filters = useSetState<IPairTableFilters>({
     name: '', // search-text
     role: [], // keep empty → not used for markets
     status: 'all', // default tab
@@ -70,11 +69,11 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
   /* ----- sorting -------------------------------------------------------- */
   /** only numeric sortable keys */
   // type SortableKeys = 'rank' | 'price' | 'change1h' | 'change1d' | 'fdv' | 'volume24h';
-  type SortableKeys = 'tvl' | 'apr' | 'volume1d' | 'volume30d' | 'ratio';
+  type SortableKeys = 'collateral' | 'apr' | 'volume1d' | 'volume30d';
 
   const comparator = getComparator<SortableKeys>(table.order, table.orderBy as SortableKeys) as (
-    a: ExplorePoolsRow,
-    b: ExplorePoolsRow
+    a: ExplorePairsRow,
+    b: ExplorePairsRow
   ) => number;
 
   /* ----- apply search + sort ------------------------------------------- */
@@ -148,17 +147,13 @@ function applyFilter({
   comparator,
   nameFilter,
 }: {
-  data: ExplorePoolsRow[];
-  comparator: (a: ExplorePoolsRow, b: ExplorePoolsRow) => number;
+  data: ExplorePairsRow[];
+  comparator: (a: ExplorePairsRow, b: ExplorePairsRow) => number;
   nameFilter: string;
 }) {
   // --- filter by name ----------------------------------------------------
   const out = nameFilter
-    ? data.filter((m) =>
-        `${m.tokenAName.toLowerCase()}/${m.tokenBName.toLowerCase()}`.includes(
-          nameFilter.toLowerCase()
-        )
-      )
+    ? data.filter((m) => m.assetName.toLowerCase().includes(nameFilter.toLowerCase()))
     : data;
 
   // --- stable-sort -------------------------------------------------------

@@ -23,7 +23,7 @@ export const NormalNavbarDefaults: Props = {
             title: 'Trade',
             links: [
               {
-                url: paths.assets,
+                url: paths.assets.root,
                 image: {
                   src: cdn('nav/explore.svg'),
                   alt: 'Explore',

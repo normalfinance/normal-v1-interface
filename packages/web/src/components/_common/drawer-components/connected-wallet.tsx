@@ -1,6 +1,6 @@
 'use client';
 
-import type { PoolPosition } from '@/hooks';
+import type { LiquidityPosition } from '@/hooks';
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
@@ -38,7 +38,7 @@ export interface ConnectedWalletProps {
   balance?: number;
   percentageChange?: number;
   tokens?: Token[];
-  positions?: PoolPosition[];
+  positions?: LiquidityPosition[];
   activity?: Activity[];
 }
 

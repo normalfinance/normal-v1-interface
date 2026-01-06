@@ -1,16 +1,15 @@
 # version: 2
 # updates:
-  
+
 #   - package-ecosystem: "npm"
 #     directory: "/"
 #     schedule:
-#       interval: "daily" 
+#       interval: "daily"
 #     groups:
 #       all-deps:
 #         patterns:
 #           - "*"
 
-  
 #   - package-ecosystem: "npm"
 #     directory: "/packages/contracts"
 #     schedule:
@@ -19,7 +18,7 @@
 #       all-deps:
 #         patterns:
 #           - "*"
-          
+
 #   - package-ecosystem: "npm"
 #     directory: "/packages/state"
 #     schedule:
@@ -55,7 +54,7 @@
 #       all-deps:
 #         patterns:
 #           - "*"
-  
+
 #   - package-ecosystem: "github-actions"
 #     directory: "/"
 #     schedule:
@@ -63,4 +62,4 @@
 #     groups:
 #       all-deps:
 #         patterns:
-#           - "*" 
+#           - "*"

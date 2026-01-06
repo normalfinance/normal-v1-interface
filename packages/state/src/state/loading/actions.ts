@@ -1,4 +1,4 @@
-import { GetStateType, SetStateType } from "@normalfinance/types";
+import { GetStateType, SetStateType } from '@normalfinance/types';
 
 export function createLoadingActions(set: SetStateType, get: GetStateType) {
   return {
@@ -7,4 +7,4 @@ export function createLoadingActions(set: SetStateType, get: GetStateType) {
       set({ globalIsLoading: isLoading });
     },
   };
-} 
+}

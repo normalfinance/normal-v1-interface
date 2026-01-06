@@ -1,6 +1,6 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
-import type { TxType, PoolTxRow } from '@/types/pools';
+import type { TxType, PairTxRow } from '@/types/pools';
 
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
@@ -29,9 +29,10 @@ import { TableSkeleton } from '@/components/template/table';
 
 import AddressChip from '../_common/address-chip';
 
-const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
-  Buy: 'success',
-  Sell: 'error',
+const typeColor: Record<TxType, 'success' | 'error' | 'secondary' | 'warning' | 'info'> = {
+  Mint: 'success',
+  Redeem: 'error',
+  Trade: 'secondary',
   Deposit: 'info',
   Withdraw: 'warning',
 };
@@ -40,16 +41,15 @@ const typeColor: Record<TxType, 'success' | 'error' | 'warning' | 'info'> = {
 // Types
 // ----------------------------------------------------------------
 type Order = 'asc' | 'desc' | undefined;
-type ColumnKey = 'timestamp' | 'tokenAAmount' | 'tokenBAmount' | 'user' | 'txHash';
+type ColumnKey = 'timestamp' | 'amount' | 'user' | 'txHash';
 
 // ----------------------------------------------------------------------
 
-export const PoolTransactionsTable: React.FC<{
-  baseTokenSymbol: string;
-  quoteTokenSymbol: string;
-  rows: PoolTxRow[];
+export const PairTransactionsTable: React.FC<{
+  assetSymbol: string;
+  rows: PairTxRow[];
   loading?: boolean;
-}> = ({ baseTokenSymbol, quoteTokenSymbol, rows, loading }) => {
+}> = ({ assetSymbol, rows, loading }) => {
   const theme = useTheme();
 
   // ------- local sort state ------------------------------------------
@@ -137,22 +137,24 @@ export const PoolTransactionsTable: React.FC<{
                     anchorEl={typeAnchor}
                     onClose={() => setTypeAnchor(null)}
                   >
-                    {(['All', 'Buy', 'Sell', 'Deposit', 'Withdraw'] as const).map((type) => (
-                      <MenuItem
-                        key={type}
-                        selected={typeFilter === type}
-                        onClick={() => {
-                          setTypeFilter(type);
-                          setTypeAnchor(null);
-                        }}
-                      >
-                        {t(type)}
-                      </MenuItem>
-                    ))}
+                    {(['All', 'Trade', 'Mint', 'Redeem', 'Deposit', 'Withdraw'] as const).map(
+                      (type) => (
+                        <MenuItem
+                          key={type}
+                          selected={typeFilter === type}
+                          onClick={() => {
+                            setTypeFilter(type);
+                            setTypeAnchor(null);
+                          }}
+                        >
+                          {t(type)}
+                        </MenuItem>
+                      )
+                    )}
                   </Menu>
                 </TableCell>
 
-                {(['tokenAAmount', 'tokenBAmount'] as const).map((key) => (
+                {(['amount'] as const).map((key) => (
                   <TableCell key={key} sortDirection={orderBy === key ? order : false}>
                     <TableSortLabel
                       active={orderBy === key}
@@ -166,7 +168,7 @@ export const PoolTransactionsTable: React.FC<{
                         },
                       }}
                     >
-                      {key === 'tokenBAmount' ? quoteTokenSymbol : baseTokenSymbol}
+                      {assetSymbol}
                     </TableSortLabel>
                   </TableCell>
                 ))}
@@ -176,7 +178,7 @@ export const PoolTransactionsTable: React.FC<{
                   onClick={() => toggleSort('user')}
                   sx={{ cursor: 'pointer' }}
                 >
-                  <Typography variant="subtitle2">{t('Wallet')}</Typography>
+                  <Typography variant="subtitle2">{t('Account')}</Typography>
                 </TableCell>
 
                 <TableCell
@@ -214,8 +216,7 @@ export const PoolTransactionsTable: React.FC<{
                           variant="soft"
                         />
                       </TableCell>
-                      <TableCell>{format.fTokenAmount(row.tokenAAmount, 7)}</TableCell>
-                      <TableCell>{format.fTokenAmount(row.tokenBAmount, 7)}</TableCell>
+                      <TableCell>{format.fTokenAmount(row.amount, 7)}</TableCell>
                       <TableCell>
                         <AddressChip address={row.user} />
                       </TableCell>
@@ -232,4 +233,4 @@ export const PoolTransactionsTable: React.FC<{
   );
 };
 
-export default PoolTransactionsTable;
+export default PairTransactionsTable;

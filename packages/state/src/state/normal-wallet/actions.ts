@@ -109,7 +109,7 @@ export function createNormalWalletActions(
         publicKey: walletData.publicKey,
         isConnected: true,
         keypair: walletData.keypair,
-        mnemonic: null, 
+        mnemonic: null,
         isConnecting: false,
       });
 
