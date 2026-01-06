@@ -156,7 +156,7 @@ function convertToPairTxRow(event: events.NormalContractEvent): PairTxRow {
       };
     }
 
-    // default:
-    //   throw new Error(`Unsupported pair event type: ${event.type}`);
+    default:
+      throw new Error('Unsupported pair event type');
   }
 }
