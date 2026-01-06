@@ -1,6 +1,6 @@
 {
   "name": "@normalfinance/web",
-  "version": "1.1.1",
+  "version": "1.3.0",
   "private": true,
   "scripts": {
     "i18n:extract": "npx i18next-parser && node ./scripts/fix-empty-i18n-values.js",
