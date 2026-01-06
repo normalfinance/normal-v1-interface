@@ -9,24 +9,18 @@ export function isMainnet(): boolean {
   return getCurrentNetwork() === 'mainnet';
 }
 
-
 export function isTestnet(): boolean {
   return getCurrentNetwork() === 'testnet';
 }
-
 
 export function getNetworkConfig<T>(testnetValue: T, mainnetValue: T): T {
   return isMainnet() ? mainnetValue : testnetValue;
 }
 
-
-
 export function getNetworkApiPath(basePath: string): string {
   return isMainnet() ? basePath : `/testnet${basePath}`;
 }
 
-
 export function getNetworkDisplayName(): string {
   return isMainnet() ? 'Mainnet' : 'Testnet';
 }
-

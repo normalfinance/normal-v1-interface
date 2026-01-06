@@ -5,7 +5,7 @@ on:
   #   paths:
   #     - 'packages/web/**'
   push:
-    branches: 
+    branches:
       - '**'
     # paths:
     #   - 'packages/web/**'
@@ -80,11 +80,10 @@ jobs:
       - name: TypeScript – type check
         working-directory: packages/web
         run: npx tsc --noEmit --project tsconfig.json
-      
+
       - name: Next.js – production build
         working-directory: packages/web
         env:
           NEXT_PUBLIC_APP_ENV: ci
           EDGE_CONFIG: ${{ secrets.EDGE_CONFIG }}
         run: yarn build
-

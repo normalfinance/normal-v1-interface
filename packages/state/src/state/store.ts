@@ -7,8 +7,8 @@ import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
 import { createReferralActions } from './persist/createReferralActions';
 import { createInviteCodeActions } from './persist/createInviteCodeActions';
-import { createPoolActions } from './persist/createPoolActions';
 import { createModalActions } from './modal/actions';
+import { createPairActions } from './persist/createPairActions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
@@ -39,8 +39,8 @@ export const usePersistStore = create<AppStorePersist>()(
       // Create invite code actions
       const inviteCodeActions = createInviteCodeActions();
 
-      // Create pool actions
-      const poolActions = createPoolActions();
+      // Create pair actions
+      const pairActions = createPairActions();
 
       // Create token actions
       const tokenActions = createTokenActions();
@@ -50,13 +50,13 @@ export const usePersistStore = create<AppStorePersist>()(
         ...disclaimer,
         ...referralActions,
         ...inviteCodeActions,
-        ...poolActions,
+        ...pairActions,
         ...tokenActions,
       };
     },
     {
       name: 'just-some-normal-storage',
-      version: 3,
+      version: 4,
       migrate: (persistedState, version) => {
         if (!persistedState) return {};
 
@@ -64,8 +64,6 @@ export const usePersistStore = create<AppStorePersist>()(
         if (version < 3) {
           return {};
         }
-
-        return persistedState;
       },
     }
   )

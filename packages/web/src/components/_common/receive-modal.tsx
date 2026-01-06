@@ -109,10 +109,10 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
     >
       <DialogTitle sx={{ textAlign: 'center', pb: 2 }}>
         <Typography variant="h6" component="div">
-          {t('Receive Crypto')}
+          {t('Deposit Crypto')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {t('Scan QR code or copy address the address below')}
+          {t('Scan the QR code or copy your account ID below')}
         </Typography>
       </DialogTitle>
 
@@ -187,7 +187,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
                   },
                 }}
               >
-                {t('Copy Address')}
+                {t('Copy Account ID')}
               </Button>
 
               <Button
@@ -203,7 +203,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
                   },
                 }}
               >
-                {t('View on Stellar Expert')}
+                {t('View Explorer')}
               </Button>
             </Stack>
           </Stack>

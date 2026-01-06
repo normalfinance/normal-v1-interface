@@ -33,16 +33,16 @@ const fetchTokenPrice = async (token: ApiToken): Promise<BigNumber> => {
     );
     const tokensKey = sortedTokens.join(':');
 
-    const poolsByTokens = usePersistStore.getState().poolState.poolsByTokens;
-    if (!poolsByTokens || !Object.keys(poolsByTokens).length) return BigNumber(0);
+    const pairByToken = usePersistStore.getState().pairState.pairByToken;
+    if (!pairByToken || !Object.keys(pairByToken).length) return BigNumber(0);
 
-    const pools = poolsByTokens[tokensKey];
-    if (!pools || !pools.length) return BigNumber(0);
+    const pair = pairByToken[tokensKey];
+    if (!pair) return BigNumber(0);
 
-    const pool = pools[0];
-
-    const isTokenA = token.contract === pool.addresses.tokenA;
-    return BigNumber(isTokenA ? pool.prices.tokenA : pool.prices.tokenB);
+    const isTokenLong = token.contract === pair.addresses.tokenLong;
+    return BigNumber(
+      isTokenLong ? pair.collateral.percentLong : 1 - Number(pair.collateral.percentLong)
+    );
   } else {
     let oraclePrice = BigNumber(0);
 

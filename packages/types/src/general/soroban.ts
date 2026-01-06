@@ -1,9 +1,7 @@
 export type ContractType =
-  | 'pool_router'
-  | 'pool'
-  | 'pool_elastic'
-  | 'liquidity_calculator'
-  | 'rewards_gauge'
-  | 'config_storage'
-  | 'token_share'
-  | 'token';
+  | 'long_short_pair_factory'
+  | 'long_short_pair'
+  | 'treasury'
+  | 'token'
+  | 'index_fund'
+  | 'index_fund_factory';

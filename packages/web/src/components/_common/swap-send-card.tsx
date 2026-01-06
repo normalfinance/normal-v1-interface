@@ -1,5 +1,4 @@
 import type { CardProps } from '@mui/material/Card';
-import type { SwapFeeInfo } from '@/types/swap-fee-info';
 
 import React from 'react';
 import { useTranslate } from '@/locales';
@@ -12,23 +11,16 @@ import Card from '@mui/material/Card';
 import { Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
-import SwapCard from './swap-card';
 import SendCard from './send-card';
+import SwapCard from './trade-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 interface SwapSendCardProps extends CardProps {
   title?: string;
   subheader?: string;
-  swapFeeInfo?: SwapFeeInfo;
 }
 
-export const SwapSendCard: React.FC<SwapSendCardProps> = ({
-  sx,
-  title,
-  subheader,
-  swapFeeInfo,
-  ...other
-}) => {
+export const SwapSendCard: React.FC<SwapSendCardProps> = ({ sx, title, subheader, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   // Use the tabs hook with a default value of 'swap'

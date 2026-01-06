@@ -42,3 +42,9 @@ next-env.d.ts
 
 .yarn/
 .yarn/install-state.gz
+
+.yarn
+
+.notes/
+
+.notes

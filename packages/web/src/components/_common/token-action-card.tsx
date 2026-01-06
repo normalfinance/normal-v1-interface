@@ -2,7 +2,6 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { Token } from '@normalfinance/types';
 import type { CardProps } from '@mui/material/Card';
-import type { SwapFeeInfo } from '@/types/swap-fee-info';
 
 import React from 'react';
 import { BigNumber } from 'bignumber.js';
@@ -19,14 +18,14 @@ import { Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import BuyCard from './buy-card';
-import SwapCard from './swap-card';
 import SendCard from './send-card';
+import TradeCard from './trade-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
 
-export type TokenActionKey = 'swap' | 'send' | 'buy';
+export type TokenActionKey = 'trade' | 'deposit' | 'withdraw';
 
 interface ActionConfig {
   value: TokenActionKey;
@@ -34,9 +33,9 @@ interface ActionConfig {
 }
 
 const ALL_TABS: readonly ActionConfig[] = [
-  { value: 'swap', label: 'Swap' },
-  { value: 'send', label: 'Send' },
-  { value: 'buy', label: 'Buy' },
+  { value: 'trade', label: 'Trade' },
+  { value: 'deposit', label: 'Deposit' },
+  { value: 'withdraw', label: 'Withdraw' },
 ] as const;
 
 // ----------------------------------------------------------------------
@@ -47,8 +46,6 @@ export interface TokenActionCardProps extends CardProps {
   title?: string;
   /** Optional subtitle displayed under the title */
   subheader?: string;
-  /** Swap‑fee info, forwarded to **SwapCard** and **SendCard** */
-  swapFeeInfo?: SwapFeeInfo;
   /**
    * Which action tabs should be enabled. If omitted, **all** known tabs are shown.
    * Example: `['swap', 'buy']` will hide the **Send** tab.
@@ -69,7 +66,6 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   sx,
   title,
   subheader,
-  swapFeeInfo,
   enabledTabs,
   cashBalance,
   loading,
@@ -111,33 +107,29 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
   // Helper – render the body matching the active tab -------------------
   const renderTabBody = () => {
     switch (tabs.value) {
-      case 'swap':
+      case 'trade':
         return (
-          <Box data-testid="swap-card" sx={{ position: 'relative' }}>
-            <SwapCard
-              swapFeeInfo={swapFeeInfo}
-              queryParams={queryParams}
-              changeTab={tabs.setValue}
-            />
+          <Box data-testid="trade-card" sx={{ position: 'relative' }}>
+            <TradeCard queryParams={queryParams} changeTab={tabs.setValue} />
           </Box>
         );
-      case 'send':
-        return (
-          <SendCard
-            tokens={tokens.filter((tkn) => BigNumber(tkn.balance).gt(0))}
-            networkCost={0}
-            queryParams={queryParams}
-            data-testid="send-card"
-            changeTab={tabs.setValue}
-          />
-        );
-      case 'buy':
+      case 'deposit':
         return (
           <BuyCard
             tokensList={buyCardTokens}
             cashBalance={cashBalance}
             queryParams={queryParams}
-            data-testid="buy-card"
+            data-testid="deposit-card"
+            changeTab={tabs.setValue}
+          />
+        );
+      case 'withdraw':
+        return (
+          <SendCard
+            tokens={tokens.filter((tkn) => BigNumber(tkn.balance).gt(0))}
+            networkCost={0}
+            queryParams={queryParams}
+            data-testid="withdraw-card"
             changeTab={tabs.setValue}
           />
         );

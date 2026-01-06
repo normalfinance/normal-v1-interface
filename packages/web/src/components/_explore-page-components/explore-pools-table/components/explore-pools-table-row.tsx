@@ -17,22 +17,21 @@ import PoolTokensAvatarGroup from '@/components/_common/pool-tokens-avatar-group
 
 /* ------------------------------------------------------------------ */
 /* Row props & type -------------------------------------------------- */
-export interface ExplorePoolsRow {
+export interface ExplorePairsRow {
   address: string;
-  tokenAName: string;
-  tokenBName: string;
+  assetName: string;
+  price: string;
   fee: number;
-  tvl: string;
+  collateral: string;
   apr: number;
   volume1d: string;
   volume30d: string;
-  ratio: string;
-  tokenA: Token;
-  tokenB: Token;
+  tokenLong: Token;
+  tokenShort: Token;
 }
 
 type Props = {
-  row: ExplorePoolsRow;
+  row: ExplorePairsRow;
   index: number;
 };
 
@@ -41,7 +40,7 @@ type Props = {
 export function ExplorePoolsTableRow({ row, index }: Props) {
   const router = useRouter();
 
-  const onClickRow = () => router.push(paths.pools.details(row.address));
+  const onClickRow = () => router.push(paths.assets.details(row.address));
 
   return (
     <TableRow
@@ -56,11 +55,9 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       {/* Name + symbol + avatar ------------------------------------ */}
       <TableCell sx={{ minWidth: 160 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          {row.tokenA && row.tokenB && (
-            <PoolTokensAvatarGroup tokenA={row.tokenA} tokenB={row.tokenB} />
-          )}
+          {row.tokenLong && <PoolTokensAvatarGroup tokenA={row.tokenLong} tokenB={row.tokenLong} />}
           <Stack>
-            <Typography variant="subtitle2">{`${row.tokenAName} / ${row.tokenBName}`}</Typography>
+            <Typography variant="subtitle2">{row.assetName}</Typography>
           </Stack>
         </Stack>
       </TableCell>
@@ -69,7 +66,7 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       <TableCell>{fPercent(row.fee / 100)}</TableCell>
 
       {/* TVL ------------------------------------------------------- */}
-      <TableCell>{fCurrency(row.tvl)}</TableCell>
+      <TableCell>{fCurrency(row.collateral)}</TableCell>
 
       {/* Rewards % ------------------------------------------------------- */}
       <TableCell>
@@ -90,12 +87,6 @@ export function ExplorePoolsTableRow({ row, index }: Props) {
       <TableCell>
         <Chip label="Coming soon" color="info" size="small" variant="soft" />
         {/* {fCurrency(row.volume30d)} */}
-      </TableCell>
-
-      {/* Ratio -------------------------------------------------- */}
-      <TableCell>
-        <Chip label="Coming soon" color="info" size="small" variant="soft" />
-        {/* {fShortenNumber(row.ratio)} */}
       </TableCell>
 
       <TableCell align="right" sx={{ pr: 1 }}>

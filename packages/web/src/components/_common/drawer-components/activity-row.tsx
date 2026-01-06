@@ -64,16 +64,30 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     }
     case 'Add Liquidity':
     case 'Remove Liquidity': {
-      const { tokenA, tokenB } = activity;
-      icon = <SplitAvatar left={tokenA.iconUrl} right={tokenB.iconUrl} />;
-      sentence = `${tokenA.amount} ${tokenA.symbol} and ${tokenB.amount} ${tokenB.symbol}`;
+      const { asset } = activity;
+      icon = <Avatar src={asset.iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${asset.amount} ${asset.symbol}`;
       break;
     }
-    case 'Swap': {
-      const { sell, buy } = activity;
+    case 'Mint': {
+      const { asset } = activity;
 
-      icon = <SplitAvatar left={sell.iconUrl} right={buy.iconUrl} />;
-      sentence = `${sell.amount} ${sell.symbol} for ${buy.amount} ${buy.symbol}`;
+      icon = <Avatar src={asset.iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${asset.amount} ${asset.symbol}`;
+      break;
+    }
+    case 'Redeem': {
+      const { asset } = activity;
+
+      icon = <Avatar src={asset.iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${asset.amount} ${asset.symbol}`;
+      break;
+    }
+    case 'Trade': {
+      const { asset } = activity;
+
+      icon = <Avatar src={asset.iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${asset.amount} ${asset.symbol}`;
       break;
     }
     default:

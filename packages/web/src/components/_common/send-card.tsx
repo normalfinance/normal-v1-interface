@@ -2,12 +2,15 @@ import type { CardProps } from '@mui/material';
 import type { Token } from '@normalfinance/types';
 import type { SendQueryParams } from '@/types/query-params';
 
+import { useBoolean } from '@/hooks';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { runWithdrawFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
+import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 import {
   getMaxAmount,
   getCryptoIconUrl,
@@ -24,12 +27,13 @@ import PickToken from './pick-token';
 import SendReview from './send-review';
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
+import AmountDialog from '../deposit-amount-dialog';
 
 interface SendCardProps extends CardProps {
   tokens: Token[];
   networkCost?: number;
   queryParams?: SendQueryParams;
-  changeTab?: React.Dispatch<React.SetStateAction<false | 'swap' | 'send' | 'buy'>>;
+  changeTab?: React.Dispatch<React.SetStateAction<false | 'trade' | 'deposit' | 'withdraw'>>;
 }
 
 const DEFAULT_DESTINATION = 'Wallet address';
@@ -155,10 +159,10 @@ const SendCard: React.FC<SendCardProps> = ({
 
   const getButtonLabel = (): string => {
     if (destination === DEFAULT_DESTINATION) {
-      return 'Input wallet address';
+      return 'Enter account';
     }
     if (!sendToken) {
-      return 'Select a token';
+      return 'Select an asset';
     }
     const amt = parseFloat(amount) || 0;
     if (amt <= 0) {
@@ -167,29 +171,55 @@ const SendCard: React.FC<SendCardProps> = ({
     if (insufficientBalance) {
       return `Insufficient ${sendToken.symbol}`;
     }
-    return 'Send';
+    return 'Withdraw';
   };
 
   const handleMainButtonClick = () => {
     const label = getButtonLabel();
 
-    if (label === 'Send') {
+    if (label === 'Withdraw') {
       if (!isValidAccountAddress(destination)) {
-        enqueueSnackbar(t('Invalid Stellar address'), { variant: 'error' });
+        enqueueSnackbar(t('Invalid accound'), { variant: 'error' });
         return;
       }
       if (destination == persist.wallet.address) {
-        enqueueSnackbar(t('Cannot send tokens to yourself'), { variant: 'error' });
+        enqueueSnackbar(t('Cannot send assets to yourself'), { variant: 'error' });
         return;
       }
       setReviewOpen(true);
     }
   };
 
+  const moneygramWithdraw = useBoolean();
+  const [mgiBusy, setMgiBusy] = useState(false);
+
+  // common start (preflight + flow wrapper)
+  async function startMgiWithdraw(addr: string, amountStr: string) {
+    setMgiBusy(true);
+    try {
+      const env = await detectWalletEnv();
+      assertTestnetAndAccountMatch(env, addr);
+
+      const withdrawAmount = Number(amountStr);
+      if (!Number.isFinite(withdrawAmount) || withdrawAmount <= 0) {
+        enqueueSnackbar(t('Enter a valid USDC amount'), { variant: 'warning' });
+        return;
+      }
+
+      await runWithdrawFlow(addr, withdrawAmount, () => {
+        enqueueSnackbar(t('MoneyGram ready — send USDC when prompted'), { variant: 'info' });
+      });
+    } catch (e: any) {
+      enqueueSnackbar(t('MoneyGram withdrawal failed'), { variant: 'error' });
+    } finally {
+      setMgiBusy(false);
+    }
+  }
+
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
-  const isSendReady = getButtonLabel() === 'Send';
+  const isSendReady = getButtonLabel() === 'Withdraw';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1 }} width={1}>
@@ -210,7 +240,7 @@ const SendCard: React.FC<SendCardProps> = ({
         >
           <Box sx={{ height: '82px' }}>
             <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-              {t("You're sending")}
+              {t("You'd like to withdraw")}
             </Typography>
           </Box>
           <Box
@@ -469,7 +499,7 @@ const SendCard: React.FC<SendCardProps> = ({
             {getButtonLabel()}
           </Button>
         ) : (
-          <WalletGate buttonText="Connect wallet to Send" fullWidth variant="soft">
+          <WalletGate buttonText="Login to withdraw" fullWidth variant="soft">
             {null}
           </WalletGate>
         )}
@@ -497,6 +527,21 @@ const SendCard: React.FC<SendCardProps> = ({
           setSendToken(token);
           setOpen(false);
         }}
+      />
+
+      {/* Withdraw dialog */}
+      <AmountDialog
+        open={moneygramWithdraw.value}
+        onCancel={moneygramWithdraw.onFalse}
+        onConfirm={async (val) => {
+          moneygramWithdraw.onFalse();
+          await startMgiWithdraw(persist.wallet.address!, val);
+        }}
+        defaultAmount=""
+        min={1}
+        max={900}
+        kind="withdraw"
+        tokenLabel="USDC"
       />
     </Box>
   );

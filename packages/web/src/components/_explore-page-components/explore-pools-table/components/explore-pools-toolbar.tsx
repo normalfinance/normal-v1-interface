@@ -1,5 +1,5 @@
+import type { IPairTableFilters } from '@/types/pairTable';
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
-import type { IMarketTableFilters } from '@/types/marketTable';
 
 import { useCallback } from 'react';
 import { logger } from '@/middleware';
@@ -18,7 +18,7 @@ import RefreshButton from '@/components/_common/refresh-button';
 
 type Props = {
   onResetPage: () => void;
-  filters: UseSetStateReturn<IMarketTableFilters>;
+  filters: UseSetStateReturn<IPairTableFilters>;
 };
 
 export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
@@ -26,7 +26,7 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const { getAllPools } = usePersistStore();
+  const { getAllPairs } = usePersistStore();
 
   const { state: currentFilters, setState: updateFilters } = filters;
 
@@ -42,7 +42,7 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
     enqueueSnackbar('Refreshing pools', { variant: 'info' });
 
     try {
-      await getAllPools();
+      await getAllPairs();
     } catch (error) {
       logger.error('Pools refresh error:', error);
     } finally {

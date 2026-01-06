@@ -27,7 +27,7 @@ yarn install
 After installation, you can import the contract classes and types into your project as needed.
 
 ```typescript
-import { ContractClassName } from '@normalfinance/contracts';
+import { ContractClassName } from '@normalfinance/contracts'
 ```
 
 Refer to the main Normal readme for guidance on how this package interacts with the other packages in the ecosystem.

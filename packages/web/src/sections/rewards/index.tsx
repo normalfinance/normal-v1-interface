@@ -1,8 +1,11 @@
 'use client';
 
+import React from 'react';
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { RouterLink } from '@/routes/components';
+import { getMgiAuthToken } from '@/lib/mgi/client';
+import { listTransactions } from '@/lib/mgi/history';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { usePathname, useSearchParams } from '@/routes/hooks';
@@ -11,15 +14,16 @@ import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
-import { Button } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { WalletGate } from '@/components/_common/wallet-gate';
+import MoneyGramTransactionsTable from '@/components/_common/moneygram-history-table';
 
 import { ProfileCover } from './profile-cover';
-import { ZealyProgress } from './zealy-progress';
 import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
+
+const MOCK_MODE = process.env.NEXT_PUBLIC_MGI_MOCK === '1';
 
 interface User {
   id: string;
@@ -48,12 +52,12 @@ const USER_DATA = {
 
 const NAV_ITEMS = [
   { value: '', label: 'Overview', icon: <Iconify width={24} icon="solar:user-id-bold" /> },
-  { value: 'zealy', label: 'Zealy', icon: <Iconify width={24} icon="solar:heart-bold" /> },
   {
     value: 'protocol',
     label: 'Protocol',
     icon: <Iconify width={24} icon="eva:more-horizontal-fill" />,
   },
+  { value: 'moneygram', label: 'MoneyGram', icon: <Iconify width={24} icon="mdi:bank-outline" /> }, // ← NEW
 ];
 
 const TAB_PARAM = 'tab';
@@ -61,8 +65,6 @@ const TAB_PARAM = 'tab';
 const REWARDS_OVERVIEW = {
   referralLink: 'https://normal.finance/ref/Jane123',
   referralsCount: 0,
-  zealyUrl: 'https://zealy.io/c/normal',
-  zealyXP: 0,
   protocolPoints: 0,
   referrals: [
     // { id: '1', address: '0xA1...C4', joined: '2025-06-01', points: 120 },
@@ -88,6 +90,119 @@ export function RewardsView() {
   const selectedTab = searchParams.get(TAB_PARAM) ?? '';
   const walletAddress = usePersistStore((s) => s.wallet.address);
   const { t } = useTranslate();
+
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let on = true;
+    (async () => {
+      if (selectedTab !== 'moneygram' || !walletAddress) return;
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Mock: no token needed
+        if (MOCK_MODE) {
+          const tx = await listTransactions({ account: walletAddress });
+          if (on) setRows(tx as any[]);
+          return;
+        }
+
+        // Live: need SEP-10 token
+        let token = await getMgiAuthToken(walletAddress);
+        try {
+          const tx = await listTransactions({ account: walletAddress, authToken: token });
+          if (on) setRows(tx as any[]);
+        } catch (e: any) {
+          const msg = String(e?.message || '');
+          const is401 =
+            /401/.test(msg) ||
+            /unauthorized/i.test(msg) ||
+            /expired/i.test(msg) ||
+            /invalid/i.test(msg);
+
+          if (is401) {
+            // Re-auth once if expired
+            token = await getMgiAuthToken(walletAddress);
+            const tx = await listTransactions({ account: walletAddress, authToken: token });
+            if (on) setRows(tx as any[]);
+          } else {
+            throw e;
+          }
+        }
+      } catch (e: any) {
+        if (on) setError(e?.message || 'Failed to load MoneyGram history');
+      } finally {
+        if (on) setLoading(false);
+      }
+    })();
+    return () => {
+      on = false;
+    };
+  }, [selectedTab, walletAddress]);
+
+  React.useEffect(() => {
+    let on = true;
+
+    (async () => {
+      // only run on MoneyGram tab with a connected wallet
+      if (selectedTab !== 'moneygram' || !walletAddress) {
+        // optional: clear state when leaving the tab or disconnecting
+        if (on) {
+          setRows([]);
+          setError(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        if (MOCK_MODE) {
+          const tx = await listTransactions({ account: walletAddress });
+          if (on) setRows(tx as any[]);
+          return;
+        }
+
+        // 1) Try with a cached/valid SEP-10 token (no popup if still valid)
+        let token = await getMgiAuthToken(walletAddress);
+
+        try {
+          const tx = await listTransactions({ account: walletAddress, authToken: token });
+          if (on) setRows(tx as any[]);
+        } catch (e: any) {
+          const msg = String(e?.message || '');
+          const is401 =
+            /401/.test(msg) ||
+            /unauthorized/i.test(msg) ||
+            /expired/i.test(msg) ||
+            /invalid/i.test(msg);
+
+          if (!is401) throw e;
+
+          // 2) If server rejected the token, clear cache & re-auth ONCE
+          const { clearMgiToken } = await import('@/lib/mgi/client');
+          clearMgiToken(walletAddress);
+
+          token = await getMgiAuthToken(walletAddress); // will prompt once if needed
+          const tx = await listTransactions({ account: walletAddress, authToken: token });
+          if (on) setRows(tx as any[]);
+        }
+      } catch (e: any) {
+        if (on) setError(e?.message || 'Failed to load MoneyGram history');
+      } finally {
+        if (on) setLoading(false);
+      }
+    })();
+
+    return () => {
+      on = false;
+    };
+  }, [selectedTab, walletAddress]);
 
   const createRedirectPath = (currentPath: string, query: string) => {
     const q = new URLSearchParams({ [TAB_PARAM]: query }).toString();
@@ -135,45 +250,25 @@ export function RewardsView() {
 
       {/* ---- Tab panels ----------------------------------------------------- */}
       {selectedTab === '' && (
-        <WalletGate buttonText={t('Connect wallet to view rewards')} fullWidth>
+        <WalletGate buttonText={t('Login to view rewards')} fullWidth>
           <RewardsOverview
             referralsCount={REWARDS_OVERVIEW.referralsCount}
-            zealyUrl={REWARDS_OVERVIEW.zealyUrl}
-            zealyXP={REWARDS_OVERVIEW.zealyXP}
             protocolPoints={REWARDS_OVERVIEW.protocolPoints}
             referrals={REWARDS_OVERVIEW.referrals}
           />
         </WalletGate>
       )}
-      {selectedTab === 'zealy' && (
-        <WalletGate buttonText={t('Connect wallet to view Zealy')} fullWidth>
-          <Box sx={{ mt: 3, textAlign: 'center' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              href="https://zealy.io/cw/normalfinance/questboard"
-              target="_blank"
-              rel="noopener"
-              sx={{ mb: 2 }}
-              startIcon={<Iconify icon="eva:external-link-outline" width={18} />}
-              // onClick={() =>
-              //   trackEvent('button_clicked', {
-              //     label: 'Manage Stake',
-              //     location: 'Insurance',
-              //   })
-              // }
-            >
-              {t('Go to Zealy')}
-            </Button>
 
-            <ZealyProgress community="normalfinance" />
-          </Box>
+      {selectedTab === 'protocol' && (
+        <WalletGate buttonText={t('Login to view points')} fullWidth>
+          <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
         </WalletGate>
       )}
 
-      {selectedTab === 'protocol' && (
-        <WalletGate buttonText={t('Connect wallet to view Protocol Points')} fullWidth>
-          <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
+      {selectedTab === 'moneygram' && (
+        <WalletGate buttonText={t('Login to view MoneyGram history')} fullWidth>
+          {error && <Box sx={{ color: 'error.main', fontSize: 13, mb: 1 }}>{error}</Box>}
+          <MoneyGramTransactionsTable rows={rows} loading={loading} />
         </WalletGate>
       )}
     </DashboardContent>

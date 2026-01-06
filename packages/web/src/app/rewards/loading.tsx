@@ -112,16 +112,6 @@ export default function Loading() {
         {/* Sidebar */}
         <Grid item xs={12} md={4}>
           <Stack spacing={3}>
-            {/* Zealy Card */}
-            <Card sx={{ p: 3 }}>
-              <Stack spacing={2} alignItems="center">
-                <Skeleton height={24} width="60%" />
-                <Skeleton height={60} width={60} />
-                <Skeleton height={32} width="40%" />
-                <Skeleton height={40} width="80%" />
-              </Stack>
-            </Card>
-
             {/* Protocol Points Card */}
             <Card sx={{ p: 3 }}>
               <Stack spacing={2}>

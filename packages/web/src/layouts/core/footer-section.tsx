@@ -22,10 +22,10 @@ const LINKS = [
   {
     headline: 'App',
     children: [
-      { name: 'Trade', href: paths.swap },
-      { name: 'Pools', href: paths.explore },
-      { name: 'Indexes', href: paths.indexes.root },
-      { name: 'Positions', href: paths.positions.root },
+      { name: 'Invest', href: paths.invest },
+      { name: 'Assets', href: paths.assets },
+      { name: 'Index', href: paths.indexes.root },
+      { name: 'Earn', href: paths.earn },
     ],
   },
   {
@@ -144,7 +144,7 @@ export function FooterSection({
               })}
             >
               {t(
-                'Crypto indexes & synthetic assets - Invest in top 100 cryptocurrencies in just one click.'
+                'A universal investing app - Trade and diversify any global asset in just one click.'
               )}
             </Typography>
 
@@ -192,7 +192,7 @@ export function FooterSection({
                     <Link
                       key={link.name}
                       component={RouterLink}
-                      href={link.href}
+                      href={link.href as string}
                       color="grey.400"
                       variant="body2"
                     >

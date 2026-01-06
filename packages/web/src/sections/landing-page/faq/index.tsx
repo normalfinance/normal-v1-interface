@@ -40,23 +40,37 @@ const DEFAULT_QUESTIONS: Question[] = [
   {
     title: 'How does Normal work?',
     answer:
-      'The Normal AMM mints and burns synthetic tokens to keep pool prices pegged to an oracle price.',
+      'Normal creates a digital version of global assets that are instantly accessible anywhere. Every investment is fully backed by USDC. Our digital assets can be combined into diversified baskets - called index funds - that help you automate your porfolio.',
   },
   {
-    title: 'Do I need an account to start?',
-    answer: 'No account needed—connect your wallet and trade instantly.',
+    title: 'What assets does Normal support?',
+    answer:
+      "We integrate new assets every week. We're building support for the top 100 cryptocurrencies and popular equities, commodotities, FX pairs, ETFs, and more.",
   },
   {
-    title: 'Which tokens can I trade?',
-    answer: 'You can swap XLM and USDC for any top 100 token supported by our AMM.',
+    title: 'How do I deposit and withdraw funds?',
+    answer:
+      "All investing on Normal is powered by USD Coin - a digital dollar that's always worth $1, fully backed by U.S. Treasuries and cash, with over $80 billion in deposits. You can deposit and withdraw funds using one of our regulated financial partners such as MoneyGram, Coinbase, and Onramper, or transfer USDC directly with your Normal account.",
   },
   {
-    title: 'What are indexes?',
-    answer: 'Indexes are baskets of tokens that track themes or sectors (e.g., DeFi, Layer-2).',
+    title: 'How much does Normal cost?',
+    answer:
+      'It is 100% free to create an account. A small fee may be collected when depositing/withdrawing using our financial partners. All trades on Normal incur a 0.30% fee and all index funds have a volume scaling transaction fee.',
   },
   {
-    title: 'Is it safe to use?',
-    answer: 'All contracts are audited. You keep custody of your assets at all times.',
+    title: 'Does Normal require KYC?',
+    answer:
+      'No, we do not require KYC to create an account or invest. However, you must KYC to deposit and withdraw funds using our regulated financial partners. We also restrict access from users originating in U.S sanctioned jurisdictions or countries where our services are not supported due to regulation.',
+  },
+  {
+    title: 'What is an index fund?',
+    answer:
+      'Index funds are baskets of assets that track an investment theme, sector, or strategy (e.g., International, High-growth, Crypto, Low-risk). They automatically update to ensure your portfolio is achieving maximum performance and save you time and money while investing.',
+  },
+  {
+    title: 'Is Normal safe to use?',
+    answer:
+      'Yes, our technology has been audited by professional security firms. We use two layer encryption across data sources and employ active monitoring systems to ensure our users and their funds are constantly secure. You keep custody of your funds and assets at all times. However, there are risks to using our platform. Please read them in our documention.',
   },
 ];
 
@@ -76,7 +90,7 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
   description = 'Common questions answered below.',
   questions = [],
   footerHeading = 'Still have questions?',
-  footerDescription = 'Check out our Gitbook!',
+  footerDescription = 'Check out our documentation!',
   button,
   ...sectionProps
 }) => {

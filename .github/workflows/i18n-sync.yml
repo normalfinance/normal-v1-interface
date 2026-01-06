@@ -63,7 +63,7 @@ jobs:
         working-directory: packages/web
         run: |
           echo "Checking for missing translations..."
-          
+
           # Run the check script - exits with code 1 if missing translations found
           if yarn i18n:check-missing; then
             echo "missing=false" >> $GITHUB_OUTPUT

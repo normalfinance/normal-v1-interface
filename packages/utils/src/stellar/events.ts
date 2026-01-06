@@ -31,59 +31,78 @@ export function parseEvent(
   const parsedData = parseVec(data);
 
   switch (type) {
-    // ─── Pool Router Events ──────────────────────────────────
+    // ─── Pair Events ──────────────────────────────────
+
+    case 'mint': {
+      return {
+        type,
+        user: parseAddress(topics[1]),
+        pair: parseAddress(topics[2]),
+        collateral: parseBigInt(parsedData[0]),
+        tokensMinted: parseBigInt(parsedData[1]),
+        ts: parseBigInt(parsedData[2]),
+        txHash,
+      };
+    }
+
+    case 'redeem': {
+      return {
+        type,
+        user: parseAddress(topics[1]),
+        pair: parseAddress(topics[2]),
+        collateral: parseBigInt(parsedData[0]),
+        tokensRedeemed: parseBigInt(parsedData[1]),
+        ts: parseBigInt(parsedData[2]),
+        txHash,
+      };
+    }
+
+    // ─── Treasury Events ──────────────────────────────────
 
     case 'deposit': {
       return {
         type,
-        tokens: (topics[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
         user: parseAddress(topics[2]),
-        poolAddress: parseAddress(parsedData[0]),
-        amounts: (parsedData[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseBigInt),
-        shareAmount: parseBigInt(parsedData[2]),
+        pair: parseAddress(topics[1]),
+        amount: parseBigInt(parsedData[0]),
+        ts: parseBigInt(parsedData[1]),
         txHash,
-        timestamp: undefined,
       };
     }
 
     case 'withdraw': {
       return {
         type,
-        tokens: (topics[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
         user: parseAddress(topics[2]),
-        poolAddress: parseAddress(parsedData[0]),
-        shareAmount: parseBigInt(parsedData[1]),
-        amounts: (parsedData[2] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseBigInt),
+        pair: parseAddress(topics[1]),
+        amount: parseBigInt(parsedData[0]),
+        ts: parseBigInt(parsedData[1]),
         txHash,
-        timestamp: undefined,
       };
     }
 
-    case 'swap': {
+    case 'trade': {
       return {
         type,
-        tokens: (topics[1] as unknown as { vec: SorobanPrimitive[] }).vec.map(parseAddress),
         user: parseAddress(topics[2]),
-        poolAddress: parseAddress(parsedData[0]),
-        tokenIn: parseAddress(parsedData[1]),
-        tokenOut: parseAddress(parsedData[2]),
-        inAmount: parseBigInt(parsedData[3]),
-        outAmount: parseBigInt(parsedData[4]),
+        pair: parseAddress(topics[1]),
+        side: parseBigInt(parsedData[0]),
+        direction: parseBigInt(parsedData[1]),
+        amount: parseBigInt(parsedData[2]),
+        ts: parseBigInt(parsedData[3]),
         txHash,
-        timestamp: undefined,
       };
     }
 
-    case 'claim':
-      return {
-        type,
-        pool: parseAddress(topics[1]),
-        user: parseAddress(topics[2]),
-        rewardToken: parseAddress(parsedData[0]),
-        rewardAmount: parseBigInt(parsedData[1]),
-        txHash,
-        timestamp: undefined,
-      };
+    // case 'claim':
+    //   return {
+    //     type,
+    //     pool: parseAddress(topics[1]),
+    //     user: parseAddress(topics[2]),
+    //     rewardToken: parseAddress(parsedData[0]),
+    //     rewardAmount: parseBigInt(parsedData[1]),
+    //     txHash,
+    //   };
 
     default:
       throw new Error(`Unknown event type: ${type}`);

@@ -44,7 +44,7 @@ export function useTrustLine(): ReturnType {
         const walletAddress = publicKey || storePersist.wallet.address;
 
         if (!walletAddress) {
-          throw new Error('No wallet connected');
+          throw new Error('No account found');
         }
 
         logger.log('[TRUSTLINE] Creating trustline for:', assetCode, 'with issuer:', assetIssuer);

@@ -13,11 +13,23 @@ export const getTransactionMessages = (details: TransactionDetails) => {
         success: `Successfully sent ${token1?.amount} ${token1?.name}.`,
         error: `Failed to sent ${token1?.name}.`,
       };
-    case TransactionType.SWAP:
+    case TransactionType.MINT_PAIR:
       return {
-        loading: `Swapping ${token1?.amount} ${token1?.name} for ${token2?.name}...`,
-        success: `Successfully swapped ${token1?.amount} ${token1?.name} for ${token2?.name}.`,
-        error: `Failed to swap ${token1?.name} for ${token2?.name}.`,
+        loading: `Minting ${token1?.amount} ${token1?.name} for ${token2?.name}...`,
+        success: `Successfully minted ${token1?.amount} ${token1?.name} for ${token2?.name}.`,
+        error: `Failed to mint ${token1?.name} for ${token2?.name}.`,
+      };
+    case TransactionType.REDEEM_PAIR:
+      return {
+        loading: `Redeeming ${token1?.amount} ${token1?.name} for ${token2?.name}...`,
+        success: `Successfully redeemed ${token1?.amount} ${token1?.name} for ${token2?.name}.`,
+        error: `Failed to redeem ${token1?.name} for ${token2?.name}.`,
+      };
+    case TransactionType.TRADE:
+      return {
+        loading: `Trading ${token1?.amount} ${token1?.name} for ${token2?.name}...`,
+        success: `Successfully traded ${token1?.amount} ${token1?.name} for ${token2?.name}.`,
+        error: `Failed to trade ${token1?.name} for ${token2?.name}.`,
       };
     case TransactionType.DEPOSIT_LIQUIDITY:
       return {
@@ -31,18 +43,18 @@ export const getTransactionMessages = (details: TransactionDetails) => {
         success: `Successfully removed ${token1?.amount} ${token1?.name}.`,
         error: `Failed to remove ${token1?.name}.`,
       };
-    case TransactionType.CLAIM_REWARD:
-      return {
-        loading: 'Claiming rewards...',
-        success: 'Successfully claimed rewards.',
-        error: 'Failed to claim rewards.',
-      };
-    case TransactionType.CLAIM_FEES:
-      return {
-        loading: 'Claiming fees...',
-        success: 'Successfully claimed fees.',
-        error: 'Failed to claim fees.',
-      };
+    // case TransactionType.CLAIM_REWARD:
+    //   return {
+    //     loading: 'Claiming rewards...',
+    //     success: 'Successfully claimed rewards.',
+    //     error: 'Failed to claim rewards.',
+    //   };
+    // case TransactionType.CLAIM_FEES:
+    //   return {
+    //     loading: 'Claiming fees...',
+    //     success: 'Successfully claimed fees.',
+    //     error: 'Failed to claim fees.',
+    //   };
     default:
       return {
         loading: 'Transaction in progress...',

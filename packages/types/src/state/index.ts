@@ -7,6 +7,7 @@ export * from './loading';
 export * from './error';
 export * from './referral';
 export * from './invite-code';
-export * from './pool';
+export * from './pair';
 export * from './token';
 export * from './modal';
+export * from './index_fund';

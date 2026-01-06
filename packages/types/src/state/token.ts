@@ -1,5 +1,3 @@
-import { BigNumber } from 'bignumber.js';
-
 export type ApiToken = {
   symbol: string;
   issuer: string;

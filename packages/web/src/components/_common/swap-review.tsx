@@ -1,16 +1,13 @@
 import type { Token } from '@normalfinance/types';
 
 import React from 'react';
-import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { getSwapConversionText } from '@/utils/conversion-helpers';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import { useTheme } from '@mui/material/styles';
 import {
   Box,
-  Chip,
   Dialog,
   Button,
   Accordion,
@@ -28,14 +25,9 @@ import { Iconify } from '../template/iconify';
 export interface SwapReviewProps {
   open: boolean;
   onClose: () => void;
-  sellToken?: Token;
-  buyToken?: Token;
-  sellAmount: string;
-  buyAmount: number;
+  selectedToken?: Token;
+  amount: string;
   feePercentage: number;
-  networkCost: string;
-  priceImpact: number;
-  maxSlippage: number;
   sellFiatValue: number;
   onSubmit: () => void;
 }
@@ -43,14 +35,9 @@ export interface SwapReviewProps {
 const SwapReview: React.FC<SwapReviewProps> = ({
   open,
   onClose,
-  sellToken,
-  buyToken,
-  sellAmount,
-  buyAmount,
+  selectedToken,
+  amount,
   feePercentage,
-  networkCost,
-  priceImpact,
-  maxSlippage,
   sellFiatValue,
   onSubmit,
 }) => {
@@ -78,7 +65,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div" color="text.primary">
-            {t("You're swapping")}
+            {t("You're trading")}
           </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
@@ -112,7 +99,8 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {sellAmount} {sellToken?.symbol}
+                  {amount} {selectedToken?.symbol}
+                  {/* sellAmount */}
                 </Typography>
                 <Typography
                   variant="body1"
@@ -134,60 +122,11 @@ const SwapReview: React.FC<SwapReviewProps> = ({
 
               <Box
                 component="img"
-                src={sellToken ? (sellToken.icon ?? getCryptoIconUrl(sellToken.symbol)) : ''}
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                }}
-              />
-            </Box>
-
-            <Iconify
-              width={24}
-              icon="eva:arrow-downward-fill"
-              sx={{
-                my: 2,
-                color: theme.palette.text.primary,
-              }}
-            />
-
-            <Box
-              sx={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Box>
-                <Typography variant="h4">
-                  {buyAmount.toFixed(8)} {buyToken?.symbol}
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    fontSize: 'var(--components-nav-item-size, 14px)',
-                    fontStyle: 'normal',
-                    fontWeight: 'var(--components-nav-item-weight, 500)',
-                    lineHeight: 'var(--components-nav-item-line-height, 22px)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'clip',
-                    minWidth: 0,
-                  }}
-                >
-                  {buyToken
-                    ? fCurrencyTwoDecimals(BigNumber(buyToken.price).multipliedBy(buyAmount))
-                    : ''}
-                </Typography>
-              </Box>
-
-              <Box
-                component="img"
-                src={buyToken ? (buyToken.icon ?? getCryptoIconUrl(buyToken.symbol)) : ''}
+                src={
+                  selectedToken
+                    ? (selectedToken.icon ?? getCryptoIconUrl(selectedToken.symbol))
+                    : ''
+                }
                 sx={{
                   width: 40,
                   height: 40,
@@ -305,7 +244,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           fontSize: '12px',
                         }}
                       >
-                        {t('Fee')}&nbsp;
+                        {t('Total Fee')}&nbsp;
                         <Box component="span">
                           {t('(')}
                           {fPercent(feePercentage / 100)}
@@ -355,52 +294,6 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                           fontSize: '12px',
                         }}
                       >
-                        {t('Network cost')}
-                      </Typography>
-                      <Iconify
-                        icon="solar:info-circle-bold"
-                        width={14}
-                        sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                      />
-                    </Box>
-
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
-                      {/* {fCurrencyTwoDecimals(networkCost)} */}
-                    </Typography>
-                  </Box>
-
-                  <Box
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
                         {t('Rate')}
                       </Typography>
                       <Iconify
@@ -410,7 +303,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                       />
                     </Box>
 
-                    <Typography
+                    {/* <Typography
                       variant="body2"
                       sx={{
                         fontWeight: 500,
@@ -418,100 +311,10 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                         fontSize: '12px',
                       }}
                     >
-                      {sellToken && buyToken ? getSwapConversionText(sellToken, buyToken) : ''}
-                    </Typography>
-                  </Box>
-
-                  <Box
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
-                        {t('Price impact')}
-                      </Typography>
-                      <Iconify
-                        icon="solar:info-circle-bold"
-                        width={14}
-                        sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                      />
-                    </Box>
-
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
-                      {/* {fRawPercent(priceImpact)} */}
-                    </Typography>
-                  </Box>
-
-                  <Box
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
-                        {t('Max slippage')}
-                      </Typography>
-                      <Iconify
-                        icon="solar:info-circle-bold"
-                        width={14}
-                        sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                      />
-                    </Box>
-
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      <Chip label="Coming soon" color="info" size="small" variant="soft" />
-                      {/* {fRawPercent(maxSlippage)} */}
-                    </Typography>
+                      {selectedToken && buyToken
+                        ? getSwapConversionText(selectedToken, buyToken)
+                        : ''}
+                    </Typography> */}
                   </Box>
                 </Box>
               </Box>
@@ -535,7 +338,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
               borderRadius: '20px',
             }}
           >
-            {t('Swap')}
+            {t('Trade')}
           </Button>
         </Box>
       </DialogActions>

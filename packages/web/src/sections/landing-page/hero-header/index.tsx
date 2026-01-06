@@ -8,7 +8,7 @@ import { cdn } from '@normalfinance/utils';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
-import SwapCard from '@/components/_common/swap-card';
+import TradeCard from '@/components/_common/trade-card';
 
 import { WavyBackground } from './wavy-background';
 
@@ -136,7 +136,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 },
               }}
             >
-              {t('Instant crypto swaps, finally made')}{' '}
+              {t('Trade and diversify any asset,')}{' '}
               <Box
                 component="span"
                 sx={{
@@ -154,7 +154,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   backgroundClip: 'text',
                 }}
               >
-                {t('Normal')}
+                {t('in seconds')}
               </Box>
             </Typography>
 
@@ -176,9 +176,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
             >
               <span>💸 {t('Low fees')}</span>
               <span>•</span>
-              <span>🌍 {t('Global access')}</span>
+              <span>🌍 {t('Global support')}</span>
               <span>•</span>
-              <span>⚡ {t('Built on Stellar')}</span>
+              <span>⚡ {t('Instant settlement')}</span>
             </Typography>
 
             <Box
@@ -193,13 +193,13 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
               }}
             >
-              <SwapCard queryParams={swapParams} />
+              <TradeCard queryParams={swapParams} />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
               {t(description)}
             </Typography>
-            <Stack
+            {/* <Stack
               direction="row"
               alignItems="center"
               justifyContent="center"
@@ -219,7 +219,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 alt={halbornImage.alt ?? ''}
                 sx={{ width: '112px', height: 'auto', objectFit: 'cover', mt: '20px' }}
               />
-            </Stack>
+            </Stack> */}
           </Box>
         </Stack>
       </Container>
@@ -241,7 +241,7 @@ export const HeroHeaderDefaults: Props = {
     src: cdn('homepage/halborn-logo.webp'),
     alt: 'Stellar Logo Long',
   },
-  tagline: 'Crypto that just works',
+  tagline: 'Investing that works for you',
   taglineLogo: {
     src: cdn('homepage/normal-long.svg'),
     alt: 'Normal Logo Long',

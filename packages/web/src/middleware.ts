@@ -209,10 +209,10 @@ export async function middleware(req: NextRequest) {
 
   // Handle referral tracking first
   logger.log(`[${requestId}] Handling referral tracking...`);
-  const referralResponse = handleReferralTracking(req);
-  if (referralResponse) {
-    logger.log(`[${requestId}] Referral response created`);
-  }
+  // const referralResponse = handleReferralTracking(req);
+  // if (referralResponse) {
+  //   logger.log(`[${requestId}] Referral response created`);
+  // }
 
   let ip =
     req.headers.get('x-real-ip') || // many reverse proxies
@@ -235,7 +235,7 @@ export async function middleware(req: NextRequest) {
   if (!ip) {
     const duration = Date.now() - startTime;
     logger.log(`[${requestId}] No IP detected, skipping geo lookup (${duration}ms)`);
-    return referralResponse || NextResponse.next();
+    return NextResponse.next();
   }
 
   // Check for cached geo data first
@@ -385,7 +385,7 @@ export async function middleware(req: NextRequest) {
 
   const totalDuration = Date.now() - startTime;
   logger.log(`[${requestId}] MIDDLEWARE END - Total duration: ${totalDuration}ms\n`);
-  return referralResponse || NextResponse.next();
+  return NextResponse.next();
 }
 
 export const config = {
