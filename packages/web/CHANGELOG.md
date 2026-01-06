@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.4...v1.2.5) (2026-01-06)
+
+
+### Bug Fixes
+
+* add missing env ([c8dfc9d](https://github.com/normalfinance/normal-v1-interface/commit/c8dfc9dbf60e20359e416105995655d02f59ccfe))
+
 ## [1.2.4](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.3...v1.2.4) (2025-11-25)
 
 
