@@ -1,3 +1,10 @@
+## [1.2.6](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.5...v1.2.6) (2026-01-09)
+
+
+### Bug Fixes
+
+* **1.3.1:** many fixes ([222aca4](https://github.com/normalfinance/normal-v1-interface/commit/222aca4382dbb831fb241bab5ab39b41839db1af))
+
 ## [1.2.5](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.4...v1.2.5) (2026-01-06)
 
 
