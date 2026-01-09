@@ -64,30 +64,30 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     }
     case 'Add Liquidity':
     case 'Remove Liquidity': {
-      const { asset } = activity;
-      icon = <Avatar src={asset.iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${asset.amount} ${asset.symbol}`;
+      const { iconUrl, amount, symbol } = activity;
+      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${amount} ${symbol}`;
       break;
     }
     case 'Mint': {
-      const { asset } = activity;
+      const { iconUrl, amount, symbol } = activity;
 
-      icon = <Avatar src={asset.iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${asset.amount} ${asset.symbol}`;
+      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${amount} ${symbol}`;
       break;
     }
     case 'Redeem': {
-      const { asset } = activity;
+      const { iconUrl, amount, symbol } = activity;
 
-      icon = <Avatar src={asset.iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${asset.amount} ${asset.symbol}`;
+      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${amount} ${symbol}`;
       break;
     }
     case 'Trade': {
-      const { asset } = activity;
+      const { iconUrl, amount, symbol } = activity;
 
-      icon = <Avatar src={asset.iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${asset.amount} ${asset.symbol}`;
+      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${amount} ${symbol}`;
       break;
     }
     default:

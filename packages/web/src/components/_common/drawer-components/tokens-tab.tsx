@@ -21,7 +21,7 @@ export interface ToeknsTabsProps {
 export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
-
+  console.log({ tokens });
   return (
     <Box sx={{ p: 2, pt: 0 }}>
       {tokens.length > 0 ? (

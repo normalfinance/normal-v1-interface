@@ -7,9 +7,8 @@ const NETWORKS = {
     dataset: 'stellar_testnet.events_v2',
     table: 'normal_contract_events_testnet',
     contracts: {
-      poolRouter: process.env.NEXT_PUBLIC_TESTNET_POOL_ROUTER || '',
-      poolPlane: process.env.NEXT_PUBLIC_TESTNET_POOL_PLANE || '',
-      liquidityCalc: process.env.NEXT_PUBLIC_TESTNET_LIQUIDITY_CALCULATOR || '',
+      treasury: process.env.NEXT_PUBLIC_TESTNET_TREASURY || '',
+      longShortPairFactory: process.env.NEXT_PUBLIC_TESTNET_LONG_SHORT_PAIR_FACTORY || '',
     },
   },
   mainnet: {
@@ -17,9 +16,8 @@ const NETWORKS = {
     dataset: 'stellar.events_v2',
     table: 'normal_contract_events_mainnet',
     contracts: {
-      poolRouter: process.env.NEXT_PUBLIC_MAINNET_POOL_ROUTER || '',
-      poolPlane: process.env.NEXT_PUBLIC_MAINNET_POOL_PLANE || '',
-      liquidityCalc: process.env.NEXT_PUBLIC_MAINNET_LIQUIDITY_CALCULATOR || '',
+      treasury: process.env.NEXT_PUBLIC_MAINNET_TREASURY || '',
+      longShortPairFactory: process.env.NEXT_PUBLIC_MAINNET_LONG_SHORT_PAIR_FACTORY || '',
     },
   },
 }

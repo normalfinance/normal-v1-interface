@@ -74,7 +74,7 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
           fullWidth
           value={currentFilters.name}
           onChange={handleFilterName}
-          placeholder={t('Search pools...')}
+          placeholder={t('Search assets...')}
           sx={{
             ml: 'auto',
             maxWidth: 200,

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { constants } from '@normalfinance/utils';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
+import { LongShortPairFactoryContract } from '@normalfinance/contracts';
 
 import { useContractTransaction } from './use-contract-transaction';
 
@@ -26,6 +27,7 @@ interface ReturnType {
   setLoading: (isLoading: boolean) => void;
   mintPair: (args: MintPairArgs) => Promise<void>;
   redeemPair: (args: RedeemPairArgs) => Promise<void>;
+  getPairByAsset: (asset: string) => Promise<string | undefined>;
 }
 
 // ----------------------------------------------------------------------
@@ -37,12 +39,6 @@ export function usePairFactory(): ReturnType {
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // const pairFactoryClient = new LongShortPairFactoryContractClient.Client({
-  //   contractId: constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
-  //   networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-  //   rpcUrl: constants.StellarConfig.RPC_URL,
-  // });
 
   const executePair = async (signedTransactionXDR: string, transactionType: string = 'Pair') => {
     if (!storePersist.wallet.address) return null;
@@ -70,7 +66,7 @@ export function usePairFactory(): ReturnType {
 
   const rateLimitCheck = async () => {
     if (!storePersist.wallet.address) return;
-    const res = await fetch('/api/pair', {
+    const res = await fetch('/api/pairs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
@@ -87,7 +83,7 @@ export function usePairFactory(): ReturnType {
   const mintPair = async (args: MintPairArgs) => {
     setLoading(true);
 
-    await rateLimitCheck();
+    // await rateLimitCheck();
 
     const processedArgs = {
       user: storePersist.wallet.address!,
@@ -99,8 +95,8 @@ export function usePairFactory(): ReturnType {
       contractType: 'long_short_pair_factory',
       contractAddress: constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
       transactionDetails: {
-        type: TransactionType.MINT_INDEX,
-        token1: { name: 'USDC', amount: String(args.tokens_to_mint) },
+        type: TransactionType.MINT_PAIR,
+        token1: { name: args.asset, amount: String(args.tokens_to_mint) },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.mint(processedArgs, { simulate: !restore });
@@ -129,7 +125,7 @@ export function usePairFactory(): ReturnType {
   const redeemPair = async (args: RedeemPairArgs) => {
     setLoading(true);
 
-    await rateLimitCheck();
+    // await rateLimitCheck();
 
     const processedArgs = {
       user: storePersist.wallet.address!,
@@ -141,8 +137,8 @@ export function usePairFactory(): ReturnType {
       contractType: 'long_short_pair_factory',
       contractAddress: constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
       transactionDetails: {
-        type: TransactionType.REDEEM_INDEX,
-        token1: { name: 'USDC', amount: String(args.tokens_to_redeem) },
+        type: TransactionType.REDEEM_PAIR,
+        token1: { name: args.asset, amount: String(args.tokens_to_redeem) },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.redeem(processedArgs, { simulate: !restore });
@@ -168,11 +164,39 @@ export function usePairFactory(): ReturnType {
     setLoading(false);
   };
 
+  const getPairByAsset = async (asset: string) => {
+    setLoading(true);
+
+    try {
+      await rateLimitCheck();
+
+      const FactoryClient = new LongShortPairFactoryContract.Client({
+        contractId: constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
+      });
+
+      const getPairByAssetResponse = await FactoryClient.get_pair_by_asset({ asset });
+
+      if (!getPairByAssetResponse || !getPairByAssetResponse.result) return undefined;
+
+      const pairAddress = getPairByAssetResponse.result as string;
+
+      return pairAddress;
+    } catch (e: any) {
+      setError(e.toString());
+    } finally {
+      setLoading(false);
+    }
+    return undefined;
+  };
+
   return {
     error,
     loading,
     setLoading,
     mintPair,
     redeemPair,
+    getPairByAsset,
   };
 }

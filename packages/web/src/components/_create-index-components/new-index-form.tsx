@@ -15,7 +15,6 @@ import { useIndexFundFactory } from '@/hooks/stellar/use-index-fund-factory';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import Slider from '@mui/material/Slider';
 import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
@@ -60,9 +59,6 @@ export const NewIndexSchema = z.object({
     .number({ invalid_type_error: 'Initial Price must be a number' })
     .min(1, { message: 'Price must be at least $1.00' })
     .max(1000, { message: 'Price cannot exceed $1,000' }),
-  initialDeposit: z
-    .number({ invalid_type_error: 'Initial deposit must be a number' })
-    .min(0, { message: 'Deposit must be 0 or more' }),
   isPublic: z.boolean(),
   components: z.array(IndexFundComponentSchema),
 });
@@ -91,7 +87,6 @@ export function NewIndexForm({ currentIndex }: Props) {
     description: '',
     weightingMethod: 'Constant',
     initialPrice: 1,
-    initialDeposit: 0,
     isPublic: true,
     components: [], // default empty list of coins
   };
@@ -417,9 +412,8 @@ export function NewIndexForm({ currentIndex }: Props) {
           new_weight: BigInt(Math.round((component.indexPercentage ?? 0) * 100)),
           token: component.contract,
         })),
-        base_nav: BigInt((1 * 10 ** 7).toFixed(0)),
         initial_price: BigInt((data.initialPrice * 10 ** 7).toFixed(0)),
-        initial_deposit: BigInt((data.initialDeposit * 10 ** 7).toFixed(0)),
+        token_quote: '',
       };
 
       await createIndexFund({ serialized_asset: serializedAsset, params });
@@ -499,8 +493,8 @@ export function NewIndexForm({ currentIndex }: Props) {
               gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', gridColumn: 'span 2' },
             }}
           >
-            <Field.Text name="name" label={t('Index Name')} autoComplete="off" />
-            <Field.Text name="symbol" label={t('Index Symbol')} autoComplete="off" />
+            <Field.Text name="name" label={t('Name')} autoComplete="off" />
+            <Field.Text name="symbol" label={t('Symbol')} autoComplete="off" />
           </Box>
           <Field.Text
             name="description"
@@ -570,56 +564,7 @@ export function NewIndexForm({ currentIndex }: Props) {
                     }}
                     sx={{ width: '100%' }}
                   />
-                  <Slider
-                    value={typeof field.value === 'number' ? field.value : 1}
-                    onChange={(_, value) => field.onChange(value)}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={(value) => `$${value}`}
-                    step={1}
-                    marks
-                    min={1}
-                    max={1000}
-                    sx={{ width: '100%' }}
-                  />
                 </Box>
-                {error && (
-                  <Typography variant="caption" color="error">
-                    {error.message}
-                  </Typography>
-                )}
-              </>
-            )}
-          />
-        </Box>
-
-        {/* Initial Deposit Section */}
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            {t('Initial Deposit')}
-          </Typography>
-          <Typography variant="caption" display="block" gutterBottom>
-            {t('The amount of USD you must deposit into the fund to initialize it.')}
-          </Typography>
-          <Controller
-            name="initialDeposit"
-            control={control}
-            render={({ field, fieldState: { error } }) => (
-              <>
-                <TextField
-                  value={field.value}
-                  onChange={(e) => {
-                    const newValue = parseFloat(e.target.value);
-                    field.onChange(isNaN(newValue) ? 0 : newValue);
-                  }}
-                  type="number"
-                  slotProps={{
-                    htmlInput: { step: 'any', min: 0 },
-                    input: {
-                      startAdornment: <InputAdornment position="start">USD</InputAdornment>,
-                    },
-                  }}
-                  fullWidth
-                />
                 {error && (
                   <Typography variant="caption" color="error">
                     {error.message}
@@ -637,7 +582,7 @@ export function NewIndexForm({ currentIndex }: Props) {
           }}
         >
           <Typography variant="subtitle1" gutterBottom>
-            {t('Asset List')}
+            {t('Assets')}
           </Typography>
           <IndexComponentList
             components={componentList}

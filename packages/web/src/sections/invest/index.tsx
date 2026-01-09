@@ -23,7 +23,7 @@ export default function InvestView() {
   const activeTab: TokenActionKey = params?.tab || 'trade';
 
   // Determine which tabs should be enabled (you can customize this logic)
-  const enabledTabs: TokenActionKey[] = ['trade', 'deposit', 'withdraw'];
+  const enabledTabs: TokenActionKey[] = ['trade', 'mint', 'deposit', 'withdraw'];
 
   // Convert TokenActionQueryParams to the format expected by different cards
   const getCardQueryParams = () => {

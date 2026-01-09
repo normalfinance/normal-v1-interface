@@ -1,2 +1,2 @@
 export * from './components';
-export * from './explore-pools-table';
+export * from './explore-assets-table';

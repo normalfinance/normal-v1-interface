@@ -6,8 +6,8 @@ import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
-import { useTrade, useTrustLine } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
+import { useTrade, useTreasury, useTrustLine } from '@/hooks';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
@@ -20,13 +20,12 @@ import {
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Alert, Stack, Button, InputBase, Typography } from '@mui/material';
+import { Box, Alert, Stack, Button, Switch, InputBase, Typography } from '@mui/material';
 
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
 import { WalletGate } from './wallet-gate';
 import ReceiveModal from './receive-modal';
-import FeeInfoAccordion from './fee-info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
@@ -51,7 +50,9 @@ interface ButtonConfig {
 
 interface TradeCardProps extends CardProps {
   queryParams?: SwapQueryParams;
-  changeTab?: React.Dispatch<React.SetStateAction<false | 'trade' | 'deposit' | 'withdraw'>>;
+  changeTab?: React.Dispatch<
+    React.SetStateAction<false | 'trade' | 'mint' | 'deposit' | 'withdraw'>
+  >;
 }
 
 const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other }) => {
@@ -76,6 +77,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
   const { addTrustLine } = useTrustLine();
 
   const { loading, setLoading, buyLong, sellLong, buyShort, sellShort } = useTrade();
+  const { fetchBalances } = useTreasury();
 
   const [swapError, setSwapError] = useState<string | null>(null);
   const [creatingTrustline, setCreatingTrustline] = useState<boolean>(false);
@@ -104,8 +106,13 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
   // Compute the fiat value for the user's sell input
   const amountVal = parseFloat(amount) || 0;
-  const sellFiatValue =
-    usdcToken && amountVal > 0 ? BigNumber(usdcToken.price).multipliedBy(amountVal).toNumber() : 0;
+  // const amountFiatValue =
+  //   selectedToken && amountVal > 0
+  //     ? BigNumber(selectedToken.price).multipliedBy(amountVal).toNumber()
+  //     : 0;
+
+  // const quoteRequiredFiatValue =
+  //   usdcToken && amountVal > 0 ? BigNumber(usdcToken.price).multipliedBy(amountVal).toNumber() : 0;
 
   // Initialize from query params
   // useEffect(() => {
@@ -224,15 +231,22 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
     // if (BigNumber(selectedToken.price).eq(0) || BigNumber(usdcToken.price).eq(0)) {
     //   setAmount('0');
-    // } else {
+    // }
+    // else {
     //   const potentialBuyAmount = BigNumber(selectedToken.price)
     //     .dividedBy(buyToken.price)
     //     .multipliedBy(sellVal);
     //   setAmount(potentialBuyAmount.toNumber());
     // }
 
-    if (BigNumber(selectedToken.balance).lt(amountVal)) {
-      setInsufficientBalance(true);
+    if (tradeDirection === 'buy') {
+      if (BigNumber(usdcToken.balance).lt(amountVal)) {
+        setInsufficientBalance(true);
+      }
+    } else {
+      if (BigNumber(selectedToken.balance).lt(amountVal)) {
+        setInsufficientBalance(true);
+      }
     }
   }, [selectedToken, amount, amountVal]);
 
@@ -423,18 +437,18 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
         }
 
         // Now call the client-side onSwap (sign and submit)
-        const isLong = selectedToken.contract === pair.addresses.tokenLong;
+        const isLong = selectedToken.contract === pair.tokens.long;
 
         if (tradeDirection === 'buy') {
           if (isLong) {
             await buyLong({
-              pair: pair.addresses.pair,
+              pair: pair.pairAddress,
               usdc_in: Number(amount),
               min_long_out: 0,
             });
           } else {
             await buyShort({
-              pair: pair.addresses.pair,
+              pair: pair.pairAddress,
               usdc_in: Number(amount),
               min_short_out: 0,
             });
@@ -442,13 +456,13 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
         } else {
           if (isLong) {
             await sellLong({
-              pair: pair.addresses.pair,
+              pair: pair.pairAddress,
               long_in: Number(amount),
               min_usdc_out: 0,
             });
           } else {
             await sellShort({
-              pair: pair.addresses.pair,
+              pair: pair.pairAddress,
               short_in: Number(amount),
               min_usdc_out: 0,
             });
@@ -472,6 +486,14 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
       <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <Switch
+          checked={tradeDirection === 'buy'}
+          color="success"
+          onClick={() => {
+            setTradeDirection(tradeDirection === 'buy' ? 'sell' : 'buy');
+          }}
+        />
+
         {/* Token Section */}
         <Box
           sx={{
@@ -508,7 +530,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
               }}
             >
               <Typography variant="body1" noWrap data-testid="sell-token-picker">
-                {t('Trade')}
+                {tradeDirection === 'buy' ? t('Buy') : t('Sell')}
               </Typography>
               <InputBase
                 type="number"
@@ -560,7 +582,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
                   minWidth: 0,
                 }}
               >
-                {`${fCurrency(sellFiatValue)}`}
+                {`Required USD: ${fCurrency(amountVal)}`}
               </Typography>
             </Box>
           </Box>
@@ -587,69 +609,72 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
                     handleOpen();
                   }}
                 />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'flex-end',
-                    justifyContent: 'center',
-                    gap: '4px',
-                  }}
-                >
+                {tradeDirection === 'sell' && (
                   <Box
                     sx={{
                       display: 'flex',
                       flexDirection: 'row',
-                      alignItems: 'center',
+                      alignItems: 'flex-end',
                       justifyContent: 'center',
                       gap: '4px',
-                      height: '100%',
                     }}
                   >
-                    <Typography
-                      variant="body2"
+                    <Box
                       sx={{
-                        fontWeight: 500,
-                        color: insufficientBalance
-                          ? theme.palette.error.main
-                          : theme.palette.text.secondary,
-                        fontSize: '12px',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        height: '100%',
                       }}
                     >
-                      {BigNumber(selectedToken.balance).toFixed(selectedToken.decimals)}{' '}
-                      <Box
-                        component="span"
+                      <Typography
+                        variant="body2"
                         sx={{
+                          fontWeight: 500,
                           color: insufficientBalance
                             ? theme.palette.error.main
-                            : theme.palette.text.primary,
+                            : theme.palette.text.secondary,
+                          fontSize: '12px',
                         }}
                       >
-                        {selectedToken?.symbol}
-                      </Box>
-                    </Typography>
+                        {BigNumber(selectedToken.balance).toFixed(selectedToken.decimals)}{' '}
+                        <Box
+                          component="span"
+                          sx={{
+                            color: insufficientBalance
+                              ? theme.palette.error.main
+                              : theme.palette.text.primary,
+                          }}
+                        >
+                          {selectedToken?.symbol}
+                        </Box>
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleMaxClick}
+                      disabled={loading}
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '12px',
+                        p: 0,
+                        height: '24px',
+                        minWidth: '36px',
+                        backgroundColor: 'rgba(148,123,255,0.29)',
+                        color: '#6E4BFF',
+                        '&:hover': {
+                          backgroundColor: 'rgba(148,123,255,0.20)',
+                        },
+                      }}
+                    >
+                      {t('Max')}
+                    </Button>
                   </Box>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={handleMaxClick}
-                    disabled={loading}
-                    sx={{
-                      fontWeight: 500,
-                      fontSize: '12px',
-                      p: 0,
-                      height: '24px',
-                      minWidth: '36px',
-                      backgroundColor: 'rgba(148,123,255,0.29)',
-                      color: '#6E4BFF',
-                      '&:hover': {
-                        backgroundColor: 'rgba(148,123,255,0.20)',
-                      },
-                    }}
-                  >
-                    {t('Max')}
-                  </Button>
-                </Box>
+                )}
               </Box>
             ) : (
               <SwapSendEmptyPopupButton
@@ -758,24 +783,15 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
         </WalletGate>
       )}
 
-      {/* Additional box with fee info */}
-      {!loading && (
-        <FeeInfoAccordion
-          conversionText="" // selectedToken ? getConversionText(selectedToken, buyToken) :
-          insufficientBalance={insufficientBalance}
-          token={selectedToken || undefined}
-          fee={30}
-          sellFiatValue={sellFiatValue}
-        />
-      )}
       {reviewOpen && (
         <SwapReview
           open={reviewOpen}
           onClose={handleReviewClose}
+          tradeDirection={tradeDirection}
           selectedToken={selectedToken!}
           amount={amount}
           feePercentage={30}
-          sellFiatValue={sellFiatValue}
+          sellFiatValue={amountVal}
           onSubmit={() => settleTrade()}
         />
       )}

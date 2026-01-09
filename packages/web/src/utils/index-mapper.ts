@@ -62,12 +62,12 @@ export function createIndexSummary(
     address,
     sequence,
     isPublic: info.is_public,
-    managerAddress: info.manager_address,
+    managerAddress: info.admin_address,
     tokenAddress: info.token_address,
     totalShares: formatContractAmount(info.total_shares),
     totalDeposits: formatContractAmount(info.total_mints),
     totalWithdrawals: formatContractAmount(info.total_redemptions),
-    baseNav: formatContractAmount(info.base_nav),
+    baseNav: 0, // FIXME:
     sharePrice: formatContractAmount(info.initial_price),
     accumulatedFees: formatContractAmount(BigInt(0)), // This is a placeholder, we need to get rid of fees later
     lastRebalanceDate: info.last_rebalance_ts

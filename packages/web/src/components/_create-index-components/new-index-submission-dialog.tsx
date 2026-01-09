@@ -390,45 +390,6 @@ export default function NewIndexSubmissionDialog({
                     {fCurrencyTwoDecimals(allFields.initialPrice)}
                   </Typography>
                 </Box>
-                <Box
-                  sx={{
-                    width: '100%',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 1,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 1,
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.text.secondary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      {t('Initial Deposit')}
-                    </Typography>
-                  </Box>
-
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 500,
-                      color: theme.palette.text.primary,
-                      fontSize: '12px',
-                    }}
-                  >
-                    {allFields.initialDeposit} USD
-                  </Typography>
-                </Box>
               </Box>
             </Box>
           </AccordionDetails>

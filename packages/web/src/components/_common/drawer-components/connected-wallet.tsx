@@ -266,7 +266,7 @@ export default function ConnectedWallet({
       </CustomTabsSwapSend>
 
       {/* ------- tab panels ---------------------------------------- */}
-      {tabs.value === 'tokens' && (
+      {tabs.value === 'assets' && (
         <TokensTab tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0))} />
       )}
       {tabs.value === 'positions' && <PositionsTab positions={positions ?? []} />}

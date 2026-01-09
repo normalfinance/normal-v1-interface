@@ -7,11 +7,13 @@ import BigNumber from 'bignumber.js';
 import { usePair, usePairEvents } from '@/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
-import { fPercent, fCurrency } from '@/utils/format-number';
+import { useTreasuryBalances } from '@/hooks/stellar/use-treasury-balances';
 
 import { Grid2, useTheme } from '@mui/material';
 
+import { useSnackbar } from '@/components/template/snackbar';
 import { PairTransactionsTable } from '@/components/_pool-page-components';
+import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
 
@@ -23,24 +25,22 @@ export default function AssetDetailsView({
   pairAddress: string;
 }) {
   const theme = useTheme();
+  const { enqueueSnackbar } = useSnackbar();
 
   const {
     tokenState: { tokens },
   } = usePersistStore();
 
-  const { loading, error, pair } = usePair(pairAddress);
+  const { loading, error, pair, fetchPair: refreshPair } = usePair(pairAddress);
+  console.log({ loading, error, pair });
+
+  const { balances: treasuryBalances } = useTreasuryBalances(pairAddress);
 
   const { events } = usePairEvents(pairAddress, 20);
 
   if (!pair) {
-    return <></>;
+    return <SpecificNotFound type="pair" />;
   }
-
-  const isLong = symbol.includes('LONG');
-
-  const token = tokens.find((tkn) =>
-    isLong ? tkn.contract === pair.addresses.tokenLong : tkn.contract === pair.addresses.tokenShort
-  )!;
 
   // Format the pair events
   const rows = events
@@ -49,42 +49,68 @@ export default function AssetDetailsView({
 
   const past24hVolume = BigNumber(0);
 
-  const collateralValue = pair ? BigNumber(pair.collateral.amount).multipliedBy(1) : BigNumber(0);
+  // Find tokens
+  const collateralToken = tokens.find((tkn) => tkn.contract === pair.collateral.collateralToken);
+  const longToken = tokens.find((tkn) => tkn.contract === pair.tokens.long);
+  const shortToken = tokens.find((tkn) => tkn.contract === pair.tokens.short);
+
+  const collateralValue =
+    pair && collateralToken
+      ? BigNumber(pair.collateral.totalCollateral).multipliedBy(collateralToken.price)
+      : BigNumber(0);
+
+  const onRefresh = async () => {
+    enqueueSnackbar('Refreshing asset', { variant: 'info' });
+    await refreshPair();
+  };
 
   return (
     <DashboardContent maxWidth="xl">
       <Grid2 container spacing={3}>
         <Grid2 size={{ xs: 12, md: 8 }}>
           <PoolChart
-            pairInfo={{
-              token,
-              address: pairAddress,
-            }}
-            metadata={{
-              version: 'v1',
-              feeTier: fPercent(30),
-            }}
-            exchangeRate={{
-              label: `1 ${token.symbol} = ${BigNumber(token.price).toFixed(token.decimals)} USD`,
-              usdEquivalent: fCurrency(token.price),
-              tokenSymbol: token.symbol,
-              tokenRate: `${BigNumber(token.price).toFixed(token.decimals)} ${token.symbol}`,
-              tokenUSDValue: fCurrency(token.price),
+            pair={pair}
+            tokens={{
+              long: longToken!,
+              short: shortToken!,
+              collateral: collateralToken!,
             }}
             performance={{ percentageChange: 0 }}
             // chart={chartData}
             color={theme.palette.primary.main}
+            onRefresh={onRefresh}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, md: 4 }}>
           <PoolOverview
             totalAprPercentage={0}
-            poolBalances={[
+            treasuryBalances={[
               {
-                address: pairAddress,
-                tokenSymbol: symbol,
-                amount: BigNumber(0),
-                fiatValue: BigNumber(1).multipliedBy(token.price),
+                address: pair.tokens.long,
+                type: 'LONG',
+                amount: treasuryBalances?.long ?? BigNumber(0),
+                fiatValue:
+                  longToken && treasuryBalances
+                    ? treasuryBalances.long.multipliedBy(longToken.price)
+                    : BigNumber(0),
+              },
+              {
+                address: pair.tokens.short,
+                type: 'SHORT',
+                amount: treasuryBalances?.short ?? BigNumber(0),
+                fiatValue:
+                  shortToken && treasuryBalances
+                    ? treasuryBalances.short.multipliedBy(shortToken.price)
+                    : BigNumber(0),
+              },
+              {
+                address: pair.collateral.collateralToken,
+                type: 'QUOTE',
+                amount: treasuryBalances?.quote ?? BigNumber(0),
+                fiatValue:
+                  collateralToken && treasuryBalances
+                    ? treasuryBalances.quote.multipliedBy(collateralToken.price)
+                    : BigNumber(0),
               },
             ]}
             stats={[

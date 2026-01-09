@@ -73,7 +73,7 @@ export function useLiquidityPositions(): ReturnType {
     }
 
     const userPairSummaryResponse = await TreasuryClient.get_user_with_pair_summary({
-      pair: pair.addresses.pair,
+      pair: pair.pairAddress,
       user: wallet.address,
     });
 
@@ -86,8 +86,8 @@ export function useLiquidityPositions(): ReturnType {
       const totalShares = BigNumber(format.fTokenAmount(pair_summary.total_shares, 7));
       const userSharePercentage = userShares.dividedBy(totalShares);
 
-      const tokenLong = tokensByAddress[pair.addresses.tokenLong];
-      const tokenShort = tokensByAddress[pair.addresses.tokenShort];
+      const tokenLong = tokensByAddress[pair.tokens.long];
+      const tokenShort = tokensByAddress[pair.tokens.short];
 
       // Rewards
       const claimableReward = BigNumber(0);

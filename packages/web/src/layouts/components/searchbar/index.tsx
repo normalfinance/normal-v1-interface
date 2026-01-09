@@ -97,14 +97,14 @@ export function Searchbar({ sx, ...other }: BoxProps) {
       }
 
       const tokenPairs = pairs.filter(
-        (p) => p.addresses.tokenLong === token.contract || p.addresses.tokenShort === token.contract
+        (p) => p.tokens.long === token.contract || p.tokens.short === token.contract
       );
 
       if (!tokenPairs || !tokenPairs.length) {
         router.push(paths.assets.root);
       }
 
-      router.push(paths.assets.details(tokenPairs[0].addresses.tokenLong)); // FIXME:
+      router.push(paths.assets.details(tokenPairs[0].tokens.long)); // FIXME:
     },
     [router, handleClose, pairs]
   );

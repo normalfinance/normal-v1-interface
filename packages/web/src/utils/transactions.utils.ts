@@ -4,7 +4,7 @@ import type { StellarExpertResourceType } from '@normalfinance/types';
 import { TransactionType } from '@/types/transaction';
 
 export const getTransactionMessages = (details: TransactionDetails) => {
-  const { type, token1, token2 } = details;
+  const { type, token1 } = details;
 
   switch (type) {
     case TransactionType.SEND:
@@ -15,26 +15,26 @@ export const getTransactionMessages = (details: TransactionDetails) => {
       };
     case TransactionType.MINT_PAIR:
       return {
-        loading: `Minting ${token1?.amount} ${token1?.name} for ${token2?.name}...`,
-        success: `Successfully minted ${token1?.amount} ${token1?.name} for ${token2?.name}.`,
-        error: `Failed to mint ${token1?.name} for ${token2?.name}.`,
+        loading: `Minting ${token1?.amount} ${token1?.name}...`,
+        success: `Successfully minted ${token1?.amount} ${token1?.name}.`,
+        error: `Failed to mint ${token1?.name}.`,
       };
     case TransactionType.REDEEM_PAIR:
       return {
-        loading: `Redeeming ${token1?.amount} ${token1?.name} for ${token2?.name}...`,
-        success: `Successfully redeemed ${token1?.amount} ${token1?.name} for ${token2?.name}.`,
-        error: `Failed to redeem ${token1?.name} for ${token2?.name}.`,
+        loading: `Redeeming ${token1?.amount} ${token1?.name}...`,
+        success: `Successfully redeemed ${token1?.amount} ${token1?.name}.`,
+        error: `Failed to redeem ${token1?.name}.`,
       };
     case TransactionType.TRADE:
       return {
-        loading: `Trading ${token1?.amount} ${token1?.name} for ${token2?.name}...`,
-        success: `Successfully traded ${token1?.amount} ${token1?.name} for ${token2?.name}.`,
-        error: `Failed to trade ${token1?.name} for ${token2?.name}.`,
+        loading: `Trading ${token1?.amount} ${token1?.name}...`,
+        success: `Successfully traded ${token1?.amount} ${token1?.name}.`,
+        error: `Failed to trade ${token1?.name}.`,
       };
     case TransactionType.DEPOSIT_LIQUIDITY:
       return {
-        loading: `Depositing ${token1?.amount} ${token1?.name} and ${token2?.amount} ${token2?.name}...`,
-        success: `Successfully deposited ${token1?.amount} ${token1?.name} and ${token2?.amount} ${token2?.name}.`,
+        loading: `Depositing ${token1?.amount} ${token1?.name}...`,
+        success: `Successfully deposited ${token1?.amount} ${token1?.name}.`,
         error: `Failed to deposit ${token1?.name}.`,
       };
     case TransactionType.REMOVE_LIQUIDITY:

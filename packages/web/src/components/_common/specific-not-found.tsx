@@ -9,16 +9,16 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 type SpecificNotFoundProps = {
-  type: 'pool' | 'index' | 'default';
+  type: 'pair' | 'index' | 'default';
   title?: string;
   description?: string;
 };
 
 const notFoundConfig = {
-  pool: {
+  pair: {
     src: cdn('placeholders/pool-not-found.svg'),
-    defaultTitle: 'Pool Not Found',
-    defaultDescription: "The pool you're looking for doesn't exist",
+    defaultTitle: 'Asset Not Found',
+    defaultDescription: "The asset you're looking for doesn't exist",
   },
   index: {
     src: cdn('placeholders/index-not-found.svg'),

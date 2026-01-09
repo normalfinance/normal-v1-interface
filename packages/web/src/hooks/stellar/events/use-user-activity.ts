@@ -140,88 +140,66 @@ async function parseEventToActivity(
   switch (event.type) {
     case 'mint': {
       const pair = pairByAddress[event.pair];
-      const token = tokensByAddress[pair.addresses.tokenLong];
 
       return {
         id,
         type: 'Mint',
         timestamp: Number(event.ts),
-        asset: {
-          address: token.contract,
-          symbol: token.symbol,
-          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
-          amount: Number(format.fTokenAmount(event.tokensMinted.toString())),
-        },
+        symbol: pair.asset,
+        iconUrl: getCryptoIconUrl(pair.asset),
+        amount: Number(format.fTokenAmount(event.tokensMinted.toString())),
       };
     }
 
     case 'redeem': {
       const pair = pairByAddress[event.pair];
-      const token = tokensByAddress[pair.addresses.tokenLong];
 
       return {
         id,
         type: 'Redeem',
         timestamp: Number(event.ts),
-        asset: {
-          address: token.contract,
-          symbol: token.symbol,
-          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
-          amount: Number(format.fTokenAmount(event.tokensRedeemed.toString())),
-        },
+        symbol: pair.asset,
+        iconUrl: getCryptoIconUrl(pair.asset),
+        amount: Number(format.fTokenAmount(event.tokensRedeemed.toString())),
       };
     }
 
     case 'trade': {
       const pair = pairByAddress[event.pair];
-      const isLong = event.side == BigInt(1);
-      const tokenAddress = isLong ? pair.addresses.tokenLong : pair.addresses.tokenShort;
-      const token = tokensByAddress[tokenAddress];
 
       return {
         id,
         type: 'Trade',
         timestamp: Number(event.ts),
-        asset: {
-          address: token.contract,
-          symbol: token.symbol,
-          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
-          amount: Number(format.fTokenAmount(event.amount.toString())),
-        },
+        symbol: pair.asset,
+        iconUrl: getCryptoIconUrl(pair.asset),
+        amount: Number(format.fTokenAmount(event.amount.toString())),
       };
     }
 
     case 'deposit': {
       const pair = pairByAddress[event.pair];
-      const token = tokensByAddress[pair.addresses.tokenLong];
 
       return {
         id,
         type: 'Add Liquidity',
         timestamp: Number(event.ts),
-        asset: {
-          address: token.contract,
-          symbol: token.symbol,
-          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
-          amount: Number(format.fTokenAmount(event.amount.toString())),
-        },
+        symbol: pair.asset,
+        iconUrl: getCryptoIconUrl(pair.asset),
+        amount: Number(format.fTokenAmount(event.amount.toString())),
       };
     }
 
     case 'withdraw': {
       const pair = pairByAddress[event.pair];
-      const token = tokensByAddress[pair.addresses.tokenLong];
 
       return {
         id,
         type: 'Remove Liquidity',
         timestamp: Number(event.ts),
-        asset: {
-          address: token.contract,
-          symbol: token.symbol,
-          iconUrl: token.icon ?? getCryptoIconUrl(token.symbol),
-          amount: Number(format.fTokenAmount(event.amount.toString())),
-        },
+        symbol: pair.asset,
+        iconUrl: getCryptoIconUrl(pair.asset),
+        amount: Number(format.fTokenAmount(event.amount.toString())),
       };
     }
 

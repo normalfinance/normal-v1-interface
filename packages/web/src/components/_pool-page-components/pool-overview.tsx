@@ -7,14 +7,12 @@ import { useState } from 'react';
 import { useAgo } from '@/hooks';
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
-import { varAlpha } from 'minimal-shared/utils';
 import { usePersistStore } from '@normalfinance/state';
-import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import { Button } from '@mui/material';
 import Stack from '@mui/material/Stack';
-import { Chip, Button } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
@@ -26,9 +24,9 @@ import SwapCard from '../_common/trade-card';
 // ----------------------------------------------------------------------
 // ── Prop types ---------------------------------------------------------
 
-export interface PoolBalance {
+export interface TreasuryBalance {
   address: string;
-  tokenSymbol: string;
+  type: 'LONG' | 'SHORT' | 'QUOTE';
   amount: BigNumber;
   fiatValue: BigNumber;
 }
@@ -48,8 +46,8 @@ export interface PoolActionButton {
 
 export type PoolsOverviewProps = CardProps & {
   totalAprPercentage: number;
-  poolBalances: [PoolBalance]; // exactly two items
-  stats: PoolStat[]; // any length (e.g. 3-4)
+  treasuryBalances: [TreasuryBalance, TreasuryBalance, TreasuryBalance];
+  stats: PoolStat[];
   actionButtons?: PoolActionButton[];
   loading?: boolean;
 };
@@ -58,7 +56,7 @@ export type PoolsOverviewProps = CardProps & {
 
 export function PoolOverview({
   totalAprPercentage,
-  poolBalances,
+  treasuryBalances,
   stats,
   loading,
   sx,
@@ -71,7 +69,7 @@ export function PoolOverview({
     pairState: { lastUpdated },
   } = usePersistStore();
 
-  const poolLastUpdated = useAgo(lastUpdated);
+  const pairLastUpdated = useAgo(lastUpdated);
 
   const [showSwap, setShowSwap] = useState(false);
 
@@ -88,7 +86,11 @@ export function PoolOverview({
     },
   ];
 
-  const [balA] = poolBalances;
+  const [balLong, balShort, balQuote] = treasuryBalances;
+  const totalFiatValue = balLong.fiatValue.plus(balShort.fiatValue).plus(balQuote.fiatValue);
+  const pctLong = balLong.fiatValue.div(totalFiatValue);
+  const pctShort = balShort.fiatValue.div(totalFiatValue);
+  const pctQuote = balQuote.fiatValue.div(totalFiatValue);
 
   if (loading) {
     return (
@@ -187,7 +189,7 @@ export function PoolOverview({
           <SwapCard />
         </Box>
       )}
-      <Stack
+      {/* <Stack
         sx={{
           alignItems: 'flex-start',
           borderRadius: '8px',
@@ -202,11 +204,10 @@ export function PoolOverview({
         </Typography>
         <Typography variant="h3" color="text.primary">
           <Chip label="Coming soon" color="info" size="small" variant="soft" />
-          {/* TODO: */}
-          {/* {totalAprPercentage}
-          {t('%')} */}
+          {totalAprPercentage}
+          {t('%')}
         </Typography>
-      </Stack>
+      </Stack> */}
       {/* —— Stats list ———————————————————— */}
       <Stack
         sx={{
@@ -224,7 +225,7 @@ export function PoolOverview({
         </Typography>
 
         <Typography variant="caption" sx={{ mt: -2 }}>
-          {t('as of')} {poolLastUpdated}
+          {t('as of')} {pairLastUpdated}
         </Typography>
 
         <Stack
@@ -234,7 +235,7 @@ export function PoolOverview({
           }}
         >
           <Typography variant="subtitle2" color="text.secondary">
-            {t('Pool balances')}
+            {t('Treasury balances')}
           </Typography>
           <Box
             sx={{
@@ -245,11 +246,14 @@ export function PoolOverview({
             }}
           >
             <Typography variant="subtitle2" color="text.primary">
-              {balA.amount.toFixed(7)} {balA.tokenSymbol}
+              {balLong.amount.toFixed(2)} {balLong.type}
             </Typography>
-            {/* <Typography variant="subtitle2" color="text.primary">
-              {balB.amount.toFixed(7)} {balB.tokenSymbol}
-            </Typography> */}
+            <Typography variant="subtitle2" color="text.primary">
+              {balShort.amount.toFixed(2)} {balShort.type}
+            </Typography>
+            <Typography variant="subtitle2" color="text.primary">
+              {balQuote.amount.toFixed(2)} USDC
+            </Typography>
           </Box>
           <Box
             sx={{
@@ -262,20 +266,27 @@ export function PoolOverview({
           >
             <Box
               sx={{
-                flexGrow: 100, // pctA.toNumber() * 100,
+                flexGrow: pctLong.toNumber() * 100,
                 bgcolor: theme.palette.primary.dark,
               }}
             />
-            {/* <Box
+            <Box
               sx={{
-                flexGrow: pctB.toNumber() * 100,
+                flexGrow: pctShort.toNumber() * 100,
                 bgcolor: theme.palette.primary.dark,
                 opacity: 0.3,
               }}
-            /> */}
+            />
+            <Box
+              sx={{
+                flexGrow: pctQuote.toNumber() * 100,
+                bgcolor: theme.palette.primary.dark,
+                opacity: 0.3,
+              }}
+            />
           </Box>
         </Stack>
-        <Stack
+        {/* <Stack
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -355,7 +366,7 @@ export function PoolOverview({
               </Box>
             </Stack>
           ))}
-        </Stack>
+        </Stack> */}
       </Stack>
     </Card>
   );

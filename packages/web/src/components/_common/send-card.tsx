@@ -33,7 +33,9 @@ interface SendCardProps extends CardProps {
   tokens: Token[];
   networkCost?: number;
   queryParams?: SendQueryParams;
-  changeTab?: React.Dispatch<React.SetStateAction<false | 'trade' | 'deposit' | 'withdraw'>>;
+  changeTab?: React.Dispatch<
+    React.SetStateAction<false | 'trade' | 'mint' | 'deposit' | 'withdraw'>
+  >;
 }
 
 const DEFAULT_DESTINATION = 'Wallet address';

@@ -25,6 +25,7 @@ import { Iconify } from '../template/iconify';
 export interface SwapReviewProps {
   open: boolean;
   onClose: () => void;
+  tradeDirection: 'buy' | 'sell';
   selectedToken?: Token;
   amount: string;
   feePercentage: number;
@@ -35,6 +36,7 @@ export interface SwapReviewProps {
 const SwapReview: React.FC<SwapReviewProps> = ({
   open,
   onClose,
+  tradeDirection,
   selectedToken,
   amount,
   feePercentage,
@@ -65,7 +67,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div" color="text.primary">
-            {t("You're trading")}
+            {tradeDirection === 'buy' ? t("You're buying") : t("You're selling")}
           </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
@@ -99,7 +101,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {amount} {selectedToken?.symbol}
+                  {amount} {t('USD worth of')} {selectedToken?.symbol}
                   {/* sellAmount */}
                 </Typography>
                 <Typography
@@ -269,53 +271,6 @@ const SwapReview: React.FC<SwapReviewProps> = ({
                       {fCurrencyTwoDecimals((sellFiatValue * feePercentage) / 10000)}
                     </Typography>
                   </Box>
-
-                  <Box
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
-                        {t('Rate')}
-                      </Typography>
-                      <Iconify
-                        icon="solar:info-circle-bold"
-                        width={14}
-                        sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                      />
-                    </Box>
-
-                    {/* <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      {selectedToken && buyToken
-                        ? getSwapConversionText(selectedToken, buyToken)
-                        : ''}
-                    </Typography> */}
-                  </Box>
                 </Box>
               </Box>
             </AccordionDetails>
@@ -338,7 +293,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
               borderRadius: '20px',
             }}
           >
-            {t('Trade')}
+            {tradeDirection === 'buy' ? t('Buy') : t('Sell')}
           </Button>
         </Box>
       </DialogActions>

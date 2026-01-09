@@ -17,8 +17,8 @@ import { Box, Stack, Typography } from '@mui/material';
 import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
 import {
   type SingleStat,
-  ExplorePoolsTable,
-  type ExplorePairsRow,
+  ExploreAssetsTable,
+  type ExploreAssetsRow,
 } from '@/components/_explore-page-components';
 
 export default function AssetsView() {
@@ -47,7 +47,7 @@ export default function AssetsView() {
     return pairs.map((pair) => formatPairForTable(pair, tokensByAddress));
   }, [pairs, tokensByAddress]);
 
-  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.collateral), BigNumber(0));
+  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.totalCollateral), BigNumber(0));
 
   // const { total1dVolume } = useTotal1dSwapVolume();
   const total1dVolume = 0;
@@ -95,35 +95,32 @@ export default function AssetsView() {
           <ExploreStats stats={stats} />
         </Grid2>
         <Grid2>
-          <ExplorePoolsTable pools={tableData} loading={globalIsLoading} />
+          <ExploreAssetsTable assets={tableData} loading={globalIsLoading} />
         </Grid2>
       </DashboardContent>
     </Box>
   );
 }
 
-const formatPairForTable = (pair: Pair, tokens: TokenMapType): ExplorePairsRow => {
-  const tokenLong = tokens[pair.addresses.tokenLong] ?? undefined;
-  const tokenShort = tokens[pair.addresses.tokenShort] ?? undefined;
+const formatPairForTable = (pair: Pair, tokens: TokenMapType): ExploreAssetsRow => {
+  const tokenLong = tokens[pair.tokens.long] ?? undefined;
+  const tokenShort = tokens[pair.tokens.short] ?? undefined;
 
-  // Volume
-  const volume1d = BigNumber(0);
-  const volume30d = BigNumber(0);
-  const volume1dValue = volume1d.multipliedBy(1); // FIXME: finish
-  const volume30dValue = volume30d.multipliedBy(1); // FIXME: finish
-
-  // Collateral
-  const collateral = pair.collateral.amount;
+  const priceBoundaryDelta = BigNumber(pair.priceBounds.upper).minus(pair.priceBounds.lower);
+  const scaledPrice = BigNumber(pair.collateral.collateralPercentLong)
+    .multipliedBy(priceBoundaryDelta)
+    .plus(pair.priceBounds.lower);
 
   return {
-    assetName: 'Testing', // tokenA ? tokenA.symbol : '',
-    address: pair.addresses.pair,
-    price: '',
-    fee: 30, // pair.fee,
-    collateral: collateral.toString(),
-    apr: 0,
-    volume1d: volume1dValue.toString(),
-    volume30d: volume30dValue.toString(),
+    asset: pair.asset,
+    address: pair.pairAddress,
+    status: pair.status.tag,
+    price: pair.collateral.collateralPercentLong,
+    scaledPrice: scaledPrice.toFixed(2),
+    totalCollateral: pair.collateral.totalCollateral.toString(),
+    volume1d: '0',
+    lowerPriceBound: pair.priceBounds.lower,
+    upperPriceBound: pair.priceBounds.upper,
     tokenLong,
     tokenShort,
   };

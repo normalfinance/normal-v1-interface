@@ -3,16 +3,23 @@ import { LongShortPairContract } from '@normalfinance/contracts';
 export type Address = string;
 
 export type Pair = {
-  version: string;
-  addresses: {
-    pair: Address;
-    tokenLong: Address;
-    tokenShort: Address;
+  pairAddress: string;
+  asset: string;
+  status: LongShortPairContract.PairStatus;
+  tokens: {
+    long: Address;
+    short: Address;
   };
   collateral: {
-    perPair: string;
-    percentLong: string;
-    amount: string;
+    collateralToken: string;
+    collateralPerPair: string;
+    collateralPercentLong: string;
+    totalCollateral: string;
+  };
+  scaledPrice: string;
+  priceBounds: {
+    lower: string;
+    upper: string;
   };
   client: LongShortPairContract.Client;
 };

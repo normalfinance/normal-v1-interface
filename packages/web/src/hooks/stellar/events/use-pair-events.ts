@@ -71,7 +71,7 @@ export function usePairEvents(pairAddress: string | undefined, limit: number): R
     fetchInitialData();
 
     const channel = supabase
-      .channel(`realtime:goldsky:pool:${pairAddress}`)
+      .channel(`realtime:goldsky:pair:${pairAddress}`)
       .on(
         'postgres_changes',
         {

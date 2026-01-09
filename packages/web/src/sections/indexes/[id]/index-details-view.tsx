@@ -79,7 +79,7 @@ export default function IndexDetailsView({ id, index }: Props) {
   };
 
   const isWalletConnected = !!wallet.address;
-  const isManager = wallet.address === index.manager_address;
+  const isManager = wallet.address === index.admin_address;
 
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
@@ -195,7 +195,7 @@ export default function IndexDetailsView({ id, index }: Props) {
                       {t('Manager')}:
                     </Typography>
                     <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                      {index.manager_address}
+                      {index.admin_address}
                     </Typography>
 
                     <Typography variant="body2" color="text.secondary">

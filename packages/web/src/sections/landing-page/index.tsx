@@ -34,7 +34,7 @@ export const tokens: TokenMeta[] = [
   {
     name: 'Vanguard S&P 500 ETF',
     symbol: 'VOO',
-    icon: cdn('icons/voo.svg'),
+    icon: cdn('icons/vanguard.svg'),
     price: '626.87',
     percentageChange: 1.1,
   },

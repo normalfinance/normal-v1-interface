@@ -2,20 +2,25 @@ import { ApiToken, AppStorePersist, Token, TokenActions, TokenState } from '@nor
 import axios from 'axios';
 import { usePersistStore } from '../store';
 import {
+  checkTrustline,
   constants,
   format,
   getReflectorExternalPrice,
-  getReflectorPubnetPrice,
   getTokenBalance,
   isNormalToken,
+  isTestnet,
   logger,
-  sortTokenAddreses,
 } from '@normalfinance/utils';
 import { BigNumber } from 'bignumber.js';
 
 const fetchTokenBalance = async (token: ApiToken, address: string): Promise<BigNumber> => {
   let balance = BigNumber(0);
+
   try {
+    // Check trustline
+    const trustlineStatus = await checkTrustline(address, token.symbol, token.issuer);
+    if (!trustlineStatus.exists) return balance;
+
     const rawBalance = await getTokenBalance(token.contract, address);
     balance = BigNumber(format.fTokenAmount(rawBalance, token.decimals));
   } catch (error) {
@@ -26,41 +31,28 @@ const fetchTokenBalance = async (token: ApiToken, address: string): Promise<BigN
 
 const fetchTokenPrice = async (token: ApiToken): Promise<BigNumber> => {
   if (isNormalToken(token.issuer)) {
-    // Find the Normal Tokens corresponding Pool
-    const { tokens: sortedTokens, idx } = sortTokenAddreses(
-      token.contract,
-      constants.StellarConfig.USDC_ADDRESS // Normal tokens are always paired with USDC
-    );
-    const tokensKey = sortedTokens.join(':');
-
     const pairByToken = usePersistStore.getState().pairState.pairByToken;
     if (!pairByToken || !Object.keys(pairByToken).length) return BigNumber(0);
 
-    const pair = pairByToken[tokensKey];
+    const pair = pairByToken[token.contract];
     if (!pair) return BigNumber(0);
 
-    const isTokenLong = token.contract === pair.addresses.tokenLong;
+    const isTokenLong = token.contract === pair.tokens.long;
+
     return BigNumber(
-      isTokenLong ? pair.collateral.percentLong : 1 - Number(pair.collateral.percentLong)
+      isTokenLong
+        ? pair.collateral.collateralPercentLong
+        : 1 - Number(pair.collateral.collateralPercentLong)
     );
   } else {
     let oraclePrice = BigNumber(0);
 
-    if (token.symbol === 'USDC') {
-      try {
-        const { price } = await getReflectorExternalPrice('USDC');
-        oraclePrice = BigNumber(format.fTokenAmount(price, 14));
-      } catch (error) {
-        logger.error('Failed getting USDC oracle price: ', error);
-        oraclePrice = BigNumber(1); // falback
-      }
-    } else {
-      try {
-        const { price } = await getReflectorPubnetPrice(token.contract);
-        oraclePrice = BigNumber(format.fTokenAmount(price, 14));
-      } catch (error) {
-        logger.error('Failed getting token oracle price: ', error);
-      }
+    try {
+      const { price } = await getReflectorExternalPrice(token.symbol);
+      oraclePrice = BigNumber(format.fTokenAmount(price, 14));
+    } catch (error) {
+      logger.error('Failed getting USDC oracle price: ', error);
+      oraclePrice = BigNumber(1); // fallback
     }
 
     return oraclePrice;
@@ -80,32 +72,60 @@ export const createTokenActions = (): TokenActions => {
     getAllTokens: async (override: boolean = false) => {
       try {
         const now = Date.now();
-        const lastFetched = usePersistStore.getState().tokenState.lastUpdated;
-        const refreshInterval = 1000 * 60 * 5; // 5 minutes
+        // const lastFetched = usePersistStore.getState().tokenState.lastUpdated;
+        // const refreshInterval = 1000 * 60 * 5; // 5 minutes
 
         const zeroTokenBalance = usePersistStore
           .getState()
           .tokenState.tokens.every((tkn) => tkn.balance === '0');
 
-        if (lastFetched && !zeroTokenBalance && now - lastFetched < refreshInterval && !override) {
-          return;
-        }
+        // `if (lastFetched && !zeroTokenBalance && now - lastFetched < refreshInterval && !override) {
+        //   return;
+        // }`
 
         let tokens: ApiToken[] = [];
 
         // Load 3rd party tokens
+        const tokenListName = isTestnet() ? 'tokenListTestnet' : 'tokenList';
         const { data: apiTokens } = await axios.get(
-          'https://raw.githubusercontent.com/normalfinance/token-list/main/tokenList.json'
+          `https://raw.githubusercontent.com/normalfinance/token-list/main/${tokenListName}.json`
         );
         if (apiTokens) tokens = tokens.concat(apiTokens.assets);
 
-        // Load Normal tokens
-        const { data: normalTokens } = await axios.get(
-          'https://raw.githubusercontent.com/normalfinance/token-list/main/normalTokenList.json'
-        );
-        if (normalTokens) tokens = tokens.concat(normalTokens.assets);
-
+        // Load Normal tokens from Pairs
         const persistStore = usePersistStore.getState();
+
+        persistStore.pairState.pairs.forEach((pair) => {
+          // Long
+          const longTkn: ApiToken = {
+            symbol: `n${pair.asset}`,
+            issuer: constants.StellarConfig.NORMAL_ISSUER,
+            contract: pair.tokens.long,
+            name: `Normal ${pair.asset}`,
+            org: 'Normal',
+            domain: 'normalfinance.io',
+            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.webp`,
+            decimals: 7,
+            featured: false,
+          };
+
+          // Short
+          const shortTkn: ApiToken = {
+            symbol: `n${pair.asset}SHORT`,
+            issuer: constants.StellarConfig.NORMAL_ISSUER,
+            contract: pair.tokens.short,
+            name: `Normal ${pair.asset} Short`,
+            org: 'Normal',
+            domain: 'normalfinance.io',
+            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.webp`,
+            decimals: 7,
+            featured: false,
+          };
+
+          tokens = tokens.concat([longTkn, shortTkn]);
+        });
+
+        // Load all token info
         const allTokens = tokens
           ? tokens.map(async (token: ApiToken) => {
               await persistStore.updateTokenInfo(token);

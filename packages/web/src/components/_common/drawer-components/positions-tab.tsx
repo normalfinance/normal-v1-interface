@@ -21,7 +21,7 @@ export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
       {positions.length > 0 ? (
         positions.map((position) => (
           <Button
-            key={position.pair.addresses.pair}
+            key={position.pair.pairAddress}
             sx={{
               display: 'flex',
               flexDirection: 'column',

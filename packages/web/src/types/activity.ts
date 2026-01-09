@@ -30,27 +30,37 @@ export interface ReceiveActivity extends ActivityBase {
 
 export interface MintActivity extends ActivityBase {
   type: 'Mint';
-  asset: TokenAmount;
+  symbol: string;
+  iconUrl: string;
+  amount: number;
 }
 
 export interface RedeemActivity extends ActivityBase {
   type: 'Redeem';
-  asset: TokenAmount;
+  symbol: string;
+  iconUrl: string;
+  amount: number;
 }
 
 export interface TradeActivity extends ActivityBase {
   type: 'Trade';
-  asset: TokenAmount;
+  symbol: string;
+  iconUrl: string;
+  amount: number;
 }
 
 export interface AddLiquidityActivity extends ActivityBase {
   type: 'Add Liquidity';
-  asset: TokenAmount;
+  symbol: string;
+  iconUrl: string;
+  amount: number;
 }
 
 export interface RemoveLiquidityActivity extends ActivityBase {
   type: 'Remove Liquidity';
-  asset: TokenAmount;
+  symbol: string;
+  iconUrl: string;
+  amount: number;
 }
 
 // -----------------------------------------------------------------------------

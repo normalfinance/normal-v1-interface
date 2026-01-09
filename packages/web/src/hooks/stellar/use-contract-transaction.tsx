@@ -7,10 +7,10 @@ import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
+import { logger, constants } from '@normalfinance/utils';
 import { type TransactionDetails } from '@/types/transaction';
 import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
-import { logger, constants, trackEvent } from '@normalfinance/utils';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
 import {
@@ -163,7 +163,7 @@ export const useContractTransaction = () => {
           if (restore) {
             logger.log('Restoring transaction state...');
             await transaction.simulate({ restore: true });
-            return { notify: true }; // transactionDetails.type !== TransactionType.ESTIMATE_SWAP
+            return { notify: true };
           }
           const txHash = (transaction as any).hash || null;
 
@@ -179,26 +179,12 @@ export const useContractTransaction = () => {
             );
           }
 
-          trackEvent('transaction_successful', {
-            txHash,
-            contractName: contractType,
-            contractAddress,
-            method: transactionDetails.type,
-          });
-
           return {
             txHash,
-            notify: true, // transactionDetails.type !== TransactionType.ESTIMATE_SWAP,
+            notify: true,
           };
         } catch (error) {
           logger.error('Error during returning transaction hash: ', error);
-
-          trackEvent('transaction_failed', {
-            error: (error as any).toString(),
-            contractName: contractType,
-            contractAddress,
-            method: transactionDetails.type,
-          });
 
           if (error instanceof Error && error.message.includes('restore some contract state')) {
             return new Promise((resolve, reject) => {
@@ -222,12 +208,11 @@ export const useContractTransaction = () => {
       const messages = getTransactionMessages(transactionDetails);
 
       let loadingKey: SnackbarKey | null = null;
-      // if (transactionDetails.type !== TransactionType.ESTIMATE_SWAP) {
+
       loadingKey = enqueueSnackbar(messages.loading, {
         variant: 'info',
         persist: true,
       });
-      // }
 
       return run()
         .then((result) => {

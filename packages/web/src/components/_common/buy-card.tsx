@@ -26,7 +26,9 @@ interface BuyCardProps extends CardProps {
   tokensList?: Token[];
   cashBalance?: number;
   queryParams?: BuyQueryParams;
-  changeTab: React.Dispatch<React.SetStateAction<false | 'trade' | 'deposit' | 'withdraw'>>;
+  changeTab: React.Dispatch<
+    React.SetStateAction<false | 'trade' | 'mint' | 'deposit' | 'withdraw'>
+  >;
 }
 
 export interface QuickAmountButton {

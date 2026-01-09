@@ -3,34 +3,27 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
 import type { CardProps } from '@mui/material/Card';
+import type { Pair, Token } from '@normalfinance/types';
 
-import { logger } from '@/middleware';
-import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 // import { useState, useCallback } from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { varAlpha } from 'minimal-shared/utils';
-import { fPercent } from '@/utils/format-number';
-import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Card from '@mui/material/Card';
+import { useTheme } from '@mui/material/styles';
 import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import { Box, Stack, Avatar } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 // import { Chart, useChart, ChartSelect } from '@/components/template/chart';
 // import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
 import RefreshButton from '@/components/_common/refresh-button';
 
-import type {
-  PoolMetadata,
-  TokenPairInfo,
-  PerformanceInfo,
-  ExchangeRateInfo,
-} from './pool-chart-data';
+import type { PerformanceInfo } from './pool-chart-data';
 
 // Types
 
@@ -45,11 +38,15 @@ type Props = CardProps & {
   subheader?: string;
   color?: string;
   // chart: ExplorerChartData;
-  pairInfo: TokenPairInfo;
-  metadata?: PoolMetadata;
-  exchangeRate?: ExchangeRateInfo;
+  pair: Pair;
+  tokens: {
+    long: Token;
+    short: Token;
+    collateral: Token;
+  };
   performance?: PerformanceInfo;
   loading?: boolean;
+  onRefresh: () => void;
 };
 
 export function PoolChart({
@@ -57,20 +54,16 @@ export function PoolChart({
   subheader,
   // chart,
   color,
-  pairInfo,
-  metadata,
-  exchangeRate,
+  pair,
+  tokens,
   performance,
   sx,
   loading,
+  onRefresh,
   ...other
 }: Props) {
   const theme = useTheme();
   const { t } = useTranslate('auto');
-
-  const { enqueueSnackbar } = useSnackbar();
-
-  const { getPair } = usePersistStore();
 
   // const effectiveColor = color || theme.palette.primary.main;
 
@@ -175,18 +168,6 @@ export function PoolChart({
   //   '12m': '1Y',
   // };
 
-  const onRefresh = async () => {
-    enqueueSnackbar('Refreshing pool', { variant: 'info' });
-
-    try {
-      await getPair(pairInfo.address);
-    } catch (error) {
-      logger.error('Pool refresh error:', error);
-    } finally {
-      // setCreatingTrustline(false);
-    }
-  };
-
   return (
     <Card sx={sx} {...other}>
       <CardHeader title={title} subheader={subheader} sx={{ mb: 2 }} />
@@ -208,14 +189,14 @@ export function PoolChart({
           }}
         >
           <Avatar
-            src={pairInfo.token.icon ?? getCryptoIconUrl(pairInfo.token.symbol)}
+            src={tokens.long.icon ?? getCryptoIconUrl(tokens.long.symbol)}
             alt="Token A"
             sx={{ width: 27, height: 27 }}
           />
         </Box>
 
         <Typography component="span" color="text.primary" variant="h6" ml={1}>
-          {pairInfo.token.name}
+          {pair.asset}
         </Typography>
 
         <Box
@@ -225,51 +206,6 @@ export function PoolChart({
             justifyContent: 'flex-start',
           }}
         >
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-            }}
-          >
-            <Typography
-              color="text.primary"
-              variant="caption"
-              ml={1}
-              sx={{
-                backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: '4px',
-                px: '6px',
-                py: '2px',
-              }}
-            >
-              {metadata?.feeTier}
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-            }}
-          >
-            <Typography
-              color="text.primary"
-              variant="caption"
-              ml={1}
-              sx={{
-                backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: '4px',
-                px: '6px',
-                py: '2px',
-              }}
-            >
-              {metadata?.version}
-            </Typography>
-          </Box>
-
           <RefreshButton onRefresh={onRefresh} sx={{ ml: 1 }} />
         </Box>
       </Box>
@@ -284,12 +220,12 @@ export function PoolChart({
           }}
         >
           <Typography variant="h4" color="text.primary" noWrap sx={{ mr: 1 }}>
-            {exchangeRate?.label}
+            {fCurrency(pair.scaledPrice)}
           </Typography>
 
           <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>
             {t('(')}
-            {exchangeRate?.usdEquivalent}
+            {fCurrency(tokens.long.price)}
             {t(')')}
           </Typography>
         </Box>

@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
-import { logger } from '@normalfinance/utils';
+import { useState, useEffect } from 'react';
+import { DashboardContent } from '@/layouts/dashboard';
+import { usePairFactory } from '@/hooks/stellar/use-pair-factory';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+
+import { Alert, CircularProgress } from '@mui/material';
 
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 
@@ -14,47 +17,50 @@ export default function AssetView({ symbol }: { symbol: string }) {
 
   const { setGlobalIsLoading } = useAppStore();
 
-  const {
-    wallet,
-    tokenState: { tokens },
-    getAllTokens,
-    pairState: { pairs },
-  } = usePersistStore();
+  const { wallet, getAllTokens } = usePersistStore();
 
-  // Effect hook to fetch all tokens and pools once the component mounts
+  const { loading, error, getPairByAsset } = usePairFactory();
+
+  const [pairAddress, setPairAddress] = useState<string | undefined>(undefined);
+
   useEffect(() => {
     const refreshData = async (): Promise<void> => {
-      try {
-        setGlobalIsLoading(true);
-        await getAllTokens();
-      } catch (e) {
-        logger.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
+      const address = await getPairByAsset(symbol);
+      if (address) setPairAddress(address);
     };
     refreshData();
-  }, [symbol, wallet.address]);
+  }, [symbol]);
 
-  const token = tokens.find((tkn) => tkn.symbol === symbol);
-
-  const pair =
-    token &&
-    pairs.find(
-      (p) => p.addresses.tokenLong === token.contract || p.addresses.tokenShort === token.contract
-    );
-
-  // if (error != null) {
-  //   return (
-  //     <DashboardContent maxWidth="xl">
-  //       <Alert severity="info">{t('There was an error loading this asset.')}</Alert>
-  //     </DashboardContent>
-  //   );
-  // }
-
-  if (!token || !pair) {
-    return <SpecificNotFound type="pool" />;
+  if (loading) {
+    return <CircularProgress />;
   }
 
-  return <AssetDetailsView symbol={symbol} pairAddress={pair.addresses.pair} />;
+  if (error != null) {
+    return (
+      <DashboardContent maxWidth="xl">
+        <Alert severity="info">{t('There was an error loading this asset.')}</Alert>
+      </DashboardContent>
+    );
+  }
+
+  if (!symbol || !pairAddress) {
+    return <SpecificNotFound type="pair" />;
+  }
+
+  // Effect hook to fetch all tokens once the component mounts
+  // useEffect(() => {
+  //   const refreshData = async (): Promise<void> => {
+  //     try {
+  //       setGlobalIsLoading(true);
+  //       await getAllTokens();
+  //     } catch (e) {
+  //       logger.error(e);
+  //     } finally {
+  //       setGlobalIsLoading(false);
+  //     }
+  //   };
+  //   refreshData();
+  // }, [wallet.address]);
+
+  return <AssetDetailsView symbol={symbol} pairAddress={pairAddress} />;
 }

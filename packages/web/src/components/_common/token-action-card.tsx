@@ -20,12 +20,13 @@ import { alpha, useTheme } from '@mui/material/styles';
 import BuyCard from './buy-card';
 import SendCard from './send-card';
 import TradeCard from './trade-card';
+import MintRedeemCard from './mint-redeem-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
 
-export type TokenActionKey = 'trade' | 'deposit' | 'withdraw';
+export type TokenActionKey = 'trade' | 'mint' | 'deposit' | 'withdraw';
 
 interface ActionConfig {
   value: TokenActionKey;
@@ -34,6 +35,7 @@ interface ActionConfig {
 
 const ALL_TABS: readonly ActionConfig[] = [
   { value: 'trade', label: 'Trade' },
+  { value: 'mint', label: 'Mint' },
   { value: 'deposit', label: 'Deposit' },
   { value: 'withdraw', label: 'Withdraw' },
 ] as const;
@@ -113,6 +115,14 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
             <TradeCard queryParams={queryParams} changeTab={tabs.setValue} />
           </Box>
         );
+
+      case 'mint':
+        return (
+          <Box data-testid="trade-card" sx={{ position: 'relative' }}>
+            <MintRedeemCard changeTab={tabs.setValue} />
+          </Box>
+        );
+
       case 'deposit':
         return (
           <BuyCard
@@ -166,6 +176,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 
           {/* Tabs */}
           <Stack direction="row" spacing={1}>
+            <Skeleton height={34} width={60} />
             <Skeleton height={34} width={60} />
             <Skeleton height={34} width={60} />
             <Skeleton height={34} width={60} />

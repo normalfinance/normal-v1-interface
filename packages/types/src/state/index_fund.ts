@@ -17,7 +17,6 @@ export type IIndexFundItem = {
   description: string;
   weightingMethod: 'Constant' | 'Custom'; // | 'Market Cap';
   initialPrice: number;
-  initialDeposit: number;
   isPublic: boolean;
   components: IndexFundComponent[];
 };

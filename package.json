@@ -60,7 +60,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/figtree": "^5.2.8",
-    "@stellar/stellar-sdk": "^14.1.1",
+    "@stellar/stellar-sdk": "^14.4.3",
     "@stellar/typescript-wallet-sdk": "^1.9.0",
     "@upstash/ratelimit": "^2.0.5",
     "@upstash/redis": "^1.35.1",

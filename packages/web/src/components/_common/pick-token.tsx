@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { fCurrency } from '@/utils/format-number';
-import { format, getCryptoIconUrl } from '@normalfinance/utils';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -193,18 +193,6 @@ const PickToken: React.FC<PickTokenProps> = ({
                         >
                           {token.symbol}
                         </Typography>
-                        {token.contract && (
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: 500,
-                              color: theme.palette.text.disabled,
-                              fontSize: '12px',
-                            }}
-                          >
-                            {format.shortenAddress(token.contract)}
-                          </Typography>
-                        )}
                       </Box>
                     </Box>
                   </Box>
@@ -375,18 +363,6 @@ const PickToken: React.FC<PickTokenProps> = ({
                               >
                                 {token.symbol}
                               </Typography>
-                              {token.contract && (
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontWeight: 500,
-                                    color: theme.palette.text.disabled,
-                                    fontSize: '12px',
-                                  }}
-                                >
-                                  {format.shortenAddress(token.contract)}
-                                </Typography>
-                              )}
                             </Box>
                           </Box>
                         </Box>
@@ -493,18 +469,6 @@ const PickToken: React.FC<PickTokenProps> = ({
                             >
                               {token.symbol}
                             </Typography>
-                            {token.contract && (
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: 500,
-                                  color: theme.palette.text.disabled,
-                                  fontSize: '12px',
-                                }}
-                              >
-                                {format.shortenAddress(token.contract)}
-                              </Typography>
-                            )}
                           </Box>
                         </Box>
                       </Box>

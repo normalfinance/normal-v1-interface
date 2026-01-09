@@ -19,10 +19,10 @@ import {
   TableHeadCustom,
 } from '@/components/template/table';
 
-import { ExplorePoolsTableRow } from './components/explore-pools-table-row';
+import { ExploreAssetsTableRow } from './components/explore-assets-table-row';
 import { ExplorePoolsTableToolbar } from './components/explore-pools-toolbar';
 
-import type { ExplorePairsRow } from './components/explore-pools-table-row';
+import type { ExploreAssetsRow } from './components/explore-assets-table-row';
 
 /* ------------------------------------------------------------------ */
 /* columns                                                             */
@@ -32,13 +32,14 @@ type HeadCell = TableHeadCellProps;
 
 const TABLE_HEAD: HeadCell[] = [
   { id: 'rank', label: '#', width: 64, align: 'left' },
-  { id: 'pair', label: 'Asset', width: 200 },
-  { id: 'fee', label: 'Fee', align: 'left' },
+  { id: 'asset', label: 'Asset', width: 200 },
+  { id: 'scaledPrice', label: 'Price', align: 'left' },
+  { id: 'price', label: '% Long', align: 'left' },
   { id: 'collateral', label: 'TVL', align: 'left' },
-  { id: 'rewards', label: 'Rewards', align: 'left' },
-  { id: 'apr', label: 'Pool APR', align: 'left' },
+  { id: 'lowerPriceBound', label: 'Lower', align: 'left' },
+  { id: 'upperPriceBound', label: 'Upper', align: 'left' },
   { id: 'volume1d', label: '1D vol', align: 'left' },
-  { id: 'volume30d', label: '30D vol', align: 'left' },
+  { id: 'status', label: 'Status', align: 'left' },
   { id: '', label: '' },
 ];
 
@@ -47,16 +48,16 @@ const TABLE_HEAD: HeadCell[] = [
 /* ------------------------------------------------------------------ */
 
 export interface ExplorePoolsTableProps {
-  pools: ExplorePairsRow[];
+  assets: ExploreAssetsRow[];
   loading: boolean;
 }
 
-export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
+export function ExploreAssetsTable({ assets, loading }: ExplorePoolsTableProps) {
   /* ----- table helpers -------------------------------------------------- */
   const table = useTable({ defaultRowsPerPage: 30 });
 
   /* ----- full dataset --------------------------------------------------- */
-  const tableData = pools;
+  const tableData = assets;
 
   /* ----- search filter state ------------------------------------------- */
   const filters = useSetState<IPairTableFilters>({
@@ -68,12 +69,11 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
 
   /* ----- sorting -------------------------------------------------------- */
   /** only numeric sortable keys */
-  // type SortableKeys = 'rank' | 'price' | 'change1h' | 'change1d' | 'fdv' | 'volume24h';
-  type SortableKeys = 'collateral' | 'apr' | 'volume1d' | 'volume30d';
+  type SortableKeys = 'totalCollateral' | 'price' | 'volume1d';
 
   const comparator = getComparator<SortableKeys>(table.order, table.orderBy as SortableKeys) as (
-    a: ExplorePairsRow,
-    b: ExplorePairsRow
+    a: ExploreAssetsRow,
+    b: ExploreAssetsRow
   ) => number;
 
   /* ----- apply search + sort ------------------------------------------- */
@@ -88,7 +88,7 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
 
   /* ----- render --------------------------------------------------------- */
   return (
-    <div data-testid="explore-pools-table">
+    <div data-testid="explore-asset-table">
       <ExplorePoolsTableToolbar filters={filters} onResetPage={table.onResetPage} />
 
       <Card sx={{ borderRadius: 3, border: 1, borderColor: alpha(theme.palette.grey[500], 0.32) }}>
@@ -119,7 +119,7 @@ export function ExplorePoolsTable({ pools, loading }: ExplorePoolsTableProps) {
                       table.page * table.rowsPerPage + table.rowsPerPage
                     )
                     .map((row, index) => (
-                      <ExplorePoolsTableRow key={row.address} row={row} index={index + 1} />
+                      <ExploreAssetsTableRow key={row.address} row={row} index={index + 1} />
                     ))}
 
                   <TableEmptyRows
@@ -147,13 +147,13 @@ function applyFilter({
   comparator,
   nameFilter,
 }: {
-  data: ExplorePairsRow[];
-  comparator: (a: ExplorePairsRow, b: ExplorePairsRow) => number;
+  data: ExploreAssetsRow[];
+  comparator: (a: ExploreAssetsRow, b: ExploreAssetsRow) => number;
   nameFilter: string;
 }) {
   // --- filter by name ----------------------------------------------------
   const out = nameFilter
-    ? data.filter((m) => m.assetName.toLowerCase().includes(nameFilter.toLowerCase()))
+    ? data.filter((m) => m.asset.toLowerCase().includes(nameFilter.toLowerCase()))
     : data;
 
   // --- stable-sort -------------------------------------------------------

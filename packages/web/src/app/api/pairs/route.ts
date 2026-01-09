@@ -9,13 +9,13 @@ async function poolsHandler(req: NextRequest) {
   try {
     const { walletAddress } = await req.json();
     if (!walletAddress) {
-      await logWithConfig('warn', 'Pools API called without wallet address');
+      await logWithConfig('warn', 'Pair API called without wallet address');
       return NextResponse.json({ error: 'Missing walletAddress' }, { status: 400 });
     }
 
     // Get Edge Config for rate limiting
-    const rateLimitConfig = await getRateLimitConfig('pools');
-    const apiConfig = await getApiConfig('pools');
+    const rateLimitConfig = await getRateLimitConfig('pairs');
+    const apiConfig = await getApiConfig('pairs');
 
     // Get client IP address (prioritize proxy headers like middleware)
     const ip =
@@ -31,7 +31,7 @@ async function poolsHandler(req: NextRequest) {
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
 
-    await logWithConfig('info', 'Pool data rate limit check', {
+    await logWithConfig('info', 'Pair data rate limit check', {
       success,
       limit,
       remaining,
@@ -45,7 +45,7 @@ async function poolsHandler(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    await logWithConfig('info', 'Pools API access granted', {
+    await logWithConfig('info', 'Pairs API access granted', {
       walletAddress: walletAddress.substring(0, 8) + '...',
     });
     return NextResponse.json({
@@ -56,12 +56,12 @@ async function poolsHandler(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    await logWithConfig('error', 'Pool data validation failed', { error: error?.message });
+    await logWithConfig('error', 'Pair data validation failed', { error: error?.message });
     return NextResponse.json(
-      { error: error?.message || 'Pool data validation failed' },
+      { error: error?.message || 'Pair data validation failed' },
       { status: 500 }
     );
   }
 }
 
-export const POST = createEdgeConfigHandler(poolsHandler, 'pools');
+export const POST = createEdgeConfigHandler(poolsHandler, 'pairs');

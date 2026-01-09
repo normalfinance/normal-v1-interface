@@ -14,8 +14,8 @@ async function swapHandler(req: NextRequest) {
     }
 
     // Get Edge Config for rate limiting
-    const rateLimitConfig = await getRateLimitConfig('swap');
-    const apiConfig = await getApiConfig('swap');
+    const rateLimitConfig = await getRateLimitConfig('trade');
+    const apiConfig = await getApiConfig('trade');
 
     // Get client IP address (prioritize proxy headers like middleware)
     const ip =
@@ -65,4 +65,4 @@ async function swapHandler(req: NextRequest) {
   }
 }
 
-export const POST = createEdgeConfigHandler(swapHandler, 'swap');
+export const POST = createEdgeConfigHandler(swapHandler, 'trade');

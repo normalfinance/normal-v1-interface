@@ -37,7 +37,6 @@ export type SetIndexRebalanceAuthorityArgs = Omit<
   Parameters<IndexFundContract.Client['set_rebalance_authority']>[0],
   'admin'
 >;
-export type SetPublicStatusIndexArgs = Parameters<IndexFundContract.Client['set_public_status']>[0];
 export type SetWhitelistStatusIndexArgs = Omit<
   Parameters<IndexFundContract.Client['set_whitelist_status']>[0],
   'admin'

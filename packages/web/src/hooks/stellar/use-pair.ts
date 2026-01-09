@@ -2,10 +2,12 @@
 
 import type { Pair } from '@normalfinance/types';
 
-import { constants } from '@normalfinance/utils';
+import { BigNumber } from 'bignumber.js';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
+import { format, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
+import { LongShortPairContract } from '@normalfinance/contracts';
 
 import { useContractTransaction } from './use-contract-transaction';
 
@@ -29,6 +31,7 @@ interface ReturnType {
   pair: Pair | undefined;
   mintPair: (args: MintPairArgs) => Promise<void>;
   redeemPair: (args: RedeemPairArgs) => Promise<void>;
+  fetchPair: () => Promise<void>;
 }
 
 // ----------------------------------------------------------------------
@@ -68,7 +71,7 @@ export function usePair(pairAddress: string): ReturnType {
 
   const rateLimitCheck = async () => {
     if (!storePersist.wallet.address) return;
-    const res = await fetch('/api/pair', {
+    const res = await fetch('/api/pairs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
@@ -87,31 +90,69 @@ export function usePair(pairAddress: string): ReturnType {
       setError(null);
       setLoading(true);
 
-      // Query the index contract directly using its address
-      // const pairClient = new LongShortPairContractClient.Client({
-      //   contractId: pairAddress,
-      //   networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
-      //   rpcUrl: constants.StellarConfig.RPC_URL,
-      // });
+      // Query the pair contract directly using its address
+      const PairClient = new LongShortPairContract.Client({
+        contractId: pairAddress,
+        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        rpcUrl: constants.StellarConfig.RPC_URL,
+      });
 
-      // const pairSummaryResponse = await pairClient.get_pair_summary();
+      const pairSummaryResponse = await PairClient.get_pair_summary();
 
-      // if (pairSummaryResponse && pairSummaryResponse.result) {
-      //   const summary = pairSummaryResponse.result as PairSummary;
-      //   setPair(summary);
-      // }
+      if (pairSummaryResponse && pairSummaryResponse.result) {
+        const summary = pairSummaryResponse.result as LongShortPairContract.PairSummary;
+
+        // Compute scaled price
+        const lowerPriceBound = summary.price_bounds[0];
+        const upperPriceBound = summary.price_bounds[1];
+
+        const priceBoundaryDelta = BigNumber(upperPriceBound).minus(lowerPriceBound);
+        const scaledPrice = BigNumber(summary.collateral.collateral_percent_long)
+          .multipliedBy(priceBoundaryDelta)
+          .plus(lowerPriceBound);
+
+        const pairDetails: Pair = {
+          pairAddress,
+          asset: summary.asset,
+          status: summary.status,
+          tokens: {
+            long: summary.long_token,
+            short: summary.short_token,
+          },
+          collateral: {
+            collateralToken: summary.collateral.collateral_token,
+            collateralPerPair: BigNumber(
+              format.fTokenAmount(summary.collateral.collateral_per_pair, 7)
+            ).toString(),
+            collateralPercentLong: BigNumber(
+              format.fTokenAmount(summary.collateral.collateral_percent_long, 7)
+            ).toString(),
+            totalCollateral: BigNumber(
+              format.fTokenAmount(summary.collateral.total_collateral, 7)
+            ).toString(),
+          },
+          scaledPrice: format.fTokenAmount(scaledPrice, 14).toString(),
+          priceBounds: {
+            lower: BigNumber(format.fTokenAmount(lowerPriceBound, 7)).toString(),
+            upper: BigNumber(format.fTokenAmount(upperPriceBound, 7)).toString(),
+          },
+          client: PairClient,
+        };
+
+        setPair(pairDetails);
+      }
     } catch (e: any) {
       // captureException(e);
       setError(e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pairAddress]);
 
   const mintPair = async (args: MintPairArgs) => {
     setLoading(true);
 
-    await rateLimitCheck();
+    // await rateLimitCheck();
 
     const processedArgs = {
       user: storePersist.wallet.address!,
@@ -153,7 +194,7 @@ export function usePair(pairAddress: string): ReturnType {
   const redeemPair = async (args: RedeemPairArgs) => {
     setLoading(true);
 
-    await rateLimitCheck();
+    // await rateLimitCheck();
 
     const processedArgs = {
       user: storePersist.wallet.address!,
@@ -203,5 +244,6 @@ export function usePair(pairAddress: string): ReturnType {
     pair,
     mintPair,
     redeemPair,
+    fetchPair,
   };
 }
