@@ -261,6 +261,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     const verificationWords = getRandomVerificationWords(mnemonic, requiredCount);
     const formatted = formatMnemonicForDisplay(mnemonic);
 
+    console.log('verificationWords', verificationWords);
+
     const questions: VerificationQuestion[] = verificationWords.map(({ index, word }) => {
       const otherOptions = formatted
         .filter((item) => item.index !== index)
@@ -276,6 +278,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         options,
       };
     });
+
+    console.log('questions', questions);
 
     setVerificationQuestions(questions);
     setSelectedAnswers({});
@@ -310,7 +314,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
   const handleCustodyConfirm = useCallback(async () => {
     if (custodyChoice === 'self') {
-      // startVerification();
       setStage('backup');
     } else if (custodyChoice === 'platform') {
       if (!custodyConsent) {
@@ -564,7 +567,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
             </Box>
 
             <Stack spacing={2}>
-              <Button variant="contained" fullWidth onClick={() => setStage('verify')}>
+              <Button variant="contained" fullWidth onClick={startVerification}>
                 {t("I've Written Them Down")}
               </Button>
               <Button variant="outlined" fullWidth onClick={handleCopyMnemonic}>
