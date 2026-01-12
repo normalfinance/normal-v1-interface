@@ -3,9 +3,9 @@ import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { CONFIG } from '@/global-config';
-import { runDepositFlow } from '@/lib/mgi/client';
+import { runWithdrawFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
-import { cdn, createOnramperURL, createCoinbasePayURL } from '@normalfinance/utils';
+import { cdn, createOnramperURL } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -41,7 +41,7 @@ export interface OnrampOption {
   onClick?: () => void;
 }
 
-export interface OnRampDialogProps {
+export interface OffRampDialogProps {
   open: boolean;
   amount: string;
   onClose: () => void;
@@ -51,7 +51,7 @@ export interface OnRampDialogProps {
 // ----------------------------------------------------------------------
 // COMPONENT -------------------------------------------------------------
 
-const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, walletAddress }) => {
+const OffRampDialog: React.FC<OffRampDialogProps> = ({ open, amount, onClose, walletAddress }) => {
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -75,56 +75,28 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
     fiat: 'USD',
   });
 
-  /** Coinbase */
-  const handleCoinbaseClick = async () => {
-    if (!walletAddress) {
-      enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
-      return;
-    }
-    const r = await fetch('/api/coinbase/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
-    });
-    const { token: sessionToken, error } = await r.json();
-    if (error || !sessionToken) {
-      enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
-      return;
-    }
-    const url = createCoinbasePayURL({
-      amountUsd: amount,
-      assetSymbol: 'USDC',
-      sessionToken,
-      fiat: 'USD',
-      sandbox: true,
-      path: 'buy/select-asset',
-    });
-    openExternal(url);
-  };
-
   /** MoneyGram */
-  const startMgiAfterAmount = async (usdcAmount: string) => {
-    if (!isConnected) {
-      enqueueSnackbar('Connect your wallet to continue', { variant: 'warning' });
-      return;
-    }
-
+  async function startMgiWithdraw(addr: string, amountStr: string) {
+    setMgiLoading(true);
     try {
-      setMgiLoading(true);
-
-      // Optional – sanity preflight (gives user actionable errors)
       const env = await detectWalletEnv();
-      assertTestnetAndAccountMatch(env, userAddress!);
+      assertTestnetAndAccountMatch(env, addr);
 
-      await runDepositFlow(userAddress!, usdcAmount, () => {
-        enqueueSnackbar('MoneyGram ready — awaiting USDC deposit', { variant: 'info' });
+      const withdrawAmount = Number(amountStr);
+      if (!Number.isFinite(withdrawAmount) || withdrawAmount <= 0) {
+        enqueueSnackbar(t('Enter a valid USDC amount'), { variant: 'warning' });
+        return;
+      }
+
+      await runWithdrawFlow(addr, withdrawAmount, () => {
+        enqueueSnackbar(t('MoneyGram ready — send USDC when prompted'), { variant: 'info' });
       });
     } catch (e: any) {
-      enqueueSnackbar(e?.message || 'MoneyGram deposit failed', { variant: 'error' });
+      enqueueSnackbar(t('MoneyGram withdrawal failed'), { variant: 'error' });
     } finally {
       setMgiLoading(false);
     }
-  };
+  }
 
   const ONRAMPS: OnrampOption[] = [
     {
@@ -136,17 +108,10 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       url: onramperUrl,
     },
     {
-      id: 'coinbase',
-      avatar: 'https://avatars.githubusercontent.com/u/1885080?s=200&v=4',
-      heading: 'Coinbase',
-      description: t('Debit Card, ACH, Apple Pay, Coinbase Balance'),
-      onClick: handleCoinbaseClick,
-    },
-    {
       id: 'moneygram',
       avatar: cdn('/icons/moneygram/mgi.webp'),
       heading: 'MoneyGram',
-      description: t('Drop-off cash at a physical location'),
+      description: t('Pick up cash at a physical location'),
       onClick: () => moneyGramAmountDialog.onTrue(),
     },
   ];
@@ -172,7 +137,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
         <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" color="text.primary">
-              {t('Deposit Cash')}
+              {t('Withdraw Cash')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <GetHelpButton url={paths.help.buy} />
@@ -250,13 +215,14 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
         onCancel={moneyGramAmountDialog.onFalse}
         onConfirm={(val) => {
           moneyGramAmountDialog.onFalse();
-          startMgiAfterAmount(val);
+          startMgiWithdraw(userAddress ?? '', val);
         }}
         min={1}
         max={900}
+        kind="withdraw"
       />
     </>
   );
 };
 
-export default OnRampDialog;
+export default OffRampDialog;

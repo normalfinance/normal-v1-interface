@@ -30,7 +30,8 @@ const fetchTokenBalance = async (token: ApiToken, address: string): Promise<BigN
 };
 
 const fetchTokenPrice = async (token: ApiToken): Promise<BigNumber> => {
-  if (isNormalToken(token.issuer)) {
+  if (isNormalToken(token as Token)) {
+    // not the greatest cast, but it'll work
     const pairByToken = usePersistStore.getState().pairState.pairByToken;
     if (!pairByToken || !Object.keys(pairByToken).length) return BigNumber(0);
 

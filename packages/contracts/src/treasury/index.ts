@@ -1,4 +1,4 @@
-import type { u128, u64 } from '@stellar/stellar-sdk/contract'
+import type { u128, u32, u64 } from '@stellar/stellar-sdk/contract'
 import {
   AssembledTransaction,
   Client as ContractClient,
@@ -47,7 +47,7 @@ export interface TreasuryPairBalances {
 export interface TreasuryPairSummary {
   balances: TreasuryPairBalances
   details: TreasuryPairDetails
-  fee: u128
+  fee_config: TreasuryFeeConfig
   prices: readonly [u128, u128]
   total_shares: u128
   tvl: u128
@@ -58,12 +58,17 @@ export interface TreasuryUserPairSummary {
   user_shares: u128
 }
 
+export interface TreasuryFeeConfig {
+  maker_fee: u128
+  taker_fee: u128
+}
+
 export type DataKey =
   | { tag: 'PairDetails'; values: readonly [string] }
   | { tag: 'PairBalances'; values: readonly [string] }
   | { tag: 'TotalShares'; values: readonly [string] }
   | { tag: 'UserShares'; values: readonly [string, string] }
-  | { tag: 'PairFee'; values: readonly [string] }
+  | { tag: 'FeeConfig'; values: readonly [string] }
   | { tag: 'ProtocolFees'; values: readonly [string] }
   | { tag: 'IsKilledDeposit'; values: void }
   | { tag: 'IsKilledWithdraw'; values: void }
@@ -102,9 +107,9 @@ export interface PairParams {
 export type Direction = { tag: 'Long'; values: void } | { tag: 'Short'; values: void }
 
 export type PairStatus =
-  | { tag: 'Active'; values: void }
-  | { tag: 'Settlement'; values: void }
   | { tag: 'Inactive'; values: void }
+  | { tag: 'Active'; values: void }
+  | { tag: 'Expired'; values: void }
 
 export interface CollateralInfo {
   collateral_per_pair: u128
@@ -122,6 +127,12 @@ export interface PairSummary {
   price_bounds: readonly [u128, u128]
   short_token: string
   status: PairStatus
+}
+
+export const Errors = {
+  2906: { message: 'AnotherActionActive' },
+  2907: { message: 'NoActionActive' },
+  2908: { message: 'ActionNotReadyYet' },
 }
 
 export const MathError = {
@@ -212,13 +223,7 @@ export interface Client {
    * Construct and simulate a deposit transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
   deposit: (
-    {
-      user,
-      pair,
-      amt_long,
-      amt_short,
-      amt_usdc,
-    }: { user: string; pair: string; amt_long: u128; amt_short: u128; amt_usdc: u128 },
+    { user, pair, pairs_to_deposit }: { user: string; pair: string; pairs_to_deposit: u128 },
     options?: {
       /**
        * The fee to pay for the transaction. Default: BASE_FEE
@@ -241,14 +246,7 @@ export interface Client {
    * Construct and simulate a withdraw transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
   withdraw: (
-    {
-      user,
-      pair,
-      shares,
-      min_usdc,
-      min_long,
-      min_short,
-    }: { user: string; pair: string; shares: u128; min_usdc: u128; min_long: u128; min_short: u128 },
+    { user, pair, shares }: { user: string; pair: string; shares: u128 },
     options?: {
       /**
        * The fee to pay for the transaction. Default: BASE_FEE
@@ -266,99 +264,6 @@ export interface Client {
       simulate?: boolean
     },
   ) => Promise<AssembledTransaction<readonly [u128, u128, u128]>>
-
-  /**
-   * Construct and simulate a buy_long transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * * Trading
-   */
-  buy_long: (
-    { user, pair, usdc_in, min_long_out }: { user: string; pair: string; usdc_in: u128; min_long_out: u128 },
-    options?: {
-      /**
-       * The fee to pay for the transaction. Default: BASE_FEE
-       */
-      fee?: number
-
-      /**
-       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-       */
-      timeoutInSeconds?: number
-
-      /**
-       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-       */
-      simulate?: boolean
-    },
-  ) => Promise<AssembledTransaction<u128>>
-
-  /**
-   * Construct and simulate a sell_long transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  sell_long: (
-    { user, pair, long_in, min_usdc_out }: { user: string; pair: string; long_in: u128; min_usdc_out: u128 },
-    options?: {
-      /**
-       * The fee to pay for the transaction. Default: BASE_FEE
-       */
-      fee?: number
-
-      /**
-       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-       */
-      timeoutInSeconds?: number
-
-      /**
-       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-       */
-      simulate?: boolean
-    },
-  ) => Promise<AssembledTransaction<u128>>
-
-  /**
-   * Construct and simulate a buy_short transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  buy_short: (
-    { user, pair, usdc_in, min_short_out }: { user: string; pair: string; usdc_in: u128; min_short_out: u128 },
-    options?: {
-      /**
-       * The fee to pay for the transaction. Default: BASE_FEE
-       */
-      fee?: number
-
-      /**
-       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-       */
-      timeoutInSeconds?: number
-
-      /**
-       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-       */
-      simulate?: boolean
-    },
-  ) => Promise<AssembledTransaction<u128>>
-
-  /**
-   * Construct and simulate a sell_short transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  sell_short: (
-    { user, pair, short_in, min_usdc_out }: { user: string; pair: string; short_in: u128; min_usdc_out: u128 },
-    options?: {
-      /**
-       * The fee to pay for the transaction. Default: BASE_FEE
-       */
-      fee?: number
-
-      /**
-       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
-       */
-      timeoutInSeconds?: number
-
-      /**
-       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
-       */
-      simulate?: boolean
-    },
-  ) => Promise<AssembledTransaction<u128>>
 
   /**
    * Construct and simulate a get_pair_details transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -499,9 +404,9 @@ export interface Client {
   ) => Promise<AssembledTransaction<u128>>
 
   /**
-   * Construct and simulate a get_pair_fee transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a get_pair_fee_config transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  get_pair_fee: (
+  get_pair_fee_config: (
     { pair }: { pair: string },
     options?: {
       /**
@@ -519,7 +424,7 @@ export interface Client {
        */
       simulate?: boolean
     },
-  ) => Promise<AssembledTransaction<u128>>
+  ) => Promise<AssembledTransaction<TreasuryFeeConfig>>
 
   /**
    * Construct and simulate a get_pair_summary transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -568,6 +473,190 @@ export interface Client {
   ) => Promise<AssembledTransaction<TreasuryUserPairSummary>>
 
   /**
+   * Construct and simulate a mint_and_sell_short transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  mint_and_sell_short: (
+    { user, pair, usdc_in }: { user: string; pair: string; usdc_in: u128 },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<u128>>
+
+  /**
+   * Construct and simulate a mint_and_sell_long transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  mint_and_sell_long: (
+    { user, pair, usdc_in }: { user: string; pair: string; usdc_in: u128 },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<u128>>
+
+  /**
+   * Construct and simulate a buy_long_and_redeem transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  buy_long_and_redeem: (
+    { user, pair, short_in }: { user: string; pair: string; short_in: u128 },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<u128>>
+
+  /**
+   * Construct and simulate a buy_short_and_redeem transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  buy_short_and_redeem: (
+    { user, pair, long_in }: { user: string; pair: string; long_in: u128 },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<u128>>
+
+  /**
+   * Construct and simulate a buy_long transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  buy_long: (
+    { user, pair, usdc_in, min_long_out }: { user: string; pair: string; usdc_in: u128; min_long_out: u128 },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<u128>>
+
+  /**
+   * Construct and simulate a sell_long transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  sell_long: (
+    { user, pair, long_in, min_usdc_out }: { user: string; pair: string; long_in: u128; min_usdc_out: u128 },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<u128>>
+
+  /**
+   * Construct and simulate a buy_short transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  buy_short: (
+    { user, pair, usdc_in, min_short_out }: { user: string; pair: string; usdc_in: u128; min_short_out: u128 },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<u128>>
+
+  /**
+   * Construct and simulate a sell_short transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  sell_short: (
+    { user, pair, short_in, min_usdc_out }: { user: string; pair: string; short_in: u128; min_usdc_out: u128 },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<u128>>
+
+  /**
    * Construct and simulate a add_pair transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
   add_pair: (
@@ -577,7 +666,17 @@ export interface Client {
       quote_token,
       long_token,
       short_token,
-    }: { admin: string; pair: string; quote_token: string; long_token: string; short_token: string },
+      maker_fee,
+      taker_fee,
+    }: {
+      admin: string
+      pair: string
+      quote_token: string
+      long_token: string
+      short_token: string
+      maker_fee: u128
+      taker_fee: u128
+    },
     options?: {
       /**
        * The fee to pay for the transaction. Default: BASE_FEE
@@ -597,10 +696,10 @@ export interface Client {
   ) => Promise<AssembledTransaction<null>>
 
   /**
-   * Construct and simulate a set_pair_fee transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a set_fee_config transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  set_pair_fee: (
-    { admin, pair, fee }: { admin: string; pair: string; fee: u128 },
+  set_fee_config: (
+    { admin, pair, maker_fee, taker_fee }: { admin: string; pair: string; maker_fee: u128; taker_fee: u128 },
     options?: {
       /**
        * The fee to pay for the transaction. Default: BASE_FEE
@@ -862,6 +961,250 @@ export interface Client {
      */
     simulate?: boolean
   }) => Promise<AssembledTransaction<boolean>>
+
+  /**
+   * Construct and simulate a version transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  version: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean
+  }) => Promise<AssembledTransaction<u32>>
+
+  /**
+   * Construct and simulate a contract_name transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  contract_name: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean
+  }) => Promise<AssembledTransaction<string>>
+
+  /**
+   * Construct and simulate a commit_upgrade transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  commit_upgrade: (
+    { admin, new_wasm_hash }: { admin: string; new_wasm_hash: Buffer },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<null>>
+
+  /**
+   * Construct and simulate a apply_upgrade transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  apply_upgrade: (
+    { admin }: { admin: string },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<Buffer>>
+
+  /**
+   * Construct and simulate a revert_upgrade transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  revert_upgrade: (
+    { admin }: { admin: string },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<null>>
+
+  /**
+   * Construct and simulate a set_emergency_mode transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  set_emergency_mode: (
+    { emergency_admin, value }: { emergency_admin: string; value: boolean },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<null>>
+
+  /**
+   * Construct and simulate a get_emergency_mode transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  get_emergency_mode: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean
+  }) => Promise<AssembledTransaction<boolean>>
+
+  /**
+   * Construct and simulate a commit_transfer_ownership transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  commit_transfer_ownership: (
+    { admin, role_name, new_address }: { admin: string; role_name: string; new_address: string },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<null>>
+
+  /**
+   * Construct and simulate a apply_transfer_ownership transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  apply_transfer_ownership: (
+    { admin, role_name }: { admin: string; role_name: string },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<null>>
+
+  /**
+   * Construct and simulate a revert_transfer_ownership transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  revert_transfer_ownership: (
+    { admin, role_name }: { admin: string; role_name: string },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<null>>
+
+  /**
+   * Construct and simulate a get_future_address transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  get_future_address: (
+    { role_name }: { role_name: string },
+    options?: {
+      /**
+       * The fee to pay for the transaction. Default: BASE_FEE
+       */
+      fee?: number
+
+      /**
+       * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+       */
+      timeoutInSeconds?: number
+
+      /**
+       * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+       */
+      simulate?: boolean
+    },
+  ) => Promise<AssembledTransaction<string>>
 }
 export class Client extends ContractClient {
   static async deploy<T = Client>(
@@ -882,23 +1225,27 @@ export class Client extends ContractClient {
     super(
       new ContractSpec([
         'AAAAAAAAAAAAAAAKaW5pdGlhbGl6ZQAAAAAAAQAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAA==',
-        'AAAAAAAAAAAAAAAHZGVwb3NpdAAAAAAFAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAACGFtdF9sb25nAAAACgAAAAAAAAAJYW10X3Nob3J0AAAAAAAACgAAAAAAAAAIYW10X3VzZGMAAAAKAAAAAQAAAAo=',
-        'AAAAAAAAAAAAAAAId2l0aGRyYXcAAAAGAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAABnNoYXJlcwAAAAAACgAAAAAAAAAIbWluX3VzZGMAAAAKAAAAAAAAAAhtaW5fbG9uZwAAAAoAAAAAAAAACW1pbl9zaG9ydAAAAAAAAAoAAAABAAAD7QAAAAMAAAAKAAAACgAAAAo=',
-        'AAAAAAAAAAkqIFRyYWRpbmcAAAAAAAAIYnV5X2xvbmcAAAAEAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAAB3VzZGNfaW4AAAAACgAAAAAAAAAMbWluX2xvbmdfb3V0AAAACgAAAAEAAAAK',
-        'AAAAAAAAAAAAAAAJc2VsbF9sb25nAAAAAAAABAAAAAAAAAAEdXNlcgAAABMAAAAAAAAABHBhaXIAAAATAAAAAAAAAAdsb25nX2luAAAAAAoAAAAAAAAADG1pbl91c2RjX291dAAAAAoAAAABAAAACg==',
-        'AAAAAAAAAAAAAAAJYnV5X3Nob3J0AAAAAAAABAAAAAAAAAAEdXNlcgAAABMAAAAAAAAABHBhaXIAAAATAAAAAAAAAAd1c2RjX2luAAAAAAoAAAAAAAAADW1pbl9zaG9ydF9vdXQAAAAAAAAKAAAAAQAAAAo=',
-        'AAAAAAAAAAAAAAAKc2VsbF9zaG9ydAAAAAAABAAAAAAAAAAEdXNlcgAAABMAAAAAAAAABHBhaXIAAAATAAAAAAAAAAhzaG9ydF9pbgAAAAoAAAAAAAAADG1pbl91c2RjX291dAAAAAoAAAABAAAACg==',
+        'AAAAAAAAAAAAAAAHZGVwb3NpdAAAAAADAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAAEHBhaXJzX3RvX2RlcG9zaXQAAAAKAAAAAQAAAAo=',
+        'AAAAAAAAAAAAAAAId2l0aGRyYXcAAAADAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAABnNoYXJlcwAAAAAACgAAAAEAAAPtAAAAAwAAAAoAAAAKAAAACg==',
         'AAAAAAAAAAAAAAAQZ2V0X3BhaXJfZGV0YWlscwAAAAEAAAAAAAAABHBhaXIAAAATAAAAAQAAB9AAAAATVHJlYXN1cnlQYWlyRGV0YWlscwA=',
         'AAAAAAAAAAAAAAAHZ2V0X3R2bAAAAAABAAAAAAAAAARwYWlyAAAAEwAAAAEAAAAK',
         'AAAAAAAAAAAAAAAKZ2V0X3ByaWNlcwAAAAAAAQAAAAAAAAAEcGFpcgAAABMAAAABAAAD7QAAAAIAAAAKAAAACg==',
         'AAAAAAAAAAAAAAAMZ2V0X2JhbGFuY2VzAAAAAQAAAAAAAAAEcGFpcgAAABMAAAABAAAH0AAAABRUcmVhc3VyeVBhaXJCYWxhbmNlcw==',
         'AAAAAAAAAAAAAAAQZ2V0X3RvdGFsX3NoYXJlcwAAAAEAAAAAAAAABHBhaXIAAAATAAAAAQAAAAo=',
         'AAAAAAAAAAAAAAAPZ2V0X3VzZXJfc2hhcmVzAAAAAAIAAAAAAAAABHBhaXIAAAATAAAAAAAAAAR1c2VyAAAAEwAAAAEAAAAK',
-        'AAAAAAAAAAAAAAAMZ2V0X3BhaXJfZmVlAAAAAQAAAAAAAAAEcGFpcgAAABMAAAABAAAACg==',
+        'AAAAAAAAAAAAAAATZ2V0X3BhaXJfZmVlX2NvbmZpZwAAAAABAAAAAAAAAARwYWlyAAAAEwAAAAEAAAfQAAAAEVRyZWFzdXJ5RmVlQ29uZmlnAAAA',
         'AAAAAAAAAAAAAAAQZ2V0X3BhaXJfc3VtbWFyeQAAAAEAAAAAAAAABHBhaXIAAAATAAAAAQAAB9AAAAATVHJlYXN1cnlQYWlyU3VtbWFyeQA=',
         'AAAAAAAAAAAAAAAaZ2V0X3VzZXJfd2l0aF9wYWlyX3N1bW1hcnkAAAAAAAIAAAAAAAAABHBhaXIAAAATAAAAAAAAAAR1c2VyAAAAEwAAAAEAAAfQAAAAF1RyZWFzdXJ5VXNlclBhaXJTdW1tYXJ5AA==',
-        'AAAAAAAAAAAAAAAIYWRkX3BhaXIAAAAFAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAABHBhaXIAAAATAAAAAAAAAAtxdW90ZV90b2tlbgAAAAATAAAAAAAAAApsb25nX3Rva2VuAAAAAAATAAAAAAAAAAtzaG9ydF90b2tlbgAAAAATAAAAAA==',
-        'AAAAAAAAAAAAAAAMc2V0X3BhaXJfZmVlAAAAAwAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAARwYWlyAAAAEwAAAAAAAAADZmVlAAAAAAoAAAAA',
+        'AAAAAAAAAAAAAAATbWludF9hbmRfc2VsbF9zaG9ydAAAAAADAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAAB3VzZGNfaW4AAAAACgAAAAEAAAAK',
+        'AAAAAAAAAAAAAAASbWludF9hbmRfc2VsbF9sb25nAAAAAAADAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAAB3VzZGNfaW4AAAAACgAAAAEAAAAK',
+        'AAAAAAAAAAAAAAATYnV5X2xvbmdfYW5kX3JlZGVlbQAAAAADAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAACHNob3J0X2luAAAACgAAAAEAAAAK',
+        'AAAAAAAAAAAAAAAUYnV5X3Nob3J0X2FuZF9yZWRlZW0AAAADAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAAB2xvbmdfaW4AAAAACgAAAAEAAAAK',
+        'AAAAAAAAAAAAAAAIYnV5X2xvbmcAAAAEAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAAB3VzZGNfaW4AAAAACgAAAAAAAAAMbWluX2xvbmdfb3V0AAAACgAAAAEAAAAK',
+        'AAAAAAAAAAAAAAAJc2VsbF9sb25nAAAAAAAABAAAAAAAAAAEdXNlcgAAABMAAAAAAAAABHBhaXIAAAATAAAAAAAAAAdsb25nX2luAAAAAAoAAAAAAAAADG1pbl91c2RjX291dAAAAAoAAAABAAAACg==',
+        'AAAAAAAAAAAAAAAJYnV5X3Nob3J0AAAAAAAABAAAAAAAAAAEdXNlcgAAABMAAAAAAAAABHBhaXIAAAATAAAAAAAAAAd1c2RjX2luAAAAAAoAAAAAAAAADW1pbl9zaG9ydF9vdXQAAAAAAAAKAAAAAQAAAAo=',
+        'AAAAAAAAAAAAAAAKc2VsbF9zaG9ydAAAAAAABAAAAAAAAAAEdXNlcgAAABMAAAAAAAAABHBhaXIAAAATAAAAAAAAAAhzaG9ydF9pbgAAAAoAAAAAAAAADG1pbl91c2RjX291dAAAAAoAAAABAAAACg==',
+        'AAAAAAAAAAAAAAAIYWRkX3BhaXIAAAAHAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAABHBhaXIAAAATAAAAAAAAAAtxdW90ZV90b2tlbgAAAAATAAAAAAAAAApsb25nX3Rva2VuAAAAAAATAAAAAAAAAAtzaG9ydF90b2tlbgAAAAATAAAAAAAAAAltYWtlcl9mZWUAAAAAAAAKAAAAAAAAAAl0YWtlcl9mZWUAAAAAAAAKAAAAAA==',
+        'AAAAAAAAAAAAAAAOc2V0X2ZlZV9jb25maWcAAAAAAAQAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAEcGFpcgAAABMAAAAAAAAACW1ha2VyX2ZlZQAAAAAAAAoAAAAAAAAACXRha2VyX2ZlZQAAAAAAAAoAAAAA',
         'AAAAAAAAAAAAAAARZ2V0X3Byb3RvY29sX2ZlZXMAAAAAAAABAAAAAAAAAARwYWlyAAAAEwAAAAEAAAAK',
         'AAAAAAAAAAAAAAATY2xhaW1fcHJvdG9jb2xfZmVlcwAAAAADAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAABHBhaXIAAAATAAAAAAAAAAtkZXN0aW5hdGlvbgAAAAATAAAAAQAAAAo=',
         'AAAAAAAAAAAAAAAMa2lsbF9kZXBvc2l0AAAAAQAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAA==',
@@ -910,20 +1257,33 @@ export class Client extends ContractClient {
         'AAAAAAAAAAAAAAAVZ2V0X2lzX2tpbGxlZF9kZXBvc2l0AAAAAAAAAAAAAAEAAAAB',
         'AAAAAAAAAAAAAAAWZ2V0X2lzX2tpbGxlZF93aXRoZHJhdwAAAAAAAAAAAAEAAAAB',
         'AAAAAAAAAAAAAAATZ2V0X2lzX2tpbGxlZF90cmFkZQAAAAAAAAAAAQAAAAE=',
+        'AAAAAAAAAAAAAAAHdmVyc2lvbgAAAAAAAAAAAQAAAAQ=',
+        'AAAAAAAAAAAAAAANY29udHJhY3RfbmFtZQAAAAAAAAAAAAABAAAAEQ==',
+        'AAAAAAAAAAAAAAAOY29tbWl0X3VwZ3JhZGUAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAANbmV3X3dhc21faGFzaAAAAAAAA+4AAAAgAAAAAA==',
+        'AAAAAAAAAAAAAAANYXBwbHlfdXBncmFkZQAAAAAAAAEAAAAAAAAABWFkbWluAAAAAAAAEwAAAAEAAAPuAAAAIA==',
+        'AAAAAAAAAAAAAAAOcmV2ZXJ0X3VwZ3JhZGUAAAAAAAEAAAAAAAAABWFkbWluAAAAAAAAEwAAAAA=',
+        'AAAAAAAAAAAAAAASc2V0X2VtZXJnZW5jeV9tb2RlAAAAAAACAAAAAAAAAA9lbWVyZ2VuY3lfYWRtaW4AAAAAEwAAAAAAAAAFdmFsdWUAAAAAAAABAAAAAA==',
+        'AAAAAAAAAAAAAAASZ2V0X2VtZXJnZW5jeV9tb2RlAAAAAAAAAAAAAQAAAAE=',
+        'AAAAAAAAAAAAAAAZY29tbWl0X3RyYW5zZmVyX293bmVyc2hpcAAAAAAAAAMAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAJcm9sZV9uYW1lAAAAAAAAEQAAAAAAAAALbmV3X2FkZHJlc3MAAAAAEwAAAAA=',
+        'AAAAAAAAAAAAAAAYYXBwbHlfdHJhbnNmZXJfb3duZXJzaGlwAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAlyb2xlX25hbWUAAAAAAAARAAAAAA==',
+        'AAAAAAAAAAAAAAAZcmV2ZXJ0X3RyYW5zZmVyX293bmVyc2hpcAAAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAJcm9sZV9uYW1lAAAAAAAAEQAAAAA=',
+        'AAAAAAAAAAAAAAASZ2V0X2Z1dHVyZV9hZGRyZXNzAAAAAAABAAAAAAAAAAlyb2xlX25hbWUAAAAAAAARAAAAAQAAABM=',
         'AAAABAAAAAAAAAAAAAAADVRyZWFzdXJ5RXJyb3IAAAAAAAAMAAAAAAAAABJBbHJlYWR5SW5pdGlhbGl6ZWQAAAAAAMkAAAAAAAAAEVdyb25nSW5wdXRWZWNTaXplAAAAAAAAygAAAAAAAAANSW52YWxpZE9yYWNsZQAAAAAAAMsAAAAAAAAADEludmFsaWRJbnB1dAAAAMwAAAAAAAAAHEZhaWxlZFRvR2V0Q2FsY3VsYXRvclBlcmNlbnQAAADPAAAAAAAAABZGYWlsZWRUb0dldE9yYWNsZVByaWNlAAAAAADRAAAAAAAAABZJbnZhbGlkQ2FsY3VsYXRvclZhbHVlAAAAAADUAAAAAAAAAAxBY3Rpb25QYXVzZWQAAADVAAAAAAAAAAdaZXJvVHZsAAAAANYAAAAAAAAAFUluc3VmZmljaWVudEludmVudG9yeQAAAAAAANcAAAAAAAAACFNsaXBwYWdlAAAA2AAAAAAAAAASSW5zdWZmaWNpZW50U2hhcmVzAAAAAADZ',
         'AAAAAQAAAAAAAAAAAAAAE1RyZWFzdXJ5UGFpckRldGFpbHMAAAAABAAAAAAAAAAEcGFpcgAAABMAAAAAAAAACnRva2VuX2xvbmcAAAAAABMAAAAAAAAAC3Rva2VuX3F1b3RlAAAAABMAAAAAAAAAC3Rva2VuX3Nob3J0AAAAABM=',
         'AAAAAQAAAAAAAAAAAAAAFFRyZWFzdXJ5UGFpckJhbGFuY2VzAAAAAwAAAAAAAAAKdG9rZW5fbG9uZwAAAAAACgAAAAAAAAALdG9rZW5fcXVvdGUAAAAACgAAAAAAAAALdG9rZW5fc2hvcnQAAAAACg==',
-        'AAAAAQAAAAAAAAAAAAAAE1RyZWFzdXJ5UGFpclN1bW1hcnkAAAAABgAAAAAAAAAIYmFsYW5jZXMAAAfQAAAAFFRyZWFzdXJ5UGFpckJhbGFuY2VzAAAAAAAAAAdkZXRhaWxzAAAAB9AAAAATVHJlYXN1cnlQYWlyRGV0YWlscwAAAAAAAAAAA2ZlZQAAAAAKAAAAAAAAAAZwcmljZXMAAAAAA+0AAAACAAAACgAAAAoAAAAAAAAADHRvdGFsX3NoYXJlcwAAAAoAAAAAAAAAA3R2bAAAAAAK',
+        'AAAAAQAAAAAAAAAAAAAAE1RyZWFzdXJ5UGFpclN1bW1hcnkAAAAABgAAAAAAAAAIYmFsYW5jZXMAAAfQAAAAFFRyZWFzdXJ5UGFpckJhbGFuY2VzAAAAAAAAAAdkZXRhaWxzAAAAB9AAAAATVHJlYXN1cnlQYWlyRGV0YWlscwAAAAAAAAAACmZlZV9jb25maWcAAAAAB9AAAAARVHJlYXN1cnlGZWVDb25maWcAAAAAAAAAAAAABnByaWNlcwAAAAAD7QAAAAIAAAAKAAAACgAAAAAAAAAMdG90YWxfc2hhcmVzAAAACgAAAAAAAAADdHZsAAAAAAo=',
         'AAAAAQAAAAAAAAAAAAAAF1RyZWFzdXJ5VXNlclBhaXJTdW1tYXJ5AAAAAAIAAAAAAAAADHBhaXJfc3VtbWFyeQAAB9AAAAATVHJlYXN1cnlQYWlyU3VtbWFyeQAAAAAAAAAAC3VzZXJfc2hhcmVzAAAAAAo=',
-        'AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAACQAAAAEAAAAAAAAAC1BhaXJEZXRhaWxzAAAAAAEAAAATAAAAAQAAAAAAAAAMUGFpckJhbGFuY2VzAAAAAQAAABMAAAABAAAAAAAAAAtUb3RhbFNoYXJlcwAAAAABAAAAEwAAAAEAAAAAAAAAClVzZXJTaGFyZXMAAAAAAAIAAAATAAAAEwAAAAEAAAAAAAAAB1BhaXJGZWUAAAAAAQAAABMAAAABAAAAAAAAAAxQcm90b2NvbEZlZXMAAAABAAAAEwAAAAAAAAAAAAAAD0lzS2lsbGVkRGVwb3NpdAAAAAAAAAAAAAAAABBJc0tpbGxlZFdpdGhkcmF3AAAAAAAAAAAAAAANSXNLaWxsZWRUcmFkZQAAAA==',
+        'AAAAAQAAAAAAAAAAAAAAEVRyZWFzdXJ5RmVlQ29uZmlnAAAAAAAAAgAAAAAAAAAJbWFrZXJfZmVlAAAAAAAACgAAAAAAAAAJdGFrZXJfZmVlAAAAAAAACg==',
+        'AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAACQAAAAEAAAAAAAAAC1BhaXJEZXRhaWxzAAAAAAEAAAATAAAAAQAAAAAAAAAMUGFpckJhbGFuY2VzAAAAAQAAABMAAAABAAAAAAAAAAtUb3RhbFNoYXJlcwAAAAABAAAAEwAAAAEAAAAAAAAAClVzZXJTaGFyZXMAAAAAAAIAAAATAAAAEwAAAAEAAAAAAAAACUZlZUNvbmZpZwAAAAAAAAEAAAATAAAAAQAAAAAAAAAMUHJvdG9jb2xGZWVzAAAAAQAAABMAAAAAAAAAAAAAAA9Jc0tpbGxlZERlcG9zaXQAAAAAAAAAAAAAAAAQSXNLaWxsZWRXaXRoZHJhdwAAAAAAAAAAAAAADUlzS2lsbGVkVHJhZGUAAAA=',
         'AAAABAAAAAAAAAAAAAAAEkFjY2Vzc0NvbnRyb2xFcnJvcgAAAAAABwAAAAAAAAAMUm9sZU5vdEZvdW5kAAAAZQAAAAAAAAAMVW5hdXRob3JpemVkAAAAZgAAAAAAAAAPQWRtaW5BbHJlYWR5U2V0AAAAAGcAAAAAAAAADEJhZFJvbGVVc2FnZQAAAGgAAAAAAAAAE0Fub3RoZXJBY3Rpb25BY3RpdmUAAAALWgAAAAAAAAAOTm9BY3Rpb25BY3RpdmUAAAAAC1sAAAAAAAAAEUFjdGlvbk5vdFJlYWR5WWV0AAAAAAALXA==',
         'AAAAAQAAAAAAAAAAAAAAD09yYWNsZVByaWNlRGF0YQAAAAACAAAAAAAAAAVkZWxheQAAAAAAB9AAAAAFRGVsYXkAAAAAAAAAAAAABXByaWNlAAAAAAAACg==',
         'AAAAAgAAAAAAAAAAAAAADE9yYWNsZVNvdXJjZQAAAAEAAAAAAAAAAAAAAAlSZWZsZWN0b3IAAAA=',
         'AAAAAQAAAAAAAAAAAAAAClBhaXJQYXJhbXMAAAAAAAoAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAFYXNzZXQAAAAAAAARAAAAAAAAAApjYWxjdWxhdG9yAAAAAAATAAAAAAAAABNjb2xsYXRlcmFsX3Blcl9wYWlyAAAAAAoAAAAAAAAAEGNvbGxhdGVyYWxfdG9rZW4AAAATAAAAAAAAAApsb25nX3Rva2VuAAAAAAATAAAAAAAAAAtsb3dlcl9ib3VuZAAAAAAKAAAAAAAAAAZvcmFjbGUAAAAAABMAAAAAAAAAC3Nob3J0X3Rva2VuAAAAABMAAAAAAAAAC3VwcGVyX2JvdW5kAAAAAAo=',
         'AAAAAgAAAAAAAAAAAAAACURpcmVjdGlvbgAAAAAAAAIAAAAAAAAAAAAAAARMb25nAAAAAAAAAAAAAAAFU2hvcnQAAAA=',
-        'AAAAAgAAAAAAAAAAAAAAClBhaXJTdGF0dXMAAAAAAAMAAAAAAAAAAAAAAAZBY3RpdmUAAAAAAAAAAAAAAAAAClNldHRsZW1lbnQAAAAAAAAAAAAAAAAACEluYWN0aXZl',
+        'AAAAAgAAAAAAAAAAAAAAClBhaXJTdGF0dXMAAAAAAAMAAAAAAAAAAAAAAAhJbmFjdGl2ZQAAAAAAAAAAAAAABkFjdGl2ZQAAAAAAAAAAAAAAAAAHRXhwaXJlZAA=',
         'AAAAAQAAAAAAAAAAAAAADkNvbGxhdGVyYWxJbmZvAAAAAAAEAAAAAAAAABNjb2xsYXRlcmFsX3Blcl9wYWlyAAAAAAoAAAAAAAAAF2NvbGxhdGVyYWxfcGVyY2VudF9sb25nAAAAAAoAAAAAAAAAEGNvbGxhdGVyYWxfdG9rZW4AAAATAAAAAAAAABB0b3RhbF9jb2xsYXRlcmFsAAAACg==',
         'AAAAAQAAAAAAAAAAAAAAC1BhaXJTdW1tYXJ5AAAAAAgAAAAAAAAABWFzc2V0AAAAAAAAEQAAAAAAAAAKY2FsY3VsYXRvcgAAAAAAEwAAAAAAAAAKY29sbGF0ZXJhbAAAAAAH0AAAAA5Db2xsYXRlcmFsSW5mbwAAAAAAAAAAAApsb25nX3Rva2VuAAAAAAATAAAAAAAAAAZvcmFjbGUAAAAAABMAAAAAAAAADHByaWNlX2JvdW5kcwAAA+0AAAACAAAACgAAAAoAAAAAAAAAC3Nob3J0X3Rva2VuAAAAABMAAAAAAAAABnN0YXR1cwAAAAAH0AAAAApQYWlyU3RhdHVzAAA=',
+        'AAAABAAAAAAAAAAAAAAABUVycm9yAAAAAAAAAwAAAAAAAAATQW5vdGhlckFjdGlvbkFjdGl2ZQAAAAtaAAAAAAAAAA5Ob0FjdGlvbkFjdGl2ZQAAAAALWwAAAAAAAAARQWN0aW9uTm90UmVhZHlZZXQAAAAAAAtc',
         'AAAABAAAAAAAAAAAAAAACU1hdGhFcnJvcgAAAAAAAAkAAAAZTWF0aEVycm9yOiBOdW1iZXJPdmVyZmxvdwAAAAAAAA5OdW1iZXJPdmVyZmxvdwAAAAAB/gAAAB1NYXRoRXJyb3I6IEdlbmVyaWMgbWF0aCBlcnJvcgAAAAAAAAlNYXRoRXJyb3IAAAAAAAH/AAAALU1hdGhFcnJvcjogQWRkaXRpb24gb3BlcmF0aW9uIGNhdXNlZCBvdmVyZmxvdwAAAAAAABBBZGRpdGlvbk92ZXJmbG93AAACAAAAADFNYXRoRXJyb3I6IFN1YnRyYWN0aW9uIG9wZXJhdGlvbiBjYXVzZWQgdW5kZXJmbG93AAAAAAAAFFN1YnRyYWN0aW9uVW5kZXJmbG93AAACAQAAADNNYXRoRXJyb3I6IE11bHRpcGxpY2F0aW9uIG9wZXJhdGlvbiBjYXVzZWQgb3ZlcmZsb3cAAAAAFk11bHRpcGxpY2F0aW9uT3ZlcmZsb3cAAAAAAgIAAAAbTWF0aEVycm9yOiBEaXZpc2lvbiBieSB6ZXJvAAAAAA5EaXZpc2lvbkJ5WmVybwAAAAACAwAAACNNYXRoRXJyb3I6IFR5cGUgY29udmVyc2lvbiBvdmVyZmxvdwAAAAASQ29udmVyc2lvbk92ZXJmbG93AAAAAAIEAAAAP01hdGhFcnJvcjogQXR0ZW1wdGVkIHRvIGNvbnZlcnQgbmVnYXRpdmUgdmFsdWUgdG8gdW5zaWduZWQgdHlwZQAAAAASTmVnYXRpdmVUb1Vuc2lnbmVkAAAAAAIFAAAAKk1hdGhFcnJvcjogRml4ZWQtcG9pbnQgYXJpdGhtZXRpYyBvdmVyZmxvdwAAAAAAEkZpeGVkUG9pbnRPdmVyZmxvdwAAAAACBg==',
         'AAAABAAAAAAAAAAAAAAADFN0b3JhZ2VFcnJvcgAAAAQAAAAMU3RvcmFnZUVycm9yAAAAEkFscmVhZHlJbml0aWFsaXplZAAAAAAAyQAAAAAAAAATVmFsdWVOb3RJbml0aWFsaXplZAAAAAH1AAAAAAAAAAxWYWx1ZU1pc3NpbmcAAAH2AAAAAAAAABRWYWx1ZUNvbnZlcnNpb25FcnJvcgAAAfc=',
         'AAAABAAAAAAAAAAAAAAAD1ZhbGlkYXRpb25FcnJvcgAAAAADAAAAD1ZhbGlkYXRpb25FcnJvcgAAAAAMSW52YWxpZFRva2VuAAADIQAAAAAAAAARSW52YWxpZFBlcmNlbnRhZ2UAAAAAAAMiAAAAAAAAAApaZXJvQW1vdW50AAAAAAMk',
@@ -936,21 +1296,25 @@ export class Client extends ContractClient {
     initialize: this.txFromJSON<null>,
     deposit: this.txFromJSON<u128>,
     withdraw: this.txFromJSON<readonly [u128, u128, u128]>,
-    buy_long: this.txFromJSON<u128>,
-    sell_long: this.txFromJSON<u128>,
-    buy_short: this.txFromJSON<u128>,
-    sell_short: this.txFromJSON<u128>,
     get_pair_details: this.txFromJSON<TreasuryPairDetails>,
     get_tvl: this.txFromJSON<u128>,
     get_prices: this.txFromJSON<readonly [u128, u128]>,
     get_balances: this.txFromJSON<TreasuryPairBalances>,
     get_total_shares: this.txFromJSON<u128>,
     get_user_shares: this.txFromJSON<u128>,
-    get_pair_fee: this.txFromJSON<u128>,
+    get_pair_fee_config: this.txFromJSON<TreasuryFeeConfig>,
     get_pair_summary: this.txFromJSON<TreasuryPairSummary>,
     get_user_with_pair_summary: this.txFromJSON<TreasuryUserPairSummary>,
+    mint_and_sell_short: this.txFromJSON<u128>,
+    mint_and_sell_long: this.txFromJSON<u128>,
+    buy_long_and_redeem: this.txFromJSON<u128>,
+    buy_short_and_redeem: this.txFromJSON<u128>,
+    buy_long: this.txFromJSON<u128>,
+    sell_long: this.txFromJSON<u128>,
+    buy_short: this.txFromJSON<u128>,
+    sell_short: this.txFromJSON<u128>,
     add_pair: this.txFromJSON<null>,
-    set_pair_fee: this.txFromJSON<null>,
+    set_fee_config: this.txFromJSON<null>,
     get_protocol_fees: this.txFromJSON<u128>,
     claim_protocol_fees: this.txFromJSON<u128>,
     kill_deposit: this.txFromJSON<null>,
@@ -962,5 +1326,16 @@ export class Client extends ContractClient {
     get_is_killed_deposit: this.txFromJSON<boolean>,
     get_is_killed_withdraw: this.txFromJSON<boolean>,
     get_is_killed_trade: this.txFromJSON<boolean>,
+    version: this.txFromJSON<u32>,
+    contract_name: this.txFromJSON<string>,
+    commit_upgrade: this.txFromJSON<null>,
+    apply_upgrade: this.txFromJSON<Buffer>,
+    revert_upgrade: this.txFromJSON<null>,
+    set_emergency_mode: this.txFromJSON<null>,
+    get_emergency_mode: this.txFromJSON<boolean>,
+    commit_transfer_ownership: this.txFromJSON<null>,
+    apply_transfer_ownership: this.txFromJSON<null>,
+    revert_transfer_ownership: this.txFromJSON<null>,
+    get_future_address: this.txFromJSON<string>,
   }
 }

@@ -1,58 +1,68 @@
 import type { CardProps } from '@mui/material';
-import type { Pair, Token } from '@normalfinance/types';
 import type { SwapQueryParams } from '@/types/query-params';
+import type { Pair, Token, ButtonConfig, TrustlineState } from '@normalfinance/types';
 
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
-import { fCurrency } from '@/utils/format-number';
+import { usePersistStore } from '@normalfinance/state';
 import { useTrade, useTreasury, useTrustLine } from '@/hooks';
+import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+import { TokenAmountButtonState as ButtonState } from '@normalfinance/types';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import {
-  logger,
   constants,
+  isNormalToken,
   checkTrustline,
   getCryptoIconUrl,
   sanitizeAmountInput,
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Alert, Stack, Button, Switch, InputBase, Typography } from '@mui/material';
+import {
+  Box,
+  Alert,
+  Stack,
+  Button,
+  Switch,
+  InputBase,
+  Typography,
+  InputAdornment,
+} from '@mui/material';
 
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
 import { WalletGate } from './wallet-gate';
-import ReceiveModal from './receive-modal';
+import InfoAccordion from './info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
-enum ButtonState {
-  SELECT_TOKEN = 'SELECT_TOKEN',
-  ENTER_AMOUNT = 'ENTER_AMOUNT',
-  ZERO_BALANCE = 'ZERO_BALANCE',
-  CHECKING_TRUSTLINE = 'CHECKING_TRUSTLINE',
-  CREATE_TRUSTLINE = 'CREATE_TRUSTLINE',
-  CREATING_TRUSTLINE = 'CREATING_TRUSTLINE',
-  INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
-  REVIEW = 'REVIEW',
-}
+import type { InfoAccordionAlert } from './info-accordion';
 
-interface ButtonConfig {
-  label: string;
-  disabled: boolean;
-  action: () => void;
-  variant?: 'contained' | 'outlined' | 'text';
-  color?: 'primary' | 'secondary' | 'error';
-}
+type TradeCardTrustlineState = {
+  selected: TrustlineState;
+  usdc: TrustlineState;
+};
+
+const initialTrustlineState: TradeCardTrustlineState = {
+  selected: {
+    creating: false,
+    needs: false,
+    checking: false,
+  },
+  usdc: {
+    creating: false,
+    needs: false,
+    checking: false,
+  },
+};
 
 interface TradeCardProps extends CardProps {
   queryParams?: SwapQueryParams;
-  changeTab?: React.Dispatch<
-    React.SetStateAction<false | 'trade' | 'mint' | 'deposit' | 'withdraw'>
-  >;
+  changeTab?: React.Dispatch<React.SetStateAction<false | 'trade' | 'deposit' | 'withdraw'>>;
 }
 
 const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other }) => {
@@ -64,35 +74,46 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
   const {
     wallet,
     updateTokenInfo,
-    tokenState: { tokens },
+    tokenState: { tokens, tokensByAddress },
     pairState: { pairByToken },
   } = usePersistStore();
-
-  const usdcToken = tokens.find((tkn) => tkn.contract === constants.StellarConfig.USDC_ADDRESS);
-
-  const { modalState, setModalView } = useAppStore();
 
   const { publicKey } = useStellarWalletsKit();
 
   const { addTrustLine } = useTrustLine();
 
-  const { loading, setLoading, buyLong, sellLong, buyShort, sellShort } = useTrade();
-  const { fetchBalances } = useTreasury();
+  const {
+    loading,
+    setLoading,
+    buyLong,
+    sellLong,
+    buyShort,
+    sellShort,
+    mintAndSellLong,
+    mintAndSellShort,
+    buyLongAndRedeem,
+    buyShortAndRedeem,
+  } = useTrade();
+
+  const { fetchBalances: fetchTreasuryBalances } = useTreasury();
+
+  const tradableTokens = tokens.filter((tkn) => isNormalToken(tkn));
+  const usdcToken = tokens.find((tkn) => tkn.contract === constants.StellarConfig.USDC_ADDRESS);
 
   const [swapError, setSwapError] = useState<string | null>(null);
-  const [creatingTrustline, setCreatingTrustline] = useState<boolean>(false);
-  const [needsTrustline, setNeedsTrustline] = useState<boolean>(false);
-  const [checkingTrustline, setCheckingTrustline] = useState<boolean>(false);
+
+  const [trustlineState, setTrustlineState] =
+    useState<TradeCardTrustlineState>(initialTrustlineState);
 
   // 1) States for tokens, default sell token is first in the list
   const [selectedToken, setSelectedToken] = useState<Token | null>(
-    tokens.length ? tokens[0] : null
+    tradableTokens.length ? tradableTokens[0] : null
   );
   const [tradeDirection, setTradeDirection] = useState<'sell' | 'buy'>('buy');
   const [pair, setPair] = useState<Pair | null>(null);
 
   // 2) State for the user's trade amount
-  const [amount, setAmount] = useState<string>('0');
+  const [fiatAmount, setFiatAmount] = useState<string>('0');
 
   // 3) Popup states for picking tokens
   const [open, setOpen] = useState(false);
@@ -103,36 +124,16 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
   // 4) Quote states
   const [insufficientBalance, setInsufficientBalance] = useState(false);
+  const [insufficientLiquidity, setInsufficientLiquidity] = useState(false);
+  const [availableLiquidity, setAvailableLiquidity] = useState<string>('0');
 
   // Compute the fiat value for the user's sell input
-  const amountVal = parseFloat(amount) || 0;
+  const fiatAmountVal = parseFloat(fiatAmount) || 0;
+
   // const amountFiatValue =
-  //   selectedToken && amountVal > 0
-  //     ? BigNumber(selectedToken.price).multipliedBy(amountVal).toNumber()
+  //   selectedToken && fiatAmountVal > 0
+  //     ? BigNumber(selectedToken.price).multipliedBy(fiatAmountVal).toNumber()
   //     : 0;
-
-  // const quoteRequiredFiatValue =
-  //   usdcToken && amountVal > 0 ? BigNumber(usdcToken.price).multipliedBy(amountVal).toNumber() : 0;
-
-  // Initialize from query params
-  // useEffect(() => {
-  //   if (!queryParams) return;
-
-  //   // Set asset
-  //   if (queryParams.asset && tokens.length > 0) {
-  //     const tokenFromQuery = tokens.find((tkn) =>
-  //       tkn.symbol.toLowerCase().includes(queryParams.asset?.toLowerCase()!)
-  //     );
-  //     if (tokenFromQuery) {
-  //       setSelectedToken(tokenFromQuery);
-  //     }
-  //   }
-
-  //   // Set amount
-  //   if (queryParams.amount) {
-  //     setAmount(queryParams.amount);
-  //   }
-  // }, [queryParams, tokens]);
 
   // 6) Open/close the token picker
   const handleOpen = () => {
@@ -142,56 +143,156 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
     setOpen(false);
   };
 
-  // Function to check if trustline is needed for the buy token
+  // Function to check if trustline is needed for the token and USDC
   const checkTrustlineStatus = useCallback(async () => {
-    logger.log('[TRUSTLINE CHECK] Starting check for token:', selectedToken?.symbol);
-
-    if (!selectedToken || selectedToken.symbol === 'XLM') {
-      logger.log('[TRUSTLINE CHECK] No check needed - XLM or no token');
-      setNeedsTrustline(false);
+    if (!selectedToken) {
+      setTrustlineState((prev) => ({
+        ...prev,
+        selected: {
+          ...prev.selected,
+          needs: false,
+        },
+        usdc: {
+          ...prev.usdc,
+          needs: false,
+        },
+      }));
       return;
     }
 
     const walletAddress = publicKey || wallet.address;
     if (!walletAddress) {
-      logger.log('[TRUSTLINE CHECK] No wallet address available');
-      setNeedsTrustline(false);
+      setTrustlineState((prev) => ({
+        ...prev,
+        selected: {
+          ...prev.selected,
+          needs: false,
+        },
+        usdc: {
+          ...prev.usdc,
+          needs: false,
+        },
+      }));
       return;
     }
 
-    logger.log('[TRUSTLINE CHECK] Checking for wallet:', walletAddress);
-    setCheckingTrustline(true);
+    setTrustlineState((prev) => ({
+      ...prev,
+      selected: {
+        ...prev.selected,
+        checking: true,
+      },
+      usdc: {
+        ...prev.usdc,
+        checking: true,
+      },
+    }));
     try {
-      const trustlineStatus = await checkTrustline(
+      const selectedTrustlineStatus = await checkTrustline(
         walletAddress,
         selectedToken.symbol,
-        selectedToken.issuer
+        constants.StellarConfig.NORMAL_ISSUER
       );
-      logger.log('[TRUSTLINE CHECK] Result:', trustlineStatus);
-      setNeedsTrustline(!trustlineStatus.exists);
+      const usdcTrustlineStatus = await checkTrustline(
+        walletAddress,
+        'USDC',
+        constants.StellarConfig.USDC_ISSUER
+      );
+      setTrustlineState((prev) => ({
+        ...prev,
+        selected: {
+          ...prev.selected,
+          needs: !selectedTrustlineStatus.exists,
+        },
+        usdc: {
+          ...prev.usdc,
+          needs: !usdcTrustlineStatus.exists,
+        },
+      }));
     } catch (error) {
-      logger.error('[TRUSTLINE CHECK] Error checking trustline:', error);
-      setNeedsTrustline(false);
+      setTrustlineState((prev) => ({
+        ...prev,
+        selected: {
+          ...prev.selected,
+          needs: true,
+        },
+        usdc: {
+          ...prev.usdc,
+          needs: true,
+        },
+      }));
     }
-    setCheckingTrustline(false);
+    setTrustlineState((prev) => ({
+      ...prev,
+      selected: {
+        ...prev.selected,
+        checking: false,
+      },
+      usdc: {
+        ...prev.usdc,
+        checking: false,
+      },
+    }));
   }, [selectedToken, publicKey, wallet.address]);
 
-  // Check trustline status when buy token changes
+  // Check trustline status when token changes
   useEffect(() => {
     checkTrustlineStatus();
   }, [checkTrustlineStatus]);
+
+  const loadTreasuryBalances = useCallback(async () => {
+    if (!pair || !selectedToken || !usdcToken) return;
+
+    const availableBalances = await fetchTreasuryBalances(pair.pairAddress);
+    if (!availableBalances) return;
+
+    // Update insufficient liquidity
+    const longToken = tokensByAddress[pair.tokens.long];
+    const shortToken = tokensByAddress[pair.tokens.short];
+    const isLong = selectedToken.contract === pair.tokens.long;
+
+    if (tradeDirection === 'buy') {
+      // Update the treasury balances
+      setAvailableLiquidity(
+        isLong ? availableBalances.long.toString() : availableBalances.short.toString()
+      );
+
+      const usdcValue = BigNumber(usdcToken.price).multipliedBy(fiatAmountVal);
+
+      const numTokensBuying = usdcValue.dividedBy(isLong ? longToken.price : shortToken.price);
+
+      const treasuryBalance = isLong ? availableBalances.long : availableBalances.short;
+      setAvailableLiquidity(treasuryBalance.toString());
+      if (treasuryBalance.lt(numTokensBuying)) {
+        setInsufficientLiquidity(true);
+      }
+    } else {
+      // Update the treasury balances
+      setAvailableLiquidity(availableBalances.quote.toString());
+
+      const tokenValue = BigNumber(isLong ? longToken.price : shortToken.price).multipliedBy(
+        fiatAmountVal
+      );
+
+      const usdcRequired = tokenValue.dividedBy(usdcToken.price);
+      setAvailableLiquidity(availableBalances.quote.toString());
+      if (availableBalances.quote.lt(usdcRequired)) {
+        setInsufficientLiquidity(true);
+      }
+    }
+  }, [pair, fiatAmountVal, tradeDirection, selectedToken]);
 
   // 7) Auto-fetch quote whenever relevant fields change: selectedToken, amount
   useEffect(() => {
     // Clear old quote state each time we start a new calculation
     setLoading(false);
-    // setQuoteFetched(false);
-    setInsufficientBalance(false);
-    // setAmount('0');
     setSwapError(null);
-    setCreatingTrustline(false);
-    setNeedsTrustline(false);
-    setCheckingTrustline(false);
+
+    setInsufficientBalance(false);
+    setInsufficientLiquidity(false);
+
+    setTrustlineState(initialTrustlineState);
+
     setPair(null);
 
     // Make sure we have a token and the store pairs
@@ -207,60 +308,47 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
     // If no pair exists for the selected token
     if (!pairFromStore) {
-      setSwapError('No pair found from store');
+      // setSwapError('No pair found from store');
       return;
     }
 
     // If user hasn't typed anything or typed 0
-    if (!amount || amountVal <= 0) {
-      setSwapError('No amount provided');
+    if (!fiatAmount || fiatAmountVal <= 0) {
+      // setSwapError('No amount provided');
       return;
     }
+
+    loadTreasuryBalances();
 
     if (!usdcToken) {
-      setSwapError('No USDC token found');
+      // setSwapError('No USDC token found');
       return;
     }
-
-    // Start "fetching" quote
-    setLoading(true);
-
-    // ...
 
     setLoading(false);
 
-    // if (BigNumber(selectedToken.price).eq(0) || BigNumber(usdcToken.price).eq(0)) {
-    //   setAmount('0');
-    // }
-    // else {
-    //   const potentialBuyAmount = BigNumber(selectedToken.price)
-    //     .dividedBy(buyToken.price)
-    //     .multipliedBy(sellVal);
-    //   setAmount(potentialBuyAmount.toNumber());
-    // }
-
     if (tradeDirection === 'buy') {
-      if (BigNumber(usdcToken.balance).lt(amountVal)) {
+      if (BigNumber(usdcToken.balance).lt(fiatAmountVal)) {
         setInsufficientBalance(true);
       }
     } else {
-      if (BigNumber(selectedToken.balance).lt(amountVal)) {
+      if (BigNumber(selectedToken.balance).lt(fiatAmountVal)) {
         setInsufficientBalance(true);
       }
     }
-  }, [selectedToken, amount, amountVal]);
+  }, [selectedToken, fiatAmount, fiatAmountVal]);
 
   // 8) handle input changes, dont allow negative numbers as input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAmount(sanitizeAmountInput(e.target.value));
+    setFiatAmount(sanitizeAmountInput(e.target.value));
   };
 
   const handleFocus = () => {
-    if (amount === '0') setAmount('');
+    if (fiatAmount === '0') setFiatAmount('');
   };
 
   const handleBlur = () => {
-    if (amount === '') setAmount('0');
+    if (fiatAmount === '') setFiatAmount('0');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -276,40 +364,34 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
   };
 
   const getButtonState = (): ButtonState => {
-    logger.log('[BUTTON STATE] State check:', {
-      selectedToken: selectedToken?.symbol,
-      checkingTrustline,
-      creatingTrustline,
-      needsTrustline,
-      amountVal,
-      loading,
-      insufficientBalance,
-    });
-
     if (!selectedToken) {
       return ButtonState.SELECT_TOKEN;
     }
     if (!tokens.some((tkn) => tkn.balance != '0')) {
       return ButtonState.ZERO_BALANCE;
     }
-    if (checkingTrustline) {
+
+    // Check trustline first, before amount validation
+    if (trustlineState.selected.checking || trustlineState.usdc.checking) {
       return ButtonState.CHECKING_TRUSTLINE;
     }
-    if (creatingTrustline) {
+    if (trustlineState.selected.creating || trustlineState.usdc.creating) {
       return ButtonState.CREATING_TRUSTLINE;
     }
-    // Check trustline first, before amount validation
-    if (needsTrustline) {
-      logger.log('[BUTTON STATE] Returning CREATE_TRUSTLINE');
+    if (trustlineState.selected.needs || trustlineState.usdc.needs) {
       return ButtonState.CREATE_TRUSTLINE;
     }
-    if (amountVal <= 0) {
+
+    if (fiatAmountVal <= 0) {
       return ButtonState.ENTER_AMOUNT;
     }
     if (insufficientBalance) {
       return ButtonState.INSUFFICIENT_BALANCE;
     }
-    return ButtonState.REVIEW;
+    if (insufficientLiquidity) {
+      return ButtonState.INSUFFICIENT_BALANCE;
+    }
+    return ButtonState.SUBMIT;
   };
 
   const getButtonConfig = (state: ButtonState): ButtonConfig => {
@@ -341,7 +423,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
         action: () => {},
       },
       [ButtonState.INSUFFICIENT_BALANCE]: {
-        label: 'Insufficient balance',
+        label: `Insufficient ${insufficientBalance ? 'balance' : 'liquidity'}`,
         disabled: true,
         action: () => {},
         color: 'error' as const,
@@ -352,7 +434,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
         action: handleCreateTrustline,
         variant: 'contained' as const,
       },
-      [ButtonState.REVIEW]: {
+      [ButtonState.SUBMIT]: {
         label: 'Review',
         disabled: false,
         action: () => setReviewOpen(true),
@@ -371,32 +453,60 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
   // Separate function to handle trustline creation
   const handleCreateTrustline = async () => {
-    if (!selectedToken || selectedToken.symbol === 'XLM') return;
+    if (!selectedToken) return;
 
-    setCreatingTrustline(true);
+    setTrustlineState((prev) => ({
+      ...prev,
+      selected: {
+        ...prev.selected,
+        creating: trustlineState.selected.needs,
+      },
+      usdc: {
+        ...prev.usdc,
+        creating: trustlineState.usdc.needs,
+      },
+    }));
     setSwapError(null);
 
     try {
-      await addTrustLine(selectedToken.symbol, selectedToken.issuer);
+      if (trustlineState.usdc.needs) {
+        await addTrustLine('USDC', constants.StellarConfig.USDC_ISSUER);
+      }
+      if (trustlineState.selected.needs) {
+        await addTrustLine(selectedToken.symbol, constants.StellarConfig.NORMAL_ISSUER);
+      }
+
       // After successful trustline creation, check status again
       await checkTrustlineStatus();
     } catch (error) {
-      setSwapError('Failed to enable asset');
-      logger.error('Enable asset error:', error);
+      setSwapError('Failed to enable asset(s)');
     } finally {
-      setCreatingTrustline(false);
+      setTrustlineState((prev) => ({
+        ...prev,
+        selected: {
+          ...prev.selected,
+          creating: false,
+        },
+        usdc: {
+          ...prev.usdc,
+          creating: false,
+        },
+      }));
     }
   };
 
-  // Max the sell token
+  // Max the token (if selling)
   const handleMaxClick = () => {
-    if (selectedToken) {
-      setAmount(selectedToken.balance.toString());
+    if (selectedToken && usdcToken) {
+      const maxFiatValue = BigNumber(selectedToken.balance)
+        .multipliedBy(selectedToken.price)
+        .dividedBy(usdcToken.price);
+      setFiatAmount(maxFiatValue.toString());
     }
   };
 
   /**
-   * Executes the swap transaction.
+   * Executes the trade transaction.
    * This function signs and sends the transaction using WalletConnect or Signer.
    *
    * @async
@@ -416,56 +526,73 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
           return;
         }
 
-        // Check if trustline exists for the token (if it's not XLM)
-        if (selectedToken.symbol !== 'XLM') {
-          const walletAddress = publicKey || wallet.address;
-          if (!walletAddress) {
-            setSwapError('No account connected');
-            return;
-          }
-
-          const trustlineStatus = await checkTrustline(
-            walletAddress,
-            selectedToken.symbol,
-            selectedToken.issuer
-          );
-
-          if (!trustlineStatus.exists) {
-            setSwapError('Please enable this asset before investing');
-            return;
-          }
-        }
-
         // Now call the client-side onSwap (sign and submit)
         const isLong = selectedToken.contract === pair.tokens.long;
+        const enoughLiquidity = false; // TODO:
 
         if (tradeDirection === 'buy') {
+          const usdcAmount = BigNumber(fiatAmount).dividedBy(usdcToken.price);
+
           if (isLong) {
-            await buyLong({
-              pair: pair.pairAddress,
-              usdc_in: Number(amount),
-              min_long_out: 0,
-            });
+            if (enoughLiquidity) {
+              await buyLong({
+                pair: pair.pairAddress,
+                usdc_in: Number(usdcAmount),
+                min_long_out: 0,
+              });
+            } else {
+              await mintAndSellShort({
+                pair: pair.pairAddress,
+                usdc_in: Number(usdcAmount),
+              });
+            }
           } else {
-            await buyShort({
-              pair: pair.pairAddress,
-              usdc_in: Number(amount),
-              min_short_out: 0,
-            });
+            if (enoughLiquidity) {
+              await buyShort({
+                pair: pair.pairAddress,
+                usdc_in: Number(usdcAmount),
+                min_short_out: 0,
+              });
+            } else {
+              await mintAndSellLong({
+                pair: pair.pairAddress,
+                usdc_in: Number(usdcAmount),
+              });
+            }
           }
         } else {
           if (isLong) {
-            await sellLong({
-              pair: pair.pairAddress,
-              long_in: Number(amount),
-              min_usdc_out: 0,
-            });
+            const longToken = tokensByAddress[pair.tokens.long];
+            const longAmount = BigNumber(fiatAmount).dividedBy(longToken.price);
+
+            if (enoughLiquidity) {
+              await sellLong({
+                pair: pair.pairAddress,
+                long_in: Number(longAmount),
+                min_usdc_out: 0,
+              });
+            } else {
+              await buyShortAndRedeem({
+                pair: pair.pairAddress,
+                long_in: Number(longAmount),
+              });
+            }
           } else {
-            await sellShort({
-              pair: pair.pairAddress,
-              short_in: Number(amount),
-              min_usdc_out: 0,
-            });
+            const shortToken = tokensByAddress[pair.tokens.short];
+            const shortAmount = BigNumber(fiatAmount).dividedBy(shortToken.price);
+
+            if (enoughLiquidity) {
+              await sellShort({
+                pair: pair.pairAddress,
+                short_in: Number(shortAmount),
+                min_usdc_out: 0,
+              });
+            } else {
+              await buyLongAndRedeem({
+                pair: pair.pairAddress,
+                short_in: Number(shortAmount),
+              });
+            }
           }
         }
 
@@ -483,17 +610,28 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
 
+  const getInfoAccordionAlerts = useCallback((): InfoAccordionAlert[] => {
+    const alerts: InfoAccordionAlert[] = [];
+
+    if (insufficientBalance && selectedToken && usdcToken) {
+      alerts.push({
+        title: `Not enough ${tradeDirection === 'buy' ? usdcToken.symbol : selectedToken.symbol} to trade`,
+        icon: 'solar:danger-triangle-bold',
+      });
+    }
+    if (insufficientLiquidity && selectedToken && usdcToken) {
+      alerts.push({
+        title: `Not enough ${tradeDirection === 'buy' ? selectedToken.symbol : usdcToken.symbol} to trade`,
+        icon: 'solar:danger-triangle-bold',
+      });
+    }
+
+    return alerts;
+  }, [selectedToken, usdcToken, tradeDirection, insufficientBalance, insufficientLiquidity]);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
       <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <Switch
-          checked={tradeDirection === 'buy'}
-          color="success"
-          onClick={() => {
-            setTradeDirection(tradeDirection === 'buy' ? 'sell' : 'buy');
-          }}
-        />
-
         {/* Token Section */}
         <Box
           sx={{
@@ -530,16 +668,40 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
               }}
             >
               <Typography variant="body1" noWrap data-testid="sell-token-picker">
-                {tradeDirection === 'buy' ? t('Buy') : t('Sell')}
+                {t('Sell')}
+                <Switch
+                  checked={tradeDirection === 'buy'}
+                  color="success"
+                  onClick={() => {
+                    setTradeDirection(tradeDirection === 'buy' ? 'sell' : 'buy');
+                  }}
+                />
+                {t('Buy')}
               </Typography>
               <InputBase
                 type="number"
-                value={amount}
+                value={fiatAmount}
                 onChange={handleInputChange}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
                 disabled={getButtonState() == ButtonState.CREATE_TRUSTLINE}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <Typography
+                      sx={{
+                        fontSize: 'var(--h3-size, 32px)',
+                        fontWeight: 'var(--h3-weight, 700)',
+                        color:
+                          fiatAmount === '0' || fiatAmount === ''
+                            ? theme.palette.text.secondary
+                            : theme.palette.text.primary,
+                      }}
+                    >
+                      $
+                    </Typography>
+                  </InputAdornment>
+                }
                 inputProps={{
                   min: 0,
                   style: {
@@ -559,7 +721,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
                   padding: 0,
                   color: insufficientBalance
                     ? theme.palette.error.main
-                    : amount === '0' || amount === ''
+                    : fiatAmount === '0' || fiatAmount === ''
                       ? theme.palette.text.secondary
                       : theme.palette.text.primary,
                   flexGrow: 1,
@@ -569,21 +731,6 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
                   whiteSpace: 'nowrap',
                 }}
               />
-              <Typography
-                noWrap
-                sx={{
-                  fontSize: 'var(--components-nav-item-size, 14px)',
-                  fontStyle: 'normal',
-                  fontWeight: 'var(--components-nav-item-weight, 500)',
-                  lineHeight: 'var(--components-nav-item-line-height, 22px)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'clip',
-                  minWidth: 0,
-                }}
-              >
-                {`Required USD: ${fCurrency(amountVal)}`}
-              </Typography>
             </Box>
           </Box>
 
@@ -743,37 +890,24 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
               {buttonState === ButtonState.ZERO_BALANCE && (
                 <>
                   <Alert severity="warning" sx={{ mt: 2 }}>
-                    {t('You must fund your account before investing. Please deposit fiat below.')}
+                    {t('You must fund your account before investing.')}
                   </Alert>
                   <Stack direction="row" spacing={1} width="100%" mt={2}>
                     <Button
                       fullWidth
                       variant="soft"
                       color="info"
-                      onClick={() => setModalView('receive', true)}
+                      onClick={() =>
+                        changeTab
+                          ? changeTab('deposit')
+                          : router.push(`${paths.invest}?tab=deposit`)
+                      }
                     >
                       {t('Deposit')}
-                    </Button>
-                    <Button
-                      fullWidth
-                      variant="soft"
-                      color="success"
-                      onClick={() => {
-                        if (changeTab) changeTab('deposit');
-                        else router.push(`${paths.invest}?tab=deposit`);
-                      }}
-                    >
-                      {t('Buy')}
                     </Button>
                   </Stack>
                 </>
               )}
-              <ReceiveModal
-                open={modalState.receive}
-                onClose={() => {
-                  setModalView('receive', false);
-                }}
-              />
             </>
           );
         })()
@@ -783,23 +917,42 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
         </WalletGate>
       )}
 
+      {/* Additional box with info */}
+      {!loading && (
+        <InfoAccordion
+          highlights={[getConversionText(usdcToken!, selectedToken!)]}
+          alerts={getInfoAccordionAlerts()}
+          rows={[
+            {
+              title: `Total Fee (${fPercent(30)})`,
+              value: fCurrencyTwoDecimals(fiatAmountVal * (30 / 10000)),
+            },
+            {
+              title: 'Available Liquidity',
+              value: fCurrencyTwoDecimals(availableLiquidity),
+            },
+          ]}
+        />
+      )}
+
       {reviewOpen && (
         <SwapReview
           open={reviewOpen}
           onClose={handleReviewClose}
           tradeDirection={tradeDirection}
           selectedToken={selectedToken!}
-          amount={amount}
+          fiatAmount={fiatAmount}
           feePercentage={30}
-          sellFiatValue={amountVal}
+          sellFiatValue={fiatAmountVal}
           onSubmit={() => settleTrade()}
         />
       )}
+
       {/* Token Picker Popup */}
       <PickToken
         open={open}
         onClose={handleClose}
-        tokens={tokens}
+        tokens={tradableTokens}
         onTokenSelect={handleTokenSelect}
       />
     </Box>

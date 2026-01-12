@@ -1,5 +1,5 @@
 import type { CardProps } from '@mui/material';
-import type { Pair, Token } from '@normalfinance/types';
+import type { Pair, Token, ButtonConfig, TrustlineState } from '@normalfinance/types';
 
 import { useTrustLine } from '@/hooks';
 import { BigNumber } from 'bignumber.js';
@@ -8,9 +8,9 @@ import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePairFactory } from '@/hooks/stellar/use-pair-factory';
+import { TokenAmountButtonState as ButtonState } from '@normalfinance/types';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import {
-  logger,
   constants,
   checkTrustline,
   getCryptoIconUrl,
@@ -18,40 +18,43 @@ import {
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Button, Switch, InputBase, Typography } from '@mui/material';
+import { Box, Button, Switch, InputBase, Typography, InputAdornment } from '@mui/material';
 
 import PickToken from './pick-token';
 import { WalletGate } from './wallet-gate';
+import InfoAccordion from './info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
-enum ButtonState {
-  SELECT_TOKEN = 'SELECT_TOKEN',
-  ENTER_AMOUNT = 'ENTER_AMOUNT',
-  ZERO_BALANCE = 'ZERO_BALANCE',
-  CHECKING_TRUSTLINE = 'CHECKING_TRUSTLINE',
-  CREATE_TRUSTLINE_LONG = 'CREATE_TRUSTLINE_LONG',
-  CREATE_TRUSTLINE_SHORT = 'CREATE_TRUSTLINE_SHORT',
-  CREATING_TRUSTLINE = 'CREATING_TRUSTLINE',
-  INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
-  SUBMIT = 'SUBMIT',
-}
+import type { InfoAccordionAlert } from './info-accordion';
 
-interface ButtonConfig {
-  label: string;
-  disabled: boolean;
-  action: () => void;
-  variant?: 'contained' | 'outlined' | 'text';
-  color?: 'primary' | 'secondary' | 'error';
-}
+type MintRedeemCardTrustlineState = {
+  long: TrustlineState;
+  short: TrustlineState;
+  usdc: TrustlineState;
+};
 
-interface MintRedeemCardProps extends CardProps {
-  changeTab?: React.Dispatch<
-    React.SetStateAction<false | 'trade' | 'mint' | 'deposit' | 'withdraw'>
-  >;
-}
+const initialTrustlineState: MintRedeemCardTrustlineState = {
+  long: {
+    creating: false,
+    needs: false,
+    checking: false,
+  },
+  short: {
+    creating: false,
+    needs: false,
+    checking: false,
+  },
+  usdc: {
+    creating: false,
+    needs: false,
+    checking: false,
+  },
+};
 
-const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) => {
+interface MintRedeemCardProps extends CardProps {}
+
+const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
 
@@ -69,12 +72,10 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
 
   const { loading, setLoading, mintPair, redeemPair } = usePairFactory();
 
-  const [swapError, setSwapError] = useState<string | null>(null);
+  const [mintRedeemError, setMintRedeemError] = useState<string | null>(null);
 
-  const [creatingTrustline, setCreatingTrustline] = useState<boolean>(false);
-  const [needsTrustline, setNeedsTrustline] = useState<boolean>(false);
-  const [shortNeedsTrustline, setShortNeedsTrustline] = useState<boolean>(false);
-  const [checkingTrustline, setCheckingTrustline] = useState<boolean>(false);
+  const [trustlineState, setTrustlineState] =
+    useState<MintRedeemCardTrustlineState>(initialTrustlineState);
 
   const filteredTokens = tokens.filter(
     (tkn) =>
@@ -86,21 +87,23 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
   );
   const [pair, setPair] = useState<Pair | null>(null);
   const [action, setAction] = useState<'mint' | 'redeem'>('mint');
-  const [amount, setAmount] = useState<string>('0');
+  const [fiatAmount, setAmount] = useState<string>('0');
 
   // 3) Popup states for picking tokens
   const [open, setOpen] = useState(false);
 
   const [insufficientBalance, setInsufficientBalance] = useState(false);
 
-  const amountVal = parseFloat(amount) || 0;
+  const fiatAmountVal = parseFloat(fiatAmount) || 0;
   const amountFiatValue =
-    usdcToken && amountVal > 0 ? BigNumber(usdcToken.price).multipliedBy(amountVal).toNumber() : 0;
+    usdcToken && fiatAmountVal > 0
+      ? BigNumber(usdcToken.price).multipliedBy(fiatAmountVal).toNumber()
+      : 0;
 
   const collateralRequiredFiatValue =
-    usdcToken && pair && amountVal > 0
+    usdcToken && pair && fiatAmountVal > 0
       ? BigNumber(usdcToken.price)
-          .multipliedBy(amountVal)
+          .multipliedBy(fiatAmountVal)
           .multipliedBy(pair.collateral.collateralPerPair)
           .toNumber()
       : 0;
@@ -113,55 +116,129 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
     setOpen(false);
   };
 
-  // Function to check if trustline is needed for the buy token
+  // Function to check if trustline is needed for the token, it's short, and USDC
   const checkTrustlineStatus = useCallback(async () => {
-    logger.log('[TRUSTLINE CHECK] Starting check for token:', selectedToken?.symbol);
-
     if (!selectedToken) {
-      logger.log('[TRUSTLINE CHECK] No check needed - no token');
-      setNeedsTrustline(false);
-      setShortNeedsTrustline(false);
+      setTrustlineState((prev) => ({
+        ...prev,
+        long: {
+          ...prev.long,
+          needs: false,
+        },
+        short: {
+          ...prev.short,
+          needs: false,
+        },
+        usdc: {
+          ...prev.usdc,
+          needs: false,
+        },
+      }));
       return;
     }
 
     const walletAddress = publicKey || wallet.address;
     if (!walletAddress) {
-      logger.log('[TRUSTLINE CHECK] No wallet address available');
-      setNeedsTrustline(false);
-      setShortNeedsTrustline(false);
+      setTrustlineState((prev) => ({
+        ...prev,
+        long: {
+          ...prev.long,
+          needs: false,
+        },
+        short: {
+          ...prev.short,
+          needs: false,
+        },
+        usdc: {
+          ...prev.usdc,
+          needs: false,
+        },
+      }));
       return;
     }
 
-    logger.log('[TRUSTLINE CHECK] Checking for wallet:', walletAddress);
-    setCheckingTrustline(true);
-    setShortNeedsTrustline(true);
+    // setCheckingTrustline(true);
+    setTrustlineState((prev) => ({
+      ...prev,
+      long: {
+        ...prev.long,
+        checking: true,
+      },
+      short: {
+        ...prev.short,
+        checking: true,
+      },
+      usdc: {
+        ...prev.usdc,
+        checking: true,
+      },
+    }));
     try {
-      // Long
-      const trustlineStatus = await checkTrustline(
+      const longTrustlineStatus = await checkTrustline(
         walletAddress,
         selectedToken.symbol,
         constants.StellarConfig.NORMAL_ISSUER
       );
-      logger.log('[TRUSTLINE CHECK] Long Result:', trustlineStatus);
-      setNeedsTrustline(!trustlineStatus.exists);
-
-      // Short
       const shortTrustlineStatus = await checkTrustline(
         walletAddress,
         `${selectedToken.symbol}SHORT`,
         constants.StellarConfig.NORMAL_ISSUER
       );
-      logger.log('[TRUSTLINE CHECK] Short Result:', shortTrustlineStatus);
-      setShortNeedsTrustline(!shortTrustlineStatus.exists);
+      const usdcTrustlineStatus = await checkTrustline(
+        walletAddress,
+        'USDC',
+        constants.StellarConfig.USDC_ISSUER
+      );
+      setTrustlineState((prev) => ({
+        ...prev,
+        long: {
+          ...prev.long,
+          needs: !longTrustlineStatus.exists,
+        },
+        short: {
+          ...prev.short,
+          needs: !shortTrustlineStatus.exists,
+        },
+        usdc: {
+          ...prev.usdc,
+          needs: !usdcTrustlineStatus.exists,
+        },
+      }));
     } catch (error) {
-      logger.error('[TRUSTLINE CHECK] Error checking trustline:', error);
-      setNeedsTrustline(false);
-      setShortNeedsTrustline(false);
+      setTrustlineState((prev) => ({
+        ...prev,
+        long: {
+          ...prev.long,
+          needs: true,
+        },
+        short: {
+          ...prev.short,
+          needs: true,
+        },
+        usdc: {
+          ...prev.usdc,
+          needs: true,
+        },
+      }));
     }
-    setCheckingTrustline(false);
+    setTrustlineState((prev) => ({
+      ...prev,
+      long: {
+        ...prev.long,
+        checking: false,
+      },
+      short: {
+        ...prev.short,
+        checking: false,
+      },
+      usdc: {
+        ...prev.usdc,
+        checking: false,
+      },
+    }));
   }, [selectedToken, publicKey, wallet.address]);
 
-  // Check trustline status when buy token changes
+  // Check all trustline statuses when token changes
   useEffect(() => {
     checkTrustlineStatus();
   }, [checkTrustlineStatus]);
@@ -171,13 +248,8 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
     // Clear old state each time
     setLoading(false);
     setInsufficientBalance(false);
-    setSwapError(null);
-
-    setCreatingTrustline(false);
-    setNeedsTrustline(false);
-    setShortNeedsTrustline(false);
-    setCheckingTrustline(false);
-    setShortNeedsTrustline(false);
+    setMintRedeemError(null);
+    setTrustlineState(initialTrustlineState);
 
     setPair(null);
 
@@ -194,18 +266,18 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
 
     // If no pair exists for the selected token
     if (!pairFromStore) {
-      // setSwapError('No pair found from store');
+      // setMintRedeemError('No pair found from store');
       return;
     }
 
     // If user hasn't typed anything or typed 0
-    if (!amount) {
-      // setSwapError('No amount provided');
+    if (!fiatAmount) {
+      // setMintRedeemError('No amount provided');
       return;
     }
 
     if (!usdcToken) {
-      // setSwapError('No USDC token found');
+      // setMintRedeemError('No USDC token found');
       return;
     }
 
@@ -214,7 +286,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
     if (action === 'mint') {
       // Check USDC balance
       const collateralRequired = BigNumber(pairFromStore.collateral.collateralPerPair).multipliedBy(
-        amountVal
+        fiatAmountVal
       );
 
       if (BigNumber(usdcToken.balance).lt(collateralRequired)) {
@@ -223,13 +295,13 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
     } else {
       // Check LONG and SHORT balance
       if (
-        BigNumber(selectedToken.balance).lt(amountVal) ||
-        BigNumber(selectedToken.balance).lt(amountVal)
+        BigNumber(selectedToken.balance).lt(fiatAmountVal) ||
+        BigNumber(selectedToken.balance).lt(fiatAmountVal)
       ) {
         setInsufficientBalance(true);
       }
     }
-  }, [selectedToken, amount, amountVal]);
+  }, [selectedToken, fiatAmount, fiatAmountVal]);
 
   // 8) handle input changes, dont allow negative numbers as input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -237,11 +309,11 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
   };
 
   const handleFocus = () => {
-    if (amount === '0') setAmount('');
+    if (fiatAmount === '0') setAmount('');
   };
 
   const handleBlur = () => {
-    if (amount === '') setAmount('0');
+    if (fiatAmount === '') setAmount('0');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -257,38 +329,33 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
   };
 
   const getButtonState = (): ButtonState => {
-    logger.log('[BUTTON STATE] State check:', {
-      selectedToken: selectedToken?.symbol,
-      checkingTrustline,
-      creatingTrustline,
-      needsTrustline,
-      amountVal,
-      insufficientBalance,
-    });
-
     if (!selectedToken) {
       return ButtonState.SELECT_TOKEN;
     }
     if (!tokens.some((tkn) => tkn.balance != '0')) {
       return ButtonState.ZERO_BALANCE;
     }
-    if (checkingTrustline) {
+
+    // Check trustline first, before amount validation
+    if (
+      trustlineState.long.checking ||
+      trustlineState.short.checking ||
+      trustlineState.usdc.checking
+    ) {
       return ButtonState.CHECKING_TRUSTLINE;
     }
-    if (creatingTrustline) {
+    if (
+      trustlineState.long.creating ||
+      trustlineState.short.creating ||
+      trustlineState.usdc.creating
+    ) {
       return ButtonState.CREATING_TRUSTLINE;
     }
-    // Check trustline first, before amount validation
-    if (needsTrustline) {
-      logger.log('[BUTTON STATE] Returning CREATE_TRUSTLINE_LONG');
-      return ButtonState.CREATE_TRUSTLINE_LONG;
+    if (trustlineState.long.needs || trustlineState.short.needs || trustlineState.usdc.needs) {
+      return ButtonState.CREATE_TRUSTLINE;
     }
-    console.log({ shortNeedsTrustline });
-    if (shortNeedsTrustline) {
-      logger.log('[BUTTON STATE] Returning CREATE_TRUSTLINE_SHORT');
-      return ButtonState.CREATE_TRUSTLINE_SHORT;
-    }
-    if (amountVal <= 0) {
+
+    if (fiatAmountVal <= 0) {
       return ButtonState.ENTER_AMOUNT;
     }
     if (insufficientBalance) {
@@ -331,20 +398,14 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
         action: () => {},
         color: 'error' as const,
       },
-      [ButtonState.CREATE_TRUSTLINE_LONG]: {
+      [ButtonState.CREATE_TRUSTLINE]: {
         label: 'Enable asset',
         disabled: false,
         action: handleCreateTrustline,
         variant: 'contained' as const,
       },
-      [ButtonState.CREATE_TRUSTLINE_SHORT]: {
-        label: 'Enable short asset',
-        disabled: false,
-        action: handleCreateShortTrustline,
-        variant: 'contained' as const,
-      },
       [ButtonState.SUBMIT]: {
-        label: 'Submit',
+        label: action === 'mint' ? 'Mint' : 'Redeem',
         disabled: false,
         action: settleTrade,
       },
@@ -361,38 +422,56 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
 
   // Separate function to handle trustline creation
   const handleCreateTrustline = async () => {
-    if (!selectedToken || selectedToken.symbol === 'XLM') return;
+    if (!selectedToken) return;
 
-    setCreatingTrustline(true);
-    setSwapError(null);
+    setTrustlineState((prev) => ({
+      ...prev,
+      long: {
+        ...prev.long,
+        creating: trustlineState.long.needs,
+      },
+      short: {
+        ...prev.short,
+        creating: trustlineState.short.needs,
+      },
+      usdc: {
+        ...prev.usdc,
+        creating: trustlineState.usdc.needs,
+      },
+    }));
+    setMintRedeemError(null);
 
     try {
-      await addTrustLine(selectedToken.symbol, constants.StellarConfig.NORMAL_ISSUER);
+      if (trustlineState.usdc.needs) {
+        await addTrustLine('USDC', constants.StellarConfig.USDC_ISSUER);
+      }
+      if (trustlineState.long.needs) {
+        await addTrustLine(selectedToken.symbol, constants.StellarConfig.NORMAL_ISSUER);
+      }
+      if (trustlineState.short.needs) {
+        await addTrustLine(`${selectedToken.symbol}SHORT`, constants.StellarConfig.NORMAL_ISSUER);
+      }
+
       // After successful trustline creation, check status again
       await checkTrustlineStatus();
     } catch (error) {
-      setSwapError('Failed to enable asset');
-      logger.error('Enable asset error:', error);
+      setMintRedeemError('Failed to enable asset(s)');
     } finally {
-      setCreatingTrustline(false);
-    }
-  };
-
-  const handleCreateShortTrustline = async () => {
-    if (!selectedToken || selectedToken.symbol === 'XLM') return;
-
-    setCreatingTrustline(true);
-    setSwapError(null);
-
-    try {
-      await addTrustLine(`${selectedToken.symbol}SHORT`, constants.StellarConfig.NORMAL_ISSUER);
-      // After successful trustline creation, check status again
-      await checkTrustlineStatus();
-    } catch (error) {
-      setSwapError('Failed to enable short asset');
-      logger.error('Enable short asset error:', error);
-    } finally {
-      setCreatingTrustline(false);
+      setTrustlineState((prev) => ({
+        ...prev,
+        long: {
+          ...prev.long,
+          creating: false,
+        },
+        short: {
+          ...prev.short,
+          creating: false,
+        },
+        usdc: {
+          ...prev.usdc,
+          creating: false,
+        },
+      }));
     }
   };
 
@@ -410,7 +489,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
    * @async
    */
   const checkIfTradeAllowed = async () => {
-    setSwapError(null);
+    setMintRedeemError(null);
     if (!selectedToken || !pair) return false;
     return true;
   };
@@ -424,40 +503,22 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
           return;
         }
 
-        // Check if trustline exists for the token (if it's not XLM)
-        if (selectedToken.symbol !== 'XLM') {
-          const walletAddress = publicKey || wallet.address;
-          if (!walletAddress) {
-            setSwapError('No account connected');
-            return;
-          }
-
-          const trustlineStatus = await checkTrustline(
-            walletAddress,
-            selectedToken.symbol,
-            selectedToken.issuer
-          );
-
-          if (!trustlineStatus.exists) {
-            setSwapError('Please enable this asset before investing');
-            return;
-          }
-        }
-
         // Now call the client-side mintPair or redeempair (sign and submit)
+        const pairTokenAmount = BigNumber(fiatAmount).dividedBy(pair.collateral.collateralPerPair);
+
         if (action === 'mint') {
           await mintPair({
             asset: pair.asset,
-            tokens_to_mint: Number(amount),
+            tokens_to_mint: Number(pairTokenAmount),
           });
         } else {
           await redeemPair({
             asset: pair.asset,
-            tokens_to_redeem: Number(amount),
+            tokens_to_redeem: Number(pairTokenAmount),
           });
         }
       } catch (error) {
-        setSwapError('Error during mint/redeem');
+        setMintRedeemError('Error during mint/redeem');
       }
     }
   };
@@ -466,17 +527,22 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
 
+  const getInfoAccordionAlerts = useCallback((): InfoAccordionAlert[] => {
+    const alerts: InfoAccordionAlert[] = [];
+
+    if (insufficientBalance) {
+      alerts.push({
+        title: `Not enough ${action === 'mint' ? 'USDC' : 'token pair(s)'} to ${action}`,
+        icon: 'solar:danger-triangle-bold',
+      });
+    }
+
+    return alerts;
+  }, [insufficientBalance, action]);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
       <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <Switch
-          checked={action === 'mint'}
-          color="info"
-          onClick={() => {
-            setAction(action === 'mint' ? 'redeem' : 'mint');
-          }}
-        />
-
         {/* Token Section */}
         <Box
           sx={{
@@ -513,11 +579,19 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
               }}
             >
               <Typography variant="body1" noWrap data-testid="sell-token-picker">
-                {action === 'mint' ? t('Mint') : t('Redeem')}
+                {t('Mint')}
+                <Switch
+                  checked={action === 'mint'}
+                  color="info"
+                  onClick={() => {
+                    setAction(action === 'mint' ? 'redeem' : 'mint');
+                  }}
+                />
+                {t('Redeem')}
               </Typography>
               <InputBase
                 type="number"
-                value={amount}
+                value={fiatAmount}
                 onChange={handleInputChange}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
@@ -535,13 +609,29 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
                     textOverflow: 'clip',
                   },
                 }}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <Typography
+                      sx={{
+                        fontSize: 'var(--h3-size, 32px)',
+                        fontWeight: 'var(--h3-weight, 700)',
+                        color:
+                          fiatAmount === '0' || fiatAmount === ''
+                            ? theme.palette.text.secondary
+                            : theme.palette.text.primary,
+                      }}
+                    >
+                      $
+                    </Typography>
+                  </InputAdornment>
+                }
                 sx={{
                   width: '100%',
                   border: 'none',
                   padding: 0,
                   color: insufficientBalance
                     ? theme.palette.error.main
-                    : amount === '0' || amount === ''
+                    : fiatAmount === '0' || fiatAmount === ''
                       ? theme.palette.text.secondary
                       : theme.palette.text.primary,
                   flexGrow: 1,
@@ -551,21 +641,6 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
                   whiteSpace: 'nowrap',
                 }}
               />
-              <Typography
-                noWrap
-                sx={{
-                  fontSize: 'var(--components-nav-item-size, 14px)',
-                  fontStyle: 'normal',
-                  fontWeight: 'var(--components-nav-item-weight, 500)',
-                  lineHeight: 'var(--components-nav-item-line-height, 22px)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'clip',
-                  minWidth: 0,
-                }}
-              >
-                {`Required USD to deposit: ${fCurrency(collateralRequiredFiatValue)}`}
-              </Typography>
             </Box>
           </Box>
 
@@ -670,7 +745,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
       </Box>
 
       {/* Display swap error if exists */}
-      {swapError && (
+      {mintRedeemError && (
         <Box
           sx={{
             padding: theme.spacing(1.5),
@@ -688,7 +763,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
               textAlign: 'center',
             }}
           >
-            {swapError}
+            {mintRedeemError}
           </Typography>
         </Box>
       )}
@@ -723,9 +798,27 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ changeTab, ...other }) 
           );
         })()
       ) : (
-        <WalletGate buttonText="Login to invest" fullWidth>
+        <WalletGate buttonText="Login to mint/redeem" fullWidth>
           {null}
         </WalletGate>
+      )}
+
+      {/* Additional box with info */}
+      {!loading && pair && (
+        <InfoAccordion
+          highlights={[
+            action === 'mint'
+              ? `This will mint ${BigNumber(fiatAmount).dividedBy(pair.collateral.collateralPerPair)} long and short tokens`
+              : `This will require`,
+          ]}
+          alerts={getInfoAccordionAlerts()}
+          rows={[
+            {
+              title: 'Collateral per Pair',
+              value: fCurrency(pair.collateral.collateralPerPair),
+            },
+          ]}
+        />
       )}
 
       {/* Token Picker Popup */}

@@ -310,7 +310,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
   const handleCustodyConfirm = useCallback(async () => {
     if (custodyChoice === 'self') {
-      // startVerification();
       setStage('backup');
     } else if (custodyChoice === 'platform') {
       if (!custodyConsent) {
@@ -564,7 +563,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
             </Box>
 
             <Stack spacing={2}>
-              <Button variant="contained" fullWidth onClick={() => setStage('verify')}>
+              <Button variant="contained" fullWidth onClick={startVerification}>
                 {t("I've Written Them Down")}
               </Button>
               <Button variant="outlined" fullWidth onClick={handleCopyMnemonic}>

@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { useTranslate } from '@/locales';
-import { format } from '@normalfinance/utils';
+import { cdn } from '@normalfinance/utils';
 import { RouterLink } from '@/routes/components';
 import { getMgiAuthToken } from '@/lib/mgi/client';
 import { listTransactions } from '@/lib/mgi/history';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { usePathname, useSearchParams } from '@/routes/hooks';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -20,67 +21,18 @@ import { WalletGate } from '@/components/_common/wallet-gate';
 import MoneyGramTransactionsTable from '@/components/_common/moneygram-history-table';
 
 import { ProfileCover } from './profile-cover';
-import { ProtocolPoints } from './protocol-points';
 import { RewardsOverview } from './rewards-overview';
 
 const MOCK_MODE = process.env.NEXT_PUBLIC_MGI_MOCK === '1';
 
-interface User {
-  id: string;
-  displayName: string;
-  photoURL: string;
-}
-
-interface UserAbout {
-  role: string;
-  coverUrl: string;
-}
-
 // ----------------------------------------------------------------------
-
-const USER_DATA = {
-  user: {
-    id: 'u001',
-    photoURL: '/assets/avatar/avatar_1.jpg',
-  } as User,
-
-  about: {
-    role: 'Product Designer',
-    coverUrl: '/assets/images/normal-images/normal-gradient.webp',
-  } as UserAbout,
-};
 
 const NAV_ITEMS = [
   { value: '', label: 'Overview', icon: <Iconify width={24} icon="solar:user-id-bold" /> },
-  {
-    value: 'protocol',
-    label: 'Protocol',
-    icon: <Iconify width={24} icon="eva:more-horizontal-fill" />,
-  },
-  { value: 'moneygram', label: 'MoneyGram', icon: <Iconify width={24} icon="mdi:bank-outline" /> }, // ← NEW
+  { value: 'moneygram', label: 'MoneyGram', icon: <Iconify width={24} icon="mdi:bank-outline" /> },
 ];
 
 const TAB_PARAM = 'tab';
-
-const REWARDS_OVERVIEW = {
-  referralLink: 'https://normal.finance/ref/Jane123',
-  referralsCount: 0,
-  protocolPoints: 0,
-  referrals: [
-    // { id: '1', address: '0xA1...C4', joined: '2025-06-01', points: 120 },
-    // { id: '2', address: '0xB2...D5', joined: '2025-06-03', points: 90 },
-    // { id: '3', address: '0xC3...E6', joined: '2025-06-07', points: 60 },
-  ],
-};
-
-const POINTS_DATA = {
-  totalPoints: 0,
-  history: [
-    // { date: '2025-07-08', points: 150, action: 'Swap' },
-    // { date: '2025-07-07', points: 75, action: 'Provide Liquidity' },
-    // { date: '2025-07-05', points: 200, action: 'Stake LP' },
-  ],
-};
 
 // ----------------------------------------------------------------------
 
@@ -209,17 +161,25 @@ export function RewardsView() {
     return query ? `${currentPath}?${q}` : currentPath;
   };
 
-  const { user, about } = USER_DATA;
+  const { session } = useSupabaseAuth();
 
-  const walletLabel =
-    walletAddress && walletAddress.length > 0
-      ? format.fTruncate(walletAddress, 12)
-      : t('Not connected');
+  const avatarURL = cdn('logo/logo-single.svg');
+
+  const userMetadata = session?.user?.user_metadata as
+    | { picture?: string; avatar_url?: string; name?: string }
+    | undefined;
+  const userEmail = session?.user?.email ?? '';
+  const userAvatar = userMetadata?.picture || userMetadata?.avatar_url || avatarURL;
+  const displayName = userMetadata?.name || userEmail || ' ';
 
   return (
     <DashboardContent>
       <Card sx={{ mb: 3, height: 290 }}>
-        <ProfileCover name={walletLabel} avatarUrl={user.photoURL} coverUrl={about.coverUrl} />
+        <ProfileCover
+          name={displayName}
+          avatarUrl={userAvatar}
+          coverUrl={cdn('/placeholders/normal-background.png')}
+        />
 
         <Box
           sx={{
@@ -251,17 +211,7 @@ export function RewardsView() {
       {/* ---- Tab panels ----------------------------------------------------- */}
       {selectedTab === '' && (
         <WalletGate buttonText={t('Login to view rewards')} fullWidth>
-          <RewardsOverview
-            referralsCount={REWARDS_OVERVIEW.referralsCount}
-            protocolPoints={REWARDS_OVERVIEW.protocolPoints}
-            referrals={REWARDS_OVERVIEW.referrals}
-          />
-        </WalletGate>
-      )}
-
-      {selectedTab === 'protocol' && (
-        <WalletGate buttonText={t('Login to view points')} fullWidth>
-          <ProtocolPoints totalPoints={POINTS_DATA.totalPoints} history={POINTS_DATA.history} />
+          <RewardsOverview referralsCount={0} referrals={[]} />
         </WalletGate>
       )}
 

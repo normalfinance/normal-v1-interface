@@ -20,6 +20,7 @@ export interface NetworkConfig {
   XLM_DECIMALS: number;
   USDC_ADDRESS: string;
   USDC_DECIMALS: number;
+  USDC_ISSUER: string;
 
   // Oracle
   REFLECTOR_EXTERNAL_ORACLE_ADDRESS: string;

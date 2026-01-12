@@ -1,6 +1,5 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
-import type { Token } from '@normalfinance/types';
 import type { CardProps } from '@mui/material/Card';
 
 import React from 'react';
@@ -17,16 +16,15 @@ import Stack from '@mui/material/Stack';
 import { Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
-import BuyCard from './buy-card';
-import SendCard from './send-card';
 import TradeCard from './trade-card';
-import MintRedeemCard from './mint-redeem-card';
+import DepositCard from './deposit-card';
+import WithdrawCard from './withdraw-card';
 import { CustomTabsSwapSend } from './swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
 // TYPES & CONSTANTS -----------------------------------------------------
 
-export type TokenActionKey = 'trade' | 'mint' | 'deposit' | 'withdraw';
+export type TokenActionKey = 'trade' | 'deposit' | 'withdraw';
 
 interface ActionConfig {
   value: TokenActionKey;
@@ -35,7 +33,6 @@ interface ActionConfig {
 
 const ALL_TABS: readonly ActionConfig[] = [
   { value: 'trade', label: 'Trade' },
-  { value: 'mint', label: 'Mint' },
   { value: 'deposit', label: 'Deposit' },
   { value: 'withdraw', label: 'Withdraw' },
 ] as const;
@@ -101,11 +98,6 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 
   const tabs = useTabs(getInitialTab());
 
-  const buyCardTokens = React.useMemo<Token[]>(
-    () => tokens!.filter((tkn) => tkn.symbol === 'XLM' || tkn.symbol === 'USDC'),
-    [tokens]
-  );
-
   // Helper – render the body matching the active tab -------------------
   const renderTabBody = () => {
     switch (tabs.value) {
@@ -116,31 +108,15 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
           </Box>
         );
 
-      case 'mint':
-        return (
-          <Box data-testid="trade-card" sx={{ position: 'relative' }}>
-            <MintRedeemCard changeTab={tabs.setValue} />
-          </Box>
-        );
-
       case 'deposit':
-        return (
-          <BuyCard
-            tokensList={buyCardTokens}
-            cashBalance={cashBalance}
-            queryParams={queryParams}
-            data-testid="deposit-card"
-            changeTab={tabs.setValue}
-          />
-        );
+        return <DepositCard data-testid="deposit-card" />;
+
       case 'withdraw':
         return (
-          <SendCard
+          <WithdrawCard
             tokens={tokens.filter((tkn) => BigNumber(tkn.balance).gt(0))}
-            networkCost={0}
             queryParams={queryParams}
             data-testid="withdraw-card"
-            changeTab={tabs.setValue}
           />
         );
       default:
@@ -176,7 +152,6 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
 
           {/* Tabs */}
           <Stack direction="row" spacing={1}>
-            <Skeleton height={34} width={60} />
             <Skeleton height={34} width={60} />
             <Skeleton height={34} width={60} />
             <Skeleton height={34} width={60} />

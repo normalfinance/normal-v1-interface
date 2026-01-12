@@ -6,7 +6,7 @@ import type { NavSectionProps } from '@/components/template/nav-section';
 import { paths } from '@/routes/paths';
 import { isTestnet } from '@normalfinance/utils';
 import { allLangs, useTranslate } from '@/locales';
-import { RestoreModalProvider } from '@/providers/RestoreModalProvider';
+import { ModalProvider } from '@/providers/ModalProvider';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -100,7 +100,7 @@ export function DashboardLayout({
   const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
 
   return (
-    <RestoreModalProvider>
+    <ModalProvider>
       <LayoutSection
         /** **************************************
          * @Header
@@ -155,6 +155,6 @@ export function DashboardLayout({
 
         {renderMain()}
       </LayoutSection>
-    </RestoreModalProvider>
+    </ModalProvider>
   );
 }

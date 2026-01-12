@@ -13,17 +13,25 @@ import { Iconify } from '../template/iconify';
 interface FeeInfoAccordionProps {
   conversionText: string;
   insufficientBalance: boolean;
+  insufficientLiquidity: boolean;
   token?: Token;
+  quoteToken?: Token;
+  tradeDirection: 'buy' | 'sell';
   fee: number;
   sellFiatValue: number;
+  availableLiquidityFiatValue: string;
 }
 
 const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
   conversionText,
   insufficientBalance,
+  insufficientLiquidity,
   token,
+  quoteToken,
+  tradeDirection,
   fee,
   sellFiatValue,
+  availableLiquidityFiatValue,
 }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
@@ -75,7 +83,7 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
             gap: 1,
           }}
         >
-          {insufficientBalance && token && (
+          {insufficientBalance && token && quoteToken && (
             <Box
               sx={{
                 p: 2,
@@ -102,11 +110,45 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                 }}
               >
                 {t('Not enough')}&nbsp;
-                {token.symbol}&nbsp;
+                {tradeDirection === 'buy' ? quoteToken.symbol : token.symbol}&nbsp;
                 {t('to trade')}
               </Typography>
             </Box>
           )}
+
+          {insufficientLiquidity && token && quoteToken && (
+            <Box
+              sx={{
+                p: 2,
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                border: `1px solid ${theme.palette.divider}`,
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                borderRadius: '8px',
+              }}
+            >
+              <Iconify
+                icon="solar:danger-triangle-bold"
+                width={14}
+                sx={{ color: theme.palette.text.secondary }}
+              />
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 500,
+                  color: theme.palette.text.secondary,
+                  fontSize: '12px',
+                }}
+              >
+                {t('Not enough')}&nbsp;
+                {tradeDirection === 'buy' ? token.symbol : quoteToken.symbol}&nbsp;
+                {t('liquidity to trade')}
+              </Typography>
+            </Box>
+          )}
+
           <Box
             sx={{
               width: '100%',
@@ -147,11 +189,6 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                     {t(')')}
                   </Box>
                 </Typography>
-                <Iconify
-                  icon="solar:info-circle-bold"
-                  width={14}
-                  sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                />
               </Box>
               <Typography
                 variant="body2"
@@ -162,6 +199,45 @@ const FeeInfoAccordion: React.FC<FeeInfoAccordionProps> = ({
                 }}
               >
                 {fCurrencyTwoDecimals(sellFiatValue * (fee / 10000))}
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 1,
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 500,
+                    color: theme.palette.text.secondary,
+                    fontSize: '12px',
+                  }}
+                >
+                  {t('Available Liquidity')}
+                </Typography>
+              </Box>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 500,
+                  color: theme.palette.text.primary,
+                  fontSize: '12px',
+                }}
+              >
+                {fCurrencyTwoDecimals(availableLiquidityFiatValue)}
               </Typography>
             </Box>
           </Box>

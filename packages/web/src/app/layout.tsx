@@ -9,6 +9,7 @@ import { detectLanguage } from '@/locales/server';
 import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
+import { ModalProvider } from '@/providers/ModalProvider';
 import { PostHogProvider } from '@/providers/PostHogProvider';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
@@ -125,9 +126,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                               <ProgressBar />
                               <SettingsDrawer defaultSettings={defaultSettings} />
                               <AnnouncementProvider>
-                                {/* <InviteCodeGate enforceInDev> */}
-                                <DashboardLayout>{children}</DashboardLayout>
-                                {/* </InviteCodeGate> */}
+                                <ModalProvider>
+                                  {/* <InviteCodeGate enforceInDev> */}
+                                  <DashboardLayout>{children}</DashboardLayout>
+                                  {/* </InviteCodeGate> */}
+                                </ModalProvider>
                               </AnnouncementProvider>
                             </SnackbarProvider>
                           </MotionLazy>

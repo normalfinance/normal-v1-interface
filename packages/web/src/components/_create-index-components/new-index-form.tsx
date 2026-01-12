@@ -3,7 +3,6 @@ import type { IIndexFundItem, IndexFundComponent } from '@normalfinance/types';
 
 import { z } from 'zod';
 import { Icon } from '@iconify/react';
-import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,6 +24,7 @@ import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
+import { useSnackbar } from '@/components/template/snackbar';
 import { Form, Field } from '@/components/template/hook-form';
 
 import IndexComponentList from './index-component-list';

@@ -9,7 +9,6 @@ import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { logger, constants } from '@normalfinance/utils';
 import { type TransactionDetails } from '@/types/transaction';
-import { useRestoreModal } from '@/providers/RestoreModalProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
@@ -67,7 +66,7 @@ interface ExecuteContractTransactionParams<T extends ContractType>
 const getContractClient = <T extends ContractType>(
   contractType: T,
   contractAddress: string,
-  signTransaction: (xdr: string) => Promise<string>,
+  signTransaction: (xdr: string) => Promise<{ signedTxXdr: string }>,
   networkPassphrase: string,
   rpcUrl: string,
   publicKey: string
@@ -90,8 +89,6 @@ export const useContractTransaction = () => {
     useStellarWalletsKit();
   const { signTransaction: signNormalWallet, publicKey: normalPublicKey } = useNormalWallet();
   const { t } = useTranslate();
-
-  const { openRestoreModal, closeRestoreModal } = useRestoreModal();
 
   const executeContractTransaction = useCallback(
     <T extends ContractType>({
@@ -129,17 +126,55 @@ export const useContractTransaction = () => {
         // Add safety check for signTransaction function
         const safeSignTransaction = async (xdr: string) => {
           try {
-            logger.log('[USE CONTRACT TRANSACTION] Attempting to sign transaction...');
-            logger.log('[USE CONTRACT TRANSACTION] Using wallet type:', walletType);
+            logger.log('[USE CONTRACT TRANSACTION] signTransaction input XDR length:', xdr?.length);
+            logger.log(
+              '[USE CONTRACT TRANSACTION] signTransaction input XDR prefix:',
+              xdr?.slice?.(0, 20)
+            );
+
             if (!signTransaction) {
               throw new Error('Sign transaction function not available');
             }
-            // For Normal wallet, pass network passphrase
-            const result = isNormalWallet
+
+            const res = isNormalWallet
               ? await signTransaction(xdr, networkPassphrase)
               : await signTransaction(xdr);
-            logger.log('[USE CONTRACT TRANSACTION] Transaction signed successfully');
-            return result;
+
+            logger.log('[USE CONTRACT TRANSACTION] signTransaction raw result:', res);
+            logger.log('[USE CONTRACT TRANSACTION] signTransaction raw typeof:', typeof res);
+
+            // Many wallet kits return { signedXDR } / { signedXdr } rather than a string
+            const signedXdr =
+              typeof res === 'string'
+                ? res
+                : ((res as any)?.signedXDR ??
+                  (res as any)?.signedXdr ??
+                  (res as any)?.xdr ??
+                  (res as any)?.result?.signedXDR ??
+                  (res as any)?.result?.signedXdr);
+
+            if (!signedXdr || typeof signedXdr !== 'string') {
+              throw new Error(
+                `Wallet did not return a signed XDR string. Got: ${JSON.stringify(res)}`
+              );
+            }
+
+            logger.log('[USE CONTRACT TRANSACTION] signed XDR length:', signedXdr.length);
+            logger.log('[USE CONTRACT TRANSACTION] signed XDR prefix:', signedXdr.slice(0, 20));
+
+            // Return Freighter-compatible shape expected by stellar-sdk contracts
+            return { signedTxXdr: signedXdr };
+            // logger.log('[USE CONTRACT TRANSACTION] Attempting to sign transaction...');
+            // logger.log('[USE CONTRACT TRANSACTION] Using wallet type:', walletType);
+            // if (!signTransaction) {
+            //   throw new Error('Sign transaction function not available');
+            // }
+            // // For Normal wallet, pass network passphrase
+            // const result = isNormalWallet
+            //   ? await signTransaction(xdr, networkPassphrase)
+            //   : await signTransaction(xdr);
+            // logger.log('[USE CONTRACT TRANSACTION] Transaction signed successfully');
+            // return result;
           } catch (error) {
             logger.error('[USE CONTRACT TRANSACTION] Error during transaction signing:', error);
             throw error;
@@ -155,7 +190,15 @@ export const useContractTransaction = () => {
           walletAddress
         );
 
-        const transaction = await transactionFunction(contractClient, restore);
+        // const transaction = await transactionFunction(contractClient, restore);
+        let transaction: AssembledTransaction<any>;
+        try {
+          transaction = await transactionFunction(contractClient, restore);
+          logger.log('[USE CONTRACT TRANSACTION] got AssembledTransaction:', transaction);
+        } catch (e) {
+          logger.error('[USE CONTRACT TRANSACTION] transactionFunction failed:', e);
+          throw e;
+        }
 
         logger.log('Transaction from backend: ', transaction);
 
@@ -186,21 +229,21 @@ export const useContractTransaction = () => {
         } catch (error) {
           logger.error('Error during returning transaction hash: ', error);
 
-          if (error instanceof Error && error.message.includes('restore some contract state')) {
-            return new Promise((resolve, reject) => {
-              openRestoreModal(async () => {
-                try {
-                  const result = await run(true);
-                  resolve(result);
-                } catch (restoreError) {
-                  logger.error('Error during restoring transaction:', restoreError);
-                  reject(restoreError);
-                } finally {
-                  closeRestoreModal();
-                }
-              });
-            });
-          }
+          // if (error instanceof Error && error.message.includes('restore some contract state')) {
+          //   return new Promise((resolve, reject) => {
+          //     openRestoreModal(async () => {
+          //       try {
+          //         const result = await run(true);
+          //         resolve(result);
+          //       } catch (restoreError) {
+          //         logger.error('Error during restoring transaction:', restoreError);
+          //         reject(restoreError);
+          //       } finally {
+          //         closeRestoreModal();
+          //       }
+          //     });
+          //   });
+          // }
           throw error;
         }
       };
@@ -278,8 +321,8 @@ export const useContractTransaction = () => {
       signNormalWallet,
       stellarPublicKey,
       normalPublicKey,
-      openRestoreModal,
-      closeRestoreModal,
+      // openRestoreModal,
+      // closeRestoreModal,
       t,
     ]
   );

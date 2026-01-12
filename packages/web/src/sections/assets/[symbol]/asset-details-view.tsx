@@ -32,7 +32,6 @@ export default function AssetDetailsView({
   } = usePersistStore();
 
   const { loading, error, pair, fetchPair: refreshPair } = usePair(pairAddress);
-  console.log({ loading, error, pair });
 
   const { balances: treasuryBalances } = useTreasuryBalances(pairAddress);
 

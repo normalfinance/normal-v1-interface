@@ -10,8 +10,8 @@ import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, format, logger } from '@normalfinance/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useUserActivity, useManageLiquidity } from '@/hooks';
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { useUserActivity, useLiquidityPositions } from '@/hooks';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
@@ -51,7 +51,7 @@ function WalletConnected({ address }: { address: string }) {
     getAllTokens,
   } = usePersistStore();
 
-  const { liquidityPositions } = useLiquidityPositions();
+  const { liquidityPositions } = useManageLiquidity();
 
   const { recentActivity } = useUserActivity();
 
@@ -92,7 +92,6 @@ function WalletConnected({ address }: { address: string }) {
       data-testid="wallet-connected"
       sx={{
         p: 2,
-        // pt: 4,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'start',

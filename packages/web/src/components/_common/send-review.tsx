@@ -6,8 +6,7 @@ import { useTranslate } from '@/locales';
 import { useContractTransaction } from '@/hooks';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
-import { fCurrencyTwoDecimals } from '@/utils/format-number';
-import { format, getCryptoIconUrl } from '@normalfinance/utils';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -30,7 +29,6 @@ export interface SendReviewProps {
   tokenValue: number;
   fiatValue: number;
   address: string;
-  networkCost: number;
 }
 
 const SendReview: React.FC<SendReviewProps> = ({
@@ -40,7 +38,6 @@ const SendReview: React.FC<SendReviewProps> = ({
   tokenValue,
   fiatValue,
   address,
-  networkCost,
 }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
@@ -226,56 +223,12 @@ const SendReview: React.FC<SendReviewProps> = ({
               }}
             >
               <Box>
-                <Typography variant="h4">{format.shortenAddress(address)}</Typography>
+                <Typography variant="body2">{address}</Typography>
               </Box>
             </Box>
           </Box>
 
           <Box sx={{ width: '100%', height: '1px', bgcolor: theme.palette.text.disabled }} />
-          <Box
-            sx={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: 1,
-            }}
-          >
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 1,
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 500,
-                  color: theme.palette.text.secondary,
-                  fontSize: '12px',
-                }}
-              >
-                {t('Network cost')}
-              </Typography>
-              <Iconify
-                icon="solar:info-circle-bold"
-                width={14}
-                sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-              />
-            </Box>
-
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 500,
-                color: theme.palette.text.primary,
-                fontSize: '12px',
-              }}
-            >
-              {fCurrencyTwoDecimals(networkCost)}
-            </Typography>
-          </Box>
         </Box>
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>

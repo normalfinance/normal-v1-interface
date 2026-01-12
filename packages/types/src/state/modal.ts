@@ -1,8 +1,15 @@
+export enum ModalType {
+  ON_RAMP = 'ON_RAMP',
+  OFF_RAMP = 'OFF_RAMP',
+
+  DEPOSIT_CRYPTO = 'DEPOSIT_CRYPTO',
+
+  // Liquidity management
+  ADD_LIQUIDITY = 'ADD_LIQUIDITY',
+  REMOVE_LIQUIDITY = 'REMOVE_LIQUIDITY',
+}
+
 export interface ModalActions {
-  modalState: {
-    receive: boolean;
-    disclaimer: boolean;
-    addLiquidity: boolean;
-  };
-  setModalView: (modal: string, showing: boolean) => void;
+  modalState: Record<ModalType, boolean>;
+  setModalView: (modal: ModalType, showing: boolean) => void;
 }

@@ -29,7 +29,7 @@ export const NormalNavbarDefaults: Props = {
                   alt: 'Explore',
                 },
                 title: 'Explore',
-                description: 'Browse global assets.',
+                description: 'Browse supported assets.',
               },
               {
                 url: paths.invest,
@@ -38,7 +38,7 @@ export const NormalNavbarDefaults: Props = {
                   alt: 'Invest',
                 },
                 title: 'Invest',
-                description: 'Trade global assets instantly.',
+                description: 'Trade assets instantly.',
               },
             ],
           },
@@ -66,10 +66,10 @@ export const NormalNavbarDefaults: Props = {
                 url: paths.earn,
                 image: {
                   src: cdn('nav/provide-liquidity.svg'),
-                  alt: 'Provide liquidity',
+                  alt: 'Dividends',
                 },
-                title: 'Provide liquidity',
-                description: 'Manage LP positions & earn yield',
+                title: 'Dividends',
+                description: 'Earn 7%+ APY on your portfolio',
               },
               {
                 url: paths.rewards,

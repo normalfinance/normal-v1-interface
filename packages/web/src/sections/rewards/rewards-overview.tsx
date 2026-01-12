@@ -31,15 +31,10 @@ export interface Referral {
 
 export interface RewardsOverviewProps {
   referralsCount: number;
-  protocolPoints: number;
   referrals: Referral[];
 }
 
-export function RewardsOverview({
-  referralsCount,
-  protocolPoints,
-  referrals,
-}: RewardsOverviewProps) {
+export function RewardsOverview({ referralsCount, referrals }: RewardsOverviewProps) {
   const { t } = useTranslate();
   const walletAddress = usePersistStore((s) => s.wallet.address);
 
@@ -256,10 +251,7 @@ export function RewardsOverview({
         </Grid2>
         <Grid2 size={{ xs: 12, md: 8 }}>
           <Grid2 container spacing={3}>
-            {[
-              { label: t('Referrals'), value: referralsCount },
-              { label: t('Protocol Points'), value: protocolPoints },
-            ].map((stat) => (
+            {[{ label: t('Referrals'), value: referralsCount }].map((stat) => (
               <Grid2 size={{ xs: 12, md: 4 }} key={stat.label}>
                 <Paper
                   variant="outlined"

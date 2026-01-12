@@ -77,13 +77,11 @@ export default function AmountDialog({
   };
 
   const isWithdraw = kind === 'withdraw';
-  const title = isWithdraw
-    ? t('Sell {{token}} with MoneyGram', { token: tokenLabel })
-    : t('Buy {{token}} with MoneyGram', { token: tokenLabel });
+  const title = isWithdraw ? t('Withdraw cash with MoneyGram') : t('Deposit cash with MoneyGram');
 
   const subtitle = isWithdraw
-    ? t('Enter how much {{token}} you’d like to cash out.', { token: tokenLabel })
-    : t('Enter how much {{token}} you’d like to purchase.', { token: tokenLabel });
+    ? t('Enter how much you’d like to cash out.')
+    : t('Enter how much cash you’d like to deposit.');
 
   return (
     <Dialog
@@ -105,7 +103,7 @@ export default function AmountDialog({
         }}
       >
         <Avatar sx={{ width: 56, height: 56, bgcolor: 'transparent', mb: 1 }}>
-          <Image src={cdn('/tokens/usdc.webp')} alt={t(tokenLabel)} width={48} height={48} />
+          <Image src={cdn('/tokens/USDC.webp')} alt={t(tokenLabel)} width={48} height={48} />
         </Avatar>
         {title}
       </DialogTitle>
@@ -139,7 +137,7 @@ export default function AmountDialog({
                     }}
                   >
                     <Image
-                      src={cdn('/tokens/usdc.webp')}
+                      src={cdn('/tokens/USDC.webp')}
                       alt={t(tokenLabel)}
                       width={20}
                       height={20}

@@ -1,9 +1,9 @@
 import type { CardProps } from '@mui/material/Card';
 
-import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
-import { fCurrency } from '@/utils/format-number';
+import { ModalType } from '@normalfinance/types';
 import { useAppStore } from '@normalfinance/state';
+import { fCurrency, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -15,25 +15,23 @@ import { WalletGate } from '@/components/_common/wallet-gate';
 // Define a type for each balance row
 export type BalanceRow = {
   label: string;
-  value: number;
-  formatter?: (value: number) => string;
+  value: string;
+  formatter?: (value: string) => string;
 };
 
 type Props = CardProps & {
   title: string;
-  averageYieldPercent: number;
-  liquidityProvided: number;
-  currentBalance: number;
-  queryParams?: any; // EarnQueryParams;
+  totalBalance: string;
+  collateralProvided: string;
+  liquidityProvided: string;
 };
 
 export function BalanceCard({
   sx,
   title,
-  averageYieldPercent,
+  totalBalance,
+  collateralProvided,
   liquidityProvided,
-  currentBalance,
-  queryParams,
   ...other
 }: Props) {
   const { t } = useTranslate();
@@ -41,15 +39,8 @@ export function BalanceCard({
 
   const { setModalView } = useAppStore();
 
-  // Automatically open dialog if query parameters are present
-  useEffect(() => {
-    if (queryParams?.amount) {
-      setModalView('addLiquidity', true);
-    }
-  }, [queryParams?.amount]);
-
   // Helper function to render a single row.
-  const row = (label: string, value: number, formatter: (value: number) => string = fCurrency) => (
+  const row = (label: string, value: string, formatter: (value: string) => string = fCurrency) => (
     <Box
       sx={{
         display: 'flex',
@@ -64,17 +55,14 @@ export function BalanceCard({
       <Box component="span" sx={{ color: 'text.secondary' }}>
         {t(label)}
       </Box>
-      <Box component="span">
-        {formatter(value)} {label === 'Staked' && 'XLM'}
-      </Box>
+      <Box component="span">{formatter(value)}</Box>
     </Box>
   );
 
   // Define default rows if none are provided via props.
   const defaultRows: BalanceRow[] = [
-    { label: 'Avg. APY', value: averageYieldPercent, formatter: fCurrency },
-    { label: 'Liquidity', value: liquidityProvided, formatter: fCurrency },
-    { label: 'Staked', value: 0, formatter: fCurrency },
+    { label: 'Collateral', value: collateralProvided, formatter: fCurrencyTwoDecimals },
+    { label: 'Liquidity', value: liquidityProvided, formatter: fCurrencyTwoDecimals },
   ];
 
   const rowsToRender = defaultRows;
@@ -86,12 +74,12 @@ export function BalanceCard({
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
       {...other}
-      data-testid="stake-balance-card"
+      data-testid="earn-balance-card"
     >
       <Box sx={{ mb: 2, typography: 'h5', fontSize: 20 }}>{title}</Box>
 
       <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ typography: 'h3' }}>{fCurrency(currentBalance)}</Box>
+        <Box sx={{ typography: 'h3' }}>{fCurrency(totalBalance)}</Box>
         {rowsToRender.map((r, i) => (
           <Box key={i}>{row(r.label, r.value, r.formatter)}</Box>
         ))}
@@ -100,21 +88,22 @@ export function BalanceCard({
           <WalletGate buttonText={t('Login to manage your Earn account')} fullWidth>
             <Button
               fullWidth
-              variant="contained"
-              color="secondary"
-              onClick={() => setModalView('addLiquidity', true)}
+              variant="soft"
+              color="success"
+              onClick={() => setModalView(ModalType.ADD_LIQUIDITY, true)}
               data-testid="add-liquidity-button"
             >
               {t('Deposit')}
             </Button>
+
             <Button
               fullWidth
-              variant="contained"
-              color="secondary"
-              // onClick={manageStake.onTrue}
-              data-testid="manage-stake-button"
+              variant="soft"
+              color="error"
+              onClick={() => setModalView(ModalType.REMOVE_LIQUIDITY, true)}
+              data-testid="remove-liquidity-button"
             >
-              {t('Stake (coming soon)')}
+              {t('Withdraw')}
             </Button>
           </WalletGate>
         </Box>

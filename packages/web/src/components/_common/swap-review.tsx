@@ -27,7 +27,7 @@ export interface SwapReviewProps {
   onClose: () => void;
   tradeDirection: 'buy' | 'sell';
   selectedToken?: Token;
-  amount: string;
+  fiatAmount: string;
   feePercentage: number;
   sellFiatValue: number;
   onSubmit: () => void;
@@ -38,7 +38,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
   onClose,
   tradeDirection,
   selectedToken,
-  amount,
+  fiatAmount,
   feePercentage,
   sellFiatValue,
   onSubmit,
@@ -101,8 +101,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {amount} {t('USD worth of')} {selectedToken?.symbol}
-                  {/* sellAmount */}
+                  {fiatAmount} {t('USD worth of')} {selectedToken?.symbol}
                 </Typography>
                 <Typography
                   variant="body1"

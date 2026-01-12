@@ -13,6 +13,17 @@ const { version } = JSON.parse(packageJson);
 const isStaticExport = 'false';
 
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'cdn.normalapi.com',
+        port: '',
+        pathname: '/**',
+        search: '',
+      },
+    ],
+  },
   trailingSlash: true,
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,

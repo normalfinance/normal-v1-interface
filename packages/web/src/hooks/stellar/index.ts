@@ -9,5 +9,4 @@ export * from './use-index-funds';
 export * from './use-manage-liquidity';
 // export * from './use-treasury-balances';
 export * from './use-index-fund-factory';
-export * from './use-liquidity-positions';
 export * from './use-contract-transaction';
