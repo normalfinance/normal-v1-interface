@@ -148,14 +148,7 @@ export function PoolOverview({
             variant="soft"
             color="success"
           >
-            <Button
-              fullWidth
-              variant="soft"
-              color="success"
-              size="large"
-              onClick={btn.onClick}
-              href={btn.href}
-            >
+            <Button fullWidth variant="soft" color="success" size="large" onClick={btn.onClick}>
               <Box
                 sx={{
                   display: 'flex',
