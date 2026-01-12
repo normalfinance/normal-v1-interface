@@ -75,14 +75,9 @@ export function PoolOverview({
 
   const actionButtons = [
     {
-      label: 'Swap',
+      label: 'Trade',
       icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => setShowSwap((prev) => !prev),
-    },
-    {
-      label: 'Add liquidity',
-      icon: 'mingcute:add-line',
-      href: '/positions/create',
     },
   ];
 

@@ -102,7 +102,7 @@ export function useTrade(): ReturnType {
   const buyLong = async (args: BuyLongArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['buy_long']>[0] = {
       user: storePersist.wallet.address!,
@@ -145,7 +145,7 @@ export function useTrade(): ReturnType {
   const sellLong = async (args: SellLongArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['sell_long']>[0] = {
       user: storePersist.wallet.address!,
@@ -188,7 +188,7 @@ export function useTrade(): ReturnType {
   const buyShort = async (args: BuyShortArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['buy_short']>[0] = {
       user: storePersist.wallet.address!,
@@ -231,7 +231,7 @@ export function useTrade(): ReturnType {
   const sellShort = async (args: SellShortArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['sell_short']>[0] = {
       user: storePersist.wallet.address!,
@@ -274,7 +274,7 @@ export function useTrade(): ReturnType {
   const mintAndSellShort = async (args: MintAndSellShortArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['mint_and_sell_short']>[0] = {
       user: storePersist.wallet.address!,
@@ -316,7 +316,7 @@ export function useTrade(): ReturnType {
   const mintAndSellLong = async (args: MintAndSellLongArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['mint_and_sell_long']>[0] = {
       user: storePersist.wallet.address!,
@@ -358,7 +358,7 @@ export function useTrade(): ReturnType {
   const buyLongAndRedeem = async (args: BuyLongAndRedeemArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['buy_long_and_redeem']>[0] = {
       user: storePersist.wallet.address!,
@@ -400,7 +400,7 @@ export function useTrade(): ReturnType {
   const buyShortAndRedeem = async (args: BuyShortAndRedeemArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['buy_short_and_redeem']>[0] = {
       user: storePersist.wallet.address!,

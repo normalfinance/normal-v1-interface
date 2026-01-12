@@ -152,7 +152,7 @@ export function usePair(pairAddress: string): ReturnType {
   const mintPair = async (args: MintPairArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs = {
       user: storePersist.wallet.address!,
@@ -194,7 +194,7 @@ export function usePair(pairAddress: string): ReturnType {
   const redeemPair = async (args: RedeemPairArgs) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs = {
       user: storePersist.wallet.address!,

@@ -4,9 +4,9 @@
     "message": "Service temporarily unavailable for maintenance. Please try again later."
   },
   "features": {
-    "pools": true,
+    "pairs": true,
     "tokens": true,
-    "swap": true,
+    "trade": true,
     "liquidity": true,
     "staking": true,
     "oracle": true,
@@ -22,7 +22,7 @@
       "cacheControl": "public, max-age=3600",
       "additionalHeaders": {}
     },
-    "pools": {
+    "pairs": {
       "enabled": true,
       "timeout": 30000,
       "rateLimitOverride": null,
@@ -63,7 +63,7 @@
       "rateLimitOverride": null,
       "additionalHeaders": {}
     },
-    "swap": {
+    "trade": {
       "enabled": true,
       "timeout": 30000,
       "slippageTolerance": 0.01,
@@ -110,7 +110,7 @@
     }
   },
   "rateLimit": {
-    "pools": {
+    "pairs": {
       "requests": 100,
       "windowMs": 60000
     },
@@ -134,7 +134,7 @@
       "requests": 50,
       "windowMs": 60000
     },
-    "swap": {
+    "trade": {
       "requests": 100,
       "windowMs": 60000
     },

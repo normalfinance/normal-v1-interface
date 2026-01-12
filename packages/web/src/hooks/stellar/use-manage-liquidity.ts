@@ -210,16 +210,14 @@ export function useManageLiquidity(): ReturnType {
   const deposit = async (pairAddress: string, amount: number) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const precisionAmount = BigInt((amount * 10 ** 7).toFixed(0));
 
     const processedArgs: Parameters<TreasuryContract.Client['deposit']>[0] = {
       user: wallet.address!,
       pair: pairAddress,
-      amt_long: precisionAmount,
-      amt_short: precisionAmount,
-      amt_usdc: precisionAmount,
+      pairs_to_deposit: precisionAmount,
     };
 
     await executeContractTransaction({
@@ -256,15 +254,12 @@ export function useManageLiquidity(): ReturnType {
   const withdraw = async (pairAddress: string, shares: number) => {
     setLoading(true);
 
-    // await rateLimitCheck();
+    await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['withdraw']>[0] = {
       user: wallet.address!,
       pair: pairAddress,
       shares: BigInt((shares * 10 ** 7).toFixed(0)),
-      min_long: 0,
-      min_short: 0,
-      min_usdc: 0,
     };
 
     await executeContractTransaction({
