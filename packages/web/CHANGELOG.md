@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.6...v1.3.0) (2026-01-12)
+
+
+### Features
+
+* updated contracts, bindings, and UI components ([c335ae1](https://github.com/normalfinance/normal-v1-interface/commit/c335ae1d4d6dc4fd91e479bd966438ec80861adc))
+
 ## [1.2.6](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.5...v1.2.6) (2026-01-09)
 
 
