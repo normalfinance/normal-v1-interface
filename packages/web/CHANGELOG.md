@@ -1,3 +1,17 @@
+# [1.3.0](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.6...v1.3.0) (2026-01-12)
+
+
+### Bug Fixes
+
+* remove action button bug ([5a97f15](https://github.com/normalfinance/normal-v1-interface/commit/5a97f15c0a64d1f47393f33f81fa8dcad21d71d7))
+* update bindings and rate limit paths ([0f690ee](https://github.com/normalfinance/normal-v1-interface/commit/0f690eef7b3a5ee4e7bf85aa6b692ed8070f65de))
+
+
+### Features
+
+* updated contracts, bindings, and UI components ([c335ae1](https://github.com/normalfinance/normal-v1-interface/commit/c335ae1d4d6dc4fd91e479bd966438ec80861adc))
+* **ux:** navbar ([2de0d5f](https://github.com/normalfinance/normal-v1-interface/commit/2de0d5f1681d3b6d33a17d82540c231ef4f2cc71))
+
 ## [1.2.6](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.5...v1.2.6) (2026-01-09)
 
 
