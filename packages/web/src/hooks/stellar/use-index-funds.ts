@@ -3,12 +3,15 @@
 import type { IndexFundContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
-// import { captureException } from '@sentry/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import {
   IndexFundFactoryContract,
   IndexFundContract as IndexFundContractClient,
 } from '@normalfinance/contracts';
+
+import type { AppError } from '@/utils/errors';
+
+import { handleHookError } from '@/utils/errors';
 
 // ----------------------------------------------------------------------
 
@@ -19,20 +22,23 @@ export interface IndexListItem {
 }
 
 interface ReturnType {
-  error: any | null;
+  error: AppError | null;
   loading: boolean;
   indexes: IndexListItem[];
   totalCount: number;
   fetchIndexes: () => void;
+  clearError: () => void;
 }
 
 // ----------------------------------------------------------------------
 
 export function useIndexFunds(): ReturnType {
-  const [error, setError] = useState<any | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
   const [loading, setLoading] = useState(true);
   const [indexes, setIndexes] = useState<IndexListItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+
+  const clearError = useCallback(() => setError(null), []);
 
   const fetchIndexes = useCallback(async () => {
     try {
@@ -90,9 +96,8 @@ export function useIndexFunds(): ReturnType {
         const validIndexes = results.filter((item): item is IndexListItem => item !== null);
         setIndexes(validIndexes);
       }
-    } catch (e: any) {
-      // captureException(e);
-      setError(e);
+    } catch (e) {
+      handleHookError(e, 'useIndexFunds', setError);
     } finally {
       setLoading(false);
     }
@@ -109,5 +114,6 @@ export function useIndexFunds(): ReturnType {
     indexes,
     totalCount,
     fetchIndexes,
+    clearError,
   };
 }

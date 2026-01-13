@@ -9,6 +9,7 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box, Grid2, Stack, Typography } from '@mui/material';
 
+import { InlineError } from '@/components/_common/errors';
 import MintRedeemCard from '@/components/_common/mint-redeem-card';
 import { BalanceCard } from '@/components/_earn-page-components/balance-card';
 import { PositionsTable } from '@/components/_earn-page-components/positions-table';
@@ -20,7 +21,7 @@ export default function EarnView() {
 
   // const { params } = useQueryParams<DepositLiquidityQueryParams>();
 
-  const { loading, liquidityPositions, totalValue } = useManageLiquidity();
+  const { loading, liquidityPositions, totalValue, error, clearError } = useManageLiquidity();
 
   const { setGlobalIsLoading } = useAppStore();
 
@@ -55,6 +56,8 @@ export default function EarnView() {
             )}
           </Typography>
         </Stack>
+
+        <InlineError error={error} onClose={clearError} sx={{ mt: 3 }} />
 
         <Grid2 container spacing={3} sx={{ mt: 3 }}>
           <Grid2 size={{ xs: 12, md: 4 }}>

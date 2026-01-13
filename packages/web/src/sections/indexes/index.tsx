@@ -25,8 +25,10 @@ import {
   TableHead,
   Typography,
   TableContainer,
-  CircularProgress,
 } from '@mui/material';
+
+import { ContentSkeleton } from '@/components/_common/loading';
+import { SectionError } from '@/components/_common/errors';
 
 export default function IndexesView() {
   const { t } = useTranslate();
@@ -121,13 +123,9 @@ export default function IndexesView() {
               }}
             >
               {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                  <CircularProgress />
-                </Box>
+                <ContentSkeleton variant="table-row" count={5} sx={{ p: 2 }} />
               ) : error ? (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <Typography color="error">{t('Error loading index funds')}</Typography>
-                </Box>
+                <SectionError error={error} onRetry={fetchIndexes} />
               ) : indexes.length === 0 ? (
                 <Box sx={{ p: 4, textAlign: 'center' }}>
                   <Typography color="text.secondary">{t('No index funds found')}</Typography>
