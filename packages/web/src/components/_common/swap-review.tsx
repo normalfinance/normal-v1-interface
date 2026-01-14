@@ -31,6 +31,7 @@ export interface SwapReviewProps {
   feePercentage: number;
   sellFiatValue: number;
   onSubmit: () => void;
+  error?: string | null;
 }
 
 const SwapReview: React.FC<SwapReviewProps> = ({
@@ -42,6 +43,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
   feePercentage,
   sellFiatValue,
   onSubmit,
+  error,
 }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
@@ -278,6 +280,24 @@ const SwapReview: React.FC<SwapReviewProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
+          {error && (
+            <Box
+              sx={{
+                mb: 2,
+                p: 1.5,
+                borderRadius: '12px',
+                backgroundColor: `${theme.palette.error.main}15`,
+                border: `1px solid ${theme.palette.error.main}30`,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{ color: theme.palette.error.main, textAlign: 'center' }}
+              >
+                {error}
+              </Typography>
+            </Box>
+          )}
           <Button
             fullWidth
             variant="contained"

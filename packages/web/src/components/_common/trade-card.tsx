@@ -519,90 +519,99 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
   // New: settleTrade function for use in onSubmit (simplified - no trustline creation)
   const settleTrade = async (): Promise<void> => {
-    if (selectedToken && usdcToken && pair) {
-      try {
-        const allowed = await checkIfTradeAllowed();
-        if (!allowed) {
-          return;
-        }
+    // Validate required data before proceeding
+    if (!selectedToken || !usdcToken || !pair) {
+      const errorMsg = !selectedToken
+        ? 'No token selected'
+        : !usdcToken
+          ? 'USDC token not available'
+          : 'Trading pair not found for this token';
+      setSwapError(errorMsg);
+      throw new Error(errorMsg);
+    }
 
-        // Now call the client-side onSwap (sign and submit)
-        const isLong = selectedToken.contract === pair.tokens.long;
-        const enoughLiquidity = false; // TODO:
+    try {
+      const allowed = await checkIfTradeAllowed();
+      if (!allowed) {
+        return;
+      }
 
-        if (tradeDirection === 'buy') {
-          const usdcAmount = BigNumber(fiatAmount).dividedBy(usdcToken.price);
+      // Now call the client-side onSwap (sign and submit)
+      const isLong = selectedToken.contract === pair.tokens.long;
+      const enoughLiquidity = false; // TODO:
 
-          if (isLong) {
-            if (enoughLiquidity) {
-              await buyLong({
-                pair: pair.pairAddress,
-                usdc_in: Number(usdcAmount),
-                min_long_out: 0,
-              });
-            } else {
-              await mintAndSellShort({
-                pair: pair.pairAddress,
-                usdc_in: Number(usdcAmount),
-              });
-            }
+      if (tradeDirection === 'buy') {
+        const usdcAmount = BigNumber(fiatAmount).dividedBy(usdcToken.price);
+
+        if (isLong) {
+          if (enoughLiquidity) {
+            await buyLong({
+              pair: pair.pairAddress,
+              usdc_in: Number(usdcAmount),
+              min_long_out: 0,
+            });
           } else {
-            if (enoughLiquidity) {
-              await buyShort({
-                pair: pair.pairAddress,
-                usdc_in: Number(usdcAmount),
-                min_short_out: 0,
-              });
-            } else {
-              await mintAndSellLong({
-                pair: pair.pairAddress,
-                usdc_in: Number(usdcAmount),
-              });
-            }
+            await mintAndSellShort({
+              pair: pair.pairAddress,
+              usdc_in: Number(usdcAmount),
+            });
           }
         } else {
-          if (isLong) {
-            const longToken = tokensByAddress[pair.tokens.long];
-            const longAmount = BigNumber(fiatAmount).dividedBy(longToken.price);
-
-            if (enoughLiquidity) {
-              await sellLong({
-                pair: pair.pairAddress,
-                long_in: Number(longAmount),
-                min_usdc_out: 0,
-              });
-            } else {
-              await buyShortAndRedeem({
-                pair: pair.pairAddress,
-                long_in: Number(longAmount),
-              });
-            }
+          if (enoughLiquidity) {
+            await buyShort({
+              pair: pair.pairAddress,
+              usdc_in: Number(usdcAmount),
+              min_short_out: 0,
+            });
           } else {
-            const shortToken = tokensByAddress[pair.tokens.short];
-            const shortAmount = BigNumber(fiatAmount).dividedBy(shortToken.price);
-
-            if (enoughLiquidity) {
-              await sellShort({
-                pair: pair.pairAddress,
-                short_in: Number(shortAmount),
-                min_usdc_out: 0,
-              });
-            } else {
-              await buyLongAndRedeem({
-                pair: pair.pairAddress,
-                short_in: Number(shortAmount),
-              });
-            }
+            await mintAndSellLong({
+              pair: pair.pairAddress,
+              usdc_in: Number(usdcAmount),
+            });
           }
         }
+      } else {
+        if (isLong) {
+          const longToken = tokensByAddress[pair.tokens.long];
+          const longAmount = BigNumber(fiatAmount).dividedBy(longToken.price);
 
-        setTimeout(async () => {
-          await updateTokenInfo(selectedToken);
-          await updateTokenInfo(usdcToken);
-        }, 5000);
-      } catch (error) {
-        setSwapError('Error during trade');
+          if (enoughLiquidity) {
+            await sellLong({
+              pair: pair.pairAddress,
+              long_in: Number(longAmount),
+              min_usdc_out: 0,
+            });
+          } else {
+            await buyShortAndRedeem({
+              pair: pair.pairAddress,
+              long_in: Number(longAmount),
+            });
+          }
+        } else {
+          const shortToken = tokensByAddress[pair.tokens.short];
+          const shortAmount = BigNumber(fiatAmount).dividedBy(shortToken.price);
+
+          if (enoughLiquidity) {
+            await sellShort({
+              pair: pair.pairAddress,
+              short_in: Number(shortAmount),
+              min_usdc_out: 0,
+            });
+          } else {
+            await buyLongAndRedeem({
+              pair: pair.pairAddress,
+              short_in: Number(shortAmount),
+            });
+          }
+        }
       }
+
+      setTimeout(async () => {
+        await updateTokenInfo(selectedToken);
+        await updateTokenInfo(usdcToken);
+      }, 5000);
+    } catch (error) {
+      setSwapError('Error during trade');
     }
   };
 
@@ -945,6 +954,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
           feePercentage={30}
           sellFiatValue={fiatAmountVal}
           onSubmit={() => settleTrade()}
+          error={swapError}
         />
       )}
 
