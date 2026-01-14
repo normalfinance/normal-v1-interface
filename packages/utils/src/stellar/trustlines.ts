@@ -51,7 +51,17 @@ export async function checkTrustline(publicKey: string, assetCode: string, asset
   // Check trustlines
   const balances = account.balances;
 
-  // Check if trustline exists
+  // Handle native XLM - no trustline needed, always "exists" if account is funded
+  const isNativeAsset = assetCode === 'XLM' && (!assetIssuer || assetIssuer === '');
+  if (isNativeAsset) {
+    const nativeBalance = balances.find((a) => a.asset_type === 'native');
+    return {
+      exists: !!nativeBalance,
+      asset: Asset.native(),
+    };
+  }
+
+  // Check if trustline exists for non-native assets
   const trustlineExists = balances.some((a) => {
     const hasIssuer = 'asset_issuer' in a;
     const hasCode = 'asset_code' in a;
