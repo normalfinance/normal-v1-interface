@@ -154,7 +154,7 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
         await addTrustLine(selectedToken.symbol, constants.StellarConfig.NORMAL_ISSUER);
       }
       if (trustlineState.short.needs) {
-        await addTrustLine(`${selectedToken.symbol}SHORT`, constants.StellarConfig.NORMAL_ISSUER);
+        await addTrustLine(`s${selectedToken.symbol}`, constants.StellarConfig.NORMAL_ISSUER);
       }
 
       // After successful trustline creation, check status again
@@ -245,7 +245,7 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
       );
       const shortTrustlineStatus = await checkTrustline(
         walletAddress,
-        `${selectedToken.symbol}SHORT`,
+        `s${selectedToken.symbol}`,
         constants.StellarConfig.NORMAL_ISSUER
       );
       const usdcTrustlineStatus = await checkTrustline(

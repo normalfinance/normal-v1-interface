@@ -909,7 +909,9 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
       {/* Additional box with info */}
       {!loading && (
         <InfoAccordion
-          highlights={[getConversionText(usdcToken!, selectedToken!)]}
+          highlights={
+            usdcToken && selectedToken ? [getConversionText(usdcToken, selectedToken)] : []
+          }
           alerts={getInfoAccordionAlerts()}
           rows={[
             {
