@@ -39,6 +39,7 @@ import { WalletGate } from './wallet-gate';
 import InfoAccordion from './info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
+import { useSnackbar } from '@/components/template/snackbar';
 
 import type { InfoAccordionAlert } from './info-accordion';
 
@@ -68,6 +69,7 @@ interface TradeCardProps extends CardProps {
 const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
+  const { enqueueSnackbar } = useSnackbar();
 
   const router = useRouter();
 
@@ -478,6 +480,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
       // After successful trustline creation, check status again
       await checkTrustlineStatus();
+      enqueueSnackbar(t('Asset enabled successfully!'), { variant: 'success' });
     } catch (error) {
       setSwapError('Failed to enable asset(s)');
     } finally {
