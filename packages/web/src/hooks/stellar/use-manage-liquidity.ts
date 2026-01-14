@@ -21,15 +21,15 @@ export type LiquidityPosition = {
   userSharePercentage: BigNumber;
 
   balances: {
-    tokenLong: BigNumber;
-    tokenShort: BigNumber;
-    tokenUSDC: BigNumber;
+    long: BigNumber;
+    short: BigNumber;
+    usdc: BigNumber;
     reward: BigNumber;
   };
   usdValues: {
-    tokenLong: string;
-    tokenShort: string;
-    tokenUSDC: string;
+    long: string;
+    short: string;
+    usdc: string;
     reward: BigNumber;
   };
 };
@@ -115,18 +115,18 @@ export function useManageLiquidity(): ReturnType {
       return undefined;
     }
 
-    const userPairSummaryResponse = await TreasuryClient.get_user_with_pair_summary({
+    const summaryResponse = await TreasuryClient.get_user_with_summary({
       pair: pair.pairAddress,
       user: wallet.address,
     });
 
-    if (userPairSummaryResponse && userPairSummaryResponse.result) {
-      const { pair_summary, user_shares } =
-        userPairSummaryResponse.result as TreasuryContract.TreasuryUserPairSummary;
+    if (summaryResponse && summaryResponse.result) {
+      const { summary, user_shares } =
+        summaryResponse.result as TreasuryContract.TreasuryUserSummary;
 
       // Shares info
       const userShares = BigNumber(format.fTokenAmount(user_shares, 7));
-      const totalShares = BigNumber(format.fTokenAmount(pair_summary.total_shares, 7));
+      const totalShares = BigNumber(format.fTokenAmount(summary.total_shares, 7));
       const userSharePercentage = userShares.dividedBy(totalShares);
 
       const tokenLong = tokensByAddress[pair.tokens.long];
@@ -143,24 +143,15 @@ export function useManageLiquidity(): ReturnType {
         userSharePercentage,
 
         balances: {
-          tokenLong: pair_summary.balances.token_long,
-          tokenShort: pair_summary.balances.token_short,
-          tokenUSDC: pair_summary.balances.token_quote,
+          long: summary.balances.long,
+          short: summary.balances.short,
+          usdc: summary.balances.usdc,
           reward: claimableReward,
         },
         usdValues: {
-          tokenLong: convertCoinToFiat(
-            pair_summary.balances.token_long,
-            BigNumber(tokenLong.price)
-          ),
-          tokenShort: convertCoinToFiat(
-            pair_summary.balances.token_short,
-            BigNumber(tokenShort.price)
-          ),
-          tokenUSDC: convertCoinToFiat(
-            pair_summary.balances.token_quote,
-            BigNumber(tokenUSDC.price)
-          ),
+          long: convertCoinToFiat(summary.balances.long, BigNumber(tokenLong.price)),
+          short: convertCoinToFiat(summary.balances.short, BigNumber(tokenShort.price)),
+          usdc: convertCoinToFiat(summary.balances.usdc, BigNumber(tokenUSDC.price)),
           reward: claimableReward,
         },
       };
@@ -190,9 +181,9 @@ export function useManageLiquidity(): ReturnType {
 
         // Total value
         const total = liquidityPositionsFiltered.reduce((acc, pos) => {
-          const totalPositionValue = BigNumber(pos.usdValues.tokenLong)
-            .plus(pos.usdValues.tokenShort)
-            .plus(pos.usdValues.tokenUSDC);
+          const totalPositionValue = BigNumber(pos.usdValues.long)
+            .plus(pos.usdValues.short)
+            .plus(pos.usdValues.usdc);
 
           return acc.plus(totalPositionValue);
         }, BigNumber(0));

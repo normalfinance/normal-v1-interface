@@ -331,7 +331,7 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
       );
       // FIXME: USDC does NOT have to strictly be equal to the amount here
       const sufficientQuote = BigNumber(
-        tokensByAddress[selectedPair.collateral.collateralToken].balance
+        tokensByAddress[selectedPair.tokens.collateral].balance
       ).gte(amountVal);
 
       setInsufficientBalance(sufficientLong && sufficientShort && sufficientQuote);

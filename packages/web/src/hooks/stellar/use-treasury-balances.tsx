@@ -5,14 +5,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { format, constants } from '@normalfinance/utils';
 import { TreasuryContract } from '@normalfinance/contracts';
 
+import type { TreasuryBalances } from './use-treasury';
+
 // ----------------------------------------------------------------------
-
-export type TreasuryBalances = {
-  long: BigNumber;
-  short: BigNumber;
-  quote: BigNumber;
-};
-
 interface ReturnType {
   error: any | null;
   loading: boolean;
@@ -43,12 +38,12 @@ export function useTreasuryBalances(pairAddress: string): ReturnType {
       });
 
       if (balancesResponse && balancesResponse.result) {
-        const balances = balancesResponse.result as TreasuryContract.TreasuryPairBalances;
+        const balances = balancesResponse.result as TreasuryContract.PairAmountsWithUSDC;
 
         const newTreasuryBalances: TreasuryBalances = {
-          long: BigNumber(format.fTokenAmount(balances.token_long, 7)),
-          short: BigNumber(format.fTokenAmount(balances.token_short, 7)),
-          quote: BigNumber(format.fTokenAmount(balances.token_quote, 7)),
+          long: BigNumber(format.fTokenAmount(balances.long, 7)),
+          short: BigNumber(format.fTokenAmount(balances.short, 7)),
+          usdc: BigNumber(format.fTokenAmount(balances.usdc, 7)),
         };
 
         setTreasuryBalances(newTreasuryBalances);

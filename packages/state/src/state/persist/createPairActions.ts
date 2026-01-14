@@ -11,45 +11,41 @@ async function getPairDetails(pairAddress: string) {
     rpcUrl: constants.StellarConfig.RPC_URL,
   });
 
-  const pairSummaryResponse = await PairClient.get_pair_summary();
+  const summaryResponse = await PairClient.get_summary();
 
-  if (!pairSummaryResponse || !pairSummaryResponse.result) return;
+  if (!summaryResponse || !summaryResponse.result) return;
 
-  let pairSummary = pairSummaryResponse.result as LongShortPairContract.PairSummary;
+  let summary = summaryResponse.result as LongShortPairContract.PairSummary;
 
   // Compute scaled price
-  let lowerPriceBound = pairSummary.price_bounds[0];
-  let upperPriceBound = pairSummary.price_bounds[1];
+  const priceBoundaryDelta = BigNumber(summary.price_bounds.upper).minus(
+    summary.price_bounds.lower
+  );
 
-  const priceBoundaryDelta = BigNumber(upperPriceBound).minus(lowerPriceBound);
-  const scaledPrice = BigNumber(pairSummary.collateral.collateral_percent_long)
+  const scaledPrice = BigNumber(summary.collateral.collateral_percent_long)
     .multipliedBy(priceBoundaryDelta)
-    .plus(lowerPriceBound);
+    .plus(summary.price_bounds.lower);
 
   const pairDetails: Pair = {
     pairAddress,
-    asset: pairSummary.asset,
-    status: pairSummary.status,
-    tokens: {
-      long: pairSummary.long_token,
-      short: pairSummary.short_token,
-    },
+    asset: summary.asset,
+    status: summary.status,
+    tokens: summary.tokens,
     collateral: {
-      collateralToken: pairSummary.collateral.collateral_token,
       collateralPerPair: BigNumber(
-        format.fTokenAmount(pairSummary.collateral.collateral_per_pair, 7)
+        format.fTokenAmount(summary.collateral.collateral_per_pair, 7)
       ).toString(),
       collateralPercentLong: BigNumber(
-        format.fTokenAmount(pairSummary.collateral.collateral_percent_long, 7)
+        format.fTokenAmount(summary.collateral.collateral_percent_long, 7)
       ).toString(),
       totalCollateral: BigNumber(
-        format.fTokenAmount(pairSummary.collateral.total_collateral, 7)
+        format.fTokenAmount(summary.collateral.total_collateral, 7)
       ).toString(),
     },
     scaledPrice: format.fTokenAmount(scaledPrice, 14).toString(),
     priceBounds: {
-      lower: BigNumber(format.fTokenAmount(lowerPriceBound, 7)).toString(),
-      upper: BigNumber(format.fTokenAmount(upperPriceBound, 7)).toString(),
+      lower: BigNumber(format.fTokenAmount(summary.price_bounds.lower, 7)).toString(),
+      upper: BigNumber(format.fTokenAmount(summary.price_bounds.upper, 7)).toString(),
     },
     client: PairClient,
   };
