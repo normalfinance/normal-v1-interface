@@ -12,6 +12,7 @@ import { TokenAmountButtonState as ButtonState } from '@normalfinance/types';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import {
   constants,
+  isLongToken,
   checkTrustline,
   getCryptoIconUrl,
   sanitizeAmountInput,
@@ -77,11 +78,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
   const [trustlineState, setTrustlineState] =
     useState<MintRedeemCardTrustlineState>(initialTrustlineState);
 
-  const filteredTokens = tokens.filter(
-    (tkn) =>
-      tkn.issuer === constants.StellarConfig.NORMAL_ISSUER &&
-      !tkn.name.toUpperCase().includes('SHORT')
-  );
+  const filteredTokens = tokens.filter((tkn) => isLongToken(tkn));
   const [selectedToken, setSelectedToken] = useState<Token | null>(
     filteredTokens.length ? filteredTokens[0] : null
   );
@@ -181,7 +178,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
       );
       const shortTrustlineStatus = await checkTrustline(
         walletAddress,
-        `${selectedToken.symbol}SHORT`,
+        `s${selectedToken.symbol}`,
         constants.StellarConfig.NORMAL_ISSUER
       );
       const usdcTrustlineStatus = await checkTrustline(

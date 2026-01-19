@@ -112,10 +112,10 @@ export const createTokenActions = (): TokenActions => {
 
           // Short
           const shortTkn: ApiToken = {
-            symbol: `n${pair.asset}SHORT`,
+            symbol: `sn${pair.asset}`,
             issuer: constants.StellarConfig.NORMAL_ISSUER,
             contract: pair.tokens.short,
-            name: `Normal ${pair.asset} Short`,
+            name: `Short Normal ${pair.asset}`,
             org: 'Normal',
             domain: 'normalfinance.io',
             icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.webp`,

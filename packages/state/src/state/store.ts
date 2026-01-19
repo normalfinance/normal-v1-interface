@@ -56,12 +56,12 @@ export const usePersistStore = create<AppStorePersist>()(
     },
     {
       name: 'just-some-normal-storage',
-      version: 4,
+      version: 5,
       migrate: (persistedState, version) => {
         if (!persistedState) return {};
 
         // Upgrade from v0, v1, v2 → v3 schema
-        if (version < 3) {
+        if (version < 5) {
           return {};
         }
       },

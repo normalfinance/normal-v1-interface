@@ -26,7 +26,7 @@ import SwapCard from '../_common/trade-card';
 
 export interface TreasuryBalance {
   address: string;
-  type: 'LONG' | 'SHORT' | 'QUOTE';
+  type: 'LONG' | 'SHORT' | 'USDC';
   amount: BigNumber;
   fiatValue: BigNumber;
 }

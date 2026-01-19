@@ -86,18 +86,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
   const { addTrustLine } = useTrustLine();
 
-  const {
-    loading,
-    setLoading,
-    buyLong,
-    sellLong,
-    buyShort,
-    sellShort,
-    mintAndSellLong,
-    mintAndSellShort,
-    buyLongAndRedeem,
-    buyShortAndRedeem,
-  } = useTrade();
+  const { loading, setLoading, buyLong, sellLong, buyShort, sellShort } = useTrade();
 
   const { fetchBalances: fetchTreasuryBalances } = useTreasury();
 
@@ -933,7 +922,9 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
       {/* Additional box with info */}
       {!loading && (
         <InfoAccordion
-          highlights={[getConversionText(usdcToken!, selectedToken!)]}
+          highlights={
+            usdcToken && selectedToken ? [getConversionText(usdcToken, selectedToken)] : []
+          }
           alerts={getInfoAccordionAlerts()}
           rows={[
             {

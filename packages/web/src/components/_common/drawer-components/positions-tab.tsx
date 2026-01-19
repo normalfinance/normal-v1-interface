@@ -22,9 +22,9 @@ export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
     <Box sx={{ p: 2, pt: 0 }}>
       {positions.length > 0 ? (
         positions.map((position) => {
-          const totalPositionValue = BigNumber(position.usdValues.tokenLong)
-            .plus(position.usdValues.tokenShort)
-            .plus(position.usdValues.tokenUSDC);
+          const totalPositionValue = BigNumber(position.usdValues.long)
+            .plus(position.usdValues.short)
+            .plus(position.usdValues.usdc);
 
           return (
             <Button

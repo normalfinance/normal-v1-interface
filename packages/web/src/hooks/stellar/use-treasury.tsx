@@ -10,7 +10,7 @@ import { TreasuryContract } from '@normalfinance/contracts';
 export type TreasuryBalances = {
   long: BigNumber;
   short: BigNumber;
-  quote: BigNumber;
+  usdc: BigNumber;
 };
 
 interface ReturnType {
@@ -42,12 +42,12 @@ export function useTreasury(): ReturnType {
       });
 
       if (balancesResponse && balancesResponse.result) {
-        const balances = balancesResponse.result as TreasuryContract.TreasuryPairBalances;
+        const balances = balancesResponse.result as TreasuryContract.PairAmountsWithUSDC;
 
         const treasuryBalances: TreasuryBalances = {
-          long: BigNumber(format.fTokenAmount(balances.token_long, 7)),
-          short: BigNumber(format.fTokenAmount(balances.token_short, 7)),
-          quote: BigNumber(format.fTokenAmount(balances.token_quote, 7)),
+          long: BigNumber(format.fTokenAmount(balances.long, 7)),
+          short: BigNumber(format.fTokenAmount(balances.short, 7)),
+          usdc: BigNumber(format.fTokenAmount(balances.usdc, 7)),
         };
 
         return treasuryBalances;

@@ -4,6 +4,7 @@ import type { ButtonProps as MUIButtonProps } from '@mui/material';
 import type { NavItemDataProps } from '@/components/template/nav-section';
 
 import { useTranslate } from '@/locales';
+import { usePathname } from '@/routes/hooks';
 import { m, AnimatePresence } from 'framer-motion';
 import React, { useRef, useMemo, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import {
@@ -20,7 +21,6 @@ import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/materia
 
 import { Logo } from '@/components/template/logo';
 import { GlowBorder } from '@/components/_common/glow-border';
-import { usePathname } from '@/routes/hooks';
 
 import { Searchbar } from '../components/searchbar';
 

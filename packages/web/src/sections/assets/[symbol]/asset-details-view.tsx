@@ -49,7 +49,7 @@ export default function AssetDetailsView({
   const past24hVolume = BigNumber(0);
 
   // Find tokens
-  const collateralToken = tokens.find((tkn) => tkn.contract === pair.collateral.collateralToken);
+  const collateralToken = tokens.find((tkn) => tkn.contract === pair.tokens.collateral);
   const longToken = tokens.find((tkn) => tkn.contract === pair.tokens.long);
   const shortToken = tokens.find((tkn) => tkn.contract === pair.tokens.short);
 
@@ -103,12 +103,12 @@ export default function AssetDetailsView({
                     : BigNumber(0),
               },
               {
-                address: pair.collateral.collateralToken,
-                type: 'QUOTE',
-                amount: treasuryBalances?.quote ?? BigNumber(0),
+                address: pair.tokens.collateral,
+                type: 'USDC',
+                amount: treasuryBalances?.usdc ?? BigNumber(0),
                 fiatValue:
                   collateralToken && treasuryBalances
-                    ? treasuryBalances.quote.multipliedBy(collateralToken.price)
+                    ? treasuryBalances.usdc.multipliedBy(collateralToken.price)
                     : BigNumber(0),
               },
             ]}

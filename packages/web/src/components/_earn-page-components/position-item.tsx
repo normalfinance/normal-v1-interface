@@ -60,18 +60,16 @@ export default function PositionItem({ position }: PositionItemProps) {
       <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
-            {position.balances.tokenLong.toFixed(7)} {t('LONG')} (
-            {fCurrency(position.usdValues.tokenLong)})
+            {position.balances.long.toFixed(7)} {t('LONG')} ({fCurrency(position.usdValues.long)})
           </Typography>
 
           <Typography color="text.primary" variant="body1">
-            {position.balances.tokenShort.toFixed(7)} {t('SHORT')} (
-            {fCurrency(position.usdValues.tokenShort)})
+            {position.balances.short.toFixed(7)} {t('SHORT')} ({fCurrency(position.usdValues.short)}
+            )
           </Typography>
 
           <Typography color="text.primary" variant="body1">
-            {position.balances.tokenShort.toFixed(7)} {t('USDC')} (
-            {fCurrency(position.usdValues.tokenUSDC)})
+            {position.balances.usdc.toFixed(7)} {t('USDC')} ({fCurrency(position.usdValues.usdc)})
           </Typography>
 
           <Typography color="text.secondary" variant="caption">

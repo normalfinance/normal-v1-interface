@@ -104,30 +104,26 @@ export function usePair(pairAddress: string): ReturnType {
         rpcUrl: constants.StellarConfig.RPC_URL,
       });
 
-      const pairSummaryResponse = await PairClient.get_pair_summary();
+      const summaryResponse = await PairClient.get_summary();
 
-      if (pairSummaryResponse && pairSummaryResponse.result) {
-        const summary = pairSummaryResponse.result as LongShortPairContract.PairSummary;
+      if (summaryResponse && summaryResponse.result) {
+        const summary = summaryResponse.result as LongShortPairContract.PairSummary;
 
         // Compute scaled price
-        const lowerPriceBound = summary.price_bounds[0];
-        const upperPriceBound = summary.price_bounds[1];
+        const priceBoundaryDelta = BigNumber(summary.price_bounds.upper).minus(
+          summary.price_bounds.lower
+        );
 
-        const priceBoundaryDelta = BigNumber(upperPriceBound).minus(lowerPriceBound);
         const scaledPrice = BigNumber(summary.collateral.collateral_percent_long)
           .multipliedBy(priceBoundaryDelta)
-          .plus(lowerPriceBound);
+          .plus(summary.price_bounds.lower);
 
         const pairDetails: Pair = {
           pairAddress,
           asset: summary.asset,
           status: summary.status,
-          tokens: {
-            long: summary.long_token,
-            short: summary.short_token,
-          },
+          tokens: summary.tokens,
           collateral: {
-            collateralToken: summary.collateral.collateral_token,
             collateralPerPair: BigNumber(
               format.fTokenAmount(summary.collateral.collateral_per_pair, 7)
             ).toString(),
@@ -140,8 +136,8 @@ export function usePair(pairAddress: string): ReturnType {
           },
           scaledPrice: format.fTokenAmount(scaledPrice, 14).toString(),
           priceBounds: {
-            lower: BigNumber(format.fTokenAmount(lowerPriceBound, 7)).toString(),
-            upper: BigNumber(format.fTokenAmount(upperPriceBound, 7)).toString(),
+            lower: BigNumber(format.fTokenAmount(summary.price_bounds.lower, 7)).toString(),
+            upper: BigNumber(format.fTokenAmount(summary.price_bounds.upper, 7)).toString(),
           },
           client: PairClient,
         };
