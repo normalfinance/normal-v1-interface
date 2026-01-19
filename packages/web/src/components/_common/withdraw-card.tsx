@@ -186,7 +186,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
   const isSendReady = getButtonLabel() === 'Send';
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1 }} width={1}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 1, flex: 1 }} width={1}>
       <Button
         variant="soft"
         color="success"
@@ -211,7 +211,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
             display: 'flex',
             flexDirection: 'column',
             gap: 0,
-            height: '278px',
+            height: '130px',
             padding: theme.spacing(2),
             alignItems: 'flex-start',
             borderRadius: '20px 20px 0 0',
@@ -220,11 +220,9 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
             overflow: 'hidden',
           }}
         >
-          <Box sx={{ height: '82px' }}>
-            <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-              {t('Send crypto')}
-            </Typography>
-          </Box>
+          <Typography variant="body2" sx={{ color: theme.palette.text.primary, mb: 0.5 }}>
+            {t('Send crypto')}
+          </Typography>
           <Box
             sx={{
               display: 'flex',
@@ -235,7 +233,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
             }}
           >
             {isFiatMode && (
-              <Typography sx={{ color: theme.palette.text.secondary, fontSize: '64px' }}>
+              <Typography sx={{ color: theme.palette.text.secondary, fontSize: '40px' }}>
                 {t('$')}
               </Typography>
             )}
@@ -262,9 +260,9 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
                 '& input': {
                   textAlign: 'center',
                   padding: 0,
-                  fontSize: '64px',
+                  fontSize: '40px',
                   fontWeight: 400,
-                  lineHeight: '48px',
+                  lineHeight: '40px',
                 },
               }}
               inputProps={{
@@ -275,9 +273,9 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
             <span
               ref={spanRef}
               style={{
-                fontSize: '64px',
+                fontSize: '40px',
                 fontWeight: 400,
-                lineHeight: '48px',
+                lineHeight: '40px',
                 letterSpacing: '0px',
                 visibility: 'hidden',
                 whiteSpace: 'pre',
