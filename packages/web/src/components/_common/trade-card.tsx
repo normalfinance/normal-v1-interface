@@ -11,6 +11,7 @@ import { useTrade, useTreasury, useTrustLine } from '@/hooks';
 import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+import { type TradeRoute, determineTradeRoute } from '@/utils/trade-route';
 import { TokenAmountButtonState as ButtonState } from '@normalfinance/types';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import {
@@ -33,13 +34,14 @@ import {
   InputAdornment,
 } from '@mui/material';
 
+import { useSnackbar } from '@/components/template/snackbar';
+
 import PickToken from './pick-token';
 import SwapReview from './swap-review';
 import { WalletGate } from './wallet-gate';
 import InfoAccordion from './info-accordion';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
-import { useSnackbar } from '@/components/template/snackbar';
 
 import type { InfoAccordionAlert } from './info-accordion';
 
@@ -128,6 +130,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
   const [insufficientBalance, setInsufficientBalance] = useState(false);
   const [insufficientLiquidity, setInsufficientLiquidity] = useState(false);
   const [availableLiquidity, setAvailableLiquidity] = useState<string>('0');
+  const [tradeRoute, setTradeRoute] = useState<TradeRoute | null>(null);
 
   // Compute the fiat value for the user's sell input
   const fiatAmountVal = parseFloat(fiatAmount) || 0;
@@ -243,46 +246,43 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
   }, [checkTrustlineStatus]);
 
   const loadTreasuryBalances = useCallback(async () => {
-    if (!pair || !selectedToken || !usdcToken) return;
+    if (!pair || !selectedToken || !usdcToken) {
+      setTradeRoute(null);
+      return;
+    }
 
-    const availableBalances = await fetchTreasuryBalances(pair.pairAddress);
-    if (!availableBalances) return;
+    const balances = await fetchTreasuryBalances(pair.pairAddress);
+    if (!balances) return;
 
-    // Update insufficient liquidity
     const longToken = tokensByAddress[pair.tokens.long];
     const shortToken = tokensByAddress[pair.tokens.short];
     const isLong = selectedToken.contract === pair.tokens.long;
 
+    // Calculate required amount based on trade direction
+    let requiredAmount: BigNumber;
     if (tradeDirection === 'buy') {
-      // Update the treasury balances
-      setAvailableLiquidity(
-        isLong ? availableBalances.long.toString() : availableBalances.short.toString()
-      );
-
       const usdcValue = BigNumber(usdcToken.price).multipliedBy(fiatAmountVal);
-
-      const numTokensBuying = usdcValue.dividedBy(isLong ? longToken.price : shortToken.price);
-
-      const treasuryBalance = isLong ? availableBalances.long : availableBalances.short;
-      setAvailableLiquidity(treasuryBalance.toString());
-      if (treasuryBalance.lt(numTokensBuying)) {
-        setInsufficientLiquidity(true);
-      }
+      requiredAmount = usdcValue.dividedBy(isLong ? longToken.price : shortToken.price);
+      setAvailableLiquidity((isLong ? balances.long : balances.short).toString());
     } else {
-      // Update the treasury balances
-      setAvailableLiquidity(availableBalances.quote.toString());
-
       const tokenValue = BigNumber(isLong ? longToken.price : shortToken.price).multipliedBy(
         fiatAmountVal
       );
-
-      const usdcRequired = tokenValue.dividedBy(usdcToken.price);
-      setAvailableLiquidity(availableBalances.quote.toString());
-      if (availableBalances.quote.lt(usdcRequired)) {
-        setInsufficientLiquidity(true);
-      }
+      requiredAmount = tokenValue.dividedBy(usdcToken.price);
+      setAvailableLiquidity(balances.quote.toString());
     }
-  }, [pair, fiatAmountVal, tradeDirection, selectedToken]);
+
+    // Determine optimal trade route
+    const route = determineTradeRoute({
+      tradeDirection,
+      isLongToken: isLong,
+      requiredAmount,
+      treasuryBalances: balances,
+    });
+
+    setTradeRoute(route);
+    setInsufficientLiquidity(!route.hasSufficientLiquidity);
+  }, [pair, fiatAmountVal, tradeDirection, selectedToken, usdcToken, tokensByAddress, fetchTreasuryBalances]);
 
   // 7) Auto-fetch quote whenever relevant fields change: selectedToken, amount
   useEffect(() => {
@@ -292,6 +292,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
     setInsufficientBalance(false);
     setInsufficientLiquidity(false);
+    setTradeRoute(null);
 
     setTrustlineState(initialTrustlineState);
 
@@ -520,95 +521,95 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
     return true;
   };
 
-  // New: settleTrade function for use in onSubmit (simplified - no trustline creation)
+  // Settle trade function - executes the optimal trade route
   const settleTrade = async (): Promise<void> => {
-    // Validate required data before proceeding
     if (!selectedToken || !usdcToken || !pair) {
-      const errorMsg = !selectedToken
-        ? 'No token selected'
-        : !usdcToken
-          ? 'USDC token not available'
-          : 'Trading pair not found for this token';
-      setSwapError(errorMsg);
-      throw new Error(errorMsg);
+      setSwapError(
+        !selectedToken ? 'No token selected' : !usdcToken ? 'USDC not available' : 'Pair not found'
+      );
+      return;
     }
 
     try {
       const allowed = await checkIfTradeAllowed();
-      if (!allowed) {
+      if (!allowed) return;
+
+      // Re-fetch treasury balances for fresh liquidity data at trade time
+      const freshBalances = await fetchTreasuryBalances(pair.pairAddress);
+      if (!freshBalances) {
+        setSwapError('Unable to verify liquidity. Please try again.');
         return;
       }
 
-      // Now call the client-side onSwap (sign and submit)
       const isLong = selectedToken.contract === pair.tokens.long;
-      const enoughLiquidity = false; // TODO:
+      const longToken = tokensByAddress[pair.tokens.long];
+      const shortToken = tokensByAddress[pair.tokens.short];
 
+      // Calculate amounts
+      const usdcAmount = BigNumber(fiatAmount).dividedBy(usdcToken.price);
+      const tokenAmount = BigNumber(fiatAmount).dividedBy(
+        isLong ? longToken.price : shortToken.price
+      );
+
+      // Calculate required amount for fresh route determination
+      let requiredAmount: BigNumber;
       if (tradeDirection === 'buy') {
-        const usdcAmount = BigNumber(fiatAmount).dividedBy(usdcToken.price);
-
-        if (isLong) {
-          if (enoughLiquidity) {
-            await buyLong({
-              pair: pair.pairAddress,
-              usdc_in: Number(usdcAmount),
-              min_long_out: 0,
-            });
-          } else {
-            await mintAndSellShort({
-              pair: pair.pairAddress,
-              usdc_in: Number(usdcAmount),
-            });
-          }
-        } else {
-          if (enoughLiquidity) {
-            await buyShort({
-              pair: pair.pairAddress,
-              usdc_in: Number(usdcAmount),
-              min_short_out: 0,
-            });
-          } else {
-            await mintAndSellLong({
-              pair: pair.pairAddress,
-              usdc_in: Number(usdcAmount),
-            });
-          }
-        }
+        requiredAmount = usdcAmount
+          .multipliedBy(usdcToken.price)
+          .dividedBy(isLong ? longToken.price : shortToken.price);
       } else {
-        if (isLong) {
-          const longToken = tokensByAddress[pair.tokens.long];
-          const longAmount = BigNumber(fiatAmount).dividedBy(longToken.price);
-
-          if (enoughLiquidity) {
-            await sellLong({
-              pair: pair.pairAddress,
-              long_in: Number(longAmount),
-              min_usdc_out: 0,
-            });
-          } else {
-            await buyShortAndRedeem({
-              pair: pair.pairAddress,
-              long_in: Number(longAmount),
-            });
-          }
-        } else {
-          const shortToken = tokensByAddress[pair.tokens.short];
-          const shortAmount = BigNumber(fiatAmount).dividedBy(shortToken.price);
-
-          if (enoughLiquidity) {
-            await sellShort({
-              pair: pair.pairAddress,
-              short_in: Number(shortAmount),
-              min_usdc_out: 0,
-            });
-          } else {
-            await buyLongAndRedeem({
-              pair: pair.pairAddress,
-              short_in: Number(shortAmount),
-            });
-          }
-        }
+        requiredAmount = tokenAmount
+          .multipliedBy(isLong ? longToken.price : shortToken.price)
+          .dividedBy(usdcToken.price);
       }
 
+      // Determine fresh route at trade time
+      const route = determineTradeRoute({
+        tradeDirection,
+        isLongToken: isLong,
+        requiredAmount,
+        treasuryBalances: freshBalances,
+      });
+
+      // Execute based on route type
+      switch (route.type) {
+        case 'buy_long_direct':
+          await buyLong({ pair: pair.pairAddress, usdc_in: Number(usdcAmount), min_long_out: 0 });
+          break;
+        case 'buy_long_mint':
+          await mintAndSellShort({ pair: pair.pairAddress, usdc_in: Number(usdcAmount) });
+          break;
+        case 'buy_short_direct':
+          await buyShort({ pair: pair.pairAddress, usdc_in: Number(usdcAmount), min_short_out: 0 });
+          break;
+        case 'buy_short_mint':
+          await mintAndSellLong({ pair: pair.pairAddress, usdc_in: Number(usdcAmount) });
+          break;
+        case 'sell_long_direct':
+          await sellLong({
+            pair: pair.pairAddress,
+            long_in: Number(tokenAmount),
+            min_usdc_out: 0,
+          });
+          break;
+        case 'sell_long_redeem':
+          await buyShortAndRedeem({ pair: pair.pairAddress, long_in: Number(tokenAmount) });
+          break;
+        case 'sell_short_direct':
+          await sellShort({
+            pair: pair.pairAddress,
+            short_in: Number(tokenAmount),
+            min_usdc_out: 0,
+          });
+          break;
+        case 'sell_short_redeem':
+          await buyLongAndRedeem({ pair: pair.pairAddress, short_in: Number(tokenAmount) });
+          break;
+        default:
+          throw new Error(`Unknown trade route: ${route.type}`);
+      }
+
+      // Refresh balances after trade
       setTimeout(async () => {
         await updateTokenInfo(selectedToken);
         await updateTokenInfo(usdcToken);
@@ -631,15 +632,15 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
         icon: 'solar:danger-triangle-bold',
       });
     }
-    if (insufficientLiquidity && selectedToken && usdcToken) {
+    if (insufficientLiquidity && selectedToken && tradeRoute) {
       alerts.push({
-        title: `Not enough ${tradeDirection === 'buy' ? selectedToken.symbol : usdcToken.symbol} to trade`,
-        icon: 'solar:danger-triangle-bold',
+        title: tradeRoute.label,
+        icon: 'solar:routing-2-bold',
       });
     }
 
     return alerts;
-  }, [selectedToken, usdcToken, tradeDirection, insufficientBalance, insufficientLiquidity]);
+  }, [selectedToken, usdcToken, tradeDirection, insufficientBalance, insufficientLiquidity, tradeRoute]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -943,6 +944,14 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
               title: 'Available Liquidity',
               value: fCurrencyTwoDecimals(availableLiquidity),
             },
+            ...(tradeRoute
+              ? [
+                  {
+                    title: 'Route',
+                    value: tradeRoute.label,
+                  },
+                ]
+              : []),
           ]}
         />
       )}
