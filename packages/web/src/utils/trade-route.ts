@@ -51,7 +51,7 @@ export function determineTradeRoute(params: DetermineRouteParams): TradeRoute {
       ? isLongToken
         ? treasuryBalances.long
         : treasuryBalances.short
-      : treasuryBalances.quote;
+      : treasuryBalances.usdc;
 
   const hasLiquidity = relevantBalance.gte(requiredWithMargin);
 
