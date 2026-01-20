@@ -27,8 +27,8 @@ import {
   TableContainer,
 } from '@mui/material';
 
-import { ContentSkeleton } from '@/components/_common/loading';
 import { SectionError } from '@/components/_common/errors';
+import { ContentSkeleton } from '@/components/_common/loading';
 
 export default function IndexesView() {
   const { t } = useTranslate();

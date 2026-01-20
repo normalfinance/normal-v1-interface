@@ -1,17 +1,15 @@
 'use client';
 
+import type { AppError } from '@/utils/errors';
 import type { Pair } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
+import { handleHookError } from '@/utils/errors';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { TreasuryContract } from '@normalfinance/contracts';
 import { format, constants, convertCoinToFiat } from '@normalfinance/utils';
-
-import type { AppError } from '@/utils/errors';
-
-import { handleHookError } from '@/utils/errors';
 
 import { useContractTransaction } from './use-contract-transaction';
 

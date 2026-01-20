@@ -2,9 +2,10 @@ import type { VariantType } from 'notistack';
 
 import { enqueueSnackbar } from 'notistack';
 
-import type { AppError } from './error-types';
-import { ErrorSeverity } from './error-types';
 import { logError } from './error-logger';
+import { ErrorSeverity } from './error-types';
+
+import type { AppError } from './error-types';
 
 interface ShowErrorOptions {
   context?: string;

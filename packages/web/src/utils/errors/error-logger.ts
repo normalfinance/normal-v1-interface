@@ -1,7 +1,8 @@
 import posthog from 'posthog-js';
 
-import type { AppError } from './error-types';
 import { classifyError } from './error-classifier';
+
+import type { AppError } from './error-types';
 
 interface LogErrorOptions {
   context?: string;

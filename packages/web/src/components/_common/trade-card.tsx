@@ -271,7 +271,15 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
     setTradeRoute(route);
     setInsufficientLiquidity(!route.hasSufficientLiquidity);
-  }, [pair, fiatAmountVal, tradeDirection, selectedToken, usdcToken, tokensByAddress, fetchTreasuryBalances]);
+  }, [
+    pair,
+    fiatAmountVal,
+    tradeDirection,
+    selectedToken,
+    usdcToken,
+    tokensByAddress,
+    fetchTreasuryBalances,
+  ]);
 
   // 7) Auto-fetch quote whenever relevant fields change: selectedToken, amount
   useEffect(() => {
@@ -629,7 +637,14 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
     }
 
     return alerts;
-  }, [selectedToken, usdcToken, tradeDirection, insufficientBalance, insufficientLiquidity, tradeRoute]);
+  }, [
+    selectedToken,
+    usdcToken,
+    tradeDirection,
+    insufficientBalance,
+    insufficientLiquidity,
+    tradeRoute,
+  ]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>

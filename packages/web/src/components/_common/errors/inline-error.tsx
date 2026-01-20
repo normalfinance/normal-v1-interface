@@ -1,14 +1,13 @@
 'use client';
 
-import type { SxProps, Theme } from '@mui/material/styles';
-
-import Alert from '@mui/material/Alert';
-import AlertTitle from '@mui/material/AlertTitle';
-import Collapse from '@mui/material/Collapse';
-
 import type { AppError } from '@/utils/errors';
+import type { Theme, SxProps } from '@mui/material/styles';
 
 import { CATEGORY_TITLES } from '@/utils/errors';
+
+import Alert from '@mui/material/Alert';
+import Collapse from '@mui/material/Collapse';
+import AlertTitle from '@mui/material/AlertTitle';
 
 interface InlineErrorProps {
   error: AppError | null;

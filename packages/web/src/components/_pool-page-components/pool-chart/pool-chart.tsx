@@ -8,9 +8,8 @@ import type { Pair, Token } from '@normalfinance/types';
 import { useTranslate } from '@/locales';
 // import { useState, useCallback } from 'react';
 import Skeleton from 'react-loading-skeleton';
-import { varAlpha } from 'minimal-shared/utils';
+import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Card from '@mui/material/Card';
 import { useTheme } from '@mui/material/styles';
@@ -18,7 +17,6 @@ import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import { Box, Stack, Avatar } from '@mui/material';
 
-import { Iconify } from '@/components/template/iconify';
 // import { Chart, useChart, ChartSelect } from '@/components/template/chart';
 // import { CustomTabsSwapSend } from '../../_common/swap-send-card-custom-card';
 import RefreshButton from '@/components/_common/refresh-button';
@@ -229,7 +227,7 @@ export function PoolChart({
             {t(')')}
           </Typography>
         </Box>
-        <Stack direction="row" spacing={0.5} alignItems="center">
+        {/* <Stack direction="row" spacing={0.5} alignItems="center">
           <Box
             component="span"
             sx={{
@@ -285,7 +283,7 @@ export function PoolChart({
               '+'}
             {fPercent(performance && performance.percentageChange)}
           </Typography>
-        </Stack>
+        </Stack> */}
       </Stack>
       {/* <Chart
         type="area"

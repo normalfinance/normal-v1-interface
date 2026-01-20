@@ -1,17 +1,15 @@
 'use client';
 
+import type { AppError } from '@/utils/errors';
 import type { IndexFundContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
+import { handleHookError } from '@/utils/errors';
 import { useState, useEffect, useCallback } from 'react';
 import {
   IndexFundFactoryContract,
   IndexFundContract as IndexFundContractClient,
 } from '@normalfinance/contracts';
-
-import type { AppError } from '@/utils/errors';
-
-import { handleHookError } from '@/utils/errors';
 
 // ----------------------------------------------------------------------
 

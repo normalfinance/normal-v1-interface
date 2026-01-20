@@ -1,15 +1,15 @@
 'use client';
 
-import type { SxProps, Theme } from '@mui/material/styles';
+import type { AppError } from '@/utils/errors';
+import type { Theme, SxProps } from '@mui/material/styles';
+
+import { ErrorCategory } from '@/utils/errors';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-
-import type { AppError } from '@/utils/errors';
-
-import { ErrorCategory } from '@/utils/errors';
+import { useTranslate } from '@/locales';
 
 interface SectionErrorProps {
   error: AppError;
@@ -18,6 +18,8 @@ interface SectionErrorProps {
 }
 
 export function SectionError({ error, onRetry, sx }: SectionErrorProps) {
+  const { t } = useTranslate();
+
   // Show retry for recoverable errors
   const showRetry =
     onRetry &&
@@ -41,7 +43,7 @@ export function SectionError({ error, onRetry, sx }: SectionErrorProps) {
 
       {showRetry && (
         <Button variant="outlined" onClick={onRetry} size="small">
-          Try Again
+          {t('Try Again')}
         </Button>
       )}
     </Box>

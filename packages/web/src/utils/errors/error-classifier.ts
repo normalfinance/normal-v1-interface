@@ -1,5 +1,6 @@
-import type { AppError } from './error-types';
 import { ErrorCategory, ErrorSeverity } from './error-types';
+
+import type { AppError } from './error-types';
 
 // Pattern matching for error classification
 interface ErrorPattern {

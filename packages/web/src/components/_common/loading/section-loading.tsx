@@ -1,13 +1,13 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import type { SxProps, Theme } from '@mui/material/styles';
+import type { Theme, SxProps } from '@mui/material/styles';
 
 import Box from '@mui/material/Box';
 
-import type { ContentSkeletonProps } from './content-skeleton';
-
 import { ContentSkeleton } from './content-skeleton';
+
+import type { ContentSkeletonProps } from './content-skeleton';
 
 interface SectionLoadingProps {
   loading: boolean;
