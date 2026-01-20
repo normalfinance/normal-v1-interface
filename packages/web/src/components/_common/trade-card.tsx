@@ -20,7 +20,6 @@ import {
   checkTrustline,
   getCryptoIconUrl,
   sanitizeAmountInput,
-  format,
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';

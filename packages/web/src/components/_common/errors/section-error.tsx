@@ -3,13 +3,13 @@
 import type { AppError } from '@/utils/errors';
 import type { Theme, SxProps } from '@mui/material/styles';
 
+import { useTranslate } from '@/locales';
 import { ErrorCategory } from '@/utils/errors';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import { useTranslate } from '@/locales';
 
 interface SectionErrorProps {
   error: AppError;
