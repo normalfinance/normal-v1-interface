@@ -10,6 +10,8 @@ export async function GET(req: Request) {
 
     const host = process.env.MGI_ACCESS_HOST!;
     const clientDomain = process.env.CLIENT_DOMAIN!;
+    console.log("host", host);
+    console.log("clientDomain", clientDomain);
     const url = `https://${host}/stellaradapterservice/auth?account=${encodeURIComponent(
       account
     )}&client_domain=${encodeURIComponent(clientDomain)}`;
@@ -25,6 +27,7 @@ export async function GET(req: Request) {
     const data = await r.json(); // { transaction, network_passphrase, ... }
     return NextResponse.json(data);
   } catch (e: any) {
+    console.error(e, "MGI challenge fetch failed");
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
   }
 }

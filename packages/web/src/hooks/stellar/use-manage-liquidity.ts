@@ -9,6 +9,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { TreasuryContract } from '@normalfinance/contracts';
 import { format, constants, convertCoinToFiat } from '@normalfinance/utils';
 
+import type { AppError } from '@/utils/errors';
+
+import { handleHookError } from '@/utils/errors';
+
 import { useContractTransaction } from './use-contract-transaction';
 
 // ----------------------------------------------------------------------
@@ -35,7 +39,7 @@ export type LiquidityPosition = {
 };
 
 interface ReturnType {
-  error: any | null;
+  error: AppError | null;
   loading: boolean;
   setLoading: (isLoading: boolean) => void;
   liquidityPositions: LiquidityPosition[] | undefined;
@@ -43,6 +47,7 @@ interface ReturnType {
   fetchPositions: () => void;
   deposit: (pairAddress: string, amount: number) => Promise<void>;
   withdraw: (pairAddress: string, shares: number) => Promise<void>;
+  clearError: () => void;
 }
 
 // ----------------------------------------------------------------------
@@ -58,10 +63,12 @@ export function useManageLiquidity(): ReturnType {
 
   const tokenUSDC = tokensByAddress[constants.StellarConfig.USDC_ADDRESS];
 
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<AppError | null>(null);
   const [loading, setLoading] = useState(false);
   const [positions, setPositions] = useState<LiquidityPosition[] | undefined>(undefined);
   const [totalValue, setTotalValue] = useState<BigNumber>(BigNumber(0));
+
+  const clearError = useCallback(() => setError(null), []);
 
   // Fetch info from Treasury
   const TreasuryClient = new TreasuryContract.Client({
@@ -190,8 +197,8 @@ export function useManageLiquidity(): ReturnType {
 
         setTotalValue(total);
       }
-    } catch (e: any) {
-      setError(e);
+    } catch (e) {
+      handleHookError(e, 'useManageLiquidity', setError);
     } finally {
       setLoading(false);
     }
@@ -298,5 +305,6 @@ export function useManageLiquidity(): ReturnType {
     totalValue,
     deposit,
     withdraw,
+    clearError,
   };
 }

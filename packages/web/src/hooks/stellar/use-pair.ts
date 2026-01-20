@@ -9,6 +9,10 @@ import { format, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { LongShortPairContract } from '@normalfinance/contracts';
 
+import type { AppError } from '@/utils/errors';
+
+import { handleHookError } from '@/utils/errors';
+
 import { useContractTransaction } from './use-contract-transaction';
 
 // ----------------------------------------------------------------------
@@ -25,13 +29,14 @@ export interface RedeemPairArgs {
 }
 
 interface ReturnType {
-  error: any | null;
+  error: AppError | null;
   loading: boolean;
   setLoading: (isLoading: boolean) => void;
   pair: Pair | undefined;
   mintPair: (args: MintPairArgs) => Promise<void>;
   redeemPair: (args: RedeemPairArgs) => Promise<void>;
   fetchPair: () => Promise<void>;
+  clearError: () => void;
 }
 
 // ----------------------------------------------------------------------
@@ -41,9 +46,11 @@ export function usePair(pairAddress: string): ReturnType {
 
   const { executeContractTransaction } = useContractTransaction();
 
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<AppError | null>(null);
   const [loading, setLoading] = useState(true);
   const [pair, setPair] = useState<Pair | undefined>(undefined);
+
+  const clearError = useCallback(() => setError(null), []);
 
   const executePair = async (signedTransactionXDR: string, transactionType: string = 'Pair') => {
     if (!storePersist.wallet.address) return null;
@@ -137,9 +144,8 @@ export function usePair(pairAddress: string): ReturnType {
 
         setPair(pairDetails);
       }
-    } catch (e: any) {
-      // captureException(e);
-      setError(e);
+    } catch (e) {
+      handleHookError(e, 'usePair', setError);
     } finally {
       setLoading(false);
     }
@@ -241,5 +247,6 @@ export function usePair(pairAddress: string): ReturnType {
     mintPair,
     redeemPair,
     fetchPair,
+    clearError,
   };
 }

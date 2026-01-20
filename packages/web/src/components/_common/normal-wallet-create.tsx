@@ -305,8 +305,9 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setCustodyChoice(null);
     setCustodyConsent(false);
     setIsSavingCustody(false);
+    enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
     onSuccess();
-  }, [walletName, publicKey, onSuccess]);
+  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t]);
 
   const handleCustodyConfirm = useCallback(async () => {
     if (custodyChoice === 'self') {

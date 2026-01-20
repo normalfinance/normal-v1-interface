@@ -3,7 +3,6 @@
 import type { IndexFundContract } from '@normalfinance/contracts';
 
 import { constants } from '@normalfinance/utils';
-// import { captureException } from '@sentry/nextjs';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
@@ -11,6 +10,10 @@ import {
   IndexFundContract as IndexFundContractClient,
   IndexFundFactoryContract as IndexFundFactoryContractClient,
 } from '@normalfinance/contracts';
+
+import type { AppError } from '@/utils/errors';
+
+import { handleHookError } from '@/utils/errors';
 
 import { useContractTransaction } from './use-contract-transaction';
 
@@ -47,13 +50,14 @@ export type SetBlacklistStatusIndexArgs = Omit<
 >;
 
 interface ReturnType {
-  error: any | null;
+  error: AppError | null;
   loading: boolean;
   index: IndexFundContract.IndexFundInfo | undefined;
   fetchIndexById: (indexId: number) => void;
   fetchIndexByAddress: (indexAddress: string) => void;
   mintIndex: (args: MintIndexArgs) => Promise<void>;
   redeemIndex: (args: RedeemIndexArgs) => Promise<void>;
+  clearError: () => void;
   // admin
   refactorIndex: (args: RefactorIndexArgs) => Promise<void>;
   rebalanceIndex: (args: RebalanceIndexArgs) => Promise<void>;
@@ -69,10 +73,12 @@ export function useIndexFund(id: number): ReturnType {
 
   const { executeContractTransaction } = useContractTransaction();
 
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<AppError | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [index, setIndex] = useState<IndexFundContract.IndexFundInfo | undefined>(undefined);
+
+  const clearError = useCallback(() => setError(null), []);
 
   const executeIndex = async (
     signedTransactionXDR: string,
@@ -141,9 +147,8 @@ export function useIndexFund(id: number): ReturnType {
           const data = indexInfo.result as IndexFundContract.IndexFundInfo;
           setIndex(data);
         }
-      } catch (e: any) {
-        // captureException(e);
-        setError(e);
+      } catch (e) {
+        handleHookError(e, 'useIndexFund.fetchIndexById', setError);
       } finally {
         setLoading(false);
       }
@@ -170,9 +175,8 @@ export function useIndexFund(id: number): ReturnType {
         const data = indexInfo.result as IndexFundContract.IndexFundInfo;
         setIndex(data);
       }
-    } catch (e: any) {
-      // captureException(e);
-      setError(e);
+    } catch (e) {
+      handleHookError(e, 'useIndexFund.fetchIndexByAddress', setError);
     } finally {
       setLoading(false);
     }
@@ -492,6 +496,7 @@ export function useIndexFund(id: number): ReturnType {
     fetchIndexByAddress,
     mintIndex,
     redeemIndex,
+    clearError,
     // admin
     refactorIndex,
     rebalanceIndex,
