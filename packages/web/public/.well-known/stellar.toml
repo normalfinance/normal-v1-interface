@@ -5,6 +5,7 @@ ACCOUNTS = [
     "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB", # deployer & issuer
     "GAZ3UNVBD3TKRTKT7BLOI5TTKPT3V4J7OSZ2YQHNFZSW2HVOID6LJTMQ", # distributor
     "GBPH7PWUDCTRDTC2GIEKSLINSNE754FGO26RIX5B7F6DDRNLG6MKOTDW", # admin & POL
+    "GAYPA6P3GUDNTZZEJQN6TMP64Y63M63KFTJ5MGLSMH7G6FMJ3CQSNPJD", # hot wallet
 ]
 VERSION = "2.5.0"
 
@@ -46,11 +47,45 @@ contract = "CCUE2TFP3NDNECT4WY73QWEUNPHNGI6P77B6BVCL6EEZD26YMHY4WEGW"
 status = "live"
 display_decimals = 7
 name = "Normal Bitcoin"
-desc = "A synthetic token with freely traded market price whose liquidity pool applies incentive and penalty mechanisms to align price toward its target value of Bitcoin."
+desc = "A synthetic asset tracking the price of Bitcoin - fully collateralized by USDC."
 conditions = ""
 image = "https://cdn.normalapi.com/tokens/normal/nBTC.png"
 is_unlimited = true
-is_asset_anchored = false
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CDLFUJWTKFCJVYGYFYHUAIKTUGXLWTIJMSBST4OLCHBWX2YHPGYSRKPF"
+collateral_addresses = [
+    "CDLFUJWTKFCJVYGYFYHUAIKTUGXLWTIJMSBST4OLCHBWX2YHPGYSRKPF",
+]
+collateral_address_messages = [
+    "The assets in the contract CDLFUJWTKFCJVYGYFYHUAIKTUGXLWTIJMSBST4OLCHBWX2YHPGYSRKPF are reserved to back nBTC issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-14T18:51:43Z to 2027-01-13T00:00:00Z.",
+]
+collateral_address_signatures = [""]
+
+[[CURRENCIES]]
+code = "snBTC"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
+contract = "CD6ZOS55KX73WIDZ2UKKZLOFOJGWAW3G6HHEOZ4MXBHJXLBILNDACFUM"
+status = "live"
+display_decimals = 7
+name = "Short Normal Bitcoin"
+desc = "A synthetic asset tracking the inverse price of Bitcoin - fully collateralized by USDC."
+conditions = ""
+image = "https://cdn.normalapi.com/tokens/normal/nBTC.png"
+is_unlimited = true
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CDLFUJWTKFCJVYGYFYHUAIKTUGXLWTIJMSBST4OLCHBWX2YHPGYSRKPF"
+collateral_addresses = [
+    "CDLFUJWTKFCJVYGYFYHUAIKTUGXLWTIJMSBST4OLCHBWX2YHPGYSRKPF",
+]
+collateral_address_messages = [
+    "The assets in the contract CDLFUJWTKFCJVYGYFYHUAIKTUGXLWTIJMSBST4OLCHBWX2YHPGYSRKPF are reserved to back snBTC issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-14T18:51:43Z to 2027-01-13T00:00:00Z.",
+]
+collateral_address_signatures = [""]
+
 
 [[CURRENCIES]]
 code = "nETH"
@@ -59,11 +94,45 @@ contract = "CDDY3K5QNZUKO254MADCUMUPEVIK64I2VW4VLZNHND6W467UMBUP2YII"
 status = "live"
 display_decimals = 7
 name = "Normal Ethereum"
-desc = "A synthetic token with freely traded market price whose liquidity pool applies incentive and penalty mechanisms to align price toward its target value of Ethereum."
+desc = "A synthetic asset tracking the price of Ethereum - fully collateralized by USDC."
 conditions = ""
 image = "https://cdn.normalapi.com/tokens/normal/nETH.png"
 is_unlimited = true
-is_asset_anchored = false
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CAKZ6DNXKOU7FJISF7CPYKIPOS6CQFDLAPURLB6EVSKUY63GLA5IUTJP"
+collateral_addresses = [
+    "CAKZ6DNXKOU7FJISF7CPYKIPOS6CQFDLAPURLB6EVSKUY63GLA5IUTJP",
+]
+collateral_address_messages = [
+    "The assets in the contract CAKZ6DNXKOU7FJISF7CPYKIPOS6CQFDLAPURLB6EVSKUY63GLA5IUTJP are reserved to back nETH issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-14T18:51:43Z to 2027-01-13T00:00:00Z.",
+]
+collateral_address_signatures = [""]
+
+[[CURRENCIES]]
+code = "snETH"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
+contract = "CCTP4C7K6GGUE5CNGZYDE6SS54CAM5GHWSSYJLRQ4EN3YGUQW6A3JOK7"
+status = "live"
+display_decimals = 7
+name = "Short Normal Ethereum"
+desc = "A synthetic asset tracking the inverse price of Ethereum - fully collateralized by USDC."
+conditions = ""
+image = "https://cdn.normalapi.com/tokens/normal/nETH.png"
+is_unlimited = true
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CAKZ6DNXKOU7FJISF7CPYKIPOS6CQFDLAPURLB6EVSKUY63GLA5IUTJP"
+collateral_addresses = [
+    "CAKZ6DNXKOU7FJISF7CPYKIPOS6CQFDLAPURLB6EVSKUY63GLA5IUTJP",
+]
+collateral_address_messages = [
+    "The assets in the contract CAKZ6DNXKOU7FJISF7CPYKIPOS6CQFDLAPURLB6EVSKUY63GLA5IUTJP are reserved to back snETH issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-14T18:51:43Z to 2027-01-13T00:00:00Z.",
+]
+collateral_address_signatures = [""]
+
 
 [[CURRENCIES]]
 code = "nSOL"
@@ -72,8 +141,135 @@ contract = "CC3HDXOCIMP2NMLNHPYYFMEKLJRYSSSX57BLCBQ4XTIDXAO6GZWP36XB"
 status = "live"
 display_decimals = 7
 name = "Normal Solana"
-desc = "A synthetic token with freely traded market price whose liquidity pool applies incentive and penalty mechanisms to align price toward its target value of Solana."
+desc = "A synthetic asset tracking the price of Solana - fully collateralized by USDC."
 conditions = ""
 image = "https://cdn.normalapi.com/tokens/normal/nSOL.png"
 is_unlimited = true
-is_asset_anchored = false
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CC3G4RXMJOYSXNGYDCYLZYBEDKVOENZ6JVJNV5VGWT7SBPTVBR64XIS5"
+collateral_addresses = [
+    "CC3G4RXMJOYSXNGYDCYLZYBEDKVOENZ6JVJNV5VGWT7SBPTVBR64XIS5",
+]
+collateral_address_messages = [
+    "The assets in the contract CC3G4RXMJOYSXNGYDCYLZYBEDKVOENZ6JVJNV5VGWT7SBPTVBR64XIS5 are reserved to back nSOL issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-14T18:51:43Z to 2027-01-13T00:00:00Z.",
+]
+collateral_address_signatures = [""]
+
+[[CURRENCIES]]
+code = "snSOL"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
+contract = "CDKPMZTSVDQ54TPET7IVL34KQTIGFPVUOPBNUWC3JPZE7RMWXIA6PAWW"
+status = "live"
+display_decimals = 7
+name = "Normal Solana"
+desc = "A synthetic asset tracking the inverse price of Solana - fully collateralized by USDC."
+conditions = ""
+image = "https://cdn.normalapi.com/tokens/normal/nSOL.png"
+is_unlimited = true
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CC3G4RXMJOYSXNGYDCYLZYBEDKVOENZ6JVJNV5VGWT7SBPTVBR64XIS5"
+collateral_addresses = [
+    "CC3G4RXMJOYSXNGYDCYLZYBEDKVOENZ6JVJNV5VGWT7SBPTVBR64XIS5",
+]
+collateral_address_messages = [
+    "The assets in the contract CC3G4RXMJOYSXNGYDCYLZYBEDKVOENZ6JVJNV5VGWT7SBPTVBR64XIS5 are reserved to back snSOL issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-14T18:51:43Z to 2027-01-13T00:00:00Z.",
+]
+collateral_address_signatures = [""]
+
+
+[[CURRENCIES]]
+code = "nXRP"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
+contract = "CDGL6SBM2Y6N4LIQ2V6Y2MLLG6ENNG6FSU5I3PBP6OVFWU6YR4WOQ3QE"
+status = "live"
+display_decimals = 7
+name = "Normal Ripple"
+desc = "A synthetic asset tracking the price of Ripple - fully collateralized by USDC."
+conditions = ""
+image = "https://cdn.normalapi.com/tokens/normal/nXRP.png"
+is_unlimited = true
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CDFCQKZJ2BTGTPZN3TQC3XBRATKISO4VCJRRLHE62Y3SEOM6SBQLIY6M"
+collateral_addresses = [
+    "CDFCQKZJ2BTGTPZN3TQC3XBRATKISO4VCJRRLHE62Y3SEOM6SBQLIY6M",
+]
+collateral_address_messages = [
+    "The assets in the contract CDFCQKZJ2BTGTPZN3TQC3XBRATKISO4VCJRRLHE62Y3SEOM6SBQLIY6M are reserved to back nXRP issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-19T00:00:00Z to 2027-01-18T00:00:00Z.",
+]
+collateral_address_signatures = [""]
+
+[[CURRENCIES]]
+code = "snXRP"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
+contract = "CDH57RDZFVJJYROQQG3MN5CTQ3KZMSIMUWTVVLDAGJ353PYNSA3FYGGX"
+status = "live"
+display_decimals = 7
+name = "Short Normal Ripple"
+desc = "A synthetic asset tracking the inverse price of Ripple - fully collateralized by USDC."
+conditions = ""
+image = "https://cdn.normalapi.com/tokens/normal/nXRP.png"
+is_unlimited = true
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CDFCQKZJ2BTGTPZN3TQC3XBRATKISO4VCJRRLHE62Y3SEOM6SBQLIY6M"
+collateral_addresses = [
+    "CDFCQKZJ2BTGTPZN3TQC3XBRATKISO4VCJRRLHE62Y3SEOM6SBQLIY6M",
+]
+collateral_address_messages = [
+    "The assets in the contract CDFCQKZJ2BTGTPZN3TQC3XBRATKISO4VCJRRLHE62Y3SEOM6SBQLIY6M are reserved to back snXRP issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-19T00:00:00Z to 2027-01-18T00:00:00Z.",
+]
+collateral_address_signatures = [""]
+
+
+[[CURRENCIES]]
+code = "nADA"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
+contract = "CAP22BQR4DFVVJSMMBF22H26YPRLKZ6CTRK5BKPUVKI3MFZQG6AMM52Z"
+status = "live"
+display_decimals = 7
+name = "Normal Cardano"
+desc = "A synthetic asset tracking the price of Cardano - fully collateralized by USDC."
+conditions = ""
+image = "https://cdn.normalapi.com/tokens/normal/nADA.png"
+is_unlimited = true
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CALB4WRAZBO6LSJHWH3GLBJYH45HQ65VWRFLAHTAKUJG25E7Y2MU7PTI"
+collateral_addresses = [
+    "CALB4WRAZBO6LSJHWH3GLBJYH45HQ65VWRFLAHTAKUJG25E7Y2MU7PTI",
+]
+collateral_address_messages = [
+    "The assets in the contract CALB4WRAZBO6LSJHWH3GLBJYH45HQ65VWRFLAHTAKUJG25E7Y2MU7PTI are reserved to back nADA issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-19T00:00:00Z to 2027-01-18T00:00:00Z.",
+]
+collateral_address_signatures = [""]
+
+[[CURRENCIES]]
+code = "snADA"
+issuer = "GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB"
+contract = "CBV6CWIGIV7R3C2Z5RFILWQBLDS57IOW4HSQ4QCJ2EXXFLQ2UGRJKBYJ"
+status = "live"
+display_decimals = 7
+name = "Short Normal Cardano"
+desc = "A synthetic asset tracking the inverse price of Cardano - fully collateralized by USDC."
+conditions = ""
+image = "https://cdn.normalapi.com/tokens/normal/nADA.png"
+is_unlimited = true
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "USDC"
+redemption_instructions = "Use redeem() on this contract: CALB4WRAZBO6LSJHWH3GLBJYH45HQ65VWRFLAHTAKUJG25E7Y2MU7PTI"
+collateral_addresses = [
+    "CALB4WRAZBO6LSJHWH3GLBJYH45HQ65VWRFLAHTAKUJG25E7Y2MU7PTI",
+]
+collateral_address_messages = [
+    "The assets in the contract CALB4WRAZBO6LSJHWH3GLBJYH45HQ65VWRFLAHTAKUJG25E7Y2MU7PTI are reserved to back snADA issued by GAOATRJGNRPONPBRHUMW6OWBJ6DJNR3B7FBJAI3Y3LQIRIE4S7VCBWMB on Stellar. Valid from 2026-01-19T00:00:00Z to 2027-01-18T00:00:00Z.",
+]
+collateral_address_signatures = [""]
