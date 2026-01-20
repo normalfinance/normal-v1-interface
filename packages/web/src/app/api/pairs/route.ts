@@ -5,7 +5,7 @@ import { rateLimiter } from '@/server/rateLimiter';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
-async function poolsHandler(req: NextRequest) {
+async function pairsHandler(req: NextRequest) {
   try {
     const { walletAddress } = await req.json();
     if (!walletAddress) {
@@ -64,4 +64,4 @@ async function poolsHandler(req: NextRequest) {
   }
 }
 
-export const POST = createEdgeConfigHandler(poolsHandler, 'pairs');
+export const POST = createEdgeConfigHandler(pairsHandler, 'pairs');

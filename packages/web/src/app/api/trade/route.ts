@@ -5,12 +5,12 @@ import { rateLimiter } from '@/server/rateLimiter';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
-async function swapHandler(req: NextRequest) {
+async function tradeHandler(req: NextRequest) {
   try {
-    const { walletAddress, swapArgs } = await req.json();
-    if (!walletAddress || !swapArgs) {
-      await logWithConfig('warn', 'Trade API called without wallet address or trade args');
-      return NextResponse.json({ error: 'Missing walletAddress or tradeArgs' }, { status: 400 });
+    const { walletAddress } = await req.json();
+    if (!walletAddress) {
+      await logWithConfig('warn', 'Trade API called without wallet address');
+      return NextResponse.json({ error: 'Missing walletAddress' }, { status: 400 });
     }
 
     // Get Edge Config for rate limiting
@@ -65,4 +65,4 @@ async function swapHandler(req: NextRequest) {
   }
 }
 
-export const POST = createEdgeConfigHandler(swapHandler, 'trade');
+export const POST = createEdgeConfigHandler(tradeHandler, 'trade');

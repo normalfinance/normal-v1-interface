@@ -298,8 +298,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   useEffect(() => {
     if (authLoading) return;
 
-    console.log('session before handlePostAuthFlow', session);
-
     if (!session) {
       if (hasHandledAuthRef.current) {
         clearLoginIntent();
