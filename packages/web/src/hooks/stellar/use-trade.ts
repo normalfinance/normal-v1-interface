@@ -136,7 +136,7 @@ export function useTrade(): ReturnType {
         token1: { name: 'USDC', amount: String(args.usdc_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.buy_long(processedArgs, { simulate: !restore });
+        const tx = await client.buy_long(processedArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -184,7 +184,7 @@ export function useTrade(): ReturnType {
         token1: { name: 'LONG', amount: String(args.long_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.sell_long(processedArgs, { simulate: !restore });
+        const tx = await client.sell_long(processedArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -232,7 +232,7 @@ export function useTrade(): ReturnType {
         token1: { name: 'USDC', amount: String(args.usdc_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.buy_short(processedArgs, { simulate: !restore });
+        const tx = await client.buy_short(processedArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -280,7 +280,7 @@ export function useTrade(): ReturnType {
         token1: { name: 'SHORT', amount: String(args.short_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.sell_short(processedArgs, { simulate: !restore });
+        const tx = await client.sell_short(processedArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -337,7 +337,7 @@ export function useTrade(): ReturnType {
         token1: { name: 'LONG', amount: String(args.usdc_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.mint(mintArgs, { simulate: !restore });
+        const tx = await client.mint(mintArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -373,7 +373,7 @@ export function useTrade(): ReturnType {
         token1: { name: 'Short', amount: String(tradeArgs.short_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.sell_short(tradeArgs, { simulate: !restore });
+        const tx = await client.sell_short(tradeArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -424,7 +424,7 @@ export function useTrade(): ReturnType {
         token1: { name: args.asset, amount: String(args.usdc_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.mint(mingArgs, { simulate: !restore });
+        const tx = await client.mint(mingArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -460,7 +460,7 @@ export function useTrade(): ReturnType {
         token1: { name: 'Long', amount: String(tradeArgs.long_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.sell_long(tradeArgs, { simulate: !restore });
+        const tx = await client.sell_long(tradeArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -511,7 +511,7 @@ export function useTrade(): ReturnType {
         token1: { name: 'Short', amount: String(args.long_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.buy_short(tradeArgs, { simulate: !restore });
+        const tx = await client.buy_short(tradeArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -548,7 +548,7 @@ export function useTrade(): ReturnType {
         token1: { name: args.asset, amount: String(tokensToRedeem) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.redeem(redeemArgs, { simulate: !restore });
+        const tx = await client.redeem(redeemArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -597,7 +597,7 @@ export function useTrade(): ReturnType {
         token1: { name: 'SHORT', amount: String(args.short_in) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.buy_long(tradeArgs, { simulate: !restore });
+        const tx = await client.buy_long(tradeArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;
@@ -634,7 +634,7 @@ export function useTrade(): ReturnType {
         token1: { name: args.asset, amount: String(tokensToRedeem) },
       },
       transactionFunction: async (client, restore) => {
-        const tx = await client.redeem(redeemArgs, { simulate: !restore });
+        const tx = await client.redeem(redeemArgs, { simulate: !restore, fee: 10000000 });
         if (restore) {
           await tx.simulate({ restore: true });
           return tx;

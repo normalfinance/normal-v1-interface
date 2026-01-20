@@ -164,17 +164,6 @@ export const useContractTransaction = () => {
 
             // Return Freighter-compatible shape expected by stellar-sdk contracts
             return { signedTxXdr: signedXdr };
-            // logger.log('[USE CONTRACT TRANSACTION] Attempting to sign transaction...');
-            // logger.log('[USE CONTRACT TRANSACTION] Using wallet type:', walletType);
-            // if (!signTransaction) {
-            //   throw new Error('Sign transaction function not available');
-            // }
-            // // For Normal wallet, pass network passphrase
-            // const result = isNormalWallet
-            //   ? await signTransaction(xdr, networkPassphrase)
-            //   : await signTransaction(xdr);
-            // logger.log('[USE CONTRACT TRANSACTION] Transaction signed successfully');
-            // return result;
           } catch (error) {
             logger.error('[USE CONTRACT TRANSACTION] Error during transaction signing:', error);
             throw error;
@@ -190,7 +179,6 @@ export const useContractTransaction = () => {
           walletAddress
         );
 
-        // const transaction = await transactionFunction(contractClient, restore);
         let transaction: AssembledTransaction<any>;
         try {
           transaction = await transactionFunction(contractClient, restore);
@@ -228,22 +216,6 @@ export const useContractTransaction = () => {
           };
         } catch (error) {
           logger.error('Error during returning transaction hash: ', error);
-
-          // if (error instanceof Error && error.message.includes('restore some contract state')) {
-          //   return new Promise((resolve, reject) => {
-          //     openRestoreModal(async () => {
-          //       try {
-          //         const result = await run(true);
-          //         resolve(result);
-          //       } catch (restoreError) {
-          //         logger.error('Error during restoring transaction:', restoreError);
-          //         reject(restoreError);
-          //       } finally {
-          //         closeRestoreModal();
-          //       }
-          //     });
-          //   });
-          // }
           throw error;
         }
       };
@@ -315,16 +287,7 @@ export const useContractTransaction = () => {
           throw error;
         });
     },
-    [
-      storePersist,
-      signStellarWalletKit,
-      signNormalWallet,
-      stellarPublicKey,
-      normalPublicKey,
-      // openRestoreModal,
-      // closeRestoreModal,
-      t,
-    ]
+    [storePersist, signStellarWalletKit, signNormalWallet, stellarPublicKey, normalPublicKey, t]
   );
 
   return {
