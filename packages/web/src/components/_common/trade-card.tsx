@@ -20,6 +20,7 @@ import {
   checkTrustline,
   getCryptoIconUrl,
   sanitizeAmountInput,
+  format,
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -86,7 +87,18 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
   const { addTrustLine } = useTrustLine();
 
-  const { loading, setLoading, buyLong, sellLong, buyShort, sellShort } = useTrade();
+  const {
+    loading,
+    setLoading,
+    buyLong,
+    sellLong,
+    buyShort,
+    sellShort,
+    buyLongMint,
+    buyShortMint,
+    sellLongRedeem,
+    sellShortRedeem,
+  } = useTrade();
 
   const { fetchBalances: fetchTreasuryBalances } = useTreasury();
 
@@ -123,11 +135,6 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
   // Compute the fiat value for the user's sell input
   const fiatAmountVal = parseFloat(fiatAmount) || 0;
-
-  // const amountFiatValue =
-  //   selectedToken && fiatAmountVal > 0
-  //     ? BigNumber(selectedToken.price).multipliedBy(fiatAmountVal).toNumber()
-  //     : 0;
 
   // 6) Open/close the token picker
   const handleOpen = () => {
@@ -258,7 +265,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
         fiatAmountVal
       );
       requiredAmount = tokenValue.dividedBy(usdcToken.price);
-      setAvailableLiquidity(balances.quote.toString());
+      setAvailableLiquidity(balances.usdc.toString());
     }
 
     // Determine optimal trade route
@@ -574,13 +581,25 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
           await buyLong({ pair: pair.pairAddress, usdc_in: Number(usdcAmount), min_long_out: 0 });
           break;
         case 'buy_long_mint':
-          await mintAndSellShort({ pair: pair.pairAddress, usdc_in: Number(usdcAmount) });
+          enqueueSnackbar(t('buy_long_mint not yet live'), { variant: 'info' });
+          // await buyLongMint({
+          //   pair: pair.pairAddress,
+          //   asset: pair.asset,
+          //   usdc_in: usdcAmount,
+          //   collateralPerPair: BigNumber(format.fTokenAmount(pair.collateral.collateralPerPair, 7)),
+          // });
           break;
         case 'buy_short_direct':
           await buyShort({ pair: pair.pairAddress, usdc_in: Number(usdcAmount), min_short_out: 0 });
           break;
         case 'buy_short_mint':
-          await mintAndSellLong({ pair: pair.pairAddress, usdc_in: Number(usdcAmount) });
+          enqueueSnackbar(t('buy_short_mint not yet live'), { variant: 'info' });
+          // await buyShortMint({
+          //   pair: pair.pairAddress,
+          //   asset: pair.asset,
+          //   usdc_in: usdcAmount,
+          //   collateralPerPair: BigNumber(format.fTokenAmount(pair.collateral.collateralPerPair, 7)),
+          // });
           break;
         case 'sell_long_direct':
           await sellLong({
@@ -590,7 +609,12 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
           });
           break;
         case 'sell_long_redeem':
-          await buyShortAndRedeem({ pair: pair.pairAddress, long_in: Number(tokenAmount) });
+          enqueueSnackbar(t('sell_long_redeem not yet live'), { variant: 'info' });
+          // await sellLongRedeem({
+          //   pair: pair.pairAddress,
+          //   asset: pair.asset,
+          //   long_in: Number(tokenAmount),
+          // });
           break;
         case 'sell_short_direct':
           await sellShort({
@@ -600,17 +624,16 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
           });
           break;
         case 'sell_short_redeem':
-          await buyLongAndRedeem({ pair: pair.pairAddress, short_in: Number(tokenAmount) });
+          enqueueSnackbar(t('sell_short_redeem not yet live'), { variant: 'info' });
+          // await sellShortRedeem({
+          //   pair: pair.pairAddress,
+          //   asset: pair.asset,
+          //   short_in: Number(tokenAmount),
+          // });
           break;
         default:
           throw new Error(`Unknown trade route: ${route.type}`);
       }
-
-      // Refresh balances after trade
-      setTimeout(async () => {
-        await updateTokenInfo(selectedToken);
-        await updateTokenInfo(usdcToken);
-      }, 5000);
     } catch (error) {
       setSwapError('Error during trade');
     }

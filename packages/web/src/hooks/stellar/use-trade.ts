@@ -1,6 +1,6 @@
 'use client';
 
-import type { TreasuryContract } from '@normalfinance/contracts';
+import type { TreasuryContract, LongShortPairFactoryContract } from '@normalfinance/contracts';
 
 import { useState } from 'react';
 import { constants } from '@normalfinance/utils';
@@ -16,22 +16,28 @@ export type SellLongArgs = Omit<Parameters<TreasuryContract.Client['sell_long']>
 export type BuyShortArgs = Omit<Parameters<TreasuryContract.Client['buy_short']>[0], 'user'>;
 export type SellShortArgs = Omit<Parameters<TreasuryContract.Client['sell_short']>[0], 'user'>;
 
-// export type MintAndSellShortArgs = Omit<
-//   Parameters<TreasuryContract.Client['mint_and_sell_short']>[0],
-//   'user'
-// >;
-// export type MintAndSellLongArgs = Omit<
-//   Parameters<TreasuryContract.Client['mint_and_sell_long']>[0],
-//   'user'
-// >;
-// export type BuyLongAndRedeemArgs = Omit<
-//   Parameters<TreasuryContract.Client['buy_long_and_redeem']>[0],
-//   'user'
-// >;
-// export type BuyShortAndRedeemArgs = Omit<
-//   Parameters<TreasuryContract.Client['buy_short_and_redeem']>[0],
-//   'user'
-// >;
+export type BuyLongMintArgs = {
+  pair: string;
+  asset: string;
+  usdc_in: BigNumber;
+  collateralPerPair: BigNumber;
+};
+export type BuyShortMintArgs = {
+  pair: string;
+  asset: string;
+  usdc_in: BigNumber;
+  collateralPerPair: BigNumber;
+};
+export type SellLongRedeemArgs = {
+  pair: string;
+  asset: string;
+  long_in: number;
+};
+export type SellShortRedeemArgs = {
+  pair: string;
+  asset: string;
+  short_in: number;
+};
 
 interface ReturnType {
   error: any | null;
@@ -43,10 +49,10 @@ interface ReturnType {
   buyShort: (args: BuyShortArgs) => Promise<void>;
   sellShort: (args: SellShortArgs) => Promise<void>;
 
-  // mintAndSellShort: (args: MintAndSellShortArgs) => Promise<void>; // buy long
-  // mintAndSellLong: (args: MintAndSellLongArgs) => Promise<void>; // buy short
-  // buyLongAndRedeem: (args: BuyLongAndRedeemArgs) => Promise<void>; // sell short
-  // buyShortAndRedeem: (args: BuyShortAndRedeemArgs) => Promise<void>; // sell long
+  buyLongMint: (args: BuyLongMintArgs) => Promise<void>;
+  buyShortMint: (args: BuyShortMintArgs) => Promise<void>;
+  sellLongRedeem: (args: SellLongRedeemArgs) => Promise<void>;
+  sellShortRedeem: (args: SellShortRedeemArgs) => Promise<void>;
 }
 
 // ----------------------------------------------------------------------
@@ -56,7 +62,7 @@ export function useTrade(): ReturnType {
 
   const { executeContractTransaction } = useContractTransaction();
 
-  const [error] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const executePair = async (signedTransactionXDR: string, transactionType: string = 'Trade') => {
@@ -99,13 +105,24 @@ export function useTrade(): ReturnType {
     }
   };
 
+  /**
+   *
+   * Single-Step Trade Functions
+   *
+   */
+
   const buyLong = async (args: BuyLongArgs) => {
+    if (!storePersist.wallet.address) {
+      setError('No account found');
+      return;
+    }
+
     setLoading(true);
 
     await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['buy_long']>[0] = {
-      user: storePersist.wallet.address!,
+      user: storePersist.wallet.address,
       pair: args.pair,
       usdc_in: BigInt((args.usdc_in * 10 ** 7).toFixed(0)),
       min_long_out: 0,
@@ -143,12 +160,17 @@ export function useTrade(): ReturnType {
   };
 
   const sellLong = async (args: SellLongArgs) => {
+    if (!storePersist.wallet.address) {
+      setError('No account found');
+      return;
+    }
+
     setLoading(true);
 
     await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['sell_long']>[0] = {
-      user: storePersist.wallet.address!,
+      user: storePersist.wallet.address,
       pair: args.pair,
       long_in: BigInt((args.long_in * 10 ** 7).toFixed(0)),
       min_usdc_out: 0,
@@ -186,12 +208,17 @@ export function useTrade(): ReturnType {
   };
 
   const buyShort = async (args: BuyShortArgs) => {
+    if (!storePersist.wallet.address) {
+      setError('No account found');
+      return;
+    }
+
     setLoading(true);
 
     await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['buy_short']>[0] = {
-      user: storePersist.wallet.address!,
+      user: storePersist.wallet.address,
       pair: args.pair,
       usdc_in: BigInt((args.usdc_in * 10 ** 7).toFixed(0)),
       min_short_out: 0,
@@ -229,12 +256,17 @@ export function useTrade(): ReturnType {
   };
 
   const sellShort = async (args: SellShortArgs) => {
+    if (!storePersist.wallet.address) {
+      setError('No account found');
+      return;
+    }
+
     setLoading(true);
 
     await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['sell_short']>[0] = {
-      user: storePersist.wallet.address!,
+      user: storePersist.wallet.address,
       pair: args.pair,
       short_in: BigInt((args.short_in * 10 ** 7).toFixed(0)),
       min_usdc_out: 0,
@@ -271,173 +303,359 @@ export function useTrade(): ReturnType {
     setLoading(false);
   };
 
-  // const mintAndSellShort = async (args: MintAndSellShortArgs) => {
-  //   setLoading(true);
+  /**
+   *
+   * Two-Step Trade Functions
+   *
+   */
 
-  //   await rateLimitCheck();
+  const buyLongMint = async (args: BuyLongMintArgs) => {
+    if (!storePersist.wallet.address) {
+      setError('No account found');
+      return;
+    }
 
-  //   const processedArgs: Parameters<TreasuryContract.Client['mint_and_sell_short']>[0] = {
-  //     user: storePersist.wallet.address!,
-  //     pair: args.pair,
-  //     usdc_in: BigInt((args.usdc_in * 10 ** 7).toFixed(0)),
-  //   };
+    setLoading(true);
 
-  //   await executeContractTransaction({
-  //     contractType: 'treasury',
-  //     contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
-  //     transactionDetails: {
-  //       type: TransactionType.TRADE,
-  //       token1: { name: 'LONG', amount: String(args.usdc_in) },
-  //     },
-  //     transactionFunction: async (client, restore) => {
-  //       const tx = await client.mint_and_sell_short(processedArgs, { simulate: !restore });
-  //       if (restore) {
-  //         await tx.simulate({ restore: true });
-  //         return tx;
-  //       } else {
-  //         await tx.sign();
-  //         const signedXDR = tx.signed?.toXDR();
+    await rateLimitCheck();
 
-  //         if (signedXDR) {
-  //           const apiRes = await executePair(signedXDR, 'Buy Long (via Mint)');
-  //           if (apiRes?.transactionHash) {
-  //             (tx as any).hash = apiRes.transactionHash;
-  //           }
-  //         }
+    // Mint
+    const tokensToMint = args.usdc_in.dividedBy(args.collateralPerPair);
+    const tokensToMintBN = BigInt((tokensToMint.toNumber() * 10 ** 7).toFixed(0));
 
-  //         return tx;
-  //       }
-  //     },
-  //   });
+    const mintArgs: Parameters<LongShortPairFactoryContract.Client['mint']>[0] = {
+      user: storePersist.wallet.address!,
+      asset: args.asset,
+      tokens_to_mint: tokensToMintBN,
+    };
 
-  //   setLoading(false);
-  // };
+    await executeContractTransaction({
+      contractType: 'long_short_pair_factory',
+      contractAddress: constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.MINT_PAIR,
+        token1: { name: 'LONG', amount: String(args.usdc_in) },
+      },
+      transactionFunction: async (client, restore) => {
+        const tx = await client.mint(mintArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-  // const mintAndSellLong = async (args: MintAndSellLongArgs) => {
-  //   setLoading(true);
+          if (signedXDR) {
+            const apiRes = await executePair(signedXDR, 'Buy Short (via Mint)');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-  //   await rateLimitCheck();
+          return tx;
+        }
+      },
+    });
 
-  //   const processedArgs: Parameters<TreasuryContract.Client['mint_and_sell_long']>[0] = {
-  //     user: storePersist.wallet.address!,
-  //     pair: args.pair,
-  //     usdc_in: BigInt((args.usdc_in * 10 ** 7).toFixed(0)),
-  //   };
+    // Trade
+    const tradeArgs: Parameters<TreasuryContract.Client['sell_short']>[0] = {
+      user: storePersist.wallet.address,
+      pair: args.pair,
+      short_in: tokensToMintBN,
+      min_usdc_out: 0,
+    };
 
-  //   await executeContractTransaction({
-  //     contractType: 'treasury',
-  //     contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
-  //     transactionDetails: {
-  //       type: TransactionType.TRADE,
-  //       token1: { name: 'LONG', amount: String(args.usdc_in) },
-  //     },
-  //     transactionFunction: async (client, restore) => {
-  //       const tx = await client.mint_and_sell_long(processedArgs, { simulate: !restore });
-  //       if (restore) {
-  //         await tx.simulate({ restore: true });
-  //         return tx;
-  //       } else {
-  //         await tx.sign();
-  //         const signedXDR = tx.signed?.toXDR();
+    await executeContractTransaction({
+      contractType: 'treasury',
+      contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.TRADE,
+        token1: { name: 'Short', amount: String(tradeArgs.short_in) },
+      },
+      transactionFunction: async (client, restore) => {
+        const tx = await client.sell_short(tradeArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-  //         if (signedXDR) {
-  //           const apiRes = await executePair(signedXDR, 'Buy Short (via Mint)');
-  //           if (apiRes?.transactionHash) {
-  //             (tx as any).hash = apiRes.transactionHash;
-  //           }
-  //         }
+          if (signedXDR) {
+            const apiRes = await executePair(signedXDR, 'Sell Short');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-  //         return tx;
-  //       }
-  //     },
-  //   });
+          return tx;
+        }
+      },
+    });
 
-  //   setLoading(false);
-  // };
+    setLoading(false);
+  };
 
-  // const buyLongAndRedeem = async (args: BuyLongAndRedeemArgs) => {
-  //   setLoading(true);
+  const buyShortMint = async (args: BuyShortMintArgs) => {
+    if (!storePersist.wallet.address) {
+      setError('No account found');
+      return;
+    }
 
-  //   await rateLimitCheck();
+    setLoading(true);
 
-  //   const processedArgs: Parameters<TreasuryContract.Client['buy_long_and_redeem']>[0] = {
-  //     user: storePersist.wallet.address!,
-  //     pair: args.pair,
-  //     short_in: BigInt((args.short_in * 10 ** 7).toFixed(0)),
-  //   };
+    await rateLimitCheck();
 
-  //   await executeContractTransaction({
-  //     contractType: 'treasury',
-  //     contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
-  //     transactionDetails: {
-  //       type: TransactionType.TRADE,
-  //       token1: { name: 'SHORT', amount: String(args.short_in) },
-  //     },
-  //     transactionFunction: async (client, restore) => {
-  //       const tx = await client.buy_long_and_redeem(processedArgs, { simulate: !restore });
-  //       if (restore) {
-  //         await tx.simulate({ restore: true });
-  //         return tx;
-  //       } else {
-  //         await tx.sign();
-  //         const signedXDR = tx.signed?.toXDR();
+    // Mint
+    const tokensToMint = args.usdc_in.dividedBy(args.collateralPerPair);
+    const tokensToMintBN = BigInt((tokensToMint.toNumber() * 10 ** 7).toFixed(0));
 
-  //         if (signedXDR) {
-  //           const apiRes = await executePair(signedXDR, 'Sell Short (via Redeem)');
-  //           if (apiRes?.transactionHash) {
-  //             (tx as any).hash = apiRes.transactionHash;
-  //           }
-  //         }
+    const mingArgs: Parameters<LongShortPairFactoryContract.Client['mint']>[0] = {
+      user: storePersist.wallet.address,
+      asset: args.asset,
+      tokens_to_mint: tokensToMint,
+    };
 
-  //         return tx;
-  //       }
-  //     },
-  //   });
+    await executeContractTransaction({
+      contractType: 'long_short_pair_factory',
+      contractAddress: constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.MINT_PAIR,
+        token1: { name: args.asset, amount: String(args.usdc_in) },
+      },
+      transactionFunction: async (client, restore) => {
+        const tx = await client.mint(mingArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-  //   setLoading(false);
-  // };
+          if (signedXDR) {
+            const apiRes = await executePair(signedXDR, 'Mint');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-  // const buyShortAndRedeem = async (args: BuyShortAndRedeemArgs) => {
-  //   setLoading(true);
+          return tx;
+        }
+      },
+    });
 
-  //   await rateLimitCheck();
+    // Trade - Sell Long
+    const tradeArgs: Parameters<TreasuryContract.Client['sell_long']>[0] = {
+      user: storePersist.wallet.address,
+      pair: args.pair,
+      long_in: tokensToMintBN,
+      min_usdc_out: 0,
+    };
 
-  //   const processedArgs: Parameters<TreasuryContract.Client['buy_short_and_redeem']>[0] = {
-  //     user: storePersist.wallet.address!,
-  //     pair: args.pair,
-  //     long_in: BigInt((args.long_in * 10 ** 7).toFixed(0)),
-  //   };
+    await executeContractTransaction({
+      contractType: 'treasury',
+      contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.TRADE,
+        token1: { name: 'Long', amount: String(tradeArgs.long_in) },
+      },
+      transactionFunction: async (client, restore) => {
+        const tx = await client.sell_long(tradeArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-  //   await executeContractTransaction({
-  //     contractType: 'treasury',
-  //     contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
-  //     transactionDetails: {
-  //       type: TransactionType.TRADE,
-  //       token1: { name: 'LONG', amount: String(args.long_in) },
-  //     },
-  //     transactionFunction: async (client, restore) => {
-  //       const tx = await client.buy_short_and_redeem(processedArgs, { simulate: !restore });
-  //       if (restore) {
-  //         await tx.simulate({ restore: true });
-  //         return tx;
-  //       } else {
-  //         await tx.sign();
-  //         const signedXDR = tx.signed?.toXDR();
+          if (signedXDR) {
+            const apiRes = await executePair(signedXDR, 'Sell Long');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
 
-  //         if (signedXDR) {
-  //           const apiRes = await executePair(signedXDR, 'Sell Long (via Redeem)');
-  //           if (apiRes?.transactionHash) {
-  //             (tx as any).hash = apiRes.transactionHash;
-  //           }
-  //         }
+          return tx;
+        }
+      },
+    });
 
-  //         return tx;
-  //       }
-  //     },
-  //   });
+    setLoading(false);
+  };
 
-  //   setLoading(false);
-  // };
+  const sellLongRedeem = async (args: SellLongRedeemArgs) => {
+    if (!storePersist.wallet.address) {
+      setError('No account found');
+      return;
+    }
+
+    setLoading(true);
+
+    await rateLimitCheck();
+
+    // Trade - Buy Short
+    const usdcIn = BigInt((args.long_in * 10 ** 7).toFixed(0));
+
+    const tradeArgs: Parameters<TreasuryContract.Client['buy_short']>[0] = {
+      user: storePersist.wallet.address!,
+      pair: args.pair,
+      usdc_in: BigInt((args.long_in * 10 ** 7).toFixed(0)),
+      min_short_out: args.long_in,
+    };
+
+    await executeContractTransaction({
+      contractType: 'treasury',
+      contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.TRADE,
+        token1: { name: 'Short', amount: String(args.long_in) },
+      },
+      transactionFunction: async (client, restore) => {
+        const tx = await client.buy_short(tradeArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
+
+          if (signedXDR) {
+            const apiRes = await executePair(signedXDR, 'Buy Short');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
+
+          return tx;
+        }
+      },
+    });
+
+    // Redeem
+    const tokensToRedeem = 0;
+
+    const redeemArgs: Parameters<LongShortPairFactoryContract.Client['redeem']>[0] = {
+      user: storePersist.wallet.address,
+      asset: args.asset,
+      tokens_to_redeem: tokensToRedeem,
+    };
+
+    await executeContractTransaction({
+      contractType: 'long_short_pair_factory',
+      contractAddress: constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.REDEEM_PAIR,
+        token1: { name: args.asset, amount: String(tokensToRedeem) },
+      },
+      transactionFunction: async (client, restore) => {
+        const tx = await client.redeem(redeemArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
+
+          if (signedXDR) {
+            const apiRes = await executePair(signedXDR, 'Redeem');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
+
+          return tx;
+        }
+      },
+    });
+
+    setLoading(false);
+  };
+
+  const sellShortRedeem = async (args: SellShortRedeemArgs) => {
+    if (!storePersist.wallet.address) {
+      setError('No account found');
+      return;
+    }
+
+    setLoading(true);
+
+    await rateLimitCheck();
+
+    // Trade - Sell Short
+    const tradeArgs: Parameters<TreasuryContract.Client['buy_long']>[0] = {
+      user: storePersist.wallet.address!,
+      pair: args.pair,
+      usdc_in: BigInt((args.short_in * 10 ** 7).toFixed(0)),
+      min_long_out: args.short_in,
+    };
+
+    await executeContractTransaction({
+      contractType: 'treasury',
+      contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.TRADE,
+        token1: { name: 'SHORT', amount: String(args.short_in) },
+      },
+      transactionFunction: async (client, restore) => {
+        const tx = await client.buy_long(tradeArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
+
+          if (signedXDR) {
+            const apiRes = await executePair(signedXDR, 'Buy Long');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
+
+          return tx;
+        }
+      },
+    });
+
+    // Redeem
+    const tokensToRedeem = 0;
+
+    const redeemArgs: Parameters<LongShortPairFactoryContract.Client['redeem']>[0] = {
+      user: storePersist.wallet.address,
+      asset: args.asset,
+      tokens_to_redeem: tokensToRedeem,
+    };
+
+    await executeContractTransaction({
+      contractType: 'long_short_pair_factory',
+      contractAddress: constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
+      transactionDetails: {
+        type: TransactionType.REDEEM_PAIR,
+        token1: { name: args.asset, amount: String(tokensToRedeem) },
+      },
+      transactionFunction: async (client, restore) => {
+        const tx = await client.redeem(redeemArgs, { simulate: !restore });
+        if (restore) {
+          await tx.simulate({ restore: true });
+          return tx;
+        } else {
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
+
+          if (signedXDR) {
+            const apiRes = await executePair(signedXDR, 'Redeem');
+            if (apiRes?.transactionHash) {
+              (tx as any).hash = apiRes.transactionHash;
+            }
+          }
+
+          return tx;
+        }
+      },
+    });
+
+    setLoading(false);
+  };
 
   return {
     error,
@@ -447,9 +665,10 @@ export function useTrade(): ReturnType {
     sellLong,
     buyShort,
     sellShort,
-    // mintAndSellShort,
-    // mintAndSellLong,
-    // buyLongAndRedeem,
-    // buyShortAndRedeem,
+
+    buyLongMint,
+    buyShortMint,
+    sellLongRedeem,
+    sellShortRedeem,
   };
 }
