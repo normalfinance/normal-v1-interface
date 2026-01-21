@@ -390,13 +390,13 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/explore',
-    '/swap',
+    '/assets',
+    '/assets/:path*',
+    '/invest',
+    '/earn',
     '/rewards',
-    '/positions',
-    '/positions/create',
-    '/pools/:path*',
     '/indexes',
+    '/indexes/:path*',
     '/indexes/create',
     '/api/:path*',
   ],

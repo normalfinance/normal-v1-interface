@@ -29,34 +29,35 @@ export function createOnramperURL(
   apiKey: string,
   arg2?: number | string | CreateOnramperUrlOpts
 ): string {
-  const base = `https://${isTestKey(apiKey) ? 'buy.onramper.dev' : 'buy.onramper.com'}`;
+  return 'https://www.onramper.com/buy';
+  // const base = `https://${isTestKey(apiKey) ? 'buy.onramper.dev' : 'buy.onramper.com'}`;
 
-  // Back-compat: createOnramperURL(apiKey, amount)
-  if (typeof arg2 === 'number' || typeof arg2 === 'string' || arg2 == null) {
-    const amountUsd = String(arg2 ?? '0');
-    const params = new URLSearchParams({
-      apiKey,
-      mode: 'buy',
-      defaultFiat: 'USD',
-      defaultAmount: amountUsd,
-    });
-    return `${base}/?${params.toString()}`;
-  }
+  // // Back-compat: createOnramperURL(apiKey, amount)
+  // if (typeof arg2 === 'number' || typeof arg2 === 'string' || arg2 == null) {
+  //   const amountUsd = String(arg2 ?? '0');
+  //   const params = new URLSearchParams({
+  //     apiKey,
+  //     mode: 'buy',
+  //     defaultFiat: 'USD',
+  //     defaultAmount: amountUsd,
+  //   });
+  //   return `${base}/?${params.toString()}`;
+  // }
 
-  const { amountUsd, tokenSymbol, walletAddress, fiat = 'USD' } = arg2 as CreateOnramperUrlOpts;
+  // const { amountUsd, tokenSymbol, walletAddress, fiat = 'USD' } = arg2 as CreateOnramperUrlOpts;
 
-  const assetId = toOnramperAssetId(tokenSymbol);
-  const params = new URLSearchParams({
-    apiKey,
-    mode: 'buy',
-    defaultFiat: fiat,
-    defaultAmount: String(amountUsd ?? '0'),
-    defaultCrypto: assetId,
-  });
+  // const assetId = toOnramperAssetId(tokenSymbol);
+  // const params = new URLSearchParams({
+  //   apiKey,
+  //   mode: 'buy',
+  //   defaultFiat: fiat,
+  //   defaultAmount: String(amountUsd ?? '0'),
+  //   defaultCrypto: assetId,
+  // });
 
-  if (walletAddress) {
-    params.set('wallets', `${assetId}:${walletAddress}`);
-  }
+  // if (walletAddress) {
+  //   params.set('wallets', `${assetId}:${walletAddress}`);
+  // }
 
-  return `${base}/?${params.toString()}`;
+  // return `${base}/?${params.toString()}`;
 }

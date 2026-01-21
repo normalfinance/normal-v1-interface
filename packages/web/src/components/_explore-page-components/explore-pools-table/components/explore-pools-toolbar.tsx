@@ -39,12 +39,12 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
   );
 
   const onRefresh = async () => {
-    enqueueSnackbar('Refreshing pools', { variant: 'info' });
+    enqueueSnackbar('Refreshing assets', { variant: 'info' });
 
     try {
       await getAllPairs();
     } catch (error) {
-      logger.error('Pools refresh error:', error);
+      logger.error('Asset refresh error:', error);
     } finally {
       // setCreatingTrustline(false);
     }

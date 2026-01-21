@@ -5,7 +5,7 @@ import { useTranslate } from '@/locales';
 import { CONFIG } from '@/global-config';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
-import { cdn, createOnramperURL, createCoinbasePayURL } from '@normalfinance/utils';
+import { cdn, createOnramperURL, createCoinbasePayURL, isTestnet } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -96,7 +96,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       assetSymbol: 'USDC',
       sessionToken,
       fiat: 'USD',
-      sandbox: true,
+      sandbox: isTestnet(),
       path: 'buy/select-asset',
     });
     openExternal(url);
