@@ -11,7 +11,7 @@ export const getTransactionMessages = (details: TransactionDetails) => {
       return {
         loading: `Sending ${token1?.amount} ${token1?.name}...`,
         success: `Successfully sent ${token1?.amount} ${token1?.name}.`,
-        error: `Failed to sent ${token1?.name}.`,
+        error: `Failed to send ${token1?.name}.`,
       };
     case TransactionType.MINT_PAIR:
       return {

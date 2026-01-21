@@ -74,7 +74,7 @@ const SendReview: React.FC<SendReviewProps> = ({
 
   const onSubmit = async () => {
     if (!store.wallet.address || !sendToken) {
-      enqueueSnackbar(t('Cannot send token without wallet or token'), { variant: 'error' });
+      enqueueSnackbar(t('Cannot send asset without account or balance'), { variant: 'error' });
       return;
     }
 
@@ -97,13 +97,10 @@ const SendReview: React.FC<SendReviewProps> = ({
           await tx.simulate({ restore: true });
           return tx;
         } else {
-          // Get the unsigned transaction XDR and manually sign it with the wallet
-          const unsignedXDR = tx.built?.toXDR();
+          await tx.sign();
+          const signedXDR = tx.signed?.toXDR();
 
-          if (unsignedXDR) {
-            // Use the safeSignTransaction function to sign the transaction
-            const signedXDR = await client.options.signTransaction(unsignedXDR);
-
+          if (signedXDR) {
             const apiRes = await executeSend(signedXDR, 'Send Token');
             if (apiRes?.transactionHash) {
               (tx as any).hash = apiRes.transactionHash;
