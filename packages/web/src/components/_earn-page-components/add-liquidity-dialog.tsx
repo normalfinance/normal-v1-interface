@@ -323,22 +323,25 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
     try {
       const selectedPair = pairByToken[selectedToken.contract];
 
-      const sufficientLong = BigNumber(tokensByAddress[selectedPair.tokens.long].balance).gte(
+      const insufficientLong = BigNumber(tokensByAddress[selectedPair.tokens.long].balance).lt(
         amountVal
       );
-      const sufficientShort = BigNumber(tokensByAddress[selectedPair.tokens.short].balance).gte(
+      const insufficientShort = BigNumber(tokensByAddress[selectedPair.tokens.short].balance).lt(
         amountVal
       );
-      // FIXME: USDC does NOT have to strictly be equal to the amount here
-      const sufficientQuote = BigNumber(
-        tokensByAddress[selectedPair.tokens.collateral].balance
-      ).gte(amountVal);
 
-      setInsufficientBalance(sufficientLong && sufficientShort && sufficientQuote);
+      const requiredUSDC = BigNumber(amountVal).multipliedBy(
+        selectedPair.collateral.collateralPerPair
+      );
+      const insufficientUSDC = BigNumber(
+        tokensByAddress[selectedPair.tokens.collateral].balance
+      ).lt(requiredUSDC);
+
+      setInsufficientBalance(insufficientLong || insufficientShort || insufficientUSDC);
     } catch (error) {
       setInsufficientBalance(false);
     }
-  }, [selectedToken, publicKey, wallet.address]);
+  }, [selectedToken, amountVal, publicKey, wallet.address]);
 
   // Check insufficient balances when token changes
   useEffect(() => {
@@ -425,7 +428,7 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
       [ButtonState.SUBMIT]: {
         label: 'Deposit',
         disabled: false,
-        action: () => handleDeposit,
+        action: handleDeposit,
         variant: 'contained' as const,
       },
     };
@@ -440,7 +443,7 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
   };
 
   const handleDeposit = async (): Promise<void> => {
-    if (selectedToken && amount) {
+    if (selectedToken && amountVal) {
       try {
         // const allowed = await checkIfTradeAllowed();
         // if (!allowed) {
@@ -451,7 +454,7 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
         // const pairTokenAmount = BigNumber(fiatAmount).dividedBy(pair.collateral.collateralPerPair);
         const selectedPair = pairByToken[selectedToken.contract];
 
-        await deposit(selectedPair.pairAddress, Number(amount));
+        await deposit(selectedPair.pairAddress, amountVal);
       } catch (error) {
         setDepositError('Error during deposit');
       }

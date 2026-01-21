@@ -3,6 +3,7 @@
 import type { Token } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
+import { BigNumber } from 'bignumber.js';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { useTrustLine, useManageLiquidity } from '@/hooks';
@@ -336,7 +337,7 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
 
   // Function to check if the user's balance is sufficient for the token
   const checkInsufficientBalance = useCallback(async () => {
-    if (!selectedToken || !liquidityPositions) {
+    if (!selectedToken || !liquidityPositions || !shareAmountVal) {
       setInsufficientBalance(false);
       return;
     }
@@ -354,13 +355,13 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
 
       if (!selectedLiquidityPosition) return;
 
-      const sufficientShares = BigNumber(selectedLiquidityPosition.userShares).gte(shareAmountVal);
+      const insufficientShares = BigNumber(shareAmountVal).gt(selectedLiquidityPosition.userShares);
 
-      setInsufficientBalance(sufficientShares);
+      setInsufficientBalance(insufficientShares);
     } catch (error) {
       setInsufficientBalance(false);
     }
-  }, [selectedToken, liquidityPositions, publicKey, wallet.address]);
+  }, [selectedToken, liquidityPositions, shareAmountVal, publicKey, wallet.address]);
 
   // Check insufficient balances when token changes
   useEffect(() => {
@@ -438,7 +439,7 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
       [ButtonState.WITHDRAW]: {
         label: 'Withdraw',
         disabled: false,
-        action: () => handleWithdraw,
+        action: handleWithdraw,
         variant: 'contained' as const,
       },
     };
@@ -453,7 +454,7 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
   };
 
   const handleWithdraw = async (): Promise<void> => {
-    if (selectedToken && shareAmount) {
+    if (selectedToken && shareAmountVal) {
       try {
         // const allowed = await checkIfTradeAllowed();
         // if (!allowed) {
@@ -463,7 +464,7 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
         // Now call the client-side deposit (sign and submit)
         const selectedPair = pairByToken[selectedToken.contract];
 
-        await withdraw(selectedPair.pairAddress, Number(shareAmount));
+        await withdraw(selectedPair.pairAddress, shareAmountVal);
       } catch (error) {
         setWithdrawError('Error during withdraw');
       }
@@ -473,20 +474,18 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
 
-  // // Max the LP token
-  // const handleMaxClick = () => {
-  //   if (position) {
-  //     setValue(
-  //       'shareAmount',
-  //       position.balances.tokenShare.eq(0)
-  //         ? undefined
-  //         : Number(position.balances.tokenShare.toString()),
-  //       {
-  //         shouldValidate: true,
-  //       }
-  //     );
-  //   }
-  // };
+  // Max the LP token
+  const handleMaxClick = () => {
+    if (selectedToken && liquidityPositions) {
+      const selectedLiquidityPosition = liquidityPositions.find(
+        (pos) => pos.pair.tokens.long === selectedToken.contract
+      );
+
+      if (!selectedLiquidityPosition) return;
+
+      setShareAmount(selectedLiquidityPosition.userShares.toString());
+    }
+  };
 
   const getInfoAccordionAlerts = useCallback((): InfoAccordionAlert[] => {
     const alerts: InfoAccordionAlert[] = [];
@@ -675,6 +674,74 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
                         handleOpen();
                       }}
                     />
+
+                    {selectedToken && liquidityPositions && (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          alignItems: 'flex-end',
+                          justifyContent: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            height: '100%',
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 500,
+                              color: insufficientBalance
+                                ? theme.palette.error.main
+                                : theme.palette.text.secondary,
+                              fontSize: '12px',
+                            }}
+                          >
+                            {liquidityPositions
+                              .find((pos) => pos.pair.tokens.long === selectedToken.contract)
+                              ?.userShares.toString() ?? 0}{' '}
+                            <Box
+                              component="span"
+                              sx={{
+                                color: insufficientBalance
+                                  ? theme.palette.error.main
+                                  : theme.palette.text.primary,
+                              }}
+                            >
+                              {t('shares')}
+                            </Box>
+                          </Typography>
+                        </Box>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={handleMaxClick}
+                          disabled={loading}
+                          sx={{
+                            fontWeight: 500,
+                            fontSize: '12px',
+                            p: 0,
+                            height: '24px',
+                            minWidth: '36px',
+                            backgroundColor: 'rgba(148,123,255,0.29)',
+                            color: '#6E4BFF',
+                            '&:hover': {
+                              backgroundColor: 'rgba(148,123,255,0.20)',
+                            },
+                          }}
+                        >
+                          {t('Max')}
+                        </Button>
+                      </Box>
+                    )}
                   </Box>
                 ) : (
                   <SwapSendEmptyPopupButton

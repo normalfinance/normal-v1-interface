@@ -1,10 +1,10 @@
 // ─── Treasury Events ─────────────────────────────
-
 export interface TreasuryDepositEvent {
   type: 'deposit';
   user: string;
   pair: string;
-  amount: bigint;
+  pairAmount: bigint;
+  usdcAmount: bigint;
   ts: bigint;
 }
 
@@ -12,7 +12,8 @@ export interface TreasuryWithdrawEvent {
   type: 'withdraw';
   user: string;
   pair: string;
-  amount: bigint;
+  pairAmount: bigint;
+  usdcAmount: bigint;
   ts: bigint;
 }
 
@@ -20,9 +21,11 @@ export interface TreasuryTradeEvent {
   type: 'trade';
   user: string;
   pair: string;
-  side: bigint; // 0 = short, 1 = long
-  direction: bigint; // 0 = sell, 1 = buy
-  amount: bigint;
+  side: string;
+  direction: string;
+  inAmount: bigint;
+  outAmount: bigint;
+  price: bigint;
   ts: bigint;
 }
 

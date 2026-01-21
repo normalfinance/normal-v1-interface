@@ -42,8 +42,15 @@ export interface RedeemActivity extends ActivityBase {
   amount: number;
 }
 
-export interface TradeActivity extends ActivityBase {
-  type: 'Trade';
+export interface BuyActivity extends ActivityBase {
+  type: 'Buy';
+  symbol: string;
+  iconUrl: string;
+  amount: number;
+}
+
+export interface SellActivity extends ActivityBase {
+  type: 'Sell';
   symbol: string;
   iconUrl: string;
   amount: number;
@@ -71,6 +78,7 @@ export type Activity =
   | ReceiveActivity
   | MintActivity
   | RedeemActivity
-  | TradeActivity
+  | BuyActivity
+  | SellActivity
   | AddLiquidityActivity
   | RemoveLiquidityActivity;

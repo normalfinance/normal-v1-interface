@@ -17,5 +17,5 @@ export function getCryptoIconUrl(symbol: string): string {
   // If Normal token, lowercase `n` prefix is preserved and attached to the uppercase remainder
   const fileName = isNormalToken ? `n${sanitized.slice(1)}` : sanitized;
 
-  return cdn(`/tokens/${fileName}.webp`);
+  return isNormalToken ? cdn(`/tokens/normal/${fileName}.webp`) : cdn(`/tokens/${fileName}.webp`);
 }

@@ -6,7 +6,6 @@ import type { NavSectionProps } from '@/components/template/nav-section';
 import { paths } from '@/routes/paths';
 import { isTestnet } from '@normalfinance/utils';
 import { allLangs, useTranslate } from '@/locales';
-import { ModalProvider } from '@/providers/ModalProvider';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -100,61 +99,54 @@ export function DashboardLayout({
   const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
 
   return (
-    <ModalProvider>
-      <LayoutSection
-        /** **************************************
-         * @Header
-         *************************************** */
-        headerSection={renderNormalNavbar()}
-        /** **************************************
-         * @Sidebar
-         *************************************** */
-        sidebarSection={isNavHorizontal ? null : renderSidebar()}
-        /** **************************************
-         * @Footer
-         *************************************** */
-        footerSection={renderFooter()}
-        /** **************************************
-         * @Styles
-         *************************************** */
-        cssVars={{ ...dashboardLayoutVars(theme), ...navVars.layout, ...cssVars }}
-        sx={[
-          {
-            [`& .${layoutClasses.sidebarContainer}`]: {
-              [theme.breakpoints.up(layoutQuery)]: {
-                pl: isNavMini ? 'var(--layout-nav-mini-width)' : 'var(--layout-nav-vertical-width)',
-                transition: theme.transitions.create(['padding-left'], {
-                  easing: 'var(--layout-transition-easing)',
-                  duration: 'var(--layout-transition-duration)',
-                }),
-              },
+    <LayoutSection
+      /** **************************************
+       * @Header
+       *************************************** */
+      headerSection={renderNormalNavbar()}
+      /** **************************************
+       * @Sidebar
+       *************************************** */
+      sidebarSection={isNavHorizontal ? null : renderSidebar()}
+      /** **************************************
+       * @Footer
+       *************************************** */
+      footerSection={renderFooter()}
+      /** **************************************
+       * @Styles
+       *************************************** */
+      cssVars={{ ...dashboardLayoutVars(theme), ...navVars.layout, ...cssVars }}
+      sx={[
+        {
+          [`& .${layoutClasses.sidebarContainer}`]: {
+            [theme.breakpoints.up(layoutQuery)]: {
+              pl: isNavMini ? 'var(--layout-nav-mini-width)' : 'var(--layout-nav-vertical-width)',
+              transition: theme.transitions.create(['padding-left'], {
+                easing: 'var(--layout-transition-easing)',
+                duration: 'var(--layout-transition-duration)',
+              }),
             },
           },
-          ...(Array.isArray(sx) ? sx : [sx]),
-        ]}
-      >
-        {isTestnet() && (
-          <Alert severity="warning" sx={{ m: 2 }}>
-            <AlertTitle>{t('Normal Testnet')}&nbsp;🎉</AlertTitle>
-            {t(
-              'You are using a testnet version of the Normal Protocol. All tokens are NOT real. You WILL experience bugs. Please report all bugs and feedback to our team. Thank you!'
-            )}
-            <br />
-            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-              <Button
-                variant="contained"
-                color="inherit"
-                sx={{ mt: 1 }}
-                onClick={handleGiveFeedback}
-              >
-                {t('Give feedback / Report bug')}
-              </Button>
-            </Box>
-          </Alert>
-        )}
+        },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
+    >
+      {isTestnet() && (
+        <Alert severity="warning" sx={{ m: 2 }}>
+          <AlertTitle>{t('Normal Testnet')}&nbsp;🎉</AlertTitle>
+          {t(
+            'You are using a testnet version of the Normal Protocol. All tokens are NOT real. You WILL experience bugs. Please report all bugs and feedback to our team. Thank you!'
+          )}
+          <br />
+          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+            <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={handleGiveFeedback}>
+              {t('Give feedback / Report bug')}
+            </Button>
+          </Box>
+        </Alert>
+      )}
 
-        {renderMain()}
-      </LayoutSection>
-    </ModalProvider>
+      {renderMain()}
+    </LayoutSection>
   );
 }

@@ -82,6 +82,7 @@ export default function AssetDetailsView({
         </Grid2>
         <Grid2 size={{ xs: 12, md: 4 }}>
           <PoolOverview
+            asset={symbol}
             totalAprPercentage={0}
             treasuryBalances={[
               {
@@ -138,7 +139,8 @@ function convertToPairTxRow(event: events.NormalContractEvent): PairTxRow {
       return {
         type: 'Deposit',
         user: event.user,
-        amount: BigNumber(event.amount),
+        usdcAmount: BigNumber(event.usdcAmount),
+        assetAmount: BigNumber(event.pairAmount),
         timestamp: Number(event.ts),
         txHash: event.txHash,
       };
@@ -147,7 +149,8 @@ function convertToPairTxRow(event: events.NormalContractEvent): PairTxRow {
       return {
         type: 'Withdraw',
         user: event.user,
-        amount: BigNumber(event.amount),
+        usdcAmount: BigNumber(event.usdcAmount),
+        assetAmount: BigNumber(event.pairAmount),
         timestamp: Number(event.ts),
         txHash: event.txHash,
       };
@@ -155,7 +158,8 @@ function convertToPairTxRow(event: events.NormalContractEvent): PairTxRow {
     case 'mint':
       return {
         type: 'Mint',
-        amount: BigNumber(event.tokensMinted),
+        usdcAmount: BigNumber(event.collateral),
+        assetAmount: BigNumber(event.tokensMinted),
         user: event.user,
         timestamp: Number(event.ts),
         txHash: event.txHash,
@@ -164,17 +168,18 @@ function convertToPairTxRow(event: events.NormalContractEvent): PairTxRow {
     case 'redeem':
       return {
         type: 'Redeem',
-        amount: BigNumber(event.tokensRedeemed),
+        usdcAmount: BigNumber(event.collateral),
+        assetAmount: BigNumber(event.tokensRedeemed),
         user: event.user,
         timestamp: Number(event.ts),
         txHash: event.txHash,
       };
 
     case 'trade': {
-      const buying = event.direction === BigInt(1);
       return {
-        type: 'Trade',
-        amount: BigNumber(event.amount),
+        type: event.direction === 'Buy' ? 'Buy' : 'Sell',
+        usdcAmount: BigNumber(event.direction === 'Buy' ? event.inAmount : event.outAmount),
+        assetAmount: BigNumber(event.direction === 'Buy' ? event.outAmount : event.inAmount),
         user: event.user,
         timestamp: Number(event.ts),
         txHash: event.txHash,

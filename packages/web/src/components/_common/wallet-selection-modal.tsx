@@ -118,27 +118,6 @@ export default function WalletSelectionModal({
             <Typography variant="body2">{t('Recommended for most users.')}</Typography>
           </Alert>
 
-          {/* Create Normal Wallet */}
-          <Button
-            variant="contained"
-            color="primary"
-            fullWidth
-            size="large"
-            onClick={handleCreateNormalWallet}
-            sx={{
-              py: 2,
-              justifyContent: 'flex-start',
-              textTransform: 'none',
-            }}
-            startIcon={<Iconify icon="solar:check-circle-bold" width={24} />}
-          >
-            <Box sx={{ textAlign: 'left', flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight={600}>
-                {t('Create a Normal account')}
-              </Typography>
-            </Box>
-          </Button>
-
           {/* Connect Normal Wallet */}
           <Button
             variant="outlined"
@@ -156,6 +135,27 @@ export default function WalletSelectionModal({
             <Box sx={{ textAlign: 'left', flex: 1 }}>
               <Typography variant="subtitle1" fontWeight={600}>
                 {t('Import an existing account')}
+              </Typography>
+            </Box>
+          </Button>
+
+          {/* Create Normal Wallet */}
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            size="large"
+            onClick={handleCreateNormalWallet}
+            sx={{
+              py: 2,
+              justifyContent: 'flex-start',
+              textTransform: 'none',
+            }}
+            startIcon={<Iconify icon="solar:check-circle-bold" width={24} />}
+          >
+            <Box sx={{ textAlign: 'left', flex: 1 }}>
+              <Typography variant="subtitle1" fontWeight={600}>
+                {t('Create a Normal account')}
               </Typography>
             </Box>
           </Button>

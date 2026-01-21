@@ -2,12 +2,11 @@
 
 import type { LiquidityPosition } from '@/hooks';
 
-import Image from 'next/image';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
-import { cdn } from '@normalfinance/utils';
 import { useRouter } from 'next/navigation';
 import { fCurrency } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import { Stack, Button, Avatar, Typography } from '@mui/material';
@@ -41,14 +40,11 @@ export default function PositionItem({ position }: PositionItemProps) {
       onClick={handleCardClick}
     >
       <Stack direction="row" width={1} alignItems="center">
-        <Avatar sx={{ width: 56, height: 56, bgcolor: 'transparent', mb: 1 }}>
-          <Image
-            src={cdn(`/tokens/n${position.pair.asset}.webp`)}
-            alt={position.pair.asset}
-            width={48}
-            height={48}
-          />
-        </Avatar>
+        <Avatar
+          src={getCryptoIconUrl(`n${position.pair.asset}`)}
+          alt={position.pair.asset}
+          sx={{ width: 56, height: 56, mb: 1 }}
+        />
 
         <Stack direction="column" width={1} alignItems="start">
           <Typography component="span" color="text.primary" variant="h6" ml={1}>
@@ -60,16 +56,17 @@ export default function PositionItem({ position }: PositionItemProps) {
       <Stack direction="row" width={1} mt={4} gap={3} alignItems="start">
         <Stack direction="column" alignItems="start">
           <Typography color="text.primary" variant="body1">
-            {position.balances.long.toFixed(7)} {t('LONG')} ({fCurrency(position.usdValues.long)})
+            {position.balances.long.toFixed(7)} {`n${position.pair.asset}`} (
+            {fCurrency(position.usdValues.long)})
           </Typography>
 
           <Typography color="text.primary" variant="body1">
-            {position.balances.short.toFixed(7)} {t('SHORT')} ({fCurrency(position.usdValues.short)}
-            )
+            {position.balances.short.toFixed(7)} {`sn${position.pair.asset}`} (
+            {fCurrency(position.usdValues.short)})
           </Typography>
 
           <Typography color="text.primary" variant="body1">
-            {position.balances.usdc.toFixed(7)} {t('USDC')} ({fCurrency(position.usdValues.usdc)})
+            {position.balances.usdc.toFixed(7)} {t('USD')} ({fCurrency(position.usdValues.usdc)})
           </Typography>
 
           <Typography color="text.secondary" variant="caption">

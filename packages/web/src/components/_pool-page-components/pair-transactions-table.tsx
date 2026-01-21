@@ -32,7 +32,8 @@ import AddressChip from '../_common/address-chip';
 const typeColor: Record<TxType, 'success' | 'error' | 'secondary' | 'warning' | 'info'> = {
   Mint: 'success',
   Redeem: 'error',
-  Trade: 'secondary',
+  Buy: 'success',
+  Sell: 'error',
   Deposit: 'info',
   Withdraw: 'warning',
 };
@@ -41,7 +42,7 @@ const typeColor: Record<TxType, 'success' | 'error' | 'secondary' | 'warning' | 
 // Types
 // ----------------------------------------------------------------
 type Order = 'asc' | 'desc' | undefined;
-type ColumnKey = 'timestamp' | 'amount' | 'user' | 'txHash';
+type ColumnKey = 'timestamp' | 'usdcAmount' | 'assetAmount' | 'user' | 'txHash';
 
 // ----------------------------------------------------------------------
 
@@ -93,8 +94,8 @@ export const PairTransactionsTable: React.FC<{
     <Card sx={{ p: 1 }}>
       <CardHeader
         sx={{ mb: 3 }}
-        title={<Typography variant="h5">{t('Transactions')}</Typography>}
-        subheader={<Typography variant="caption">{t('Realtime (last 20 txs)')}</Typography>}
+        title={<Typography variant="h5">{t('Recent Transactions')}</Typography>}
+        subheader={<Typography variant="caption">{t('Realtime')}</Typography>}
       />
       <Paper sx={{ width: '100%', overflow: 'auto' }}>
         <TableContainer
@@ -137,7 +138,7 @@ export const PairTransactionsTable: React.FC<{
                     anchorEl={typeAnchor}
                     onClose={() => setTypeAnchor(null)}
                   >
-                    {(['All', 'Trade', 'Mint', 'Redeem', 'Deposit', 'Withdraw'] as const).map(
+                    {(['All', 'Buy', 'Sell', 'Mint', 'Redeem', 'Deposit', 'Withdraw'] as const).map(
                       (type) => (
                         <MenuItem
                           key={type}
@@ -154,7 +155,7 @@ export const PairTransactionsTable: React.FC<{
                   </Menu>
                 </TableCell>
 
-                {(['amount'] as const).map((key) => (
+                {(['usdcAmount', 'assetAmount'] as const).map((key) => (
                   <TableCell key={key} sortDirection={orderBy === key ? order : false}>
                     <TableSortLabel
                       active={orderBy === key}
@@ -168,7 +169,7 @@ export const PairTransactionsTable: React.FC<{
                         },
                       }}
                     >
-                      {assetSymbol}
+                      {key === 'assetAmount' ? assetSymbol : 'USD'}
                     </TableSortLabel>
                   </TableCell>
                 ))}
@@ -178,7 +179,7 @@ export const PairTransactionsTable: React.FC<{
                   onClick={() => toggleSort('user')}
                   sx={{ cursor: 'pointer' }}
                 >
-                  <Typography variant="subtitle2">{t('Account')}</Typography>
+                  <Typography variant="subtitle2">{t('User')}</Typography>
                 </TableCell>
 
                 <TableCell
@@ -186,15 +187,7 @@ export const PairTransactionsTable: React.FC<{
                   onClick={() => toggleSort('txHash')}
                   sx={{ cursor: 'pointer' }}
                 >
-                  <Typography variant="subtitle2">{t('Tx Hash')}</Typography>
-                </TableCell>
-
-                <TableCell
-                  sortDirection={orderBy === 'txHash' ? order : false}
-                  onClick={() => toggleSort('txHash')}
-                  sx={{ cursor: 'pointer' }}
-                >
-                  <Typography variant="subtitle2">{t('Tx Hash')}</Typography>
+                  <Typography variant="subtitle2">{t('Transaction ID')}</Typography>
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -214,7 +207,7 @@ export const PairTransactionsTable: React.FC<{
                       onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
                     >
                       <TableCell>
-                        {row.timestamp ? `${format.ago(row.timestamp / 1000)} ago` : ''}
+                        {row.timestamp ? `${format.ago(row.timestamp)} ago` : ''}
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -224,7 +217,8 @@ export const PairTransactionsTable: React.FC<{
                           variant="soft"
                         />
                       </TableCell>
-                      <TableCell>{format.fTokenAmount(row.amount, 7)}</TableCell>
+                      <TableCell>{format.fTokenAmount(row.usdcAmount, 7)}</TableCell>
+                      <TableCell>{format.fTokenAmount(row.assetAmount, 7)}</TableCell>
                       <TableCell>
                         <AddressChip address={row.user} />
                       </TableCell>

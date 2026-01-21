@@ -34,10 +34,8 @@ const TABLE_HEAD: HeadCell[] = [
   { id: 'rank', label: '#', width: 64, align: 'left' },
   { id: 'asset', label: 'Asset', width: 200 },
   { id: 'scaledPrice', label: 'Price', align: 'left' },
-  { id: 'price', label: '% Long', align: 'left' },
   { id: 'collateral', label: 'TVL', align: 'left' },
-  { id: 'lowerPriceBound', label: 'Lower', align: 'left' },
-  { id: 'upperPriceBound', label: 'Upper', align: 'left' },
+  { id: 'liquidity', label: 'Liquidity', align: 'left' },
   { id: 'volume1d', label: '1D vol', align: 'left' },
   { id: 'status', label: 'Status', align: 'left' },
   { id: '', label: '' },
@@ -69,7 +67,7 @@ export function ExploreAssetsTable({ assets, loading }: ExplorePoolsTableProps) 
 
   /* ----- sorting -------------------------------------------------------- */
   /** only numeric sortable keys */
-  type SortableKeys = 'totalCollateral' | 'price' | 'volume1d';
+  type SortableKeys = 'collateral' | 'liquidity' | 'price' | 'volume1d';
 
   const comparator = getComparator<SortableKeys>(table.order, table.orderBy as SortableKeys) as (
     a: ExploreAssetsRow,

@@ -404,7 +404,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
       [ButtonState.SUBMIT]: {
         label: action === 'mint' ? 'Mint' : 'Redeem',
         disabled: false,
-        action: settleTrade,
+        action: handleSubmit,
       },
     };
 
@@ -446,7 +446,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
         await addTrustLine(selectedToken.symbol, constants.StellarConfig.NORMAL_ISSUER);
       }
       if (trustlineState.short.needs) {
-        await addTrustLine(`${selectedToken.symbol}SHORT`, constants.StellarConfig.NORMAL_ISSUER);
+        await addTrustLine(`s${selectedToken.symbol}`, constants.StellarConfig.NORMAL_ISSUER);
       }
 
       // After successful trustline creation, check status again
@@ -491,8 +491,8 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
     return true;
   };
 
-  // New: doSwap function for use in onSubmit (simplified - no trustline creation)
-  const settleTrade = async (): Promise<void> => {
+  // New: mintPair/redeemPair function for use in onSubmit (simplified - no trustline creation)
+  const handleSubmit = async (): Promise<void> => {
     if (selectedToken && pair) {
       try {
         const allowed = await checkIfTradeAllowed();
@@ -576,7 +576,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
               }}
             >
               <Typography variant="body1" noWrap data-testid="sell-token-picker">
-                {t('Mint')}
+                {t('Redeem')}
                 <Switch
                   checked={action === 'mint'}
                   color="info"
@@ -584,7 +584,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
                     setAction(action === 'mint' ? 'redeem' : 'mint');
                   }}
                 />
-                {t('Redeem')}
+                {t('Mint')}
               </Typography>
               <InputBase
                 type="number"

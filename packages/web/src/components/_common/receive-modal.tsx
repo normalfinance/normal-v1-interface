@@ -70,10 +70,6 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
 
   const handleCopyAddress = () => {
     if (walletAddress) {
-      // trackEvent('button_clicked', {
-      //   label: 'Copy Address',
-      //   location: 'Account Drawer',
-      // });
       copy(walletAddress);
       enqueueSnackbar('Wallet address copied to clipboard', { variant: 'success' });
     }
@@ -81,10 +77,6 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
 
   const handleViewOnExplorer = () => {
     if (walletAddress) {
-      // trackEvent('button_clicked', {
-      //   label: 'View on Explorer',
-      //   location: 'Account Drawer',
-      // });
       const url = createStellarExpertUrl('account', walletAddress);
       window.open(url, '_blank', 'noopener');
     }
@@ -176,7 +168,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
             <Stack direction="row" spacing={1}>
               <Button
                 key="copy"
-                variant="outlined"
+                variant="soft"
                 startIcon={<Iconify icon="solar:copy-outline" />}
                 onClick={handleCopyAddress}
                 sx={{
@@ -192,7 +184,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
 
               <Button
                 key="view"
-                variant="outlined"
+                variant="soft"
                 startIcon={<Iconify icon="eva:external-link-outline" />}
                 onClick={handleViewOnExplorer}
                 sx={{

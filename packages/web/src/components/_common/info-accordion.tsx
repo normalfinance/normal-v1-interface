@@ -56,8 +56,9 @@ const InfoAccordion: React.FC<InfoAccordionProps> = ({
           />
         }
       >
-        {highlights.map((highlight) => (
+        {highlights.map((highlight, index) => (
           <Typography
+            key={index}
             variant="body2"
             sx={{
               fontWeight: 500,
@@ -82,8 +83,9 @@ const InfoAccordion: React.FC<InfoAccordionProps> = ({
             gap: 1,
           }}
         >
-          {alerts.map((alert) => (
+          {alerts.map((alert, index) => (
             <Box
+              key={index}
               sx={{
                 p: 2,
                 width: '100%',
@@ -118,8 +120,9 @@ const InfoAccordion: React.FC<InfoAccordionProps> = ({
               px: 1,
             }}
           >
-            {rows.map((row) => (
+            {rows.map((row, index) => (
               <Box
+                key={index}
                 sx={{
                   width: '100%',
                   display: 'flex',

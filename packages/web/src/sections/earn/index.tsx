@@ -48,7 +48,7 @@ export default function EarnView() {
       <DashboardContent maxWidth="xl">
         <Stack spacing={1}>
           <Typography variant="h4" color="text.primary">
-            {t('Earn Dividends')}
+            {t('Earn Account')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
             {t(
@@ -64,7 +64,6 @@ export default function EarnView() {
             <BalanceCard
               title={t('Total balance')}
               totalBalance={totalValue.toFixed(2)}
-              collateralProvided="0"
               liquidityProvided={totalValue.toString()}
             />
           </Grid2>

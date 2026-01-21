@@ -37,7 +37,7 @@ export function SplitAvatar({ left, right }: { left: string; right: string }) {
 export function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslate();
 
-  const time = format.ago(activity.timestamp / 1000);
+  const time = format.ago(activity.timestamp);
 
   /* ---------- derive icon + sentence ---------------------------- */
   let icon: React.ReactNode;
@@ -66,24 +66,31 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     case 'Remove Liquidity': {
       const { iconUrl, amount, symbol } = activity;
       icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${amount} ${symbol}`;
+      sentence = `${amount} ${symbol} pairs`;
       break;
     }
     case 'Mint': {
       const { iconUrl, amount, symbol } = activity;
 
       icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
-      sentence = `${amount} ${symbol}`;
+      sentence = `${amount} ${symbol} pairs`;
       break;
     }
     case 'Redeem': {
       const { iconUrl, amount, symbol } = activity;
 
       icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
+      sentence = `${amount} ${symbol} pairs`;
+      break;
+    }
+    case 'Buy': {
+      const { iconUrl, amount, symbol } = activity;
+
+      icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
       sentence = `${amount} ${symbol}`;
       break;
     }
-    case 'Trade': {
+    case 'Sell': {
       const { iconUrl, amount, symbol } = activity;
 
       icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;

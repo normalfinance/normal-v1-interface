@@ -4,15 +4,12 @@ import type { Token } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { varAlpha } from 'minimal-shared/utils';
+import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
+import { Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Stack, Typography } from '@mui/material';
-
-import { Iconify } from '@/components/template/iconify';
 
 export interface ToeknsTabsProps {
   tokens?: Token[];
@@ -95,7 +92,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                     >
                       {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
                     </Typography>
-                    <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
+                    {/* <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                       <Box
                         component="span"
                         sx={{
@@ -147,14 +144,14 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                         {token.percentageChange && token.percentageChange >= 0 && '+'}
                         {fPercent(token.percentageChange && token.percentageChange)}
                       </Typography>
-                    </Stack>
+                    </Stack> */}
                   </Box>
                 </Box>
               </Box>
             </Box>
           ))
       ) : (
-        <Typography>{t('No tokens found.')}</Typography>
+        <Typography>{t('No assets found.')}</Typography>
       )}
     </Box>
   );

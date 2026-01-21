@@ -31,15 +31,21 @@ export function usePairEvents(pairAddress: string | undefined, limit: number): R
       setError(null);
       setLoading(true);
 
+      // Treasury Events: trade, deposit, withdraw
       const { data, error: e } = await supabase
         .from(constants.StellarConfig.EVENTS_TABLENAME)
         .select('*')
-        .eq('contract_id', constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS)
+        .in('contract_id', [
+          constants.StellarConfig.TREASURY_ADDRESS,
+          constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
+        ])
         .eq('type', 'contract')
         .eq('in_successful_contract_call', true)
         .eq('transaction_successful', true)
-        .ilike('data', `%${pairAddress}%`)
-        .or(`topics.ilike.%deposit%,topics.ilike.%trade%,topics.ilike.%withdraw%`)
+        .ilike('topics', `%${pairAddress}%`)
+        .or(
+          `topics.ilike.%deposit%,topics.ilike.%trade%,topics.ilike.%withdraw%,topics.ilike.%mint%,topics.ilike.%redeem%`
+        )
         .order('id', { ascending: false })
         .limit(limit);
 
@@ -78,7 +84,10 @@ export function usePairEvents(pairAddress: string | undefined, limit: number): R
           event: 'INSERT',
           schema: 'public',
           table: constants.StellarConfig.EVENTS_TABLENAME,
-          filter: `contract_id=eq.${constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS}&data=ilike.%${pairAddress}%&or=(topics.ilike.%deposit%,topics.ilike.%trade%,topics.ilike.%withdraw%)`,
+          filter:
+            `or=(contract_id.eq.${constants.StellarConfig.TREASURY_ADDRESS},contract_id.eq.${constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS})` +
+            `&topics=ilike.%${pairAddress}%` +
+            `&or=(topics.ilike.%deposit%,topics.ilike.%trade%,topics.ilike.%withdraw%,topics.ilike.%mint%,topics.ilike.%redeem%)`,
         },
         async (payload: RealtimePostgresInsertPayload<GoldskyTableRow>) => {
           const { topics, data, transaction_hash } = payload.new;

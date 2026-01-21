@@ -1,7 +1,7 @@
 'use client';
 
 import type { Activity } from '@/types/activity';
-import type { events, PairState, TokenState } from '@normalfinance/types';
+import type { events, PairState } from '@normalfinance/types';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import type { GoldskyTableRow } from '@normalfinance/types/build/contracts/events';
 
@@ -23,7 +23,6 @@ interface ReturnType {
 export function useUserActivity(): ReturnType {
   const {
     wallet,
-    tokenState: { tokensByAddress },
     pairState: { pairByAddress },
   } = usePersistStore();
 
@@ -69,12 +68,7 @@ export function useUserActivity(): ReturnType {
                   r.transaction_hash
                 ) as events.UserActivityEvent;
 
-                return parseEventToActivity(
-                  r.transaction_hash,
-                  parsedEvent,
-                  pairByAddress,
-                  tokensByAddress
-                );
+                return parseEventToActivity(r.transaction_hash, parsedEvent, pairByAddress);
               })
           )
         );
@@ -108,8 +102,7 @@ export function useUserActivity(): ReturnType {
             const activityParsed = await parseEventToActivity(
               transaction_hash,
               parsed,
-              pairByAddress,
-              tokensByAddress
+              pairByAddress
             );
 
             if (activityParsed) setRecentActivity((prev) => [activityParsed, ...prev]);
@@ -134,8 +127,7 @@ export function useUserActivity(): ReturnType {
 async function parseEventToActivity(
   id: string,
   event: events.UserActivityEvent,
-  pairByAddress: PairState['pairByAddress'],
-  tokensByAddress: TokenState['tokensByAddress']
+  pairByAddress: PairState['pairByAddress']
 ): Promise<Activity | null> {
   switch (event.type) {
     case 'mint': {
@@ -145,8 +137,8 @@ async function parseEventToActivity(
         id,
         type: 'Mint',
         timestamp: Number(event.ts),
-        symbol: pair.asset,
-        iconUrl: getCryptoIconUrl(pair.asset),
+        symbol: `n${pair.asset}`,
+        iconUrl: getCryptoIconUrl(`n${pair.asset}`),
         amount: Number(format.fTokenAmount(event.tokensMinted.toString())),
       };
     }
@@ -158,8 +150,8 @@ async function parseEventToActivity(
         id,
         type: 'Redeem',
         timestamp: Number(event.ts),
-        symbol: pair.asset,
-        iconUrl: getCryptoIconUrl(pair.asset),
+        symbol: `n${pair.asset}`,
+        iconUrl: getCryptoIconUrl(`n${pair.asset}`),
         amount: Number(format.fTokenAmount(event.tokensRedeemed.toString())),
       };
     }
@@ -169,11 +161,11 @@ async function parseEventToActivity(
 
       return {
         id,
-        type: 'Trade',
+        type: event.direction === 'Buy' ? 'Buy' : 'Sell',
         timestamp: Number(event.ts),
-        symbol: pair.asset,
-        iconUrl: getCryptoIconUrl(pair.asset),
-        amount: Number(format.fTokenAmount(event.amount.toString())),
+        symbol: event.side === 'Long' ? `n${pair.asset}` : `sn${pair.asset}`,
+        iconUrl: getCryptoIconUrl(`n${pair.asset}`),
+        amount: Number(format.fTokenAmount(event.inAmount.toString())),
       };
     }
 
@@ -184,9 +176,9 @@ async function parseEventToActivity(
         id,
         type: 'Add Liquidity',
         timestamp: Number(event.ts),
-        symbol: pair.asset,
-        iconUrl: getCryptoIconUrl(pair.asset),
-        amount: Number(format.fTokenAmount(event.amount.toString())),
+        symbol: `n${pair.asset}`,
+        iconUrl: getCryptoIconUrl(`n${pair.asset}`),
+        amount: Number(format.fTokenAmount(event.pairAmount.toString())),
       };
     }
 
@@ -197,9 +189,9 @@ async function parseEventToActivity(
         id,
         type: 'Remove Liquidity',
         timestamp: Number(event.ts),
-        symbol: pair.asset,
-        iconUrl: getCryptoIconUrl(pair.asset),
-        amount: Number(format.fTokenAmount(event.amount.toString())),
+        symbol: `n${pair.asset}`,
+        iconUrl: getCryptoIconUrl(`n${pair.asset}`),
+        amount: Number(format.fTokenAmount(event.pairAmount.toString())),
       };
     }
 

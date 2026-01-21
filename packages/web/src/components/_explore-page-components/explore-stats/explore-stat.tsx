@@ -1,11 +1,8 @@
 import { useTranslate } from '@/locales';
-import { fPercent } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-
-import { Iconify } from '@/components/template/iconify';
 
 // ----------------------------------------------------------------------
 
@@ -40,7 +37,7 @@ export function ExploreStat({ title, total, percent, formatter }: Props) {
         <Box component="span" sx={{ my: 1.5, typography: 'h3', fontSize: 32 }} mt={8}>
           {formatter(total)}
         </Box>
-        <Stack direction="row" spacing={0.5} alignItems="center">
+        {/* <Stack direction="row" spacing={0.5} alignItems="center">
           <Box
             sx={{
               gap: 0.5,
@@ -73,7 +70,7 @@ export function ExploreStat({ title, total, percent, formatter }: Props) {
               {t('last 7 days')}
             </Box>
           </Box>
-        </Stack>
+        </Stack> */}
       </Stack>
     </Box>
   );

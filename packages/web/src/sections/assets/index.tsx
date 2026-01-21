@@ -2,14 +2,15 @@
 
 import type { Pair, TokenMapType } from '@normalfinance/types';
 
-import { useAgo } from '@/hooks';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useMemo, useEffect } from 'react';
-import { logger } from '@normalfinance/utils';
+import { fCurrency } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
-import { fCurrency, fShortenNumber } from '@/utils/format-number';
+import { logger, constants } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useAgo, useTreasury, useTotal1dTradeVolume } from '@/hooks';
+import { useTreasuryLiquidityByPair } from '@/hooks/stellar/useTreasuryLiquidityByPair';
 
 import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
@@ -29,11 +30,23 @@ export default function AssetsView() {
     wallet,
     tokenState: { tokensByAddress, lastUpdated: tokensLastUpdated },
     getAllTokens,
-    pairState: { pairs, lastUpdated: poolsLastUpdated },
+    pairState: { pairs, lastUpdated: pairsLastUpdated },
     getAllPairs,
   } = usePersistStore();
 
-  const lastUpdated = useAgo(Math.min(tokensLastUpdated, poolsLastUpdated));
+  const { total1dVolume, volumeByPair } = useTotal1dTradeVolume();
+
+  const { fetchBalances } = useTreasury();
+
+  const { liquidityValueByPair, balancesByPair, totalLiquidityValue, loading } =
+    useTreasuryLiquidityByPair({
+      pairs,
+      tokensByAddress,
+      usdcAddress: constants.StellarConfig.USDC_ADDRESS,
+      fetchTreasuryBalancesForPair: fetchBalances,
+    });
+
+  const lastUpdated = useAgo(Math.min(tokensLastUpdated, pairsLastUpdated));
 
   const tableData = useMemo(() => {
     if (
@@ -44,22 +57,26 @@ export default function AssetsView() {
     ) {
       return [];
     }
-    return pairs.map((pair) => formatPairForTable(pair, tokensByAddress));
-  }, [pairs, tokensByAddress]);
+    return pairs.map((pair) =>
+      formatPairForTable(pair, tokensByAddress, volumeByPair, liquidityValueByPair)
+    );
+  }, [pairs, tokensByAddress, volumeByPair]);
 
-  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.totalCollateral), BigNumber(0));
-
-  // const { total1dVolume } = useTotal1dSwapVolume();
-  const total1dVolume = 0;
+  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.collateral), BigNumber(0));
 
   const stats: SingleStat[] = [
-    { title: '1D Volume', total: total1dVolume, percent: 0, formatter: fCurrency },
+    {
+      title: '1D Volume',
+      total: Number(total1dVolume.toFixed(2)),
+      percent: 0,
+      formatter: fCurrency,
+    },
     { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
     {
-      title: 'Total Assets',
-      total: pairs.length * 2,
+      title: 'Total Liquidity',
+      total: Number(totalLiquidityValue.toFixed(2)),
       percent: 0,
-      formatter: fShortenNumber,
+      formatter: fCurrency,
     },
   ];
 
@@ -78,6 +95,15 @@ export default function AssetsView() {
     };
     refreshTokens();
   }, [wallet.address]);
+
+  useEffect(() => {
+    const fetchAllBalances = async (): Promise<void> => {
+      pairs.forEach(async (pair) => {
+        const balances = await fetchBalances(pair.pairAddress);
+      });
+    };
+    fetchAllBalances();
+  }, [pairs]);
 
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
@@ -102,10 +128,15 @@ export default function AssetsView() {
   );
 }
 
-const formatPairForTable = (pair: Pair, tokens: TokenMapType): ExploreAssetsRow => {
+const formatPairForTable = (
+  pair: Pair,
+  tokens: TokenMapType,
+  volumeByPair: Record<string, BigNumber>,
+  liquidityValueByPair: Record<string, BigNumber>
+): ExploreAssetsRow => {
   const tokenLong = tokens[pair.tokens.long] ?? undefined;
-  const tokenShort = tokens[pair.tokens.short] ?? undefined;
 
+  // Scaled Price
   const priceBoundaryDelta = BigNumber(pair.priceBounds.upper).minus(pair.priceBounds.lower);
   const scaledPrice = BigNumber(pair.collateral.collateralPercentLong)
     .multipliedBy(priceBoundaryDelta)
@@ -117,11 +148,12 @@ const formatPairForTable = (pair: Pair, tokens: TokenMapType): ExploreAssetsRow 
     status: pair.status.tag,
     price: pair.collateral.collateralPercentLong,
     scaledPrice: scaledPrice.toFixed(2),
-    totalCollateral: pair.collateral.totalCollateral.toString(),
-    volume1d: '0',
-    lowerPriceBound: pair.priceBounds.lower,
-    upperPriceBound: pair.priceBounds.upper,
+    collateral: pair.collateral.totalCollateral.toString(),
+    liquidity:
+      pair.pairAddress in liquidityValueByPair
+        ? liquidityValueByPair[pair.pairAddress].toFixed(2)
+        : '0',
+    volume1d: pair.pairAddress in volumeByPair ? volumeByPair[pair.pairAddress].toFixed(2) : '0',
     tokenLong,
-    tokenShort,
   };
 };

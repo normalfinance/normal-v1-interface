@@ -165,7 +165,7 @@ export function usePair(pairAddress: string): ReturnType {
       contractAddress: constants.StellarConfig.LONG_SHORT_PAIR_FACTORY_ADDRESS,
       transactionDetails: {
         type: TransactionType.MINT_PAIR,
-        token1: { name: 'USDC', amount: String(args.tokens_to_mint) },
+        token1: { name: 'asset pairs', amount: String(args.tokens_to_mint) },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.mint(processedArgs, { simulate: !restore });
@@ -206,7 +206,7 @@ export function usePair(pairAddress: string): ReturnType {
       contractAddress: pairAddress,
       transactionDetails: {
         type: TransactionType.REDEEM_PAIR,
-        token1: { name: 'USDC', amount: String(args.tokens_to_redeem) },
+        token1: { name: 'asset pairs', amount: String(args.tokens_to_redeem) },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.redeem(processedArgs, { simulate: !restore });

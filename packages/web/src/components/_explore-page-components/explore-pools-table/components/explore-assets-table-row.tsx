@@ -24,12 +24,10 @@ export interface ExploreAssetsRow {
   status: string;
   price: string;
   scaledPrice: string;
-  totalCollateral: string;
-  lowerPriceBound: string;
-  upperPriceBound: string;
+  collateral: string;
+  liquidity: string;
   volume1d: string;
   tokenLong: Token;
-  tokenShort: Token;
 }
 
 type Props = {
@@ -49,7 +47,7 @@ export function ExploreAssetsTableRow({ row, index }: Props) {
       case 'Active':
         return 'success';
 
-      case 'Settlement':
+      case 'Expired':
         return 'warning';
 
       case 'Inactive':
@@ -89,17 +87,11 @@ export function ExploreAssetsTableRow({ row, index }: Props) {
       {/* Scaled Price */}
       <TableCell>{fCurrency(row.scaledPrice)}</TableCell>
 
-      {/* Price */}
-      <TableCell>{fCurrency(row.price)}</TableCell>
-
       {/* Collateral */}
-      <TableCell>{fCurrency(row.totalCollateral)}</TableCell>
+      <TableCell>{fCurrency(row.collateral)}</TableCell>
 
-      {/* Price Bound: Lower */}
-      <TableCell>{fCurrency(row.lowerPriceBound)}</TableCell>
-
-      {/* Price Bound: Upper */}
-      <TableCell>{fCurrency(row.upperPriceBound)}</TableCell>
+      {/* Liquidity */}
+      <TableCell>{fCurrency(row.liquidity)}</TableCell>
 
       {/* Volume */}
       <TableCell>{fCurrency(row.volume1d)}</TableCell>

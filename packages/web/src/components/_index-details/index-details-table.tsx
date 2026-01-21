@@ -24,8 +24,12 @@ import {
 
 import { TableSkeleton } from '@/components/template/table';
 
-const typeColor: Record<TxType, 'success' | 'primary' | 'secondary' | 'warning' | 'info'> = {
-  Trade: 'success',
+const typeColor: Record<
+  TxType,
+  'success' | 'primary' | 'error' | 'secondary' | 'warning' | 'info'
+> = {
+  Buy: 'success',
+  Sell: 'error',
   Mint: 'primary',
   Redeem: 'secondary',
   Deposit: 'info',
@@ -36,7 +40,7 @@ const typeColor: Record<TxType, 'success' | 'primary' | 'secondary' | 'warning' 
 // Types
 // ----------------------------------------------------------------
 type Order = 'asc' | 'desc' | undefined;
-type ColumnKey = 'timestamp' | 'amount' | 'user';
+type ColumnKey = 'timestamp' | 'usdcAmount' | 'assetAmount' | 'user';
 
 // ----------------------------------------------------------------------
 
@@ -50,7 +54,8 @@ export const IndexDetailsTable: React.FC<{
   const theme = useTheme();
 
   const typeTextColor: Record<TxType, string> = {
-    Trade: theme.palette.success.main,
+    Buy: theme.palette.success.main,
+    Sell: theme.palette.error.main,
     Mint: theme.palette.primary.main,
     Redeem: theme.palette.secondary.main,
     Deposit: theme.palette.info.main,
@@ -131,7 +136,7 @@ export const IndexDetailsTable: React.FC<{
                   anchorEl={typeAnchor}
                   onClose={() => setTypeAnchor(null)}
                 >
-                  {(['All', 'Trade', 'Mint', 'Redeem', 'Deposit', 'Withdraw'] as const).map(
+                  {(['All', 'Buy', 'Sell', 'Mint', 'Redeem', 'Deposit', 'Withdraw'] as const).map(
                     (type) => (
                       <MenuItem
                         key={type}
@@ -148,7 +153,7 @@ export const IndexDetailsTable: React.FC<{
                 </Menu>
               </TableCell>
 
-              {(['amount'] as const).map((key) => (
+              {(['usdcAmount', 'assetAmount'] as const).map((key) => (
                 <TableCell key={key} sortDirection={orderBy === key ? order : false}>
                   <TableSortLabel
                     active={orderBy === key}

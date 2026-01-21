@@ -2,6 +2,7 @@ import { SignJWT, importPKCS8, importJWK, JWTPayload } from 'jose';
 import { getRandomValues } from 'uncrypto';
 
 import { CreateCoinbaseUrlOpts } from '@normalfinance/types';
+import { isTestnet } from '../network';
 
 const ONRAMP_HOST = 'api.developer.coinbase.com';
 const ONRAMP_PATH = '/onramp/v1/token';
@@ -33,7 +34,7 @@ export function createCoinbasePayURL(opts: CreateCoinbaseUrlOpts): string {
     fiat = 'USD',
     path = 'buy',
     redirectUrl,
-    sandbox = true, // default to sandbox while testing
+    sandbox = isTestnet(),
   } = opts;
 
   const base = sandbox ? 'https://pay-sandbox.coinbase.com' : 'https://pay.coinbase.com';

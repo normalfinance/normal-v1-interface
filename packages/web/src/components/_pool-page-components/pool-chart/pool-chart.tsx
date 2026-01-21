@@ -188,7 +188,7 @@ export function PoolChart({
         >
           <Avatar
             src={tokens.long.icon ?? getCryptoIconUrl(tokens.long.symbol)}
-            alt="Token A"
+            alt={pair.asset}
             sx={{ width: 27, height: 27 }}
           />
         </Box>
@@ -221,11 +221,11 @@ export function PoolChart({
             {fCurrency(pair.scaledPrice)}
           </Typography>
 
-          <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>
+          {/* <Typography variant="h4" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>
             {t('(')}
             {fCurrency(tokens.long.price)}
             {t(')')}
-          </Typography>
+          </Typography> */}
         </Box>
         {/* <Stack direction="row" spacing={0.5} alignItems="center">
           <Box

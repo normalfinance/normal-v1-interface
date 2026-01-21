@@ -207,7 +207,7 @@ export function FooterSection({
 
         {/* eslint-disable-next-line i18next/no-literal-string */}
         <Typography variant="body2" sx={{ mt: 10 }} color="white">
-          © 2025 - Normal Finance, Inc.
+          © 2026 - Normal Finance, Inc.
         </Typography>
       </Container>
     </FooterRoot>

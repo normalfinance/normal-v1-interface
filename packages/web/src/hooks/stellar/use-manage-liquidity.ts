@@ -129,11 +129,27 @@ export function useManageLiquidity(): ReturnType {
       const { summary, user_shares } =
         summaryResponse.result as TreasuryContract.TreasuryUserSummary;
 
+      if (BigNumber(user_shares).eq(0)) {
+        return undefined;
+      }
+
       // Shares info
       const userShares = BigNumber(format.fTokenAmount(user_shares, 7));
       const totalShares = BigNumber(format.fTokenAmount(summary.total_shares, 7));
       const userSharePercentage = userShares.dividedBy(totalShares);
 
+      // Balances
+      const longBalance = BigNumber(format.fTokenAmount(summary.balances.long, 7)).multipliedBy(
+        userSharePercentage
+      );
+      const shortBalance = BigNumber(format.fTokenAmount(summary.balances.short, 7)).multipliedBy(
+        userSharePercentage
+      );
+      const usdcBalance = BigNumber(format.fTokenAmount(summary.balances.usdc, 7)).multipliedBy(
+        userSharePercentage
+      );
+
+      // Tokens
       const tokenLong = tokensByAddress[pair.tokens.long];
       const tokenShort = tokensByAddress[pair.tokens.short];
 
@@ -148,15 +164,15 @@ export function useManageLiquidity(): ReturnType {
         userSharePercentage,
 
         balances: {
-          long: summary.balances.long,
-          short: summary.balances.short,
-          usdc: summary.balances.usdc,
+          long: longBalance,
+          short: shortBalance,
+          usdc: usdcBalance,
           reward: claimableReward,
         },
         usdValues: {
-          long: convertCoinToFiat(summary.balances.long, BigNumber(tokenLong.price)),
-          short: convertCoinToFiat(summary.balances.short, BigNumber(tokenShort.price)),
-          usdc: convertCoinToFiat(summary.balances.usdc, BigNumber(tokenUSDC.price)),
+          long: convertCoinToFiat(longBalance, BigNumber(tokenLong.price)),
+          short: convertCoinToFiat(shortBalance, BigNumber(tokenShort.price)),
+          usdc: convertCoinToFiat(usdcBalance, BigNumber(tokenUSDC.price)),
           reward: claimableReward,
         },
       };
@@ -204,6 +220,11 @@ export function useManageLiquidity(): ReturnType {
   }, []);
 
   const deposit = async (pairAddress: string, amount: number) => {
+    if (!wallet.address) {
+      handleHookError('No account', 'useManageLiquidity', setError);
+      return;
+    }
+
     setLoading(true);
 
     await rateLimitCheck();
@@ -211,7 +232,7 @@ export function useManageLiquidity(): ReturnType {
     const precisionAmount = BigInt((amount * 10 ** 7).toFixed(0));
 
     const processedArgs: Parameters<TreasuryContract.Client['deposit']>[0] = {
-      user: wallet.address!,
+      user: wallet.address,
       pair: pairAddress,
       pairs_to_deposit: precisionAmount,
     };
@@ -221,7 +242,7 @@ export function useManageLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
       transactionDetails: {
         type: TransactionType.DEPOSIT_LIQUIDITY,
-        token1: { name: 'USDC', amount: String(amount) },
+        token1: { name: 'asset pairs', amount: String(amount) },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.deposit(processedArgs, { simulate: !restore });
@@ -248,12 +269,17 @@ export function useManageLiquidity(): ReturnType {
   };
 
   const withdraw = async (pairAddress: string, shares: number) => {
+    if (!wallet.address) {
+      handleHookError('No account', 'useManageLiquidity', setError);
+      return;
+    }
+
     setLoading(true);
 
     await rateLimitCheck();
 
     const processedArgs: Parameters<TreasuryContract.Client['withdraw']>[0] = {
-      user: wallet.address!,
+      user: wallet.address,
       pair: pairAddress,
       shares: BigInt((shares * 10 ** 7).toFixed(0)),
     };
@@ -263,7 +289,7 @@ export function useManageLiquidity(): ReturnType {
       contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
       transactionDetails: {
         type: TransactionType.REMOVE_LIQUIDITY,
-        token1: { name: 'USDC', amount: String(shares) },
+        token1: { name: 'shares', amount: String(shares) },
       },
       transactionFunction: async (client, restore) => {
         const tx = await client.withdraw(processedArgs, { simulate: !restore });

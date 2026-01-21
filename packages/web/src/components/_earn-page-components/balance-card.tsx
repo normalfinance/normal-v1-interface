@@ -22,18 +22,10 @@ export type BalanceRow = {
 type Props = CardProps & {
   title: string;
   totalBalance: string;
-  collateralProvided: string;
   liquidityProvided: string;
 };
 
-export function BalanceCard({
-  sx,
-  title,
-  totalBalance,
-  collateralProvided,
-  liquidityProvided,
-  ...other
-}: Props) {
+export function BalanceCard({ sx, title, totalBalance, liquidityProvided, ...other }: Props) {
   const { t } = useTranslate();
   const theme = useTheme();
 
@@ -61,7 +53,6 @@ export function BalanceCard({
 
   // Define default rows if none are provided via props.
   const defaultRows: BalanceRow[] = [
-    { label: 'Collateral', value: collateralProvided, formatter: fCurrencyTwoDecimals },
     { label: 'Liquidity', value: liquidityProvided, formatter: fCurrencyTwoDecimals },
   ];
 

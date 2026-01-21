@@ -3,7 +3,6 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import type BigNumber from 'bignumber.js';
 import type { CardProps } from '@mui/material/Card';
 
-import { useState } from 'react';
 import { useAgo } from '@/hooks';
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
@@ -11,13 +10,9 @@ import { usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import { Button } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
-
-import { Iconify } from '@/components/template/iconify';
-import { WalletGate } from '@/components/_common/wallet-gate';
 
 import SwapCard from '../_common/trade-card';
 
@@ -45,6 +40,7 @@ export interface PoolActionButton {
 }
 
 export type PoolsOverviewProps = CardProps & {
+  asset: string;
   totalAprPercentage: number;
   treasuryBalances: [TreasuryBalance, TreasuryBalance, TreasuryBalance];
   stats: PoolStat[];
@@ -55,6 +51,7 @@ export type PoolsOverviewProps = CardProps & {
 // ----------------------------------------------------------------------
 
 export function PoolOverview({
+  asset,
   totalAprPercentage,
   treasuryBalances,
   stats,
@@ -70,16 +67,6 @@ export function PoolOverview({
   } = usePersistStore();
 
   const pairLastUpdated = useAgo(lastUpdated);
-
-  const [showSwap, setShowSwap] = useState(false);
-
-  const actionButtons = [
-    {
-      label: 'Trade',
-      icon: 'solar:transfer-horizontal-bold-duotone',
-      onClick: () => setShowSwap((prev) => !prev),
-    },
-  ];
 
   const [balLong, balShort, balQuote] = treasuryBalances;
   const totalFiatValue = balLong.fiatValue.plus(balShort.fiatValue).plus(balQuote.fiatValue);
@@ -139,44 +126,10 @@ export function PoolOverview({
       ]}
       {...other}
     >
-      <Stack direction="row" spacing={1} width="100%">
-        {actionButtons.map((btn, idx) => (
-          <WalletGate
-            key={idx}
-            buttonText={`Login to ${btn.label}`}
-            fullWidth
-            variant="soft"
-            color="success"
-          >
-            <Button fullWidth variant="soft" color="success" size="large" onClick={btn.onClick}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '2px',
-                }}
-              >
-                <Iconify
-                  icon={btn.icon}
-                  width={14}
-                  sx={{
-                    color: theme.palette.primary.dark,
-                    cursor: 'pointer',
-                    rotate: '-90deg',
-                  }}
-                />
-                {btn.label}
-              </Box>
-            </Button>
-          </WalletGate>
-        ))}
-      </Stack>
-      {showSwap && (
-        <Box sx={{ mt: 2 }}>
-          <SwapCard />
-        </Box>
-      )}
+      <Box sx={{ mt: 2 }}>
+        <SwapCard />
+      </Box>
+
       {/* <Stack
         sx={{
           alignItems: 'flex-start',
@@ -209,7 +162,7 @@ export function PoolOverview({
         }}
       >
         <Typography variant="h5" color="text.primary">
-          {t('Stats')}
+          {t('Liquidity')}
         </Typography>
 
         <Typography variant="caption" sx={{ mt: -2 }}>
@@ -223,7 +176,7 @@ export function PoolOverview({
           }}
         >
           <Typography variant="subtitle2" color="text.secondary">
-            {t('Treasury balances')}
+            {t('By asset')}
           </Typography>
           <Box
             sx={{
@@ -234,13 +187,13 @@ export function PoolOverview({
             }}
           >
             <Typography variant="subtitle2" color="text.primary">
-              {balLong.amount.toFixed(2)} {balLong.type}
+              {balLong.amount.toFixed(2)} {`n${asset}`}
             </Typography>
             <Typography variant="subtitle2" color="text.primary">
-              {balShort.amount.toFixed(2)} {balShort.type}
+              {balShort.amount.toFixed(2)} {`sn${asset}`}
             </Typography>
             <Typography variant="subtitle2" color="text.primary">
-              {balQuote.amount.toFixed(2)} USDC
+              {balQuote.amount.toFixed(2)} USD
             </Typography>
           </Box>
           <Box
@@ -255,20 +208,20 @@ export function PoolOverview({
             <Box
               sx={{
                 flexGrow: pctLong.toNumber() * 100,
-                bgcolor: theme.palette.primary.dark,
+                bgcolor: theme.palette.success.main,
               }}
             />
             <Box
               sx={{
                 flexGrow: pctShort.toNumber() * 100,
-                bgcolor: theme.palette.primary.dark,
+                bgcolor: theme.palette.error.main,
                 opacity: 0.3,
               }}
             />
             <Box
               sx={{
                 flexGrow: pctQuote.toNumber() * 100,
-                bgcolor: theme.palette.primary.dark,
+                bgcolor: theme.palette.primary.main,
                 opacity: 0.3,
               }}
             />
