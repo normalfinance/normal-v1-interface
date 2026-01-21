@@ -42,7 +42,6 @@ export default function AssetsView() {
     useTreasuryLiquidityByPair({
       pairs,
       tokensByAddress,
-      usdcAddress: constants.StellarConfig.USDC_ADDRESS,
       fetchTreasuryBalancesForPair: fetchBalances,
     });
 

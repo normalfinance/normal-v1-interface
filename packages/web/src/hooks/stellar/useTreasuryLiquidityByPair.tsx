@@ -4,6 +4,7 @@ import BigNumber from 'bignumber.js';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import type { TreasuryBalances } from './use-treasury';
+import { constants } from '@normalfinance/utils';
 
 // return shape
 type TreasuryLiquidityState = {
@@ -15,7 +16,6 @@ type TreasuryLiquidityState = {
 type UseTreasuryLiquidityArgs = {
   pairs: Pair[];
   tokensByAddress: Record<string, { price: BigNumber.Value } | undefined>;
-  usdcAddress: string;
 
   // you implement this (RPC / indexer / contract call)
   fetchTreasuryBalancesForPair: (pairAddress: string) => Promise<TreasuryBalances | undefined>;
@@ -33,7 +33,6 @@ const ZERO_BALANCES: TreasuryBalances = {
 export function useTreasuryLiquidityByPair({
   pairs,
   tokensByAddress,
-  usdcAddress,
   fetchTreasuryBalancesForPair,
 }: UseTreasuryLiquidityArgs) {
   const [balancesByPair, setBalancesByPair] = useState<Record<string, TreasuryBalances>>({});
@@ -42,9 +41,9 @@ export function useTreasuryLiquidityByPair({
   const [error, setError] = useState<any>(null);
 
   const usdcPrice = useMemo(() => {
-    const p = tokensByAddress?.[usdcAddress]?.price;
+    const p = tokensByAddress?.[constants.StellarConfig.USDC_ADDRESS]?.price;
     return p == null ? null : new BigNumber(p);
-  }, [tokensByAddress, usdcAddress]);
+  }, [tokensByAddress]);
 
   const fetchAll = useCallback(async () => {
     setError(null);
@@ -64,13 +63,18 @@ export function useTreasuryLiquidityByPair({
       const nextLiquidityValueByPair: Record<string, BigNumber> = {};
 
       for (const { pair, balances } of results) {
-        const pairPrice = new BigNumber(pair.collateral.collateralPercentLong ?? 0);
+        const longP = tokensByAddress?.[pair.tokens.long]?.price;
+        const longPrice = new BigNumber(longP == null ? 0 : longP);
+
+        const shortP = tokensByAddress?.[pair.tokens.short]?.price;
+        const shortPrice = new BigNumber(shortP == null ? 0 : shortP);
+
         const uPrice = usdcPrice ?? new BigNumber(0);
 
         // Total USD value for this pair:
         // long + short valued at pair.price, usdc valued at usdcPrice
-        const longValue = balances.long.multipliedBy(pairPrice);
-        const shortValue = balances.short.multipliedBy(pairPrice);
+        const longValue = balances.long.multipliedBy(longPrice);
+        const shortValue = balances.short.multipliedBy(shortPrice);
         const usdcValue = balances.usdc.multipliedBy(uPrice);
 
         const totalValue = longValue.plus(shortValue).plus(usdcValue);
