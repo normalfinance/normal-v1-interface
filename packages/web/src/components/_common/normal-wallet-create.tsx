@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-import { useBoolean } from '@/hooks/use-boolean';
 import { supabase } from '@/lib/createSupabaseClient';
 import React, { useMemo, useState, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
@@ -44,7 +43,6 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
-import { ConfirmDialog } from '@/components/template/custom-dialog';
 
 export type NormalWalletCreateProps = {
   open: boolean;
@@ -73,7 +71,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   const { enqueueSnackbar } = useSnackbar();
   const { createWallet } = useNormalWallet();
   const { user } = useSupabaseAuth();
-  const confirmSkip = useBoolean();
 
   const [stage, setStage] = useState<CreateStage>('creating');
   const [mnemonic, setMnemonic] = useState<string | null>(null);
@@ -126,15 +123,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
   const handleBackupWallet = () => {
     setStage('custody-choice');
-  };
-
-  const handleSkipBackup = () => {
-    confirmSkip.onTrue();
-  };
-
-  const handleConfirmSkip = () => {
-    confirmSkip.onFalse();
-    handleComplete();
   };
 
   const handleCopyMnemonic = async () => {
@@ -392,21 +380,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   };
 
   const handleClose = () => {
-    if (stage === 'creating') {
-      onClose();
-      return;
-    }
-
-    if (
-      stage === 'summary' ||
-      stage === 'backup' ||
-      stage === 'custody-choice' ||
-      stage === 'verify'
-    ) {
-      confirmSkip.onTrue();
-      return;
-    }
-
     setMnemonic(null);
     setPublicKey(null);
     setWalletName('');
@@ -507,11 +480,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {t('Backup your recovery phrase to ensure you can recover your account later.')}
               </Typography>
-              <Button variant="contained" fullWidth onClick={handleBackupWallet} sx={{ mb: 1 }}>
+              <Button variant="contained" fullWidth onClick={handleBackupWallet}>
                 {t('Back up')}
-              </Button>
-              <Button variant="outlined" fullWidth onClick={handleSkipBackup}>
-                {t('Skip for Now')}
               </Button>
             </Paper>
           </Stack>
@@ -815,20 +785,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           </Stack>
         )}
       </DialogContent>
-
-      <ConfirmDialog
-        open={confirmSkip.value}
-        onClose={confirmSkip.onFalse}
-        title={t('Skip Backup?')}
-        content={t(
-          "Without backing up your wallet, you won't be able to recover it if you lose access. Are you sure?"
-        )}
-        action={
-          <Button variant="contained" onClick={handleConfirmSkip}>
-            {t('Skip Anyway')}
-          </Button>
-        }
-      />
     </Dialog>
   );
 }
