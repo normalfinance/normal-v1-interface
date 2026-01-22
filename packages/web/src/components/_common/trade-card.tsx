@@ -509,13 +509,17 @@ const TradeCard: React.FC<TradeCardProps> = ({
     }
   };
 
-  // Max the token (if selling)
+  // Max the token (for buying or selling)
   const handleMaxClick = () => {
     if (selectedToken && usdcToken) {
-      const maxFiatValue = BigNumber(selectedToken.balance)
-        .multipliedBy(selectedToken.price)
-        .dividedBy(usdcToken.price);
-      setFiatAmount(maxFiatValue.toString());
+      if (tradeDirection === 'buy') {
+        // For buying: use USDC balance as the max amount
+        setFiatAmount(usdcToken.balance);
+      } else {
+        // For selling: convert token balance to fiat value
+        const maxFiatValue = BigNumber(selectedToken.balance).multipliedBy(selectedToken.price);
+        setFiatAmount(maxFiatValue.toFixed(2));
+      }
     }
   };
 
@@ -802,72 +806,72 @@ const TradeCard: React.FC<TradeCardProps> = ({
                     handleOpen();
                   }}
                 />
-                {tradeDirection === 'sell' && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'flex-end',
+                    justifyContent: 'center',
+                    gap: '4px',
+                  }}
+                >
                   <Box
                     sx={{
                       display: 'flex',
                       flexDirection: 'row',
-                      alignItems: 'flex-end',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       gap: '4px',
+                      height: '100%',
                     }}
                   >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        height: '100%',
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: insufficientBalance
-                            ? theme.palette.error.main
-                            : theme.palette.text.secondary,
-                          fontSize: '12px',
-                        }}
-                      >
-                        {BigNumber(selectedToken.balance).toFixed(selectedToken.decimals)}{' '}
-                        <Box
-                          component="span"
-                          sx={{
-                            color: insufficientBalance
-                              ? theme.palette.error.main
-                              : theme.palette.text.primary,
-                          }}
-                        >
-                          {selectedToken?.symbol}
-                        </Box>
-                      </Typography>
-                    </Box>
-
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={handleMaxClick}
-                      disabled={loading}
+                    <Typography
+                      variant="body2"
                       sx={{
                         fontWeight: 500,
+                        color: insufficientBalance
+                          ? theme.palette.error.main
+                          : theme.palette.text.secondary,
                         fontSize: '12px',
-                        p: 0,
-                        height: '24px',
-                        minWidth: '36px',
-                        backgroundColor: 'rgba(148,123,255,0.29)',
-                        color: '#6E4BFF',
-                        '&:hover': {
-                          backgroundColor: 'rgba(148,123,255,0.20)',
-                        },
                       }}
                     >
-                      {t('Max')}
-                    </Button>
+                      {tradeDirection === 'buy'
+                        ? BigNumber(usdcToken?.balance || '0').toFixed(2)
+                        : BigNumber(selectedToken.balance).toFixed(selectedToken.decimals)}{' '}
+                      <Box
+                        component="span"
+                        sx={{
+                          color: insufficientBalance
+                            ? theme.palette.error.main
+                            : theme.palette.text.primary,
+                        }}
+                      >
+                        {tradeDirection === 'buy' ? 'USDC' : selectedToken?.symbol}
+                      </Box>
+                    </Typography>
                   </Box>
-                )}
+
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleMaxClick}
+                    disabled={loading}
+                    sx={{
+                      fontWeight: 500,
+                      fontSize: '12px',
+                      p: 0,
+                      height: '24px',
+                      minWidth: '36px',
+                      backgroundColor: 'rgba(148,123,255,0.29)',
+                      color: '#6E4BFF',
+                      '&:hover': {
+                        backgroundColor: 'rgba(148,123,255,0.20)',
+                      },
+                    }}
+                  >
+                    {t('Max')}
+                  </Button>
+                </Box>
               </Box>
             ) : (
               <SwapSendEmptyPopupButton
