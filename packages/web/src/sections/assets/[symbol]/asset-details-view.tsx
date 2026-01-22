@@ -15,7 +15,6 @@ import { useSnackbar } from '@/components/template/snackbar';
 import { PairTransactionsTable } from '@/components/_pool-page-components';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
-import { PoolChart } from '@/components/_pool-page-components/pool-chart/pool-chart';
 
 export default function AssetDetailsView({
   symbol,
@@ -66,24 +65,9 @@ export default function AssetDetailsView({
   return (
     <DashboardContent maxWidth="xl">
       <Grid2 container spacing={3}>
-        <Grid2 size={{ xs: 12, md: 8 }}>
-          <PoolChart
-            pair={pair}
-            tokens={{
-              long: longToken!,
-              short: shortToken!,
-              collateral: collateralToken!,
-            }}
-            performance={{ percentageChange: 0 }}
-            // chart={chartData}
-            color={theme.palette.primary.main}
-            onRefresh={onRefresh}
-          />
-        </Grid2>
         <Grid2 size={{ xs: 12, md: 4 }}>
           <PoolOverview
-            asset={symbol}
-            totalAprPercentage={0}
+            pair={pair}
             treasuryBalances={[
               {
                 address: pair.tokens.long,
@@ -114,18 +98,21 @@ export default function AssetDetailsView({
               },
             ]}
             stats={[
-              { statName: 'TVL', value: collateralValue },
-              { statName: '24h Volume', value: past24hVolume },
               {
-                statName: '24h Fees',
-                value: past24hVolume.multipliedBy(300 / 10000).dividedBy(2),
+                statName: 'Collateral % Long',
+                value: BigNumber(pair.collateral.collateralPercentLong),
+              },
+              { statName: 'Lower Price Bound', value: BigNumber(pair.priceBounds.lower) },
+              {
+                statName: 'Upper Price Bound',
+                value: BigNumber(pair.priceBounds.upper),
               },
             ]}
+            onRefresh={onRefresh}
           />
         </Grid2>
-      </Grid2>
-      <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        <Grid2 size={{ xs: 12, md: 12 }}>
+
+        <Grid2 size={{ xs: 12, md: 8 }}>
           <PairTransactionsTable assetSymbol={symbol} rows={rows} />
         </Grid2>
       </Grid2>

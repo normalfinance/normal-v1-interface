@@ -449,7 +449,7 @@ export const FeatureGrid: React.FC<FeatureGridProps> = ({
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, px: 0 }}>
         <Stack spacing={2} maxWidth={640} textAlign="left" mb={{ xs: 3, md: 4 }}>
           <Typography variant="h2" fontWeight={500}>
-            {t('A new universal investment layer')}
+            {t('An easier way to invest')}
           </Typography>
         </Stack>
 

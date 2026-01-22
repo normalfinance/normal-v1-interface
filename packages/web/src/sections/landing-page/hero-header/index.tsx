@@ -199,27 +199,6 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
               {t(description)}
             </Typography>
-            {/* <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="center"
-              gap={2}
-              flexWrap="wrap"
-            >
-              <Box
-                component="img"
-                src={image.src}
-                alt={image.alt ?? ''}
-                sx={{ width: '82px', height: 'auto', objectFit: 'cover', mt: '20px' }}
-              />
-
-              <Box
-                component="img"
-                src={halbornImage.src}
-                alt={halbornImage.alt ?? ''}
-                sx={{ width: '112px', height: 'auto', objectFit: 'cover', mt: '20px' }}
-              />
-            </Stack> */}
           </Box>
         </Stack>
       </Container>
@@ -232,7 +211,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
 export const HeroHeaderDefaults: Props = {
   heading: 'Medium length hero heading goes here',
   description:
-    'The largest on-chain catalogue of synthetic crypto and real-world assets built on Stellar, secured by Halborn.',
+    'A universal investing app - Trade and diversify any global asset in just one click.',
   image: {
     src: cdn('homepage/stellar-logo.webp'),
     alt: 'Stellar Logo Long',

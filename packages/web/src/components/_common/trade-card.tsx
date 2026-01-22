@@ -8,8 +8,8 @@ import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { usePersistStore } from '@normalfinance/state';
 import { useTrade, useTreasury, useTrustLine } from '@/hooks';
-import { getConversionText } from '@/utils/conversion-helpers';
 import React, { useState, useEffect, useCallback } from 'react';
+import { getConversionTextScaled } from '@/utils/conversion-helpers';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { type TradeRoute, determineTradeRoute } from '@/utils/trade-route';
 import { TokenAmountButtonState as ButtonState } from '@normalfinance/types';
@@ -66,9 +66,15 @@ const initialTrustlineState: TradeCardTrustlineState = {
 interface TradeCardProps extends CardProps {
   queryParams?: SwapQueryParams;
   changeTab?: React.Dispatch<React.SetStateAction<false | 'trade' | 'deposit' | 'withdraw'>>;
+  defaultTokenSymbol?: string;
 }
 
-const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other }) => {
+const TradeCard: React.FC<TradeCardProps> = ({
+  queryParams,
+  changeTab,
+  defaultTokenSymbol,
+  ...other
+}) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
@@ -77,7 +83,6 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
   const {
     wallet,
-    updateTokenInfo,
     tokenState: { tokens, tokensByAddress },
     pairState: { pairByToken },
   } = usePersistStore();
@@ -93,15 +98,17 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
     sellLong,
     buyShort,
     sellShort,
-    buyLongMint,
-    buyShortMint,
-    sellLongRedeem,
-    sellShortRedeem,
+    // buyLongMint,
+    // buyShortMint,
+    // sellLongRedeem,
+    // sellShortRedeem,
   } = useTrade();
 
   const { fetchBalances: fetchTreasuryBalances } = useTreasury();
 
   const tradableTokens = tokens.filter((tkn) => isNormalToken(tkn));
+  const defaultToken =
+    defaultTokenSymbol && tradableTokens.find((tkn) => tkn.symbol === defaultTokenSymbol);
   const usdcToken = tokens.find((tkn) => tkn.contract === constants.StellarConfig.USDC_ADDRESS);
 
   const [swapError, setSwapError] = useState<string | null>(null);
@@ -111,7 +118,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
   // 1) States for tokens, default sell token is first in the list
   const [selectedToken, setSelectedToken] = useState<Token | null>(
-    tradableTokens.length ? tradableTokens[0] : null
+    defaultToken ? defaultToken : tradableTokens.length ? tradableTokens[0] : null
   );
   const [tradeDirection, setTradeDirection] = useState<'sell' | 'buy'>('buy');
   const [pair, setPair] = useState<Pair | null>(null);
@@ -647,7 +654,7 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
 
     if (insufficientBalance && selectedToken && usdcToken) {
       alerts.push({
-        title: `Not enough ${tradeDirection === 'buy' ? usdcToken.symbol : selectedToken.symbol} to trade`,
+        title: `Not enough ${tradeDirection === 'buy' ? 'USD' : selectedToken.symbol} to trade`,
         icon: 'solar:danger-triangle-bold',
       });
     }
@@ -957,15 +964,13 @@ const TradeCard: React.FC<TradeCardProps> = ({ queryParams, changeTab, ...other 
       )}
 
       {/* Additional box with info */}
-      {!loading && (
+      {!loading && selectedToken && pair && (
         <InfoAccordion
-          highlights={
-            usdcToken && selectedToken ? [getConversionText(usdcToken, selectedToken)] : []
-          }
+          highlights={usdcToken ? [getConversionTextScaled(usdcToken, selectedToken, pair)] : []}
           alerts={getInfoAccordionAlerts()}
           rows={[
             {
-              title: `Total Fee (${fPercent(30 / 10000)})`,
+              title: `Total Fee (${fPercent(0.3)})`,
               value: fCurrencyTwoDecimals(fiatAmountVal * (30 / 10000)),
             },
             {

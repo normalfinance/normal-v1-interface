@@ -1,20 +1,25 @@
 import 'react-loading-skeleton/dist/skeleton.css';
 
 import type BigNumber from 'bignumber.js';
+import type { Pair } from '@normalfinance/types';
 import type { CardProps } from '@mui/material/Card';
 
 import { useAgo } from '@/hooks';
 import { useTranslate } from '@/locales';
 import Skeleton from 'react-loading-skeleton';
 import { usePersistStore } from '@normalfinance/state';
+import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fPercent, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import { Avatar } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import SwapCard from '../_common/trade-card';
+import RefreshButton from '../_common/refresh-button';
 
 // ----------------------------------------------------------------------
 // ── Prop types ---------------------------------------------------------
@@ -40,10 +45,10 @@ export interface PoolActionButton {
 }
 
 export type PoolsOverviewProps = CardProps & {
-  asset: string;
-  totalAprPercentage: number;
+  pair: Pair;
   treasuryBalances: [TreasuryBalance, TreasuryBalance, TreasuryBalance];
   stats: PoolStat[];
+  onRefresh: () => void;
   actionButtons?: PoolActionButton[];
   loading?: boolean;
 };
@@ -51,10 +56,10 @@ export type PoolsOverviewProps = CardProps & {
 // ----------------------------------------------------------------------
 
 export function PoolOverview({
-  asset,
-  totalAprPercentage,
+  pair,
   treasuryBalances,
   stats,
+  onRefresh,
   loading,
   sx,
   ...other
@@ -126,11 +131,44 @@ export function PoolOverview({
       ]}
       {...other}
     >
-      <Box sx={{ mt: 2 }}>
-        <SwapCard />
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+          }}
+        >
+          <Avatar
+            src={getCryptoIconUrl(`n${pair.asset}`)}
+            alt={pair.asset}
+            sx={{ width: 64, height: 64 }}
+          />
+        </Box>
+
+        <Typography component="span" color="text.primary" variant="h6" ml={1}>
+          {pair.asset}
+        </Typography>
+
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+          }}
+        >
+          <RefreshButton onRefresh={onRefresh} sx={{ ml: 1 }} />
+        </Box>
       </Box>
 
-      {/* <Stack
+      {/* Price */}
+      <Stack
         sx={{
           alignItems: 'flex-start',
           borderRadius: '8px',
@@ -141,15 +179,37 @@ export function PoolOverview({
         }}
       >
         <Typography variant="subtitle1" color="text.secondary">
-          {t('Total APR')}
+          {t('Price')}
         </Typography>
         <Typography variant="h3" color="text.primary">
-          <Chip label="Coming soon" color="info" size="small" variant="soft" />
-          {totalAprPercentage}
-          {t('%')}
+          {fCurrency(pair.scaledPrice)}
         </Typography>
-      </Stack> */}
-      {/* —— Stats list ———————————————————— */}
+      </Stack>
+
+      <Box sx={{ mt: 2 }}>
+        <SwapCard defaultTokenSymbol={`n${pair.asset}`} />
+      </Box>
+
+      {/* Collateral */}
+      <Stack
+        sx={{
+          alignItems: 'flex-start',
+          borderRadius: '8px',
+          border: `1px solid ${theme.palette.divider}`,
+          backgroundColor: alpha(theme.palette.grey[500], 0.08),
+          p: '20px',
+          width: '100%',
+        }}
+      >
+        <Typography variant="subtitle1" color="text.secondary">
+          {t('Total Collateral (TVL)')}
+        </Typography>
+        <Typography variant="h3" color="text.primary">
+          {fCurrency(pair.collateral.totalCollateral)}
+        </Typography>
+      </Stack>
+
+      {/* Liquidity */}
       <Stack
         sx={{
           alignItems: 'flex-start',
@@ -167,6 +227,10 @@ export function PoolOverview({
 
         <Typography variant="caption" sx={{ mt: -2 }}>
           {t('as of')} {pairLastUpdated}
+        </Typography>
+
+        <Typography variant="h3" color="text.primary">
+          {fCurrency(totalFiatValue)}
         </Typography>
 
         <Stack
@@ -187,10 +251,10 @@ export function PoolOverview({
             }}
           >
             <Typography variant="subtitle2" color="text.primary">
-              {balLong.amount.toFixed(2)} {`n${asset}`}
+              {balLong.amount.toFixed(2)} {`n${pair.asset}`}
             </Typography>
             <Typography variant="subtitle2" color="text.primary">
-              {balShort.amount.toFixed(2)} {`sn${asset}`}
+              {balShort.amount.toFixed(2)} {`sn${pair.asset}`}
             </Typography>
             <Typography variant="subtitle2" color="text.primary">
               {balQuote.amount.toFixed(2)} USD
@@ -208,7 +272,7 @@ export function PoolOverview({
             <Box
               sx={{
                 flexGrow: pctLong.toNumber() * 100,
-                bgcolor: theme.palette.success.main,
+                bgcolor: theme.palette.success.light,
               }}
             />
             <Box
@@ -227,7 +291,9 @@ export function PoolOverview({
             />
           </Box>
         </Stack>
-        {/* <Stack
+
+        {/* Info */}
+        <Stack
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -235,7 +301,7 @@ export function PoolOverview({
             gap: '15px',
           }}
         >
-          {stats.map(({ statName, value, percentage }) => (
+          {stats.map(({ statName, value }) => (
             <Stack
               key={statName}
               sx={{
@@ -247,67 +313,16 @@ export function PoolOverview({
               </Typography>
               <Box>
                 <Stack direction="row" spacing={1} alignItems="end">
-                  {statName !== 'TVL' ? (
-                    <Chip
-                      label="Coming soon"
-                      color="info"
-                      size="small"
-                      variant="soft"
-                      sx={{ mt: 1 }}
-                    />
-                  ) : (
-                    <>
-                      <Typography variant="h3">{fCurrency(value.toFixed(2))}</Typography>
-                      {percentage != null && (
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Box
-                            component="span"
-                            sx={{
-                              width: 24,
-                              height: 24,
-                              display: 'flex',
-                              borderRadius: '50%',
-                              position: 'relative',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              bgcolor: varAlpha(theme.vars.palette.success.mainChannel, 0.16),
-                              color: 'success.dark',
-                              ...theme.applyStyles('dark', {
-                                color: 'success.light',
-                              }),
-                              ...(percentage < 0 && {
-                                bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
-                                color: 'error.dark',
-                                ...theme.applyStyles('dark', {
-                                  color: 'error.light',
-                                }),
-                              }),
-                            }}
-                          >
-                            <Iconify
-                              width={16}
-                              icon={
-                                percentage < 0 ? 'eva:trending-down-fill' : 'eva:trending-up-fill'
-                              }
-                              color={percentage < 0 ? 'error.main' : 'success.main'}
-                            />
-                          </Box>
-                          <Typography
-                            variant="subtitle2"
-                            sx={{ color: percentage < 0 ? 'error.main' : 'success.main' }}
-                          >
-                            {percentage >= 0 && '+'}
-                            {fPercent(percentage)}
-                          </Typography>
-                        </Stack>
-                      )}
-                    </>
-                  )}
+                  <Typography variant="h3">
+                    {statName.includes('Collateral')
+                      ? fPercent(value.multipliedBy(100).toString())
+                      : fCurrency(value.toString())}
+                  </Typography>
                 </Stack>
               </Box>
             </Stack>
           ))}
-        </Stack> */}
+        </Stack>
       </Stack>
     </Card>
   );

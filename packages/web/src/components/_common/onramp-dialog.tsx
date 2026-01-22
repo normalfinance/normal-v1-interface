@@ -5,8 +5,8 @@ import { useTranslate } from '@/locales';
 import { CONFIG } from '@/global-config';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
-import { cdn, createOnramperURL, createCoinbasePayURL, isTestnet } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
+import { cdn, isTestnet, createOnramperURL, createCoinbasePayURL } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {

@@ -1,11 +1,10 @@
 'use client';
 
+import type { Pair } from '@normalfinance/types';
 import type { BoxProps } from '@mui/material/Box';
-import type { Token } from '@normalfinance/types';
 import type { Breakpoint } from '@mui/material/styles';
 
 import { paths } from '@/routes/paths';
-// import type { NavSectionProps } from '@/components/template/nav-section';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from '@/routes/hooks';
@@ -50,8 +49,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   const { globalIsLoading } = useAppStore();
 
   const {
-    tokenState: { tokens },
-    getAllTokens,
+    getAllPairs,
     pairState: { pairs },
   } = usePersistStore();
 
@@ -83,28 +81,16 @@ export function Searchbar({ sx, ...other }: BoxProps) {
 
   // Fetch tokens when dialog opens
   useEffect(() => {
-    if (open && tokens.length === 0) {
-      getAllTokens();
+    if (open && pairs.length === 0) {
+      getAllPairs();
     }
-  }, [open, getAllTokens, tokens.length]);
+  }, [open, getAllPairs, pairs.length]);
 
-  const handleTokenClick = useCallback(
-    (token: Token) => {
+  const handleAssetClick = useCallback(
+    (pair: Pair) => {
       setTimeout(() => handleClose(), 50);
 
-      if (!pairs || !pairs.length) {
-        router.push(paths.assets.root);
-      }
-
-      const tokenPairs = pairs.filter(
-        (p) => p.tokens.long === token.contract || p.tokens.short === token.contract
-      );
-
-      if (!tokenPairs || !tokenPairs.length) {
-        router.push(paths.assets.root);
-      }
-
-      router.push(paths.assets.details(tokenPairs[0].tokens.long)); // FIXME:
+      router.push(paths.assets.details(pair.asset));
     },
     [router, handleClose, pairs]
   );
@@ -114,7 +100,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   }, []);
 
   const dataFiltered = applyFilter({
-    inputData: tokens,
+    inputData: pairs,
     query: searchQuery,
   });
 
@@ -195,24 +181,24 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   );
 
   const renderList = () => {
-    // Show loading state when tokens are being fetched
-    if (globalIsLoading && tokens.length === 0) {
+    // Show loading state when pairs are being fetched
+    if (globalIsLoading && pairs.length === 0) {
       return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
           <Typography variant="body2" color="text.secondary">
-            {t('Loading tokens...')}
+            {t('Loading assets...')}
           </Typography>
         </Box>
       );
     }
 
-    // Show empty state when no tokens are available
-    if (!globalIsLoading && tokens.length === 0) {
+    // Show empty state when no pairs are available
+    if (!globalIsLoading && pairs.length === 0) {
       return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
           <Iconify icon="eva:search-fill" width={48} sx={{ color: 'text.disabled', mb: 2 }} />
           <Typography variant="body2" color="text.secondary" align="center">
-            {t('No tokens available')}
+            {t('No assets available')}
           </Typography>
           <Typography variant="caption" color="text.disabled" align="center">
             {t('Try refreshing the page or check your connection')}
@@ -234,13 +220,13 @@ export function Searchbar({ sx, ...other }: BoxProps) {
       >
         {dataFiltered.length &&
           dataFiltered.map((item) => {
-            const partsTitle = parse(item.name, match(item.name, searchQuery));
-            const partsSymbol = parse(item.symbol, match(item.symbol, searchQuery));
+            const partsTitle = parse(item.asset, match(item.asset, searchQuery));
+            // const partsSymbol = parse(item.asset, match(item.asset, searchQuery));
 
             return (
-              <MenuItem disableRipple key={item.symbol}>
+              <MenuItem disableRipple key={item.asset}>
                 <ListItemButton
-                  onClick={() => handleTokenClick(item)}
+                  onClick={() => handleAssetClick(item)}
                   sx={{
                     borderWidth: 1,
                     borderStyle: 'dashed',
@@ -255,11 +241,8 @@ export function Searchbar({ sx, ...other }: BoxProps) {
                   }}
                 >
                   <ListItemAvatar>
-                    <Avatar
-                      src={item.icon ?? getCryptoIconUrl(item.symbol)}
-                      sx={{ width: 32, height: 32 }}
-                    >
-                      {item.symbol.substring(0, 2)}
+                    <Avatar src={getCryptoIconUrl(`n${item.asset}`)} sx={{ width: 32, height: 32 }}>
+                      {item.asset.substring(0, 2)}
                     </Avatar>
                   </ListItemAvatar>
 
@@ -281,35 +264,17 @@ export function Searchbar({ sx, ...other }: BoxProps) {
                         ))}
                       </Box>
                     }
-                    secondary={
-                      <Box component="span">
-                        {partsSymbol.map((part, index) => (
-                          <Box
-                            key={index}
-                            component="span"
-                            sx={{
-                              color: part.highlight
-                                ? theme.vars?.palette.primary.main || theme.palette.primary.main
-                                : theme.vars?.palette.text.secondary ||
-                                  theme.palette.text.secondary,
-                            }}
-                          >
-                            {part.text}
-                          </Box>
-                        ))}
-                      </Box>
-                    }
                   />
 
                   <Box sx={{ textAlign: 'right', minWidth: 80 }}>
-                    {BigNumber(item.balance).gt(0) && (
+                    {/* {BigNumber(item.balance).gt(0) && (
                       <Typography variant="body2" color="text.primary">
                         {t('Balance: ')} {fCurrency(item.balance)}
                       </Typography>
-                    )}
-                    {BigNumber(item.price).gt(0) && (
+                    )} */}
+                    {BigNumber(item.scaledPrice).gt(0) && (
                       <Typography variant="caption" color="text.secondary">
-                        {fCurrency(item.price)}
+                        {fCurrency(item.scaledPrice)}
                       </Typography>
                     )}
                   </Box>

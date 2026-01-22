@@ -1,10 +1,10 @@
 import type { Pair } from '@normalfinance/types';
 
 import BigNumber from 'bignumber.js';
+import { constants } from '@normalfinance/utils';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import type { TreasuryBalances } from './use-treasury';
-import { constants } from '@normalfinance/utils';
 
 // return shape
 type TreasuryLiquidityState = {

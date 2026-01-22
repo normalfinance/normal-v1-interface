@@ -529,7 +529,7 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
 
     if (insufficientBalance) {
       alerts.push({
-        title: `Not enough ${action === 'mint' ? 'USDC' : 'token pair(s)'} to ${action}`,
+        title: `Not enough ${action === 'mint' ? 'USD' : 'token pair(s)'} to ${action}`,
         icon: 'solar:danger-triangle-bold',
       });
     }

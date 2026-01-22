@@ -1,4 +1,4 @@
-import type { Token } from '@normalfinance/types';
+import type { Pair } from '@normalfinance/types';
 
 // ----------------------------------------------------------------------
 
@@ -41,13 +41,13 @@ import type { Token } from '@normalfinance/types';
 
 type ApplyFilterProps = {
   query: string;
-  inputData: Token[];
+  inputData: Pair[];
 };
 
-export function applyFilter({ inputData, query }: ApplyFilterProps): Token[] {
+export function applyFilter({ inputData, query }: ApplyFilterProps): Pair[] {
   if (!query) return inputData;
 
-  return inputData.filter(({ name, symbol }) =>
-    [name, symbol].some((field) => field?.toLowerCase().includes(query.toLowerCase()))
+  return inputData.filter(({ asset }) =>
+    [asset].some((field) => field?.toLowerCase().includes(query.toLowerCase()))
   );
 }

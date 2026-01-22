@@ -1,4 +1,4 @@
-import type { Token } from '@normalfinance/types';
+import type { Pair, Token } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
 
@@ -11,6 +11,9 @@ export const getConversionText = (sellToken: Token, buyToken: Token): string => 
     buyToken.price
   )})`;
 };
+
+export const getConversionTextScaled = (sellToken: Token, buyToken: Token, pair: Pair): string =>
+  `1 ${buyToken.symbol} = ${fCurrencyTwoDecimals(pair.scaledPrice)}`;
 
 // 1 ETH = $2,814.81 USDC ($2,814.81) - We are swaping ETH to USDC
 export const getSwapConversionText = (sellToken: Token, buyToken: Token): string => {
