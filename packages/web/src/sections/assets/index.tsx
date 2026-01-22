@@ -15,6 +15,7 @@ import { useTreasuryLiquidityByPair } from '@/hooks/stellar/useTreasuryLiquidity
 import Grid2 from '@mui/material/Grid2';
 import { Box, Stack, Typography } from '@mui/material';
 
+import { MyBalanceSection } from '@/components/_assets-page-components';
 import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
 import {
   type SingleStat,
@@ -116,6 +117,9 @@ export default function AssetsView() {
             {lastUpdated}
           </Typography>
         </Stack>
+        <Grid2 width={1} sx={{ mt: 3 }}>
+          <MyBalanceSection />
+        </Grid2>
         <Grid2 width={1} sx={{ mt: 3 }}>
           <ExploreStats stats={stats} />
         </Grid2>
