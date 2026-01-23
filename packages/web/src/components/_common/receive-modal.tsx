@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogContent,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -143,6 +144,12 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
           </Box>
 
           <Stack spacing={2} alignItems="center" sx={{ width: '100%' }}>
+            <Alert severity="warning">
+              <Typography variant="body2">
+                {t('This wallet ONLY supports Stellar tokens!')}
+              </Typography>
+            </Alert>
+
             <Box
               sx={{
                 p: 2,
@@ -169,15 +176,9 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
               <Button
                 key="copy"
                 variant="soft"
+                color="info"
                 startIcon={<Iconify icon="solar:copy-outline" />}
                 onClick={handleCopyAddress}
-                sx={{
-                  borderColor: theme.palette.primary.main,
-                  color: theme.palette.primary.main,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                  },
-                }}
               >
                 {t('Copy Account ID')}
               </Button>
@@ -185,15 +186,9 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
               <Button
                 key="view"
                 variant="soft"
+                color="secondary"
                 startIcon={<Iconify icon="eva:external-link-outline" />}
                 onClick={handleViewOnExplorer}
-                sx={{
-                  borderColor: theme.palette.secondary.main,
-                  color: theme.palette.secondary.main,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.secondary.main, 0.08),
-                  },
-                }}
               >
                 {t('View Explorer')}
               </Button>
