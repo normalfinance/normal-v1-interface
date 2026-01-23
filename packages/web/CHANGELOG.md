@@ -1,3 +1,37 @@
+# [1.3.0](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.6...v1.3.0) (2026-01-23)
+
+
+### Bug Fixes
+
+* fm and lint ([a0e8f5b](https://github.com/normalfinance/normal-v1-interface/commit/a0e8f5bb9845a9520e2e8aa32ccc22d3d9c58056))
+* fm, lint ([f89224b](https://github.com/normalfinance/normal-v1-interface/commit/f89224bba0557559ecae9658e4d71da77de58624))
+* lint ([ffab011](https://github.com/normalfinance/normal-v1-interface/commit/ffab011026b3d0f4755dd0cca33a3d49216edb59))
+* remove action button bug ([5a97f15](https://github.com/normalfinance/normal-v1-interface/commit/5a97f15c0a64d1f47393f33f81fa8dcad21d71d7))
+* small bugs ([54f39d6](https://github.com/normalfinance/normal-v1-interface/commit/54f39d61c1fed89a89ae118e66f8621f75fe9f1a))
+* **stellar:** update signing key ([097ee8c](https://github.com/normalfinance/normal-v1-interface/commit/097ee8cb0eaefb95a0712e8eedb5a56fe9fc4989))
+* **trade:** multi-step trades ([8fdba2b](https://github.com/normalfinance/normal-v1-interface/commit/8fdba2b0681e91a283f52b1089984a290040e38a))
+* **trade:** trade fees ([0fb2213](https://github.com/normalfinance/normal-v1-interface/commit/0fb221301dfb2d070ef27bd7f8ae46cf7ec2f722))
+* typo ([790e164](https://github.com/normalfinance/normal-v1-interface/commit/790e164e0fa167dba6416052e708fb26f817beaf))
+* update bindings and rate limit paths ([0f690ee](https://github.com/normalfinance/normal-v1-interface/commit/0f690eef7b3a5ee4e7bf85aa6b692ed8070f65de))
+* **web:** add missing turbo env vars ([7f2831a](https://github.com/normalfinance/normal-v1-interface/commit/7f2831a5048d4e9e48a43bf67d5ff2c8124ba057))
+* **web:** liquidity value calculation ([acecff7](https://github.com/normalfinance/normal-v1-interface/commit/acecff7a8f6354875ba110c6069485478b0f3365))
+* **web:** lots of fixes ([762df10](https://github.com/normalfinance/normal-v1-interface/commit/762df1084a3c877985c9bb6ed498c67b6506e54f))
+* **web:** middleware, onramping, etc. ([89c1a1b](https://github.com/normalfinance/normal-v1-interface/commit/89c1a1b4c09e609fc3b96ecda3d1a133f16fb08a))
+* **web:** searchbar, asset details page, conversion text, linting ([8330b5a](https://github.com/normalfinance/normal-v1-interface/commit/8330b5ac316451aa89fa62a47ba3eca788574e05))
+* **web:** send stuff ([5f7532a](https://github.com/normalfinance/normal-v1-interface/commit/5f7532a3eaee61899ca4968ad3a8e07af31d030a))
+* **web:** token errors and short naming ([372e3b3](https://github.com/normalfinance/normal-v1-interface/commit/372e3b3d4bdba5c54b8e45569405298e1823cc6c))
+* **web:** trade bug ([739d6ee](https://github.com/normalfinance/normal-v1-interface/commit/739d6eeb10c4b0f6db5b86ea1988ff72bd2b9441))
+* **web:** update mainnet contracts and trading access ([3cd025f](https://github.com/normalfinance/normal-v1-interface/commit/3cd025f16d5827739420abfde82220d4be5c1408))
+
+
+### Features
+
+* **onramp:** add stripe ([9506344](https://github.com/normalfinance/normal-v1-interface/commit/950634458d9be39281290dd0bd88286510ed37c7))
+* **receive:** add network limit alert ([43788da](https://github.com/normalfinance/normal-v1-interface/commit/43788da531802defac0cafdb5cd903b7d7331eb3))
+* **stellar:** update toml file ([dd05fae](https://github.com/normalfinance/normal-v1-interface/commit/dd05fae7ba5a001cfc7a9bbc48331a16a71a2a7a))
+* updated contracts, bindings, and UI components ([c335ae1](https://github.com/normalfinance/normal-v1-interface/commit/c335ae1d4d6dc4fd91e479bd966438ec80861adc))
+* **ux:** navbar ([2de0d5f](https://github.com/normalfinance/normal-v1-interface/commit/2de0d5f1681d3b6d33a17d82540c231ef4f2cc71))
+
 # [1.3.0](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.6...v1.3.0) (2026-01-22)
 
 
