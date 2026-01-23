@@ -317,16 +317,13 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           const { hash: trustlineHash } = await submitTrustlineTransaction(signedTrustlineXDR);
           logger.log('[NormalWalletCreate] Trustline created successfully:', trustlineHash);
         }
-      } catch (error: any) {
-        logger.error('[NormalWalletCreate] Error in faucet funding flow:', error);
-        if (
-          error.message?.includes('already been funded') ||
-          error.message?.includes('already exists')
-        ) {
+      } catch (e: any) {
+        logger.error('[NormalWalletCreate] Error in faucet funding flow:', e);
+        if (e.message?.includes('already been funded') || e.message?.includes('already exists')) {
           logger.log('[NormalWalletCreate] Wallet already funded, skipping');
           return;
         }
-        throw error;
+        throw e;
       }
     },
     [signTransaction]

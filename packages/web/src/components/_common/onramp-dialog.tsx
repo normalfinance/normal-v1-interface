@@ -4,12 +4,19 @@ import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
-import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import { cdn, isTestnet, createStripeURL, createCoinbasePayURL, constants, logger } from '@normalfinance/utils';
-import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
-import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
+import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
+import {
+  cdn,
+  logger,
+  isTestnet,
+  constants,
+  createStripeURL,
+  createCoinbasePayURL,
+} from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -109,10 +116,12 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
           const signedXDR = await signTransaction(trustlineXDR);
           await submitTrustlineTransaction(signedXDR);
           logger.log('[OnRampDialog] Trustline created automatically');
-          enqueueSnackbar(t('Account funded and USDC trustline created!'), { variant: 'success' });
+          enqueueSnackbar(t('Account funded and USDC enabled!'), { variant: 'success' });
         } catch (trustlineError: any) {
           logger.warn('[OnRampDialog] Auto-trustline failed:', trustlineError);
-          enqueueSnackbar(t('Account funded! Please add USDC trustline manually.'), { variant: 'success' });
+          enqueueSnackbar(t('Account funded! Please enable USDC manually.'), {
+            variant: 'success',
+          });
         }
       } else {
         enqueueSnackbar(t('Account funded successfully!'), { variant: 'success' });
@@ -122,7 +131,10 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       await refetchAccountStatus();
     } catch (error: any) {
       logger.error('[OnRampDialog] Faucet funding failed:', error);
-      if (error.message?.includes('already been funded') || error.message?.includes('already exists')) {
+      if (
+        error.message?.includes('already been funded') ||
+        error.message?.includes('already exists')
+      ) {
         enqueueSnackbar(t('Account already funded. Refreshing status...'), { variant: 'info' });
         await refetchAccountStatus();
       } else if (error.message?.includes('Rate limit')) {
@@ -150,11 +162,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
     try {
       await addTrustLine('USDC', usdcIssuer);
-      enqueueSnackbar(t('USDC trustline added successfully!'), { variant: 'success' });
+      enqueueSnackbar(t('USDC enabled successfully!'), { variant: 'success' });
       await refetchAccountStatus();
     } catch (error: any) {
       logger.error('[OnRampDialog] Add trustline failed:', error);
-      enqueueSnackbar(error.message || t('Failed to add trustline'), { variant: 'error' });
+      enqueueSnackbar(error.message || t('Failed to enable USDC'), { variant: 'error' });
     }
   };
 
@@ -306,7 +318,9 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
                   {t('Account Not Funded')}
                 </Typography>
                 <Typography variant="body2">
-                  {t('Your account needs XLM to exist on the Stellar blockchain before you can use onramp services.')}
+                  {t(
+                    'Your account needs XLM to exist on the Stellar blockchain before you can use onramp services.'
+                  )}
                 </Typography>
               </Alert>
               <Button
@@ -316,7 +330,13 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
                 size="large"
                 onClick={handleFundAccount}
                 disabled={isFunding}
-                startIcon={isFunding ? <CircularProgress size={18} color="inherit" /> : <Iconify icon="solar:rocket-bold" />}
+                startIcon={
+                  isFunding ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <Iconify icon="solar:rocket-bold" />
+                  )
+                }
               >
                 {isFunding ? t('Funding Account...') : t('Fund Account (Free)')}
               </Button>
@@ -341,7 +361,13 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
                 size="large"
                 onClick={handleAddTrustline}
                 disabled={isAddingTrustline}
-                startIcon={isAddingTrustline ? <CircularProgress size={18} color="inherit" /> : <Iconify icon="solar:add-circle-bold" />}
+                startIcon={
+                  isAddingTrustline ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <Iconify icon="solar:add-circle-bold" />
+                  )
+                }
               >
                 {isAddingTrustline ? t('Adding Trustline...') : t('Add USDC Trustline')}
               </Button>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAccount, checkTrustline, constants, logger } from '@normalfinance/utils';
+import { logger, constants, fetchAccount, checkTrustline } from '@normalfinance/utils';
 
 export interface AccountStatus {
   isLoading: boolean;

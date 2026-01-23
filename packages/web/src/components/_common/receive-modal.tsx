@@ -7,9 +7,9 @@ import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
-import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
-import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -85,7 +85,10 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
       await refetchAccountStatus();
     } catch (error: any) {
       logger.error('[ReceiveModal] Faucet funding failed:', error);
-      if (error.message?.includes('already been funded') || error.message?.includes('already exists')) {
+      if (
+        error.message?.includes('already been funded') ||
+        error.message?.includes('already exists')
+      ) {
         enqueueSnackbar(t('Account already funded. Refreshing status...'), { variant: 'info' });
         await refetchAccountStatus();
       } else if (error.message?.includes('Rate limit')) {
@@ -191,16 +194,14 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
                 width: '100%',
               }}
             >
-              <Iconify
-                icon="solar:wallet-bold"
-                width={48}
-                sx={{ color: 'warning.main', mb: 2 }}
-              />
+              <Iconify icon="solar:wallet-bold" width={48} sx={{ color: 'warning.main', mb: 2 }} />
               <Typography variant="subtitle1" sx={{ mb: 1 }}>
                 {t('Account Not Funded')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                {t('Your account needs to be funded with XLM before you can receive crypto from external sources.')}
+                {t(
+                  'Your account needs to be funded with XLM before you can receive crypto from external sources.'
+                )}
               </Typography>
               <Button
                 variant="contained"
@@ -209,7 +210,13 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
                 fullWidth
                 onClick={handleFundAccount}
                 disabled={isFunding}
-                startIcon={isFunding ? <CircularProgress size={18} color="inherit" /> : <Iconify icon="solar:rocket-bold" />}
+                startIcon={
+                  isFunding ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <Iconify icon="solar:rocket-bold" />
+                  )
+                }
               >
                 {isFunding ? t('Funding Account...') : t('Fund Account (Free)')}
               </Button>
