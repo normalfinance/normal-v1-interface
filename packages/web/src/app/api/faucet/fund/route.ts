@@ -24,7 +24,7 @@ function getClientIP(request: NextRequest): string {
 
 /**
  * POST /api/faucet/fund
- * Fund a new wallet with 1 XLM and return trustline XDR
+ * Fund a new wallet with XLM and return trustline XDR
  */
 export async function POST(request: NextRequest) {
   try {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { txHash, trustlineXDR } = await FaucetService.fundNewWallet(walletAddress, ip, '1');
+    const { txHash, trustlineXDR } = await FaucetService.fundNewWallet(walletAddress, ip);
 
     logger.log('[API /faucet/fund] Wallet funded successfully:', {
       walletAddress: walletAddress.substring(0, 8) + '...',
