@@ -40,10 +40,10 @@
     "NEXT_PUBLIC_MAINNET_POSTHOG_KEY",
 
     // Database URLs (used by both Next.js server actions and build-time validation)
-    "DATABASE_TESTNET_URL",
+    "DATABASE_TESTNET_URL", // 6543
     "DATABASE_MAINNET_URL",
-    "DIRECT_TESTNET_URL",
-    "DIRECT_MAINNET_URL",
+    "DATABASE_DIRECT_TESTNET_URL", // 5432
+    "DATABASE_DIRECT_MAINNET_URL",
 
     // MoneyGram
     "MGI_ACCESS_HOST",
