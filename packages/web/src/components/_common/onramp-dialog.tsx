@@ -2,11 +2,10 @@ import { useBoolean } from '@/hooks';
 import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { CONFIG } from '@/global-config';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import { cdn, isTestnet, createOnramperURL, createCoinbasePayURL } from '@normalfinance/utils';
+import { cdn, isTestnet, createCoinbasePayURL, createStripeURL } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -68,12 +67,15 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const isConnected = !!userAddress;
 
   /** Onramper */
-  const onramperUrl = createOnramperURL(CONFIG.onramper.apiKey, {
-    amountUsd: amount,
-    tokenSymbol: 'USDC',
-    walletAddress,
-    fiat: 'USD',
-  });
+  // const onramperUrl = createOnramperURL(CONFIG.onramper.apiKey, {
+  //   amountUsd: amount,
+  //   tokenSymbol: 'USDC',
+  //   walletAddress,
+  //   fiat: 'USD',
+  // });
+
+  /** Stripe */
+  const stripeUrl = createStripeURL(amount);
 
   /** Coinbase */
   const handleCoinbaseClick = async () => {
@@ -128,12 +130,12 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
   const ONRAMPS: OnrampOption[] = [
     {
-      id: 'onramper',
+      id: 'stripe',
       avatar:
-        'https://dashboard.onramper.com/assets/onramper-logo-08814537d425beb902d0f9b80fc5ac47b5fa20f88139ff16f09b290335d68447.png',
-      heading: 'Onramper',
+        'https://cdn.brandfetch.io/idxAg10C0L/w/480/h/480/theme/dark/icon.jpeg?c=1dxbfHSJFAPEGdCLU4o5B',
+      heading: 'Stripe',
       description: t('Debit Card, ACH, Apple Pay, Google Pay'),
-      url: onramperUrl,
+      url: stripeUrl,
     },
     {
       id: 'coinbase',
