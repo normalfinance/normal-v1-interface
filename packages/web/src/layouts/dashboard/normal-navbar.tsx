@@ -227,7 +227,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                   fontWeight: 400,
                 }}
               >
-                {t('InvAssetsest')}
+                {t('Assets')}
               </Button>
             )}
             {pathname.startsWith('/invest') ? (
