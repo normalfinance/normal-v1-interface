@@ -240,7 +240,7 @@ export function SettingsAccounts() {
                 </Box>
 
                 <Button
-                  variant="outlined"
+                  variant="soft"
                   color="error"
                   size="small"
                   startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}

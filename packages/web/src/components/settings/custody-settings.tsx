@@ -224,7 +224,7 @@ export function CustodySettings({
                     {t('Self-custody enabled. You manage your recovery phrase.')}
                   </Typography>
                 </Alert>
-                <Button variant="contained" onClick={migrateToPlatformDialog.onTrue}>
+                <Button variant="soft" onClick={migrateToPlatformDialog.onTrue}>
                   {t('Switch to Platform Custody')}
                 </Button>
               </>
@@ -242,7 +242,7 @@ export function CustodySettings({
                     </Typography>
                   )}
                 </Alert>
-                <Button variant="outlined" color="warning" onClick={migrateToSelfDialog.onTrue}>
+                <Button variant="soft" color="info" onClick={migrateToSelfDialog.onTrue}>
                   {t('Switch to Self-Custody (Will delete stored phrase)')}
                 </Button>
               </>
@@ -323,8 +323,8 @@ export function CustodySettings({
             {t('Cancel')}
           </Button>
           <Button
-            variant="contained"
-            color="warning"
+            variant="soft"
+            color="info"
             onClick={handleMigrateToSelf}
             disabled={isMigrating}
             startIcon={isMigrating ? <CircularProgress size={16} /> : null}
