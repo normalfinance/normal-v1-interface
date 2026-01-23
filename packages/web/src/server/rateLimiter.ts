@@ -41,6 +41,12 @@ const ipRateLimiter = new Ratelimit({
   limiter: Ratelimit.slidingWindow(50, '10 s'),
 });
 
+// Allow 5 requests per hour per IP for faucet, sliding window
+const faucetIPRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 h'),
+});
+
 export const rateLimiter = {
   limit: async (walletAddress: string, ip?: string) => {
     // Rate limit by wallet address
@@ -61,5 +67,10 @@ export const rateLimiter = {
 
     // Only wallet rate limiting
     return walletResult;
+  },
+  faucet: {
+    limit: async (ip: string) => {
+      return await faucetIPRateLimiter.limit(ip);
+    },
   },
 };

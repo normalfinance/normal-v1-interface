@@ -1,12 +1,12 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-import { useBoolean } from '@/hooks/use-boolean';
 import { supabase } from '@/lib/createSupabaseClient';
 import React, { useMemo, useState, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { linkWallet, updateWalletName } from '@/services/linked-wallets';
+import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
 import {
   logger,
   splitMnemonicToWords,
@@ -44,7 +44,6 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
-import { ConfirmDialog } from '@/components/template/custom-dialog';
 
 export type NormalWalletCreateProps = {
   open: boolean;
@@ -71,9 +70,8 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
 export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalWalletCreateProps) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { createWallet } = useNormalWallet();
+  const { createWallet, signTransaction } = useNormalWallet();
   const { user } = useSupabaseAuth();
-  const confirmSkip = useBoolean();
 
   const [stage, setStage] = useState<CreateStage>('creating');
   const [mnemonic, setMnemonic] = useState<string | null>(null);
@@ -126,15 +124,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
   const handleBackupWallet = () => {
     setStage('custody-choice');
-  };
-
-  const handleSkipBackup = () => {
-    confirmSkip.onTrue();
-  };
-
-  const handleConfirmSkip = () => {
-    confirmSkip.onFalse();
-    handleComplete();
   };
 
   const handleCopyMnemonic = async () => {
@@ -293,6 +282,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
       }
     }
 
+    const walletAddress = publicKey;
     setMnemonic(null);
     setPublicKey(null);
     setWalletName('');
@@ -307,7 +297,37 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setIsSavingCustody(false);
     enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
     onSuccess();
-  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t]);
+
+    if (walletAddress) {
+      requestFaucetFundingAndTrustline(walletAddress).catch((err) => {
+        logger.warn('[NormalWalletCreate] Failed to fund wallet or create trustline:', err);
+      });
+    }
+  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t, signTransaction]);
+
+  const requestFaucetFundingAndTrustline = useCallback(
+    async (walletAddress: string) => {
+      try {
+        logger.log('[NormalWalletCreate] Requesting faucet funding for:', walletAddress);
+        const { txHash, trustlineXDR } = await requestFaucetFunding(walletAddress);
+        logger.log('[NormalWalletCreate] Wallet funded, creating trustline:', txHash);
+
+        if (trustlineXDR && signTransaction) {
+          const signedTrustlineXDR = await signTransaction(trustlineXDR);
+          const { hash: trustlineHash } = await submitTrustlineTransaction(signedTrustlineXDR);
+          logger.log('[NormalWalletCreate] Trustline created successfully:', trustlineHash);
+        }
+      } catch (error: any) {
+        logger.error('[NormalWalletCreate] Error in faucet funding flow:', error);
+        if (error.message?.includes('already been funded') || error.message?.includes('already exists')) {
+          logger.log('[NormalWalletCreate] Wallet already funded, skipping');
+          return;
+        }
+        throw error;
+      }
+    },
+    [signTransaction]
+  );
 
   const handleCustodyConfirm = useCallback(async () => {
     if (custodyChoice === 'self') {
@@ -392,21 +412,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   };
 
   const handleClose = () => {
-    if (stage === 'creating') {
-      onClose();
-      return;
-    }
-
-    if (
-      stage === 'summary' ||
-      stage === 'backup' ||
-      stage === 'custody-choice' ||
-      stage === 'verify'
-    ) {
-      confirmSkip.onTrue();
-      return;
-    }
-
     setMnemonic(null);
     setPublicKey(null);
     setWalletName('');
@@ -507,11 +512,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {t('Backup your recovery phrase to ensure you can recover your account later.')}
               </Typography>
-              <Button variant="contained" fullWidth onClick={handleBackupWallet} sx={{ mb: 1 }}>
+              <Button variant="contained" fullWidth onClick={handleBackupWallet}>
                 {t('Back up')}
-              </Button>
-              <Button variant="outlined" fullWidth onClick={handleSkipBackup}>
-                {t('Skip for Now')}
               </Button>
             </Paper>
           </Stack>
@@ -815,20 +817,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           </Stack>
         )}
       </DialogContent>
-
-      <ConfirmDialog
-        open={confirmSkip.value}
-        onClose={confirmSkip.onFalse}
-        title={t('Skip Backup?')}
-        content={t(
-          "Without backing up your wallet, you won't be able to recover it if you lose access. Are you sure?"
-        )}
-        action={
-          <Button variant="contained" onClick={handleConfirmSkip}>
-            {t('Skip Anyway')}
-          </Button>
-        }
-      />
     </Dialog>
   );
 }

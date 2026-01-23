@@ -17,6 +17,20 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
+import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
+import {
+  generateAESKey,
+  decryptWithAES,
+  exportAESKeyAsBase64,
+  importAESKeyFromBase64,
+  encryptWithRSAPublicKey,
+} from '@/lib/client-crypto';
+import {
+  normalizeMnemonic,
+  validateMnemonic,
+  createWalletFromMnemonic,
+  createKeypairFromSecret,
+} from '@normalfinance/utils';
 
 import {
   Box,
@@ -126,6 +140,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
     publicKey: normalPublicKey,
     isConnected: isNormalConnected,
     disconnectWallet: disconnectNormalWallet,
+    importWalletFromMnemonic,
+    importWalletFromPrivateKey,
   } = useNormalWallet();
   const { session, isLoading: authLoading, signOut } = useSupabaseAuth();
   const { enqueueSnackbar } = useSnackbar();
@@ -157,6 +173,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
   const [resetEmail, setResetEmail] = useState<string | null>(null);
+  const [isAutoConnecting, setIsAutoConnecting] = useState(false);
 
   const handleDisconnect = async () => {
     if (isDisconnecting) {
@@ -216,16 +233,123 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const handleConnectStellarWallet = useCallback(async () => {
     try {
       await connectWallet();
-      onClose(); // Close the drawer after connecting
+      onClose();
     } catch (error) {
       logger.error('Error connecting wallet:', error);
     }
   }, [connectWallet, onClose]);
 
+  const fetchAndDecryptMnemonic = useCallback(
+    async (walletAddress: string): Promise<string | null> => {
+      if (!session?.user?.id || !session?.user?.email || !session?.access_token) {
+        return null;
+      }
+
+      try {
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        };
+
+        const rsaKeysResponse = await fetch('/api/user/rsa-keys', {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        });
+
+        if (!rsaKeysResponse.ok) {
+          throw new Error('Could not fetch RSA keys');
+        }
+
+        const rsaKeysData = await rsaKeysResponse.json();
+
+        if (!rsaKeysData.hasKeys) {
+          throw new Error('RSA keys not found');
+        }
+
+        const aesKey = await generateAESKey();
+        const aesKeyBase64 = await exportAESKeyAsBase64(aesKey);
+        const encryptedAESKey = await encryptWithRSAPublicKey(aesKeyBase64, rsaKeysData.publicKey);
+
+        const response = await fetch(`/api/wallets/mnemonic/${walletAddress}`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({
+            encryptedAESKey,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Could not load stored recovery phrase');
+        }
+
+        const { encryptedMnemonic, iv } = await response.json();
+
+        const importedAESKey = await importAESKeyFromBase64(aesKeyBase64);
+        const decryptedMnemonic = await decryptWithAES(encryptedMnemonic, iv, importedAESKey);
+
+        return decryptedMnemonic;
+      } catch (err: any) {
+        logger.warn('[AccountDrawer] Failed to fetch and decrypt mnemonic:', err);
+        return null;
+      }
+    },
+    [session]
+  );
+
+  const attemptAutoConnect = useCallback(
+    async (wallet: LinkedWallet): Promise<boolean> => {
+      try {
+        if (wallet.custodyChoice === 'platform') {
+          const mnemonic = await fetchAndDecryptMnemonic(wallet.walletAddress);
+          if (!mnemonic) {
+            return false;
+          }
+
+          const normalized = normalizeMnemonic(mnemonic);
+          if (!validateMnemonic(normalized)) {
+            logger.error('[AccountDrawer] Invalid mnemonic from platform custody');
+            return false;
+          }
+
+          const walletData = createWalletFromMnemonic(normalized);
+          if (walletData.publicKey !== wallet.walletAddress) {
+            logger.error('[AccountDrawer] Mnemonic does not match wallet address');
+            return false;
+          }
+
+          await importWalletFromMnemonic(normalized, undefined, wallet.walletName ?? undefined);
+          logger.log('[AccountDrawer] Successfully auto-connected platform custody wallet');
+          return true;
+        } else if (wallet.custodyChoice === 'self') {
+          const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
+          const storedPrivateKey = localStorage.getItem(NORMAL_WALLET_STORAGE_KEY);
+          if (storedPrivateKey) {
+            try {
+              const privateKey = atob(storedPrivateKey);
+              const keypair = createKeypairFromSecret(privateKey);
+              if (keypair.publicKey() === wallet.walletAddress) {
+                await importWalletFromPrivateKey(privateKey, wallet.walletName ?? undefined);
+                logger.log('[AccountDrawer] Successfully auto-connected self-custody wallet from localStorage');
+                return true;
+              }
+            } catch (err) {
+              logger.warn('[AccountDrawer] Failed to restore from localStorage:', err);
+            }
+          }
+        }
+        return false;
+      } catch (error) {
+        logger.error('[AccountDrawer] Error during auto-connect:', error);
+        return false;
+      }
+    },
+    [fetchAndDecryptMnemonic, importWalletFromMnemonic, importWalletFromPrivateKey]
+  );
+
   const handlePostAuthFlow = useCallback(async () => {
-    // TOS is now handled in AuthLoginModal, proceed directly to wallet selection
-    if (!hasSeenWalletSelectionModal()) {
-      setShowWalletSelection(true);
+    if (!session) {
       return;
     }
 
@@ -235,13 +359,56 @@ export function AccountDrawer(props: AccountDrawerProps) {
       return;
     }
 
-    await handleConnectStellarWallet();
+    if (isAutoConnecting) {
+      return;
+    }
+
+    setIsAutoConnecting(true);
+
+    try {
+      const linkedWallets = await getLinkedWallets();
+
+      if (linkedWallets.length === 0) {
+        if (!hasSeenWalletSelectionModal()) {
+          setShowWalletSelection(true);
+        } else {
+          await handleConnectStellarWallet();
+        }
+        return;
+      }
+
+      const mostRecentWallet = linkedWallets[0];
+
+      const autoConnected = await attemptAutoConnect(mostRecentWallet);
+
+      if (autoConnected) {
+        enqueueSnackbar(t('Wallet connected successfully'), { variant: 'success' });
+        return;
+      }
+
+      logger.warn('[AccountDrawer] Auto-connect failed for wallet:', mostRecentWallet.walletAddress);
+      enqueueSnackbar(t('Could not auto-connect wallet. Use Switch Wallets to reconnect.'), {
+        variant: 'warning',
+      });
+    } catch (error) {
+      logger.error('[AccountDrawer] Error in handlePostAuthFlow:', error);
+      enqueueSnackbar(t('Could not connect wallet. Use Switch Wallets to try again.'), {
+        variant: 'error',
+      });
+    } finally {
+      setIsAutoConnecting(false);
+    }
   }, [
-    handleConnectStellarWallet,
+    session,
     normalPublicKey,
     isNormalConnected,
     connectNormalWallet,
     onClose,
+    isAutoConnecting,
+    attemptAutoConnect,
+    handleConnectStellarWallet,
+    enqueueSnackbar,
+    t,
   ]);
 
   /** Handle Normal wallet creation success */
@@ -303,9 +470,15 @@ export function AccountDrawer(props: AccountDrawerProps) {
         clearLoginIntent();
         hasHandledAuthRef.current = false;
       }
+      setIsAutoConnecting(false);
       if (!passwordResetSuccess) {
         setShowLoginModal(false);
       }
+      return;
+    }
+
+    if (isWalletConnected) {
+      setIsAutoConnecting(false);
       return;
     }
 
@@ -315,7 +488,13 @@ export function AccountDrawer(props: AccountDrawerProps) {
       setShowLoginModal(false);
       void handlePostAuthFlow();
     }
-  }, [authLoading, session, handlePostAuthFlow, passwordResetSuccess]);
+  }, [
+    authLoading,
+    session,
+    handlePostAuthFlow,
+    passwordResetSuccess,
+    isWalletConnected,
+  ]);
 
   return (
     <>
@@ -432,8 +611,41 @@ export function AccountDrawer(props: AccountDrawerProps) {
               >
                 {isNavigatingToSettings ? t('Loading...') : t('Settings')}
               </Button>
-              {isWalletConnected && connectedAddress ? (
-                <WalletConnected address={connectedAddress} />
+              {isAutoConnecting ? (
+                <Box sx={{ px: 2, py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <CircularProgress sx={{ mb: 2 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    {t('Connecting to your wallet...')}
+                  </Typography>
+                </Box>
+              ) : isWalletConnected && connectedAddress ? (
+                <>
+                  <Stack spacing={1} sx={{ mb: 2 }}>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      fullWidth
+                      startIcon={<Iconify icon="mingcute:add-line" />}
+                      onClick={() => {
+                        setShowCreateNormalWallet(true);
+                      }}
+                    >
+                      {t('Create New Account')}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      fullWidth
+                      startIcon={<Iconify icon="solar:refresh-bold" />}
+                      onClick={() => {
+                        setShowImportNormalWallet(true);
+                      }}
+                    >
+                      {t('Switch Wallets')}
+                    </Button>
+                  </Stack>
+                  <WalletConnected address={connectedAddress} />
+                </>
               ) : (
                 <Box sx={{ px: 2, py: 4 }}>
                   <Typography variant="h6" sx={{ mb: 2 }}>
@@ -442,15 +654,27 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                     {t('Complete your account to start investing')}
                   </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    onClick={handleConnectClick}
-                    sx={{ mb: 2 }}
-                  >
-                    {t('Complete')}
-                  </Button>
+                  <Stack spacing={1.5}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      onClick={handleConnectClick}
+                    >
+                      {t('Complete')}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      fullWidth
+                      startIcon={<Iconify icon="solar:refresh-bold" />}
+                      onClick={() => {
+                        setShowImportNormalWallet(true);
+                      }}
+                    >
+                      {t('Switch Wallets')}
+                    </Button>
+                  </Stack>
                 </Box>
               )}
             </Stack>
