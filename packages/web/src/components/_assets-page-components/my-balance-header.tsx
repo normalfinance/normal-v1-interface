@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-import { fCurrencyTwoDecimals, fRawPercent } from '@/utils/format-number';
+import { fRawPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -15,7 +15,10 @@ interface MyBalanceHeaderProps {
   percentageChange?: number;
 }
 
-export default function MyBalanceHeader({ totalBalance, percentageChange = 0 }: MyBalanceHeaderProps) {
+export default function MyBalanceHeader({
+  totalBalance,
+  percentageChange = 0,
+}: MyBalanceHeaderProps) {
   const { t } = useTranslate();
   const theme = useTheme();
 

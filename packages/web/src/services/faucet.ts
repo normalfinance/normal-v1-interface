@@ -1,5 +1,5 @@
 import { logger, constants } from '@normalfinance/utils';
-import { TransactionBuilder, Horizon } from '@stellar/stellar-sdk';
+import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 
 export interface FundWalletResponse {
   success: boolean;
@@ -17,9 +17,7 @@ export interface FundWalletError {
  * Request funding for a new wallet (1 XLM)
  * Returns the funding transaction hash and unsigned trustline XDR
  */
-export async function requestFaucetFunding(
-  walletAddress: string
-): Promise<FundWalletResponse> {
+export async function requestFaucetFunding(walletAddress: string): Promise<FundWalletResponse> {
   try {
     const response = await fetch('/api/faucet/fund', {
       method: 'POST',
@@ -45,9 +43,7 @@ export async function requestFaucetFunding(
 /**
  * Submit a signed trustline transaction
  */
-export async function submitTrustlineTransaction(
-  signedXDR: string
-): Promise<{ hash: string }> {
+export async function submitTrustlineTransaction(signedXDR: string): Promise<{ hash: string }> {
   try {
     const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
       allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),

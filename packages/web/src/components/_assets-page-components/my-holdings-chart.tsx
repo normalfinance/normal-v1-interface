@@ -1,12 +1,12 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-import { fRawPercent, fCurrency } from '@/utils/format-number';
+import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 import Card from '@mui/material/Card';
 import Divider from '@mui/material/Divider';
-import CardHeader from '@mui/material/CardHeader';
 import { useTheme } from '@mui/material/styles';
+import CardHeader from '@mui/material/CardHeader';
 
 import { ChartLegends } from '@/components/template/chart';
 import IndexDonutChart from '@/components/_index-details/index-donut-chart';

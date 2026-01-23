@@ -52,10 +52,7 @@ export default function MyHoldingsTable({ holdingsData }: MyHoldingsTableProps) 
                 table.page * table.rowsPerPage + table.rowsPerPage
               )
               .map((holding) => (
-                <MyHoldingsTableRow
-                  key={holding.token.contract}
-                  holding={holding}
-                />
+                <MyHoldingsTableRow key={holding.token.contract} holding={holding} />
               ))}
             <TableNoData notFound={holdingsData.length === 0} />
           </TableBody>

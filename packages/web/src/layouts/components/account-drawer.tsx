@@ -8,7 +8,6 @@ import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
-import { cdn, format, logger } from '@normalfinance/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserActivity, useManageLiquidity } from '@/hooks';
 import { useRef, useState, useEffect, useCallback } from 'react';
@@ -16,8 +15,8 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
+import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   generateAESKey,
   decryptWithAES,
@@ -26,10 +25,13 @@ import {
   encryptWithRSAPublicKey,
 } from '@/lib/client-crypto';
 import {
-  normalizeMnemonic,
+  cdn,
+  format,
+  logger,
   validateMnemonic,
-  createWalletFromMnemonic,
+  normalizeMnemonic,
   createKeypairFromSecret,
+  createWalletFromMnemonic,
 } from '@normalfinance/utils';
 
 import {
@@ -331,7 +333,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
               const keypair = createKeypairFromSecret(privateKey);
               if (keypair.publicKey() === wallet.walletAddress) {
                 await importWalletFromPrivateKey(privateKey, wallet.walletName ?? undefined);
-                logger.log('[AccountDrawer] Successfully auto-connected self-custody wallet from localStorage');
+                logger.log(
+                  '[AccountDrawer] Successfully auto-connected self-custody wallet from localStorage'
+                );
                 return true;
               }
             } catch (err) {
@@ -386,7 +390,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
         return;
       }
 
-      logger.warn('[AccountDrawer] Auto-connect failed for wallet:', mostRecentWallet.walletAddress);
+      logger.warn(
+        '[AccountDrawer] Auto-connect failed for wallet:',
+        mostRecentWallet.walletAddress
+      );
       enqueueSnackbar(t('Could not auto-connect wallet. Use Switch Wallets to reconnect.'), {
         variant: 'warning',
       });
@@ -488,13 +495,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
       setShowLoginModal(false);
       void handlePostAuthFlow();
     }
-  }, [
-    authLoading,
-    session,
-    handlePostAuthFlow,
-    passwordResetSuccess,
-    isWalletConnected,
-  ]);
+  }, [authLoading, session, handlePostAuthFlow, passwordResetSuccess, isWalletConnected]);
 
   return (
     <>
@@ -612,7 +613,15 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 {isNavigatingToSettings ? t('Loading...') : t('Settings')}
               </Button>
               {isAutoConnecting ? (
-                <Box sx={{ px: 2, py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 4,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                  }}
+                >
                   <CircularProgress sx={{ mb: 2 }} />
                   <Typography variant="body2" color="text.secondary">
                     {t('Connecting to your wallet...')}

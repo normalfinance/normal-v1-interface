@@ -14,6 +14,7 @@ import { WalletGate } from '@/components/_common/wallet-gate';
 import MyBalanceHeader from './my-balance-header';
 import MyHoldingsChart from './my-holdings-chart';
 import MyHoldingsTable from './my-holdings-table';
+
 import type { HoldingData } from './my-holdings-table-row';
 
 export function MyBalanceSection({ sx, ...other }: CardProps) {

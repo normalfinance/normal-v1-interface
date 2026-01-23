@@ -199,6 +199,37 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               gap: 0.5,
             }}
           >
+            {pathname.startsWith('/assets') ? (
+              <GlowBorder radius={8} borderWidth={1} glowOpacity={0} glowSpread={0} glowBlur={0}>
+                <Button
+                  component="a"
+                  href="/assets"
+                  sx={{
+                    textTransform: 'none',
+                    py: 0.5,
+                    px: 1.5,
+                    color: 'text.primary',
+                    fontWeight: 400,
+                  }}
+                >
+                  {t('Assets')}
+                </Button>
+              </GlowBorder>
+            ) : (
+              <Button
+                component="a"
+                href="/assets"
+                sx={{
+                  textTransform: 'none',
+                  py: 0.5,
+                  px: 1.5,
+                  color: 'text.primary',
+                  fontWeight: 400,
+                }}
+              >
+                {t('InvAssetsest')}
+              </Button>
+            )}
             {pathname.startsWith('/invest') ? (
               <GlowBorder radius={8} borderWidth={1} glowOpacity={0} glowSpread={0} glowBlur={0}>
                 <Button

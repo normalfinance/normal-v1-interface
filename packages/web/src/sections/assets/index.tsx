@@ -118,13 +118,13 @@ export default function AssetsView() {
           </Typography>
         </Stack>
         <Grid2 width={1} sx={{ mt: 3 }}>
-          <MyBalanceSection />
-        </Grid2>
-        <Grid2 width={1} sx={{ mt: 3 }}>
           <ExploreStats stats={stats} />
         </Grid2>
         <Grid2>
           <ExploreAssetsTable assets={tableData} loading={globalIsLoading} />
+        </Grid2>
+        <Grid2 width={1} sx={{ mt: 3 }}>
+          <MyBalanceSection />
         </Grid2>
       </DashboardContent>
     </Box>

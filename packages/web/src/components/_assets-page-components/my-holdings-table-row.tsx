@@ -2,11 +2,11 @@
 
 import type { Token } from '@normalfinance/types';
 
-import { useRouter } from 'next/navigation';
-import { BigNumber } from 'bignumber.js';
-import { getCryptoIconUrl } from '@normalfinance/utils';
-import { fCurrency, fPercent, fNumber } from '@/utils/format-number';
 import { paths } from '@/routes/paths';
+import { BigNumber } from 'bignumber.js';
+import { useRouter } from 'next/navigation';
+import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fNumber, fPercent, fCurrency } from '@/utils/format-number';
 
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
@@ -32,16 +32,10 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
     router.push(paths.assets.details(token.symbol));
   };
 
-  const balanceDisplay = BigNumber(token.balance).toFixed(
-    token.decimals > 4 ? 4 : token.decimals
-  );
+  const balanceDisplay = BigNumber(token.balance).toFixed(token.decimals > 4 ? 4 : token.decimals);
 
   return (
-    <TableRow
-      hover
-      onClick={handleRowClick}
-      sx={{ cursor: 'pointer' }}
-    >
+    <TableRow hover onClick={handleRowClick} sx={{ cursor: 'pointer' }}>
       {/* Asset name + icon */}
       <TableCell>
         <Stack direction="row" spacing={1.5} alignItems="center">

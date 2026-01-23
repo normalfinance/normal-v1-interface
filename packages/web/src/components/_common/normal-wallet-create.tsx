@@ -319,7 +319,10 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         }
       } catch (error: any) {
         logger.error('[NormalWalletCreate] Error in faucet funding flow:', error);
-        if (error.message?.includes('already been funded') || error.message?.includes('already exists')) {
+        if (
+          error.message?.includes('already been funded') ||
+          error.message?.includes('already exists')
+        ) {
           logger.log('[NormalWalletCreate] Wallet already funded, skipping');
           return;
         }

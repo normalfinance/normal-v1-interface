@@ -69,8 +69,6 @@ export const rateLimiter = {
     return walletResult;
   },
   faucet: {
-    limit: async (ip: string) => {
-      return await faucetIPRateLimiter.limit(ip);
-    },
+    limit: async (ip: string) => await faucetIPRateLimiter.limit(ip),
   },
 };

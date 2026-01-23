@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { FaucetService } from '@/lib/faucet-service';
 import { rateLimiter } from '@/server/rateLimiter';
+import { FaucetService } from '@/lib/faucet-service';
 
 const FundWalletSchema = z.object({
   walletAddress: z
@@ -63,10 +63,7 @@ export async function POST(request: NextRequest) {
       logger.warn('[API /faucet/fund] Wallet already funded:', {
         walletAddress: walletAddress.substring(0, 8) + '...',
       });
-      return NextResponse.json(
-        { error: 'Wallet has already been funded' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Wallet has already been funded' }, { status: 400 });
     }
 
     const accountExists = await FaucetService.accountExists(walletAddress);
@@ -80,11 +77,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { txHash, trustlineXDR } = await FaucetService.fundNewWallet(
-      walletAddress,
-      ip,
-      '1'
-    );
+    const { txHash, trustlineXDR } = await FaucetService.fundNewWallet(walletAddress, ip, '1');
 
     logger.log('[API /faucet/fund] Wallet funded successfully:', {
       walletAddress: walletAddress.substring(0, 8) + '...',
