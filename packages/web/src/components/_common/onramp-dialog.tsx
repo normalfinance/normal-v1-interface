@@ -4,13 +4,27 @@ import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import { cdn, isTestnet, createStripeURL, createCoinbasePayURL } from '@normalfinance/utils';
+import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
+import {
+  cdn,
+  logger,
+  isTestnet,
+  constants,
+  createStripeURL,
+  createCoinbasePayURL,
+} from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
   List,
+  Alert,
+  Stack,
+  Button,
   Dialog,
   Avatar,
   Typography,
@@ -20,6 +34,7 @@ import {
   DialogContent,
   ListItemButton,
   ListItemAvatar,
+  CircularProgress,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -56,15 +71,104 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const { enqueueSnackbar } = useSnackbar();
 
   const persist = usePersistStore();
+  const { signTransaction } = useNormalWallet();
 
   const moneyGramAmountDialog = useBoolean();
 
   const [mgiLoading, setMgiLoading] = useState(false);
+  const [isFunding, setIsFunding] = useState(false);
 
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 
   const userAddress = persist.wallet.address;
   const isConnected = !!userAddress;
+
+  // Account status checks
+  const {
+    isLoading: isCheckingAccount,
+    accountExists,
+    hasUsdcTrustline,
+    refetch: refetchAccountStatus,
+  } = useAccountStatus(userAddress);
+
+  // Trustline hook
+  const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
+
+  // Check if prerequisites are met
+  const prerequisitesMet = accountExists && hasUsdcTrustline;
+
+  // Handle funding account via faucet
+  const handleFundAccount = async () => {
+    if (!userAddress) {
+      enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
+      return;
+    }
+
+    setIsFunding(true);
+    try {
+      logger.log('[OnRampDialog] Requesting faucet funding for:', userAddress);
+      const { txHash, trustlineXDR } = await requestFaucetFunding(userAddress);
+      logger.log('[OnRampDialog] Account funded successfully:', txHash);
+
+      // Auto-create trustline if we have the XDR and can sign
+      if (trustlineXDR && signTransaction) {
+        try {
+          const signedXDR = await signTransaction(trustlineXDR);
+          await submitTrustlineTransaction(signedXDR);
+          logger.log('[OnRampDialog] Trustline created automatically');
+          enqueueSnackbar(t('Account funded and USDC enabled!'), { variant: 'success' });
+        } catch (trustlineError: any) {
+          logger.warn('[OnRampDialog] Auto-trustline failed:', trustlineError);
+          enqueueSnackbar(t('Account funded! Please enable USDC manually.'), {
+            variant: 'success',
+          });
+        }
+      } else {
+        enqueueSnackbar(t('Account funded successfully!'), { variant: 'success' });
+      }
+
+      // Refetch account status
+      await refetchAccountStatus();
+    } catch (error: any) {
+      logger.error('[OnRampDialog] Faucet funding failed:', error);
+      if (
+        error.message?.includes('already been funded') ||
+        error.message?.includes('already exists')
+      ) {
+        enqueueSnackbar(t('Account already funded. Refreshing status...'), { variant: 'info' });
+        await refetchAccountStatus();
+      } else if (error.message?.includes('Rate limit')) {
+        enqueueSnackbar(t('Rate limit exceeded. Please try again later.'), { variant: 'error' });
+      } else {
+        enqueueSnackbar(error.message || t('Failed to fund account'), { variant: 'error' });
+      }
+    } finally {
+      setIsFunding(false);
+    }
+  };
+
+  // Handle adding USDC trustline
+  const handleAddTrustline = async () => {
+    if (!userAddress) {
+      enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
+      return;
+    }
+
+    const usdcIssuer = constants.StellarConfig.USDC_ISSUER;
+    if (!usdcIssuer) {
+      enqueueSnackbar(t('USDC issuer not configured'), { variant: 'error' });
+      return;
+    }
+
+    try {
+      await addTrustLine('USDC', usdcIssuer);
+      enqueueSnackbar(t('USDC enabled successfully!'), { variant: 'success' });
+      await refetchAccountStatus();
+    } catch (error: any) {
+      logger.error('[OnRampDialog] Add trustline failed:', error);
+      enqueueSnackbar(error.message || t('Failed to enable USDC'), { variant: 'error' });
+    }
+  };
 
   /** Onramper */
   // const onramperUrl = createOnramperURL(CONFIG.onramper.apiKey, {
@@ -196,55 +300,135 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             },
           }}
         >
-          <List disablePadding>
-            {ONRAMPS.map((checkout) => (
-              <ListItemButton
-                key={checkout.id}
-                onClick={() => {
-                  if (checkout.onClick) {
-                    checkout.onClick();
-                  } else if (checkout.url) {
-                    openExternal(checkout.url);
-                  }
-                }}
-                sx={{
-                  borderRadius: 1,
-                  mb: 1,
-                  border: `1px solid ${alpha(theme.palette.grey[500], 0.14)}`,
-                }}
+          {/* Loading state */}
+          {isCheckingAccount && (
+            <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
+              <CircularProgress size={32} />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                {t('Checking account status...')}
+              </Typography>
+            </Stack>
+          )}
+
+          {/* Account not funded - show faucet button */}
+          {!isCheckingAccount && !accountExists && (
+            <Stack spacing={2} sx={{ mb: 2 }}>
+              <Alert severity="warning" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                  {t('Account Not Funded')}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    'Your account needs XLM to exist on the Stellar blockchain before you can use onramp services.'
+                  )}
+                </Typography>
+              </Alert>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                size="large"
+                onClick={handleFundAccount}
+                disabled={isFunding}
+                startIcon={
+                  isFunding ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <Iconify icon="solar:rocket-bold" />
+                  )
+                }
               >
-                <ListItemAvatar>
-                  <Avatar
-                    src={checkout.avatar}
-                    alt={checkout.heading}
-                    sx={{ width: 36, height: 36 }}
+                {isFunding ? t('Funding Account...') : t('Fund Account (Free)')}
+              </Button>
+            </Stack>
+          )}
+
+          {/* Account funded but no USDC trustline */}
+          {!isCheckingAccount && accountExists && !hasUsdcTrustline && (
+            <Stack spacing={2} sx={{ mb: 2 }}>
+              <Alert severity="info" icon={<Iconify icon="solar:link-bold" width={22} />}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                  {t('USDC Trustline Required')}
+                </Typography>
+                <Typography variant="body2">
+                  {t('Add a USDC trustline to receive USDC from onramp providers.')}
+                </Typography>
+              </Alert>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                size="large"
+                onClick={handleAddTrustline}
+                disabled={isAddingTrustline}
+                startIcon={
+                  isAddingTrustline ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <Iconify icon="solar:add-circle-bold" />
+                  )
+                }
+              >
+                {isAddingTrustline ? t('Adding Trustline...') : t('Add USDC Trustline')}
+              </Button>
+            </Stack>
+          )}
+
+          {/* Onramp options - only show when prerequisites met */}
+          {!isCheckingAccount && prerequisitesMet && (
+            <List disablePadding>
+              {ONRAMPS.map((checkout) => (
+                <ListItemButton
+                  key={checkout.id}
+                  onClick={() => {
+                    if (checkout.onClick) {
+                      checkout.onClick();
+                    } else if (checkout.url) {
+                      openExternal(checkout.url);
+                    }
+                  }}
+                  sx={{
+                    borderRadius: 1,
+                    mb: 1,
+                    border: `1px solid ${alpha(theme.palette.grey[500], 0.14)}`,
+                  }}
+                >
+                  <ListItemAvatar>
+                    <Avatar
+                      src={checkout.avatar}
+                      alt={checkout.heading}
+                      sx={{ width: 36, height: 36 }}
+                    />
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={
+                      <Typography variant="subtitle2" color="text.primary">
+                        {checkout.heading}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography variant="caption" color="text.secondary">
+                        {checkout.description}
+                      </Typography>
+                    }
                   />
-                </ListItemAvatar>
-                <ListItemText
-                  primary={
-                    <Typography variant="subtitle2" color="text.primary">
-                      {checkout.heading}
-                    </Typography>
-                  }
-                  secondary={
-                    <Typography variant="caption" color="text.secondary">
-                      {checkout.description}
-                    </Typography>
-                  }
-                />
-              </ListItemButton>
-            ))}
-          </List>
+                </ListItemButton>
+              ))}
+            </List>
+          )}
         </DialogContent>
 
-        <Box sx={{ px: 4, pb: 4, width: '100%' }}>
-          <Typography
-            variant="body2"
-            sx={{ fontWeight: 500, color: 'text.primary', fontSize: '12px', textAlign: 'center' }}
-          >
-            {t("You'll continue to the provider's website to complete your transaction")}
-          </Typography>
-        </Box>
+        {/* Footer text - only show when prerequisites met */}
+        {!isCheckingAccount && prerequisitesMet && (
+          <Box sx={{ px: 4, pb: 4, width: '100%' }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 500, color: 'text.primary', fontSize: '12px', textAlign: 'center' }}
+            >
+              {t("You'll continue to the provider's website to complete your transaction")}
+            </Typography>
+          </Box>
+        )}
       </Dialog>
 
       <AmountDialog
