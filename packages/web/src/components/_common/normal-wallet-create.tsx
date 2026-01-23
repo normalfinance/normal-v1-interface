@@ -6,6 +6,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { linkWallet, updateWalletName } from '@/services/linked-wallets';
+import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
 import {
   logger,
   splitMnemonicToWords,
@@ -69,7 +70,7 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
 export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalWalletCreateProps) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { createWallet } = useNormalWallet();
+  const { createWallet, signTransaction } = useNormalWallet();
   const { user } = useSupabaseAuth();
 
   const [stage, setStage] = useState<CreateStage>('creating');
@@ -281,6 +282,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
       }
     }
 
+    const walletAddress = publicKey;
     setMnemonic(null);
     setPublicKey(null);
     setWalletName('');
@@ -295,7 +297,37 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setIsSavingCustody(false);
     enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
     onSuccess();
-  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t]);
+
+    if (walletAddress) {
+      requestFaucetFundingAndTrustline(walletAddress).catch((err) => {
+        logger.warn('[NormalWalletCreate] Failed to fund wallet or create trustline:', err);
+      });
+    }
+  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t, signTransaction]);
+
+  const requestFaucetFundingAndTrustline = useCallback(
+    async (walletAddress: string) => {
+      try {
+        logger.log('[NormalWalletCreate] Requesting faucet funding for:', walletAddress);
+        const { txHash, trustlineXDR } = await requestFaucetFunding(walletAddress);
+        logger.log('[NormalWalletCreate] Wallet funded, creating trustline:', txHash);
+
+        if (trustlineXDR && signTransaction) {
+          const signedTrustlineXDR = await signTransaction(trustlineXDR);
+          const { hash: trustlineHash } = await submitTrustlineTransaction(signedTrustlineXDR);
+          logger.log('[NormalWalletCreate] Trustline created successfully:', trustlineHash);
+        }
+      } catch (error: any) {
+        logger.error('[NormalWalletCreate] Error in faucet funding flow:', error);
+        if (error.message?.includes('already been funded') || error.message?.includes('already exists')) {
+          logger.log('[NormalWalletCreate] Wallet already funded, skipping');
+          return;
+        }
+        throw error;
+      }
+    },
+    [signTransaction]
+  );
 
   const handleCustodyConfirm = useCallback(async () => {
     if (custodyChoice === 'self') {

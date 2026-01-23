@@ -99,6 +99,19 @@ model UserRSAKeys {
   @@map("user_rsa_keys")
 }
 
+model FaucetFunding {
+  id            String   @id @default(cuid())
+  walletAddress String   @unique
+  ipAddress     String
+  xlmAmount     String
+  txHash        String?
+  trustlineHash String?
+  createdAt     DateTime @default(now())
+
+  @@index([ipAddress])
+  @@map("faucet_fundings")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model normal_contract_events {
   id                          String   @id
