@@ -69,7 +69,7 @@ export class FaucetService {
   static async fundNewWallet(
     walletAddress: string,
     ipAddress: string,
-    xlmAmount: string = '1'
+    xlmAmount: string = '3'
   ): Promise<{ txHash: string; trustlineXDR: string }> {
     const faucetSecretKey = process.env.NORMAL_HOT_A_SECRET;
     if (!faucetSecretKey) {
