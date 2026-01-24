@@ -32,7 +32,7 @@ const DepositCard: React.FC<DepositCardProps> = ({ ...other }) => {
         gap: 2,
       }}
     >
-      {isConnected ? (
+      <WalletGate buttonText="Login to deposit" fullWidth variant="soft">
         <>
           <Button
             variant="soft"
@@ -56,11 +56,7 @@ const DepositCard: React.FC<DepositCardProps> = ({ ...other }) => {
             {t('Deposit crypto')}
           </Button>
         </>
-      ) : (
-        <WalletGate buttonText="Login to deposit" fullWidth variant="soft">
-          {null}
-        </WalletGate>
-      )}
+      </WalletGate>
     </Box>
   );
 };
