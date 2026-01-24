@@ -2,10 +2,10 @@ import { useBoolean } from '@/hooks';
 import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { CONFIG } from '@/global-config';
 import { runWithdrawFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
-import { cdn, createOnramperURL } from '@normalfinance/utils';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { cdn, isTestnet, createCoinbasePayOfframpURL } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -58,6 +58,8 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({ open, amount, onClose, wa
 
   const persist = usePersistStore();
 
+  const { user } = useSupabaseAuth();
+
   const moneyGramAmountDialog = useBoolean();
 
   const [mgiLoading, setMgiLoading] = useState(false);
@@ -67,13 +69,45 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({ open, amount, onClose, wa
   const userAddress = persist.wallet.address;
   const isConnected = !!userAddress;
 
+  /** Coinbase */
+  const handleCoinbaseClick = async () => {
+    if (!user?.email) {
+      enqueueSnackbar('Please login first', { variant: 'warning' });
+      return;
+    }
+
+    if (!walletAddress) {
+      enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
+      return;
+    }
+    const r = await fetch('/api/coinbase/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
+    });
+    const { token: sessionToken, error } = await r.json();
+    if (error || !sessionToken) {
+      enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
+      return;
+    }
+    const url = createCoinbasePayOfframpURL({
+      sessionToken,
+      redirectUrl: `${window.location.origin}/invest`,
+      partnerUserRef: user.email,
+      fiat: 'USD',
+      sandbox: isTestnet(),
+      path: 'sell',
+    });
+    openExternal(url);
+  };
+
   /** Onramper */
-  const onramperUrl = createOnramperURL(CONFIG.onramper.apiKey, {
-    amountUsd: amount,
-    tokenSymbol: 'USDC',
-    walletAddress,
-    fiat: 'USD',
-  });
+  // const onramperUrl = createOnramperURL(CONFIG.onramper.apiKey, {
+  //   amountUsd: amount,
+  //   tokenSymbol: 'USDC',
+  //   walletAddress,
+  //   fiat: 'USD',
+  // });
 
   /** MoneyGram */
   async function startMgiWithdraw(addr: string, amountStr: string) {
@@ -100,13 +134,20 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({ open, amount, onClose, wa
 
   const ONRAMPS: OnrampOption[] = [
     {
-      id: 'onramper',
-      avatar:
-        'https://dashboard.onramper.com/assets/onramper-logo-08814537d425beb902d0f9b80fc5ac47b5fa20f88139ff16f09b290335d68447.png',
-      heading: 'Onramper',
-      description: t('Debit Card, ACH, Apple Pay, Google Pay'),
-      url: onramperUrl,
+      id: 'coinbase',
+      avatar: 'https://avatars.githubusercontent.com/u/1885080?s=200&v=4',
+      heading: 'Coinbase',
+      description: t('Debit Card, ACH, Apple Pay, Coinbase Balance'),
+      onClick: handleCoinbaseClick,
     },
+    // {
+    //   id: 'onramper',
+    //   avatar:
+    //     'https://dashboard.onramper.com/assets/onramper-logo-08814537d425beb902d0f9b80fc5ac47b5fa20f88139ff16f09b290335d68447.png',
+    //   heading: 'Onramper',
+    //   description: t('Debit Card, ACH, Apple Pay, Google Pay'),
+    //   url: onramperUrl,
+    // },
     {
       id: 'moneygram',
       avatar: cdn('/icons/moneygram/mgi.webp'),
