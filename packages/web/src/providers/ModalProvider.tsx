@@ -50,13 +50,13 @@ export function ModalProvider({ children }: ModalProviderProps) {
         />
       )}
 
-      {/* Liquidity */}
       {modalState.ADD_LIQUIDITY && (
         <AddLiquidityDialog
           open={modalState.ADD_LIQUIDITY}
           onClose={() => setModalView(ModalType.ADD_LIQUIDITY, false)}
         />
       )}
+
       {modalState.REMOVE_LIQUIDITY && (
         <WithdrawLiquidityDialog
           open={modalState.REMOVE_LIQUIDITY}

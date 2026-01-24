@@ -14,7 +14,7 @@ import {
   isTestnet,
   constants,
   createStripeURL,
-  createCoinbasePayURL,
+  createCoinbasePayOnrampURL,
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -195,7 +195,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
       return;
     }
-    const url = createCoinbasePayURL({
+    const url = createCoinbasePayOnrampURL({
       amountUsd: amount,
       assetSymbol: 'USDC',
       sessionToken,

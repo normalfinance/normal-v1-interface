@@ -1,7 +1,7 @@
 import { SignJWT, importPKCS8, importJWK, JWTPayload } from 'jose';
 import { getRandomValues } from 'uncrypto';
 
-import { CreateCoinbaseUrlOpts } from '@normalfinance/types';
+import { CreateCoinbaseOnrampUrlOpts, CreateCoinbaseOfframpUrlOpts } from '@normalfinance/types';
 import { isTestnet } from '../network';
 
 const ONRAMP_HOST = 'api.developer.coinbase.com';
@@ -26,7 +26,7 @@ export async function getCdpBearerToken() {
   return { jwt, host: ONRAMP_HOST, path: ONRAMP_PATH };
 }
 
-export function createCoinbasePayURL(opts: CreateCoinbaseUrlOpts): string {
+export function createCoinbasePayOnrampURL(opts: CreateCoinbaseOnrampUrlOpts): string {
   const {
     amountUsd,
     assetSymbol,
@@ -47,6 +47,31 @@ export function createCoinbasePayURL(opts: CreateCoinbaseUrlOpts): string {
   });
 
   if (redirectUrl) params.set('redirectUrl', redirectUrl);
+
+  return `${base}/${path}?${params.toString()}`;
+}
+
+export function createCoinbasePayOfframpURL(opts: CreateCoinbaseOfframpUrlOpts): string {
+  const {
+    sessionToken,
+    partnerUserRef,
+    fiat = 'USD',
+    path = 'sell',
+    redirectUrl,
+    sandbox = isTestnet(),
+    defaultNetwork,
+  } = opts;
+
+  const base = sandbox ? 'https://pay-sandbox.coinbase.com' : 'https://pay.coinbase.com';
+
+  const params = new URLSearchParams({
+    redirectUrl,
+    sessionToken,
+    partnerUserRef,
+    fiatCurrency: fiat,
+  });
+
+  if (defaultNetwork) params.set('defaultNetwork', defaultNetwork);
 
   return `${base}/${path}?${params.toString()}`;
 }
