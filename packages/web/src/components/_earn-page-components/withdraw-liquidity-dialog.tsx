@@ -1,6 +1,7 @@
 'use client';
 
-import type { Token } from '@normalfinance/types';
+import type { Token, ButtonConfig } from '@normalfinance/types';
+import { TokenAmountButtonState as ButtonState } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
@@ -39,24 +40,6 @@ import SwapSendEmptyPopupButton from '../_common/swap-send-empty-popup-button';
 import type { InfoAccordionRow, InfoAccordionAlert } from '../_common/info-accordion';
 
 // ----------------------------------------------------------------------
-
-enum ButtonState {
-  SELECT_TOKEN = 'SELECT_TOKEN',
-  ENTER_AMOUNT = 'ENTER_AMOUNT',
-  CHECKING_TRUSTLINE = 'CHECKING_TRUSTLINE',
-  CREATE_TRUSTLINE = 'CREATE_TRUSTLINE',
-  CREATING_TRUSTLINE = 'CREATING_TRUSTLINE',
-  INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
-  WITHDRAW = 'WITHDRAW',
-}
-
-interface ButtonConfig {
-  label: string;
-  disabled: boolean;
-  action: () => void;
-  variant?: 'contained' | 'outlined' | 'text';
-  color?: 'primary' | 'secondary' | 'error';
-}
 
 type TrustlineState = {
   creating: boolean;
@@ -369,6 +352,9 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
   }, [checkInsufficientBalance]);
 
   const getButtonState = (): ButtonState => {
+    if (!isConnected) {
+      return ButtonState.NOT_CONNECTED;
+    }
     if (!selectedToken) {
       return ButtonState.SELECT_TOKEN;
     }
@@ -399,11 +385,16 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
     if (insufficientBalance) {
       return ButtonState.INSUFFICIENT_BALANCE;
     }
-    return ButtonState.WITHDRAW;
+    return ButtonState.SUBMIT;
   };
 
   const getButtonConfig = (state: ButtonState): ButtonConfig => {
     const configs: Record<ButtonState, ButtonConfig> = {
+      [ButtonState.NOT_CONNECTED]: {
+        label: 'Connect Wallet',
+        disabled: true,
+        action: () => {},
+      },
       [ButtonState.SELECT_TOKEN]: {
         label: 'Select an asset',
         disabled: true,
@@ -413,6 +404,12 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
         label: 'Enter an amount',
         disabled: true,
         action: () => {},
+      },
+      [ButtonState.ZERO_BALANCE]: {
+        label: 'Fund your account',
+        disabled: true,
+        action: () => {},
+        color: 'error' as const,
       },
       [ButtonState.CHECKING_TRUSTLINE]: {
         label: 'Checking asset...',
@@ -436,7 +433,7 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
         action: handleCreateTrustline,
         variant: 'contained' as const,
       },
-      [ButtonState.WITHDRAW]: {
+      [ButtonState.SUBMIT]: {
         label: 'Withdraw',
         disabled: false,
         action: handleWithdraw,
@@ -793,8 +790,8 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
           </Box>
         )}
 
-        {isConnected ? (
-          (() => {
+        <WalletGate buttonText="Login to manage your Earn account" fullWidth>
+          {(() => {
             const buttonState = getButtonState();
             const buttonConfig = getButtonConfig(buttonState);
 
@@ -821,12 +818,8 @@ export default function WithdrawLiquidityDialog({ open, onClose }: WithdrawLiqui
                 {buttonConfig.label}
               </Button>
             );
-          })()
-        ) : (
-          <WalletGate buttonText="Login to manage your Earn account" fullWidth>
-            {null}
-          </WalletGate>
-        )}
+          })()}
+        </WalletGate>
       </DialogContent>
     </Dialog>
   );
