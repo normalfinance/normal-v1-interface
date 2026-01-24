@@ -5,8 +5,8 @@ import type { Token } from '@normalfinance/types';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
-import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fNumber, fPercent, fCurrency } from '@/utils/format-number';
+import { isNormalToken, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
@@ -29,7 +29,11 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
   const { token, value, percentage } = holding;
 
   const handleRowClick = () => {
-    router.push(paths.assets.details(token.symbol));
+    router.push(
+      paths.assets.details(
+        isNormalToken(token) ? token.symbol.replace(/^(sn|n)/, '') : token.symbol
+      )
+    );
   };
 
   const balanceDisplay = BigNumber(token.balance).toFixed(token.decimals > 4 ? 4 : token.decimals);

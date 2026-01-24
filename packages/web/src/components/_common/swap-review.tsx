@@ -5,11 +5,11 @@ import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
+import { LoadingButton } from '@mui/lab';
 import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Dialog,
-  Button,
   Accordion,
   Typography,
   IconButton,
@@ -31,6 +31,7 @@ export interface SwapReviewProps {
   feePercentage: number;
   sellFiatValue: number;
   onSubmit: () => void;
+  loading: boolean;
   error?: string | null;
 }
 
@@ -43,6 +44,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
   feePercentage,
   sellFiatValue,
   onSubmit,
+  loading,
   error,
 }) => {
   const theme = useTheme();
@@ -103,7 +105,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             >
               <Box>
                 <Typography variant="h4">
-                  {fiatAmount} {t('USD worth of')} {selectedToken?.symbol}
+                  {fCurrencyTwoDecimals(fiatAmount)} {t('of')} {selectedToken?.symbol}
                 </Typography>
                 <Typography
                   variant="body1"
@@ -298,11 +300,12 @@ const SwapReview: React.FC<SwapReviewProps> = ({
               </Typography>
             </Box>
           )}
-          <Button
+          <LoadingButton
             fullWidth
             variant="contained"
             size="large"
             onClick={onSubmit}
+            loading={loading}
             sx={{
               backgroundColor: 'rgba(148,123,255,0.29)',
               color: '#6E4BFF',
@@ -313,7 +316,7 @@ const SwapReview: React.FC<SwapReviewProps> = ({
             }}
           >
             {tradeDirection === 'buy' ? t('Buy') : t('Sell')}
-          </Button>
+          </LoadingButton>
         </Box>
       </DialogActions>
     </Dialog>

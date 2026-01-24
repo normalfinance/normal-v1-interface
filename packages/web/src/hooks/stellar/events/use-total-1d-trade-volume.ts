@@ -30,7 +30,7 @@ export function useTotal1dTradeVolume(): ReturnType {
   } = usePersistStore();
 
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [total1dVolume, setTotal1dVolume] = useState<BigNumber>(BigNumber(0));
   const [volumeByPair, setVolumeByPair] = useState<Record<string, BigNumber>>({});

@@ -4293,6 +4293,7 @@ __metadata:
     "@testing-library/jest-dom": ^6.1.3
     "@testing-library/react": ^14.2.0
     "@types/autosuggest-highlight": ^3.2.3
+    "@types/canvas-confetti": ^1.9.0
     "@types/node": ^22.10.3
     "@types/nprogress": ^0.2.3
     "@types/qrcode": ^1.5.5
@@ -4306,6 +4307,7 @@ __metadata:
     autosuggest-highlight: ^3.3.4
     axios: ^1.7.9
     bignumber.js: ^9.3.1
+    canvas-confetti: ^1.9.4
     commitizen: ^4.3.0
     cz-conventional-changelog: ^3.3.0
     cz-customizable: ^7.4.0
@@ -7041,6 +7043,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/canvas-confetti@npm:^1.9.0":
+  version: 1.9.0
+  resolution: "@types/canvas-confetti@npm:1.9.0"
+  checksum: 56227a362cead21ab76b0870e07e0cc2d26c800f5bc0fc109e4a3eca1a4d4dd317e1292163246d389827b7f30ce9e6eca3915681f3c80ed1e46491018f48a266
+  languageName: node
+  linkType: hard
+
 "@types/connect@npm:^3.4.33":
   version: 3.4.38
   resolution: "@types/connect@npm:3.4.38"
@@ -9621,6 +9630,13 @@ __metadata:
   version: 1.0.30001752
   resolution: "caniuse-lite@npm:1.0.30001752"
   checksum: c532c2230d3603d37f6e3c811bb99fb0ecd79d76b62da188d0c0100b1808aa15fa478532e35c8474e4a943fcf987a5601d6288adca0151232e596ae34bef8814
+  languageName: node
+  linkType: hard
+
+"canvas-confetti@npm:^1.9.4":
+  version: 1.9.4
+  resolution: "canvas-confetti@npm:1.9.4"
+  checksum: 61f069b220ee666ec56e5403a7118f1c22c4d55597da3ebfdc8227acdb432ecb9e1bae4b4c86fd15b001422240939d591e44b501dc68ddd545e14f373ab7488e
   languageName: node
   linkType: hard
 

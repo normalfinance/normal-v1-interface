@@ -1,5 +1,4 @@
 import { useBoolean } from '@/hooks';
-import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { runDepositFlow } from '@/lib/mgi/client';
@@ -40,7 +39,6 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
-import GetHelpButton from './get-help-button';
 import AmountDialog from '../deposit-amount-dialog';
 
 // ----------------------------------------------------------------------
@@ -281,7 +279,6 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
               {t('Deposit Cash')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <GetHelpButton url={paths.help.buy} />
               <IconButton onClick={onClose} aria-label="close dialog">
                 <Iconify icon="mingcute:close-line" width={24} />
               </IconButton>

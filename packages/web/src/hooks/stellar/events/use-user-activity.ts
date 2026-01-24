@@ -27,7 +27,7 @@ export function useUserActivity(): ReturnType {
   } = usePersistStore();
 
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
 

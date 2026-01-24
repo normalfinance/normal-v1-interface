@@ -18,7 +18,7 @@ interface ReturnType {
 
 export function useTreasuryBalances(pairAddress: string): ReturnType {
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [treasuryBalances, setTreasuryBalances] = useState<TreasuryBalances | undefined>(undefined);
 
   // Fetch info from Treasury

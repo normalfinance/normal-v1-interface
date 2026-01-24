@@ -398,6 +398,7 @@ export const config = {
     '/indexes',
     '/indexes/:path*',
     '/indexes/create',
+    '/trx/:path*',
     '/api/:path*',
   ],
 };

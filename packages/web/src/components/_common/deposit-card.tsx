@@ -28,7 +28,7 @@ const DepositCard: React.FC<DepositCardProps> = ({ ...other }) => {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'flex-end',
+        justifyContent: 'flex-start',
         gap: 2,
       }}
     >

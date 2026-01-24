@@ -63,7 +63,7 @@ export function useTrade(): ReturnType {
   const { executeContractTransaction } = useContractTransaction();
 
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const executePair = async (signedTransactionXDR: string, transactionType: string = 'Trade') => {
     if (!storePersist.wallet.address) return null;
@@ -135,24 +135,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.TRADE,
         token1: { name: 'USDC', amount: String(args.usdc_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.buy_long(processedArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.buy_long(processedArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Buy Long');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Buy Long');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -183,24 +179,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.TRADE,
         token1: { name: 'LONG', amount: String(args.long_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.sell_long(processedArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.sell_long(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Sell Long');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Sell Long');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -231,24 +223,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.TRADE,
         token1: { name: 'USDC', amount: String(args.usdc_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.buy_short(processedArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.buy_short(processedArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Buy Short');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Buy Short');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -279,24 +267,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.TRADE,
         token1: { name: 'SHORT', amount: String(args.short_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.sell_short(processedArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.sell_short(processedArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Sell Short');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Sell Short');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -336,24 +320,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.MINT_PAIR,
         token1: { name: 'LONG', amount: String(args.usdc_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.mint(mintArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.mint(mintArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Buy Short (via Mint)');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Buy Short (via Mint)');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -372,24 +352,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.TRADE,
         token1: { name: 'Short', amount: String(tradeArgs.short_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.sell_short(tradeArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.sell_short(tradeArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Sell Short');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Sell Short');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -423,24 +399,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.MINT_PAIR,
         token1: { name: args.asset, amount: String(args.usdc_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.mint(mingArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.mint(mingArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Mint');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Mint');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -459,24 +431,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.TRADE,
         token1: { name: 'Long', amount: String(tradeArgs.long_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.sell_long(tradeArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.sell_long(tradeArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Sell Long');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Sell Long');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -510,24 +478,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.TRADE,
         token1: { name: 'Short', amount: String(args.long_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.buy_short(tradeArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.buy_short(tradeArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Buy Short');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Buy Short');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -547,24 +511,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.REDEEM_PAIR,
         token1: { name: args.asset, amount: String(tokensToRedeem) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.redeem(redeemArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.redeem(redeemArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Redeem');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Redeem');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -596,24 +556,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.TRADE,
         token1: { name: 'SHORT', amount: String(args.short_in) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.buy_long(tradeArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.buy_long(tradeArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Buy Long');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Buy Long');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -633,24 +589,20 @@ export function useTrade(): ReturnType {
         type: TransactionType.REDEEM_PAIR,
         token1: { name: args.asset, amount: String(tokensToRedeem) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.redeem(redeemArgs, { simulate: !restore, fee: 10000000 });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.redeem(redeemArgs, { fee: 10000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Redeem');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Redeem');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 

@@ -23,7 +23,7 @@ interface ReturnType {
 
 export function useTreasury(): ReturnType {
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Fetch info from Treasury
   const TreasuryClient = new TreasuryContract.Client({

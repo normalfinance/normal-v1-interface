@@ -181,7 +181,7 @@ export const TokenActionCard: React.FC<TokenActionCardProps> = ({
         justifyContent: 'space-between',
         minWidth: 200,
         maxWidth: '100%',
-        minHeight: 380,
+        // minHeight: 380,
         maxHeight: 800,
         p: 1.5,
         gap: 0.5,

@@ -1,5 +1,4 @@
 import { useBoolean } from '@/hooks';
-import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { CONFIG } from '@/global-config';
@@ -26,7 +25,6 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
-import GetHelpButton from './get-help-button';
 import AmountDialog from '../deposit-amount-dialog';
 
 // ----------------------------------------------------------------------
@@ -140,7 +138,6 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({ open, amount, onClose, wa
               {t('Withdraw Cash')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <GetHelpButton url={paths.help.buy} />
               <IconButton onClick={onClose} aria-label="close dialog">
                 <Iconify icon="mingcute:close-line" width={24} />
               </IconButton>

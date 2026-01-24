@@ -72,7 +72,7 @@ export function useIndexFund(id: number): ReturnType {
   const { executeContractTransaction } = useContractTransaction();
 
   const [error, setError] = useState<AppError | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [index, setIndex] = useState<IndexFundContract.IndexFundInfo | undefined>(undefined);
 
@@ -201,24 +201,20 @@ export function useIndexFund(id: number): ReturnType {
         type: TransactionType.MINT_INDEX,
         token1: { name: 'USDC', amount: String(args.amount) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.mint(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.mint(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executeIndex(signedXDR, 'Mint Index');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executeIndex(signedXDR, 'Mint Index');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -245,24 +241,20 @@ export function useIndexFund(id: number): ReturnType {
         type: TransactionType.REDEEM_INDEX,
         token1: { name: 'USDC', amount: String(args.share_amount) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.redeem(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.redeem(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executeIndex(signedXDR, 'Redeem Index');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executeIndex(signedXDR, 'Redeem Index');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -289,24 +281,20 @@ export function useIndexFund(id: number): ReturnType {
       transactionDetails: {
         type: TransactionType.REFACTOR_INDEX,
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.refactor(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.refactor(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executeIndex(signedXDR, 'Refactor Index');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executeIndex(signedXDR, 'Refactor Index');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -331,24 +319,20 @@ export function useIndexFund(id: number): ReturnType {
       transactionDetails: {
         type: TransactionType.REBALANCE_INDEX,
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.rebalance(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.rebalance(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executeIndex(signedXDR, 'Rebalance Index');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executeIndex(signedXDR, 'Rebalance Index');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -373,24 +357,20 @@ export function useIndexFund(id: number): ReturnType {
       transactionDetails: {
         type: TransactionType.UPDATE_INDEX,
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.set_rebalance_authority(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.set_rebalance_authority(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executeIndex(signedXDR, 'Update Index Rebalance Authority');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executeIndex(signedXDR, 'Update Index Rebalance Authority');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -415,24 +395,20 @@ export function useIndexFund(id: number): ReturnType {
       transactionDetails: {
         type: TransactionType.UPDATE_INDEX,
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.set_whitelist_status(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.set_whitelist_status(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executeIndex(signedXDR, 'Update Index Whitelist');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executeIndex(signedXDR, 'Update Index Whitelist');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -457,24 +433,20 @@ export function useIndexFund(id: number): ReturnType {
       transactionDetails: {
         type: TransactionType.UPDATE_INDEX,
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.set_blacklist_status(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.set_blacklist_status(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executeIndex(signedXDR, 'Update Index Blacklist');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executeIndex(signedXDR, 'Update Index Blacklist');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 

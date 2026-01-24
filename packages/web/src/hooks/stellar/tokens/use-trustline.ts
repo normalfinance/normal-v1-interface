@@ -32,7 +32,7 @@ export function useTrustLine(): ReturnType {
   const publicKey = isNormalWallet ? normalWalletPublicKey : stellarKitPublicKey;
 
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true); // Loading state for async operations
+  const [loading, setLoading] = useState(false); // Loading state for async operations
 
   const [txBroadcasting, setTxBroadcasting] = useState<boolean>(false);
 

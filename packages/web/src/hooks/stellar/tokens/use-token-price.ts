@@ -14,7 +14,7 @@ interface ReturnType {
 
 export const useTokenPrice = (tokenSymbol: string): ReturnType => {
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState<BigNumber>(BigNumber(0));
 
   const getPrice = useCallback(async () => {

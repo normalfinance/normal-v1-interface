@@ -21,7 +21,7 @@ interface ReturnType {
 
 export function useIndexFundFactory(): ReturnType {
   const [error, setError] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const createIndexFund = useCallback(async (args: CreateIndexFundArgs) => {
     try {

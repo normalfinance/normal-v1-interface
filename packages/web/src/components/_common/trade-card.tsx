@@ -22,6 +22,7 @@ import {
   sanitizeAmountInput,
 } from '@normalfinance/utils';
 
+import { LoadingButton } from '@mui/lab';
 import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
@@ -313,17 +314,16 @@ const TradeCard: React.FC<TradeCardProps> = ({
       return;
     }
 
-    setLoading(true);
-
     // Load the pair from the
     const pairFromStore = pairByToken[selectedToken.contract];
-    setPair(pairFromStore);
 
     // If no pair exists for the selected token
     if (!pairFromStore) {
       // setSwapError('No pair found from store');
       return;
     }
+
+    setPair(pairFromStore);
 
     // If user hasn't typed anything or typed 0
     if (!fiatAmount || fiatAmountVal <= 0) {
@@ -337,8 +337,6 @@ const TradeCard: React.FC<TradeCardProps> = ({
       // setSwapError('No USDC token found');
       return;
     }
-
-    setLoading(false);
 
     if (tradeDirection === 'buy') {
       if (BigNumber(usdcToken.balance).lt(fiatAmountVal)) {
@@ -644,6 +642,9 @@ const TradeCard: React.FC<TradeCardProps> = ({
         default:
           throw new Error(`Unknown trade route: ${route.type}`);
       }
+
+      handleClose();
+      setFiatAmount('0');
     } catch (error) {
       setSwapError('Error during trade');
     }
@@ -916,13 +917,14 @@ const TradeCard: React.FC<TradeCardProps> = ({
 
           return (
             <>
-              <Button
+              <LoadingButton
                 fullWidth
                 variant={buttonConfig.variant || 'contained'}
                 size="large"
                 onClick={handleMainButtonClick}
                 disabled={buttonConfig.disabled}
                 color={buttonConfig.color}
+                loading={loading}
                 sx={{
                   backgroundColor:
                     buttonConfig.color === 'error' ? undefined : 'rgba(148,123,255,0.29)',
@@ -936,7 +938,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
                 }}
               >
                 {buttonConfig.label}
-              </Button>
+              </LoadingButton>
               {buttonState === ButtonState.ZERO_BALANCE && (
                 <>
                   <Alert severity="warning" sx={{ mt: 2 }}>
@@ -1003,6 +1005,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
           feePercentage={30}
           sellFiatValue={fiatAmountVal}
           onSubmit={() => settleTrade()}
+          loading={loading}
           error={swapError}
         />
       )}

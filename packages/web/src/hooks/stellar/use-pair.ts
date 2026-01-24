@@ -45,7 +45,7 @@ export function usePair(pairAddress: string): ReturnType {
   const { executeContractTransaction } = useContractTransaction();
 
   const [error, setError] = useState<AppError | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [pair, setPair] = useState<Pair | undefined>(undefined);
 
   const clearError = useCallback(() => setError(null), []);
@@ -167,24 +167,20 @@ export function usePair(pairAddress: string): ReturnType {
         type: TransactionType.MINT_PAIR,
         token1: { name: 'asset pairs', amount: String(args.tokens_to_mint) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.mint(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.mint(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Mint Pair');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Mint Pair');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 
@@ -208,24 +204,20 @@ export function usePair(pairAddress: string): ReturnType {
         type: TransactionType.REDEEM_PAIR,
         token1: { name: 'asset pairs', amount: String(args.tokens_to_redeem) },
       },
-      transactionFunction: async (client, restore) => {
-        const tx = await client.redeem(processedArgs, { simulate: !restore });
-        if (restore) {
-          await tx.simulate({ restore: true });
-          return tx;
-        } else {
-          await tx.sign();
-          const signedXDR = tx.signed?.toXDR();
+      transactionFunction: async (client) => {
+        const tx = await client.redeem(processedArgs, { fee: 1_0000000 });
 
-          if (signedXDR) {
-            const apiRes = await executePair(signedXDR, 'Redeem Pair');
-            if (apiRes?.transactionHash) {
-              (tx as any).hash = apiRes.transactionHash;
-            }
+        await tx.sign();
+        const signedXDR = tx.signed?.toXDR();
+
+        if (signedXDR) {
+          const apiRes = await executePair(signedXDR, 'Redeem Pair');
+          if (apiRes?.transactionHash) {
+            (tx as any).hash = apiRes.transactionHash;
           }
-
-          return tx;
         }
+
+        return tx;
       },
     });
 

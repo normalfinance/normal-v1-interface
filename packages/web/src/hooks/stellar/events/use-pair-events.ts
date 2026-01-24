@@ -20,7 +20,7 @@ interface ReturnType {
 
 export function usePairEvents(pairAddress: string | undefined, limit: number): ReturnType {
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [events, setEvents] = useState<events.PairEvent[]>([]);
 

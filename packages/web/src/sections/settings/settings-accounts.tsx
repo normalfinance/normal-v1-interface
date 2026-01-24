@@ -33,7 +33,7 @@ export function SettingsAccounts() {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [editingWallet, setEditingWallet] = useState<string | null>(null);
   const [walletName, setWalletName] = useState('');
   const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);

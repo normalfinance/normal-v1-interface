@@ -5,7 +5,9 @@ import type { SnackbarKey } from '@/components/template/snackbar';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 
 import { useCallback } from 'react';
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
 import { usePersistStore } from '@normalfinance/state';
 import { logger, constants } from '@normalfinance/utils';
 import { type TransactionDetails } from '@/types/transaction';
@@ -51,10 +53,7 @@ type ContractClientType<T extends ContractType> = T extends 'treasury'
 
 interface BaseExecuteContractTransactionParams<T extends ContractType> {
   contractAddress: string;
-  transactionFunction: (
-    client: ContractClientType<T>,
-    restore?: boolean
-  ) => Promise<AssembledTransaction<any>>;
+  transactionFunction: (client: ContractClientType<T>) => Promise<AssembledTransaction<any>>;
   transactionDetails: TransactionDetails;
 }
 
@@ -89,6 +88,7 @@ export const useContractTransaction = () => {
     useStellarWalletsKit();
   const { signTransaction: signNormalWallet, publicKey: normalPublicKey } = useNormalWallet();
   const { t } = useTranslate();
+  const router = useRouter();
 
   const executeContractTransaction = useCallback(
     <T extends ContractType>({
@@ -120,9 +120,7 @@ export const useContractTransaction = () => {
 
       logger.log('[USE CONTRACT TRANSACTION] Network passphrase:', networkPassphrase);
 
-      const run = async (
-        restore: boolean = false
-      ): Promise<{ txHash?: string; notify: boolean }> => {
+      const run = async (): Promise<{ txHash?: string; notify: boolean }> => {
         // Add safety check for signTransaction function
         const safeSignTransaction = async (xdr: string) => {
           try {
@@ -181,7 +179,7 @@ export const useContractTransaction = () => {
 
         let transaction: AssembledTransaction<any>;
         try {
-          transaction = await transactionFunction(contractClient, restore);
+          transaction = await transactionFunction(contractClient);
           logger.log('[USE CONTRACT TRANSACTION] got AssembledTransaction:', transaction);
         } catch (e) {
           logger.error('[USE CONTRACT TRANSACTION] transactionFunction failed:', e);
@@ -191,11 +189,6 @@ export const useContractTransaction = () => {
         logger.log('Transaction from backend: ', transaction);
 
         try {
-          if (restore) {
-            logger.log('Restoring transaction state...');
-            await transaction.simulate({ restore: true });
-            return { notify: true };
-          }
           const txHash = (transaction as any).hash || null;
 
           if (txHash) {
@@ -271,6 +264,9 @@ export const useContractTransaction = () => {
               });
             }
           }
+
+          // router push
+          if (result.txHash) router.replace(paths.transaction.details(result.txHash));
 
           return result;
         })

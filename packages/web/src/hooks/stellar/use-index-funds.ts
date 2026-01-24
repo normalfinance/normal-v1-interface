@@ -32,7 +32,7 @@ interface ReturnType {
 
 export function useIndexFunds(): ReturnType {
   const [error, setError] = useState<AppError | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [indexes, setIndexes] = useState<IndexListItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
 
