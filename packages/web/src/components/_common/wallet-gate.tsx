@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
-import { useBoolean } from 'minimal-shared/hooks';
 import { usePersistStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
@@ -22,10 +21,6 @@ interface WalletGateProps {
   color?: 'info' | 'success' | 'primary' | 'secondary' | 'error' | 'warning';
 }
 
-/* ------------------------------------------------------------------ */
-/* ② Connected: simple summary / logout                               */
-/* ------------------------------------------------------------------ */
-
 export const WalletGate: React.FC<WalletGateProps> = ({
   children,
   buttonText = 'Login',
@@ -42,9 +37,6 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     isConnected: isNormalConnected,
   } = useNormalWallet();
   const isWalletConnected = !!persist.wallet.address || isConnected || isNormalConnected;
-
-  /* ↓ drawer UI toggle (only used when wallet is connected) -------- */
-  const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
 
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
@@ -99,18 +91,6 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     }
   };
 
-  /** Handle wallet disconnect */
-  const handleDisconnectClick = async () => {
-    try {
-      await disconnectWallet();
-      persist.disconnectWallet();
-
-      onClose();
-    } catch (error) {
-      logger.error('Error disconnecting wallet:', error);
-    }
-  };
-
   if (isWalletConnected) {
     return children;
   }
@@ -123,6 +103,8 @@ export const WalletGate: React.FC<WalletGateProps> = ({
         color={color}
         onClick={handleConnectClick}
         data-testid="wallet-gate-connect-btn"
+        size="large"
+        sx={{ mt: 2 }}
       >
         {t(buttonText)}
       </Button>

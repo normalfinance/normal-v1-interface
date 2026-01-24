@@ -962,7 +962,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
           );
         })()
       ) : (
-        <WalletGate buttonText="Login to invest" fullWidth>
+        <WalletGate buttonText="Login to trade" fullWidth>
           {null}
         </WalletGate>
       )}

@@ -18,6 +18,7 @@ import {
 import {
   Box,
   Stack,
+  Alert,
   Button,
   Dialog,
   Divider,
@@ -58,7 +59,7 @@ const AuthLoginModal = ({
   const [tosAccepted, setTosAccepted] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [authMode, setAuthMode] = useState<AuthMode>('password');
+  const [authMode, setAuthMode] = useState<AuthMode>('magic-link');
   const [otpSent, setOtpSent] = useState(false);
   const [otpToken, setOtpToken] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
@@ -249,40 +250,6 @@ const AuthLoginModal = ({
               </Typography>
             </Box>
           )}
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={tosAccepted}
-                onChange={(e) => setTosAccepted(e.target.checked)}
-                data-testid="tos-checkbox"
-              />
-            }
-            label={
-              <Typography variant="body2" color="text.secondary">
-                {t('I understand and agree to the')}{' '}
-                <MuiLink
-                  href={`${paths.docs}/other/legal/terms-of-service`}
-                  underline="always"
-                  color="secondary"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t('Normal Terms of Service')}
-                </MuiLink>{' '}
-                {t('and')}{' '}
-                <MuiLink
-                  href={`${paths.docs}/other/legal/disclaimer`}
-                  underline="always"
-                  color="secondary"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t('Normal Security Disclaimer')}
-                </MuiLink>
-              </Typography>
-            }
-            sx={{ alignItems: 'flex-start', mt: 1 }}
-          />
           <Button
             variant="outlined"
             color="inherit"
@@ -375,12 +342,16 @@ const AuthLoginModal = ({
                   </Box>
                 </>
               )}
-
               <Button
                 variant="contained"
                 size="large"
                 onClick={handleEmailAuth}
-                disabled={loading || !email.trim() || (authMode === 'password' && !password.trim())}
+                disabled={
+                  loading ||
+                  !email.trim() ||
+                  (authMode === 'password' && !password.trim()) ||
+                  !tosAccepted
+                }
                 fullWidth
               >
                 {loading
@@ -391,6 +362,40 @@ const AuthLoginModal = ({
                       : t('Sign In')
                     : t('Send Magic Link')}
               </Button>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={tosAccepted}
+                    onChange={(e) => setTosAccepted(e.target.checked)}
+                    data-testid="tos-checkbox"
+                  />
+                }
+                label={
+                  <Typography variant="body2" color="text.secondary">
+                    {t('I understand and agree to the')}{' '}
+                    <MuiLink
+                      href={`${paths.docs}/other/legal/terms-of-service`}
+                      underline="always"
+                      color="secondary"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('Normal Terms of Service')}
+                    </MuiLink>{' '}
+                    {t('and')}{' '}
+                    <MuiLink
+                      href={`${paths.docs}/other/legal/disclaimer`}
+                      underline="always"
+                      color="secondary"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('Normal Security Disclaimer')}
+                    </MuiLink>
+                  </Typography>
+                }
+                sx={{ alignItems: 'flex-start', my: 1 }}
+              />
             </>
           ) : forgotPassword ? (
             <>
@@ -491,17 +496,16 @@ const AuthLoginModal = ({
           )}
 
           {error && (
-            <Box
+            <Alert
+              severity="error"
               sx={{
-                backgroundColor: 'error.light',
-                color: 'error.dark',
                 borderRadius: 1,
                 px: 2,
                 py: 1,
               }}
             >
               <Typography variant="body2">{error}</Typography>
-            </Box>
+            </Alert>
           )}
         </Stack>
       </DialogContent>
