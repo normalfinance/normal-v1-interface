@@ -35,7 +35,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     // App pages
     {
-      url: 'https://normalfinance.io/explore',
+      url: 'https://normalfinance.io/assets',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
@@ -53,19 +53,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: 'https://normalfinance.io/index',
+      url: 'https://normalfinance.io/indexes',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: 'https://normalfinance.io/index/create',
+      url: 'https://normalfinance.io/indexes/create',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
       url: 'https://normalfinance.io/rewards',
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: 'https://normalfinance.io/settings',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,

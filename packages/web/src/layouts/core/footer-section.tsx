@@ -50,6 +50,8 @@ const LINKS = [
     children: [
       { name: 'Contact us', href: paths.core.contact },
       { name: 'Report bugs', href: paths.help.feedbackForm },
+      { name: 'Terms of Service', href: paths.legal.tos },
+      { name: 'Privacy Policy', href: paths.legal.pp },
     ],
   },
 ];

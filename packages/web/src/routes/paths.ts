@@ -22,6 +22,11 @@ export const paths = {
   },
   blog: 'https://normalfi.substack.com/',
   docs: 'https://normalfinance.gitbook.io/docs',
+  legal: {
+    tos: 'https://normalfinance.gitbook.io/docs/other/legal/terms-of-service',
+    pp: 'https://normalfinance.gitbook.io/docs/other/legal/privacy-policy',
+    disclaimer: 'https://normalfinance.gitbook.io/docs/other/legal/disclaimer',
+  },
   // main
   invest: '/invest',
   assets: {

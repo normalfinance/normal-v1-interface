@@ -374,7 +374,7 @@ const AuthLoginModal = ({
                   <Typography variant="body2" color="text.secondary">
                     {t('I understand and agree to the')}{' '}
                     <MuiLink
-                      href={`${paths.docs}/other/legal/terms-of-service`}
+                      href={paths.legal.tos}
                       underline="always"
                       color="secondary"
                       target="_blank"
@@ -384,7 +384,7 @@ const AuthLoginModal = ({
                     </MuiLink>{' '}
                     {t('and')}{' '}
                     <MuiLink
-                      href={`${paths.docs}/other/legal/disclaimer`}
+                      href={paths.legal.disclaimer}
                       underline="always"
                       color="secondary"
                       target="_blank"
