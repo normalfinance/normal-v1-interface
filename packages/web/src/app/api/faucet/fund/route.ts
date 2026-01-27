@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { rateLimiter } from '@/server/rateLimiter';
-import { FaucetService } from '@/lib/faucet-service';
+import { SponsorService } from '@/lib/sponsor-service';
 
 const FundWalletSchema = z.object({
   walletAddress: z
@@ -24,7 +24,8 @@ function getClientIP(request: NextRequest): string {
 
 /**
  * POST /api/faucet/fund
- * Fund a new wallet with XLM and return trustline XDR
+ * Sponsor a new account with reserves for account creation and USDC trustline
+ * Returns partially-signed XDR that needs user signature
  */
 export async function POST(request: NextRequest) {
   try {
@@ -58,15 +59,15 @@ export async function POST(request: NextRequest) {
 
     const { walletAddress } = validation.data;
 
-    const hasBeenFunded = await FaucetService.hasWalletBeenFunded(walletAddress);
-    if (hasBeenFunded) {
-      logger.warn('[API /faucet/fund] Wallet already funded:', {
+    const hasBeenSponsored = await SponsorService.hasBeenSponsored(walletAddress);
+    if (hasBeenSponsored) {
+      logger.warn('[API /faucet/fund] Wallet already sponsored:', {
         walletAddress: walletAddress.substring(0, 8) + '...',
       });
-      return NextResponse.json({ error: 'Wallet has already been funded' }, { status: 400 });
+      return NextResponse.json({ error: 'Wallet has already been sponsored' }, { status: 400 });
     }
 
-    const accountExists = await FaucetService.accountExists(walletAddress);
+    const accountExists = await SponsorService.accountExists(walletAddress);
     if (accountExists) {
       logger.warn('[API /faucet/fund] Account already exists on Stellar:', {
         walletAddress: walletAddress.substring(0, 8) + '...',
@@ -77,26 +78,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { txHash, trustlineXDR } = await FaucetService.fundNewWallet(walletAddress, ip);
+    const { sponsorshipXDR, sponsorAddress } = await SponsorService.createSponsoredAccount(
+      walletAddress,
+      ip
+    );
 
-    logger.log('[API /faucet/fund] Wallet funded successfully:', {
+    logger.log('[API /faucet/fund] Sponsorship XDR created:', {
       walletAddress: walletAddress.substring(0, 8) + '...',
-      txHash,
+      sponsor: sponsorAddress.substring(0, 8) + '...',
     });
 
     return NextResponse.json(
       {
         success: true,
-        txHash,
-        trustlineXDR,
+        sponsorshipXDR,
+        sponsorAddress,
       },
       { status: 200 }
     );
   } catch (error: any) {
-    logger.error('[API /faucet/fund] Error funding wallet:', error);
+    logger.error('[API /faucet/fund] Error creating sponsorship:', error);
     return NextResponse.json(
       {
-        error: error?.message || 'Failed to fund wallet',
+        error: error?.message || 'Failed to create sponsorship',
       },
       { status: 500 }
     );

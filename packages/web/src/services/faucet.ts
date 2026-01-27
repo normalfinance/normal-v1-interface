@@ -1,23 +1,25 @@
 import { logger, constants } from '@normalfinance/utils';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 
-export interface FundWalletResponse {
+export interface SponsorWalletResponse {
   success: boolean;
-  txHash: string;
-  trustlineXDR: string;
+  sponsorshipXDR: string;
+  sponsorAddress: string;
 }
 
-export interface FundWalletError {
+export interface SponsorWalletError {
   error: string;
   reset?: number;
   details?: any;
 }
 
 /**
- * Request funding for a new wallet (1 XLM)
- * Returns the funding transaction hash and unsigned trustline XDR
+ * Request sponsorship for a new wallet
+ * Returns partially-signed XDR that needs user signature
  */
-export async function requestFaucetFunding(walletAddress: string): Promise<FundWalletResponse> {
+export async function requestWalletSponsorship(
+  walletAddress: string
+): Promise<SponsorWalletResponse> {
   try {
     const response = await fetch('/api/faucet/fund', {
       method: 'POST',
@@ -29,21 +31,25 @@ export async function requestFaucetFunding(walletAddress: string): Promise<FundW
     });
 
     if (!response.ok) {
-      const error: FundWalletError = await response.json();
-      throw new Error(error.error || 'Failed to fund wallet');
+      const error: SponsorWalletError = await response.json();
+      throw new Error(error.error || 'Failed to request sponsorship');
     }
 
     return await response.json();
   } catch (error: any) {
-    logger.error('[faucet] Failed to request faucet funding:', error);
+    logger.error('[faucet] Failed to request wallet sponsorship:', error);
     throw error;
   }
 }
 
 /**
- * Submit a signed trustline transaction
+ * Submit the fully-signed sponsorship transaction
+ * This creates the account, trustline, and transfers fee payment
  */
-export async function submitTrustlineTransaction(signedXDR: string): Promise<{ hash: string }> {
+export async function submitSponsorshipTransaction(
+  signedXDR: string,
+  walletAddress: string
+): Promise<{ hash: string }> {
   try {
     const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
       allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
@@ -55,10 +61,22 @@ export async function submitTrustlineTransaction(signedXDR: string): Promise<{ h
     );
 
     const result = await horizonServer.submitTransaction(transaction);
-    logger.log('[faucet] Trustline created successfully:', result.hash);
+
+    logger.log('[faucet] Sponsorship transaction submitted:', result.hash);
+
+    // Record the transaction hash (fire and forget)
+    fetch('/api/faucet/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ walletAddress, txHash: result.hash }),
+    }).catch((err) => {
+      logger.warn('[faucet] Failed to confirm transaction hash:', err);
+    });
+
     return { hash: result.hash };
   } catch (error: any) {
-    logger.error('[faucet] Failed to submit trustline transaction:', error);
+    logger.error('[faucet] Failed to submit sponsorship transaction:', error);
     throw error;
   }
 }
