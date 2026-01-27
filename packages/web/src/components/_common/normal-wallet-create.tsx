@@ -6,7 +6,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { linkWallet, updateWalletName } from '@/services/linked-wallets';
-import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
+import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
 import {
   logger,
   splitMnemonicToWords,
@@ -308,19 +308,19 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   const requestFaucetFundingAndTrustline = useCallback(
     async (walletAddress: string) => {
       try {
-        logger.log('[NormalWalletCreate] Requesting faucet funding for:', walletAddress);
-        const { txHash, trustlineXDR } = await requestFaucetFunding(walletAddress);
-        logger.log('[NormalWalletCreate] Wallet funded, creating trustline:', txHash);
+        logger.log('[NormalWalletCreate] Requesting sponsorship for:', walletAddress);
+        const { sponsorshipXDR } = await requestWalletSponsorship(walletAddress);
+        logger.log('[NormalWalletCreate] Received sponsorship XDR');
 
-        if (trustlineXDR && signTransaction) {
-          const signedTrustlineXDR = await signTransaction(trustlineXDR);
-          const { hash: trustlineHash } = await submitTrustlineTransaction(signedTrustlineXDR);
-          logger.log('[NormalWalletCreate] Trustline created successfully:', trustlineHash);
+        if (sponsorshipXDR && signTransaction) {
+          const signedXDR = await signTransaction(sponsorshipXDR);
+          const { hash } = await submitSponsorshipTransaction(signedXDR, walletAddress);
+          logger.log('[NormalWalletCreate] Account sponsored successfully:', hash);
         }
       } catch (e: any) {
-        logger.error('[NormalWalletCreate] Error in faucet funding flow:', e);
-        if (e.message?.includes('already been funded') || e.message?.includes('already exists')) {
-          logger.log('[NormalWalletCreate] Wallet already funded, skipping');
+        logger.error('[NormalWalletCreate] Error in sponsorship flow:', e);
+        if (e.message?.includes('already been sponsored') || e.message?.includes('already exists')) {
+          logger.log('[NormalWalletCreate] Wallet already sponsored, skipping');
           return;
         }
         throw e;

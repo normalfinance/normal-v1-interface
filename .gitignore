@@ -37,13 +37,9 @@ next-env.d.ts
 .idea/
 
 .yarn/cache
-
-.turbo
-
-.yarn/
 .yarn/install-state.gz
 
-.yarn
+.turbo
 
 .notes/
 

@@ -9,7 +9,7 @@ import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
+import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -53,7 +53,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
     refetch: refetchAccountStatus,
   } = useAccountStatus(walletAddress);
 
-  // Handle funding account via faucet
+  // Handle funding account via sponsored reserves
   const handleFundAccount = async () => {
     if (!walletAddress) {
       enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
@@ -62,39 +62,31 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
 
     setIsFunding(true);
     try {
-      logger.log('[ReceiveModal] Requesting faucet funding for:', walletAddress);
-      const { txHash, trustlineXDR } = await requestFaucetFunding(walletAddress);
-      logger.log('[ReceiveModal] Account funded successfully:', txHash);
+      logger.log('[ReceiveModal] Requesting sponsorship for:', walletAddress);
+      const { sponsorshipXDR } = await requestWalletSponsorship(walletAddress);
+      logger.log('[ReceiveModal] Received sponsorship XDR');
 
-      // Auto-create trustline if we have the XDR and can sign
-      if (trustlineXDR && signTransaction) {
-        try {
-          const signedXDR = await signTransaction(trustlineXDR);
-          await submitTrustlineTransaction(signedXDR);
-          logger.log('[ReceiveModal] Trustline created automatically');
-          enqueueSnackbar(t('Account funded and USDC trustline created!'), { variant: 'success' });
-        } catch (trustlineError: any) {
-          logger.warn('[ReceiveModal] Auto-trustline failed:', trustlineError);
-          enqueueSnackbar(t('Account funded successfully!'), { variant: 'success' });
-        }
-      } else {
-        enqueueSnackbar(t('Account funded successfully!'), { variant: 'success' });
+      if (sponsorshipXDR && signTransaction) {
+        const signedXDR = await signTransaction(sponsorshipXDR);
+        const { hash } = await submitSponsorshipTransaction(signedXDR, walletAddress);
+        logger.log('[ReceiveModal] Account sponsored successfully:', hash);
+        enqueueSnackbar(t('Account created and USDC enabled!'), { variant: 'success' });
       }
 
       // Refetch account status
       await refetchAccountStatus();
     } catch (error: any) {
-      logger.error('[ReceiveModal] Faucet funding failed:', error);
+      logger.error('[ReceiveModal] Sponsorship failed:', error);
       if (
-        error.message?.includes('already been funded') ||
+        error.message?.includes('already been sponsored') ||
         error.message?.includes('already exists')
       ) {
-        enqueueSnackbar(t('Account already funded. Refreshing status...'), { variant: 'info' });
+        enqueueSnackbar(t('Account already exists. Refreshing status...'), { variant: 'info' });
         await refetchAccountStatus();
       } else if (error.message?.includes('Rate limit')) {
         enqueueSnackbar(t('Rate limit exceeded. Please try again later.'), { variant: 'error' });
       } else {
-        enqueueSnackbar(error.message || t('Failed to fund account'), { variant: 'error' });
+        enqueueSnackbar(error.message || t('Failed to create account'), { variant: 'error' });
       }
     } finally {
       setIsFunding(false);
