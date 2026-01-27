@@ -32,6 +32,7 @@ const NAV_ITEMS: { url: string; label: string }[] = [
   { url: paths.invest, label: 'Invest' },
   { url: paths.portfolio, label: 'Portfolio' },
   { url: paths.earn, label: 'Earn' },
+  { url: paths.help.feedbackForm, label: 'Give feedback' },
 ];
 
 const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: string) => {
@@ -207,42 +208,61 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           >
             {NAV_ITEMS.map((item) => (
               <div key={item.url}>
-                {pathname.startsWith(item.url) ? (
-                  <GlowBorder
-                    radius={8}
-                    borderWidth={1}
-                    glowOpacity={0}
-                    glowSpread={0}
-                    glowBlur={0}
-                  >
-                    <Button
-                      component="a"
-                      href={item.url}
-                      sx={{
-                        textTransform: 'none',
-                        py: 0.5,
-                        px: 1.5,
-                        color: 'text.primary',
-                        fontWeight: 400,
-                      }}
-                    >
-                      {t(item.label)}
-                    </Button>
-                  </GlowBorder>
-                ) : (
+                {item.label === 'Give feedback' ? (
                   <Button
+                    className="rainbow-button"
                     component="a"
-                    href={item.url}
+                    variant="soft"
+                    onClick={() => window.open(item.url, '_blank', 'noopener')}
                     sx={{
                       textTransform: 'none',
                       py: 0.5,
                       px: 1.5,
-                      color: 'text.primary',
-                      fontWeight: 400,
+                      color: '#fff',
                     }}
                   >
                     {t(item.label)}
                   </Button>
+                ) : (
+                  <>
+                    {pathname.startsWith(item.url) ? (
+                      <GlowBorder
+                        radius={8}
+                        borderWidth={1}
+                        glowOpacity={0}
+                        glowSpread={0}
+                        glowBlur={0}
+                      >
+                        <Button
+                          component="a"
+                          href={item.url}
+                          sx={{
+                            textTransform: 'none',
+                            py: 0.5,
+                            px: 1.5,
+                            color: 'text.primary',
+                            fontWeight: 400,
+                          }}
+                        >
+                          {t(item.label)}
+                        </Button>
+                      </GlowBorder>
+                    ) : (
+                      <Button
+                        component="a"
+                        href={item.url}
+                        sx={{
+                          textTransform: 'none',
+                          py: 0.5,
+                          px: 1.5,
+                          color: 'text.primary',
+                          fontWeight: 400,
+                        }}
+                      >
+                        {t(item.label)}
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             ))}
