@@ -7,7 +7,7 @@ import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import { requestFaucetFunding, submitTrustlineTransaction } from '@/services/faucet';
+import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
 import {
   cdn,
   logger,
@@ -95,7 +95,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   // Check if prerequisites are met
   const prerequisitesMet = accountExists && hasUsdcTrustline;
 
-  // Handle funding account via faucet
+  // Handle funding account via sponsored reserves
   const handleFundAccount = async () => {
     if (!userAddress) {
       enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
@@ -104,41 +104,31 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
     setIsFunding(true);
     try {
-      logger.log('[OnRampDialog] Requesting faucet funding for:', userAddress);
-      const { txHash, trustlineXDR } = await requestFaucetFunding(userAddress);
-      logger.log('[OnRampDialog] Account funded successfully:', txHash);
+      logger.log('[OnRampDialog] Requesting sponsorship for:', userAddress);
+      const { sponsorshipXDR } = await requestWalletSponsorship(userAddress);
+      logger.log('[OnRampDialog] Received sponsorship XDR');
 
-      // Auto-create trustline if we have the XDR and can sign
-      if (trustlineXDR && signTransaction) {
-        try {
-          const signedXDR = await signTransaction(trustlineXDR);
-          await submitTrustlineTransaction(signedXDR);
-          logger.log('[OnRampDialog] Trustline created automatically');
-          enqueueSnackbar(t('Account funded and USDC enabled!'), { variant: 'success' });
-        } catch (trustlineError: any) {
-          logger.warn('[OnRampDialog] Auto-trustline failed:', trustlineError);
-          enqueueSnackbar(t('Account funded! Please enable USDC manually.'), {
-            variant: 'success',
-          });
-        }
-      } else {
-        enqueueSnackbar(t('Account funded successfully!'), { variant: 'success' });
+      if (sponsorshipXDR && signTransaction) {
+        const signedXDR = await signTransaction(sponsorshipXDR);
+        const { hash } = await submitSponsorshipTransaction(signedXDR, userAddress);
+        logger.log('[OnRampDialog] Account sponsored successfully:', hash);
+        enqueueSnackbar(t('Account created and USDC enabled!'), { variant: 'success' });
       }
 
       // Refetch account status
       await refetchAccountStatus();
     } catch (error: any) {
-      logger.error('[OnRampDialog] Faucet funding failed:', error);
+      logger.error('[OnRampDialog] Sponsorship failed:', error);
       if (
-        error.message?.includes('already been funded') ||
+        error.message?.includes('already been sponsored') ||
         error.message?.includes('already exists')
       ) {
-        enqueueSnackbar(t('Account already funded. Refreshing status...'), { variant: 'info' });
+        enqueueSnackbar(t('Account already exists. Refreshing status...'), { variant: 'info' });
         await refetchAccountStatus();
       } else if (error.message?.includes('Rate limit')) {
         enqueueSnackbar(t('Rate limit exceeded. Please try again later.'), { variant: 'error' });
       } else {
-        enqueueSnackbar(error.message || t('Failed to fund account'), { variant: 'error' });
+        enqueueSnackbar(error.message || t('Failed to create account'), { variant: 'error' });
       }
     } finally {
       setIsFunding(false);

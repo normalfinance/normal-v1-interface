@@ -99,17 +99,24 @@ model UserRSAKeys {
   @@map("user_rsa_keys")
 }
 
-model FaucetFunding {
-  id            String   @id @default(cuid())
-  walletAddress String   @unique
-  ipAddress     String
-  xlmAmount     String
-  txHash        String?
-  trustlineHash String?
-  createdAt     DateTime @default(now())
+model SponsoredAccount {
+  id               String    @id @default(cuid())
+  walletAddress    String    @unique
+  sponsorAddress   String
+  ipAddress        String
+  sponsoredAt      DateTime  @default(now())
+  accountReserve   String    @default("0.5")
+  trustlineReserve String    @default("0.5")
+  feePayment       String    @default("1")
+  txHash           String?
+  isRevoked        Boolean   @default(false)
+  revokedAt        DateTime?
+  revocationTxHash String?
+  revocationReason String?
 
+  @@index([sponsorAddress])
   @@index([ipAddress])
-  @@map("faucet_fundings")
+  @@map("sponsored_accounts")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
