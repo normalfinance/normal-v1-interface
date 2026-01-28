@@ -34,22 +34,30 @@ export const exchangeCodeForSession = async (code: string) => {
   return data.session;
 };
 
-export const signInWithPassword = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+export const signInWithPassword = async (email: string, password: string, captchaToken: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+    options: { captchaToken },
+  });
   if (error) throw error;
   return data.session;
 };
 
-export const signUpWithPassword = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+export const signUpWithPassword = async (email: string, password: string, captchaToken: string) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { captchaToken },
+  });
   if (error) throw error;
   return data;
 };
 
-export const signInWithOtp = async (email: string) => {
+export const signInWithOtp = async (email: string, captchaToken: string) => {
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/auth/callback` },
+    options: { shouldCreateUser: true, captchaToken, emailRedirectTo: `${window.location.origin}/auth/callback` },
   });
   if (error) throw error;
 };
@@ -64,12 +72,13 @@ export const verifyOtp = async (email: string, token: string) => {
   return data.session;
 };
 
-export const resetPassword = async (email: string) => {
+export const resetPassword = async (email: string, captchaToken: string) => {
   const redirectTo =
     typeof window !== 'undefined' ? `${window.location.origin}/auth/reset-password` : undefined;
 
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo,
+    captchaToken,
   });
 
   if (error) {
