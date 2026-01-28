@@ -18,13 +18,15 @@ export interface SponsorWalletError {
  * Returns partially-signed XDR that needs user signature
  */
 export async function requestWalletSponsorship(
-  walletAddress: string
+  walletAddress: string,
+  accessToken: string
 ): Promise<SponsorWalletResponse> {
   try {
     const response = await fetch('/api/faucet/fund', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
       },
       credentials: 'include',
       body: JSON.stringify({ walletAddress }),
