@@ -55,18 +55,6 @@ model ReferralAction {
   @@map("referral_actions")
 }
 
-model TestnetUser {
-  id            String    @id @default(cuid())
-  inviteCode    String    @unique
-  walletAddress String?   @unique
-  isUsed        Boolean   @default(false)
-  usedAt        DateTime?
-  createdAt     DateTime  @default(now())
-  source        String?
-
-  @@map("testnet_users")
-}
-
 model LinkedWallet {
   id                  String    @id @default(cuid())
   supabaseUid         String

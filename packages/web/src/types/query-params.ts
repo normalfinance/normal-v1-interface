@@ -66,7 +66,6 @@ export interface ReferralQueryParams extends BaseQueryParams {
   ref?: string;
   referral?: string;
   referrer?: string;
-  invite?: string;
 }
 
 export type AllQueryParams =
