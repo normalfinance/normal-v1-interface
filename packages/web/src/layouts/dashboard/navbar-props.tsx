@@ -28,7 +28,7 @@ export const NormalNavbarDefaults: Props = {
                   src: cdn('nav/explore.svg'),
                   alt: 'Explore',
                 },
-                title: 'Explore',
+                title: 'Assets',
                 description: 'Browse supported assets.',
               },
               {
@@ -39,6 +39,15 @@ export const NormalNavbarDefaults: Props = {
                 },
                 title: 'Invest',
                 description: 'Trade assets instantly.',
+              },
+              {
+                url: paths.portfolio,
+                image: {
+                  src: cdn('nav/portfolio.svg'),
+                  alt: 'Portfolio',
+                },
+                title: 'Portfolio',
+                description: 'View your account holdings.',
               },
             ],
           },
