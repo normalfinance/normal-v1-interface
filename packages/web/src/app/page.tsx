@@ -8,13 +8,15 @@ export const metadata: Metadata = {
     default: 'Home | Normal',
     template: '%s · Normal',
   },
-  description: 'Normal helps you invest in diversified crypto indices and assets.',
+  description:
+    'Normal helps you invest or diversify any global asset in seconds with low fees and deep liquidity.',
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'Home | Normal',
-    description: 'Normal helps you invest in diversified crypto indices and assets.',
+    description:
+      'Normal helps you invest or diversify any global asset in seconds with low fees and deep liquidity.',
     url: CONFIG.siteUrl,
     siteName: 'Normal',
     images: [
@@ -31,7 +33,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Home | Normal',
-    description: 'Normal helps you invest in diversified crypto indices and assets.',
+    description:
+      'Normal helps you invest or diversify any global asset in seconds with low fees and deep liquidity.',
     images: ['/og/home.png'],
   },
   robots: {

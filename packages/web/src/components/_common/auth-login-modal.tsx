@@ -203,7 +203,7 @@ const AuthLoginModal = ({
     setOtpToken('');
     setOtpSent(false);
     setError(null);
-    setAuthMode('password');
+    setAuthMode('magic-link');
     setIsSignUp(false);
     setTosAccepted(false);
     setForgotPassword(false);
