@@ -80,6 +80,7 @@ export class SponsorService {
    */
   static async createSponsoredAccount(
     walletAddress: string,
+    supabaseUid: string,
     ipAddress: string
   ): Promise<SponsoredAccountResult> {
     const sponsorSecretKey = process.env.NORMAL_HOT_A_SECRET;
@@ -147,6 +148,7 @@ export class SponsorService {
       // Create pending record (will be updated with txHash after submission)
       await prisma.sponsoredAccount.create({
         data: {
+          supabaseUid,
           walletAddress,
           sponsorAddress,
           ipAddress,

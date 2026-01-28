@@ -10,13 +10,13 @@ export const metadata: Metadata = {
     default: 'Earn | Normal',
     template: '%s · Normal',
   },
-  description: 'Review and manage your positions on Normal.',
+  description: 'Earn industry leading APY on your USD on Normal.',
   alternates: {
     canonical: '/earn',
   },
   openGraph: {
     title: 'Earn | Normal',
-    description: 'Review and manage your positions on Normal.',
+    description: 'Earn industry leading APY on your USD on Normal.',
     url: `${CONFIG.siteUrl}/earn`,
     siteName: 'Normal',
     images: [
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Earn | Normal',
-    description: 'Review and manage your positions on Normal.',
+    description: 'Earn industry leading APY on your USD on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {

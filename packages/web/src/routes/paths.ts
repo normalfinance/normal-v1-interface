@@ -24,6 +24,7 @@ export const paths = {
   docs: 'https://normalfinance.gitbook.io/docs',
   // main
   invest: '/invest',
+  portfolio: '/portfolio',
   assets: {
     root: '/assets',
     details: (symbol: string) => `/assets/${symbol}`,
