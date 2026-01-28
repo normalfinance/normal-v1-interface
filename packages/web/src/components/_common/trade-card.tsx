@@ -4,9 +4,7 @@ import type { Pair, Token, ButtonConfig, TrustlineState } from '@normalfinance/t
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useRouter } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
-import { usePersistStore } from '@normalfinance/state';
 import { useTrade, useTreasury, useTrustLine } from '@/hooks';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';

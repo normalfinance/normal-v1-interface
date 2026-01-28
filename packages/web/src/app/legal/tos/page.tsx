@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-import TermsOfServiceView from '@/sections/legal/tos-view';
-import { CONFIG } from '@/global-config';
 import { paths } from '@/routes/paths';
+import { CONFIG } from '@/global-config';
+import TermsOfServiceView from '@/sections/legal/tos-view';
 
 export const metadata: Metadata = {
   title: {

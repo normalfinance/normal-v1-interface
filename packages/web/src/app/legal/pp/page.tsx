@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-import PrivacyPolicyView from '@/sections/legal/pp-view';
-import { CONFIG } from '@/global-config';
 import { paths } from '@/routes/paths';
+import { CONFIG } from '@/global-config';
+import PrivacyPolicyView from '@/sections/legal/pp-view';
 
 export const metadata: Metadata = {
   title: {

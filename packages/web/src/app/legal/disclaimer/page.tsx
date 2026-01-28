@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-import DisclaimerView from '@/sections/legal/disclaimer-view';
-import { CONFIG } from '@/global-config';
 import { paths } from '@/routes/paths';
+import { CONFIG } from '@/global-config';
+import DisclaimerView from '@/sections/legal/disclaimer-view';
 
 export const metadata: Metadata = {
   title: {

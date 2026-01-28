@@ -1,11 +1,12 @@
 'use client';
 
+import type { Metadata } from 'next';
+
 import { useEffect } from 'react';
+import { CONFIG } from '@/global-config';
 import { useRouter } from 'next/navigation';
 import { UserSettingsView } from '@/sections/settings';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { Metadata } from 'next';
-import { CONFIG } from '@/global-config';
 
 export const metadata: Metadata = {
   title: {

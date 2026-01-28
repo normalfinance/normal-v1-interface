@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
-import BlockedView from '@/sections/blocked';
 import { CONFIG } from '@/global-config';
+import BlockedView from '@/sections/blocked';
 
 export const metadata: Metadata = {
   title: {
