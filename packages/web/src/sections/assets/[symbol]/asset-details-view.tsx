@@ -163,10 +163,12 @@ function convertToPairTxRow(event: events.NormalContractEvent): PairTxRow {
       };
 
     case 'trade': {
+      const buying = event.direction === 'Buy';
       return {
-        type: event.direction === 'Buy' ? 'Buy' : 'Sell',
-        usdcAmount: BigNumber(event.direction === 'Buy' ? event.inAmount : event.outAmount),
-        assetAmount: BigNumber(event.direction === 'Buy' ? event.outAmount : event.inAmount),
+        type: buying ? 'Buy' : 'Sell',
+        side: event.side === 'Long' ? 'Long' : 'Short',
+        usdcAmount: BigNumber(buying ? event.inAmount : event.outAmount),
+        assetAmount: BigNumber(buying ? event.outAmount : event.inAmount),
         user: event.user,
         timestamp: Number(event.ts),
         txHash: event.txHash,
