@@ -649,6 +649,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
       handleClose();
       setFiatAmount('0');
     } catch (error) {
+      console.log(error);
       posthog.captureException(error);
       setSwapError('Error during trade');
     }
@@ -989,7 +990,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
           alerts={getInfoAccordionAlerts()}
           rows={[
             {
-              title: `Total Fee (${fPercent(0.3)})`,
+              title: `Fee (${fPercent(0.3)})`,
               value: fCurrencyTwoDecimals(fiatAmountVal * (30 / 10000)),
             },
             {

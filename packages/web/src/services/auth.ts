@@ -49,7 +49,7 @@ export const signUpWithPassword = async (email: string, password: string) => {
 export const signInWithOtp = async (email: string) => {
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true },
+    options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/auth/callback` },
   });
   if (error) throw error;
 };
