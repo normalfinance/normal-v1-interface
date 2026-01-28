@@ -15,7 +15,7 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
+import { getLinkedWallets, checkWalletCreationLimit, type LinkedWallet } from '@/services/linked-wallets';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   generateAESKey,
@@ -176,6 +176,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
   const [resetEmail, setResetEmail] = useState<string | null>(null);
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
+  const [isCheckingRateLimit, setIsCheckingRateLimit] = useState(false);
 
   const handleDisconnect = async () => {
     if (isDisconnecting) {
@@ -436,6 +437,46 @@ export function AccountDrawer(props: AccountDrawerProps) {
     onClose();
   };
 
+  /** Format remaining time until rate limit reset */
+  const formatRateLimitReset = (resetTimestamp: number): string => {
+    const diffMs = resetTimestamp - Date.now();
+    if (diffMs <= 0) return 'now';
+
+    const days = Math.floor(diffMs / 86400000);
+    const hours = Math.floor((diffMs % 86400000) / 3600000);
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
+
+    return parts.length > 0 ? parts.join(', ') : 'less than an hour';
+  };
+
+  /** Handle Create New Account button click with rate limit check */
+  const handleCreateNewAccountClick = useCallback(async () => {
+    if (isCheckingRateLimit) return;
+    setIsCheckingRateLimit(true);
+
+    try {
+      const status = await checkWalletCreationLimit();
+      if (!status.allowed) {
+        const remaining = formatRateLimitReset(status.reset);
+        enqueueSnackbar(
+          t(`You can only create one account per week. Try again in ${remaining}.`),
+          { variant: 'warning' }
+        );
+        return;
+      }
+      setShowCreateNormalWallet(true);
+    } catch (error) {
+      logger.error('[AccountDrawer] Error checking rate limit:', error);
+      // On error, allow opening modal - actual rate limit enforced on submit
+      setShowCreateNormalWallet(true);
+    } finally {
+      setIsCheckingRateLimit(false);
+    }
+  }, [isCheckingRateLimit, enqueueSnackbar, t]);
+
   const handleMainButtonClick = () => {
     if (session) {
       onOpen(); // Open drawer to show account info
@@ -634,10 +675,15 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       variant="outlined"
                       color="primary"
                       fullWidth
-                      startIcon={<Iconify icon="mingcute:add-line" />}
-                      onClick={() => {
-                        setShowCreateNormalWallet(true);
-                      }}
+                      startIcon={
+                        isCheckingRateLimit ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : (
+                          <Iconify icon="mingcute:add-line" />
+                        )
+                      }
+                      onClick={handleCreateNewAccountClick}
+                      disabled={isCheckingRateLimit}
                     >
                       {t('Create New Account')}
                     </Button>

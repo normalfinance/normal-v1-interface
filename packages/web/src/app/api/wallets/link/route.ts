@@ -6,6 +6,7 @@ import { logger } from '@normalfinance/utils';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { rateLimiter } from '@/server/rateLimiter';
+import { ReferralService } from '@/lib/referral-service';
 
 const LinkWalletSchema = z.object({
   walletAddress: z
@@ -146,6 +147,17 @@ export async function POST(request: NextRequest) {
       userId: userId.substring(0, 8) + '...',
       walletAddress: walletAddress.substring(0, 8) + '...',
     });
+
+    // Create or find user in the users table for referral tracking
+    try {
+      await ReferralService.findOrCreateUser(walletAddress);
+      logger.log('[API /wallets/link] User record ensured for wallet:', {
+        walletAddress: walletAddress.substring(0, 8) + '...',
+      });
+    } catch (userError) {
+      // Log but don't fail the wallet linking - user creation is secondary
+      logger.warn('[API /wallets/link] Failed to create user record:', userError);
+    }
 
     return NextResponse.json(
       {
