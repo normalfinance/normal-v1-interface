@@ -49,7 +49,7 @@ const BLOCKED_COUNTRIES = new Set([
 // Referral tracking constants
 const REFERRAL_COOKIE_NAME = 'referral_code';
 const REFERRAL_TIMESTAMP_COOKIE_NAME = 'referral_timestamp';
-const REFERRAL_PARAM_NAMES = ['ref', 'referral', 'referrer', 'invite'];
+const REFERRAL_PARAM_NAMES = ['ref', 'referral', 'referrer'];
 
 // Geo caching constants
 const GEO_CACHE_COOKIE_NAME = 'geo_data';

@@ -35,7 +35,6 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts",
     "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅'",
     "convert:contract": "node ./scripts/convert-contract-address.js",
     "commit": "cz",

@@ -61,7 +61,9 @@
     "POSTHOG_MAINNET_ENV_ID",
     "POSTHOG_MAINNET_API_KEY",
 
+    // Stellar Sponsorship
     "NORMAL_HOT_A_SECRET",
+    "ADMIN_SECRET",
 
     "COINBASE_KEY_ID",
     "COINBASE_SECRET",

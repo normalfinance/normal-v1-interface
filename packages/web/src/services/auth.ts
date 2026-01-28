@@ -57,7 +57,7 @@ export const signUpWithPassword = async (email: string, password: string, captch
 export const signInWithOtp = async (email: string, captchaToken: string) => {
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true, captchaToken },
+    options: { shouldCreateUser: true, captchaToken, emailRedirectTo: `${window.location.origin}/auth/callback` },
   });
   if (error) throw error;
 };

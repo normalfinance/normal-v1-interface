@@ -21,7 +21,6 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
 import { ProgressBar } from '@/components/template/progress-bar';
 import { SnackbarProvider } from '@/components/template/snackbar';
-// import { InviteCodeGate } from '@/components/_common/invite-code-gate';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
@@ -127,9 +126,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                               <SettingsDrawer defaultSettings={defaultSettings} />
                               <AnnouncementProvider>
                                 <ModalProvider>
-                                  {/* <InviteCodeGate enforceInDev> */}
                                   <DashboardLayout>{children}</DashboardLayout>
-                                  {/* </InviteCodeGate> */}
                                 </ModalProvider>
                               </AnnouncementProvider>
                             </SnackbarProvider>

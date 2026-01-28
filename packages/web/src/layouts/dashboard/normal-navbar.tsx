@@ -1,8 +1,8 @@
 'use client';
 
 import type { ButtonProps as MUIButtonProps } from '@mui/material';
-import type { NavItemDataProps } from '@/components/template/nav-section';
 
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { usePathname } from '@/routes/hooks';
 import { m, AnimatePresence } from 'framer-motion';
@@ -27,7 +27,13 @@ import { Searchbar } from '../components/searchbar';
 const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
 const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
 
-const navData: { subheader?: string; items: NavItemDataProps[] }[] | undefined = [];
+const NAV_ITEMS: { url: string; label: string }[] = [
+  { url: paths.assets.root, label: 'Assets' },
+  { url: paths.invest, label: 'Invest' },
+  { url: paths.portfolio, label: 'Portfolio' },
+  { url: paths.earn, label: 'Earn' },
+  { url: paths.help.feedbackForm, label: 'Give feedback' },
+];
 
 const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: string) => {
   const isExternal = /^https?:\/\//i.test(url);
@@ -190,6 +196,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
       >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Logo isSingle={false} sx={{ display: { xs: 'none', lg: 'inline-flex' }, height: 28 }} />
+
           {/* Quick nav links - desktop only */}
           <Box
             sx={{
@@ -199,130 +206,66 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               gap: 0.5,
             }}
           >
-            {pathname.startsWith('/assets') ? (
-              <GlowBorder radius={8} borderWidth={1} glowOpacity={0} glowSpread={0} glowBlur={0}>
-                <Button
-                  component="a"
-                  href="/assets"
-                  sx={{
-                    textTransform: 'none',
-                    py: 0.5,
-                    px: 1.5,
-                    color: 'text.primary',
-                    fontWeight: 400,
-                  }}
-                >
-                  {t('Assets')}
-                </Button>
-              </GlowBorder>
-            ) : (
-              <Button
-                component="a"
-                href="/assets"
-                sx={{
-                  textTransform: 'none',
-                  py: 0.5,
-                  px: 1.5,
-                  color: 'text.primary',
-                  fontWeight: 400,
-                }}
-              >
-                {t('Assets')}
-              </Button>
-            )}
-            {pathname.startsWith('/invest') ? (
-              <GlowBorder radius={8} borderWidth={1} glowOpacity={0} glowSpread={0} glowBlur={0}>
-                <Button
-                  component="a"
-                  href="/invest"
-                  sx={{
-                    textTransform: 'none',
-                    py: 0.5,
-                    px: 1.5,
-                    color: 'text.primary',
-                    fontWeight: 400,
-                  }}
-                >
-                  {t('Invest')}
-                </Button>
-              </GlowBorder>
-            ) : (
-              <Button
-                component="a"
-                href="/invest"
-                sx={{
-                  textTransform: 'none',
-                  py: 0.5,
-                  px: 1.5,
-                  color: 'text.primary',
-                  fontWeight: 400,
-                }}
-              >
-                {t('Invest')}
-              </Button>
-            )}
-            {pathname.startsWith('/indexes') ? (
-              <GlowBorder radius={8} borderWidth={1} glowOpacity={0} glowSpread={0} glowBlur={0}>
-                <Button
-                  component="a"
-                  href="/indexes"
-                  sx={{
-                    textTransform: 'none',
-                    py: 0.5,
-                    px: 1.5,
-                    color: 'text.primary',
-                    fontWeight: 400,
-                  }}
-                >
-                  {t('Diversify')}
-                </Button>
-              </GlowBorder>
-            ) : (
-              <Button
-                component="a"
-                href="/indexes"
-                sx={{
-                  textTransform: 'none',
-                  py: 0.5,
-                  px: 1.5,
-                  color: 'text.primary',
-                  fontWeight: 400,
-                }}
-              >
-                {t('Diversify')}
-              </Button>
-            )}
-            {pathname.startsWith('/earn') ? (
-              <GlowBorder radius={8} borderWidth={1} glowOpacity={0} glowSpread={0} glowBlur={0}>
-                <Button
-                  component="a"
-                  href="/earn"
-                  sx={{
-                    textTransform: 'none',
-                    py: 0.5,
-                    px: 1.5,
-                    color: 'text.primary',
-                    fontWeight: 400,
-                  }}
-                >
-                  {t('Earn')}
-                </Button>
-              </GlowBorder>
-            ) : (
-              <Button
-                component="a"
-                href="/earn"
-                sx={{
-                  textTransform: 'none',
-                  py: 0.5,
-                  px: 1.5,
-                  color: 'text.primary',
-                  fontWeight: 400,
-                }}
-              >
-                {t('Earn')}
-              </Button>
-            )}
+            {NAV_ITEMS.map((item) => (
+              <div key={item.url}>
+                {item.label === 'Give feedback' ? (
+                  <Button
+                    className="rainbow-button"
+                    component="a"
+                    variant="soft"
+                    onClick={() => window.open(item.url, '_blank', 'noopener')}
+                    sx={{
+                      textTransform: 'none',
+                      py: 0.5,
+                      px: 1.5,
+                      color: '#fff',
+                    }}
+                  >
+                    {t(item.label)}
+                  </Button>
+                ) : (
+                  <>
+                    {pathname.startsWith(item.url) ? (
+                      <GlowBorder
+                        radius={8}
+                        borderWidth={1}
+                        glowOpacity={0}
+                        glowSpread={0}
+                        glowBlur={0}
+                      >
+                        <Button
+                          component="a"
+                          href={item.url}
+                          sx={{
+                            textTransform: 'none',
+                            py: 0.5,
+                            px: 1.5,
+                            color: 'text.primary',
+                            fontWeight: 400,
+                          }}
+                        >
+                          {t(item.label)}
+                        </Button>
+                      </GlowBorder>
+                    ) : (
+                      <Button
+                        component="a"
+                        href={item.url}
+                        sx={{
+                          textTransform: 'none',
+                          py: 0.5,
+                          px: 1.5,
+                          color: 'text.primary',
+                          fontWeight: 400,
+                        }}
+                      >
+                        {t(item.label)}
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
           </Box>
           <IconButton
             onClick={toggleMobile}

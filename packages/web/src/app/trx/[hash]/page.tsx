@@ -8,13 +8,13 @@ export const metadata: Metadata = {
     default: 'Transaction Status | Normal',
     template: '%s · Normal',
   },
-  description: 'Detailed view of a specific asset on Normal.',
+  description: 'Track the status of a transaction on Normal.',
   alternates: {
     canonical: '/trx',
   },
   openGraph: {
     title: 'Transaction Status | Normal',
-    description: 'Detailed view of a specific asset on Normal.',
+    description: 'Track the status of a transaction on Normal.',
     url: `${CONFIG.siteUrl}/trx`,
     siteName: 'Normal',
     images: [
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Transaction Status | Normal',
-    description: 'Detailed view of a specific asset on Normal.',
+    description: 'Track the status of a transaction on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'liquidity pool', 'APY', 'crypto yield'],
+  keywords: ['Normal', 'Normal Finance', 'transaction'],
 };
 
 interface PageProps {

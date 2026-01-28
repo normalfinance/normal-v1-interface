@@ -6,7 +6,6 @@ import { createConnectWalletActions } from './persist/createConnectWalletActions
 import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
 import { createReferralActions } from './persist/createReferralActions';
-import { createInviteCodeActions } from './persist/createInviteCodeActions';
 import { createModalActions } from './modal/actions';
 import { createPairActions } from './persist/createPairActions';
 
@@ -36,9 +35,6 @@ export const usePersistStore = create<AppStorePersist>()(
       // Create referral actions
       const referralActions = createReferralActions();
 
-      // Create invite code actions
-      const inviteCodeActions = createInviteCodeActions();
-
       // Create pair actions
       const pairActions = createPairActions();
 
@@ -49,7 +45,6 @@ export const usePersistStore = create<AppStorePersist>()(
         ...walletPersist,
         ...disclaimer,
         ...referralActions,
-        ...inviteCodeActions,
         ...pairActions,
         ...tokenActions,
       };

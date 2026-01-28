@@ -9,6 +9,8 @@ import { LoadingButton } from '@mui/lab';
 import { useTheme } from '@mui/material/styles';
 import {
   Box,
+  Chip,
+  Alert,
   Dialog,
   Accordion,
   Typography,
@@ -93,192 +95,198 @@ const SwapReview: React.FC<SwapReviewProps> = ({
           scrollbarColor: `${theme.palette.divider} transparent`,
         }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-          <Box>
-            <Box
-              sx={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Box>
-                <Typography variant="h4">
-                  {fCurrencyTwoDecimals(fiatAmount)} {t('of')} {selectedToken?.symbol}
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    fontSize: 'var(--components-nav-item-size, 14px)',
-                    fontStyle: 'normal',
-                    fontWeight: 'var(--components-nav-item-weight, 500)',
-                    lineHeight: 'var(--components-nav-item-line-height, 22px)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'clip',
-                    minWidth: 0,
-                  }}
-                >
-                  {`${fCurrencyTwoDecimals(sellFiatValue)}`}
-                </Typography>
-              </Box>
-
-              <Box
-                component="img"
-                src={
-                  selectedToken
-                    ? (selectedToken.icon ?? getCryptoIconUrl(selectedToken.symbol))
-                    : ''
-                }
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                }}
-              />
-            </Box>
-          </Box>
-          <Accordion
-            defaultExpanded
-            disableGutters
-            sx={{
-              mt: 0,
-              backgroundColor: 'transparent !important',
-              boxShadow: 'none !important',
-              width: '100%',
-              padding: '0px !important',
-              '::before': {
-                display: 'none',
-              },
-            }}
-          >
-            <AccordionSummary
-              aria-controls="panel3-content"
-              id="panel3-header"
-              sx={{
-                padding: '0 !important',
-                minHeight: 0,
-                '&.Mui-expanded': {
-                  minHeight: 0,
-                },
-                '& .MuiAccordionSummary-content': {
-                  margin: 0,
-                  padding: 0,
-                },
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                <Box
-                  sx={{
-                    flex: 1,
-                    height: '1px',
-                    bgcolor: theme.palette.text.disabled,
-                  }}
-                />
-                <Box sx={{ display: 'flex', alignItems: 'center', mx: 1 }}>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 500,
-                      color: theme.palette.text.secondary,
-                      fontSize: '12px',
-                    }}
-                  >
-                    {t('Show less')}
-                  </Typography>
-                  <Iconify
-                    icon="carbon:chevron-sort"
-                    width={14}
-                    sx={{ color: theme.palette.text.secondary, ml: 0.5 }}
-                  />
-                </Box>
-                <Box
-                  sx={{
-                    flex: 1,
-                    height: '1px',
-                    bgcolor: theme.palette.text.disabled,
-                  }}
-                />
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 0, px: 0, pt: 2 }}>
+        {!selectedToken ? (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            {t('No asset selection found')}
+          </Alert>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <Box>
               <Box
                 sx={{
-                  mt: 0,
-                  px: 0,
                   width: '100%',
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  gap: 1,
+                  justifyContent: 'space-between',
                 }}
               >
+                <Box>
+                  <Typography variant="h4">
+                    {fCurrencyTwoDecimals(fiatAmount)} {t('of')}{' '}
+                    {selectedToken.name.includes('Short') && (
+                      <Chip label="Short" color="error" size="small" variant="soft" />
+                    )}
+                    {selectedToken.name.replace('Short', '')}
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      fontSize: 'var(--components-nav-item-size, 14px)',
+                      fontStyle: 'normal',
+                      fontWeight: 'var(--components-nav-item-weight, 500)',
+                      lineHeight: 'var(--components-nav-item-line-height, 22px)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'clip',
+                      minWidth: 0,
+                    }}
+                  >
+                    {`${fCurrencyTwoDecimals(sellFiatValue)}`}
+                  </Typography>
+                </Box>
+
+                <Box
+                  component="img"
+                  src={selectedToken.icon ?? getCryptoIconUrl(selectedToken.symbol)}
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                  }}
+                />
+              </Box>
+            </Box>
+            <Accordion
+              defaultExpanded
+              disableGutters
+              sx={{
+                mt: 0,
+                backgroundColor: 'transparent !important',
+                boxShadow: 'none !important',
+                width: '100%',
+                padding: '0px !important',
+                '::before': {
+                  display: 'none',
+                },
+              }}
+            >
+              <AccordionSummary
+                aria-controls="panel3-content"
+                id="panel3-header"
+                sx={{
+                  padding: '0 !important',
+                  minHeight: 0,
+                  '&.Mui-expanded': {
+                    minHeight: 0,
+                  },
+                  '& .MuiAccordionSummary-content': {
+                    margin: 0,
+                    padding: 0,
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      height: '1px',
+                      bgcolor: theme.palette.text.disabled,
+                    }}
+                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', mx: 1 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.text.secondary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      {t('Show less')}
+                    </Typography>
+                    <Iconify
+                      icon="carbon:chevron-sort"
+                      width={14}
+                      sx={{ color: theme.palette.text.secondary, ml: 0.5 }}
+                    />
+                  </Box>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      height: '1px',
+                      bgcolor: theme.palette.text.disabled,
+                    }}
+                  />
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails sx={{ p: 0, px: 0, pt: 2 }}>
                 <Box
                   sx={{
+                    mt: 0,
+                    px: 0,
                     width: '100%',
                     display: 'flex',
                     flexDirection: 'column',
+                    alignItems: 'center',
                     gap: 1,
-                    px: 0,
                   }}
                 >
                   <Box
                     sx={{
                       width: '100%',
                       display: 'flex',
-                      justifyContent: 'space-between',
+                      flexDirection: 'column',
                       gap: 1,
+                      px: 0,
                     }}
                   >
                     <Box
                       sx={{
+                        width: '100%',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        justifyContent: 'space-between',
                         gap: 1,
                       }}
                     >
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 500,
+                            color: theme.palette.text.secondary,
+                            fontSize: '12px',
+                          }}
+                        >
+                          {t('Fee')}&nbsp;
+                          <Box component="span">
+                            {t('(')}
+                            {fPercent(feePercentage / 100)}
+                            {t(')')}
+                          </Box>{' '}
+                        </Typography>
+                        <Iconify
+                          icon="solar:info-circle-bold"
+                          width={14}
+                          sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
+                        />
+                      </Box>
+
                       <Typography
                         variant="body2"
                         sx={{
                           fontWeight: 500,
-                          color: theme.palette.text.secondary,
+                          color: theme.palette.text.primary,
                           fontSize: '12px',
                         }}
                       >
-                        {t('Total Fee')}&nbsp;
-                        <Box component="span">
-                          {t('(')}
-                          {fPercent(feePercentage / 100)}
-                          {t(')')}
-                        </Box>{' '}
+                        {fCurrencyTwoDecimals((sellFiatValue * feePercentage) / 10000)}
                       </Typography>
-                      <Iconify
-                        icon="solar:info-circle-bold"
-                        width={14}
-                        sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
-                      />
                     </Box>
-
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        fontSize: '12px',
-                      }}
-                    >
-                      {fCurrencyTwoDecimals((sellFiatValue * feePercentage) / 10000)}
-                    </Typography>
                   </Box>
                 </Box>
-              </Box>
-            </AccordionDetails>
-          </Accordion>
-        </Box>
+              </AccordionDetails>
+            </Accordion>
+          </Box>
+        )}
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
