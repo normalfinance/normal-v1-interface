@@ -76,7 +76,7 @@ export function MyBalanceSection({ sx, ...other }: CardProps) {
 
   return (
     <Card sx={[{ p: 3 }, ...(Array.isArray(sx) ? sx : [sx])]} {...other}>
-      <WalletGate buttonText="Login to view your balance" fullWidth>
+      <WalletGate buttonText="Login to view your portfolio" fullWidth>
         <Grid2 container spacing={3}>
           <Grid2 size={12}>
             <MyBalanceHeader
