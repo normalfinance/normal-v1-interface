@@ -646,6 +646,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
       handleClose();
       setFiatAmount('0');
     } catch (error) {
+      console.log(error);
       setSwapError('Error during trade');
     }
   };
