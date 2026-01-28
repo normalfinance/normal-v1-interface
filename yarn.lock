@@ -3083,6 +3083,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@marsidev/react-turnstile@npm:^1.4.1":
+  version: 1.4.1
+  resolution: "@marsidev/react-turnstile@npm:1.4.1"
+  peerDependencies:
+    react: ^17.0.2 || ^18.0.0 || ^19.0
+    react-dom: ^17.0.2 || ^18.0.0 || ^19.0
+  checksum: b999e089c944f468c20e8df78a0220f4b9be6112d8bb57a40cfcab1ac33935621463054c01ad33675a25a25d04a73e8b1ddbec6be0d19181a4480ec389cb8fc1
+  languageName: node
+  linkType: hard
+
 "@mixmark-io/domino@npm:^2.2.0":
   version: 2.2.0
   resolution: "@mixmark-io/domino@npm:2.2.0"
@@ -4271,6 +4281,7 @@ __metadata:
     "@hookform/resolvers": ^3.9.1
     "@iconify/react": ^5.1.0
     "@lingual/i18n-check": ^0.8.4
+    "@marsidev/react-turnstile": ^1.4.1
     "@mui/icons-material": ^7.2.0
     "@mui/lab": ^6.0.0-beta.21
     "@mui/material": ^6.3.0

@@ -5,6 +5,7 @@ import type { AppStorePersist } from '@normalfinance/types';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { usePersistStore } from '@normalfinance/state';
 import {
   verifyOtp,
@@ -65,6 +66,7 @@ const AuthLoginModal = ({
   const [isSignUp, setIsSignUp] = useState(false);
   const [forgotPassword, setForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (passwordResetSuccess && open) {
@@ -96,6 +98,11 @@ const AuthLoginModal = ({
       return;
     }
 
+    if (!captchaToken) {
+      setError(t('Invalid captcha'));
+      return;
+    }
+
     if (authMode === 'password') {
       if (!password.trim()) {
         setError(t('Please enter your password'));
@@ -108,11 +115,11 @@ const AuthLoginModal = ({
       try {
         await setDisclaimerAccepted(true);
         if (isSignUp) {
-          await signUpWithPassword(email.trim(), password);
+          await signUpWithPassword(email.trim(), password, captchaToken);
           setError(t('Account created! Please check your email to verify your account.'));
           setLoading(false);
         } else {
-          await signInWithPassword(email.trim(), password);
+          await signInWithPassword(email.trim(), password, captchaToken);
           onClose();
         }
       } catch (err) {
@@ -127,7 +134,7 @@ const AuthLoginModal = ({
       setError(null);
 
       try {
-        await signInWithOtp(email.trim());
+        await signInWithOtp(email.trim(), captchaToken);
         setOtpSent(true);
         setLoading(false);
       } catch (err) {
@@ -178,11 +185,16 @@ const AuthLoginModal = ({
       return;
     }
 
+    if (!captchaToken) {
+      setError(t('Invalid captcha'));
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const result = await resetPassword(email.trim());
+      const result = await resetPassword(email.trim(), captchaToken);
       console.log('Password reset request result:', result);
       setResetEmailSent(true);
       setLoading(false);
@@ -203,7 +215,7 @@ const AuthLoginModal = ({
     setOtpToken('');
     setOtpSent(false);
     setError(null);
-    setAuthMode('password');
+    setAuthMode('magic-link');
     setIsSignUp(false);
     setTosAccepted(false);
     setForgotPassword(false);
@@ -342,6 +354,7 @@ const AuthLoginModal = ({
                   </Box>
                 </>
               )}
+
               <Button
                 variant="contained"
                 size="large"
@@ -362,6 +375,14 @@ const AuthLoginModal = ({
                       : t('Sign In')
                     : t('Send Magic Link')}
               </Button>
+
+              <Turnstile
+                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
+                onSuccess={(token) => {
+                  setCaptchaToken(token);
+                }}
+              />
+
               <FormControlLabel
                 control={
                   <Checkbox
@@ -372,7 +393,7 @@ const AuthLoginModal = ({
                 }
                 label={
                   <Typography variant="body2" color="text.secondary">
-                    {t('I understand and agree to the')}{' '}
+                    {t("I understand and agree to Normal's")}{' '}
                     <MuiLink
                       href={paths.legal.tos}
                       underline="always"
@@ -380,7 +401,7 @@ const AuthLoginModal = ({
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {t('Normal Terms of Service')}
+                      {t('Terms of Service')}
                     </MuiLink>{' '}
                     {t('and')}{' '}
                     <MuiLink
@@ -390,7 +411,7 @@ const AuthLoginModal = ({
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {t('Normal Security Disclaimer')}
+                      {t('Disclaimer')}
                     </MuiLink>
                   </Typography>
                 }

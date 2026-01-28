@@ -155,6 +155,10 @@ export const PairTransactionsTable: React.FC<{
                   </Menu>
                 </TableCell>
 
+                <TableCell sx={{ cursor: 'pointer' }}>
+                  <Typography variant="subtitle2">{t('Side')}</Typography>
+                </TableCell>
+
                 {(['usdcAmount', 'assetAmount'] as const).map((key) => (
                   <TableCell key={key} sortDirection={orderBy === key ? order : false}>
                     <TableSortLabel
@@ -216,6 +220,17 @@ export const PairTransactionsTable: React.FC<{
                           size="small"
                           variant="soft"
                         />
+                      </TableCell>
+                      {/* Long/Short */}
+                      <TableCell>
+                        {['Buy', 'Sell'].includes(row.type) ? (
+                          <Chip
+                            label={row.side!}
+                            color={row.side! === 'Long' ? 'success' : 'error'}
+                            size="small"
+                            variant="soft"
+                          />
+                        ) : null}
                       </TableCell>
                       <TableCell>{format.fTokenAmount(row.usdcAmount, 7)}</TableCell>
                       <TableCell>{format.fTokenAmount(row.assetAmount, 7)}</TableCell>

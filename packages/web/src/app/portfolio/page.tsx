@@ -1,29 +1,30 @@
 import type { Metadata } from 'next';
 
-import { paths } from '@/routes/paths';
 import { CONFIG } from '@/global-config';
-import TermsOfServiceView from '@/sections/legal/tos-view';
+import PortfolioView from '@/sections/portfolio';
+
+// ----------------------------------------------------------------------
 
 export const metadata: Metadata = {
   title: {
-    default: 'Legal - Terms of Service | Normal',
+    default: 'Portfolio | Normal',
     template: '%s · Normal',
   },
-  description: 'View our official Terms of Service.',
+  description: 'View and manage your asset and index fund portfolio on Normal.',
   alternates: {
-    canonical: '/assets',
+    canonical: '/invest',
   },
   openGraph: {
-    title: 'Legal - Terms of Service | Normal',
-    description: 'View our official Terms of Service.',
-    url: `${CONFIG.siteUrl}${paths.legal.tos}`,
+    title: 'Portfolio | Normal',
+    description: 'View and manage your asset and index fund portfolio on Normal.',
+    url: `${CONFIG.siteUrl}/invest`,
     siteName: 'Normal',
     images: [
       {
         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
-        alt: 'Normal Legal - Terms of Service',
+        alt: 'Normal Portfolio overview',
       },
     ],
     locale: 'en_US',
@@ -31,8 +32,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Legal - Terms of Service | Normal',
-    description: 'View our official Terms of Service.',
+    title: 'Portfolio | Normal',
+    description: 'View and manage your asset and index fund portfolio on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -40,9 +41,9 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'legal', 'terms of service'],
+  keywords: ['Normal', 'Normal Finance', 'token swap', 'crypto exchange', 'DEX'],
 };
 
 export default function Page() {
-  return <TermsOfServiceView />;
+  return <PortfolioView />;
 }

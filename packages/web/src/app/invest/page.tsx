@@ -10,13 +10,13 @@ export const metadata: Metadata = {
     default: 'Invest | Normal',
     template: '%s · Normal',
   },
-  description: 'Invest tokens quickly and securely on Normal.',
+  description: 'Buy and sell any global asset in seconds on Normal.',
   alternates: {
     canonical: '/invest',
   },
   openGraph: {
     title: 'Invest | Normal',
-    description: 'Invest tokens quickly and securely on Normal.',
+    description: 'Buy and sell any global asset in seconds on Normal.',
     url: `${CONFIG.siteUrl}/invest`,
     siteName: 'Normal',
     images: [
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Invest | Normal',
-    description: 'Invest tokens quickly and securely on Normal.',
+    description: 'Buy and sell any global asset in seconds on Normal.',
     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'token swap', 'crypto exchange', 'DEX'],
+  keywords: ['Normal', 'Normal Finance', 'invest', 'crypto exchange', 'DEX'],
 };
 
 export default function Page() {

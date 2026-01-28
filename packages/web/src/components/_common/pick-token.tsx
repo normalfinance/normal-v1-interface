@@ -9,6 +9,7 @@ import { getCryptoIconUrl } from '@normalfinance/utils';
 import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
+  Chip,
   Dialog,
   Button,
   TextField,
@@ -173,27 +174,11 @@ const PickToken: React.FC<PickTokenProps> = ({
                         variant="body2"
                         sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                       >
-                        {token.name}
+                        {token.name.includes('Short') && (
+                          <Chip label="Short" color="error" size="small" variant="soft" />
+                        )}
+                        {token.name.replace('Short', '')}
                       </Typography>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          gap: '4px',
-                          alignItems: 'flex-start',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 500,
-                            color: theme.palette.text.secondary,
-                            fontSize: '12px',
-                          }}
-                        >
-                          {token.symbol}
-                        </Typography>
-                      </Box>
                     </Box>
                   </Box>
                   <Box>
@@ -211,16 +196,6 @@ const PickToken: React.FC<PickTokenProps> = ({
                           sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                         >
                           {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 500,
-                            color: theme.palette.text.secondary,
-                            fontSize: '12px',
-                          }}
-                        >
-                          {BigNumber(token.balance).toFixed(token.decimals)}
                         </Typography>
                       </Box>
                     )}
@@ -286,6 +261,9 @@ const PickToken: React.FC<PickTokenProps> = ({
                       variant="body2"
                       sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                     >
+                      {token.symbol.startsWith('sn') && (
+                        <Chip label="Short" color="error" size="small" variant="soft" />
+                      )}
                       {token.symbol}
                     </Typography>
                   </Button>
@@ -343,27 +321,11 @@ const PickToken: React.FC<PickTokenProps> = ({
                               variant="body2"
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
-                              {token.name}
+                              {token.name.includes('Short') && (
+                                <Chip label="Short" color="error" size="small" variant="soft" />
+                              )}
+                              {token.name.replace('Short', '')}
                             </Typography>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                gap: '4px',
-                                alignItems: 'flex-start',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: 500,
-                                  color: theme.palette.text.secondary,
-                                  fontSize: '12px',
-                                }}
-                              >
-                                {token.symbol}
-                              </Typography>
-                            </Box>
                           </Box>
                         </Box>
                         <Box>
@@ -380,16 +342,6 @@ const PickToken: React.FC<PickTokenProps> = ({
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
                               {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                fontWeight: 500,
-                                color: theme.palette.text.secondary,
-                                fontSize: '12px',
-                              }}
-                            >
-                              {BigNumber(token.balance).toFixed(token.decimals)}
                             </Typography>
                           </Box>
                         </Box>
@@ -437,6 +389,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                             objectFit: 'cover',
                           }}
                         />
+
                         <Box
                           sx={{
                             display: 'flex',
@@ -449,27 +402,11 @@ const PickToken: React.FC<PickTokenProps> = ({
                             variant="body2"
                             sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                           >
-                            {token.name.replace('Normal ', '')}
+                            {token.name.includes('Short') && (
+                              <Chip label="Short" color="error" size="small" variant="soft" />
+                            )}
+                            {token.name.replace('Short', '')}
                           </Typography>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              gap: '4px',
-                              alignItems: 'flex-start',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                fontWeight: 500,
-                                color: theme.palette.text.secondary,
-                                fontSize: '12px',
-                              }}
-                            >
-                              {token.symbol}
-                            </Typography>
-                          </Box>
                         </Box>
                       </Box>
                       <Box>
@@ -487,16 +424,6 @@ const PickToken: React.FC<PickTokenProps> = ({
                               sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                             >
                               {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                fontWeight: 500,
-                                color: theme.palette.text.secondary,
-                                fontSize: '12px',
-                              }}
-                            >
-                              {BigNumber(token.balance).toFixed(token.decimals)}
                             </Typography>
                           </Box>
                         )}

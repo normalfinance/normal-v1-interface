@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { resetPassword } from '@/services/auth';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import Card from '@mui/material/Card';
@@ -23,6 +24,7 @@ export function SettingsSecurity() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const handleSendResetLink = async () => {
     if (!user?.email) {
@@ -30,9 +32,14 @@ export function SettingsSecurity() {
       return;
     }
 
+    if (!captchaToken) {
+      enqueueSnackbar(t('Invalid captcha'), { variant: 'error' });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      await resetPassword(user.email);
+      await resetPassword(user.email, captchaToken);
       setResetEmailSent(true);
       enqueueSnackbar(t('Password reset email sent'), { variant: 'success' });
     } catch (error: any) {
@@ -52,6 +59,12 @@ export function SettingsSecurity() {
               {t('Click below to receive a password reset link at your email address.')}
             </Typography>
             <TextField fullWidth label={t('Email')} value={user?.email || ''} disabled />
+            <Turnstile
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
+              onSuccess={(token) => {
+                setCaptchaToken(token);
+              }}
+            />
             <Button
               variant="contained"
               onClick={handleSendResetLink}

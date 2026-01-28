@@ -225,3 +225,34 @@ export async function unlinkWallet(walletAddress: string): Promise<void> {
     throw error;
   }
 }
+
+export interface WalletCreationLimitStatus {
+  allowed: boolean;
+  remaining: number;
+  reset: number;
+}
+
+/**
+ * Check wallet creation rate limit status
+ * @returns Object with allowed status and reset timestamp
+ */
+export async function checkWalletCreationLimit(): Promise<WalletCreationLimitStatus> {
+  try {
+    const headers = await buildAuthHeaders();
+    const response = await fetch('/api/wallets/check-limit', {
+      method: 'GET',
+      headers,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to check rate limit');
+    }
+
+    return await response.json();
+  } catch (error) {
+    logger.error('[linked-wallets] Failed to check rate limit:', error);
+    throw error;
+  }
+}
