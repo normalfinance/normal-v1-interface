@@ -24,6 +24,7 @@ export const paths = {
   docs: 'https://normalfinance.gitbook.io/docs',
   // main
   invest: '/invest',
+  portfolio: '/portfolio',
   assets: {
     root: '/assets',
     details: (symbol: string) => `/assets/${symbol}`,
@@ -48,7 +49,7 @@ export const paths = {
   },
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready
-    feedbackForm: 'https://forms.fillout.com/t/cumVTceVQeus',
+    feedbackForm: 'https://link.normalfinance.io/feedback',
     contractTracker: 'https://normalfinance.notion.site/mainnet-v1',
   },
 };

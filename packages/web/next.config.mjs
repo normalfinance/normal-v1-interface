@@ -58,11 +58,11 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/ingest/static/:path*',
+        source: '/ph/static/:path*',
         destination: 'https://us-assets.i.posthog.com/static/:path*',
       },
-      { source: '/ingest/:path*', destination: 'https://us.i.posthog.com/:path*' },
-      { source: '/ingest/decide', destination: 'https://us.i.posthog.com/decide' },
+      { source: '/ph/:path*', destination: 'https://us.i.posthog.com/:path*' },
+      { source: '/ph/decide', destination: 'https://us.i.posthog.com/decide' },
       // Rewrite API routes with trailing slash to without trailing slash to prevent redirects
       // {
       //   source: '/api/:path*/',

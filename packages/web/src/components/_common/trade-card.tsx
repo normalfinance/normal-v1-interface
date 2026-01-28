@@ -2,18 +2,19 @@ import type { CardProps } from '@mui/material';
 import type { SwapQueryParams } from '@/types/query-params';
 import type { Pair, Token, ButtonConfig, TrustlineState } from '@normalfinance/types';
 
-import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
+import { usePostHog } from 'posthog-js/react';
 import { usePersistStore } from '@normalfinance/state';
 import { useTrade, useTreasury, useTrustLine } from '@/hooks';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getConversionTextScaled } from '@/utils/conversion-helpers';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { type TradeRoute, determineTradeRoute } from '@/utils/trade-route';
-import { TokenAmountButtonState as ButtonState } from '@normalfinance/types';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { ModalType, TokenAmountButtonState as ButtonState } from '@normalfinance/types';
 import {
   constants,
   isNormalToken,
@@ -41,6 +42,7 @@ import PickToken from './pick-token';
 import SwapReview from './swap-review';
 import { WalletGate } from './wallet-gate';
 import InfoAccordion from './info-accordion';
+import { Iconify } from '../template/iconify';
 import SwapSendPopupButton from './swap-send-popup-button';
 import SwapSendEmptyPopupButton from './swap-send-empty-popup-button';
 
@@ -76,11 +78,12 @@ const TradeCard: React.FC<TradeCardProps> = ({
   defaultTokenSymbol,
   ...other
 }) => {
+  const posthog = usePostHog();
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
 
-  const router = useRouter();
+  const { setModalView } = useAppStore();
 
   const {
     wallet,
@@ -646,6 +649,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
       handleClose();
       setFiatAmount('0');
     } catch (error) {
+      posthog.captureException(error);
       setSwapError('Error during trade');
     }
   };
@@ -946,16 +950,25 @@ const TradeCard: React.FC<TradeCardProps> = ({
                   </Alert>
                   <Stack direction="row" spacing={1} width="100%" mt={2}>
                     <Button
-                      fullWidth
                       variant="soft"
-                      color="info"
-                      onClick={() =>
-                        changeTab
-                          ? changeTab('deposit')
-                          : router.push(`${paths.invest}?tab=deposit`)
-                      }
+                      color="success"
+                      fullWidth
+                      size="large"
+                      startIcon={<Iconify icon="solar:wad-of-money-bold" />}
+                      onClick={() => setModalView(ModalType.ON_RAMP, true)}
                     >
-                      {t('Deposit')}
+                      {t('Deposit cash')}
+                    </Button>
+
+                    <Button
+                      variant="soft"
+                      color="primary"
+                      fullWidth
+                      size="large"
+                      startIcon={<Iconify icon="solar:wallet-bold" />}
+                      onClick={() => setModalView(ModalType.DEPOSIT_CRYPTO, true)}
+                    >
+                      {t('Deposit crypto')}
                     </Button>
                   </Stack>
                 </>

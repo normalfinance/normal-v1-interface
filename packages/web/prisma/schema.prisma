@@ -89,6 +89,7 @@ model UserRSAKeys {
 
 model SponsoredAccount {
   id               String    @id @default(cuid())
+  supabaseUid      String?
   walletAddress    String    @unique
   sponsorAddress   String
   ipAddress        String
@@ -104,6 +105,7 @@ model SponsoredAccount {
 
   @@index([sponsorAddress])
   @@index([ipAddress])
+  @@index([supabaseUid])
   @@map("sponsored_accounts")
 }
 

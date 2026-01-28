@@ -3,6 +3,7 @@
 import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
+import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -62,8 +63,18 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
 
     setIsFunding(true);
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
       logger.log('[ReceiveModal] Requesting sponsorship for:', walletAddress);
-      const { sponsorshipXDR } = await requestWalletSponsorship(walletAddress);
+      const { sponsorshipXDR } = await requestWalletSponsorship(
+        walletAddress,
+        session.access_token
+      );
       logger.log('[ReceiveModal] Received sponsorship XDR');
 
       if (sponsorshipXDR && signTransaction) {
