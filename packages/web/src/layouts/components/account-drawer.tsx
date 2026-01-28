@@ -15,8 +15,12 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { getLinkedWallets, checkWalletCreationLimit, type LinkedWallet } from '@/services/linked-wallets';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
+import {
+  getLinkedWallets,
+  type LinkedWallet,
+  checkWalletCreationLimit,
+} from '@/services/linked-wallets';
 import {
   generateAESKey,
   decryptWithAES,
@@ -461,10 +465,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
       const status = await checkWalletCreationLimit();
       if (!status.allowed) {
         const remaining = formatRateLimitReset(status.reset);
-        enqueueSnackbar(
-          t(`You can only create one account per week. Try again in ${remaining}.`),
-          { variant: 'warning' }
-        );
+        enqueueSnackbar(t(`You can only create one account per week. Try again in ${remaining}.`), {
+          variant: 'warning',
+        });
         return;
       }
       setShowCreateNormalWallet(true);

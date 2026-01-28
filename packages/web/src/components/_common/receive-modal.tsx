@@ -3,6 +3,7 @@
 import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
+import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -10,7 +11,6 @@ import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
-import { supabase } from '@/lib/createSupabaseClient';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -71,7 +71,10 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
       }
 
       logger.log('[ReceiveModal] Requesting sponsorship for:', walletAddress);
-      const { sponsorshipXDR } = await requestWalletSponsorship(walletAddress, session.access_token);
+      const { sponsorshipXDR } = await requestWalletSponsorship(
+        walletAddress,
+        session.access_token
+      );
       logger.log('[ReceiveModal] Received sponsorship XDR');
 
       if (sponsorshipXDR && signTransaction) {

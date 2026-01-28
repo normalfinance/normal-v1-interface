@@ -316,7 +316,10 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         }
 
         logger.log('[NormalWalletCreate] Requesting sponsorship for:', walletAddress);
-        const { sponsorshipXDR } = await requestWalletSponsorship(walletAddress, session.access_token);
+        const { sponsorshipXDR } = await requestWalletSponsorship(
+          walletAddress,
+          session.access_token
+        );
         logger.log('[NormalWalletCreate] Received sponsorship XDR');
 
         if (sponsorshipXDR && signTransaction) {
@@ -326,7 +329,10 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         }
       } catch (e: any) {
         logger.error('[NormalWalletCreate] Error in sponsorship flow:', e);
-        if (e.message?.includes('already been sponsored') || e.message?.includes('already exists')) {
+        if (
+          e.message?.includes('already been sponsored') ||
+          e.message?.includes('already exists')
+        ) {
           logger.log('[NormalWalletCreate] Wallet already sponsored, skipping');
           return;
         }

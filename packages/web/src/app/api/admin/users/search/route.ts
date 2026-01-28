@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { prisma } from '@/lib/prisma';
 
 const SearchSchema = z.object({
   walletAddress: z
@@ -45,10 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'walletAddress is required for search' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'walletAddress is required for search' }, { status: 400 });
     }
 
     // Search by wallet address

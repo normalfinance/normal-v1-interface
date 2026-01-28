@@ -2,13 +2,13 @@ import { useBoolean } from '@/hooks';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { runDepositFlow } from '@/lib/mgi/client';
+import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
-import { supabase } from '@/lib/createSupabaseClient';
 import {
   cdn,
   logger,
