@@ -6,6 +6,7 @@ import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
+import { usePostHog } from 'posthog-js/react';
 import { usePersistStore } from '@normalfinance/state';
 import { useTrade, useTreasury, useTrustLine } from '@/hooks';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -76,6 +77,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
   defaultTokenSymbol,
   ...other
 }) => {
+  const posthog = usePostHog();
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
@@ -646,6 +648,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
       handleClose();
       setFiatAmount('0');
     } catch (error) {
+      posthog.captureException(error);
       setSwapError('Error during trade');
     }
   };
