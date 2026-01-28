@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { rateLimiter } from '@/server/rateLimiter';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -44,22 +43,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    // TODO: Client giving "Rate limit exceeded. Please try again later." right after new account creation
     // Rate limit by supabaseUid (1 per week)
-    const rateLimitResult = await rateLimiter.faucet.limit(user.id);
-    if (!rateLimitResult.success) {
-      logger.warn('[API /faucet/fund] Rate limit exceeded for user:', {
-        userId: user.id.substring(0, 8) + '...',
-        remaining: rateLimitResult.remaining,
-        reset: rateLimitResult.reset,
-      });
-      return NextResponse.json(
-        {
-          error: 'Rate limit exceeded',
-          reset: rateLimitResult.reset,
-        },
-        { status: 429 }
-      );
-    }
+    // const rateLimitResult = await rateLimiter.faucet.limit(user.id);
+    // if (!rateLimitResult.success) {
+    //   logger.warn('[API /faucet/fund] Rate limit exceeded for user:', {
+    //     userId: user.id.substring(0, 8) + '...',
+    //     remaining: rateLimitResult.remaining,
+    //     reset: rateLimitResult.reset,
+    //   });
+    //   return NextResponse.json(
+    //     {
+    //       error: 'Rate limit exceeded',
+    //       reset: rateLimitResult.reset,
+    //     },
+    //     { status: 429 }
+    //   );
+    // }
 
     const ip = getClientIP(request);
 
