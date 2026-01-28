@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_MAINNET_URL")
-  directUrl = env("DATABASE_MAINNET_URL")
+  url       = env("DATABASE_TESTNET_URL")
+  directUrl = env("DATABASE_TESTNET_URL")
 }
 
 model User {
@@ -101,6 +101,7 @@ model UserRSAKeys {
 
 model SponsoredAccount {
   id               String    @id @default(cuid())
+  supabaseUid      String?
   walletAddress    String    @unique
   sponsorAddress   String
   ipAddress        String
@@ -116,6 +117,7 @@ model SponsoredAccount {
 
   @@index([sponsorAddress])
   @@index([ipAddress])
+  @@index([supabaseUid])
   @@map("sponsored_accounts")
 }
 

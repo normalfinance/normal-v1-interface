@@ -8,6 +8,7 @@ import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
+import { supabase } from '@/lib/createSupabaseClient';
 import {
   cdn,
   logger,
@@ -104,8 +105,15 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
     setIsFunding(true);
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
       logger.log('[OnRampDialog] Requesting sponsorship for:', userAddress);
-      const { sponsorshipXDR } = await requestWalletSponsorship(userAddress);
+      const { sponsorshipXDR } = await requestWalletSponsorship(userAddress, session.access_token);
       logger.log('[OnRampDialog] Received sponsorship XDR');
 
       if (sponsorshipXDR && signTransaction) {

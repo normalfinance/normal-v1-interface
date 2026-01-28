@@ -308,8 +308,15 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   const requestFaucetFundingAndTrustline = useCallback(
     async (walletAddress: string) => {
       try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('Authentication required');
+        }
+
         logger.log('[NormalWalletCreate] Requesting sponsorship for:', walletAddress);
-        const { sponsorshipXDR } = await requestWalletSponsorship(walletAddress);
+        const { sponsorshipXDR } = await requestWalletSponsorship(walletAddress, session.access_token);
         logger.log('[NormalWalletCreate] Received sponsorship XDR');
 
         if (sponsorshipXDR && signTransaction) {

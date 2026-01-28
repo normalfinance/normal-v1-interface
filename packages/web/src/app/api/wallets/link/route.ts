@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { rateLimiter } from '@/server/rateLimiter';
 
 const LinkWalletSchema = z.object({
   walletAddress: z
@@ -49,6 +50,27 @@ export async function POST(request: NextRequest) {
     const user = await getAuthenticatedUser(token);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if admin bypass (admin_secret as auth token)
+    const isAdminRequest = token === process.env.ADMIN_SECRET;
+
+    // Only check rate limit for non-admin requests
+    if (!isAdminRequest) {
+      const rateLimitStatus = await rateLimiter.faucet.check(user.id);
+      if (rateLimitStatus.remaining === 0) {
+        logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
+          userId: user.id.substring(0, 8) + '...',
+          reset: rateLimitStatus.reset,
+        });
+        return NextResponse.json(
+          {
+            error: 'Weekly wallet creation limit exceeded. Try again next week.',
+            reset: rateLimitStatus.reset,
+          },
+          { status: 429 }
+        );
+      }
     }
 
     // Parse and validate request body
