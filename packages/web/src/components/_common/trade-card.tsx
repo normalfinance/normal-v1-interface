@@ -976,7 +976,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
           alerts={getInfoAccordionAlerts()}
           rows={[
             {
-              title: `Total Fee (${fPercent(0.3)})`,
+              title: `Fee (${fPercent(0.3)})`,
               value: fCurrencyTwoDecimals(fiatAmountVal * (30 / 10000)),
             },
             {
