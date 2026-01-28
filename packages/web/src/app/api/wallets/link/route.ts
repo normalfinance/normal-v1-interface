@@ -3,6 +3,8 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { rateLimiter } from '@/server/rateLimiter';
+import { ReferralService } from '@/lib/referral-service';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -17,6 +19,7 @@ const LinkWalletSchema = z.object({
   encryptionIV: z.string().optional(),
   encryptionSalt: z.string().optional(),
   custodyConsentEmail: z.string().email().optional(),
+  userId: z.string().uuid().optional(), // Required for admin requests
 });
 
 const UpdateWalletSchema = z.object({
@@ -41,17 +44,16 @@ function getAccessToken(request: NextRequest): string | undefined {
 /**
  * POST /api/wallets/link
  * Link a wallet to the authenticated user's account
+ * Admin can bypass rate limits by using ADMIN_SECRET and providing userId in body
  */
 export async function POST(request: NextRequest) {
   try {
     const token = getAccessToken(request);
-    // Verify authentication
-    const user = await getAuthenticatedUser(token);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
-    // Parse and validate request body
+    // Check if admin bypass (admin_secret as auth token)
+    const isAdminRequest = token === process.env.ADMIN_SECRET;
+
+    // Parse and validate request body first (needed for admin userId)
     const body = await request.json();
     const validation = LinkWalletSchema.safeParse(body);
 
@@ -70,7 +72,47 @@ export async function POST(request: NextRequest) {
       encryptionIV,
       encryptionSalt,
       custodyConsentEmail,
+      userId: adminProvidedUserId,
     } = validation.data;
+
+    let userId: string;
+
+    if (isAdminRequest) {
+      // Admin request: require userId in body
+      if (!adminProvidedUserId) {
+        return NextResponse.json(
+          { error: 'Admin requests require userId in request body' },
+          { status: 400 }
+        );
+      }
+      userId = adminProvidedUserId;
+      logger.log('[API /wallets/link] Admin bypass for user:', {
+        userId: userId.substring(0, 8) + '...',
+      });
+    } else {
+      // Normal request: authenticate user
+      const user = await getAuthenticatedUser(token);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      userId = user.id;
+
+      // Check rate limit for non-admin requests
+      const rateLimitStatus = await rateLimiter.faucet.check(userId);
+      if (rateLimitStatus.remaining === 0) {
+        logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
+          userId: userId.substring(0, 8) + '...',
+          reset: rateLimitStatus.reset,
+        });
+        return NextResponse.json(
+          {
+            error: 'Weekly wallet creation limit exceeded. Try again next week.',
+            reset: rateLimitStatus.reset,
+          },
+          { status: 429 }
+        );
+      }
+    }
 
     // Validate custody data if platform custody is chosen
     if (custodyChoice === 'platform') {
@@ -87,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     // Link the wallet
     const linkedWallet = await LinkedWalletService.linkWallet(
-      user.id,
+      userId,
       walletAddress,
       walletName,
       custodyChoice
@@ -102,9 +144,20 @@ export async function POST(request: NextRequest) {
     );
 
     logger.log('[API /wallets/link] Wallet linked successfully:', {
-      userId: user.id.substring(0, 8) + '...',
+      userId: userId.substring(0, 8) + '...',
       walletAddress: walletAddress.substring(0, 8) + '...',
     });
+
+    // Create or find user in the users table for referral tracking
+    try {
+      await ReferralService.findOrCreateUser(walletAddress);
+      logger.log('[API /wallets/link] User record ensured for wallet:', {
+        walletAddress: walletAddress.substring(0, 8) + '...',
+      });
+    } catch (userError) {
+      // Log but don't fail the wallet linking - user creation is secondary
+      logger.warn('[API /wallets/link] Failed to create user record:', userError);
+    }
 
     return NextResponse.json(
       {

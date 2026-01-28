@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { rateLimiter } from '@/server/rateLimiter';
 import { SponsorService } from '@/lib/sponsor-service';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const FundWalletSchema = z.object({
   walletAddress: z
@@ -22,6 +23,12 @@ function getClientIP(request: NextRequest): string {
   return ip;
 }
 
+function getAccessToken(request: NextRequest): string | undefined {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader) return undefined;
+  return authHeader.split(' ')[1];
+}
+
 /**
  * POST /api/faucet/fund
  * Sponsor a new account with reserves for account creation and USDC trustline
@@ -29,23 +36,32 @@ function getClientIP(request: NextRequest): string {
  */
 export async function POST(request: NextRequest) {
   try {
-    const ip = getClientIP(request);
+    // Authenticate user
+    const token = getAccessToken(request);
+    const user = await getAuthenticatedUser(token);
 
-    const ipRateLimitResult = await rateLimiter.faucet.limit(ip);
-    if (!ipRateLimitResult.success) {
-      logger.warn('[API /faucet/fund] Rate limit exceeded for IP:', {
-        ip: ip.substring(0, 8) + '...',
-        remaining: ipRateLimitResult.remaining,
-        reset: ipRateLimitResult.reset,
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Rate limit by supabaseUid (1 per week)
+    const rateLimitResult = await rateLimiter.faucet.limit(user.id);
+    if (!rateLimitResult.success) {
+      logger.warn('[API /faucet/fund] Rate limit exceeded for user:', {
+        userId: user.id.substring(0, 8) + '...',
+        remaining: rateLimitResult.remaining,
+        reset: rateLimitResult.reset,
       });
       return NextResponse.json(
         {
           error: 'Rate limit exceeded',
-          reset: ipRateLimitResult.reset,
+          reset: rateLimitResult.reset,
         },
         { status: 429 }
       );
     }
+
+    const ip = getClientIP(request);
 
     const body = await request.json();
     const validation = FundWalletSchema.safeParse(body);
@@ -80,6 +96,7 @@ export async function POST(request: NextRequest) {
 
     const { sponsorshipXDR, sponsorAddress } = await SponsorService.createSponsoredAccount(
       walletAddress,
+      user.id,
       ip
     );
 

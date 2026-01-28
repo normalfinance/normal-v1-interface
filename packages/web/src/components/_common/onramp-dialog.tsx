@@ -2,6 +2,7 @@ import { useBoolean } from '@/hooks';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { runDepositFlow } from '@/lib/mgi/client';
+import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
@@ -104,8 +105,15 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
     setIsFunding(true);
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
       logger.log('[OnRampDialog] Requesting sponsorship for:', userAddress);
-      const { sponsorshipXDR } = await requestWalletSponsorship(userAddress);
+      const { sponsorshipXDR } = await requestWalletSponsorship(userAddress, session.access_token);
       logger.log('[OnRampDialog] Received sponsorship XDR');
 
       if (sponsorshipXDR && signTransaction) {
