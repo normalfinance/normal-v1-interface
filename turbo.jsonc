@@ -52,6 +52,9 @@
     "AUTH_PUBLIC_KEY",
     "AUTH_SECRET_KEY",
 
+    // CloudFlare
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+
     // Missing
     "POSTHOG_TESTNET_ENV_ID",
     "POSTHOG_TESTNET_API_KEY",
