@@ -92,7 +92,10 @@ const SendReview: React.FC<SendReviewProps> = ({
         token1: { name: sendToken.symbol, amount: tokenValue.toString() },
       },
       transactionFunction: async (client) => {
-        const tx = await client.transfer(processedArgs);
+        const tx = await client.transfer(processedArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();

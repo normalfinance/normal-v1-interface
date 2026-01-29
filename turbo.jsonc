@@ -61,6 +61,10 @@
     "POSTHOG_MAINNET_ENV_ID",
     "POSTHOG_MAINNET_API_KEY",
 
+    // Stellar Transactions
+    "NEXT_PUBLIC_STELLAR_FEE",
+    "NEXT_PUBLIC_STELLAR_TIMEOUT",
+
     // Stellar Sponsorship
     "NORMAL_HOT_A_SECRET",
     "ADMIN_SECRET",

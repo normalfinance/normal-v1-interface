@@ -643,13 +643,14 @@ const TradeCard: React.FC<TradeCardProps> = ({
         default:
           throw new Error(`Unknown trade route: ${route.type}`);
       }
-
-      handleClose();
-      setFiatAmount('0');
     } catch (error) {
       console.log(error);
       posthog.captureException(error);
       setSwapError('Error during trade');
+    } finally {
+      setLoading(false);
+      handleReviewClose();
+      setFiatAmount('0');
     }
   };
 
