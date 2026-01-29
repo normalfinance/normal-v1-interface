@@ -10,3 +10,4 @@ export * from './normal-wallet';
 export * from './mnemonic-encryption';
 export * from './asset';
 export * from './horizon';
+export * from './parser';

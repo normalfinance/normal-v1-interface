@@ -336,10 +336,12 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           logger.log('[NormalWalletCreate] Wallet already sponsored, skipping');
           return;
         }
-        throw e;
+        enqueueSnackbar(e.message || t('Failed to create account and enable USDC'), {
+          variant: 'error',
+        });
       }
     },
-    [signTransaction]
+    [signTransaction, enqueueSnackbar, t]
   );
 
   const handleCustodyConfirm = useCallback(async () => {

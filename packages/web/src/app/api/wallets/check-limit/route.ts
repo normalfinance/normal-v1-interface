@@ -20,6 +20,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const isDev = process.env.NODE_ENV === 'development';
+    if (isDev) {
+      logger.log('[API /wallets/check-limit] Dev mode: skipping rate limit', {
+        userId: user.id.substring(0, 8) + '...',
+      });
+      return NextResponse.json({
+        allowed: true,
+        remaining: 1,
+        reset: 0,
+      });
+    }
+
     const rateLimitStatus = await rateLimiter.faucet.check(user.id);
 
     logger.log('[API /wallets/check-limit] Rate limit checked for user:', {
