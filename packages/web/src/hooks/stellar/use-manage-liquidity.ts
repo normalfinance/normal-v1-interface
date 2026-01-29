@@ -245,7 +245,10 @@ export function useManageLiquidity(): ReturnType {
         token1: { name: 'asset pairs', amount: String(amount) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.deposit(processedArgs, { fee: 1_0000000 });
+        const tx = await client.deposit(processedArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -288,7 +291,10 @@ export function useManageLiquidity(): ReturnType {
         token1: { name: 'shares', amount: String(shares) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.withdraw(processedArgs, { fee: 1_0000000 });
+        const tx = await client.withdraw(processedArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();

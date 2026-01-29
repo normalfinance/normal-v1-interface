@@ -136,7 +136,10 @@ export function useTrade(): ReturnType {
         token1: { name: 'USDC', amount: String(args.usdc_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.buy_long(processedArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.buy_long(processedArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -180,7 +183,10 @@ export function useTrade(): ReturnType {
         token1: { name: 'LONG', amount: String(args.long_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.sell_long(processedArgs, { fee: 1_0000000 });
+        const tx = await client.sell_long(processedArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -224,7 +230,10 @@ export function useTrade(): ReturnType {
         token1: { name: 'USDC', amount: String(args.usdc_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.buy_short(processedArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.buy_short(processedArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -268,7 +277,10 @@ export function useTrade(): ReturnType {
         token1: { name: 'SHORT', amount: String(args.short_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.sell_short(processedArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.sell_short(processedArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -321,7 +333,10 @@ export function useTrade(): ReturnType {
         token1: { name: 'LONG', amount: String(args.usdc_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.mint(mintArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.mint(mintArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -353,7 +368,10 @@ export function useTrade(): ReturnType {
         token1: { name: 'Short', amount: String(tradeArgs.short_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.sell_short(tradeArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.sell_short(tradeArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -400,7 +418,10 @@ export function useTrade(): ReturnType {
         token1: { name: args.asset, amount: String(args.usdc_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.mint(mingArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.mint(mingArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -432,7 +453,10 @@ export function useTrade(): ReturnType {
         token1: { name: 'Long', amount: String(tradeArgs.long_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.sell_long(tradeArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.sell_long(tradeArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -479,7 +503,10 @@ export function useTrade(): ReturnType {
         token1: { name: 'Short', amount: String(args.long_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.buy_short(tradeArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.buy_short(tradeArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -512,7 +539,10 @@ export function useTrade(): ReturnType {
         token1: { name: args.asset, amount: String(tokensToRedeem) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.redeem(redeemArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.redeem(redeemArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -557,7 +587,10 @@ export function useTrade(): ReturnType {
         token1: { name: 'SHORT', amount: String(args.short_in) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.buy_long(tradeArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.buy_long(tradeArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -590,7 +623,10 @@ export function useTrade(): ReturnType {
         token1: { name: args.asset, amount: String(tokensToRedeem) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.redeem(redeemArgs, { fee: 9000000, timeoutInSeconds: 300 });
+        const tx = await client.redeem(redeemArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
