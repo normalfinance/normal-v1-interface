@@ -5,7 +5,6 @@ import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { UserRSAService } from '@/lib/user-rsa-service';
-import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { encryptMnemonicServer } from '@/lib/server-mnemonic-encryption';
@@ -55,11 +54,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { walletAddress, encryptedMnemonic, encryptedAESKey, iv } = validation.data;
-
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
-    }
 
     const userIdentifier = `${user.id}:${user.email}`;
 
