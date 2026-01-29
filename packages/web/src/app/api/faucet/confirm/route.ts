@@ -10,10 +10,15 @@ const ConfirmSchema = z.object({
   txHash: z.string().min(1, 'Transaction hash is required'),
 });
 
-/**
- * POST /api/faucet/confirm
- * Record the transaction hash after user submits the signed sponsorship transaction
- */
+function getClientIP(request: NextRequest): string {
+  const ip =
+    request.headers.get('x-real-ip') ||
+    request.headers.get('X-Forwarded-For')?.split(',')[0] ||
+    request.ip ||
+    'unknown';
+  return ip;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -27,8 +32,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { walletAddress, txHash } = validation.data;
+    const ipAddress = getClientIP(request);
 
-    await SponsorService.recordTransactionHash(walletAddress, txHash);
+    await SponsorService.recordTransactionHash({
+      walletAddress,
+      txHash,
+      ipAddress,
+    });
 
     logger.log('[API /faucet/confirm] Transaction hash recorded:', {
       walletAddress: walletAddress.substring(0, 8) + '...',

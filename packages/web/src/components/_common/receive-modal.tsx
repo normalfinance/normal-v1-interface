@@ -97,7 +97,10 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
       } else if (error.message?.includes('Rate limit')) {
         enqueueSnackbar(t('Rate limit exceeded. Please try again later.'), { variant: 'error' });
       } else {
-        enqueueSnackbar(error.message || t('Failed to create account'), { variant: 'error' });
+        enqueueSnackbar(
+          error.message || t('Failed to create account and enable USDC'),
+          { variant: 'error' }
+        );
       }
     } finally {
       setIsFunding(false);

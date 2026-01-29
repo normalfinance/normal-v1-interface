@@ -145,19 +145,6 @@ export class SponsorService {
       // Convert to XDR - client will add their signature
       const sponsorshipXDR = transaction.toXDR();
 
-      // Create pending record (will be updated with txHash after submission)
-      await prisma.sponsoredAccount.create({
-        data: {
-          supabaseUid,
-          walletAddress,
-          sponsorAddress,
-          ipAddress,
-          accountReserve: '0.5',
-          trustlineReserve: '0.5',
-          feePayment: '1', // 1 XLM transferred for account creation (reserves are sponsored)
-        },
-      });
-
       logger.log('[SponsorService] Created sponsorship XDR for:', {
         walletAddress: walletAddress.substring(0, 8) + '...',
         sponsor: sponsorAddress.substring(0, 8) + '...',
@@ -176,11 +163,36 @@ export class SponsorService {
   /**
    * Record the transaction hash after successful submission
    */
-  static async recordTransactionHash(walletAddress: string, txHash: string): Promise<void> {
+  static async recordTransactionHash(params: {
+    walletAddress: string;
+    txHash: string;
+    ipAddress: string;
+    supabaseUid?: string;
+  }): Promise<void> {
+    const { walletAddress, txHash, ipAddress, supabaseUid } = params;
+
+    const sponsorSecretKey = process.env.NORMAL_HOT_A_SECRET;
+    if (!sponsorSecretKey) {
+      throw new Error('NORMAL_HOT_A_SECRET environment variable is not set');
+    }
+
+    const sponsorKeypair = Keypair.fromSecret(sponsorSecretKey);
+    const sponsorAddress = sponsorKeypair.publicKey();
+
     try {
-      await prisma.sponsoredAccount.update({
+      await prisma.sponsoredAccount.upsert({
         where: { walletAddress },
-        data: { txHash },
+        update: { txHash },
+        create: {
+          supabaseUid,
+          walletAddress,
+          sponsorAddress,
+          ipAddress,
+          accountReserve: '0.5',
+          trustlineReserve: '0.5',
+          feePayment: '1',
+          txHash,
+        },
       });
       logger.log('[SponsorService] Recorded transaction hash:', {
         walletAddress: walletAddress.substring(0, 8) + '...',
