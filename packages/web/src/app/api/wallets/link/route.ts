@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Check if admin bypass (admin_secret as auth token)
     const isAdminRequest = token === process.env.ADMIN_SECRET;
+    const isDev = process.env.NODE_ENV === 'development';
 
     // Parse and validate request body first (needed for admin userId)
     const body = await request.json();
@@ -98,19 +99,25 @@ export async function POST(request: NextRequest) {
       userId = user.id;
 
       // Check rate limit for non-admin requests
-      const rateLimitStatus = await rateLimiter.faucet.check(userId);
-      if (rateLimitStatus.remaining === 0) {
-        logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
-          userId: userId.substring(0, 8) + '...',
-          reset: rateLimitStatus.reset,
-        });
-        return NextResponse.json(
-          {
-            error: 'Weekly wallet creation limit exceeded. Try again next week.',
+      if (!isDev) {
+        const rateLimitStatus = await rateLimiter.faucet.check(userId);
+        if (rateLimitStatus.remaining === 0) {
+          logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
+            userId: userId.substring(0, 8) + '...',
             reset: rateLimitStatus.reset,
-          },
-          { status: 429 }
-        );
+          });
+          return NextResponse.json(
+            {
+              error: 'Weekly wallet creation limit exceeded. Try again next week.',
+              reset: rateLimitStatus.reset,
+            },
+            { status: 429 }
+          );
+        }
+      } else {
+        logger.log('[API /wallets/link] Dev mode: skipping rate limit', {
+          userId: userId.substring(0, 8) + '...',
+        });
       }
     }
 
