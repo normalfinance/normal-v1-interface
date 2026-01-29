@@ -63,6 +63,7 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
       </TableCell>
 
       {/* Price */}
+      {/* TODO: replace with .scaledPrice for Normal Tokens */}
       <TableCell align="right">
         <Typography variant="body2">{fCurrency(token.price)}</Typography>
       </TableCell>

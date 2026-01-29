@@ -49,14 +49,6 @@ export const createConnectWalletActions = () => {
 
       logger.log('[WALLET ACTIONS] Wallet state updated successfully');
 
-      // Check invite code status for this wallet address
-      try {
-        const persistStore = usePersistStore.getState();
-        await persistStore.checkWalletInviteStatus(walletAddress);
-      } catch (error) {
-        logger.error('Error checking wallet invite status:', error);
-      }
-
       return;
     },
 

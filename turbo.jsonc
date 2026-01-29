@@ -52,13 +52,18 @@
     "AUTH_PUBLIC_KEY",
     "AUTH_SECRET_KEY",
 
+    // CloudFlare
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+
     // Missing
     "POSTHOG_TESTNET_ENV_ID",
     "POSTHOG_TESTNET_API_KEY",
     "POSTHOG_MAINNET_ENV_ID",
     "POSTHOG_MAINNET_API_KEY",
 
+    // Stellar Sponsorship
     "NORMAL_HOT_A_SECRET",
+    "ADMIN_SECRET",
 
     "COINBASE_KEY_ID",
     "COINBASE_SECRET",

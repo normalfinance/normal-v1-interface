@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { rateLimiter } from '@/server/rateLimiter';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -45,6 +44,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    // TODO: Client giving "Rate limit exceeded. Please try again later." right after new account creation
     // Rate limit by supabaseUid (1 per week)
     if (!isDev) {
       const rateLimitResult = await rateLimiter.faucet.limit(user.id);

@@ -8,8 +8,8 @@ import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
-import { Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { Chip, Typography } from '@mui/material';
 
 export interface ToeknsTabsProps {
   tokens?: Token[];
@@ -62,17 +62,10 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                     variant="body2"
                     sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                   >
-                    {BigNumber(token.balance).toFixed(token.decimals)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 500,
-                      color: theme.palette.text.secondary,
-                      fontSize: '12px',
-                    }}
-                  >
-                    {token.symbol}
+                    {token.symbol.startsWith('sn') && (
+                      <Chip label="Short" color="error" size="small" variant="soft" />
+                    )}{' '}
+                    {token.symbol.replace('sn', '')}
                   </Typography>
                 </Box>
               </Box>
