@@ -168,7 +168,10 @@ export function usePair(pairAddress: string): ReturnType {
         token1: { name: 'asset pairs', amount: String(args.tokens_to_mint) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.mint(processedArgs, { fee: 1_0000000 });
+        const tx = await client.mint(processedArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
@@ -205,7 +208,10 @@ export function usePair(pairAddress: string): ReturnType {
         token1: { name: 'asset pairs', amount: String(args.tokens_to_redeem) },
       },
       transactionFunction: async (client) => {
-        const tx = await client.redeem(processedArgs, { fee: 1_0000000 });
+        const tx = await client.redeem(processedArgs, {
+          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+        });
 
         await tx.sign();
         const signedXDR = tx.signed?.toXDR();
