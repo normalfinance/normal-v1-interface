@@ -336,10 +336,9 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           logger.log('[NormalWalletCreate] Wallet already sponsored, skipping');
           return;
         }
-        enqueueSnackbar(
-          e.message || t('Failed to create account and enable USDC'),
-          { variant: 'error' }
-        );
+        enqueueSnackbar(e.message || t('Failed to create account and enable USDC'), {
+          variant: 'error',
+        });
       }
     },
     [signTransaction, enqueueSnackbar, t]
