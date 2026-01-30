@@ -20,6 +20,7 @@ import MyHoldingsTableRow, { type HoldingData } from './my-holdings-table-row';
 const TABLE_HEAD: TableHeadCellProps[] = [
   { id: 'asset', label: 'Asset', width: 180 },
   { id: 'balance', label: 'Balance', align: 'right' },
+  { id: 'targetPrice', label: 'Target Price', align: 'right' },
   { id: 'price', label: 'Price', align: 'right' },
   { id: 'value', label: 'Value', align: 'right' },
   { id: 'allocation', label: 'Allocation', align: 'right' },
