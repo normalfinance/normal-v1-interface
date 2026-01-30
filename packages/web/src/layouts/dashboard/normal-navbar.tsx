@@ -32,7 +32,7 @@ const NAV_ITEMS: { url: string; label: string }[] = [
   { url: paths.invest, label: 'Invest' },
   { url: paths.portfolio, label: 'Portfolio' },
   { url: paths.earn, label: 'Earn' },
-  { url: paths.help.feedbackForm, label: 'Give feedback' },
+  { url: paths.help.feedbackForm, label: 'Feedback' },
 ];
 
 const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: string) => {
@@ -208,7 +208,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           >
             {NAV_ITEMS.map((item) => (
               <div key={item.url}>
-                {item.label === 'Give feedback' ? (
+                {item.label === 'Feedback' ? (
                   <Button
                     className="rainbow-button"
                     component="a"
