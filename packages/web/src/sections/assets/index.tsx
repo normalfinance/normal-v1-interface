@@ -9,7 +9,7 @@ import { logger } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { useAgo, useTreasury, useTotal1dTradeVolume, useTotalVolume } from '@/hooks';
+import { useAgo, useTreasury, useTotalVolume, useTotal1dTradeVolume } from '@/hooks';
 import { useTreasuryLiquidityByPair } from '@/hooks/stellar/useTreasuryLiquidityByPair';
 
 import Grid2 from '@mui/material/Grid2';
