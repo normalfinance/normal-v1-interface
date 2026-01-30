@@ -219,6 +219,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                       py: 0.5,
                       px: 1.5,
                       color: '#fff',
+                      fontSize: '12px',
                     }}
                   >
                     {t(item.label)}
