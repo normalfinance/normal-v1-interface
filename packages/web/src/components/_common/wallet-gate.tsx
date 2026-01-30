@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import { Button } from '@mui/material';
 

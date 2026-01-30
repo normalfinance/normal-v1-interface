@@ -1,13 +1,13 @@
 'use client';
 
 import type { Token, ButtonConfig } from '@normalfinance/types';
-import { TokenAmountButtonState as ButtonState } from '@normalfinance/types';
 
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { useTrustLine, useManageLiquidity } from '@/hooks';
+import { TokenAmountButtonState as ButtonState } from '@normalfinance/types';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import {
   constants,
