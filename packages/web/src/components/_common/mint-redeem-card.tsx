@@ -326,6 +326,9 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
   };
 
   const getButtonState = (): ButtonState => {
+    if (!isConnected) {
+      return ButtonState.NOT_CONNECTED;
+    }
     if (!selectedToken) {
       return ButtonState.SELECT_TOKEN;
     }
@@ -363,6 +366,11 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
 
   const getButtonConfig = (state: ButtonState): ButtonConfig => {
     const configs: Record<ButtonState, ButtonConfig> = {
+      [ButtonState.NOT_CONNECTED]: {
+        label: 'Connect Wallet',
+        disabled: true,
+        action: () => {},
+      },
       [ButtonState.SELECT_TOKEN]: {
         label: 'Select an asset',
         disabled: true,
@@ -765,8 +773,8 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
         </Box>
       )}
 
-      {isConnected ? (
-        (() => {
+      <WalletGate buttonText="Login to mint/redeem" fullWidth>
+        {(() => {
           const buttonState = getButtonState();
           const buttonConfig = getButtonConfig(buttonState);
 
@@ -793,12 +801,8 @@ const MintRedeemCard: React.FC<MintRedeemCardProps> = ({ ...other }) => {
               {buttonConfig.label}
             </Button>
           );
-        })()
-      ) : (
-        <WalletGate buttonText="Login to mint/redeem" fullWidth>
-          {null}
-        </WalletGate>
-      )}
+        })()}
+      </WalletGate>
 
       {/* Additional box with info */}
       {!loading && pair && (
