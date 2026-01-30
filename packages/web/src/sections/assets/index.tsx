@@ -9,7 +9,7 @@ import { logger } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { useAgo, useTreasury, useTotal1dTradeVolume } from '@/hooks';
+import { useAgo, useTreasury, useTotal1dTradeVolume, useTotalVolume } from '@/hooks';
 import { useTreasuryLiquidityByPair } from '@/hooks/stellar/useTreasuryLiquidityByPair';
 
 import Grid2 from '@mui/material/Grid2';
@@ -34,6 +34,7 @@ export default function AssetsView() {
     getAllPairs,
   } = usePersistStore();
 
+  const { totalVolume } = useTotalVolume();
   const { total1dVolume, volumeByPair } = useTotal1dTradeVolume();
 
   const { fetchBalances } = useTreasury();
@@ -64,6 +65,12 @@ export default function AssetsView() {
   const totalTvl = tableData.reduce((acc, p) => acc.plus(p.collateral), BigNumber(0));
 
   const stats: SingleStat[] = [
+    {
+      title: 'Total Volume',
+      total: Number(totalVolume.toFixed(2)),
+      percent: 0,
+      formatter: fCurrency,
+    },
     {
       title: '1D Volume',
       total: Number(total1dVolume.toFixed(2)),
@@ -109,7 +116,7 @@ export default function AssetsView() {
       <DashboardContent maxWidth="xl">
         <Stack spacing={1}>
           <Typography variant="h4" color="text.primary">
-            {t('Explore')}
+            {t('Assets')}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {t('as of ')}
