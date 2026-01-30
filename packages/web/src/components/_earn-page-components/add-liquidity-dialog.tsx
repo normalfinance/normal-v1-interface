@@ -349,6 +349,9 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
   }, [checkInsufficientBalance]);
 
   const getButtonState = (): ButtonState => {
+    if (!isConnected) {
+      return ButtonState.NOT_CONNECTED;
+    }
     if (!selectedToken) {
       return ButtonState.SELECT_TOKEN;
     }
@@ -387,6 +390,11 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
 
   const getButtonConfig = (state: ButtonState): ButtonConfig => {
     const configs: Record<ButtonState, ButtonConfig> = {
+      [ButtonState.NOT_CONNECTED]: {
+        label: 'Connect Wallet',
+        disabled: true,
+        action: () => {},
+      },
       [ButtonState.SELECT_TOKEN]: {
         label: 'Select an asset',
         disabled: true,
@@ -700,8 +708,8 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
           </Box>
         )}
 
-        {isConnected ? (
-          (() => {
+        <WalletGate buttonText="Login to manage your Earn account" fullWidth>
+          {(() => {
             const buttonState = getButtonState();
             const buttonConfig = getButtonConfig(buttonState);
 
@@ -728,12 +736,8 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialog> = ({ open, onClose }) => 
                 {buttonConfig.label}
               </Button>
             );
-          })()
-        ) : (
-          <WalletGate buttonText="Login to manage your Earn account" fullWidth>
-            {null}
-          </WalletGate>
-        )}
+          })()}
+        </WalletGate>
       </DialogContent>
     </Dialog>
   );

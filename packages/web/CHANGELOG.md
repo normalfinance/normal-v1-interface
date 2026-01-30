@@ -1,4 +1,4 @@
-# [1.3.0](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.6...v1.3.0) (2026-01-26)
+# [1.3.0](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.6...v1.3.0) (2026-01-24)
 
 
 ### Bug Fixes
@@ -15,7 +15,6 @@
 * typo ([790e164](https://github.com/normalfinance/normal-v1-interface/commit/790e164e0fa167dba6416052e708fb26f817beaf))
 * update bindings and rate limit paths ([0f690ee](https://github.com/normalfinance/normal-v1-interface/commit/0f690eef7b3a5ee4e7bf85aa6b692ed8070f65de))
 * **web:** add missing turbo env vars ([7f2831a](https://github.com/normalfinance/normal-v1-interface/commit/7f2831a5048d4e9e48a43bf67d5ff2c8124ba057))
-* **web:** add tos and pp paths ([31087a4](https://github.com/normalfinance/normal-v1-interface/commit/31087a425053486dae6bc24e600f46464b1915d9))
 * **web:** database vars ([516e413](https://github.com/normalfinance/normal-v1-interface/commit/516e4138cf6c4b703259b0117363c570f8c4ed92))
 * **web:** liquidity value calculation ([acecff7](https://github.com/normalfinance/normal-v1-interface/commit/acecff7a8f6354875ba110c6069485478b0f3365))
 * **web:** lots of fixes ([762df10](https://github.com/normalfinance/normal-v1-interface/commit/762df1084a3c877985c9bb6ed498c67b6506e54f))
@@ -35,7 +34,6 @@
 * **stellar:** update toml file ([dd05fae](https://github.com/normalfinance/normal-v1-interface/commit/dd05fae7ba5a001cfc7a9bbc48331a16a71a2a7a))
 * updated contracts, bindings, and UI components ([c335ae1](https://github.com/normalfinance/normal-v1-interface/commit/c335ae1d4d6dc4fd91e479bd966438ec80861adc))
 * **ux:** navbar ([2de0d5f](https://github.com/normalfinance/normal-v1-interface/commit/2de0d5f1681d3b6d33a17d82540c231ef4f2cc71))
-* **web:** self-host legal pages ([24d2b98](https://github.com/normalfinance/normal-v1-interface/commit/24d2b98fdf44eb7b9799b753fb55c24172416ecb))
 * **Withdraw:** add Coinbase offramp support ([9b0a458](https://github.com/normalfinance/normal-v1-interface/commit/9b0a45840ca32f17252899d5e4845f4e5456dd32))
 
 # [1.3.0](https://github.com/normalfinance/normal-v1-interface/compare/v1.2.6...v1.3.0) (2026-01-23)
