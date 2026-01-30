@@ -466,7 +466,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
       </Box>
       {/* Main Button */}
       <Box>
-        {isConnected ? (
+        <WalletGate buttonText="Login to withdraw" fullWidth variant="soft">
           <Button
             fullWidth
             variant="soft"
@@ -478,11 +478,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
           >
             {getButtonLabel()}
           </Button>
-        ) : (
-          <WalletGate buttonText="Login to withdraw" fullWidth variant="soft">
-            {null}
-          </WalletGate>
-        )}
+        </WalletGate>
       </Box>
       {reviewOpen && (
         <SendReview

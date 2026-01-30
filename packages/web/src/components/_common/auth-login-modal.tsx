@@ -1,7 +1,5 @@
 'use client';
 
-import type { AppStorePersist } from '@normalfinance/types';
-
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
@@ -23,6 +21,7 @@ import {
   Button,
   Dialog,
   Divider,
+  Tooltip,
   Checkbox,
   TextField,
   IconButton,
@@ -53,11 +52,11 @@ const AuthLoginModal = ({
   resetEmail = null,
 }: AuthLoginModalProps) => {
   const { t } = useTranslate();
-  const setDisclaimerAccepted = usePersistStore((s: AppStorePersist) => s.setDisclaimerAccepted);
+  const { disclaimer, setDisclaimerAccepted } = usePersistStore();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tosAccepted, setTosAccepted] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(disclaimer.accepted);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authMode, setAuthMode] = useState<AuthMode>('magic-link');
@@ -67,6 +66,16 @@ const AuthLoginModal = ({
   const [forgotPassword, setForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [showTosHelper, setShowTosHelper] = useState(false);
+
+  const handleDisabledButtonClick = () => {
+    setShowTosHelper(true);
+  };
+
+  const handleClickTos = (value: boolean) => {
+    setShowTosHelper(!value);
+    setTosAccepted(value);
+  };
 
   useEffect(() => {
     if (passwordResetSuccess && open) {
@@ -220,6 +229,7 @@ const AuthLoginModal = ({
     setTosAccepted(false);
     setForgotPassword(false);
     setResetEmailSent(false);
+    setShowTosHelper(false);
     onClose();
   };
 
@@ -262,16 +272,79 @@ const AuthLoginModal = ({
               </Typography>
             </Box>
           )}
-          <Button
-            variant="outlined"
-            color="inherit"
-            size="large"
-            onClick={handleGoogle}
-            disabled={loading || !tosAccepted}
-            startIcon={<Iconify icon="logos:google-icon" width={24} />}
+
+          {showTosHelper && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              {t('Please review and accept our ToS and Disclaimer to continue')}
+            </Alert>
+          )}
+
+          {!disclaimer.accepted && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={tosAccepted}
+                  onChange={(e) => handleClickTos(e.target.checked)}
+                  data-testid="tos-checkbox"
+                />
+              }
+              label={
+                <Typography variant="body2" color="text.secondary">
+                  {t("I understand and agree to Normal's")}{' '}
+                  <MuiLink
+                    href={paths.legal.tos}
+                    underline="always"
+                    color="secondary"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t('Terms of Service')}
+                  </MuiLink>{' '}
+                  {t('and')}{' '}
+                  <MuiLink
+                    href={paths.legal.disclaimer}
+                    underline="always"
+                    color="secondary"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t('Disclaimer')}
+                  </MuiLink>
+                </Typography>
+              }
+              sx={{ alignItems: 'flex-start', my: 1 }}
+            />
+          )}
+
+          <Box
+            component="span"
+            onClick={() => {
+              if (loading || !tosAccepted) handleDisabledButtonClick();
+            }}
+            sx={{
+              display: 'flex',
+              width: '100%',
+            }}
           >
-            {loading ? t('Redirecting…') : t('Sign in with Google')}
-          </Button>
+            <Tooltip
+              title={
+                loading || !tosAccepted
+                  ? 'Please review and accept our ToS and Disclaimer to continue'
+                  : ''
+              }
+            >
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="large"
+                onClick={handleGoogle}
+                disabled={loading || !tosAccepted}
+                startIcon={<Iconify icon="logos:google-icon" width={24} />}
+              >
+                {loading ? t('Redirecting…') : t('Sign in with Google')}
+              </Button>
+            </Tooltip>
+          </Box>
 
           <Divider sx={{ my: 1 }}>
             <Typography variant="body2" color="text.secondary">
@@ -355,68 +428,40 @@ const AuthLoginModal = ({
                 </>
               )}
 
-              <Button
-                variant="contained"
-                size="large"
-                onClick={handleEmailAuth}
-                disabled={
-                  loading ||
-                  !email.trim() ||
-                  (authMode === 'password' && !password.trim()) ||
-                  !tosAccepted
+              <Tooltip
+                title={
+                  loading || !tosAccepted
+                    ? 'Please review and accept our ToS and Disclaimer to continue'
+                    : ''
                 }
-                fullWidth
               >
-                {loading
-                  ? t('Processing…')
-                  : authMode === 'password'
-                    ? isSignUp
-                      ? t('Sign Up')
-                      : t('Sign In')
-                    : t('Send Magic Link')}
-              </Button>
-
-              <Turnstile
-                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
-                onSuccess={(token) => {
-                  setCaptchaToken(token);
-                }}
-              />
-
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={tosAccepted}
-                    onChange={(e) => setTosAccepted(e.target.checked)}
-                    data-testid="tos-checkbox"
-                  />
-                }
-                label={
-                  <Typography variant="body2" color="text.secondary">
-                    {t("I understand and agree to Normal's")}{' '}
-                    <MuiLink
-                      href={paths.legal.tos}
-                      underline="always"
-                      color="secondary"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t('Terms of Service')}
-                    </MuiLink>{' '}
-                    {t('and')}{' '}
-                    <MuiLink
-                      href={paths.legal.disclaimer}
-                      underline="always"
-                      color="secondary"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t('Disclaimer')}
-                    </MuiLink>
-                  </Typography>
-                }
-                sx={{ alignItems: 'flex-start', my: 1 }}
-              />
+                <span
+                  onClick={() => {
+                    if (loading || !tosAccepted) handleDisabledButtonClick();
+                  }}
+                >
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleEmailAuth}
+                    disabled={
+                      loading ||
+                      !email.trim() ||
+                      (authMode === 'password' && !password.trim()) ||
+                      !tosAccepted
+                    }
+                    fullWidth
+                  >
+                    {loading
+                      ? t('Processing…')
+                      : authMode === 'password'
+                        ? isSignUp
+                          ? t('Sign Up')
+                          : t('Sign In')
+                        : t('Send Magic Link')}
+                  </Button>
+                </span>
+              </Tooltip>
             </>
           ) : forgotPassword ? (
             <>
@@ -528,6 +573,13 @@ const AuthLoginModal = ({
               <Typography variant="body2">{error}</Typography>
             </Alert>
           )}
+
+          <Turnstile
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
+            onSuccess={(token) => {
+              setCaptchaToken(token);
+            }}
+          />
         </Stack>
       </DialogContent>
     </Dialog>

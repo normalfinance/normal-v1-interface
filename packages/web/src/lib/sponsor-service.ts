@@ -119,7 +119,7 @@ export class SponsorService {
         .addOperation(
           Operation.createAccount({
             destination: walletAddress,
-            startingBalance: '1',
+            startingBalance: process.env.NEXT_PUBLIC_STELLAR_STARTING_BALANCE ?? '1',
             source: sponsorAddress,
           })
         )

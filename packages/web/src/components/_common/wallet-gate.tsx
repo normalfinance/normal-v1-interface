@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import { Button } from '@mui/material';
 
+import AuthLoginModal from '@/components/_common/auth-login-modal';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import WalletSelectionModal, {
@@ -30,6 +32,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
 }) => {
   const persist = usePersistStore();
   const { t } = useTranslate();
+  const { session, isLoading } = useSupabaseAuth();
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
@@ -37,15 +40,18 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     isConnected: isNormalConnected,
   } = useNormalWallet();
   const isWalletConnected = !!persist.wallet.address || isConnected || isNormalConnected;
+  const isGatePassed = !isLoading && !!session && isWalletConnected;
 
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
 
-  /** Handle connecting wallet - show wallet selection modal or Stellar Wallets Kit popup */
   const handleConnectClick = async () => {
-    // TOS is now handled in AuthLoginModal
-    // Check if user has seen wallet selection modal before
+    if (!session) {
+      setShowAuthModal(true);
+      return;
+    }
     if (!hasSeenWalletSelectionModal()) {
       setShowWalletSelection(true);
       return;
@@ -91,8 +97,11 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     }
   };
 
-  if (isWalletConnected) {
+  if (isGatePassed) {
     return children;
+  }
+  if (isLoading) {
+    return null;
   }
 
   return (
@@ -125,6 +134,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
         onClose={() => setShowImportNormalWallet(false)}
         onSuccess={handleNormalWalletImported}
       />
+      <AuthLoginModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </>
   );
 };

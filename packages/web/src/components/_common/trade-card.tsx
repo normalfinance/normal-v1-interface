@@ -376,6 +376,9 @@ const TradeCard: React.FC<TradeCardProps> = ({
   };
 
   const getButtonState = (): ButtonState => {
+    if (!isConnected) {
+      return ButtonState.NOT_CONNECTED;
+    }
     if (!selectedToken) {
       return ButtonState.SELECT_TOKEN;
     }
@@ -408,6 +411,11 @@ const TradeCard: React.FC<TradeCardProps> = ({
 
   const getButtonConfig = (state: ButtonState): ButtonConfig => {
     const configs: Record<ButtonState, ButtonConfig> = {
+      [ButtonState.NOT_CONNECTED]: {
+        label: 'Connect Wallet',
+        disabled: true,
+        action: () => {},
+      },
       [ButtonState.SELECT_TOKEN]: {
         label: 'Select an asset',
         disabled: true,
@@ -914,8 +922,8 @@ const TradeCard: React.FC<TradeCardProps> = ({
         </Box>
       )}
 
-      {isConnected ? (
-        (() => {
+      <WalletGate buttonText="Login to trade" fullWidth>
+        {(() => {
           const buttonState = getButtonState();
           const buttonConfig = getButtonConfig(buttonState);
 
@@ -975,12 +983,8 @@ const TradeCard: React.FC<TradeCardProps> = ({
               )}
             </>
           );
-        })()
-      ) : (
-        <WalletGate buttonText="Login to trade" fullWidth>
-          {null}
-        </WalletGate>
-      )}
+        })()}
+      </WalletGate>
 
       {/* Additional box with info */}
       {!loading && selectedToken && pair && (
