@@ -3,7 +3,9 @@ export interface Disclaimer {
   version: number;
   acceptedAt?: number;
 }
+
 export interface DisclaimerActions {
   disclaimer: Disclaimer;
   setDisclaimerAccepted: (accepted: boolean) => Promise<void>;
+  refreshDisclaimerFromStorage: () => Promise<void>;
 }

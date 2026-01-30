@@ -30,7 +30,7 @@ export const usePersistStore = create<AppStorePersist>()(
       const walletPersist = createConnectWalletActions();
 
       // Create a store for disclaimer modal
-      const disclaimer = createDisclaimerAction();
+      const disclaimeActions = createDisclaimerAction();
 
       // Create referral actions
       const referralActions = createReferralActions();
@@ -43,7 +43,7 @@ export const usePersistStore = create<AppStorePersist>()(
 
       return {
         ...walletPersist,
-        ...disclaimer,
+        ...disclaimeActions,
         ...referralActions,
         ...pairActions,
         ...tokenActions,
@@ -51,12 +51,12 @@ export const usePersistStore = create<AppStorePersist>()(
     },
     {
       name: 'just-some-normal-storage',
-      version: 5,
+      version: 6,
       migrate: (persistedState, version) => {
         if (!persistedState) return {};
 
-        // Upgrade from v0, v1, v2 → v3 schema
-        if (version < 5) {
+        // Upgrade all to v6 schema
+        if (version < 6) {
           return {};
         }
       },
