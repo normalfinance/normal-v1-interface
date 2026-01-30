@@ -273,6 +273,41 @@ const AuthLoginModal = ({
             {loading ? t('Redirecting…') : t('Sign in with Google')}
           </Button>
 
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={tosAccepted}
+                onChange={(e) => setTosAccepted(e.target.checked)}
+                data-testid="tos-checkbox"
+              />
+            }
+            label={
+              <Typography variant="body2" color="text.secondary">
+                {t("I understand and agree to Normal's")}{' '}
+                <MuiLink
+                  href={paths.legal.tos}
+                  underline="always"
+                  color="secondary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('Terms of Service')}
+                </MuiLink>{' '}
+                {t('and')}{' '}
+                <MuiLink
+                  href={paths.legal.disclaimer}
+                  underline="always"
+                  color="secondary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('Disclaimer')}
+                </MuiLink>
+              </Typography>
+            }
+            sx={{ alignItems: 'flex-start', my: 1 }}
+          />
+
           <Divider sx={{ my: 1 }}>
             <Typography variant="body2" color="text.secondary">
               {t('or')}
@@ -381,41 +416,6 @@ const AuthLoginModal = ({
                 onSuccess={(token) => {
                   setCaptchaToken(token);
                 }}
-              />
-
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={tosAccepted}
-                    onChange={(e) => setTosAccepted(e.target.checked)}
-                    data-testid="tos-checkbox"
-                  />
-                }
-                label={
-                  <Typography variant="body2" color="text.secondary">
-                    {t("I understand and agree to Normal's")}{' '}
-                    <MuiLink
-                      href={paths.legal.tos}
-                      underline="always"
-                      color="secondary"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t('Terms of Service')}
-                    </MuiLink>{' '}
-                    {t('and')}{' '}
-                    <MuiLink
-                      href={paths.legal.disclaimer}
-                      underline="always"
-                      color="secondary"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t('Disclaimer')}
-                    </MuiLink>
-                  </Typography>
-                }
-                sx={{ alignItems: 'flex-start', my: 1 }}
               />
             </>
           ) : forgotPassword ? (

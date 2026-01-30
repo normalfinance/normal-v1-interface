@@ -134,10 +134,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
         onClose={() => setShowImportNormalWallet(false)}
         onSuccess={handleNormalWalletImported}
       />
-      <AuthLoginModal
-        open={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
+      <AuthLoginModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </>
   );
 };
