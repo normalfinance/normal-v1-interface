@@ -64,6 +64,7 @@
     // Stellar Transactions
     "NEXT_PUBLIC_STELLAR_FEE",
     "NEXT_PUBLIC_STELLAR_TIMEOUT",
+    "NEXT_PUBLIC_STELLAR_STARTING_BALANCE",
 
     // Stellar Sponsorship
     "NORMAL_HOT_A_SECRET",
