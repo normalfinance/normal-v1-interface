@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { rateLimiter } from '@/server/rateLimiter';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -46,27 +45,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limit by supabaseUid (1 per week)
-    if (!isDev) {
-      const rateLimitResult = await rateLimiter.faucet.limit(user.id);
-      if (!rateLimitResult.success) {
-        logger.warn('[API /faucet/fund] Rate limit exceeded for user:', {
-          userId: user.id.substring(0, 8) + '...',
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset,
-        });
-        return NextResponse.json(
-          {
-            error: 'Rate limit exceeded',
-            reset: rateLimitResult.reset,
-          },
-          { status: 429 }
-        );
-      }
-    } else {
-      logger.log('[API /faucet/fund] Dev mode: skipping rate limit', {
-        userId: user.id.substring(0, 8) + '...',
-      });
-    }
+    // if (!isDev) {
+    //   const rateLimitResult = await rateLimiter.faucet.limit(user.id);
+    //   if (!rateLimitResult.success) {
+    //     logger.warn('[API /faucet/fund] Rate limit exceeded for user:', {
+    //       userId: user.id.substring(0, 8) + '...',
+    //       remaining: rateLimitResult.remaining,
+    //       reset: rateLimitResult.reset,
+    //     });
+    //     return NextResponse.json(
+    //       {
+    //         error: 'Rate limit exceeded',
+    //         reset: rateLimitResult.reset,
+    //       },
+    //       { status: 429 }
+    //     );
+    //   }
+    // } else {
+    //   logger.log('[API /faucet/fund] Dev mode: skipping rate limit', {
+    //     userId: user.id.substring(0, 8) + '...',
+    //   });
+    // }
 
     const ip = getClientIP(request);
 
