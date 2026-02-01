@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { rateLimiter } from '@/server/rateLimiter';
+import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -40,14 +40,15 @@ export async function POST(request: NextRequest) {
     const token = getAccessToken(request);
     const user = await getAuthenticatedUser(token);
     const isDev = process.env.NODE_ENV === 'development';
+    const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
 
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     // Rate limit by supabaseUid (1 per week)
-    if (!isDev) {
-      const rateLimitResult = await rateLimiter.faucet.limit(user.id);
+    if (!isDev || forceRateLimit) {
+      const rateLimitResult = await faucetRateLimiter.limit(user.id);
       if (!rateLimitResult.success) {
         logger.warn('[API /faucet/fund] Rate limit exceeded for user:', {
           userId: user.id.substring(0, 8) + '...',
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
           { status: 429 }
         );
       }
-    } else {
+    } else if (isDev) {
       logger.log('[API /faucet/fund] Dev mode: skipping rate limit', {
         userId: user.id.substring(0, 8) + '...',
       });

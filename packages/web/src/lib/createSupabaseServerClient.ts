@@ -43,7 +43,9 @@ export async function getAuthenticatedUser(accessToken?: string) {
     data: { user },
     error,
   } = accessToken ? await supabase.auth.getUser(accessToken) : await supabase.auth.getUser();
-
+  
+  console.log('getAuthenticatedUser user', user);
+  console.log('getAuthenticatedUser error', error);
   if (error || !user) {
     return null;
   }

@@ -1,6 +1,23 @@
 import { logger, constants } from '@normalfinance/utils';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 
+/**
+ * Format remaining time until rate limit reset
+ */
+function formatRateLimitReset(resetTimestamp: number): string {
+  const diffMs = resetTimestamp - Date.now();
+  if (diffMs <= 0) return 'now';
+
+  const days = Math.floor(diffMs / 86400000);
+  const hours = Math.floor((diffMs % 86400000) / 3600000);
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+  if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
+
+  return parts.length > 0 ? parts.join(', ') : 'less than an hour';
+}
+
 export interface SponsorWalletResponse {
   success: boolean;
   sponsorshipXDR: string;
@@ -34,6 +51,11 @@ export async function requestWalletSponsorship(
 
     if (!response.ok) {
       const error: SponsorWalletError = await response.json();
+      // If rate limited, include remaining time in error message
+      if (response.status === 429 && error.reset) {
+        const remaining = formatRateLimitReset(error.reset);
+        throw new Error(`Weekly limit reached. Try again in ${remaining}.`);
+      }
       throw new Error(error.error || 'Failed to request sponsorship');
     }
 
