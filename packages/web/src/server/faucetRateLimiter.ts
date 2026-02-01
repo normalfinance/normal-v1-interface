@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@normalfinance/utils';
 
 const RATE_LIMIT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const MAX_SPONSORSHIPS_PER_WINDOW = 2; // Allow 2 wallets per week
 
 export interface RateLimitResult {
   success: boolean;
@@ -22,16 +23,20 @@ export interface RateLimitCheckResult {
  */
 export class FaucetRateLimiter {
   /**
-   * Get the most recent non-revoked sponsorship for a user
+   * Get all non-revoked sponsorships for a user within the rate limit window
    */
-  private static async getLastSponsorship(supabaseUid: string) {
-    return prisma.sponsoredAccount.findFirst({
+  private static async getSponsorshipsInWindow(supabaseUid: string) {
+    const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
+    return prisma.sponsoredAccount.findMany({
       where: {
         supabaseUid,
         isRevoked: false,
+        sponsoredAt: {
+          gte: windowStart,
+        },
       },
       orderBy: {
-        sponsoredAt: 'desc',
+        sponsoredAt: 'asc',
       },
       select: {
         sponsoredAt: true,
@@ -45,28 +50,22 @@ export class FaucetRateLimiter {
    */
   static async check(supabaseUid: string): Promise<RateLimitCheckResult> {
     try {
-      const lastSponsorship = await this.getLastSponsorship(supabaseUid);
+      const sponsorshipsInWindow = await this.getSponsorshipsInWindow(supabaseUid);
+      const count = sponsorshipsInWindow.length;
+      const remaining = MAX_SPONSORSHIPS_PER_WINDOW - count;
 
-      if (!lastSponsorship) {
-        // No previous sponsorship - user can be sponsored
+      if (remaining > 0) {
+        // User can still be sponsored
         return {
-          remaining: 1,
+          remaining,
           reset: 0,
         };
       }
 
-      const resetTimestamp = lastSponsorship.sponsoredAt.getTime() + RATE_LIMIT_WINDOW_MS;
-      const now = Date.now();
+      // Rate limited - calculate reset time based on oldest sponsorship in window
+      const oldestSponsorship = sponsorshipsInWindow[0];
+      const resetTimestamp = oldestSponsorship.sponsoredAt.getTime() + RATE_LIMIT_WINDOW_MS;
 
-      if (now >= resetTimestamp) {
-        // Rate limit window has passed - user can be sponsored again
-        return {
-          remaining: 1,
-          reset: 0,
-        };
-      }
-
-      // Still within rate limit window
       return {
         remaining: 0,
         reset: resetTimestamp,
@@ -87,8 +86,8 @@ export class FaucetRateLimiter {
 
       return {
         success: checkResult.remaining > 0,
-        limit: 1,
-        remaining: checkResult.remaining > 0 ? 0 : 0,
+        limit: MAX_SPONSORSHIPS_PER_WINDOW,
+        remaining: checkResult.remaining > 0 ? checkResult.remaining - 1 : 0,
         reset: checkResult.remaining > 0
           ? Date.now() + RATE_LIMIT_WINDOW_MS
           : checkResult.reset,
