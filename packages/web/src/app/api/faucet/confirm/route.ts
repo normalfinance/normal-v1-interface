@@ -22,7 +22,6 @@ function getClientIP(request: NextRequest): string {
 
 function getAccessToken(request: NextRequest): string | undefined {
   const authHeader = request.headers.get('authorization');
-  console.log('authHeader', authHeader);
   return authHeader?.split(' ')[1];
 }
 
@@ -44,8 +43,6 @@ export async function POST(request: NextRequest) {
 
     const { walletAddress, txHash } = validation.data;
     const ipAddress = getClientIP(request);
-
-    console.log('user', user);
 
     await SponsorService.recordTransactionHash({
       walletAddress,

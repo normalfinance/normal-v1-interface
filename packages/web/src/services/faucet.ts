@@ -72,7 +72,8 @@ export async function requestWalletSponsorship(
  */
 export async function submitSponsorshipTransaction(
   signedXDR: string,
-  walletAddress: string
+  walletAddress: string,
+  accessToken?: string
 ): Promise<{ hash: string }> {
   try {
     const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
@@ -89,9 +90,14 @@ export async function submitSponsorshipTransaction(
     logger.log('[faucet] Sponsorship transaction submitted:', result.hash);
 
     // Record the transaction hash (fire and forget)
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
     fetch('/api/faucet/confirm', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       credentials: 'include',
       body: JSON.stringify({ walletAddress, txHash: result.hash }),
     }).catch((err) => {
