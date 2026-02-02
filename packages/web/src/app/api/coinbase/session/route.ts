@@ -1,8 +1,9 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { getClientIP, getAccessToken } from '@/utils/http';
 import { logger, getCdpBearerToken } from '@normalfinance/utils';
-import { createSupabaseServerClient } from '@/lib/createSupabaseServerClient';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,33 +13,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing wallet address' }, { status: 400 });
     }
 
-    // Grab request access token
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing auth token' }, { status: 401 });
+    const token = getAccessToken(req);
+    const user = await getAuthenticatedUser(token);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const accessToken = authHeader.replace('Bearer ', '');
-
-    // Validate it with Supabase
-    const supabase = await createSupabaseServerClient();
-
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser(accessToken);
-
-    if (error || !user) {
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-    }
-
-    // Coinbase
     const { jwt, host, path } = await getCdpBearerToken();
 
-    const clientIp =
-      req.headers.get('x-real-ip') || // many reverse proxies
-      req.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      req.ip;
+    const clientIp = getClientIP(req);
 
     const resp = await fetch(`https://${host}${path}`, {
       method: 'POST',
