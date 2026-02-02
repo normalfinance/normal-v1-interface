@@ -2,15 +2,37 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { logger, getCdpBearerToken } from '@normalfinance/utils';
+import { createSupabaseServerClient } from '@/lib/createSupabaseServerClient';
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, asset = 'XLM' } = await req.json();
+    const { address, asset = 'USDC' } = await req.json();
 
     if (!address) {
       return NextResponse.json({ error: 'Missing wallet address' }, { status: 400 });
     }
 
+    // Grab request access token
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Missing auth token' }, { status: 401 });
+    }
+
+    const accessToken = authHeader.replace('Bearer ', '');
+
+    // Validate it with Supabase
+    const supabase = await createSupabaseServerClient();
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(accessToken);
+
+    if (error || !user) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    // Coinbase
     const { jwt, host, path } = await getCdpBearerToken();
 
     const resp = await fetch(`https://${host}${path}`, {
@@ -21,9 +43,8 @@ export async function POST(req: NextRequest) {
         Accept: 'application/json',
       },
       body: JSON.stringify({
-        // send XLM to Stellar:
         addresses: [{ address, blockchains: ['stellar'] }],
-        assets: [asset], // 'XLM' typically
+        assets: [asset],
         // optional: partnerUserId, redirectUrl (must be allow-listed)
       }),
     });

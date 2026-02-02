@@ -70,6 +70,31 @@ const nextConfig = {
       // },
     ];
   },
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: 'normalfinance.io',
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: 'normalapi.com',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+        ],
+      },
+    ];
+  },
   ...(isStaticExport === 'true' && { output: 'export' }),
 };
 

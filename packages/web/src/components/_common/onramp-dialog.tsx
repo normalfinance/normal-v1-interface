@@ -41,6 +41,8 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import AmountDialog from '../deposit-amount-dialog';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { paths } from '@/routes/paths';
 
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------
@@ -68,6 +70,8 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
+
+  const { session } = useSupabaseAuth();
 
   const persist = usePersistStore();
   const { signTransaction } = useNormalWallet();
@@ -185,11 +189,21 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
       return;
     }
+
+    if (!session) {
+      enqueueSnackbar('Please login first', { variant: 'warning' });
+      return;
+    }
+
     const r = await fetch('/api/coinbase/session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
     });
+
     const { token: sessionToken, error } = await r.json();
     if (error || !sessionToken) {
       enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
@@ -202,6 +216,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       fiat: 'USD',
       sandbox: isTestnet(),
       path: 'buy/select-asset',
+      redirectUrl: `${window.location.origin}${paths.invest}`,
     });
     openExternal(url);
   };
