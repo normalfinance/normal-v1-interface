@@ -107,6 +107,7 @@
     "rehype-highlight": "^7.0.1",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
+    "server-only": "^0.0.1",
     "simplebar-react": "^3.3.0",
     "sonner": "^1.7.1",
     "stylis": "^4.3.4",

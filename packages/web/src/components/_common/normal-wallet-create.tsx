@@ -324,7 +324,11 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
         if (sponsorshipXDR && signTransaction) {
           const signedXDR = await signTransaction(sponsorshipXDR);
-          const { hash } = await submitSponsorshipTransaction(signedXDR, walletAddress);
+          const { hash } = await submitSponsorshipTransaction(
+            signedXDR,
+            walletAddress,
+            session.access_token
+          );
           logger.log('[NormalWalletCreate] Account sponsored successfully:', hash);
         }
       } catch (e: any) {

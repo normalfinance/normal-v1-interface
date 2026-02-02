@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const ConfirmSchema = z.object({
   walletAddress: z.string().regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
@@ -19,8 +20,17 @@ function getClientIP(request: NextRequest): string {
   return ip;
 }
 
+function getAccessToken(request: NextRequest): string | undefined {
+  const authHeader = request.headers.get('authorization');
+  return authHeader?.split(' ')[1];
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Get authenticated user to record supabaseUid
+    const token = getAccessToken(request);
+    const user = await getAuthenticatedUser(token);
+
     const body = await request.json();
     const validation = ConfirmSchema.safeParse(body);
 
@@ -38,6 +48,7 @@ export async function POST(request: NextRequest) {
       walletAddress,
       txHash,
       ipAddress,
+      supabaseUid: user?.id,
     });
 
     logger.log('[API /faucet/confirm] Transaction hash recorded:', {
