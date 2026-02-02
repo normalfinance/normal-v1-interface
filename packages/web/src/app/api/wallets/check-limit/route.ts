@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { rateLimiter } from '@/server/rateLimiter';
+import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
@@ -21,7 +21,15 @@ export async function GET(request: NextRequest) {
     }
 
     const isDev = process.env.NODE_ENV === 'development';
-    if (isDev) {
+    const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
+
+    logger.log('[API /wallets/check-limit] Rate limit config:', {
+      isDev,
+      forceRateLimit,
+      envValue: process.env.FORCE_RATE_LIMIT,
+    });
+
+    if (isDev && !forceRateLimit) {
       logger.log('[API /wallets/check-limit] Dev mode: skipping rate limit', {
         userId: user.id.substring(0, 8) + '...',
       });
@@ -32,7 +40,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const rateLimitStatus = await rateLimiter.faucet.check(user.id);
+    const rateLimitStatus = await faucetRateLimiter.check(user.id);
 
     logger.log('[API /wallets/check-limit] Rate limit checked for user:', {
       userId: user.id.substring(0, 8) + '...',
