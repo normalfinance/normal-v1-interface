@@ -1,4 +1,5 @@
 import 'server-only';
+
 import { prisma } from '@/lib/prisma';
 import { logger } from '@normalfinance/utils';
 
@@ -88,9 +89,7 @@ export class FaucetRateLimiter {
         success: checkResult.remaining > 0,
         limit: MAX_SPONSORSHIPS_PER_WINDOW,
         remaining: checkResult.remaining > 0 ? checkResult.remaining - 1 : 0,
-        reset: checkResult.remaining > 0
-          ? Date.now() + RATE_LIMIT_WINDOW_MS
-          : checkResult.reset,
+        reset: checkResult.remaining > 0 ? Date.now() + RATE_LIMIT_WINDOW_MS : checkResult.reset,
       };
     } catch (error) {
       logger.error('[FaucetRateLimiter] Error applying rate limit:', error);

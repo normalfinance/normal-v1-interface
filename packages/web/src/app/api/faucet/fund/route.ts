@@ -3,9 +3,9 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getClientIP, getAccessToken } from '@/utils/http';
+import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const FundWalletSchema = z.object({

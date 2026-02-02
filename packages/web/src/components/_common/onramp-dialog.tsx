@@ -119,7 +119,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
       if (sponsorshipXDR && signTransaction) {
         const signedXDR = await signTransaction(sponsorshipXDR);
-        const { hash } = await submitSponsorshipTransaction(signedXDR, userAddress, session.access_token);
+        const { hash } = await submitSponsorshipTransaction(
+          signedXDR,
+          userAddress,
+          session.access_token
+        );
         logger.log('[OnRampDialog] Account sponsored successfully:', hash);
         enqueueSnackbar(t('Account created and USDC enabled!'), { variant: 'success' });
       }
