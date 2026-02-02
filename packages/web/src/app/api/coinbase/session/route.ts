@@ -35,6 +35,11 @@ export async function POST(req: NextRequest) {
     // Coinbase
     const { jwt, host, path } = await getCdpBearerToken();
 
+    const clientIp =
+      req.headers.get('x-real-ip') || // many reverse proxies
+      req.headers.get('X-Forwarded-For')?.split(',')[0] ||
+      req.ip;
+
     const resp = await fetch(`https://${host}${path}`, {
       method: 'POST',
       headers: {
@@ -44,8 +49,8 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         addresses: [{ address, blockchains: ['stellar'] }],
+        clientIp,
         assets: [asset],
-        // optional: partnerUserId, redirectUrl (must be allow-listed)
       }),
     });
 
