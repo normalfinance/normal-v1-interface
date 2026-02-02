@@ -41,12 +41,6 @@ const ipRateLimiter = new Ratelimit({
   limiter: Ratelimit.slidingWindow(50, '10 s'),
 });
 
-// Allow 1 request per week per user for faucet, sliding window
-const faucetUserRateLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(1, '7 d'),
-});
-
 export const rateLimiter = {
   limit: async (walletAddress: string, ip?: string) => {
     // Rate limit by wallet address
@@ -67,9 +61,5 @@ export const rateLimiter = {
 
     // Only wallet rate limiting
     return walletResult;
-  },
-  faucet: {
-    limit: async (supabaseUid: string) => await faucetUserRateLimiter.limit(supabaseUid),
-    check: async (supabaseUid: string) => await faucetUserRateLimiter.getRemaining(supabaseUid),
   },
 };

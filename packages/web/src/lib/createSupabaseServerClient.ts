@@ -38,11 +38,15 @@ export async function createSupabaseServerClient() {
  * Returns null if not authenticated.
  */
 export async function getAuthenticatedUser(accessToken?: string) {
+  if (!accessToken) {
+    return null;
+  }
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
     error,
-  } = accessToken ? await supabase.auth.getUser(accessToken) : await supabase.auth.getUser();
+  } = await supabase.auth.getUser(accessToken);
 
   if (error || !user) {
     return null;
