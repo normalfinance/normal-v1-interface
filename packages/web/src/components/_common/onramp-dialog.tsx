@@ -1,4 +1,5 @@
 import { useBoolean } from '@/hooks';
+import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { runDepositFlow } from '@/lib/mgi/client';
@@ -185,11 +186,25 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
       return;
     }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      enqueueSnackbar('Please login first', { variant: 'warning' });
+      return;
+    }
+
     const r = await fetch('/api/coinbase/session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
     });
+
     const { token: sessionToken, error } = await r.json();
     if (error || !sessionToken) {
       enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
@@ -202,6 +217,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       fiat: 'USD',
       sandbox: isTestnet(),
       path: 'buy/select-asset',
+      redirectUrl: `${window.location.origin}${paths.invest}`,
     });
     openExternal(url);
   };

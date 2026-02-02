@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { SponsorService } from '@/lib/sponsor-service';
+import { getClientIP, getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const FundWalletSchema = z.object({
@@ -13,21 +14,6 @@ const FundWalletSchema = z.object({
     .min(1, 'Wallet address is required')
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
 });
-
-function getClientIP(request: NextRequest): string {
-  const ip =
-    request.headers.get('x-real-ip') ||
-    request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-    request.ip ||
-    'unknown';
-  return ip;
-}
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return undefined;
-  return authHeader.split(' ')[1];
-}
 
 /**
  * POST /api/faucet/fund

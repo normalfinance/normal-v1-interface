@@ -1,17 +1,28 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { getClientIP, getAccessToken } from '@/utils/http';
 import { logger, getCdpBearerToken } from '@normalfinance/utils';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, asset = 'XLM' } = await req.json();
+    const { address, asset = 'USDC' } = await req.json();
 
     if (!address) {
       return NextResponse.json({ error: 'Missing wallet address' }, { status: 400 });
     }
 
+    const token = getAccessToken(req);
+    const user = await getAuthenticatedUser(token);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const { jwt, host, path } = await getCdpBearerToken();
+
+    const clientIp = getClientIP(req);
 
     const resp = await fetch(`https://${host}${path}`, {
       method: 'POST',
@@ -21,10 +32,9 @@ export async function POST(req: NextRequest) {
         Accept: 'application/json',
       },
       body: JSON.stringify({
-        // send XLM to Stellar:
         addresses: [{ address, blockchains: ['stellar'] }],
-        assets: [asset], // 'XLM' typically
-        // optional: partnerUserId, redirectUrl (must be allow-listed)
+        clientIp,
+        assets: [asset],
       }),
     });
 
