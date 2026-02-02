@@ -80,10 +80,6 @@ const nextConfig = {
             value: 'normalfinance.io',
           },
           {
-            key: 'Access-Control-Allow-Origin',
-            value: 'normalapi.com',
-          },
-          {
             key: 'Access-Control-Allow-Methods',
             value: 'GET, POST, PUT, DELETE, OPTIONS',
           },
