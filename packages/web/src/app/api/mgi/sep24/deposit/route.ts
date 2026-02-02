@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getAccessToken } from '@/utils/http';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 function j(status: number, payload: any) {
   return NextResponse.json(payload, { status });
@@ -11,6 +13,14 @@ export async function POST(req: Request) {
   const t0 = Date.now();
 
   try {
+    // Authenticate
+    const accessToken = getAccessToken(req);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const body = await req.json().catch(() => ({}));
     const {
       token,

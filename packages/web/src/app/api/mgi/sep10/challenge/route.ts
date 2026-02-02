@@ -1,7 +1,17 @@
 import { NextResponse } from 'next/server';
+import { getAccessToken } from '@/utils/http';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export async function GET(req: Request) {
   try {
+    // Authenticate
+    const token = getAccessToken(req);
+    const user = await getAuthenticatedUser(token);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const account = searchParams.get('account');
     if (!account) {

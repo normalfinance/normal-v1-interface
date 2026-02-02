@@ -2,11 +2,22 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { getClientIP, getAccessToken } from '@/utils/http';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 async function tradeHandler(req: NextRequest) {
   try {
+    // Authenticate
+    const token = getAccessToken(req);
+    const user = await getAuthenticatedUser(token);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Validate params
     const { walletAddress } = await req.json();
     if (!walletAddress) {
       await logWithConfig('warn', 'Trade API called without wallet address');
@@ -18,10 +29,7 @@ async function tradeHandler(req: NextRequest) {
     const apiConfig = await getApiConfig('trade');
 
     // Get client IP address (prioritize proxy headers like middleware)
-    const ip =
-      req.headers.get('x-real-ip') || // many reverse proxies
-      req.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      req.ip;
+    const ip = getClientIP(req);
 
     // Use Edge Config rate limit override if available
     const effectiveLimit = apiConfig.rateLimitOverride || {
