@@ -1,4 +1,5 @@
 import { useBoolean } from '@/hooks';
+import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { runDepositFlow } from '@/lib/mgi/client';
@@ -41,8 +42,6 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import AmountDialog from '../deposit-amount-dialog';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { paths } from '@/routes/paths';
 
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------
@@ -70,8 +69,6 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-
-  const { session } = useSupabaseAuth();
 
   const persist = usePersistStore();
   const { signTransaction } = useNormalWallet();
@@ -189,6 +186,10 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
       return;
     }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
     if (!session) {
       enqueueSnackbar('Please login first', { variant: 'warning' });
