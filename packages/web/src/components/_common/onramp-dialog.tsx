@@ -1,6 +1,7 @@
 import { useBoolean } from '@/hooks';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { buildAuthHeaders } from '@/utils/http';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
@@ -41,8 +42,6 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import AmountDialog from '../deposit-amount-dialog';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { buildAuthHeaders } from '@/utils/http';
 
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------
@@ -70,8 +69,6 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-
-  const { session } = useSupabaseAuth();
 
   const persist = usePersistStore();
   const { signTransaction } = useNormalWallet();
@@ -112,7 +109,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session?.access_token) {
+      if (!session) {
         throw new Error('Authentication required');
       }
 
@@ -185,7 +182,15 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
   /** Coinbase */
   const handleCoinbaseClick = async () => {
-    if (!walletAddress || !session) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      throw new Error('Authentication required');
+    }
+
+    if (!walletAddress) {
       enqueueSnackbar('Please login and connect your wallet first', { variant: 'warning' });
       return;
     }
