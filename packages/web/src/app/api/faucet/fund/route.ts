@@ -5,8 +5,8 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getClientIP, getAccessToken } from '@/utils/http';
-import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { faucetRateLimiter } from '@/server/faucetRateLimiter';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const FundWalletSchema = z.object({

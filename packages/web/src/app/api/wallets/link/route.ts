@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
-import { rateLimiter } from '@/server/rateLimiter';
-import { ReferralService } from '@/lib/referral-service';
 import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
