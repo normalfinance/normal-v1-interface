@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -12,10 +13,10 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : undefined;
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
 
-    const user = await getAuthenticatedUser(token);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

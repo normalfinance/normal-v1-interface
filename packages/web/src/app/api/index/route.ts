@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { getClientIP, getAccessToken } from '@/utils/http';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export async function POST(req: NextRequest) {
@@ -12,13 +13,19 @@ export async function POST(req: NextRequest) {
     const user = await getAuthenticatedUser(token);
 
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Validate params
     const { walletAddress } = await req.json();
     if (!walletAddress) {
       return NextResponse.json({ error: 'Missing walletAddress' }, { status: 400 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Get client IP address (prioritize proxy headers like middleware)

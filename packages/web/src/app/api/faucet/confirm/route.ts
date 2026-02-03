@@ -2,9 +2,11 @@ import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
-import { getClientIP } from '@/utils/http';
 import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
+import { getClientIP, getAccessToken } from '@/utils/http';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const ConfirmSchema = z.object({
   walletAddress: z.string().regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
@@ -13,6 +15,14 @@ const ConfirmSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const validation = ConfirmSchema.safeParse(body);
 
@@ -24,6 +34,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { walletAddress, txHash } = validation.data;
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const ipAddress = getClientIP(request);
 
     await SponsorService.recordTransactionHash({

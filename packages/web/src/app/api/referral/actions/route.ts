@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
+import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
@@ -46,10 +47,7 @@ async function recordActionHandler(request: NextRequest) {
     const apiConfig = await getApiConfig('referral-actions');
 
     // Get client IP address
-    const ip =
-      request.headers.get('x-real-ip') ||
-      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      request.ip;
+    const ip = getClientIP(request);
 
     // Use Edge Config rate limit override if available
     const effectiveLimit = apiConfig.rateLimitOverride || {
@@ -172,14 +170,11 @@ async function getActionsHandler(request: NextRequest) {
     }
 
     // Get Edge Config for rate limiting
-    const rateLimitConfig = await getRateLimitConfig('referral-actions');
+    // const rateLimitConfig = await getRateLimitConfig('referral-actions');
     const apiConfig = await getApiConfig('referral-actions');
 
     // Get client IP address
-    const ip =
-      request.headers.get('x-real-ip') ||
-      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      request.ip;
+    const ip = getClientIP(request);
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(
       validation.data.userWalletAddress,
