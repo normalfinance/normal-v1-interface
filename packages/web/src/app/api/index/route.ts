@@ -22,12 +22,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing walletAddress' }, { status: 400 });
     }
 
-    // Assert user owns walletAddress
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     // Get client IP address (prioritize proxy headers like middleware)
     const ip = getClientIP(req);
 
@@ -41,6 +35,12 @@ export async function POST(req: NextRequest) {
 
     if (!success) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     return NextResponse.json({ allowed: true });

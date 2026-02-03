@@ -25,12 +25,6 @@ async function liquidityHandler(req: NextRequest) {
       return NextResponse.json({ error: 'Missing walletAddress' }, { status: 400 });
     }
 
-    // Assert user owns walletAddress
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     // Get Edge Config for rate limiting
     const rateLimitConfig = await getRateLimitConfig('liquidity');
     const apiConfig = await getApiConfig('liquidity');
@@ -58,6 +52,12 @@ async function liquidityHandler(req: NextRequest) {
     if (!success) {
       await logWithConfig('warn', 'Rate limit exceeded for liquidity API', { walletAddress });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await logWithConfig('info', 'Liquidity API access granted', {

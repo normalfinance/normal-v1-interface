@@ -40,12 +40,6 @@ async function transactionHandler(req: NextRequest) {
       );
     }
 
-    // Assert user owns walletAddress
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     // Get Edge Config for rate limiting
     const rateLimitConfig = await getRateLimitConfig('transaction');
     const apiConfig = await getApiConfig('transaction');
@@ -77,6 +71,12 @@ async function transactionHandler(req: NextRequest) {
         transactionType,
       });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Verify signature
