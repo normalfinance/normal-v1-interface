@@ -2,10 +2,12 @@ import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
-import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
+import { getClientIP, getAccessToken } from '@/utils/http';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const GetUserSchema = z.object({
@@ -18,6 +20,14 @@ const CreateUserSchema = z.object({
 
 async function getUserHandler(request: NextRequest) {
   try {
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const supabaseUser = await getAuthenticatedUser(accessToken);
+
+    if (!supabaseUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const walletAddress = searchParams.get('walletAddress');
 
@@ -64,6 +74,15 @@ async function getUserHandler(request: NextRequest) {
         walletAddress: validation.data.walletAddress,
       });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(
+      supabaseUser.id,
+      validation.data.walletAddress
+    );
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const user = await ReferralService.getUserByWallet(validation.data.walletAddress);
