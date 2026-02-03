@@ -53,13 +53,6 @@ export function RewardsView() {
       setError(null);
 
       try {
-        // Mock: no token needed
-        if (MOCK_MODE) {
-          const tx = await listTransactions({ account: walletAddress });
-          if (on) setRows(tx as any[]);
-          return;
-        }
-
         // Live: need SEP-10 token
         let token = await getMgiAuthToken(walletAddress);
         try {
@@ -112,12 +105,6 @@ export function RewardsView() {
       setError(null);
 
       try {
-        if (MOCK_MODE) {
-          const tx = await listTransactions({ account: walletAddress });
-          if (on) setRows(tx as any[]);
-          return;
-        }
-
         // 1) Try with a cached/valid SEP-10 token (no popup if still valid)
         let token = await getMgiAuthToken(walletAddress);
 
