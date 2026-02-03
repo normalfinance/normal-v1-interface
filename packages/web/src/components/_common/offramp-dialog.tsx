@@ -1,6 +1,7 @@
 import { useBoolean } from '@/hooks';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { buildAuthHeaders } from '@/utils/http';
 import { runWithdrawFlow } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
@@ -26,7 +27,6 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import AmountDialog from '../deposit-amount-dialog';
-import { buildAuthHeaders } from '@/utils/http';
 
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------

@@ -3,10 +3,12 @@ import type { Token } from '@normalfinance/types';
 import React from 'react';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
+import { buildAuthHeaders } from '@/utils/http';
 import { useContractTransaction } from '@/hooks';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -21,8 +23,6 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { buildAuthHeaders } from '@/utils/http';
 
 export interface SendReviewProps {
   open: boolean;
