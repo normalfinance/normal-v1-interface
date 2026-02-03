@@ -27,9 +27,12 @@
     "NEXT_PUBLIC_MAINNET_HORIZON_URL",
     "NEXT_PUBLIC_MAINNET_RPC_URL",
 
+    // Crisp
+    "NEXT_PUBLIC_CRISP_WEBSITE_ID",
+    "CRISP_SECRET_KEY",
+
     // External services that may affect static builds or analytics initialization
     "EDGE_CONFIG",
-    "NEXT_PUBLIC_CRISP_WEBSITE_ID",
     "NEXT_PUBLIC_ANNOUNCEMENT_TITLE",
     "NEXT_PUBLIC_ANNOUNCEMENT_MESSAGE",
     "NEXT_PUBLIC_ANNOUNCEMENT_FORMAT",
