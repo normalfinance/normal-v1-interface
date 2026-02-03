@@ -5,7 +5,6 @@
   },
   "features": {
     "pairs": true,
-    "tokens": true,
     "trade": true,
     "liquidity": true,
     "send": true,
@@ -23,13 +22,6 @@
     "pairs": {
       "enabled": true,
       "timeout": 30000,
-      "rateLimitOverride": null,
-      "additionalHeaders": {}
-    },
-    "tokens": {
-      "enabled": true,
-      "timeout": 30000,
-      "priceRefreshInterval": 30000,
       "rateLimitOverride": null,
       "additionalHeaders": {}
     },
@@ -96,10 +88,6 @@
   "rateLimit": {
     "pairs": {
       "requests": 100,
-      "windowMs": 60000
-    },
-    "tokens": {
-      "requests": 200,
       "windowMs": 60000
     },
     "liquidity": {
