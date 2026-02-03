@@ -41,6 +41,8 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import AmountDialog from '../deposit-amount-dialog';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { buildAuthHeaders } from '@/utils/http';
 
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------
@@ -68,6 +70,8 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
+
+  const { session } = useSupabaseAuth();
 
   const persist = usePersistStore();
   const { signTransaction } = useNormalWallet();
@@ -181,13 +185,15 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
   /** Coinbase */
   const handleCoinbaseClick = async () => {
-    if (!walletAddress) {
-      enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
+    if (!walletAddress || !session) {
+      enqueueSnackbar('Please login and connect your wallet first', { variant: 'warning' });
       return;
     }
+    const headers = await buildAuthHeaders();
     const r = await fetch('/api/coinbase/session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
     });
     const { token: sessionToken, error } = await r.json();

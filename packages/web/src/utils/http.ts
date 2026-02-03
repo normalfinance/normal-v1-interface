@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/createSupabaseClient';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export function getClientIP(request: NextRequest): string {
@@ -17,4 +18,20 @@ export function getAccessToken(request: NextRequest | Request): string | undefin
 
 export function j(status: number, payload: any) {
   return NextResponse.json(payload, { status });
+}
+
+export async function buildAuthHeaders(): Promise<HeadersInit> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+
+  return headers;
 }

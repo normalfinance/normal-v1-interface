@@ -26,6 +26,7 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import AmountDialog from '../deposit-amount-dialog';
+import { buildAuthHeaders } from '@/utils/http';
 
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------
@@ -56,7 +57,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({ open, amount, onClose, wa
 
   const persist = usePersistStore();
 
-  const { user } = useSupabaseAuth();
+  const { user, session } = useSupabaseAuth();
 
   const moneyGramAmountDialog = useBoolean();
 
@@ -74,13 +75,15 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({ open, amount, onClose, wa
       return;
     }
 
-    if (!walletAddress) {
-      enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
+    if (!walletAddress || !session) {
+      enqueueSnackbar('Please login connect your wallet first', { variant: 'warning' });
       return;
     }
+    const headers = await buildAuthHeaders();
     const r = await fetch('/api/coinbase/session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
     });
     const { token: sessionToken, error } = await r.json();

@@ -23,8 +23,6 @@ import MoneyGramTransactionsTable from '@/components/_common/moneygram-history-t
 import { ProfileCover } from './profile-cover';
 import { RewardsOverview } from './rewards-overview';
 
-const MOCK_MODE = process.env.NEXT_PUBLIC_MGI_MOCK === '1';
-
 // ----------------------------------------------------------------------
 
 const NAV_ITEMS = [

@@ -1,5 +1,5 @@
 import { logger } from '@normalfinance/utils';
-import { supabase } from '@/lib/createSupabaseClient';
+import { buildAuthHeaders } from '@/utils/http';
 
 export interface LinkedWallet {
   id: string;
@@ -22,22 +22,6 @@ export interface LinkWalletResponse {
 
 export interface GetLinkedWalletsResponse {
   wallets: LinkedWallet[];
-}
-
-async function buildAuthHeaders(): Promise<HeadersInit> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  if (session?.access_token) {
-    headers.Authorization = `Bearer ${session.access_token}`;
-  }
-
-  return headers;
 }
 
 /**

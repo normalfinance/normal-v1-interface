@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { constants } from '@normalfinance/utils';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { LongShortPairFactoryContract } from '@normalfinance/contracts';
 
 import { useContractTransaction } from './use-contract-transaction';
@@ -37,14 +38,20 @@ export function usePairFactory(): ReturnType {
 
   const { executeContractTransaction } = useContractTransaction();
 
+  const { session } = useSupabaseAuth();
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const executePair = async (signedTransactionXDR: string, transactionType: string = 'Pair') => {
-    if (!storePersist.wallet.address) return null;
+    if (!storePersist.wallet.address || !session) return null;
     const res = await fetch('/api/transaction', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      credentials: 'include',
       body: JSON.stringify({
         walletAddress: storePersist.wallet.address,
         signedTransactionXDR,
@@ -65,10 +72,14 @@ export function usePairFactory(): ReturnType {
   };
 
   const rateLimitCheck = async () => {
-    if (!storePersist.wallet.address) return;
+    if (!storePersist.wallet.address || !session) return;
     const res = await fetch('/api/pairs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      credentials: 'include',
       body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
     });
     if (res.status === 429) {

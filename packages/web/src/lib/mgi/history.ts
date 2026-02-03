@@ -1,6 +1,6 @@
-import type { Sep24ListResponse, Sep24SingleResponse } from './types';
+import { buildAuthHeaders } from '@/utils/http';
 
-const isMock = process.env.NEXT_PUBLIC_MGI_MOCK === '1';
+import type { Sep24ListResponse, Sep24SingleResponse } from './types';
 
 export async function listTransactions(opts?: {
   account?: string;
@@ -13,12 +13,12 @@ export async function listTransactions(opts?: {
   if (opts?.kind) params.set('kind', opts.kind);
   if (opts?.status) params.set('status', opts.status);
 
-  const url = isMock
-    ? `/api/mgi/sep24/transactions?${params.toString()}`
-    : `/api/mgi/sep24/transactions/proxy?${params.toString()}`;
+  const url = `/api/mgi/sep24/transactions/proxy?${params.toString()}`;
 
+  const headers = await buildAuthHeaders();
   const r = await fetch(url, {
-    headers: !isMock && opts?.authToken ? { Authorization: `Bearer ${opts.authToken}` } : {},
+    headers,
+    credentials: 'include',
     cache: 'no-store',
   });
   if (!r.ok) throw new Error(`history list failed: ${r.status}`);
@@ -27,12 +27,12 @@ export async function listTransactions(opts?: {
 }
 
 export async function getTransaction(id: string, authToken?: string) {
-  const url = isMock
-    ? `/api/mgi/sep24/transaction/${encodeURIComponent(id)}`
-    : `/api/mgi/sep24/transaction/proxy/${encodeURIComponent(id)}`;
+  const url = `/api/mgi/sep24/transaction/proxy/${encodeURIComponent(id)}`;
 
+  const headers = await buildAuthHeaders();
   const r = await fetch(url, {
-    headers: !isMock && authToken ? { Authorization: `Bearer ${authToken}` } : {},
+    headers,
+    credentials: 'include',
     cache: 'no-store',
   });
   if (!r.ok) throw new Error(`history get failed: ${r.status}`);

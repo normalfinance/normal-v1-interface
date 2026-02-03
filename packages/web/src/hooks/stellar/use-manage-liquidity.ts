@@ -4,6 +4,7 @@ import type { AppError } from '@/utils/errors';
 import type { Pair } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
+import { buildAuthHeaders } from '@/utils/http';
 import { handleHookError } from '@/utils/errors';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
@@ -77,9 +78,11 @@ export function useManageLiquidity(): ReturnType {
 
   const executePair = async (signedTransactionXDR: string, transactionType: string = 'Trade') => {
     if (!wallet.address) return null;
+    const headers = await buildAuthHeaders();
     const res = await fetch('/api/transaction', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({
         walletAddress: wallet.address,
         signedTransactionXDR,
@@ -101,9 +104,11 @@ export function useManageLiquidity(): ReturnType {
 
   const rateLimitCheck = async () => {
     if (!wallet.address) return;
+    const headers = await buildAuthHeaders();
     const res = await fetch('/api/trade', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ walletAddress: wallet.address }),
     });
     if (res.status === 429) {
