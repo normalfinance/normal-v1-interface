@@ -1,7 +1,6 @@
 import type { Sep24ListResponse } from '@/lib/mgi/types';
 
 import { NextResponse } from 'next/server';
-import { MOCK_TX } from '@/lib/mgi/mock/transactions';
 
 export async function GET(req: Request) {
   // Optional: filter by kind/status/account via query params if you want
@@ -10,7 +9,8 @@ export async function GET(req: Request) {
   const status = searchParams.get('status');
   const account = searchParams.get('account');
 
-  let tx = [...MOCK_TX];
+  // TODO: Complete API call to MGI
+  let tx: any[] = [];
 
   if (kind) tx = tx.filter((t) => t.kind === kind);
   if (status) tx = tx.filter((t) => t.status === status);
