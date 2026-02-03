@@ -1,4 +1,4 @@
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export function getClientIP(request: NextRequest): string {
   const ip =
@@ -13,4 +13,8 @@ export function getAccessToken(request: NextRequest | Request): string | undefin
   const authHeader = request.headers.get('authorization');
   if (!authHeader) return undefined;
   return authHeader.split(' ')[1];
+}
+
+export function j(status: number, payload: any) {
+  return NextResponse.json(payload, { status });
 }

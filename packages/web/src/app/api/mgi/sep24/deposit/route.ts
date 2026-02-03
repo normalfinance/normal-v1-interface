@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
+import { j, getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-
-function j(status: number, payload: any) {
-  return NextResponse.json(payload, { status });
-}
 
 // MoneyGram sandbox USDC issuer on Stellar Testnet (FYI, we do NOT send it unless you decide to)
 const USDC_TESTNET_ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
@@ -18,7 +14,7 @@ export async function POST(req: Request) {
     const user = await getAuthenticatedUser(accessToken);
 
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json().catch(() => ({}));
