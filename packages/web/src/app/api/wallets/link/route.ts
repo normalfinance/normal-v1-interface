@@ -6,6 +6,7 @@ import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
+import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest) {
     // Check if admin bypass (admin_secret as auth token)
     const isAdminRequest = accessToken === process.env.ADMIN_SECRET;
     const isDev = process.env.NODE_ENV === 'development';
+    const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
 
     // Parse and validate request body first (needed for admin userId)
     const body = await request.json();
@@ -96,8 +98,8 @@ export async function POST(request: NextRequest) {
       userId = user.id;
 
       // Check rate limit for non-admin requests
-      if (!isDev) {
-        const rateLimitStatus = await rateLimiter.faucet.check(userId);
+      if (!isDev || forceRateLimit) {
+        const rateLimitStatus = await faucetRateLimiter.check(userId);
         if (rateLimitStatus.remaining === 0) {
           logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
             userId: userId.substring(0, 8) + '...',
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
             { status: 429 }
           );
         }
-      } else {
+      } else if (isDev) {
         logger.log('[API /wallets/link] Dev mode: skipping rate limit', {
           userId: userId.substring(0, 8) + '...',
         });
@@ -153,15 +155,15 @@ export async function POST(request: NextRequest) {
     });
 
     // Create or find user in the users table for referral tracking
-    try {
-      await ReferralService.findOrCreateUser(walletAddress);
-      logger.log('[API /wallets/link] User record ensured for wallet:', {
-        walletAddress: walletAddress.substring(0, 8) + '...',
-      });
-    } catch (userError) {
-      // Log but don't fail the wallet linking - user creation is secondary
-      logger.warn('[API /wallets/link] Failed to create user record:', userError);
-    }
+    // try {
+    //   await ReferralService.findOrCreateUser(walletAddress);
+    //   logger.log('[API /wallets/link] User record ensured for wallet:', {
+    //     walletAddress: walletAddress.substring(0, 8) + '...',
+    //   });
+    // } catch (userError) {
+    //   // Log but don't fail the wallet linking - user creation is secondary
+    //   logger.warn('[API /wallets/link] Failed to create user record:', userError);
+    // }
 
     return NextResponse.json(
       {

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/createSupabaseClient';
 import { NextResponse, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export function getClientIP(request: NextRequest): string {
   const ip =

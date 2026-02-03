@@ -465,7 +465,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
       const status = await checkWalletCreationLimit();
       if (!status.allowed) {
         const remaining = formatRateLimitReset(status.reset);
-        enqueueSnackbar(t(`You can only create one account per week. Try again in ${remaining}.`), {
+        enqueueSnackbar(t(`You can only create 2 wallets per week. Try again in ${remaining}.`), {
           variant: 'warning',
         });
         return;

@@ -79,7 +79,11 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
 
       if (sponsorshipXDR && signTransaction) {
         const signedXDR = await signTransaction(sponsorshipXDR);
-        const { hash } = await submitSponsorshipTransaction(signedXDR, walletAddress);
+        const { hash } = await submitSponsorshipTransaction(
+          signedXDR,
+          walletAddress,
+          session.access_token
+        );
         logger.log('[ReceiveModal] Account sponsored successfully:', hash);
         enqueueSnackbar(t('Account created and USDC enabled!'), { variant: 'success' });
       }

@@ -1,4 +1,5 @@
 import { useBoolean } from '@/hooks';
+import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
@@ -119,7 +120,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
       if (sponsorshipXDR && signTransaction) {
         const signedXDR = await signTransaction(sponsorshipXDR);
-        const { hash } = await submitSponsorshipTransaction(signedXDR, userAddress);
+        const { hash } = await submitSponsorshipTransaction(
+          signedXDR,
+          userAddress,
+          session.access_token
+        );
         logger.log('[OnRampDialog] Account sponsored successfully:', hash);
         enqueueSnackbar(t('Account created and USDC enabled!'), { variant: 'success' });
       }
@@ -201,6 +206,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       credentials: 'include',
       body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
     });
+
     const { token: sessionToken, error } = await r.json();
     if (error || !sessionToken) {
       enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
@@ -213,6 +219,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       fiat: 'USD',
       sandbox: isTestnet(),
       path: 'buy/select-asset',
+      redirectUrl: `${window.location.origin}${paths.invest}`,
     });
     openExternal(url);
   };

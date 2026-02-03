@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       walletAddress,
       txHash,
       ipAddress,
+      supabaseUid: user?.id,
     });
 
     logger.log('[API /faucet/confirm] Transaction hash recorded:', {

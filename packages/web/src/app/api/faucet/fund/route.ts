@@ -6,6 +6,7 @@ import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getClientIP, getAccessToken } from '@/utils/http';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
+import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const FundWalletSchema = z.object({
@@ -26,33 +27,34 @@ export async function POST(request: NextRequest) {
     const token = getAccessToken(request);
     const user = await getAuthenticatedUser(token);
     const isDev = process.env.NODE_ENV === 'development';
+    const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Rate limit by supabaseUid (1 per week)
-    // if (!isDev) {
-    //   const rateLimitResult = await rateLimiter.faucet.limit(user.id);
-    //   if (!rateLimitResult.success) {
-    //     logger.warn('[API /faucet/fund] Rate limit exceeded for user:', {
-    //       userId: user.id.substring(0, 8) + '...',
-    //       remaining: rateLimitResult.remaining,
-    //       reset: rateLimitResult.reset,
-    //     });
-    //     return NextResponse.json(
-    //       {
-    //         error: 'Rate limit exceeded',
-    //         reset: rateLimitResult.reset,
-    //       },
-    //       { status: 429 }
-    //     );
-    //   }
-    // } else {
-    //   logger.log('[API /faucet/fund] Dev mode: skipping rate limit', {
-    //     userId: user.id.substring(0, 8) + '...',
-    //   });
-    // }
+    if (!isDev || forceRateLimit) {
+      const rateLimitResult = await faucetRateLimiter.limit(user.id);
+      if (!rateLimitResult.success) {
+        logger.warn('[API /faucet/fund] Rate limit exceeded for user:', {
+          userId: user.id.substring(0, 8) + '...',
+          remaining: rateLimitResult.remaining,
+          reset: rateLimitResult.reset,
+        });
+        return NextResponse.json(
+          {
+            error: 'Rate limit exceeded',
+            reset: rateLimitResult.reset,
+          },
+          { status: 429 }
+        );
+      }
+    } else if (isDev) {
+      logger.log('[API /faucet/fund] Dev mode: skipping rate limit', {
+        userId: user.id.substring(0, 8) + '...',
+      });
+    }
 
     const ip = getClientIP(request);
 

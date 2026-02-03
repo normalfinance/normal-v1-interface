@@ -4647,6 +4647,7 @@ __metadata:
     rehype-highlight: ^7.0.1
     rehype-raw: ^7.0.0
     remark-gfm: ^4.0.0
+    server-only: ^0.0.1
     simplebar-react: ^3.3.0
     sonner: ^1.7.1
     stylis: ^4.3.4
@@ -18241,6 +18242,13 @@ __metadata:
   bin:
     semver: bin/semver.js
   checksum: f013a3ee4607857bcd3503b6ac1d80165f7f8ea94f5d55e2d3e33df82fce487aa3313b987abf9b39e0793c83c9fc67b76c36c067625141a9f6f704ae0ea18db2
+  languageName: node
+  linkType: hard
+
+"server-only@npm:^0.0.1":
+  version: 0.0.1
+  resolution: "server-only@npm:0.0.1"
+  checksum: c432348956641ea3f460af8dc3765f3a1bdbcf7a1e0205b0756d868e6e6fe8934cdee6bff68401a1dd49ba4a831c75916517a877446d54b334f7de36fa273e53
   languageName: node
   linkType: hard
 
