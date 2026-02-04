@@ -269,6 +269,7 @@ export const useNormalWallet = () => {
           return signedXDR;
         } finally {
           normalWalletStore.setKeypair(null);
+          removeStoredPrivateKey();
         }
       }
 
