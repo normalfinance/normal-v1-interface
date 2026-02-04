@@ -5,6 +5,7 @@ export * from './use-pair';
 export * from './use-trade';
 export * from './use-treasury';
 export * from './use-index-fund';
+export * from './use-send-token';
 export * from './use-index-funds';
 export * from './use-account-status';
 export * from './use-manage-liquidity';
