@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import { LoadingButton } from '@mui/lab';
 import { useTheme } from '@mui/material/styles';
