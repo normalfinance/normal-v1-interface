@@ -4602,6 +4602,7 @@ __metadata:
     bignumber.js: ^9.3.1
     canvas-confetti: ^1.9.4
     commitizen: ^4.3.0
+    crisp-sdk-web: ^1.0.27
     cz-conventional-changelog: ^3.3.0
     cz-customizable: ^7.4.0
     dayjs: ^1.11.13
@@ -9949,6 +9950,13 @@ __metadata:
   version: 1.1.1
   resolution: "create-require@npm:1.1.1"
   checksum: a9a1503d4390d8b59ad86f4607de7870b39cad43d929813599a23714831e81c520bddf61bcdd1f8e30f05fd3a2b71ae8538e946eb2786dc65c2bbc520f692eff
+  languageName: node
+  linkType: hard
+
+"crisp-sdk-web@npm:^1.0.27":
+  version: 1.0.27
+  resolution: "crisp-sdk-web@npm:1.0.27"
+  checksum: 0110f0ac89c02d820ee4feb3357c792c7bb8d28bff2ddcfd01be9901738f0ca9897bcce3a1a384a3145126e68c08c869c0f809ba00012194fc2d718817c4c929
   languageName: node
   linkType: hard
 

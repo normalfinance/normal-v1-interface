@@ -18,19 +18,27 @@ import {
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Button, Divider, InputBase, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Divider,
+  Accordion,
+  InputBase,
+  Typography,
+  AccordionDetails,
+  AccordionSummary,
+} from '@mui/material';
 
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
+import PasteIconButton from '../paste-icon-button';
 
 interface WithdrawCardProps extends CardProps {
   tokens: Token[];
   queryParams?: SendQueryParams;
 }
-
-const DEFAULT_DESTINATION = 'Account ID';
 
 const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...other }) => {
   const theme = useTheme();
@@ -41,7 +49,8 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
 
   // State declarations...
   const [sendToken, setSendToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
-  const [destination, setDestination] = useState<string>(DEFAULT_DESTINATION);
+  const [destination, setDestination] = useState<string>('');
+  const [memo, setMemo] = useState<string>('');
   const [amount, setAmount] = useState<string>('0');
   const [isFiatMode, setIsFiatMode] = useState<boolean>(true);
   const [open, setOpen] = useState<boolean>(false);
@@ -74,6 +83,10 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
 
       if (queryParams.destination) {
         setDestination(queryParams.destination);
+      }
+
+      if (queryParams.memo) {
+        setDestination(queryParams.memo);
       }
     }
   }, [queryParams, tokens]);
@@ -148,7 +161,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
   const insufficientBalance = sendToken ? BigNumber(sendToken.balance).lt(coinAmount) : false;
 
   const getButtonLabel = (): string => {
-    if (destination === DEFAULT_DESTINATION) {
+    if (destination === '') {
       return 'Enter account';
     }
     if (!sendToken) {
@@ -169,7 +182,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
 
     if (label === 'Send') {
       if (!isValidAccountAddress(destination)) {
-        enqueueSnackbar(t('Invalid accound'), { variant: 'error' });
+        enqueueSnackbar(t('Invalid destination'), { variant: 'error' });
         return;
       }
       if (destination == persist.wallet.address) {
@@ -178,6 +191,18 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
       }
       setReviewOpen(true);
     }
+  };
+
+  const handlePasteDestination = (value: string): boolean => {
+    if (!value || value === '') return false;
+    setDestination(value);
+    return true;
+  };
+
+  const handlePasteMemo = (value: string): boolean => {
+    if (!value || value === '') return false;
+    setMemo(value);
+    return true;
   };
 
   // Main button with multiple states
@@ -414,14 +439,14 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
           )}
         </Button>
       </Box>
-      {/* Destination Input for Wallet Address/ENS */}
+      {/* Destination Input for Wallet Address */}
       <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
           padding: '12px',
           px: '16px',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
           alignItems: 'flex-start',
           borderRadius: '20px',
           border: `1px solid ${theme.palette.divider}`,
@@ -436,24 +461,12 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
           type="text"
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
-          onFocus={() => {
-            if (destination === DEFAULT_DESTINATION) {
-              setDestination('');
-            }
-          }}
-          onBlur={() => {
-            if (destination.trim() === '') {
-              setDestination(DEFAULT_DESTINATION);
-            }
-          }}
+          placeholder="GAD...123"
           sx={{
             width: '100%',
             border: 'none',
             padding: 0,
-            color:
-              destination === DEFAULT_DESTINATION
-                ? theme.palette.text.secondary
-                : theme.palette.text.primary,
+            color: destination === '' ? theme.palette.text.secondary : theme.palette.text.primary,
           }}
           inputProps={{
             style: {
@@ -463,7 +476,104 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
             },
           }}
         />
+        <Box
+          sx={{
+            height: '100%',
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: '6px',
+          }}
+        >
+          <PasteIconButton
+            alert="Successfully pasted destination"
+            onSubmit={handlePasteDestination}
+          />
+        </Box>
       </Box>
+
+      {/* Input for Memo (optional) */}
+      <Accordion
+        disableGutters
+        sx={{
+          mt: 0,
+          backgroundColor: 'transparent !important',
+          boxShadow: 'none !important',
+          width: '100%',
+          padding: '0px !important',
+          '::before': { display: 'none' },
+        }}
+      >
+        <AccordionSummary
+          expandIcon={
+            <Iconify
+              icon="eva:arrow-ios-upward-fill"
+              width={14}
+              sx={{ color: theme.palette.text.secondary, cursor: 'pointer' }}
+            />
+          }
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 500,
+              color: theme.palette.text.secondary,
+              fontSize: '12px',
+            }}
+          >
+            {t('Options')}
+          </Typography>
+        </AccordionSummary>
+
+        <AccordionDetails sx={{ p: 0, px: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '12px',
+              px: '16px',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              borderRadius: '20px',
+              border: `1px solid ${theme.palette.divider}`,
+              backgroundColor: alpha(theme.palette.grey[500], 0.08),
+              overflow: 'hidden',
+            }}
+          >
+            <Typography variant="caption" sx={{ color: theme.palette.text.primary }}>
+              {t('Memo (optional)')}
+            </Typography>
+            <InputBase
+              type="text"
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="abc123"
+              sx={{
+                width: '100%',
+                border: 'none',
+                padding: 0,
+              }}
+              inputProps={{
+                style: {
+                  fontSize: '14px',
+                  fontWeight: 400,
+                  lineHeight: '22px',
+                },
+              }}
+            />
+            <Box
+              sx={{
+                height: '100%',
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: '6px',
+              }}
+            >
+              <PasteIconButton alert="Successfully pasted memo" onSubmit={handlePasteMemo} />
+            </Box>
+          </Box>
+        </AccordionDetails>
+      </Accordion>
+
       {/* Main Button */}
       <Box>
         <WalletGate buttonText="Login to withdraw" fullWidth variant="soft">
@@ -480,7 +590,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
           </Button>
         </WalletGate>
       </Box>
-      {reviewOpen && (
+      {reviewOpen && sendToken && (
         <SendReview
           open={reviewOpen}
           onClose={handleReviewClose}
@@ -488,6 +598,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
           tokenValue={coinValue}
           fiatValue={fiatValue}
           address={destination}
+          memo={memo}
         />
       )}
       {/* Token Picker Popup */}

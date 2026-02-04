@@ -23,8 +23,6 @@ import MoneyGramTransactionsTable from '@/components/_common/moneygram-history-t
 import { ProfileCover } from './profile-cover';
 import { RewardsOverview } from './rewards-overview';
 
-const MOCK_MODE = process.env.NEXT_PUBLIC_MGI_MOCK === '1';
-
 // ----------------------------------------------------------------------
 
 const NAV_ITEMS = [
@@ -55,13 +53,6 @@ export function RewardsView() {
       setError(null);
 
       try {
-        // Mock: no token needed
-        if (MOCK_MODE) {
-          const tx = await listTransactions({ account: walletAddress });
-          if (on) setRows(tx as any[]);
-          return;
-        }
-
         // Live: need SEP-10 token
         let token = await getMgiAuthToken(walletAddress);
         try {
@@ -114,12 +105,6 @@ export function RewardsView() {
       setError(null);
 
       try {
-        if (MOCK_MODE) {
-          const tx = await listTransactions({ account: walletAddress });
-          if (on) setRows(tx as any[]);
-          return;
-        }
-
         // 1) Try with a cached/valid SEP-10 token (no popup if still valid)
         let token = await getMgiAuthToken(walletAddress);
 

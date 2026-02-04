@@ -246,6 +246,31 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
   }, [connectWallet, onClose]);
 
+  const handleSwitchToExternalWallet = useCallback(async () => {
+    if (persist.wallet.walletType === 'normal-wallet') {
+      await disconnectNormalWallet();
+    }
+    await handleConnectStellarWallet();
+  }, [persist.wallet.walletType, disconnectNormalWallet, handleConnectStellarWallet]);
+
+  const handleSwitchToCreateNormalWallet = useCallback(async () => {
+    const isExternal =
+      persist.wallet.walletType != null && persist.wallet.walletType !== 'normal-wallet';
+    if (isExternal) {
+      await disconnectWallet();
+    }
+    setShowCreateNormalWallet(true);
+  }, [persist.wallet.walletType, disconnectWallet]);
+
+  const handleSwitchToImportNormalWallet = useCallback(async () => {
+    const isExternal =
+      persist.wallet.walletType != null && persist.wallet.walletType !== 'normal-wallet';
+    if (isExternal) {
+      await disconnectWallet();
+    }
+    setShowImportNormalWallet(true);
+  }, [persist.wallet.walletType, disconnectWallet]);
+
   const fetchAndDecryptMnemonic = useCallback(
     async (walletAddress: string): Promise<string | null> => {
       if (!session?.user?.id || !session?.user?.email || !session?.access_token) {
@@ -695,9 +720,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       color="primary"
                       fullWidth
                       startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => {
-                        setShowImportNormalWallet(true);
-                      }}
+                      onClick={() => setShowWalletSelection(true)}
                     >
                       {t('Switch Wallets')}
                     </Button>
@@ -726,9 +749,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       color="primary"
                       fullWidth
                       startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => {
-                        setShowImportNormalWallet(true);
-                      }}
+                      onClick={() => setShowWalletSelection(true)}
                     >
                       {t('Switch Wallets')}
                     </Button>
@@ -752,9 +773,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
       <WalletSelectionModal
         open={showWalletSelection}
         onClose={() => setShowWalletSelection(false)}
-        onCreateNormalWallet={() => setShowCreateNormalWallet(true)}
-        onConnectNormalWallet={() => setShowImportNormalWallet(true)}
-        onContinueToOtherWallets={handleConnectStellarWallet}
+        onCreateNormalWallet={handleSwitchToCreateNormalWallet}
+        onConnectNormalWallet={handleSwitchToImportNormalWallet}
+        onContinueToOtherWallets={handleSwitchToExternalWallet}
       />
       <NormalWalletCreate
         open={showCreateNormalWallet}

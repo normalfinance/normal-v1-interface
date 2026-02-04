@@ -10,6 +10,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { format, constants } from '@normalfinance/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { LongShortPairContract } from '@normalfinance/contracts';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import { useContractTransaction } from './use-contract-transaction';
 
@@ -44,6 +45,8 @@ export function usePair(pairAddress: string): ReturnType {
 
   const { executeContractTransaction } = useContractTransaction();
 
+  const { session } = useSupabaseAuth();
+
   const [error, setError] = useState<AppError | null>(null);
   const [loading, setLoading] = useState(false);
   const [pair, setPair] = useState<Pair | undefined>(undefined);
@@ -51,10 +54,14 @@ export function usePair(pairAddress: string): ReturnType {
   const clearError = useCallback(() => setError(null), []);
 
   const executePair = async (signedTransactionXDR: string, transactionType: string = 'Pair') => {
-    if (!storePersist.wallet.address) return null;
+    if (!storePersist.wallet.address || !session) return null;
     const res = await fetch('/api/transaction', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      credentials: 'include',
       body: JSON.stringify({
         walletAddress: storePersist.wallet.address,
         signedTransactionXDR,
@@ -75,10 +82,14 @@ export function usePair(pairAddress: string): ReturnType {
   };
 
   const rateLimitCheck = async () => {
-    if (!storePersist.wallet.address) return;
+    if (!storePersist.wallet.address || !session) return;
     const res = await fetch('/api/pairs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      credentials: 'include',
       body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
     });
     if (res.status === 429) {

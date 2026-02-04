@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { getAccessToken } from '@/utils/http';
 import { Keypair, Transaction } from '@stellar/stellar-sdk';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * POST /api/mgi/sep10/complete
@@ -12,6 +14,14 @@ import { Keypair, Transaction } from '@stellar/stellar-sdk';
  */
 export async function POST(req: Request) {
   try {
+    // Authenticate
+    const accessToken = getAccessToken(req);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { userSignedXDR } = (await req.json()) as { userSignedXDR?: string };
     if (!userSignedXDR) {
       return NextResponse.json({ error: 'Missing userSignedXDR' }, { status: 400 });

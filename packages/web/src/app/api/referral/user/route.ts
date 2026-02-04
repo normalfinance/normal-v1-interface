@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
+import { getClientIP, getAccessToken } from '@/utils/http';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const GetUserSchema = z.object({
@@ -17,6 +19,14 @@ const CreateUserSchema = z.object({
 
 async function getUserHandler(request: NextRequest) {
   try {
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const supabaseUser = await getAuthenticatedUser(accessToken);
+
+    if (!supabaseUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const walletAddress = searchParams.get('walletAddress');
 
@@ -36,10 +46,7 @@ async function getUserHandler(request: NextRequest) {
     const apiConfig = await getApiConfig('referral-user');
 
     // Get client IP address
-    const ip =
-      request.headers.get('x-real-ip') ||
-      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      request.ip;
+    const ip = getClientIP(request);
 
     // Use Edge Config rate limit override if available
     const effectiveLimit = apiConfig.rateLimitOverride || {
@@ -67,6 +74,15 @@ async function getUserHandler(request: NextRequest) {
       });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
+
+    // Assert user owns walletAddress
+    // const isLinked = await LinkedWalletService.isWalletLinked(
+    //   supabaseUser.id,
+    //   validation.data.walletAddress
+    // );
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
 
     const user = await ReferralService.getUserByWallet(validation.data.walletAddress);
 
@@ -114,10 +130,7 @@ async function createUserHandler(request: NextRequest) {
     const apiConfig = await getApiConfig('referral-user');
 
     // Get client IP address
-    const ip =
-      request.headers.get('x-real-ip') ||
-      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      request.ip;
+    const ip = getClientIP(request);
 
     // Use Edge Config rate limit override if available
     const effectiveLimit = apiConfig.rateLimitOverride || {

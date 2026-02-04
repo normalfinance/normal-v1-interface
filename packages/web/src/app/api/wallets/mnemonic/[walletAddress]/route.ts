@@ -4,22 +4,12 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { UserRSAService } from '@/lib/user-rsa-service';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { decryptMnemonicServer } from '@/lib/server-mnemonic-encryption';
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return undefined;
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) return undefined;
-
-  return token;
-}
 
 const RequestSchema = z.object({
   encryptedAESKey: z.string().min(1, 'Encrypted AES key is required'),
@@ -35,8 +25,10 @@ export async function POST(
   { params }: { params: { walletAddress: string } }
 ) {
   try {
-    const token = getAccessToken(request);
-    const user = await getAuthenticatedUser(token);
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -51,6 +43,12 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 });
     }
 
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
     const validation = RequestSchema.safeParse(body);
 
@@ -62,11 +60,6 @@ export async function POST(
     }
 
     const { encryptedAESKey } = validation.data;
-
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
-    }
 
     const encryptedData = await LinkedWalletService.getEncryptedMnemonic(user.id, walletAddress);
 

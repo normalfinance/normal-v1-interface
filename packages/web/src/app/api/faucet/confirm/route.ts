@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
+import { getClientIP, getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const ConfirmSchema = z.object({
@@ -11,25 +12,15 @@ const ConfirmSchema = z.object({
   txHash: z.string().min(1, 'Transaction hash is required'),
 });
 
-function getClientIP(request: NextRequest): string {
-  const ip =
-    request.headers.get('x-real-ip') ||
-    request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-    request.ip ||
-    'unknown';
-  return ip;
-}
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  return authHeader?.split(' ')[1];
-}
-
 export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user to record supabaseUid
-    const token = getAccessToken(request);
-    const user = await getAuthenticatedUser(token);
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const body = await request.json();
     const validation = ConfirmSchema.safeParse(body);
@@ -42,6 +33,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { walletAddress, txHash } = validation.data;
+
+    // Assert user owns walletAddress
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
+
     const ipAddress = getClientIP(request);
 
     await SponsorService.recordTransactionHash({
