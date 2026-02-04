@@ -70,7 +70,7 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
 export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalWalletCreateProps) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { createWallet, signTransaction } = useNormalWallet();
+  const { createWallet, signTransaction, clearKeypairForPlatformCustody } = useNormalWallet();
   const { user } = useSupabaseAuth();
 
   const [stage, setStage] = useState<CreateStage>('creating');
@@ -273,40 +273,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setStage('verify');
   }, [mnemonic]);
 
-  const handleComplete = useCallback(async () => {
-    if (walletName.trim() && publicKey) {
-      try {
-        await updateWalletName(publicKey, walletName.trim());
-      } catch (err) {
-        logger.warn('Failed to update wallet name:', err);
-      }
-    }
-
-    const walletAddress = publicKey;
-    setMnemonic(null);
-    setPublicKey(null);
-    setWalletName('');
-    setStage('creating');
-    setVerificationQuestions([]);
-    setSelectedAnswers({});
-    setAnswerErrors({});
-    setCurrentQuestionIndex(0);
-    setError(null);
-    setCustodyChoice(null);
-    setCustodyConsent(false);
-    setIsSavingCustody(false);
-    enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
-    onSuccess();
-
-    if (walletAddress) {
-      requestFaucetFundingAndTrustline(walletAddress).catch((err) => {
-        logger.warn('[NormalWalletCreate] Failed to fund wallet or create trustline:', err);
-      });
-    }
-  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t, signTransaction]);
-
   const requestFaucetFundingAndTrustline = useCallback(
-    async (walletAddress: string) => {
+    async (walletAddress: string, custodyChoice?: 'self' | 'platform') => {
       try {
         const {
           data: { session },
@@ -343,9 +311,48 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         enqueueSnackbar(e.message || t('Failed to create account and enable USDC'), {
           variant: 'error',
         });
+      } finally {
+        if (custodyChoice === 'platform') {
+          clearKeypairForPlatformCustody();
+        }
       }
     },
-    [signTransaction, enqueueSnackbar, t]
+    [signTransaction, enqueueSnackbar, t, clearKeypairForPlatformCustody]
+  );
+
+  const handleComplete = useCallback(
+    async (options?: { custodyChoice?: 'self' | 'platform' }) => {
+      if (walletName.trim() && publicKey) {
+        try {
+          await updateWalletName(publicKey, walletName.trim());
+        } catch (err) {
+          logger.warn('Failed to update wallet name:', err);
+        }
+      }
+
+      const walletAddress = publicKey;
+      setMnemonic(null);
+      setPublicKey(null);
+      setWalletName('');
+      setStage('creating');
+      setVerificationQuestions([]);
+      setSelectedAnswers({});
+      setAnswerErrors({});
+      setCurrentQuestionIndex(0);
+      setError(null);
+      setCustodyChoice(null);
+      setCustodyConsent(false);
+      setIsSavingCustody(false);
+      enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
+      onSuccess();
+
+      if (walletAddress) {
+        requestFaucetFundingAndTrustline(walletAddress, options?.custodyChoice).catch((err) => {
+          logger.warn('[NormalWalletCreate] Failed to fund wallet or create trustline:', err);
+        });
+      }
+    },
+    [walletName, publicKey, onSuccess, enqueueSnackbar, t, requestFaucetFundingAndTrustline]
   );
 
   const handleCustodyConfirm = useCallback(async () => {
@@ -361,7 +368,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
       try {
         await encryptAndSaveMnemonic();
-        await handleComplete();
+        await handleComplete({ custodyChoice: 'platform' });
       } catch (err: any) {
         logger.error('Failed to save encrypted mnemonic:', err);
         enqueueSnackbar(

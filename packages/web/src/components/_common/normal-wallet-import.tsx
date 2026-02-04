@@ -296,9 +296,10 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
           return;
         }
 
-        await importWalletFromMnemonic(normalized, undefined, wallet.walletName ?? undefined);
+        await importWalletFromMnemonic(normalized, undefined, wallet.walletName ?? undefined, {
+          persistLocally: wallet.custodyChoice !== 'platform',
+        });
 
-        // Reset form
         resetForm();
         onSuccess();
       } catch (err: any) {
@@ -341,7 +342,8 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         await importWalletFromMnemonic(
           normalized,
           undefined,
-          selectedWallet?.walletName ?? undefined
+          selectedWallet?.walletName ?? undefined,
+          { persistLocally: selectedWallet?.custodyChoice !== 'platform' }
         );
       } else {
         const trimmed = privateKey.trim();
@@ -370,7 +372,9 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
           }
         }
 
-        await importWalletFromPrivateKey(trimmed, selectedWallet?.walletName ?? undefined);
+        await importWalletFromPrivateKey(trimmed, selectedWallet?.walletName ?? undefined, {
+          persistLocally: selectedWallet?.custodyChoice !== 'platform',
+        });
       }
 
       // Reset form
