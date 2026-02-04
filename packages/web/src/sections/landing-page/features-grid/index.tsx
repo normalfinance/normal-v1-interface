@@ -149,7 +149,9 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   width={1}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (tkn.icon) router.push(paths.assets.details(tkn.symbol));
+                    if (tkn.icon && !['VOO', 'XAU'].includes(tkn.symbol)) {
+                      router.push(paths.assets.details(tkn.symbol));
+                    }
                   }}
                   role={tkn.icon ? 'link' : undefined}
                   tabIndex={tkn.icon ? 0 : undefined}

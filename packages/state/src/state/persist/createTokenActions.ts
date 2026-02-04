@@ -105,7 +105,7 @@ export const createTokenActions = (): TokenActions => {
             name: `${pair.asset}`,
             org: 'Normal',
             domain: 'normalfinance.io',
-            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.webp`,
+            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.svg`,
             decimals: 7,
             featured: false,
           };
@@ -118,7 +118,7 @@ export const createTokenActions = (): TokenActions => {
             name: `Short ${pair.asset}`,
             org: 'Normal',
             domain: 'normalfinance.io',
-            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.webp`,
+            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.svg`,
             decimals: 7,
             featured: false,
           };
