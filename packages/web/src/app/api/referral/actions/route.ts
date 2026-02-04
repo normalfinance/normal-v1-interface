@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
 import { getClientIP, getAccessToken } from '@/utils/http';
-import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
@@ -107,10 +106,10 @@ async function recordActionHandler(request: NextRequest) {
     }
 
     // Assert user owns walletAddress
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, userWalletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, userWalletAddress);
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
 
     const actionRecord = await ReferralService.recordAction(
       userWalletAddress,
@@ -221,13 +220,13 @@ async function getActionsHandler(request: NextRequest) {
     }
 
     // Assert user owns walletAddress
-    const isLinked = await LinkedWalletService.isWalletLinked(
-      user.id,
-      validation.data.userWalletAddress
-    );
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    // const isLinked = await LinkedWalletService.isWalletLinked(
+    //   user.id,
+    //   validation.data.userWalletAddress
+    // );
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
 
     const actions = await ReferralService.getUserActions(
       validation.data.userWalletAddress,

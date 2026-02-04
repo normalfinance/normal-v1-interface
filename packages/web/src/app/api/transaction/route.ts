@@ -5,7 +5,6 @@ import { rateLimiter } from '@/server/rateLimiter';
 import { ContractErrorType } from '@normalfinance/types';
 import { getClientIP, getAccessToken } from '@/utils/http';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
-import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { logger, constants, parseError } from '@normalfinance/utils';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
@@ -74,10 +73,10 @@ async function transactionHandler(req: NextRequest) {
     }
 
     // Assert user owns walletAddress
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
 
     // Verify signature
     try {

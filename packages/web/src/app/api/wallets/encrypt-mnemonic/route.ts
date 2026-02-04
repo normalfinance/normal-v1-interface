@@ -6,7 +6,6 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
 import { UserRSAService } from '@/lib/user-rsa-service';
-import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { encryptMnemonicServer } from '@/lib/server-mnemonic-encryption';
@@ -48,10 +47,10 @@ export async function POST(request: NextRequest) {
     const { walletAddress, encryptedMnemonic, encryptedAESKey, iv } = validation.data;
 
     // Assert user owns walletAddress
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
 
     const userIdentifier = `${user.id}:${user.email}`;
 

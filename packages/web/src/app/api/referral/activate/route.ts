@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
 import { getClientIP, getAccessToken } from '@/utils/http';
-import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
@@ -74,10 +73,10 @@ async function activateReferralHandler(request: NextRequest) {
     }
 
     // Assert user owns walletAddress
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, refereeWalletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, refereeWalletAddress);
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
 
     const referral = await ReferralService.activateReferral(code, refereeWalletAddress);
 

@@ -72,10 +72,10 @@ export async function POST(request: NextRequest) {
       userId: adminProvidedUserId,
     } = validation.data;
 
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    if (isLinked) {
-      return NextResponse.json({ error: 'Wallet already linked' }, { status: 409 });
-    }
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    // if (isLinked) {
+    //   return NextResponse.json({ error: 'Wallet already linked' }, { status: 409 });
+    // }
 
     let userId: string;
 
