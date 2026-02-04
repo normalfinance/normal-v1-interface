@@ -4,7 +4,10 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
+import { getClientIP, getAccessToken } from '@/utils/http';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const ActivateReferralSchema = z.object({
@@ -14,6 +17,14 @@ const ActivateReferralSchema = z.object({
 
 async function activateReferralHandler(request: NextRequest) {
   try {
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const validation = ActivateReferralSchema.safeParse(body);
 
@@ -34,10 +45,7 @@ async function activateReferralHandler(request: NextRequest) {
     const apiConfig = await getApiConfig('referral-activate');
 
     // Get client IP address
-    const ip =
-      request.headers.get('x-real-ip') ||
-      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      request.ip;
+    const ip = getClientIP(request);
 
     // Use Edge Config rate limit override if available
     const effectiveLimit = apiConfig.rateLimitOverride || {
@@ -63,6 +71,12 @@ async function activateReferralHandler(request: NextRequest) {
         code,
       });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, refereeWalletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const referral = await ReferralService.activateReferral(code, refereeWalletAddress);

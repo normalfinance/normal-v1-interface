@@ -2,11 +2,23 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { getClientIP, getAccessToken } from '@/utils/http';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 async function tradeHandler(req: NextRequest) {
   try {
+    // Authenticate
+    const token = getAccessToken(req);
+    const user = await getAuthenticatedUser(token);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Validate params
     const { walletAddress } = await req.json();
     if (!walletAddress) {
       await logWithConfig('warn', 'Trade API called without wallet address');
@@ -18,10 +30,7 @@ async function tradeHandler(req: NextRequest) {
     const apiConfig = await getApiConfig('trade');
 
     // Get client IP address (prioritize proxy headers like middleware)
-    const ip =
-      req.headers.get('x-real-ip') || // many reverse proxies
-      req.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      req.ip;
+    const ip = getClientIP(req);
 
     // Use Edge Config rate limit override if available
     const effectiveLimit = apiConfig.rateLimitOverride || {
@@ -43,6 +52,12 @@ async function tradeHandler(req: NextRequest) {
     if (!success) {
       await logWithConfig('warn', 'Rate limit exceeded for trade API', { walletAddress });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await logWithConfig('info', 'Trade API access granted', {

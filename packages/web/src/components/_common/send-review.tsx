@@ -3,10 +3,12 @@ import type { Token } from '@normalfinance/types';
 import React from 'react';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
+import { buildAuthHeaders } from '@/utils/http';
 import { useContractTransaction } from '@/hooks';
 import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import { useTheme } from '@mui/material/styles';
 import {
@@ -44,15 +46,18 @@ const SendReview: React.FC<SendReviewProps> = ({
   const { enqueueSnackbar } = useSnackbar();
   const store = usePersistStore();
   const { executeContractTransaction } = useContractTransaction();
+  const { session } = useSupabaseAuth();
 
   const executeSend = async (
     signedTransactionXDR: string,
     transactionType: string = 'Send Token'
   ) => {
-    if (!store.wallet.address) return null;
+    if (!store.wallet.address || !session) return null;
+    const headers = await buildAuthHeaders();
     const res = await fetch('/api/transaction', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({
         walletAddress: store.wallet.address,
         signedTransactionXDR,

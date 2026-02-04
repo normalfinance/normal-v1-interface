@@ -3,23 +3,13 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { UserRSAService } from '@/lib/user-rsa-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import {
   encryptRSAPrivateKey,
   decryptClientEncryptedRSAPrivateKey,
 } from '@/lib/server-rsa-encryption';
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return undefined;
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) return undefined;
-
-  return token;
-}
 
 const StoreRSASchema = z.object({
   publicKey: z.string().min(1, 'Public key is required'),
@@ -30,6 +20,7 @@ const StoreRSASchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    // Authenticate
     const token = getAccessToken(request);
     const user = await getAuthenticatedUser(token);
 
@@ -61,6 +52,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate
     const token = getAccessToken(request);
     if (!token) {
       return NextResponse.json({ error: 'Access token required' }, { status: 400 });

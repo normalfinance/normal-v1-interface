@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -25,25 +26,16 @@ const RemoveCustodySchema = z.object({
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
 });
 
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return undefined;
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) return undefined;
-
-  return token;
-}
-
 /**
  * PATCH /api/wallets/custody
  * Update wallet custody choice
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const token = getAccessToken(request);
-    const user = await getAuthenticatedUser(token);
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -67,9 +59,10 @@ export async function PATCH(request: NextRequest) {
       custodyConsentEmail,
     } = validation.data;
 
+    // Assert user owns walletAddress
     const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     if (!isLinked) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     if (custodyChoice === 'platform') {
@@ -118,8 +111,10 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const token = getAccessToken(request);
-    const user = await getAuthenticatedUser(token);
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -136,9 +131,10 @@ export async function DELETE(request: NextRequest) {
 
     const { walletAddress } = validation.data;
 
+    // Assert user owns walletAddress
     const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     if (!isLinked) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const wallet = await LinkedWalletService.removePlatformCustody(user.id, walletAddress);

@@ -4,7 +4,10 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
+import { getClientIP, getAccessToken } from '@/utils/http';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +18,14 @@ const GetStatsSchema = z.object({
 
 async function getReferralStatsHandler(request: NextRequest) {
   try {
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const walletAddress = request.nextUrl.searchParams.get('walletAddress');
 
     const validation = GetStatsSchema.safeParse({ walletAddress });
@@ -33,10 +44,7 @@ async function getReferralStatsHandler(request: NextRequest) {
     const apiConfig = await getApiConfig('referral-stats');
 
     // Get client IP address
-    const ip =
-      request.headers.get('x-real-ip') ||
-      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      request.ip;
+    const ip = getClientIP(request);
 
     // Use Edge Config rate limit override if available
     const effectiveLimit = apiConfig.rateLimitOverride || {
@@ -63,6 +71,15 @@ async function getReferralStatsHandler(request: NextRequest) {
         walletAddress: validation.data.walletAddress,
       });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(
+      user.id,
+      validation.data.walletAddress
+    );
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const stats = await ReferralService.getReferralStats(validation.data.walletAddress);

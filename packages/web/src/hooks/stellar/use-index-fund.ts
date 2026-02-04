@@ -3,6 +3,7 @@
 import type { AppError } from '@/utils/errors';
 import type { IndexFundContract } from '@normalfinance/contracts';
 
+import { buildAuthHeaders } from '@/utils/http';
 import { constants } from '@normalfinance/utils';
 import { handleHookError } from '@/utils/errors';
 import { TransactionType } from '@/types/transaction';
@@ -83,9 +84,11 @@ export function useIndexFund(id: number): ReturnType {
     transactionType: string = 'Liquidity'
   ) => {
     if (!storePersist.wallet.address) return null;
+    const headers = await buildAuthHeaders();
     const res = await fetch('/api/transaction', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({
         walletAddress: storePersist.wallet.address,
         signedTransactionXDR,
@@ -107,9 +110,11 @@ export function useIndexFund(id: number): ReturnType {
 
   const rateLimitCheck = async () => {
     if (!storePersist.wallet.address) return;
+    const headers = await buildAuthHeaders();
     const res = await fetch('/api/index', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ walletAddress: storePersist.wallet.address }),
     });
     if (res.status === 429) {

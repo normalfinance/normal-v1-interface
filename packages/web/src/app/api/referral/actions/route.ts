@@ -4,7 +4,10 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
+import { getClientIP, getAccessToken } from '@/utils/http';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const RecordActionSchema = z.object({
@@ -26,6 +29,14 @@ const GetActionsSchema = z.object({
 
 async function recordActionHandler(request: NextRequest) {
   try {
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const validation = RecordActionSchema.safeParse(body);
 
@@ -46,10 +57,7 @@ async function recordActionHandler(request: NextRequest) {
     const apiConfig = await getApiConfig('referral-actions');
 
     // Get client IP address
-    const ip =
-      request.headers.get('x-real-ip') ||
-      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      request.ip;
+    const ip = getClientIP(request);
 
     // Use Edge Config rate limit override if available
     const effectiveLimit = apiConfig.rateLimitOverride || {
@@ -96,6 +104,12 @@ async function recordActionHandler(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, userWalletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const actionRecord = await ReferralService.recordAction(
@@ -152,6 +166,14 @@ async function recordActionHandler(request: NextRequest) {
 
 async function getActionsHandler(request: NextRequest) {
   try {
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userWalletAddress = searchParams.get('userWalletAddress');
     const referralCode = searchParams.get('referralCode');
@@ -172,14 +194,11 @@ async function getActionsHandler(request: NextRequest) {
     }
 
     // Get Edge Config for rate limiting
-    const rateLimitConfig = await getRateLimitConfig('referral-actions');
+    // const rateLimitConfig = await getRateLimitConfig('referral-actions');
     const apiConfig = await getApiConfig('referral-actions');
 
     // Get client IP address
-    const ip =
-      request.headers.get('x-real-ip') ||
-      request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      request.ip;
+    const ip = getClientIP(request);
 
     const { success, limit, remaining, reset } = await rateLimiter.limit(
       validation.data.userWalletAddress,
@@ -199,6 +218,15 @@ async function getActionsHandler(request: NextRequest) {
         userWalletAddress: validation.data.userWalletAddress,
       });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(
+      user.id,
+      validation.data.userWalletAddress
+    );
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const actions = await ReferralService.getUserActions(

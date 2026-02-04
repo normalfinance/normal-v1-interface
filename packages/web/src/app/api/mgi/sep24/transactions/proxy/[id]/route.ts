@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-
-function j(status: number, payload: any) {
-  return NextResponse.json(payload, { status });
-}
+import { j, getAccessToken } from '@/utils/http';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * GET /api/mgi/sep24/transaction/proxy/:id
@@ -14,6 +12,14 @@ function j(status: number, payload: any) {
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const t0 = Date.now();
   try {
+    // Authenticate
+    const accessToken = getAccessToken(req);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const host = process.env.MGI_ACCESS_HOST;
     if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
