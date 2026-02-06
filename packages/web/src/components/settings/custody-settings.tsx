@@ -113,7 +113,14 @@ export function CustodySettings({
     setIsExporting(true);
     setExportError(null);
     try {
-      const { error } = await supabase.auth.reauthenticate();
+      const { error } = await supabase.auth.signInWithOtp({
+        email: user.email,
+        options: {
+          shouldCreateUser: false,
+          captchaToken: exportCaptchaToken,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
       if (error) {
         throw error;
