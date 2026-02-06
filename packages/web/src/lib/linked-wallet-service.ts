@@ -16,6 +16,14 @@ export interface LinkedWallet {
   custodyConsentDate: Date | null;
 }
 
+export interface PlatformCustodyPayload {
+  encryptedMnemonic: string;
+  encryptionIV: string;
+  encryptionSalt: string;
+  custodyConsentEmail: string | null;
+  custodyConsentDate: Date | null;
+}
+
 export class LinkedWalletService {
   /**
    * Link a wallet to a Supabase user account
@@ -310,6 +318,49 @@ export class LinkedWalletService {
       };
     } catch (error) {
       logger.error('[LinkedWalletService] Failed to get encrypted mnemonic:', error);
+      throw error;
+    }
+  }
+
+  static async getPlatformCustodyPayload(
+    supabaseUid: string,
+    walletAddress: string
+  ): Promise<PlatformCustodyPayload | null> {
+    try {
+      const wallet = await prisma.linkedWallet.findUnique({
+        where: {
+          supabaseUid_walletAddress: {
+            supabaseUid,
+            walletAddress,
+          },
+        },
+        select: {
+          custodyChoice: true,
+          encryptedMnemonic: true,
+          encryptionIV: true,
+          encryptionSalt: true,
+          custodyConsentEmail: true,
+          custodyConsentDate: true,
+        },
+      });
+
+      if (!wallet || wallet.custodyChoice !== 'platform') {
+        return null;
+      }
+
+      if (!wallet.encryptedMnemonic || !wallet.encryptionIV || !wallet.encryptionSalt) {
+        return null;
+      }
+
+      return {
+        encryptedMnemonic: wallet.encryptedMnemonic,
+        encryptionIV: wallet.encryptionIV,
+        encryptionSalt: wallet.encryptionSalt,
+        custodyConsentEmail: wallet.custodyConsentEmail ?? null,
+        custodyConsentDate: wallet.custodyConsentDate ?? null,
+      };
+    } catch (error) {
+      logger.error('[LinkedWalletService] Failed to get platform custody payload:', error);
       throw error;
     }
   }

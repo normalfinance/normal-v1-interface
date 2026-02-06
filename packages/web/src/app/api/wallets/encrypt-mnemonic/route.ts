@@ -7,7 +7,8 @@ import { logger } from '@normalfinance/utils';
 import { UserRSAService } from '@/lib/user-rsa-service';
 import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { encryptMnemonicServer } from '@/lib/server-mnemonic-encryption';
+import { encryptMnemonicServerV2 } from '@/lib/server-mnemonic-encryption';
+import { getAccessToken } from '@/utils/http';
 
 const EncryptSchema = z.object({
   walletAddress: z
@@ -18,17 +19,6 @@ const EncryptSchema = z.object({
   encryptedAESKey: z.string().min(1, 'Encrypted AES key is required'),
   iv: z.string().min(1, 'IV is required'),
 });
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return undefined;
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) return undefined;
-
-  return token;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,7 +72,7 @@ export async function POST(request: NextRequest) {
       decipher.final(),
     ]).toString('utf-8');
 
-    const encrypted = await encryptMnemonicServer(decryptedMnemonic, userIdentifier);
+    const encrypted = await encryptMnemonicServerV2(decryptedMnemonic, user.id);
 
     logger.log('[API /encrypt-mnemonic] Mnemonic encrypted successfully:', {
       userId: user.id.substring(0, 8) + '...',

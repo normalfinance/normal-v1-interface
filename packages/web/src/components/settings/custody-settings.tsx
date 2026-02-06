@@ -2,7 +2,7 @@
 
 import { useTranslate } from '@/locales';
 import { useBoolean } from '@/hooks/use-boolean';
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { logger, validateMnemonic, normalizeMnemonic } from '@normalfinance/utils';
@@ -15,6 +15,7 @@ import {
   encryptWithRSAPublicKey,
   encryptPrivateKeyForStorage,
 } from '@/lib/client-crypto';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 import {
   Card,
@@ -52,10 +53,146 @@ export function CustodySettings({
   const { user } = useSupabaseAuth();
   const migrateToPlatformDialog = useBoolean();
   const migrateToSelfDialog = useBoolean();
+  const exportMnemonicDialog = useBoolean();
 
   const [mnemonic, setMnemonic] = useState('');
   const [mnemonicError, setMnemonicError] = useState('');
   const [isMigrating, setIsMigrating] = useState(false);
+
+  const [exportStage, setExportStage] = useState<'confirm' | 'otp' | 'reveal'>('confirm');
+  const [exportOtp, setExportOtp] = useState('');
+  const [exportCaptchaToken, setExportCaptchaToken] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportedMnemonic, setExportedMnemonic] = useState<string | null>(null);
+  const [isHoldingReveal, setIsHoldingReveal] = useState(false);
+
+  const resetExportState = useCallback(() => {
+    setExportStage('confirm');
+    setExportOtp('');
+    setExportCaptchaToken(null);
+    setIsExporting(false);
+    setExportError(null);
+    setExportedMnemonic(null);
+    setIsHoldingReveal(false);
+  }, []);
+
+  const handleCloseExport = useCallback(() => {
+    exportMnemonicDialog.onFalse();
+    resetExportState();
+  }, [exportMnemonicDialog, resetExportState]);
+
+  useEffect(() => {
+    if (!exportMnemonicDialog.value) return;
+
+    const hide = () => setIsHoldingReveal(false);
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') hide();
+    };
+
+    window.addEventListener('blur', hide);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.removeEventListener('blur', hide);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [exportMnemonicDialog.value]);
+
+  const handleSendExportOtp = useCallback(async () => {
+    if (!user?.email) {
+      enqueueSnackbar(t('User authentication required'), { variant: 'error' });
+      return;
+    }
+
+    if (!exportCaptchaToken) {
+      enqueueSnackbar(t('Invalid captcha'), { variant: 'error' });
+      return;
+    }
+
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: user.email,
+        options: {
+          shouldCreateUser: false,
+          captchaToken: exportCaptchaToken,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setExportStage('otp');
+    } catch (e: any) {
+      setExportError(e?.message || t('Unable to send code. Please try again.'));
+    } finally {
+      setIsExporting(false);
+    }
+  }, [user?.email, exportCaptchaToken, enqueueSnackbar, t]);
+
+  const handleVerifyExportOtp = useCallback(async () => {
+    if (!user?.email) {
+      enqueueSnackbar(t('User authentication required'), { variant: 'error' });
+      return;
+    }
+
+    const token = exportOtp.trim();
+    if (token.length !== 6) {
+      setExportError(t('Please enter the 6-digit code'));
+      return;
+    }
+
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: user.email,
+        token,
+        type: 'email',
+      });
+      if (error) {
+        throw error;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      const resp = await fetch(`/api/wallets/export-mnemonic/${walletAddress}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body?.error || t('Failed to export recovery phrase'));
+      }
+
+      const body = await resp.json();
+      if (!body?.mnemonic || typeof body.mnemonic !== 'string') {
+        throw new Error(t('Failed to export recovery phrase'));
+      }
+
+      setExportedMnemonic(body.mnemonic);
+      setExportStage('reveal');
+      enqueueSnackbar(t('Recovery phrase ready to reveal'), { variant: 'success' });
+    } catch (e: any) {
+      setExportError(e?.message || t('Invalid code. Please try again.'));
+    } finally {
+      setIsExporting(false);
+    }
+  }, [user?.email, exportOtp, walletAddress, enqueueSnackbar, t]);
 
   const handleMigrateToPlatform = useCallback(async () => {
     if (!user?.id || !user?.email) {
@@ -245,6 +382,9 @@ export function CustodySettings({
                 <Button variant="soft" color="info" onClick={migrateToSelfDialog.onTrue}>
                   {t('Switch to Self-Custody (Will delete stored phrase)')}
                 </Button>
+                <Button variant="outlined" onClick={exportMnemonicDialog.onTrue}>
+                  {t('Export Recovery Phrase')}
+                </Button>
               </>
             )}
           </Stack>
@@ -331,6 +471,112 @@ export function CustodySettings({
           >
             {isMigrating ? t('Switching...') : t('Switch to Self-Custody')}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={exportMnemonicDialog.value} onClose={handleCloseExport} maxWidth="sm" fullWidth>
+        <DialogTitle>{t('Export Recovery Phrase')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Alert severity="warning">
+              <Typography variant="body2">
+                {t(
+                  'Anyone with this recovery phrase can take your funds. Only export on a trusted device and never share it.'
+                )}
+              </Typography>
+            </Alert>
+
+            {exportStage === 'confirm' && (
+              <>
+                <Typography variant="body2" color="text.secondary">
+                  {t('We will send a 6-digit verification code to confirm it is you.')}
+                </Typography>
+                <Turnstile
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
+                  onSuccess={(token) => setExportCaptchaToken(token)}
+                />
+              </>
+            )}
+
+            {exportStage === 'otp' && (
+              <>
+                <Typography variant="body2" color="text.secondary">
+                  {t('Enter the 6-digit code sent to')} {user?.email}
+                </Typography>
+                <TextField
+                  label={t('Enter 6-digit code')}
+                  value={exportOtp}
+                  onChange={(e) => {
+                    const numeric = e.target.value.replace(/\\D/g, '').slice(0, 6);
+                    setExportOtp(numeric);
+                    if (exportError) setExportError(null);
+                  }}
+                  fullWidth
+                  disabled={isExporting}
+                  inputProps={{
+                    maxLength: 6,
+                    style: { textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.5rem' },
+                  }}
+                />
+              </>
+            )}
+
+            {exportStage === 'reveal' && (
+              <>
+                <Typography variant="body2" color="text.secondary">
+                  {t('Press and hold to reveal. Release to hide.')}
+                </Typography>
+                <TextField
+                  multiline
+                  rows={4}
+                  fullWidth
+                  value={isHoldingReveal ? exportedMnemonic ?? '' : '••••••••••••••••••••••••••••'}
+                  InputProps={{ readOnly: true }}
+                />
+                <Button
+                  variant="contained"
+                  onPointerDown={() => setIsHoldingReveal(true)}
+                  onPointerUp={() => setIsHoldingReveal(false)}
+                  onPointerCancel={() => setIsHoldingReveal(false)}
+                  onPointerLeave={() => setIsHoldingReveal(false)}
+                  disabled={!exportedMnemonic}
+                >
+                  {t('Hold to Reveal')}
+                </Button>
+              </>
+            )}
+
+            {exportError && (
+              <Alert severity="error">
+                <Typography variant="body2">{exportError}</Typography>
+              </Alert>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseExport} disabled={isExporting}>
+            {t('Close')}
+          </Button>
+          {exportStage === 'confirm' && (
+            <Button
+              variant="contained"
+              onClick={handleSendExportOtp}
+              disabled={isExporting || !exportCaptchaToken}
+              startIcon={isExporting ? <CircularProgress size={16} /> : null}
+            >
+              {isExporting ? t('Sending...') : t('Send Code')}
+            </Button>
+          )}
+          {exportStage === 'otp' && (
+            <Button
+              variant="contained"
+              onClick={handleVerifyExportOtp}
+              disabled={isExporting || exportOtp.trim().length !== 6}
+              startIcon={isExporting ? <CircularProgress size={16} /> : null}
+            >
+              {isExporting ? t('Verifying...') : t('Verify & Export')}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </>

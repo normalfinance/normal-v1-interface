@@ -5,25 +5,13 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { getClientIP, getAccessToken } from '@/utils/http';
 
 const ConfirmSchema = z.object({
   walletAddress: z.string().regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
   txHash: z.string().min(1, 'Transaction hash is required'),
 });
 
-function getClientIP(request: NextRequest): string {
-  const ip =
-    request.headers.get('x-real-ip') ||
-    request.headers.get('X-Forwarded-For')?.split(',')[0] ||
-    request.ip ||
-    'unknown';
-  return ip;
-}
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  return authHeader?.split(' ')[1];
-}
 
 export async function POST(request: NextRequest) {
   try {

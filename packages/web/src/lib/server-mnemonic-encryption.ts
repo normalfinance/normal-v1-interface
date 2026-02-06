@@ -43,6 +43,12 @@ export interface EncryptedMnemonicData {
   salt: string;
 }
 
+export type MnemonicDecryptStrategy = 'v2_supabaseUid' | 'v1_currentEmail' | 'v1_consentEmail';
+
+function getV2Identifier(supabaseUid: string): string {
+  return `v2:${supabaseUid}`;
+}
+
 export async function encryptMnemonicServer(
   mnemonic: string,
   userIdentifier: string
@@ -70,6 +76,13 @@ export async function encryptMnemonicServer(
       `Encryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
+}
+
+export async function encryptMnemonicServerV2(
+  mnemonic: string,
+  supabaseUid: string
+): Promise<EncryptedMnemonicData> {
+  return encryptMnemonicServer(mnemonic, getV2Identifier(supabaseUid));
 }
 
 export async function decryptMnemonicServer(
@@ -100,4 +113,66 @@ export async function decryptMnemonicServer(
       `Decryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
+}
+
+export async function decryptMnemonicServerV2(
+  encryptedMnemonic: string,
+  iv: string,
+  salt: string,
+  supabaseUid: string
+): Promise<string> {
+  return decryptMnemonicServer(encryptedMnemonic, iv, salt, getV2Identifier(supabaseUid));
+}
+
+export async function decryptMnemonicWithFallback(
+  encrypted: EncryptedMnemonicData,
+  params: {
+    supabaseUid: string;
+    currentEmail?: string | null;
+    consentEmail?: string | null;
+  }
+): Promise<{ mnemonic: string; strategy: MnemonicDecryptStrategy }> {
+  const errors: string[] = [];
+
+  try {
+    const mnemonic = await decryptMnemonicServerV2(
+      encrypted.encryptedMnemonic,
+      encrypted.iv,
+      encrypted.salt,
+      params.supabaseUid
+    );
+    return { mnemonic, strategy: 'v2_supabaseUid' };
+  } catch (e) {
+    errors.push(e instanceof Error ? e.message : 'v2 decrypt failed');
+  }
+
+  if (params.currentEmail) {
+    try {
+      const mnemonic = await decryptMnemonicServer(
+        encrypted.encryptedMnemonic,
+        encrypted.iv,
+        encrypted.salt,
+        `${params.supabaseUid}:${params.currentEmail}`
+      );
+      return { mnemonic, strategy: 'v1_currentEmail' };
+    } catch (e) {
+      errors.push(e instanceof Error ? e.message : 'v1 currentEmail decrypt failed');
+    }
+  }
+
+  if (params.consentEmail) {
+    try {
+      const mnemonic = await decryptMnemonicServer(
+        encrypted.encryptedMnemonic,
+        encrypted.iv,
+        encrypted.salt,
+        `${params.supabaseUid}:${params.consentEmail}`
+      );
+      return { mnemonic, strategy: 'v1_consentEmail' };
+    } catch (e) {
+      errors.push(e instanceof Error ? e.message : 'v1 consentEmail decrypt failed');
+    }
+  }
+
+  throw new Error(`Decryption failed (${errors.length} attempts): ${errors.join(' | ')}`);
 }

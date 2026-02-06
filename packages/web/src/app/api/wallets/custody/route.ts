@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { getAccessToken } from '@/utils/http';
 
 const UpdateCustodySchema = z.object({
   walletAddress: z
@@ -24,17 +25,6 @@ const RemoveCustodySchema = z.object({
     .min(1, 'Wallet address is required')
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
 });
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return undefined;
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) return undefined;
-
-  return token;
-}
 
 /**
  * PATCH /api/wallets/custody

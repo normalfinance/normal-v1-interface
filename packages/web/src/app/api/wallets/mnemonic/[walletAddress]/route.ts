@@ -8,7 +8,7 @@ import { UserRSAService } from '@/lib/user-rsa-service';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { decryptMnemonicServer } from '@/lib/server-mnemonic-encryption';
+import { decryptMnemonicWithFallback } from '@/lib/server-mnemonic-encryption';
 
 function getAccessToken(request: NextRequest): string | undefined {
   const authHeader = request.headers.get('authorization');
@@ -68,9 +68,9 @@ export async function POST(
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
     }
 
-    const encryptedData = await LinkedWalletService.getEncryptedMnemonic(user.id, walletAddress);
+    const custody = await LinkedWalletService.getPlatformCustodyPayload(user.id, walletAddress);
 
-    if (!encryptedData) {
+    if (!custody) {
       return NextResponse.json(
         { error: 'Wallet does not have platform custody enabled' },
         { status: 404 }
@@ -79,12 +79,16 @@ export async function POST(
 
     const userIdentifier = `${user.id}:${user.email}`;
 
-    const decryptedMnemonic = await decryptMnemonicServer(
-      encryptedData.encryptedMnemonic,
-      encryptedData.encryptionIV,
-      encryptedData.encryptionSalt,
-      userIdentifier
-    );
+    const decryptedMnemonic = (
+      await decryptMnemonicWithFallback(
+        {
+          encryptedMnemonic: custody.encryptedMnemonic,
+          iv: custody.encryptionIV,
+          salt: custody.encryptionSalt,
+        },
+        { supabaseUid: user.id, currentEmail: user.email, consentEmail: custody.custodyConsentEmail }
+      )
+    ).mnemonic;
 
     const rsaPrivateKey = await UserRSAService.getDecryptedPrivateKey(user.id, userIdentifier);
 

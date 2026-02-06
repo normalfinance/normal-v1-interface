@@ -6,6 +6,7 @@ import { logger } from '@normalfinance/utils';
 import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { getAccessToken } from '@/utils/http';
 
 const LinkWalletSchema = z.object({
   walletAddress: z
@@ -28,17 +29,6 @@ const UpdateWalletSchema = z.object({
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
   walletName: z.string().max(50, 'Wallet name must be 50 characters or less').optional(),
 });
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return undefined;
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) return undefined;
-
-  return token;
-}
 
 /**
  * POST /api/wallets/link

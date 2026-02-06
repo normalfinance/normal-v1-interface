@@ -9,17 +9,7 @@ import {
   encryptRSAPrivateKey,
   decryptClientEncryptedRSAPrivateKey,
 } from '@/lib/server-rsa-encryption';
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return undefined;
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) return undefined;
-
-  return token;
-}
+import { getAccessToken } from '@/utils/http';
 
 const StoreRSASchema = z.object({
   publicKey: z.string().min(1, 'Public key is required'),
