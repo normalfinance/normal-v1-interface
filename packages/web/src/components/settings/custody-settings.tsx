@@ -113,14 +113,7 @@ export function CustodySettings({
     setIsExporting(true);
     setExportError(null);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: user.email,
-        options: {
-          shouldCreateUser: false,
-          captchaToken: exportCaptchaToken,
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+      const { error } = await supabase.auth.reauthenticate();
 
       if (error) {
         throw error;
@@ -128,7 +121,7 @@ export function CustodySettings({
 
       setExportStage('otp');
     } catch (e: any) {
-      setExportError(e?.message || t('Unable to send code. Please try again.'));
+      setExportError(e?.message.toString() || t('Unable to send code. Please try again.'));
     } finally {
       setIsExporting(false);
     }
@@ -141,15 +134,15 @@ export function CustodySettings({
     }
 
     const token = exportOtp.trim();
-    if (token.length !== 6) {
-      setExportError(t('Please enter the 6-digit code'));
+    if (token.length !== 8) {
+      setExportError(t('Please enter the 8-digit code'));
       return;
     }
 
     setIsExporting(true);
     setExportError(null);
     try {
-      const { error } = await supabase.auth.verifyOtp({
+      const { data, error } = await supabase.auth.verifyOtp({
         email: user.email,
         token,
         type: 'email',
@@ -158,9 +151,7 @@ export function CustodySettings({
         throw error;
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const session = data?.session;
       if (!session?.access_token) {
         throw new Error('Authentication required');
       }
@@ -188,6 +179,7 @@ export function CustodySettings({
       setExportStage('reveal');
       enqueueSnackbar(t('Recovery phrase ready to reveal'), { variant: 'success' });
     } catch (e: any) {
+      logger.error('Failed to verify export OTP:', e);
       setExportError(e?.message || t('Invalid code. Please try again.'));
     } finally {
       setIsExporting(false);
@@ -489,7 +481,7 @@ export function CustodySettings({
             {exportStage === 'confirm' && (
               <>
                 <Typography variant="body2" color="text.secondary">
-                  {t('We will send a 6-digit verification code to confirm it is you.')}
+                  {t('We will send an 8-digit verification code to confirm it is you.')}
                 </Typography>
                 <Turnstile
                   siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
@@ -501,20 +493,20 @@ export function CustodySettings({
             {exportStage === 'otp' && (
               <>
                 <Typography variant="body2" color="text.secondary">
-                  {t('Enter the 6-digit code sent to')} {user?.email}
+                  {t('Enter the 8-digit code sent to')} {user?.email}
                 </Typography>
                 <TextField
-                  label={t('Enter 6-digit code')}
+                  label={t('Enter 8-digit code')}
                   value={exportOtp}
                   onChange={(e) => {
-                    const numeric = e.target.value.replace(/\\D/g, '').slice(0, 6);
+                    const numeric = e.target.value.replace(/\\D/g, '').slice(0, 8);
                     setExportOtp(numeric);
                     if (exportError) setExportError(null);
                   }}
                   fullWidth
                   disabled={isExporting}
                   inputProps={{
-                    maxLength: 6,
+                    maxLength: 8,
                     style: { textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.5rem' },
                   }}
                 />
@@ -530,7 +522,9 @@ export function CustodySettings({
                   multiline
                   rows={4}
                   fullWidth
-                  value={isHoldingReveal ? exportedMnemonic ?? '' : '••••••••••••••••••••••••••••'}
+                  value={
+                    isHoldingReveal ? (exportedMnemonic ?? '') : '••••••••••••••••••••••••••••'
+                  }
                   InputProps={{ readOnly: true }}
                 />
                 <Button
@@ -571,7 +565,7 @@ export function CustodySettings({
             <Button
               variant="contained"
               onClick={handleVerifyExportOtp}
-              disabled={isExporting || exportOtp.trim().length !== 6}
+              disabled={isExporting || exportOtp.trim().length !== 8}
               startIcon={isExporting ? <CircularProgress size={16} /> : null}
             >
               {isExporting ? t('Verifying...') : t('Verify & Export')}
