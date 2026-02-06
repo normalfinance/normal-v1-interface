@@ -1,6 +1,7 @@
 'use client';
 
 import { enqueueSnackbar } from 'notistack';
+import { buildAuthHeaders } from '@/utils/http';
 
 import { openMoneyGram } from './flow';
 import { getTransaction } from './history';
@@ -77,15 +78,21 @@ function tryParseJwtExpMs(token: string): number | undefined {
 /* ------------------------ API wrappers ------------------------ */
 
 export async function fetchMgiChallenge(userAccount: string) {
-  const r = await fetch(`/api/mgi/sep10/challenge?account=${encodeURIComponent(userAccount)}`);
+  const headers = await buildAuthHeaders();
+  const r = await fetch(`/api/mgi/sep10/challenge?account=${encodeURIComponent(userAccount)}`, {
+    headers,
+    credentials: 'include',
+  });
   if (!r.ok) throw new Error(`challenge failed: ${r.status} ${r.statusText}`);
   return r.json() as Promise<{ transaction: string; network_passphrase?: string }>;
 }
 
 export async function completeMgiAuth(userSignedXDR: string): Promise<string> {
+  const headers = await buildAuthHeaders();
   const r = await fetch(`/api/mgi/sep10/complete`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
+    credentials: 'include',
     body: JSON.stringify({ userSignedXDR }),
   });
 
@@ -125,9 +132,11 @@ export async function getMgiAuthToken(userAccount: string) {
 }
 
 export async function startMgiDeposit(token: string, userAccount: string, amount: number) {
+  const headers = await buildAuthHeaders();
   const r = await fetch(`/api/mgi/sep24/deposit`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
+    credentials: 'include',
     body: JSON.stringify({ token, account: userAccount, amount }),
   });
 
@@ -158,9 +167,11 @@ export async function runDepositFlow(
 }
 
 export async function startMgiWithdraw(token: string, userAccount: string, amount: number) {
+  const headers = await buildAuthHeaders();
   const r = await fetch(`/api/mgi/sep24/withdraw`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
+    credentials: 'include',
     body: JSON.stringify({ token, account: userAccount, amount }),
   });
 
@@ -191,9 +202,11 @@ export async function runWithdrawFlow(
 }
 
 export async function startWithdrawCancel(token: string, txId: string) {
+  const headers = await buildAuthHeaders();
   const r = await fetch(`/api/mgi/sep24/withdraw/cancel`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
+    credentials: 'include',
     body: JSON.stringify({ token, id: txId, lang: 'en' }),
   });
 
@@ -233,9 +246,11 @@ export async function runWithdrawCancelFlow(
 /* ------------------------------------------------------------------ */
 
 async function fetchMoreInfoUrlWithSep10(token: string, txId: string): Promise<string> {
+  const headers = await buildAuthHeaders();
   const r = await fetch(`/api/mgi/sep24/transactions/moreinfo`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
+    credentials: 'include',
     body: JSON.stringify({ token, id: txId }),
   });
   const data = await r.json();

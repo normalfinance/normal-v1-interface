@@ -39,9 +39,11 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
   const pair = isNormal ? pairByToken[token.contract] : null;
 
   const handleRowClick = () => {
-    router.push(
-      paths.assets.details(isNormal ? token.symbol.replace(/^(sn|n)/, '') : token.symbol)
-    );
+    if (isNormal) {
+      router.push(
+        paths.assets.details(isNormal ? token.symbol.replace(/^(sn|n)/, '') : token.symbol)
+      );
+    }
   };
 
   const priceDisplay = () => {

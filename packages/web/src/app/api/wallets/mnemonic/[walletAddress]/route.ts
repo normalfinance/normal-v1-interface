@@ -4,22 +4,12 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { UserRSAService } from '@/lib/user-rsa-service';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { decryptMnemonicWithFallback } from '@/lib/server-mnemonic-encryption';
-
-function getAccessToken(request: NextRequest): string | undefined {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return undefined;
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) return undefined;
-
-  return token;
-}
 
 const RequestSchema = z.object({
   encryptedAESKey: z.string().min(1, 'Encrypted AES key is required'),
@@ -35,8 +25,10 @@ export async function POST(
   { params }: { params: { walletAddress: string } }
 ) {
   try {
-    const token = getAccessToken(request);
-    const user = await getAuthenticatedUser(token);
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -49,6 +41,12 @@ export async function POST(
 
     if (!walletAddress || !/^G[A-Z0-9]{55}$/.test(walletAddress)) {
       return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 });
+    }
+
+    // Assert user owns walletAddress
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();

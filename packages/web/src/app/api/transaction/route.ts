@@ -3,15 +3,26 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ContractErrorType } from '@normalfinance/types';
+import { getClientIP, getAccessToken } from '@/utils/http';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
 import { logger, constants, parseError } from '@normalfinance/utils';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createNodeConfigHandler } from '@/lib/edge-config-middleware';
 
 export const runtime = 'nodejs';
 
 async function transactionHandler(req: NextRequest) {
   try {
+    // Authenticate
+    const token = getAccessToken(req);
+    const user = await getAuthenticatedUser(token);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Validate params
     const { walletAddress, signedTransactionXDR, transactionType } = await req.json();
 
     logger.log('[Transaction API] walletAddress: ', walletAddress);
@@ -33,10 +44,7 @@ async function transactionHandler(req: NextRequest) {
     const apiConfig = await getApiConfig('transaction');
 
     // Get client IP address (prioritize proxy headers like middleware)
-    const ip =
-      req.headers.get('x-real-ip') || // many reverse proxies
-      req.headers.get('X-Forwarded-For')?.split(',')[0] ||
-      req.ip;
+    const ip = getClientIP(req);
 
     // Use Edge Config rate limit override if available
     const effectiveLimit = apiConfig.rateLimitOverride || {
@@ -63,6 +71,12 @@ async function transactionHandler(req: NextRequest) {
       });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
+
+    // Assert user owns walletAddress
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
 
     // Verify signature
     try {

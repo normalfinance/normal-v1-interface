@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { UserRSAService } from '@/lib/user-rsa-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import {
@@ -20,6 +21,7 @@ const StoreRSASchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    // Authenticate
     const token = getAccessToken(request);
     const user = await getAuthenticatedUser(token);
 
@@ -51,6 +53,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate
     const token = getAccessToken(request);
     if (!token) {
       return NextResponse.json({ error: 'Access token required' }, { status: 400 });

@@ -5,11 +5,8 @@
   },
   "features": {
     "pairs": true,
-    "tokens": true,
     "trade": true,
     "liquidity": true,
-    "staking": true,
-    "oracle": true,
     "send": true,
     "transaction": true,
     "referrals": true,
@@ -28,13 +25,6 @@
       "rateLimitOverride": null,
       "additionalHeaders": {}
     },
-    "tokens": {
-      "enabled": true,
-      "timeout": 30000,
-      "priceRefreshInterval": 30000,
-      "rateLimitOverride": null,
-      "additionalHeaders": {}
-    },
     "liquidity": {
       "enabled": true,
       "timeout": 30000,
@@ -42,24 +32,10 @@
       "rateLimitOverride": null,
       "additionalHeaders": {}
     },
-    "oracle": {
-      "enabled": true,
-      "timeout": 30000,
-      "refreshInterval": 60000,
-      "rateLimitOverride": null,
-      "additionalHeaders": {}
-    },
     "send": {
       "enabled": true,
       "timeout": 30000,
       "maxAmount": "1000000",
-      "rateLimitOverride": null,
-      "additionalHeaders": {}
-    },
-    "staking": {
-      "enabled": true,
-      "timeout": 30000,
-      "rewardsRefreshInterval": 300000,
       "rateLimitOverride": null,
       "additionalHeaders": {}
     },
@@ -114,24 +90,12 @@
       "requests": 100,
       "windowMs": 60000
     },
-    "tokens": {
-      "requests": 200,
-      "windowMs": 60000
-    },
     "liquidity": {
       "requests": 50,
       "windowMs": 60000
     },
-    "oracle": {
-      "requests": 150,
-      "windowMs": 60000
-    },
     "send": {
       "requests": 20,
-      "windowMs": 60000
-    },
-    "staking": {
-      "requests": 50,
       "windowMs": 60000
     },
     "trade": {

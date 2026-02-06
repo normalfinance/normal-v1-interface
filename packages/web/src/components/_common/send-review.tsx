@@ -1,18 +1,20 @@
 import type { Token } from '@normalfinance/types';
 
-import React from 'react';
+import { useSendToken } from '@/hooks';
+import React, { useState } from 'react';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
-import { useContractTransaction } from '@/hooks';
-import { TransactionType } from '@/types/transaction';
-import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
+import { LoadingButton } from '@mui/lab';
 import { useTheme } from '@mui/material/styles';
 import {
   Box,
+  Alert,
+  alpha,
   Dialog,
-  Button,
+  Checkbox,
   Typography,
   IconButton,
   DialogTitle,
@@ -25,10 +27,11 @@ import { Iconify } from '../template/iconify';
 export interface SendReviewProps {
   open: boolean;
   onClose: () => void;
-  sendToken?: Token | null;
+  sendToken: Token;
   tokenValue: number;
   fiatValue: number;
   address: string;
+  memo: string;
 }
 
 const SendReview: React.FC<SendReviewProps> = ({
@@ -38,80 +41,45 @@ const SendReview: React.FC<SendReviewProps> = ({
   tokenValue,
   fiatValue,
   address,
+  memo,
 }) => {
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
-  const store = usePersistStore();
-  const { executeContractTransaction } = useContractTransaction();
 
-  const executeSend = async (
-    signedTransactionXDR: string,
-    transactionType: string = 'Send Token'
-  ) => {
-    if (!store.wallet.address) return null;
-    const res = await fetch('/api/transaction', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        walletAddress: store.wallet.address,
-        signedTransactionXDR,
-        transactionType,
-      }),
-    });
+  const { loading, error, setError, send } = useSendToken();
 
-    if (res.status === 429) {
-      throw new Error('Rate limit exceeded. Please try again later.');
-    }
-
-    const data = await res.json();
-    if (!data.success) {
-      throw new Error(data.error || 'Send execution failed');
-    }
-
-    return data;
-  };
+  const [approved, setApproved] = useState<boolean>(false);
 
   const onSubmit = async () => {
-    if (!store.wallet.address || !sendToken) {
-      enqueueSnackbar(t('Cannot send asset without account or balance'), { variant: 'error' });
+    if (!sendToken || !tokenValue || !address) {
+      setError(
+        !sendToken
+          ? 'No asset selected'
+          : !tokenValue
+            ? 'Amount not available'
+            : 'Destination not found'
+      );
       return;
     }
 
-    const processedArgs = {
-      from: store.wallet.address!,
-      to: address,
-      amount: BigInt((tokenValue * 10 ** (sendToken?.decimals || 7)).toFixed(0)),
-    };
+    try {
+      const txHash = await send({
+        destination: address,
+        token: sendToken,
+        amount: tokenValue.toFixed(7),
+        memo,
+      });
 
-    await executeContractTransaction({
-      contractType: 'token',
-      contractAddress: sendToken.contract,
-      transactionDetails: {
-        type: TransactionType.SEND,
-        token1: { name: sendToken.symbol, amount: tokenValue.toString() },
-      },
-      transactionFunction: async (client) => {
-        const tx = await client.transfer(processedArgs, {
-          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
-          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
-        });
-
-        await tx.sign();
-        const signedXDR = tx.signed?.toXDR();
-
-        if (signedXDR) {
-          const apiRes = await executeSend(signedXDR, 'Send Token');
-          if (apiRes?.transactionHash) {
-            (tx as any).hash = apiRes.transactionHash;
-          }
-        }
-
-        return tx;
-      },
-    });
-
-    onClose();
+      if (txHash) {
+        enqueueSnackbar('Transaction successful', { variant: 'success' });
+      } else {
+        enqueueSnackbar('Failed to send asset', { variant: 'error' });
+      }
+      onClose();
+    } catch (e: any) {
+      setError('Error during transfer');
+    }
   };
 
   return (
@@ -135,7 +103,7 @@ const SendReview: React.FC<SendReviewProps> = ({
       <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div" color="text.primary">
-            {t('Review send')}
+            {t('Review withdrawal')}
           </Typography>
           <IconButton onClick={onClose}>
             <Iconify icon="mingcute:close-line" width={24} />
@@ -162,7 +130,6 @@ const SendReview: React.FC<SendReviewProps> = ({
             <Typography variant="caption" color="text.secondary" mb={1}>
               {t("You're sending")}
             </Typography>
-
             <Box
               sx={{
                 width: '100%',
@@ -206,8 +173,7 @@ const SendReview: React.FC<SendReviewProps> = ({
                 }}
               />
             </Box>
-
-            <Typography variant="caption" color="text.secondary" mb={1}>
+            <Typography variant="caption" color="text.secondary" mb={2}>
               {t('To')}
             </Typography>
             <Box
@@ -219,19 +185,89 @@ const SendReview: React.FC<SendReviewProps> = ({
               }}
             >
               <Box>
-                <Typography variant="body2">{address}</Typography>
+                <Typography variant="body2" sx={{ wordBreak: 'break-all', whiteSpace: 'normal' }}>
+                  {address}
+                </Typography>
               </Box>
             </Box>
+            {memo && (
+              <>
+                <Typography variant="caption" color="text.secondary" mb={2}>
+                  {t('With memo')}
+                </Typography>
+                <Box
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{ wordBreak: 'break-all', whiteSpace: 'normal' }}
+                    >
+                      {memo}
+                    </Typography>
+                  </Box>
+                </Box>
+              </>
+            )}
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              {t('Please review all information - mistakes cannot be reversed!')}
+            </Alert>
+            <Checkbox
+              checked={approved}
+              onChange={(e) => setApproved(e.target.checked)}
+              data-testid="send-review-checkbox"
+            />
+            <Typography variant="body2" color="text.secondary">
+              {t("I've reviewed this transaction")}
+            </Typography>
           </Box>
 
           <Box sx={{ width: '100%', height: '1px', bgcolor: theme.palette.text.disabled }} />
+
+          {/* Display send error if exists */}
+          {error && (
+            <Box
+              sx={{
+                padding: theme.spacing(1.5),
+                backgroundColor: alpha(theme.palette.error.main, 0.1),
+                border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                borderRadius: '12px',
+                mt: 2,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  color: theme.palette.error.main,
+                  fontSize: '14px',
+                  textAlign: 'center',
+                }}
+              >
+                {error.toString()}
+              </Typography>
+            </Box>
+          )}
         </Box>
       </DialogContent>
+
       <DialogActions sx={{ p: 2, pt: 0, width: '100%' }}>
         <Box sx={{ width: '100%' }}>
-          <Button fullWidth variant="soft" color="success" size="large" onClick={onSubmit}>
+          <LoadingButton
+            fullWidth
+            variant="soft"
+            color="success"
+            size="large"
+            onClick={onSubmit}
+            loading={loading}
+            disabled={!approved}
+          >
             {t('Send')}
-          </Button>
+          </LoadingButton>
         </Box>
       </DialogActions>
     </Dialog>

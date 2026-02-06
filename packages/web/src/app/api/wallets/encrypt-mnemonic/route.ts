@@ -4,6 +4,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { UserRSAService } from '@/lib/user-rsa-service';
 import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
@@ -22,8 +23,9 @@ const EncryptSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const token = getAccessToken(request);
-    const user = await getAuthenticatedUser(token);
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -44,6 +46,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { walletAddress, encryptedMnemonic, encryptedAESKey, iv } = validation.data;
+
+    // Assert user owns walletAddress
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
 
     const userIdentifier = `${user.id}:${user.email}`;
 

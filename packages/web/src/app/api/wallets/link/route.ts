@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
@@ -37,10 +38,16 @@ const UpdateWalletSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const token = getAccessToken(request);
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     // Check if admin bypass (admin_secret as auth token)
-    const isAdminRequest = token === process.env.ADMIN_SECRET;
+    const isAdminRequest = accessToken === process.env.ADMIN_SECRET;
     const isDev = process.env.NODE_ENV === 'development';
     const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
 
@@ -66,6 +73,11 @@ export async function POST(request: NextRequest) {
       userId: adminProvidedUserId,
     } = validation.data;
 
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    // if (isLinked) {
+    //   return NextResponse.json({ error: 'Wallet already linked' }, { status: 409 });
+    // }
+
     let userId: string;
 
     if (isAdminRequest) {
@@ -82,10 +94,6 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Normal request: authenticate user
-      const user = await getAuthenticatedUser(token);
-      if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
       userId = user.id;
 
       // Check rate limit for non-admin requests
@@ -182,9 +190,10 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const token = getAccessToken(request);
-    // Verify authentication
-    const user = await getAuthenticatedUser(token);
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -202,10 +211,10 @@ export async function PATCH(request: NextRequest) {
 
     const { walletAddress, walletName } = validation.data;
 
-    // Check if wallet is linked to this user
+    // Assert user owns walletAddress
     const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     if (!isLinked) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Update wallet name if provided
@@ -234,9 +243,10 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const token = getAccessToken(request);
-    // Verify authentication
-    const user = await getAuthenticatedUser(token);
+    // Authenticate
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -249,10 +259,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 });
     }
 
-    // Check if wallet is linked to this user
+    // Assert user owns walletAddress
     const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     if (!isLinked) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Unlink the wallet

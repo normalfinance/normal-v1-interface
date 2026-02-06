@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
 
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Rate limit by supabaseUid (1 per week)
@@ -68,6 +68,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { walletAddress } = validation.data;
+
+    // Assert user owns walletAddress
+    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    // if (!isLinked) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }
 
     const hasBeenSponsored = await SponsorService.hasBeenSponsored(walletAddress);
     if (hasBeenSponsored) {

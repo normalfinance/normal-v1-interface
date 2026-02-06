@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-
-function j(status: number, payload: any) {
-  return NextResponse.json(payload, { status });
-}
+import { j, getAccessToken } from '@/utils/http';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * POST /api/mgi/sep24/withdraw/cancel
@@ -14,6 +12,14 @@ function j(status: number, payload: any) {
  */
 export async function POST(req: Request) {
   try {
+    // Authenticate
+    const accessToken = getAccessToken(req);
+    const user = await getAuthenticatedUser(accessToken);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const {
       token,
       id,

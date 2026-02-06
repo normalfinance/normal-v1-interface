@@ -2,6 +2,7 @@ import { useBoolean } from '@/hooks';
 import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { buildAuthHeaders } from '@/utils/http';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
@@ -109,7 +110,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session?.access_token) {
+      if (!session) {
         throw new Error('Authentication required');
       }
 
@@ -186,26 +187,23 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
   /** Coinbase */
   const handleCoinbaseClick = async () => {
-    if (!walletAddress) {
-      enqueueSnackbar('Please connect your wallet first', { variant: 'warning' });
-      return;
-    }
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
     if (!session) {
-      enqueueSnackbar('Please login first', { variant: 'warning' });
-      return;
+      throw new Error('Authentication required');
     }
 
+    if (!walletAddress) {
+      enqueueSnackbar('Please login and connect your wallet first', { variant: 'warning' });
+      return;
+    }
+    const headers = await buildAuthHeaders();
     const r = await fetch('/api/coinbase/session', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
     });
 

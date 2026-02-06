@@ -610,9 +610,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       color="primary"
                       fullWidth
                       startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => {
-                        setShowImportNormalWallet(true);
-                      }}
+                      onClick={() => setShowWalletSelection(true)}
                     >
                       {t('Switch Wallets')}
                     </Button>
@@ -641,9 +639,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       color="primary"
                       fullWidth
                       startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => {
-                        setShowImportNormalWallet(true);
-                      }}
+                      onClick={() => setShowWalletSelection(true)}
                     >
                       {t('Switch Wallets')}
                     </Button>
@@ -667,9 +663,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
       <WalletSelectionModal
         open={showWalletSelection}
         onClose={() => setShowWalletSelection(false)}
-        onCreateNormalWallet={() => setShowCreateNormalWallet(true)}
-        onConnectNormalWallet={() => setShowImportNormalWallet(true)}
-        onContinueToOtherWallets={handleConnectStellarWallet}
+        onCreateNormalWallet={handleSwitchToCreateNormalWallet}
+        onConnectNormalWallet={handleSwitchToImportNormalWallet}
+        onContinueToOtherWallets={handleSwitchToExternalWallet}
       />
       <NormalWalletCreate
         open={showCreateNormalWallet}
