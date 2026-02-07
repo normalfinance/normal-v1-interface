@@ -5,7 +5,12 @@ import { useBoolean } from '@/hooks/use-boolean';
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { logger, validateMnemonic, normalizeMnemonic } from '@normalfinance/utils';
+import {
+  logger,
+  validateMnemonic,
+  normalizeMnemonic,
+  createKeypairFromMnemonic,
+} from '@normalfinance/utils';
 import { updateWalletCustody, removePlatformCustody } from '@/services/linked-wallets';
 import {
   generateAESKey,
@@ -31,9 +36,15 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import ContentCopy from '@mui/icons-material/ContentCopy';
 
 import { useSnackbar } from '@/components/template/snackbar';
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 
 export interface CustodySettingsProps {
   walletAddress: string;
@@ -51,6 +62,7 @@ export function CustodySettings({
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { user } = useSupabaseAuth();
+  const { copy } = useCopyToClipboard();
   const migrateToPlatformDialog = useBoolean();
   const migrateToSelfDialog = useBoolean();
   const exportMnemonicDialog = useBoolean();
@@ -66,6 +78,8 @@ export function CustodySettings({
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportedMnemonic, setExportedMnemonic] = useState<string | null>(null);
   const [isHoldingReveal, setIsHoldingReveal] = useState(false);
+  const [exportedSecretKey, setExportedSecretKey] = useState<string | null>(null);
+  const [isSecretKeyVisible, setIsSecretKeyVisible] = useState(false);
 
   const resetExportState = useCallback(() => {
     setExportStage('confirm');
@@ -75,6 +89,8 @@ export function CustodySettings({
     setExportError(null);
     setExportedMnemonic(null);
     setIsHoldingReveal(false);
+    setExportedSecretKey(null);
+    setIsSecretKeyVisible(false);
   }, []);
 
   const handleCloseExport = useCallback(() => {
@@ -183,6 +199,16 @@ export function CustodySettings({
       }
 
       setExportedMnemonic(body.mnemonic);
+
+      try {
+        const keypair = createKeypairFromMnemonic(body.mnemonic, '', 0);
+        const secretKey = keypair.secret();
+        setExportedSecretKey(secretKey);
+      } catch (error) {
+        logger.error('Failed to derive secret key:', error);
+        setExportedSecretKey(null);
+      }
+
       setExportStage('reveal');
       enqueueSnackbar(t('Recovery phrase ready to reveal'), { variant: 'success' });
     } catch (e: any) {
@@ -529,6 +555,7 @@ export function CustodySettings({
                   multiline
                   rows={4}
                   fullWidth
+                  label={t('Recovery Phrase')}
                   value={
                     isHoldingReveal ? (exportedMnemonic ?? '') : '••••••••••••••••••••••••••••'
                   }
@@ -544,6 +571,44 @@ export function CustodySettings({
                 >
                   {t('Hold to Reveal')}
                 </Button>
+
+                {exportedSecretKey && (
+                  <>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                      {t('Secret Key')}
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      value={isSecretKeyVisible ? exportedSecretKey : '••••••••••••••••••••••••••••'}
+                      InputProps={{
+                        readOnly: true,
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setIsSecretKeyVisible(!isSecretKeyVisible)}
+                              edge="end"
+                              aria-label={isSecretKeyVisible ? t('Hide secret key') : t('Show secret key')}
+                            >
+                              {isSecretKeyVisible ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                            <IconButton
+                              onClick={() => {
+                                copy(exportedSecretKey);
+                                enqueueSnackbar(t('Secret key copied to clipboard'), {
+                                  variant: 'success',
+                                });
+                              }}
+                              edge="end"
+                              aria-label={t('Copy secret key')}
+                            >
+                              <ContentCopy />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </>
+                )}
               </>
             )}
 
