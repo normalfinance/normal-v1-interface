@@ -7,6 +7,7 @@ import { getAccessToken } from '@/utils/http';
 import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { getAccessToken } from '@/utils/http';
 
 const LinkWalletSchema = z.object({
   walletAddress: z

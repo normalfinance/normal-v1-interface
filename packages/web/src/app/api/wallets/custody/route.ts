@@ -6,6 +6,7 @@ import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { getAccessToken } from '@/utils/http';
 
 const UpdateCustodySchema = z.object({
   walletAddress: z

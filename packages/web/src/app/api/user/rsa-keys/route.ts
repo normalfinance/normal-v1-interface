@@ -10,6 +10,7 @@ import {
   encryptRSAPrivateKey,
   decryptClientEncryptedRSAPrivateKey,
 } from '@/lib/server-rsa-encryption';
+import { getAccessToken } from '@/utils/http';
 
 const StoreRSASchema = z.object({
   publicKey: z.string().min(1, 'Public key is required'),

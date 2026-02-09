@@ -8,7 +8,8 @@ import { getAccessToken } from '@/utils/http';
 import { UserRSAService } from '@/lib/user-rsa-service';
 import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { encryptMnemonicServer } from '@/lib/server-mnemonic-encryption';
+import { encryptMnemonicServerV2 } from '@/lib/server-mnemonic-encryption';
+import { getAccessToken } from '@/utils/http';
 
 const EncryptSchema = z.object({
   walletAddress: z
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       decipher.final(),
     ]).toString('utf-8');
 
-    const encrypted = await encryptMnemonicServer(decryptedMnemonic, userIdentifier);
+    const encrypted = await encryptMnemonicServerV2(decryptedMnemonic, user.id);
 
     logger.log('[API /encrypt-mnemonic] Mnemonic encrypted successfully:', {
       userId: user.id.substring(0, 8) + '...',
