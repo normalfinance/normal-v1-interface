@@ -663,9 +663,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
       <WalletSelectionModal
         open={showWalletSelection}
         onClose={() => setShowWalletSelection(false)}
-        onCreateNormalWallet={handleSwitchToCreateNormalWallet}
-        onConnectNormalWallet={handleSwitchToImportNormalWallet}
-        onContinueToOtherWallets={handleSwitchToExternalWallet}
+        onCreateNormalWallet={() => setShowCreateNormalWallet(true)}
+        onConnectNormalWallet={() => setShowImportNormalWallet(true)}
+        onContinueToOtherWallets={handleConnectStellarWallet}
       />
       <NormalWalletCreate
         open={showCreateNormalWallet}

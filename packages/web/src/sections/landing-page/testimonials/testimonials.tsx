@@ -142,11 +142,6 @@ const DEFAULT_PROPS = {
   ],
 };
 
-const paperSx = {
-  bgcolor: '#F9FAFB',
-  borderRadius: 2,
-};
-
 const TestimonialCard: React.FC<Testimonial> = ({
   quote,
   avatar,
@@ -159,22 +154,24 @@ const TestimonialCard: React.FC<Testimonial> = ({
   return (
     <Paper
       variant="outlined"
-      sx={{
-        ...paperSx,
+      sx={(theme) => ({
+        borderRadius: 2,
         p: { xs: 3, md: 4 },
         display: 'flex',
         flexDirection: 'column',
-      }}
+        bgcolor: theme.palette.grey[100],
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
+      })}
     >
       <Box mb={{ xs: 2.5, md: 3 }} display="flex">
         {Array.from({ length: numberOfStars }).map((_, i) => (
-          <Icon
-            key={i}
-            icon="material-symbols:star-rounded"
-            width={24}
-            height={24}
-            style={{ color: '#FFAB00' }}
-          />
+          <Box key={i} component="span" sx={{ color: 'warning.main', display: 'inline-flex' }}>
+            <Icon
+              icon="material-symbols:star-rounded"
+              width={24}
+              height={24}
+            />
+          </Box>
         ))}
       </Box>
 
