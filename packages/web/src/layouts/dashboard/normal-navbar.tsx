@@ -459,13 +459,19 @@ function DesktopDock({
       }}
     >
       <Box
-        sx={{
+        sx={(t) => ({
           px: 2,
-          borderTop: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
-          borderBottom: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
-          bgcolor: theme.palette.background.paper,
-          boxShadow: `0 16px 40px ${alpha(theme.palette.common.black, 0.14)}`,
-        }}
+          color: 'text.primary',
+          borderTop: `1px solid ${alpha(t.palette.text.primary, 0.06)}`,
+          borderBottom: `1px solid ${alpha(t.palette.text.primary, 0.06)}`,
+          boxShadow: `0 16px 40px ${alpha(t.palette.common.black, 0.14)}`,
+          bgcolor: t.palette.background.paper,
+          ...t.applyStyles('dark', {
+            bgcolor: t.palette.grey[900],
+            borderTop: `1px solid ${alpha(t.palette.common.white, 0.08)}`,
+            borderBottom: `1px solid ${alpha(t.palette.common.white, 0.08)}`,
+          }),
+        })}
       >
         {children}
       </Box>

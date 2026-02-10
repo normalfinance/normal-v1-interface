@@ -865,22 +865,34 @@ const TradeCard: React.FC<TradeCardProps> = ({
                   </Box>
 
                   <Button
-                    variant="contained"
+                    variant="outlined"
                     size="small"
+                    color="secondary"
                     onClick={handleMaxClick}
                     disabled={loading}
-                    sx={{
+                    sx={(t) => ({
                       fontWeight: 500,
                       fontSize: '12px',
                       p: 0,
                       height: '24px',
                       minWidth: '36px',
-                      backgroundColor: 'rgba(148,123,255,0.29)',
-                      color: '#6E4BFF',
+                      borderColor: alpha(t.palette.secondary.main, 0.5),
+                      bgcolor: alpha(t.palette.secondary.main, 0.29),
+                      color: 'secondary.main',
                       '&:hover': {
-                        backgroundColor: 'rgba(148,123,255,0.20)',
+                        borderColor: alpha(t.palette.secondary.main, 0.5),
+                        bgcolor: alpha(t.palette.secondary.main, 0.2),
                       },
-                    }}
+                      ...t.applyStyles('dark', {
+                        bgcolor: alpha(t.palette.secondary.main, 0.4),
+                        borderColor: alpha(t.palette.secondary.main, 0.6),
+                        color: t.palette.secondary.light,
+                        '&:hover': {
+                          bgcolor: alpha(t.palette.secondary.main, 0.35),
+                          borderColor: alpha(t.palette.secondary.main, 0.6),
+                        },
+                      }),
+                    })}
                   >
                     {t('Max')}
                   </Button>

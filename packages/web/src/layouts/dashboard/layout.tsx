@@ -139,7 +139,23 @@ export function DashboardLayout({
           )}
           <br />
           <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-            <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={handleGiveFeedback}>
+            <Button
+              variant="contained"
+              sx={(theme) => ({
+                mt: 1,
+                bgcolor: theme.palette.grey[100],
+                color: theme.palette.grey[900],
+                '&:hover': {
+                  bgcolor: theme.palette.grey[200],
+                },
+                ...theme.applyStyles('dark', {
+                  bgcolor: theme.palette.grey[800],
+                  color: theme.palette.common.white,
+                  '&:hover': { bgcolor: theme.palette.grey[700] },
+                }),
+              })}
+              onClick={handleGiveFeedback}
+            >
               {t('Give feedback / Report bug')}
             </Button>
           </Box>
