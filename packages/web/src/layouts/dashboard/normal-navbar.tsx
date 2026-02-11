@@ -724,14 +724,15 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
         </Box>
 
         <Box
-          sx={{
+          sx={(t2) => ({
             position: 'absolute',
             inset: 0,
             width: '100vw',
             left: { xs: 0, lg: 'calc(-5% - 0px)' },
-            bgcolor: (t2) => t2.palette.grey[100],
+            bgcolor: t2.palette.grey[100],
             zIndex: 0,
-          }}
+            ...t2.applyStyles('dark', { bgcolor: t2.palette.grey[800] }),
+          })}
         />
       </Box>
     </Box>
