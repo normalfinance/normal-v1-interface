@@ -49,10 +49,11 @@ export interface FeatureGridProps extends React.ComponentPropsWithoutRef<'sectio
 
 /* ––––– Shared styles ––––– */
 
-const paperSx = {
-  bgcolor: '#F9FAFB',
+const getPaperSx = (theme: { palette: { grey: Record<number, string> }; applyStyles: (mode: string, styles: object) => object }) => ({
   borderRadius: 3,
-};
+  bgcolor: theme.palette.grey[100],
+  ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
+});
 
 const cardPadding = { xs: 2.5, md: 4 };
 
@@ -68,7 +69,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
   return (
     <Paper
       variant="outlined"
-      sx={{ ...paperSx, cursor: isLink ? 'pointer' : 'default' }}
+      sx={(theme) => ({ ...getPaperSx(theme), cursor: isLink ? 'pointer' : 'default' })}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)} // keyboard focus
@@ -155,7 +156,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   }}
                   role={tkn.icon ? 'link' : undefined}
                   tabIndex={tkn.icon ? 0 : undefined}
-                  sx={{
+                  sx={(theme) => ({
                     cursor: tkn.icon ? 'pointer' : 'default',
                     transition: 'transform 0.15s ease',
                     '&:hover': {
@@ -163,10 +164,10 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                     },
                     px: { xs: '12px', md: '16px' },
                     py: { xs: '6px', md: '12px' },
-                    bgcolor: 'white',
+                    bgcolor: theme.palette.background.paper,
                     borderRadius: 1.5,
-                    border: '1px solid rgba(87, 146, 255, 0.15)',
-                  }}
+                    border: `1px solid ${theme.palette.divider}`,
+                  })}
                 >
                   {/* left side (icon + symbols) */}
                   <Box display="flex" alignItems="center" gap={1}>
@@ -288,7 +289,7 @@ const TallCardItem: React.FC<TallCard> = (c) => {
   return (
     <Paper
       variant="outlined"
-      sx={{ ...paperSx, cursor: isLink ? 'pointer' : 'default', height: '100%' }}
+      sx={(theme) => ({ ...getPaperSx(theme), cursor: isLink ? 'pointer' : 'default', height: '100%' })}
       onClick={() => isLink && router.push(c.url!)}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -358,7 +359,7 @@ const WideCardItem: React.FC<WideCard> = (c) => {
   return (
     <Paper
       variant="outlined"
-      sx={{ ...paperSx, cursor: isLink ? 'pointer' : 'default' }}
+      sx={(theme) => ({ ...getPaperSx(theme), cursor: isLink ? 'pointer' : 'default' })}
       onClick={() => isLink && router.push(c.url!)}
     >
       <Stack spacing={2} p={cardPadding} textAlign={{ xs: 'center', md: 'left' }}>
@@ -439,13 +440,13 @@ export const FeatureGrid: React.FC<FeatureGridProps> = ({
   return (
     <Box
       component="section"
-      sx={{
+      sx={(theme) => ({
         position: 'relative',
         overflow: 'hidden',
         px: '5%',
         py: { xs: 6, md: 8, lg: 10 },
-        backgroundColor: 'white',
-      }}
+        bgcolor: theme.palette.background.paper,
+      })}
       {...sectionProps}
     >
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, px: 0 }}>

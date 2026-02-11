@@ -112,7 +112,7 @@ export function FooterSection({
   const { t } = useTranslate();
 
   return (
-    <FooterRoot sx={[{ bgcolor: 'grey.950' }, ...(Array.isArray(sx) ? sx : [sx || {}])]} {...other}>
+    <FooterRoot sx={[{ bgcolor: 'background.paper' }, ...(Array.isArray(sx) ? sx : [sx || {}])]} {...other}>
       <Divider />
 
       <Container
@@ -138,7 +138,7 @@ export function FooterSection({
           <Grid size={{ xs: 12, [layoutQuery]: 3 }}>
             <Typography
               variant="body2"
-              color="grey.400"
+              color="text.secondary"
               sx={(theme) => ({
                 mx: 'auto',
                 maxWidth: 280,
@@ -186,7 +186,7 @@ export function FooterSection({
                     [theme.breakpoints.up(layoutQuery)]: { alignItems: 'flex-start' },
                   })}
                 >
-                  <Typography component="div" variant="overline" color="white">
+                  <Typography component="div" variant="overline" color="text.primary">
                     {t(list.headline)}
                   </Typography>
 
@@ -195,7 +195,7 @@ export function FooterSection({
                       key={link.name}
                       component={RouterLink}
                       href={link.href as string}
-                      color="grey.400"
+                      color="text.secondary"
                       variant="body2"
                     >
                       {t(link.name)}
@@ -208,7 +208,7 @@ export function FooterSection({
         </Grid>
 
         {/* eslint-disable-next-line i18next/no-literal-string */}
-        <Typography variant="body2" sx={{ mt: 10 }} color="white">
+        <Typography variant="body2" sx={{ mt: 10 }} color="text.primary">
           © 2026 - Normal Finance, Inc.
         </Typography>
       </Container>

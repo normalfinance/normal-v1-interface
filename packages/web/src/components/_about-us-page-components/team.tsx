@@ -50,9 +50,9 @@ type Props = {
 export type TeamProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
 const BRAND = {
-  x: '#000000',
+  x: 'currentColor',
   linkedin: '#0077B5',
-  github: '#181717',
+  github: 'currentColor',
   telegram: '#0088CC',
 };
 
@@ -282,7 +282,10 @@ export const Team: React.FC<TeamProps> = (props) => {
       component="section"
       {...sectionProps}
       py={{ xs: 8, md: 12, lg: 14 }}
-      sx={{ backgroundColor: '#F8FAFC' }}
+      sx={(theme) => ({
+        backgroundColor: theme.palette.grey[50],
+        ...theme.applyStyles('dark', { backgroundColor: theme.palette.grey[900] }),
+      })}
     >
       <Container>
         <Box maxWidth={600} mb={{ xs: 6, md: 9, lg: 10 }}>
@@ -322,12 +325,12 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
       display="flex"
       flexDirection="column"
       p={1}
-      bgcolor="white"
-      sx={{
-        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+      sx={(theme) => ({
+        bgcolor: theme.palette.background.paper,
+        boxShadow: `0 4px 12px ${theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(15, 23, 42, 0.06)'}`,
         transition: 'transform 120ms ease, box-shadow 120ms ease',
         borderRadius: 2,
-      }}
+      })}
     >
       <Box position="relative" width="100%" paddingTop="100%" mb={1} sx={{ overflow: 'hidden' }}>
         <Box
@@ -347,7 +350,7 @@ const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
       </Box>
       <Box
         sx={{
-          backgroundColor: 'grey.100',
+          backgroundColor: 'background.neutral',
           borderRadius: 2,
           p: 3,
         }}

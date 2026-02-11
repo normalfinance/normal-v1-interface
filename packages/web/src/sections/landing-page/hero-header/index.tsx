@@ -5,6 +5,7 @@ import type { SwapQueryParams } from '@/types/query-params';
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
@@ -45,6 +46,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
   } as Props;
 
   const { t } = useTranslate();
+  const theme = useTheme();
 
   return (
     <Box
@@ -54,7 +56,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
         overflow: 'hidden',
         px: '5%',
         py: { xs: 6, md: 8, lg: 10 },
-        backgroundColor: 'white',
+        bgcolor: 'background.paper',
       }}
       {...sectionProps}
     >
@@ -67,15 +69,14 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
           pointerEvents: 'none',
         }}
       >
-        {/* animated waves */}
         <WavyBackground
           sizing="viewport"
-          baseline="center" // or "top"
+          baseline="center"
           yOffset={0}
           colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
           waveOpacity={0.35}
           speed="slow"
-          backgroundFill="white"
+          backgroundFill={theme.palette.background.paper}
         />
       </Box>
 
@@ -87,7 +88,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               variant="outlined"
               sx={{
                 justifyContent: 'center',
-                backgroundColor: 'rgba(145, 158, 171, 0.12)',
+                backgroundColor: alpha(theme.palette.grey[500], 0.12),
                 px: '10px',
                 py: '4px',
                 display: 'inline-flex',
@@ -112,7 +113,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   sx={{
                     width: '2px',
                     height: '10px',
-                    backgroundColor: 'rgba(145, 158, 171, 0.12)',
+                    backgroundColor: alpha(theme.palette.grey[500], 0.12),
                   }}
                 />
                 <Box
@@ -189,8 +190,8 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 my: { xs: 4, md: 5 },
                 p: 1,
                 borderRadius: 3,
-                backgroundColor: 'white',
-                boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
+                bgcolor: 'background.paper',
+                boxShadow: (t) => `0px 9px 50px 0px ${alpha(t.palette.common.black, 0.25)}`,
               }}
             >
               <TradeCard queryParams={swapParams} />

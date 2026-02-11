@@ -44,7 +44,13 @@ export default function EarnView() {
   }, [wallet.address]);
 
   return (
-    <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
+    <Box
+      sx={(theme) => ({
+        minHeight: '100dvh',
+        bgcolor: theme.palette.grey[100],
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.background.default }),
+      })}
+    >
       <DashboardContent maxWidth="xl">
         <Stack spacing={1}>
           <Typography variant="h4" color="text.primary">
