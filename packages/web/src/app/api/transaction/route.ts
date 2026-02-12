@@ -9,6 +9,7 @@ import { logger, constants, parseError } from '@normalfinance/utils';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createNodeConfigHandler } from '@/lib/edge-config-middleware';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 
 export const runtime = 'nodejs';
 
@@ -72,11 +73,27 @@ async function transactionHandler(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    // Assert user owns walletAddress
-    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    // if (!isLinked) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
+    const linkedWallet = await LinkedWalletService.getLinkedWalletByAddress(walletAddress);
+    if (linkedWallet && linkedWallet.supabaseUid !== user.id) {
+      await logWithConfig('warn', 'Transaction API: wallet linked to different user', {
+        userId: user.id.substring(0, 8) + '...',
+        walletAddress: walletAddress.substring(0, 8) + '...',
+        transactionType,
+      });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    if (linkedWallet && linkedWallet.supabaseUid === user.id) {
+      const custodyChoice = linkedWallet.custodyChoice;
+      if (custodyChoice !== 'self' && custodyChoice !== 'platform' && custodyChoice !== null) {
+        await logWithConfig('warn', 'Transaction API: wallet custody not allowed for transaction', {
+          userId: user.id.substring(0, 8) + '...',
+          walletAddress: walletAddress.substring(0, 8) + '...',
+          transactionType,
+          custodyChoice,
+        });
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
 
     // Verify signature
     try {
