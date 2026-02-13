@@ -6,6 +6,7 @@ import { buildAuthHeaders } from '@/utils/http';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
+import { isWalletLinked } from '@/services/linked-wallets';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
@@ -113,6 +114,21 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const handleFundAccount = async () => {
     if (!userAddress) {
       enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
+      return;
+    }
+
+    try {
+      const linked = await isWalletLinked(userAddress);
+      if (!linked) {
+        enqueueSnackbar(t('We could not verify wallet link right now. Please retry.'), {
+          variant: 'info',
+        });
+        return;
+      }
+    } catch {
+      enqueueSnackbar(t('We could not verify wallet link right now. Please retry.'), {
+        variant: 'warning',
+      });
       return;
     }
 
