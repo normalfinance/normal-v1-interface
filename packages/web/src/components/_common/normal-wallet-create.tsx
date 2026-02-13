@@ -6,7 +6,6 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { linkWallet, updateWalletName } from '@/services/linked-wallets';
-import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
 import {
   logger,
   splitMnemonicToWords,
@@ -70,7 +69,7 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
 export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalWalletCreateProps) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { createWallet, signTransaction, clearKeypairForPlatformCustody } = useNormalWallet();
+  const { createWallet } = useNormalWallet();
   const { user } = useSupabaseAuth();
 
   const [stage, setStage] = useState<CreateStage>('creating');
@@ -274,55 +273,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setStage('verify');
   }, [mnemonic]);
 
-  const requestFaucetFundingAndTrustline = useCallback(
-    async (walletAddress: string, custodyChoice?: 'self' | 'platform') => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          throw new Error('Authentication required');
-        }
-
-        logger.log('[NormalWalletCreate] Requesting sponsorship for:', walletAddress);
-        const { sponsorshipXDR } = await requestWalletSponsorship(
-          walletAddress,
-          session.access_token
-        );
-        logger.log('[NormalWalletCreate] Received sponsorship XDR');
-
-        if (sponsorshipXDR && signTransaction) {
-          const signedXDR = await signTransaction(sponsorshipXDR);
-          const { hash } = await submitSponsorshipTransaction(
-            signedXDR,
-            walletAddress,
-            session.access_token
-          );
-          logger.log('[NormalWalletCreate] Account sponsored successfully:', hash);
-        }
-      } catch (e: any) {
-        logger.error('[NormalWalletCreate] Error in sponsorship flow:', e);
-        if (
-          e.message?.includes('already been sponsored') ||
-          e.message?.includes('already exists')
-        ) {
-          logger.log('[NormalWalletCreate] Wallet already sponsored, skipping');
-          return;
-        }
-        enqueueSnackbar(e.message || t('Failed to create account and enable USDC'), {
-          variant: 'error',
-        });
-      } finally {
-        if (custodyChoice === 'platform') {
-          clearKeypairForPlatformCustody();
-        }
-      }
-    },
-    [signTransaction, enqueueSnackbar, t, clearKeypairForPlatformCustody]
-  );
-
   const handleComplete = useCallback(
-    async (options?: { custodyChoice?: 'self' | 'platform' }) => {
+    async () => {
       if (walletName.trim() && publicKey) {
         try {
           await updateWalletName(publicKey, walletName.trim());
@@ -331,7 +283,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         }
       }
 
-      const walletAddress = publicKey;
       setMnemonic(null);
       setPublicKey(null);
       setWalletName('');
@@ -346,14 +297,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
       setIsSavingCustody(false);
       enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
       onSuccess();
-
-      if (walletAddress) {
-        requestFaucetFundingAndTrustline(walletAddress, options?.custodyChoice).catch((err) => {
-          logger.warn('[NormalWalletCreate] Failed to fund wallet or create trustline:', err);
-        });
-      }
     },
-    [walletName, publicKey, onSuccess, enqueueSnackbar, t, requestFaucetFundingAndTrustline]
+    [walletName, publicKey, onSuccess, enqueueSnackbar, t]
   );
 
   const handleCustodyConfirm = useCallback(async () => {
@@ -369,7 +314,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
       try {
         await encryptAndSaveMnemonic();
-        await handleComplete({ custodyChoice: 'platform' });
+        await handleComplete();
       } catch (err: any) {
         logger.error('Failed to save encrypted mnemonic:', err);
         enqueueSnackbar(

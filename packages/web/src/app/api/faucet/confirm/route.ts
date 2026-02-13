@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getClientIP, getAccessToken } from '@/utils/http';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const ConfirmSchema = z.object({
@@ -35,11 +36,10 @@ export async function POST(request: NextRequest) {
 
     const { walletAddress, txHash } = validation.data;
 
-    // Assert user owns walletAddress
-    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    // if (!isLinked) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const ipAddress = getClientIP(request);
 
