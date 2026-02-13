@@ -5,8 +5,8 @@ import { useTranslate } from '@/locales';
 
 import {
   Box,
+  Chip,
   Stack,
-  Alert,
   Dialog,
   Button,
   Divider,
@@ -24,7 +24,9 @@ export type WalletSelectionModalProps = {
   open: boolean;
   onClose: () => void;
   onCreateNormalWallet: () => void;
+  onConnectNormalWallet?: () => void;
   onContinueToOtherWallets: () => void;
+  showImportOption?: boolean;
 };
 
 const WALLET_SELECTION_SEEN_KEY = 'wallet-selection-modal-seen';
@@ -49,7 +51,9 @@ export default function WalletSelectionModal({
   open,
   onClose,
   onCreateNormalWallet,
+  onConnectNormalWallet,
   onContinueToOtherWallets,
+  showImportOption = false,
 }: WalletSelectionModalProps) {
   const { t } = useTranslate();
 
@@ -62,6 +66,13 @@ export default function WalletSelectionModal({
   const handleContinueToOtherWallets = () => {
     markWalletSelectionModalSeen();
     onContinueToOtherWallets();
+    onClose();
+  };
+
+  const handleConnectNormalWallet = () => {
+    if (!onConnectNormalWallet) return;
+    markWalletSelectionModalSeen();
+    onConnectNormalWallet();
     onClose();
   };
 
@@ -101,34 +112,74 @@ export default function WalletSelectionModal({
       </DialogTitle>
 
       <DialogContent sx={{ py: 5 }}>
-        <Stack spacing={2}>
+        <Stack spacing={2.5}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t('Select how you would like to setup your account')}
           </Typography>
 
-          <Alert severity="success">
-            <Typography variant="body2">{t('Recommended for most users.')}</Typography>
-          </Alert>
-
-          <Button
-            variant="contained"
-            color="primary"
-            fullWidth
-            size="large"
-            onClick={handleCreateNormalWallet}
+          <Box
             sx={{
-              py: 2,
-              justifyContent: 'flex-start',
-              textTransform: 'none',
+              border: 1,
+              borderColor: 'success.main',
+              borderRadius: 2,
+              p: 2,
+              bgcolor: 'background.neutral',
             }}
-            startIcon={<Iconify icon="solar:check-circle-bold" width={24} />}
           >
-            <Box sx={{ textAlign: 'left', flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight={600}>
-                {t('Create a Normal account')}
-              </Typography>
-            </Box>
-          </Button>
+            <Stack spacing={1.5}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                  label={t('Recommended')}
+                />
+                <Typography variant="caption" color="text.secondary">
+                  {t('Best for most users')}
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                size="large"
+                onClick={handleCreateNormalWallet}
+                sx={{
+                  py: 2,
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                }}
+                startIcon={<Iconify icon="solar:check-circle-bold" width={24} />}
+              >
+                <Box sx={{ textAlign: 'left', flex: 1 }}>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {t('Create a Normal account')}
+                  </Typography>
+                </Box>
+              </Button>
+              {showImportOption && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  fullWidth
+                  size="large"
+                  onClick={handleConnectNormalWallet}
+                  sx={{
+                    py: 2,
+                    justifyContent: 'flex-start',
+                    textTransform: 'none',
+                  }}
+                  startIcon={<Iconify icon="solar:import-bold" width={24} />}
+                >
+                  <Box sx={{ textAlign: 'left', flex: 1 }}>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {t('Import an existing account')}
+                    </Typography>
+                  </Box>
+                </Button>
+              )}
+            </Stack>
+          </Box>
 
           <Divider sx={{ my: 0.5 }}>
             <Typography variant="body2" color="text.secondary">
@@ -136,31 +187,48 @@ export default function WalletSelectionModal({
             </Typography>
           </Divider>
 
-          <Alert severity="warning">
-            <Typography variant="body2">{t('For advanced users only.')}</Typography>
-          </Alert>
-
-          {/* Continue to Other Wallets */}
-          <Button
-            variant="outlined"
-            color="inherit"
-            fullWidth
-            size="large"
-            onClick={handleContinueToOtherWallets}
+          <Box
             sx={{
-              py: 2,
-              justifyContent: 'flex-start',
-              textTransform: 'none',
-              mt: 1,
+              border: 1,
+              borderColor: 'warning.light',
+              borderRadius: 2,
+              p: 2,
+              bgcolor: 'background.neutral',
             }}
-            startIcon={<Iconify icon="solar:wallet-bold" width={24} />}
           >
-            <Box sx={{ textAlign: 'left', flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight={600}>
-                {t('Connect a crypto wallet')}
-              </Typography>
-            </Box>
-          </Button>
+            <Stack spacing={1.5}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip
+                  size="small"
+                  color="warning"
+                  variant="outlined"
+                  label={t('Advanced')}
+                />
+                <Typography variant="caption" color="text.disabled">
+                  {t('Requires wallet familiarity')}
+                </Typography>
+              </Box>
+              <Button
+                variant="outlined"
+                color="inherit"
+                fullWidth
+                size="large"
+                onClick={handleContinueToOtherWallets}
+                sx={{
+                  py: 2,
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                }}
+                startIcon={<Iconify icon="solar:wallet-bold" width={24} />}
+              >
+                <Box sx={{ textAlign: 'left', flex: 1 }}>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {t('Connect a crypto wallet')}
+                  </Typography>
+                </Box>
+              </Button>
+            </Stack>
+          </Box>
         </Stack>
       </DialogContent>
     </Dialog>

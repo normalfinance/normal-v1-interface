@@ -296,6 +296,7 @@ export function SettingsAccounts() {
         open={showImportNormalWallet}
         onClose={() => setShowImportNormalWallet(false)}
         onSuccess={handleImportSuccess}
+        showLinkedWallets={false}
       />
     </Stack>
   );
