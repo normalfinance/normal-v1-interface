@@ -45,7 +45,6 @@ import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import AuthLoginModal from '@/components/_common/auth-login-modal';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
-import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import WalletSelectionModal, {
   hasSeenWalletSelectionModal,
@@ -168,7 +167,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
-  const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
   const [resetEmail, setResetEmail] = useState<string | null>(null);
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
   const [isCheckingRateLimit, setIsCheckingRateLimit] = useState(false);
@@ -341,15 +339,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /** Handle Normal wallet creation success */
   const handleNormalWalletCreated = async () => {
     setShowCreateNormalWallet(false);
-    if (normalPublicKey) {
-      await connectNormalWallet();
-    }
-    onClose();
-  };
-
-  /** Handle Normal wallet import success */
-  const handleNormalWalletImported = async () => {
-    setShowImportNormalWallet(false);
     if (normalPublicKey) {
       await connectNormalWallet();
     }
@@ -664,18 +653,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
         open={showWalletSelection}
         onClose={() => setShowWalletSelection(false)}
         onCreateNormalWallet={() => setShowCreateNormalWallet(true)}
-        onConnectNormalWallet={() => setShowImportNormalWallet(true)}
         onContinueToOtherWallets={handleConnectStellarWallet}
       />
       <NormalWalletCreate
         open={showCreateNormalWallet}
         onClose={() => setShowCreateNormalWallet(false)}
         onSuccess={handleNormalWalletCreated}
-      />
-      <NormalWalletImport
-        open={showImportNormalWallet}
-        onClose={() => setShowImportNormalWallet(false)}
-        onSuccess={handleNormalWalletImported}
       />
     </>
   );

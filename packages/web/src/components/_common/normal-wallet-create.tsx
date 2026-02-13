@@ -123,6 +123,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   }, [open, stage]); // Removed createWallet from dependencies to prevent infinite loop
 
   const handleBackupWallet = () => {
+    setCustodyChoice('platform');
     setStage('custody-choice');
   };
 

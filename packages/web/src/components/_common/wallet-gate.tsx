@@ -10,7 +10,6 @@ import { Button } from '@mui/material';
 
 import AuthLoginModal from '@/components/_common/auth-login-modal';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
-import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import WalletSelectionModal, {
   hasSeenWalletSelectionModal,
 } from '@/components/_common/wallet-selection-modal';
@@ -21,6 +20,7 @@ interface WalletGateProps {
   fullWidth?: boolean;
   variant?: 'contained' | 'soft' | 'outlined';
   color?: 'info' | 'success' | 'primary' | 'secondary' | 'error' | 'warning';
+  requireWalletConnection?: boolean;
 }
 
 export const WalletGate: React.FC<WalletGateProps> = ({
@@ -29,27 +29,31 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   fullWidth = true,
   variant = 'soft',
   color = 'info',
+  requireWalletConnection = true,
 }) => {
   const persist = usePersistStore();
   const { t } = useTranslate();
   const { session, isLoading } = useSupabaseAuth();
-  const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
+  const { connectWallet, publicKey, isConnected } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
     publicKey: normalPublicKey,
     isConnected: isNormalConnected,
   } = useNormalWallet();
   const isWalletConnected = !!persist.wallet.address || isConnected || isNormalConnected;
-  const isGatePassed = !isLoading && !!session && isWalletConnected;
+  const isGatePassed =
+    !isLoading && !!session && (!requireWalletConnection || isWalletConnected);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
-  const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
 
   const handleConnectClick = async () => {
     if (!session) {
       setShowAuthModal(true);
+      return;
+    }
+    if (!requireWalletConnection) {
       return;
     }
     if (!hasSeenWalletSelectionModal()) {
@@ -89,14 +93,6 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     }
   };
 
-  /** Handle Normal wallet import success */
-  const handleNormalWalletImported = async () => {
-    setShowImportNormalWallet(false);
-    if (normalPublicKey) {
-      await connectNormalWallet();
-    }
-  };
-
   if (isGatePassed) {
     return children;
   }
@@ -117,23 +113,21 @@ export const WalletGate: React.FC<WalletGateProps> = ({
       >
         {t(buttonText)}
       </Button>
-      <WalletSelectionModal
-        open={showWalletSelection}
-        onClose={() => setShowWalletSelection(false)}
-        onCreateNormalWallet={() => setShowCreateNormalWallet(true)}
-        onConnectNormalWallet={() => setShowImportNormalWallet(true)}
-        onContinueToOtherWallets={handleConnectStellarWallet}
-      />
-      <NormalWalletCreate
-        open={showCreateNormalWallet}
-        onClose={() => setShowCreateNormalWallet(false)}
-        onSuccess={handleNormalWalletCreated}
-      />
-      <NormalWalletImport
-        open={showImportNormalWallet}
-        onClose={() => setShowImportNormalWallet(false)}
-        onSuccess={handleNormalWalletImported}
-      />
+      {requireWalletConnection && (
+        <>
+          <WalletSelectionModal
+            open={showWalletSelection}
+            onClose={() => setShowWalletSelection(false)}
+            onCreateNormalWallet={() => setShowCreateNormalWallet(true)}
+            onContinueToOtherWallets={handleConnectStellarWallet}
+          />
+          <NormalWalletCreate
+            open={showCreateNormalWallet}
+            onClose={() => setShowCreateNormalWallet(false)}
+            onSuccess={handleNormalWalletCreated}
+          />
+        </>
+      )}
       <AuthLoginModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </>
   );

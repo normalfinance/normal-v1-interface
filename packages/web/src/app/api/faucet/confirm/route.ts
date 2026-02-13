@@ -6,7 +6,6 @@ import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getClientIP, getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { getClientIP, getAccessToken } from '@/utils/http';
 
 const ConfirmSchema = z.object({
   walletAddress: z.string().regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),

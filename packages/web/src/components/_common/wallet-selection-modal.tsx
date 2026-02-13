@@ -24,7 +24,6 @@ export type WalletSelectionModalProps = {
   open: boolean;
   onClose: () => void;
   onCreateNormalWallet: () => void;
-  onConnectNormalWallet: () => void;
   onContinueToOtherWallets: () => void;
 };
 
@@ -50,7 +49,6 @@ export default function WalletSelectionModal({
   open,
   onClose,
   onCreateNormalWallet,
-  onConnectNormalWallet,
   onContinueToOtherWallets,
 }: WalletSelectionModalProps) {
   const { t } = useTranslate();
@@ -58,12 +56,6 @@ export default function WalletSelectionModal({
   const handleCreateNormalWallet = () => {
     markWalletSelectionModalSeen();
     onCreateNormalWallet();
-    onClose();
-  };
-
-  const handleConnectNormalWallet = () => {
-    markWalletSelectionModalSeen();
-    onConnectNormalWallet();
     onClose();
   };
 
@@ -118,28 +110,6 @@ export default function WalletSelectionModal({
             <Typography variant="body2">{t('Recommended for most users.')}</Typography>
           </Alert>
 
-          {/* Connect Normal Wallet */}
-          <Button
-            variant="outlined"
-            color="secondary"
-            fullWidth
-            size="large"
-            onClick={handleConnectNormalWallet}
-            sx={{
-              py: 2,
-              justifyContent: 'flex-start',
-              textTransform: 'none',
-            }}
-            startIcon={<Iconify icon="solar:import-bold" width={24} />}
-          >
-            <Box sx={{ textAlign: 'left', flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight={600}>
-                {t('Import an existing account')}
-              </Typography>
-            </Box>
-          </Button>
-
-          {/* Create Normal Wallet */}
           <Button
             variant="contained"
             color="primary"

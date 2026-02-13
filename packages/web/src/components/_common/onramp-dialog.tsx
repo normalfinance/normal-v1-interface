@@ -41,6 +41,7 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 
 import AmountDialog from '../deposit-amount-dialog';
 
@@ -72,12 +73,16 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const { enqueueSnackbar } = useSnackbar();
 
   const persist = usePersistStore();
-  const { signTransaction } = useNormalWallet();
+  const {
+    signTransaction,
+    connectWallet: connectNormalWallet,
+  } = useNormalWallet();
 
   const moneyGramAmountDialog = useBoolean();
 
   const [mgiLoading, setMgiLoading] = useState(false);
   const [isFunding, setIsFunding] = useState(false);
+  const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
 
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 
@@ -97,6 +102,12 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
   // Check if prerequisites are met
   const prerequisitesMet = accountExists && hasUsdcTrustline;
+
+  const handleNormalWalletCreated = async () => {
+    setShowCreateNormalWallet(false);
+    await connectNormalWallet();
+    await refetchAccountStatus();
+  };
 
   // Handle funding account via sponsored reserves
   const handleFundAccount = async () => {
@@ -315,8 +326,30 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             },
           }}
         >
-          {/* Loading state */}
-          {isCheckingAccount && (
+          {!isConnected && (
+            <Stack spacing={2} sx={{ mb: 2 }}>
+              <Alert severity="info" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                  {t('Normal Account Required')}
+                </Typography>
+                <Typography variant="body2">
+                  {t('Create a Normal account to start your first USDC deposit.')}
+                </Typography>
+              </Alert>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                size="large"
+                onClick={() => setShowCreateNormalWallet(true)}
+                startIcon={<Iconify icon="solar:add-circle-bold" />}
+              >
+                {t('Create Normal Account')}
+              </Button>
+            </Stack>
+          )}
+
+          {isConnected && isCheckingAccount && (
             <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
               <CircularProgress size={32} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
@@ -325,8 +358,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             </Stack>
           )}
 
-          {/* Account not funded - show faucet button */}
-          {!isCheckingAccount && !accountExists && (
+          {!isCheckingAccount && isConnected && !accountExists && (
             <Stack spacing={2} sx={{ mb: 2 }}>
               <Alert severity="warning" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
@@ -358,8 +390,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             </Stack>
           )}
 
-          {/* Account funded but no USDC trustline */}
-          {!isCheckingAccount && accountExists && !hasUsdcTrustline && (
+          {!isCheckingAccount && isConnected && accountExists && !hasUsdcTrustline && (
             <Stack spacing={2} sx={{ mb: 2 }}>
               <Alert severity="info" icon={<Iconify icon="solar:link-bold" width={22} />}>
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
@@ -389,8 +420,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             </Stack>
           )}
 
-          {/* Onramp options - only show when prerequisites met */}
-          {!isCheckingAccount && prerequisitesMet && (
+          {!isCheckingAccount && isConnected && prerequisitesMet && (
             <List disablePadding>
               {ONRAMPS.map((checkout) => (
                 <ListItemButton
@@ -433,8 +463,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
           )}
         </DialogContent>
 
-        {/* Footer text - only show when prerequisites met */}
-        {!isCheckingAccount && prerequisitesMet && (
+        {!isCheckingAccount && isConnected && prerequisitesMet && (
           <Box sx={{ px: 4, pb: 4, width: '100%' }}>
             <Typography
               variant="body2"
@@ -455,6 +484,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
         }}
         min={1}
         max={900}
+      />
+      <NormalWalletCreate
+        open={showCreateNormalWallet}
+        onClose={() => setShowCreateNormalWallet(false)}
+        onSuccess={handleNormalWalletCreated}
       />
     </>
   );
