@@ -8,6 +8,7 @@ import { usePostHog } from 'posthog-js/react';
 import { useTrade, useTreasury, useTrustLine } from '@/hooks';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { getConversionTextScaled } from '@/utils/conversion-helpers';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { type TradeRoute, determineTradeRoute } from '@/utils/trade-route';
@@ -80,6 +81,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
+  const { session } = useSupabaseAuth();
 
   const { setModalView } = useAppStore();
 
@@ -665,6 +667,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
+  const gateButtonText = session && !isConnected ? 'Connect account' : 'Login to trade';
 
   const getInfoAccordionAlerts = useCallback((): InfoAccordionAlert[] => {
     const alerts: InfoAccordionAlert[] = [];
@@ -934,7 +937,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
         </Box>
       )}
 
-      <WalletGate buttonText="Login to trade" fullWidth>
+      <WalletGate buttonText={gateButtonText} fullWidth>
         {(() => {
           const buttonState = getButtonState();
           const buttonConfig = getButtonConfig(buttonState);
