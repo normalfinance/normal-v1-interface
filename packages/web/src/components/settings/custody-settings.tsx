@@ -2,16 +2,18 @@
 
 import { useTranslate } from '@/locales';
 import { useBoolean } from '@/hooks/use-boolean';
-import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
+import { Turnstile } from '@marsidev/react-turnstile';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
+import { updateWalletCustody, removePlatformCustody } from '@/services/linked-wallets';
 import {
   logger,
   validateMnemonic,
   normalizeMnemonic,
   createKeypairFromMnemonic,
 } from '@normalfinance/utils';
-import { updateWalletCustody, removePlatformCustody } from '@/services/linked-wallets';
 import {
   generateAESKey,
   encryptWithAES,
@@ -20,8 +22,10 @@ import {
   encryptWithRSAPublicKey,
   encryptPrivateKeyForStorage,
 } from '@/lib/client-crypto';
-import { Turnstile } from '@marsidev/react-turnstile';
 
+import Visibility from '@mui/icons-material/Visibility';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import {
   Card,
   Stack,
@@ -31,20 +35,16 @@ import {
   TextField,
   CardHeader,
   Typography,
+  IconButton,
   CardContent,
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress,
   InputAdornment,
-  IconButton,
+  CircularProgress,
 } from '@mui/material';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import ContentCopy from '@mui/icons-material/ContentCopy';
 
 import { useSnackbar } from '@/components/template/snackbar';
-import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 
 export interface CustodySettingsProps {
   walletAddress: string;
@@ -204,8 +204,8 @@ export function CustodySettings({
         const keypair = createKeypairFromMnemonic(body.mnemonic, '', 0);
         const secretKey = keypair.secret();
         setExportedSecretKey(secretKey);
-      } catch (error) {
-        logger.error('Failed to derive secret key:', error);
+      } catch (err) {
+        logger.error('Failed to derive secret key:', err);
         setExportedSecretKey(null);
       }
 
@@ -579,7 +579,9 @@ export function CustodySettings({
                     </Typography>
                     <TextField
                       fullWidth
-                      value={isSecretKeyVisible ? exportedSecretKey : '••••••••••••••••••••••••••••'}
+                      value={
+                        isSecretKeyVisible ? exportedSecretKey : '••••••••••••••••••••••••••••'
+                      }
                       InputProps={{
                         readOnly: true,
                         endAdornment: (
@@ -587,7 +589,9 @@ export function CustodySettings({
                             <IconButton
                               onClick={() => setIsSecretKeyVisible(!isSecretKeyVisible)}
                               edge="end"
-                              aria-label={isSecretKeyVisible ? t('Hide secret key') : t('Show secret key')}
+                              aria-label={
+                                isSecretKeyVisible ? t('Hide secret key') : t('Show secret key')
+                              }
                             >
                               {isSecretKeyVisible ? <VisibilityOff /> : <Visibility />}
                             </IconButton>

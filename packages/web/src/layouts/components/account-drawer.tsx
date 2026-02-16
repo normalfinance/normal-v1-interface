@@ -15,18 +15,13 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { cdn, format, logger, createKeypairFromSecret } from '@normalfinance/utils';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   getLinkedWallets,
   type LinkedWallet,
   checkWalletCreationLimit,
 } from '@/services/linked-wallets';
-import {
-  cdn,
-  format,
-  logger,
-  createKeypairFromSecret,
-} from '@normalfinance/utils';
 
 import {
   Box,

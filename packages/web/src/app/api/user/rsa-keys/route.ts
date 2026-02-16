@@ -3,13 +3,13 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { UserRSAService } from '@/lib/user-rsa-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import {
   encryptRSAPrivateKey,
   decryptClientEncryptedRSAPrivateKey,
 } from '@/lib/server-rsa-encryption';
-import { getAccessToken } from '@/utils/http';
 
 const StoreRSASchema = z.object({
   publicKey: z.string().min(1, 'Public key is required'),

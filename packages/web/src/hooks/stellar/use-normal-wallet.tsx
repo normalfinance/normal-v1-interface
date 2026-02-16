@@ -188,11 +188,7 @@ export const useNormalWallet = () => {
   );
 
   const importWalletFromPrivateKey = useCallback(
-    async (
-      privateKey: string,
-      walletName?: string,
-      options?: { persistLocally?: boolean }
-    ) => {
+    async (privateKey: string, walletName?: string, options?: { persistLocally?: boolean }) => {
       try {
         const result = await normalWalletStore.importWalletFromPrivateKey(privateKey);
         const stateToStore = useNormalWalletStore.getState();

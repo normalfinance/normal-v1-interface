@@ -3,10 +3,10 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { decryptMnemonicWithFallback } from '@/lib/server-mnemonic-encryption';
-import { getAccessToken } from '@/utils/http';
 
 const STEP_UP_MAX_AGE_SECONDS = 5 * 60;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -100,7 +100,10 @@ export async function POST(
 
     const custody = await LinkedWalletService.getPlatformCustodyPayload(user.id, walletAddress);
     if (!custody) {
-      return NextResponse.json({ error: 'Wallet does not have platform custody enabled' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Wallet does not have platform custody enabled' },
+        { status: 404 }
+      );
     }
 
     const decrypted = await decryptMnemonicWithFallback(
@@ -137,4 +140,3 @@ export async function POST(
     );
   }
 }
-

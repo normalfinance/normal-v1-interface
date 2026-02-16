@@ -13,7 +13,6 @@ const ConfirmSchema = z.object({
   txHash: z.string().min(1, 'Transaction hash is required'),
 });
 
-
 export async function POST(request: NextRequest) {
   try {
     // Authenticate

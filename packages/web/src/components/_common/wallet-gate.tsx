@@ -41,8 +41,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     isConnected: isNormalConnected,
   } = useNormalWallet();
   const isWalletConnected = !!persist.wallet.address || isConnected || isNormalConnected;
-  const isGatePassed =
-    !isLoading && !!session && (!requireWalletConnection || isWalletConnected);
+  const isGatePassed = !isLoading && !!session && (!requireWalletConnection || isWalletConnected);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);

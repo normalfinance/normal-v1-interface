@@ -112,7 +112,10 @@ export function FooterSection({
   const { t } = useTranslate();
 
   return (
-    <FooterRoot sx={[{ bgcolor: 'background.paper' }, ...(Array.isArray(sx) ? sx : [sx || {}])]} {...other}>
+    <FooterRoot
+      sx={[{ bgcolor: 'background.paper' }, ...(Array.isArray(sx) ? sx : [sx || {}])]}
+      {...other}
+    >
       <Divider />
 
       <Container

@@ -43,12 +43,6 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 });
     }
 
-    // Assert user owns walletAddress
-    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    if (!isLinked) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const body = await request.json();
     const validation = RequestSchema.safeParse(body);
 
@@ -63,7 +57,7 @@ export async function POST(
 
     const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     if (!isLinked) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const custody = await LinkedWalletService.getPlatformCustodyPayload(user.id, walletAddress);
@@ -84,7 +78,11 @@ export async function POST(
           iv: custody.encryptionIV,
           salt: custody.encryptionSalt,
         },
-        { supabaseUid: user.id, currentEmail: user.email, consentEmail: custody.custodyConsentEmail }
+        {
+          supabaseUid: user.id,
+          currentEmail: user.email,
+          consentEmail: custody.custodyConsentEmail,
+        }
       )
     ).mnemonic;
 

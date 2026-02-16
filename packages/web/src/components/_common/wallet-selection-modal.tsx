@@ -128,12 +128,7 @@ export default function WalletSelectionModal({
           >
             <Stack spacing={1.5}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Chip
-                  size="small"
-                  color="success"
-                  variant="outlined"
-                  label={t('Recommended')}
-                />
+                <Chip size="small" color="success" variant="outlined" label={t('Recommended')} />
                 <Typography variant="caption" color="text.secondary">
                   {t('Best for most users')}
                 </Typography>
@@ -198,12 +193,7 @@ export default function WalletSelectionModal({
           >
             <Stack spacing={1.5}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Chip
-                  size="small"
-                  color="warning"
-                  variant="outlined"
-                  label={t('Advanced')}
-                />
+                <Chip size="small" color="warning" variant="outlined" label={t('Advanced')} />
                 <Typography variant="caption" color="text.disabled">
                   {t('Requires wallet familiarity')}
                 </Typography>

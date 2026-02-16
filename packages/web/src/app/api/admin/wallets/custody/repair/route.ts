@@ -73,7 +73,10 @@ export async function POST(request: NextRequest) {
     const wallet = wallets[0];
 
     if (wallet.custodyChoice !== 'platform') {
-      return NextResponse.json({ error: 'Wallet does not have platform custody enabled' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Wallet does not have platform custody enabled' },
+        { status: 400 }
+      );
     }
 
     if (!wallet.encryptedMnemonic || !wallet.encryptionIV || !wallet.encryptionSalt) {
@@ -164,4 +167,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

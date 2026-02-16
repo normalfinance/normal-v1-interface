@@ -74,10 +74,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const { enqueueSnackbar } = useSnackbar();
 
   const persist = usePersistStore();
-  const {
-    signTransaction,
-    connectWallet: connectNormalWallet,
-  } = useNormalWallet();
+  const { signTransaction, connectWallet: connectNormalWallet } = useNormalWallet();
 
   const moneyGramAmountDialog = useBoolean();
 

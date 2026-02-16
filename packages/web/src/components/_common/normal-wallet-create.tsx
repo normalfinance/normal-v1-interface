@@ -273,33 +273,30 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setStage('verify');
   }, [mnemonic]);
 
-  const handleComplete = useCallback(
-    async () => {
-      if (walletName.trim() && publicKey) {
-        try {
-          await updateWalletName(publicKey, walletName.trim());
-        } catch (err) {
-          logger.warn('Failed to update wallet name:', err);
-        }
+  const handleComplete = useCallback(async () => {
+    if (walletName.trim() && publicKey) {
+      try {
+        await updateWalletName(publicKey, walletName.trim());
+      } catch (err) {
+        logger.warn('Failed to update wallet name:', err);
       }
+    }
 
-      setMnemonic(null);
-      setPublicKey(null);
-      setWalletName('');
-      setStage('creating');
-      setVerificationQuestions([]);
-      setSelectedAnswers({});
-      setAnswerErrors({});
-      setCurrentQuestionIndex(0);
-      setError(null);
-      setCustodyChoice(null);
-      setCustodyConsent(false);
-      setIsSavingCustody(false);
-      enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
-      onSuccess();
-    },
-    [walletName, publicKey, onSuccess, enqueueSnackbar, t]
-  );
+    setMnemonic(null);
+    setPublicKey(null);
+    setWalletName('');
+    setStage('creating');
+    setVerificationQuestions([]);
+    setSelectedAnswers({});
+    setAnswerErrors({});
+    setCurrentQuestionIndex(0);
+    setError(null);
+    setCustodyChoice(null);
+    setCustodyConsent(false);
+    setIsSavingCustody(false);
+    enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
+    onSuccess();
+  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t]);
 
   const handleCustodyConfirm = useCallback(async () => {
     if (custodyChoice === 'self') {

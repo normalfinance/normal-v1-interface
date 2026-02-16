@@ -166,11 +166,7 @@ const TestimonialCard: React.FC<Testimonial> = ({
       <Box mb={{ xs: 2.5, md: 3 }} display="flex">
         {Array.from({ length: numberOfStars }).map((_, i) => (
           <Box key={i} component="span" sx={{ color: 'warning.main', display: 'inline-flex' }}>
-            <Icon
-              icon="material-symbols:star-rounded"
-              width={24}
-              height={24}
-            />
+            <Icon icon="material-symbols:star-rounded" width={24} height={24} />
           </Box>
         ))}
       </Box>

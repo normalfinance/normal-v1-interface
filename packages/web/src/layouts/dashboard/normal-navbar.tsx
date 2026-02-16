@@ -21,9 +21,9 @@ import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/materia
 
 import { Logo } from '@/components/template/logo';
 import { GlowBorder } from '@/components/_common/glow-border';
-import { LightDarkModeButton } from '../components/light-dark-mode-button';
 
 import { Searchbar } from '../components/searchbar';
+import { LightDarkModeButton } from '../components/light-dark-mode-button';
 
 const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
 const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
