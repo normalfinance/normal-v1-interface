@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslate } from '@/locales';
 import { useManageLiquidity } from '@/hooks';
 import { logger } from '@normalfinance/utils';
@@ -13,7 +13,9 @@ import { InlineError } from '@/components/_common/errors';
 import MintRedeemCard from '@/components/_common/mint-redeem-card';
 import { BalanceCard } from '@/components/_earn-page-components/balance-card';
 import { PositionsTable } from '@/components/_earn-page-components/positions-table';
+import { EarnOverviewCard } from '@/components/_earn-page-components/earn-overview';
 
+import { BigNumber } from 'bignumber.js';
 // ----------------------------------------------------------------------
 
 export default function EarnView() {
@@ -26,6 +28,8 @@ export default function EarnView() {
   const { setGlobalIsLoading } = useAppStore();
 
   const { wallet, getAllTokens, getAllPairs } = usePersistStore();
+
+  const [openEstimate, setOpenEstimate] = useState(false);
 
   // Effect hook to fetch all pairs and tokens once the component mounts
   useEffect(() => {
@@ -43,6 +47,53 @@ export default function EarnView() {
     refreshTokens();
   }, [wallet.address]);
 
+
+
+  const rows = useMemo(
+    () => [
+      {
+        key: 'collateral',
+        label: 'Collateral',
+        balanceUsd: 6543.21,
+        apy: 0.04,
+        showManage: true,
+      },
+        {
+        key: 'blend',
+        label: 'Blend',
+        balanceUsd: 8987.65,
+        apy: 0.152,
+        showManage: true,
+      },
+      {
+        key: 'liquidity',
+        label: 'Liquidity',
+        balanceUsd: 1937.65,
+        apy: 0.152,
+        showManage: false,
+      },
+    ],
+    []
+  );
+
+  const donutSeries = useMemo(
+    () => [
+      { label: 'Collateral', value: 0 },
+      { label: 'Liquidity', value: 1937.65 },
+      { label: 'Blend', value: 8987.65 },
+    ],
+    []
+  );
+
+  // Example metrics (replace with real data)
+  const blendedYield = 0.074;
+  const totalValueNum = totalValue
+  ? totalValue.dividedBy(1e6).toNumber()
+  : 0;
+
+const annualYieldUsd = totalValueNum * blendedYield;
+  const totalEarningsUsd = 494.78;
+
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
       <DashboardContent maxWidth="xl">
@@ -56,6 +107,25 @@ export default function EarnView() {
             )}
           </Typography>
         </Stack>
+
+        <Grid2 sx={{ mt: 3 }}>
+          <EarnOverviewCard
+            totalCapitalDeployedUsd={totalValueNum}
+            blendedYield={blendedYield}
+            annualYieldUsd={annualYieldUsd}
+            totalEarningsUsd={totalEarningsUsd}
+            earnedTodayUsd={2.5}
+            donutSeries={donutSeries}
+            donutColors={['#20E3A2', '#2775CA', '#BBD3FB']}
+            rows={rows as any}
+            onCalculateClick={() => setOpenEstimate(true)}
+            onBridgeClick={() => console.log('bridge')}
+            onAllocateClick={() => setOpenEstimate(true)}
+            onRowAction={(rowKey, action) => {
+              console.log('row action', rowKey, action);
+            }}
+          />
+        </Grid2>
 
         <InlineError error={error} onClose={clearError} sx={{ mt: 3 }} />
 
