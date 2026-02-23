@@ -1,26 +1,25 @@
 'use client';
 
-import * as React from 'react';
 import type { Theme, SxProps } from '@mui/material/styles';
 
+import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
-
 import {
     Box,
     Card,
     Stack,
     Button,
-    Typography,
+    Avatar,
+    useTheme,
     Accordion,
+    Typography,
     AccordionDetails,
     AccordionSummary,
-    useTheme,
-    Avatar,
 } from '@mui/material';
 
 export type UsdcLiquidityPool = {

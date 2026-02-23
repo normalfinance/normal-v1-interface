@@ -6,7 +6,9 @@ import { logger } from '@normalfinance/utils';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+
 import { Box, Grid2, Stack, Typography } from '@mui/material';
+
 import { InlineError } from '@/components/_common/errors';
 import MintRedeemCard from '@/components/_common/mint-redeem-card';
 import { BalanceCard } from '@/components/_earn-page-components/balance-card';

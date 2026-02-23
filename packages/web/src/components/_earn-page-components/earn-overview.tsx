@@ -17,11 +17,11 @@ import {
   Menu,
   Stack,
   Button,
+  Avatar,
   Divider,
   MenuItem,
   useTheme,
   Typography,
-  Avatar,
 } from '@mui/material';
 
 import DonutChart from '../ui/donut-chart';
