@@ -167,7 +167,7 @@ export default function EarnView() {
           </Typography>
         </Stack>
 
-        <Grid2 sx={{ mt: 3 }}>
+        <Grid2 sx={{ mt: 6 }}>
           <EarnOverviewCard
             totalCapitalDeployedUsd={totalCapitalDeployedUsd}
             blendedYield={blendedYield}
@@ -182,7 +182,7 @@ export default function EarnView() {
           />
         </Grid2>
 
-        <Grid2 sx={{ mt: 3 }}>
+        <Grid2 sx={{ mt: 6 }}>
           <ProvideUsdcLiquidityCard
             totalLpBalanceUsd={liquidityDemo.totalLpBalanceUsd}
             avgApy={liquidityDemo.avgApy}
@@ -197,13 +197,13 @@ export default function EarnView() {
           />
         </Grid2>
 
-        <Grid2 sx={{ mt: 3, pb: 6 }}>
+        <Grid2 sx={{ mt: 6, pb: 6 }}>
           <EarnTransactionsTable title="Transactions" rows={demoTxs} />
         </Grid2>
 
-        <InlineError error={error} onClose={clearError} sx={{ mt: 3 }} />
+        <InlineError error={error} onClose={clearError} sx={{ mt: 6 }} />
 
-        <Grid2 container spacing={3} sx={{ mt: 3 }}>
+        <Grid2 container spacing={3} sx={{ mt: 6}}>
           <Grid2 size={{ xs: 12, md: 4 }}>
             <BalanceCard
               title={t('Total balance')}
