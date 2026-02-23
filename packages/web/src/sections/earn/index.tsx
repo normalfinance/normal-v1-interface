@@ -128,7 +128,9 @@ export default function EarnView() {
             {t('Earn Account')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            {t('Generate high-interest APY on your USD and compound dividends on each of your assets.')}
+            {t(
+              'Generate high-interest APY on your USD and compound dividends on each of your assets.'
+            )}
           </Typography>
         </Stack>
 

@@ -391,7 +391,15 @@ function DefaultRowIcon({ rowKey }: { rowKey: EarnAssetKey }) {
   }
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: size,
+        height: size,
+      }}
+    >
       {rowKey === 'liquidity' ? (
         <BarChartRoundedIcon sx={{ fontSize: 22, color: 'text.primary' }} />
       ) : (
