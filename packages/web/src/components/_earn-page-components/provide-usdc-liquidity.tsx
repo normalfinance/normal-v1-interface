@@ -205,7 +205,7 @@ export function ProvideUsdcLiquidityCard(props: ProvideUsdcLiquidityCardProps) {
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <TokenPairIcon a={pool.tokenA.symbol} b={pool.tokenB.symbol} />
 
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.secondary' }}>
                       {pool.pairLabel}
                     </Typography>
 
@@ -326,8 +326,8 @@ function TokenPairIcon({ a, b }: { a: string; b: string }) {
       <Avatar
         src={!errA ? srcA : undefined}
         sx={{
-          width: 26,
-          height: 26,
+          width: 32,
+          height: 32,
           fontSize: 12,
           fontWeight: 700,
           position: 'absolute',
@@ -344,12 +344,12 @@ function TokenPairIcon({ a, b }: { a: string; b: string }) {
       <Avatar
         src={!errB ? srcB : undefined}
         sx={{
-          width: 26,
-          height: 26,
+          width: 32,
+          height: 32,
           fontSize: 12,
           fontWeight: 700,
           position: 'absolute',
-          left: 16,
+          left: 24,
           top: 1,
           border: '2px solid',
           borderColor: 'background.paper',
@@ -359,45 +359,5 @@ function TokenPairIcon({ a, b }: { a: string; b: string }) {
         {letterFor(b)}
       </Avatar>
     </Box>
-  );
-}
-function GradientOutlineButton({
-  children,
-  onClick,
-  sx,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  sx?: SxProps<Theme>;
-}) {
-  const theme = useTheme();
-
-  return (
-    <Button
-      onClick={onClick}
-      variant="outlined"
-      sx={[
-        {
-          position: 'relative',
-          borderRadius: 999,
-          fontWeight: 700,
-          textTransform: 'none',
-          color: 'text.primary',
-          border: '1px solid transparent',
-          backgroundImage: 'linear-gradient(#fff,#fff), linear-gradient(90deg, #20E3A2, #2775CA)',
-          backgroundOrigin: 'border-box',
-          backgroundClip: 'padding-box, border-box',
-          ...(theme.palette.mode === 'dark'
-            ? {
-                backgroundImage:
-                  'linear-gradient(#111827,#111827), linear-gradient(90deg, #20E3A2, #2775CA)',
-              }
-            : null),
-        },
-        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
-      ]}
-    >
-      {children}
-    </Button>
   );
 }
