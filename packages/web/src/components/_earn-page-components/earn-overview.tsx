@@ -4,6 +4,7 @@ import type { Theme, SxProps } from '@mui/material/styles';
 
 import * as React from 'react';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -20,13 +21,10 @@ import {
   MenuItem,
   useTheme,
   Typography,
+  Avatar,
 } from '@mui/material';
 
 import DonutChart from '../ui/donut-chart';
-
-// --------------------
-// Types
-// --------------------
 
 export type EarnAssetKey = 'collateral' | 'liquidity' | 'blend';
 
@@ -57,10 +55,6 @@ export type EarnOverviewCardProps = {
   currency?: string;
 };
 
-// --------------------
-// Component
-// --------------------
-
 export function EarnOverviewCard(props: EarnOverviewCardProps) {
   const theme = useTheme();
   const { t } = useTranslate();
@@ -73,17 +67,13 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
     earnedTodayUsd,
     rows,
     donutColors,
-
     bridgeButtonLabel = t('Bridge USDC'),
     bridgeHelperText = t('From Ethereum, Arbitrum, Base + 4 more'),
     onBridgeClick,
-
     onCalculateClick,
     onRowAction,
-
     allocateCtaLabel = t('Allocate Capital'),
     onAllocateClick,
-
     currency = 'USD',
   } = props;
 
@@ -254,21 +244,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
                 <React.Fragment key={row.key}>
                   <AllocationRow
                     label={row.label}
-                    icon={
-                      row.icon ?? (
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          {row.key === 'liquidity' ? (
-                            <BarChartRoundedIcon sx={{ fontSize: 22, color: 'text.primary' }} />
-                          ) : (
-                            <InfoOutlinedIcon
-                              sx={{ fontSize: 22, color: 'text.primary', opacity: 0.75 }}
-                            />
-                          )}
-                        </Box>
-                      )
-                    }
+                    icon={row.icon ?? <DefaultRowIcon rowKey={row.key} />}
                     balanceUsd={row.balanceUsd}
                     apy={row.apy}
                     showManage={row.showManage}
@@ -295,10 +271,6 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
     </Card>
   );
 }
-
-// --------------------
-// Subcomponents
-// --------------------
 
 function MetricBlock({
   label,
@@ -393,5 +365,38 @@ function AllocationRow({
         </Stack>
       </Stack>
     </Stack>
+  );
+}
+
+function DefaultRowIcon({ rowKey }: { rowKey: EarnAssetKey }) {
+  const [imgError, setImgError] = React.useState(false);
+
+  const srcByKey: Record<EarnAssetKey, string> = {
+    collateral: cdn('tokens/usdc.webp'),
+    liquidity: cdn('icons/liquidity.svg'),
+    blend: cdn('icons/blend.svg'),
+  };
+
+  const size = 26;
+
+  if (!imgError && srcByKey[rowKey]) {
+    return (
+      <Avatar
+        src={srcByKey[rowKey]}
+        variant="circular"
+        sx={{ width: size, height: size }}
+        imgProps={{ onError: () => setImgError(true) }}
+      />
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
+      {rowKey === 'liquidity' ? (
+        <BarChartRoundedIcon sx={{ fontSize: 22, color: 'text.primary' }} />
+      ) : (
+        <InfoOutlinedIcon sx={{ fontSize: 22, color: 'text.primary', opacity: 0.75 }} />
+      )}
+    </Box>
   );
 }
