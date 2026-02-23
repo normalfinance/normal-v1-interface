@@ -15,6 +15,7 @@ import { BalanceCard } from '@/components/_earn-page-components/balance-card';
 import { PositionsTable } from '@/components/_earn-page-components/positions-table';
 import { EarnOverviewCard } from '@/components/_earn-page-components/earn-overview';
 import { ProvideUsdcLiquidityCard } from '@/components/_earn-page-components/provide-usdc-liquidity';
+import { EarnTransactionRow, EarnTransactionsTable } from '@/components/_earn-page-components/earn-transaction-table';
 
 // ----------------------------------------------------------------------
 
@@ -120,6 +121,15 @@ export default function EarnView() {
     []
   );
 
+    const demoTxs: EarnTransactionRow[] = useMemo(
+    () => [
+      { id: 'tx-1', timestamp: '44s', type: 'Blend', asset: 'USDC', amountUsd: 250, status: 'Complete' },
+      { id: 'tx-2', timestamp: '44s', type: 'Liquidity Deposit', asset: 'USDC/ETH', amountUsd: 250, status: 'Complete' },
+      { id: 'tx-3', timestamp: '44s', type: 'Withdraw', asset: 'USDC', amountUsd: 250, status: 'Pending' },
+    ],
+    []
+  );
+
   return (
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
       <DashboardContent maxWidth="xl">
@@ -162,6 +172,10 @@ export default function EarnView() {
             onWithdraw={(id) => console.log('withdraw', id)}
             onAddLiquidity={() => console.log('add liquidity')}
           />
+        </Grid2>
+
+        <Grid2 sx={{ mt: 3, pb: 6 }}>
+          <EarnTransactionsTable title="Transactions" rows={demoTxs} />
         </Grid2>
 
         <InlineError error={error} onClose={clearError} sx={{ mt: 3 }} />
