@@ -23,7 +23,12 @@ import {
 } from '@mui/material';
 
 export type EarnTxStatus = 'Complete' | 'Pending' | 'Failed';
-export type EarnTxType = 'Blend' | 'Liquidity Deposit' | 'Liquidity Withdraw' | 'Deposit' | 'Withdraw';
+export type EarnTxType =
+  | 'Blend'
+  | 'Liquidity Deposit'
+  | 'Liquidity Withdraw'
+  | 'Deposit'
+  | 'Withdraw';
 
 export type EarnTransactionRow = {
   id: string;
@@ -79,9 +84,9 @@ export function EarnTransactionsTable({ title, rows, sx }: EarnTransactionsTable
 
     return [...rows].sort((a, b) => {
       const valA =
-        orderBy === 'timestamp' ? getTimeValue(a.timestamp) : (a as any)[orderBy] ?? '';
+        orderBy === 'timestamp' ? getTimeValue(a.timestamp) : ((a as any)[orderBy] ?? '');
       const valB =
-        orderBy === 'timestamp' ? getTimeValue(b.timestamp) : (b as any)[orderBy] ?? '';
+        orderBy === 'timestamp' ? getTimeValue(b.timestamp) : ((b as any)[orderBy] ?? '');
 
       if (valA < valB) return order === 'asc' ? -1 : 1;
       if (valA > valB) return order === 'asc' ? 1 : -1;

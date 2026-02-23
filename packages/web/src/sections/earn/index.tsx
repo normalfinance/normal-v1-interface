@@ -1,5 +1,7 @@
 'use client';
 
+import type { EarnTransactionRow } from '@/components/_earn-page-components/earn-transaction-table';
+
 import { useTranslate } from '@/locales';
 import { useManageLiquidity } from '@/hooks';
 import { logger } from '@normalfinance/utils';
@@ -14,8 +16,8 @@ import MintRedeemCard from '@/components/_common/mint-redeem-card';
 import { BalanceCard } from '@/components/_earn-page-components/balance-card';
 import { PositionsTable } from '@/components/_earn-page-components/positions-table';
 import { EarnOverviewCard } from '@/components/_earn-page-components/earn-overview';
+import { EarnTransactionsTable } from '@/components/_earn-page-components/earn-transaction-table';
 import { ProvideUsdcLiquidityCard } from '@/components/_earn-page-components/provide-usdc-liquidity';
-import { EarnTransactionRow, EarnTransactionsTable } from '@/components/_earn-page-components/earn-transaction-table';
 
 // ----------------------------------------------------------------------
 
@@ -121,11 +123,32 @@ export default function EarnView() {
     []
   );
 
-    const demoTxs: EarnTransactionRow[] = useMemo(
+  const demoTxs: EarnTransactionRow[] = useMemo(
     () => [
-      { id: 'tx-1', timestamp: '44s', type: 'Blend', asset: 'USDC', amountUsd: 250, status: 'Complete' },
-      { id: 'tx-2', timestamp: '44s', type: 'Liquidity Deposit', asset: 'USDC/ETH', amountUsd: 250, status: 'Complete' },
-      { id: 'tx-3', timestamp: '44s', type: 'Withdraw', asset: 'USDC', amountUsd: 250, status: 'Pending' },
+      {
+        id: 'tx-1',
+        timestamp: '44s',
+        type: 'Blend',
+        asset: 'USDC',
+        amountUsd: 250,
+        status: 'Complete',
+      },
+      {
+        id: 'tx-2',
+        timestamp: '44s',
+        type: 'Liquidity Deposit',
+        asset: 'USDC/ETH',
+        amountUsd: 250,
+        status: 'Complete',
+      },
+      {
+        id: 'tx-3',
+        timestamp: '44s',
+        type: 'Withdraw',
+        asset: 'USDC',
+        amountUsd: 250,
+        status: 'Pending',
+      },
     ],
     []
   );
