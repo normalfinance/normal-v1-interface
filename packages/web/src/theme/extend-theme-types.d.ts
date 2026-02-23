@@ -30,6 +30,7 @@ import type {
   MenuItemStylesMixin,
   BorderGradientProps,
 } from './core/mixins';
+import { CustomGradients } from './core/custom-gradients';
 
 // ----------------------------------------------------------------------
 
@@ -73,14 +74,25 @@ declare module '@mui/material/styles' {
    */
   interface Theme {
     customShadows: CustomShadows;
+    customGradients: CustomGradients; 
   }
+
   interface ThemeOptions {
     customShadows?: CustomShadows;
+    customGradients?: CustomGradients; 
   }
+
   interface ThemeVars {
     customShadows: CustomShadows;
+    customGradients: CustomGradients; 
     typography: Theme['typography'];
     transitions: Theme['transitions'];
+  }
+}
+
+declare module '@mui/material/styles' {
+  interface ColorSystemOptions {
+    customGradients?: CustomGradients;
   }
 }
 

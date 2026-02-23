@@ -17,6 +17,7 @@ import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownR
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded';
 import DonutChart from '../ui/donut-chart';
+import type { SxProps, Theme } from '@mui/material/styles';
 
 // --------------------
 // Types
@@ -146,7 +147,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
                 borderColor: 'divider',
                 overflow: 'hidden',
                 bgcolor: 'background.paper',
-                p:2,
+                p: 2,
             }}
         >
             {/* Top metrics bar */}
@@ -194,11 +195,13 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
                         <MetricBlock
                             label="Total Earnings"
                             value={formatUsd(totalEarningsUsd, currency)}
-                            valueSx={{
-                                background: 'linear-gradient(90deg, #3B82F6 0%, #A855F7 50%, #F97316 100%)',
+                            valueSx={(theme) => ({
+                                background: theme.vars.customGradients.textRainbow,
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
-                            }}
+                                backgroundClip: 'text',
+                                color: 'transparent',
+                            })}
                             action={
                                 earnedTodayUsd != null ? (
                                     <Chip
@@ -305,7 +308,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
                                 onClick={onAllocateClick}
                                 variant="darkSoft"
                                 fullWidth
-                               
+
                             >
                                 {allocateCtaLabel}
                             </Button>
@@ -344,30 +347,38 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
 // --------------------
 
 function MetricBlock({
-    label,
-    value,
-    action,
-    valueSx,
+  label,
+  value,
+  action,
+  valueSx,
 }: {
-    label: string;
-    value: string;
-    action?: React.ReactNode;
-    valueSx?: any;
+  label: string;
+  value: string;
+  action?: React.ReactNode;
+  valueSx?: SxProps<Theme>;
 }) {
-    return (
-        <Stack spacing={0.5} sx={{ minWidth: 180 }}>
-            <Stack direction="row" alignItems="center">
-                <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: -0.6, ...valueSx }}>
-                    {value}
-                </Typography>
-                {action}
-            </Stack>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                {label}
-            </Typography>
-        </Stack>
-    );
+  return (
+    <Stack spacing={0.5} sx={{ minWidth: 180 }}>
+      <Stack direction="row" alignItems="center">
+        <Typography
+          variant="h4"
+          sx={[
+            { fontWeight: 700, letterSpacing: -0.6 },
+            ...(Array.isArray(valueSx) ? valueSx : valueSx ? [valueSx] : []),
+          ]}
+        >
+          {value}
+        </Typography>
+        {action}
+      </Stack>
+
+      <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+        {label}
+      </Typography>
+    </Stack>
+  );
 }
+
 
 function AllocationRow({
     label,

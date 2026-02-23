@@ -8,6 +8,7 @@ import type {
 } from '@mui/material/styles';
 
 import type { CustomShadows } from './core/custom-shadows';
+import { CustomGradients } from './core/custom-gradients';
 
 // ----------------------------------------------------------------------
 
@@ -28,6 +29,7 @@ export type ThemeCssVariables = Pick<
 type ColorSchemeOptionsExtended = ColorSystemOptions & {
   shadows?: Shadows;
   customShadows?: CustomShadows;
+  customGradients?: CustomGradients;
 };
 
 export type ThemeOptions = Omit<MuiThemeOptions, 'components'> &
