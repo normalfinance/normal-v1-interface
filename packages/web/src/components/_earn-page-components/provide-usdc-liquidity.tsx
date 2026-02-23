@@ -349,7 +349,7 @@ function TokenPairIcon({ a, b }: { a: string; b: string }) {
           fontSize: 12,
           fontWeight: 700,
           position: 'absolute',
-          left: 24,
+          left: 20,
           top: 1,
           border: '2px solid',
           borderColor: 'background.paper',
