@@ -35,21 +35,20 @@ export type EarnAllocationRow = {
 
 export type EarnOverviewCardProps = {
     totalCapitalDeployedUsd: number;
-  blendedYield: number;
-  annualYieldUsd: number;
-  totalEarningsUsd: number;
-  earnedTodayUsd?: number;
-  donutSeries: Array<{ label: string; value: number }>;
-  donutColors?: string[];
-  bridgeButtonLabel?: string;
-  bridgeHelperText?: string;
-  rows: EarnAllocationRow[];
-  onBridgeClick?: () => void;
-  onCalculateClick?: () => void;
-  onAllocateClick?: () => void;
-  onRowAction?: (rowKey: EarnAssetKey, action: 'deposit' | 'withdraw' | 'info') => void;
+    blendedYield: number;
+    annualYieldUsd: number;
+    totalEarningsUsd: number;
+    earnedTodayUsd?: number;
+    donutColors?: string[];
+    bridgeButtonLabel?: string;
+    bridgeHelperText?: string;
+    rows: EarnAllocationRow[];
+    onBridgeClick?: () => void;
+    onCalculateClick?: () => void;
+    onAllocateClick?: () => void;
+    onRowAction?: (rowKey: EarnAssetKey, action: 'deposit' | 'withdraw' | 'info') => void;
     allocateCtaLabel?: string;
-    currency?: string; 
+    currency?: string;
 };
 
 // --------------------
@@ -83,7 +82,6 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
         totalEarningsUsd,
         earnedTodayUsd,
         rows,
-        donutSeries,
         donutColors,
 
         bridgeButtonLabel = 'Bridge USDC',
@@ -99,10 +97,27 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
         currency = 'USD',
     } = props;
 
-    const computedDonutSeries = rows.map((r) => ({
-  label: r.label,
-  value: r.balanceUsd ?? 0,
-}));
+    const defaultColorByLabel: Record<string, string> = {
+        Blend: '#20E3A2',
+        Collateral: '#2775CA',
+        Liquidity: '#BBD3FB',
+    };
+
+    const computedDonutSeries = React.useMemo(
+        () =>
+            rows.map((r) => ({
+                label: r.label,
+                value: r.balanceUsd ?? 0,
+            })),
+        [rows]
+    );
+
+    const computedDonutColors = React.useMemo(() => {
+        // If you explicitly pass donutColors, we assume you manage ordering yourself.
+        if (donutColors?.length) return donutColors;
+
+        return computedDonutSeries.map((s) => defaultColorByLabel[s.label] ?? '#CBD5E1');
+    }, [donutColors, computedDonutSeries]);
 
     // Manage menu state (one menu, anchored to whichever row was clicked)
     const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
@@ -228,92 +243,92 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
             <Divider />
 
             {/* Body */}
-<Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 3 } }}>
-  <Stack
-    direction={{ xs: 'column', md: 'row' }}
-    alignItems="stretch"
-    sx={{ width: '100%' }}
-  >
-    {/* Left: Donut (1/3) */}
-    <Box
-      sx={{
-        flex: { xs: '1 1 auto', md: '0 0 33.333%' },
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        pr: { md: 4 },
-      }}
-    >
-      <DonutChart
-  totalValueUsd={totalCapitalDeployedUsd}
-  series={computedDonutSeries}
-  colors={donutColors ?? ['#20E3A2', '#BBD3FB', '#2775CA']}
-/>
-    </Box>
+            <Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 3 } }}>
+                <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    alignItems="stretch"
+                    sx={{ width: '100%' }}
+                >
+                    {/* Left: Donut */}
+                    <Box
+                        sx={{
+                            flex: { xs: '1 1 auto', md: '0 0 40%' },
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            pr: { md: 4 },
+                        }}
+                    >
+                        <DonutChart
+                            totalValueUsd={totalCapitalDeployedUsd}
+                            series={computedDonutSeries}
+                            colors={computedDonutColors}
+                        />
+                    </Box>
 
-    {/* Divider (1px) */}
-    <Box
-      sx={{
-        display: { xs: 'none', md: 'block' },
-        width: '1px',
-        bgcolor: 'divider',
-        opacity: 0.8,
-      }}
-    />
+                    {/* Divider (1px) */}
+                    <Box
+                        sx={{
+                            display: { xs: 'none', md: 'block' },
+                            width: '1px',
+                            bgcolor: 'divider',
+                            opacity: 0.8,
+                        }}
+                    />
 
-    {/* Right: Allocation list (rest) */}
-    <Box
-      sx={{
-        flex: 1,
-        pl: { md: 4 },
-        minWidth: 0,
-      }}
-    >
-      <Stack spacing={3}>
-        {rows.map((row, idx) => (
-          <React.Fragment key={row.key}>
-            <AllocationRow
-              label={row.label}
-              icon={
-                row.icon ?? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {row.key === 'liquidity' ? (
-                      <BarChartRoundedIcon sx={{ fontSize: 22, color: 'text.primary' }} />
-                    ) : (
-                      <InfoOutlinedIcon sx={{ fontSize: 22, color: 'text.primary', opacity: 0.75 }} />
-                    )}
-                  </Box>
-                )
-              }
-              balanceUsd={row.balanceUsd}
-              apy={row.apy}
-              showManage={row.showManage}
-              onManageClick={(e) => openMenu(e, row.key)}
-            />
-            {idx !== rows.length - 1 && <Divider />}
-          </React.Fragment>
-        ))}
+                    {/* Right: Allocation list (rest) */}
+                    <Box
+                        sx={{
+                            flex: 1,
+                            pl: { md: 4 },
+                            minWidth: 0,
+                        }}
+                    >
+                        <Stack spacing={3}>
+                            {rows.map((row, idx) => (
+                                <React.Fragment key={row.key}>
+                                    <AllocationRow
+                                        label={row.label}
+                                        icon={
+                                            row.icon ?? (
+                                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {row.key === 'liquidity' ? (
+                                                        <BarChartRoundedIcon sx={{ fontSize: 22, color: 'text.primary' }} />
+                                                    ) : (
+                                                        <InfoOutlinedIcon sx={{ fontSize: 22, color: 'text.primary', opacity: 0.75 }} />
+                                                    )}
+                                                </Box>
+                                            )
+                                        }
+                                        balanceUsd={row.balanceUsd}
+                                        apy={row.apy}
+                                        showManage={row.showManage}
+                                        onManageClick={(e) => openMenu(e, row.key)}
+                                    />
+                                    {idx !== rows.length - 1 && <Divider />}
+                                </React.Fragment>
+                            ))}
 
-        <Button
-          onClick={onAllocateClick}
-          variant="contained"
-          fullWidth
-          sx={{
-            mt: 1,
-            borderRadius: 999,
-            py: 1.3,
-            textTransform: 'none',
-            fontWeight: 800,
-            bgcolor: theme.palette.grey[900],
-            '&:hover': { bgcolor: theme.palette.grey[900] },
-          }}
-        >
-          {allocateCtaLabel}
-        </Button>
-      </Stack>
-    </Box>
-  </Stack>
-</Box>
+                            <Button
+                                onClick={onAllocateClick}
+                                variant="contained"
+                                fullWidth
+                                sx={{
+                                    mt: 1,
+                                    borderRadius: 999,
+                                    py: 1.3,
+                                    textTransform: 'none',
+                                    fontWeight: 700,
+                                    bgcolor: theme.palette.grey[900],
+                                    '&:hover': { bgcolor: theme.palette.grey[900] },
+                                }}
+                            >
+                                {allocateCtaLabel}
+                            </Button>
+                        </Stack>
+                    </Box>
+                </Stack>
+            </Box>
 
 
             {/* Shared Manage menu */}
@@ -358,7 +373,7 @@ function MetricBlock({
     return (
         <Stack spacing={0.5} sx={{ minWidth: 180 }}>
             <Stack direction="row" alignItems="center">
-                <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: -0.6, ...valueSx }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: -0.6, ...valueSx }}>
                     {value}
                 </Typography>
                 {action}
@@ -390,7 +405,7 @@ function AllocationRow({
             <Stack direction="row" spacing={1.5} alignItems="flex-start">
                 <Box sx={{ mt: 0.2 }}>{icon}</Box>
                 <Stack spacing={0.8}>
-                    <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
                         {label}
                     </Typography>
 
@@ -409,7 +424,7 @@ function AllocationRow({
                         onClick={onManageClick}
                         variant="text"
                         size="small"
-                        sx={{ textTransform: 'none', fontWeight: 800, color: 'text.primary' }}
+                        sx={{ textTransform: 'none', fontWeight: 700, color: 'text.primary' }}
                         endIcon={<KeyboardArrowDownRoundedIcon />}
                     >
                         Manage
@@ -419,10 +434,10 @@ function AllocationRow({
                 )}
 
                 <Stack spacing={0.4} alignItems="flex-end">
-                    <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
                         {balanceUsd != null ? formatUsd(balanceUsd) : ''}
                     </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
                         {apy != null ? formatPct(apy) : ''}
                     </Typography>
                 </Stack>

@@ -58,10 +58,10 @@ export default function EarnView() {
         apy: 0.04,
         showManage: true,
       },
-        {
+      {
         key: 'blend',
         label: 'Blend',
-        balanceUsd: 8987.65,
+        balanceUsd: 9987.65,
         apy: 0.152,
         showManage: true,
       },
@@ -76,22 +76,29 @@ export default function EarnView() {
     []
   );
 
-  const donutSeries = useMemo(
-    () => [
-      { label: 'Collateral', value: 0 },
-      { label: 'Liquidity', value: 1937.65 },
-      { label: 'Blend', value: 8987.65 },
-    ],
-    []
-  );
 
-  // Example metrics (replace with real data)
-  const blendedYield = 0.074;
-  const totalValueNum = totalValue
-  ? totalValue.dividedBy(1e6).toNumber()
-  : 0;
 
-const annualYieldUsd = totalValueNum * blendedYield;
+  const totalCapitalDeployedUsd = useMemo(() => {
+    return rows.reduce((sum, r) => sum + (r.balanceUsd ?? 0), 0);
+  }, [rows]);
+
+  const blendedYield = useMemo(() => {
+    // Weighted APY: sum(balance * apy) / sum(balance)
+    const total = totalCapitalDeployedUsd;
+    if (!total) return 0;
+
+    const weighted = rows.reduce((sum, r) => {
+      const bal = r.balanceUsd ?? 0;
+      const apy = r.apy ?? 0;
+      return sum + bal * apy;
+    }, 0);
+
+    return weighted / total;
+  }, [rows, totalCapitalDeployedUsd]);
+
+  const annualYieldUsd = totalCapitalDeployedUsd * blendedYield;
+
+
   const totalEarningsUsd = 494.78;
 
   return (
@@ -110,13 +117,11 @@ const annualYieldUsd = totalValueNum * blendedYield;
 
         <Grid2 sx={{ mt: 3 }}>
           <EarnOverviewCard
-            totalCapitalDeployedUsd={totalValueNum}
+            totalCapitalDeployedUsd={totalCapitalDeployedUsd}
             blendedYield={blendedYield}
             annualYieldUsd={annualYieldUsd}
             totalEarningsUsd={totalEarningsUsd}
             earnedTodayUsd={2.5}
-            donutSeries={donutSeries}
-            donutColors={['#20E3A2', '#2775CA', '#BBD3FB']}
             rows={rows as any}
             onCalculateClick={() => setOpenEstimate(true)}
             onBridgeClick={() => console.log('bridge')}
