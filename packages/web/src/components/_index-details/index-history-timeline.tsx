@@ -5,6 +5,14 @@ import { useTranslate } from '@/locales';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
+  Timeline,
+  TimelineDot,
+  TimelineItem,
+  TimelineContent,
+  TimelineSeparator,
+  TimelineConnector,
+} from '@mui/lab';
+import {
   Box,
   Card,
   Button,
@@ -14,14 +22,6 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import {
-  Timeline,
-  TimelineDot,
-  TimelineItem,
-  TimelineContent,
-  TimelineSeparator,
-  TimelineConnector,
-} from '@mui/lab';
 
 // Color mapping for different event types
 const eventDotColor: Record<IndexEvent['type'], 'primary' | 'success' | 'error' | 'warning'> = {

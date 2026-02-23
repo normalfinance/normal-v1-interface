@@ -8,7 +8,7 @@ import type {
 } from '@mui/material/styles';
 
 import type { CustomShadows } from './core/custom-shadows';
-import { CustomGradients } from './core/custom-gradients';
+import type { CustomGradients } from './core/custom-gradients';
 
 // ----------------------------------------------------------------------
 

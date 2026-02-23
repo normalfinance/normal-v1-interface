@@ -12,8 +12,9 @@ import { themeConfig } from './theme-config';
 import { components } from './core/components';
 import { typography } from './core/typography';
 import { customShadows } from './core/custom-shadows';
-import { updateCoreWithSettings, updateComponentsWithSettings } from './with-settings';
 import { customGradients } from './core/custom-gradients';
+import { updateCoreWithSettings, updateComponentsWithSettings } from './with-settings';
+
 import type { ThemeOptions } from './types';
 
 // ----------------------------------------------------------------------

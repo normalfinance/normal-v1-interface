@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import { useTranslate } from '@/locales';
 import { useManageLiquidity } from '@/hooks';
 import { logger } from '@normalfinance/utils';
+import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
@@ -14,8 +14,6 @@ import MintRedeemCard from '@/components/_common/mint-redeem-card';
 import { BalanceCard } from '@/components/_earn-page-components/balance-card';
 import { PositionsTable } from '@/components/_earn-page-components/positions-table';
 import { EarnOverviewCard } from '@/components/_earn-page-components/earn-overview';
-
-import { BigNumber } from 'bignumber.js';
 // ----------------------------------------------------------------------
 
 export default function EarnView() {
@@ -78,9 +76,7 @@ export default function EarnView() {
 
 
 
-  const totalCapitalDeployedUsd = useMemo(() => {
-    return rows.reduce((sum, r) => sum + (r.balanceUsd ?? 0), 0);
-  }, [rows]);
+  const totalCapitalDeployedUsd = useMemo(() => rows.reduce((sum, r) => sum + (r.balanceUsd ?? 0), 0), [rows]);
 
   const blendedYield = useMemo(() => {
     // Weighted APY: sum(balance * apy) / sum(balance)

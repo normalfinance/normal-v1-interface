@@ -6,6 +6,7 @@ import type {} from '@mui/material/themeCssVarsAugmentation';
 
 import type { FontStyleExtend } from './core/typography';
 import type { CustomShadows } from './core/custom-shadows';
+import type { CustomGradients } from './core/custom-gradients';
 import type { ChipExtendVariant } from './core/components/chip';
 import type { BadgeExtendVariant } from './core/components/badge';
 import type { SliderExtendColor } from './core/components/slider';
@@ -30,7 +31,6 @@ import type {
   MenuItemStylesMixin,
   BorderGradientProps,
 } from './core/mixins';
-import { CustomGradients } from './core/custom-gradients';
 
 // ----------------------------------------------------------------------
 
