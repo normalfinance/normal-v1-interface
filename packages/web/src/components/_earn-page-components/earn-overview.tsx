@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 
 import DonutChart from '../ui/donut-chart';
+import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 // --------------------
 // Types
@@ -56,21 +57,6 @@ export type EarnOverviewCardProps = {
   currency?: string;
 };
 
-// --------------------
-// Helpers
-// --------------------
-
-function formatUsd(value: number, currency = 'USD') {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatPct(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
-}
 
 // --------------------
 // Component
@@ -167,14 +153,14 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
           >
             <MetricBlock
               label={t('Total Capital Deployed')}
-              value={formatUsd(totalCapitalDeployedUsd, currency)}
+              value={fCurrency(totalCapitalDeployedUsd)}
             />
 
-            <MetricBlock label={t('Blended Yield')} value={formatPct(blendedYield)} />
+            <MetricBlock label={t('Blended Yield')} value={fRawPercent(blendedYield)} />
 
             <MetricBlock
               label={t('Annual Yield')}
-              value={formatUsd(annualYieldUsd, currency)}
+              value={fCurrency(annualYieldUsd)}
               action={
                 <Button
                   onClick={onCalculateClick}
@@ -197,7 +183,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
 
             <MetricBlock
               label={t('Total Earnings')}
-              value={formatUsd(totalEarningsUsd, currency)}
+              value={fCurrency(totalEarningsUsd)}
               valueSx={{
                 background: theme.vars.customGradients.textRainbow,
                 WebkitBackgroundClip: 'text',
@@ -208,7 +194,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
               action={
                 earnedTodayUsd != null ? (
                   <Chip
-                    label={`${formatUsd(earnedTodayUsd, currency)} ${t('earned today')}`}
+                    label={`${fCurrency(earnedTodayUsd)} ${t('earned today')}`}
                     size="small"
                     sx={{
                       ml: 1,
@@ -398,10 +384,10 @@ function AllocationRow({
 
         <Stack spacing={0.4} alignItems="flex-end">
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            {balanceUsd != null ? formatUsd(balanceUsd) : ''}
+            {balanceUsd != null ? fCurrency(balanceUsd) : ''}
           </Typography>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            {apy != null ? formatPct(apy) : ''}
+            {apy != null ? fRawPercent(apy) : ''}
           </Typography>
         </Stack>
       </Stack>
