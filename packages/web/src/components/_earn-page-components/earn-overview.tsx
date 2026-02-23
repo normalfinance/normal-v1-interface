@@ -56,7 +56,6 @@ export type EarnOverviewCardProps = {
 // --------------------
 
 function formatUsd(value: number, currency = 'USD') {
-    // Use Intl.NumberFormat so it stays consistent
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency,
@@ -142,11 +141,12 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
         <Card
             elevation={0}
             sx={{
-                borderRadius: 4,
+                borderRadius: 3,
                 border: '1px solid',
                 borderColor: 'divider',
                 overflow: 'hidden',
                 bgcolor: 'background.paper',
+                p:2,
             }}
         >
             {/* Top metrics bar */}
@@ -220,15 +220,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
                     <Stack alignItems={{ xs: 'flex-start', md: 'flex-end' }} spacing={1}>
                         <Button
                             onClick={onBridgeClick}
-                            variant="outlined"
-                            sx={{
-                                borderRadius: 999,
-                                px: 2,
-                                py: 0.75,
-                                borderColor: 'rgba(0,0,0,0.18)',
-                                textTransform: 'none',
-                                fontWeight: 700,
-                            }}
+                            variant="gradientSoft"
                         >
                             {bridgeButtonLabel}
                         </Button>
@@ -311,17 +303,9 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
 
                             <Button
                                 onClick={onAllocateClick}
-                                variant="contained"
+                                variant="darkSoft"
                                 fullWidth
-                                sx={{
-                                    mt: 1,
-                                    borderRadius: 999,
-                                    py: 1.3,
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    bgcolor: theme.palette.grey[900],
-                                    '&:hover': { bgcolor: theme.palette.grey[900] },
-                                }}
+                               
                             >
                                 {allocateCtaLabel}
                             </Button>
@@ -405,7 +389,7 @@ function AllocationRow({
             <Stack direction="row" spacing={1.5} alignItems="flex-start">
                 <Box sx={{ mt: 0.2 }}>{icon}</Box>
                 <Stack spacing={0.8}>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 700 }}>
                         {label}
                     </Typography>
 
