@@ -74,17 +74,17 @@ declare module '@mui/material/styles' {
    */
   interface Theme {
     customShadows: CustomShadows;
-    customGradients: CustomGradients; 
+    customGradients: CustomGradients;
   }
 
   interface ThemeOptions {
     customShadows?: CustomShadows;
-    customGradients?: CustomGradients; 
+    customGradients?: CustomGradients;
   }
 
   interface ThemeVars {
     customShadows: CustomShadows;
-    customGradients: CustomGradients; 
+    customGradients: CustomGradients;
     typography: Theme['typography'];
     transitions: Theme['transitions'];
   }

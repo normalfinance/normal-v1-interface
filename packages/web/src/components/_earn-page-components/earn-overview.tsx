@@ -57,7 +57,6 @@ export type EarnOverviewCardProps = {
   currency?: string;
 };
 
-
 // --------------------
 // Component
 // --------------------
@@ -257,7 +256,9 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
                     label={row.label}
                     icon={
                       row.icon ?? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
                           {row.key === 'liquidity' ? (
                             <BarChartRoundedIcon sx={{ fontSize: 22, color: 'text.primary' }} />
                           ) : (

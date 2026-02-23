@@ -31,7 +31,7 @@ export const baseTheme: ThemeOptions = {
       palette: palette.dark,
       shadows: shadows.dark,
       customShadows: customShadows.dark,
-      customGradients: customGradients.dark, 
+      customGradients: customGradients.dark,
     },
   },
   mixins,

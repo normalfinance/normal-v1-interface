@@ -105,8 +105,7 @@ const gradientSoftVariant: ComponentsVariants<Theme>['MuiButton'] = [
         borderRadius: 'inherit',
         background:
           'linear-gradient(85.91deg, rgba(45, 233, 200, 1) -13.32%, rgba(0, 175, 247, 1) 13.05%, rgba(148, 123, 255, 1) 39.41%, rgba(248, 39, 156, 1) 65.77%, rgba(255, 111, 76, 1) 92.13%, rgba(255, 225, 61, 1) 118.47%)',
-        WebkitMask:
-          'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+        WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
         WebkitMaskComposite: 'xor',
         maskComposite: 'exclude',
         pointerEvents: 'none',
@@ -131,14 +130,11 @@ const darkSoftVariant: ComponentsVariants<Theme>['MuiButton'] = [
       padding: '8px 16px',
       gap: 8,
 
-  
-
       backgroundColor: theme.vars.palette.text.primary,
 
       border: `1px solid ${theme.vars.palette.grey[500]}`,
 
       color: theme.vars.palette.primary.contrastText,
-
 
       [`&.${buttonClasses.disabled}`]: {
         opacity: 0.5,
@@ -146,8 +142,6 @@ const darkSoftVariant: ComponentsVariants<Theme>['MuiButton'] = [
     }),
   },
 ];
-
-
 
 const MuiButton: Components<Theme>['MuiButton'] = {
   /** **************************************
@@ -160,7 +154,7 @@ const MuiButton: Components<Theme>['MuiButton'] = {
    *************************************** */
   styleOverrides: {
     root: {
-      variants: [softVariant.base, softVariant.colors, gradientSoftVariant, darkSoftVariant,].flat(),
+      variants: [softVariant.base, softVariant.colors, gradientSoftVariant, darkSoftVariant].flat(),
     },
     /**
      * @variant contained
@@ -173,18 +167,18 @@ const MuiButton: Components<Theme>['MuiButton'] = {
         inheritColor: {
           ...(ownerState.color === 'inherit' &&
             !ownerState.disabled && {
-            color: theme.vars.palette.common.white,
-            backgroundColor: theme.vars.palette.grey[800],
-            '&:hover': {
-              boxShadow: theme.vars.customShadows.z8,
-              backgroundColor: theme.vars.palette.grey[700],
-            },
-            ...theme.applyStyles('dark', {
-              color: theme.vars.palette.grey[800],
-              backgroundColor: theme.vars.palette.common.white,
-              '&:hover': { backgroundColor: theme.vars.palette.grey[400] },
+              color: theme.vars.palette.common.white,
+              backgroundColor: theme.vars.palette.grey[800],
+              '&:hover': {
+                boxShadow: theme.vars.customShadows.z8,
+                backgroundColor: theme.vars.palette.grey[700],
+              },
+              ...theme.applyStyles('dark', {
+                color: theme.vars.palette.grey[800],
+                backgroundColor: theme.vars.palette.common.white,
+                '&:hover': { backgroundColor: theme.vars.palette.grey[400] },
+              }),
             }),
-          }),
         },
       };
       return { ...styled.inheritColor, ...styled.colors };
@@ -200,9 +194,9 @@ const MuiButton: Components<Theme>['MuiButton'] = {
         inheritColor: {
           ...(ownerState.color === 'inherit' &&
             !ownerState.disabled && {
-            borderColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.32),
-            '&:hover': { backgroundColor: theme.vars.palette.action.hover },
-          }),
+              borderColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.32),
+              '&:hover': { backgroundColor: theme.vars.palette.action.hover },
+            }),
         },
         base: {
           '&:hover': { borderColor: 'currentColor', boxShadow: '0 0 0 0.75px currentColor' },
@@ -218,8 +212,8 @@ const MuiButton: Components<Theme>['MuiButton'] = {
         inheritColor: {
           ...(ownerState.color === 'inherit' &&
             !ownerState.disabled && {
-            '&:hover': { backgroundColor: theme.vars.palette.action.hover },
-          }),
+              '&:hover': { backgroundColor: theme.vars.palette.action.hover },
+            }),
         },
       };
       return { ...styled.inheritColor };

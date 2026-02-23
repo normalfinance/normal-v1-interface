@@ -45,8 +45,6 @@ export default function EarnView() {
     refreshTokens();
   }, [wallet.address]);
 
-
-
   const rows = useMemo(
     () => [
       {
@@ -74,9 +72,10 @@ export default function EarnView() {
     []
   );
 
-
-
-  const totalCapitalDeployedUsd = useMemo(() => rows.reduce((sum, r) => sum + (r.balanceUsd ?? 0), 0), [rows]);
+  const totalCapitalDeployedUsd = useMemo(
+    () => rows.reduce((sum, r) => sum + (r.balanceUsd ?? 0), 0),
+    [rows]
+  );
 
   const blendedYield = useMemo(() => {
     // Weighted APY: sum(balance * apy) / sum(balance)
@@ -93,7 +92,6 @@ export default function EarnView() {
   }, [rows, totalCapitalDeployedUsd]);
 
   const annualYieldUsd = totalCapitalDeployedUsd * blendedYield;
-
 
   const totalEarningsUsd = 494.78;
 

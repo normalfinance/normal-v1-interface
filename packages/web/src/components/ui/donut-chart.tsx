@@ -39,13 +39,7 @@ type Props = {
   options?: ApexOptions;
 };
 
-export default function DonutChart({
-  totalLabel,
-  totalValueUsd,
-  series,
-  colors,
-  options,
-}: Props) {
+export default function DonutChart({ totalLabel, totalValueUsd, series, colors, options }: Props) {
   const { t } = useTranslate();
   const theme = useTheme();
 
@@ -56,9 +50,9 @@ export default function DonutChart({
   const resolvedTotalLabel = totalLabel ?? t('Total');
 
   const displayLabel =
-    hoverIndex != null ? series[hoverIndex]?.label ?? resolvedTotalLabel : resolvedTotalLabel;
+    hoverIndex != null ? (series[hoverIndex]?.label ?? resolvedTotalLabel) : resolvedTotalLabel;
 
-  const displayValue = hoverIndex != null ? series[hoverIndex]?.value ?? 0 : totalValueUsd;
+  const displayValue = hoverIndex != null ? (series[hoverIndex]?.value ?? 0) : totalValueUsd;
 
   const formatUsd = (v: number) =>
     new Intl.NumberFormat('en-US', {
@@ -128,7 +122,6 @@ export default function DonutChart({
           pointerEvents: 'none',
         }}
       >
-
         <Typography
           sx={{
             color: theme.palette.text.secondary,
@@ -139,7 +132,7 @@ export default function DonutChart({
           {displayLabel}
         </Typography>
 
-         <Typography
+        <Typography
           sx={{
             color: theme.palette.text.primary,
             fontSize: 32,
