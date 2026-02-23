@@ -32,7 +32,7 @@ export type DonutChartSeriesItem = {
 };
 
 type Props = {
-  totalLabel?: string; // e.g. "Total"
+  totalLabel?: string;
   totalValueUsd: number;
   series: DonutChartSeriesItem[];
   colors?: string[];
@@ -104,7 +104,6 @@ export default function DonutChart({
         expandOnClick: false,
         donut: {
           size: '78%',
-          // We render our own overlay
           labels: { show: false },
         },
       },
@@ -117,7 +116,7 @@ export default function DonutChart({
     <Box sx={{ position: 'relative', width: CHART_SIZE, height: CHART_SIZE }}>
       <StyledChart dir="ltr" type="donut" series={chartSeries} options={chartOptions} />
 
-      {/* Center overlay: updates on hover, always visible */}
+      {/* Center overlay */}
       <Stack
         spacing={0.5}
         alignItems="center"
@@ -129,16 +128,6 @@ export default function DonutChart({
           pointerEvents: 'none',
         }}
       >
-        <Typography
-          sx={{
-            color: theme.palette.text.primary,
-            fontSize: 32,
-            fontWeight: 700,
-            lineHeight: 1.1,
-          }}
-        >
-          {formatUsd(displayValue)}
-        </Typography>
 
         <Typography
           sx={{
@@ -148,6 +137,17 @@ export default function DonutChart({
           }}
         >
           {displayLabel}
+        </Typography>
+
+         <Typography
+          sx={{
+            color: theme.palette.text.primary,
+            fontSize: 32,
+            fontWeight: 700,
+            lineHeight: 1.1,
+          }}
+        >
+          {formatUsd(displayValue)}
         </Typography>
       </Stack>
     </Box>

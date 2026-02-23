@@ -4,6 +4,7 @@ import type { Theme, SxProps } from '@mui/material/styles';
 
 import * as React from 'react';
 import { useTranslate } from '@/locales';
+import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded';
@@ -22,7 +23,6 @@ import {
 } from '@mui/material';
 
 import DonutChart from '../ui/donut-chart';
-import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 // --------------------
 // Types
