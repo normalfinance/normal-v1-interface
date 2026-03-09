@@ -135,7 +135,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
 
   const handleCalculate = () => {
     onCalculateClick?.();
-    setView('calculator');
+    setView(view === 'calculator' ? 'overview' : 'calculator');
   };
 
   const handleAllocate = () => {
@@ -193,7 +193,15 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
                     fontWeight: 600,
                     textTransform: 'none',
                   }}
-                  endIcon={<KeyboardArrowDownRoundedIcon sx={{ fontSize: 18 }} />}
+                  endIcon={
+                    <KeyboardArrowDownRoundedIcon
+                      sx={{
+                        fontSize: 18,
+                        transform: view === 'calculator' ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    />
+                  }
                 >
                   {t('Calculate')}
                 </Button>
@@ -220,6 +228,9 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
                       bgcolor: 'rgba(0,0,0,0.04)',
                       color: 'text.secondary',
                       fontWeight: 600,
+                      '&:hover': {
+                        bgcolor: 'rgba(0,0,0,0.04)',
+                      },
                     }}
                   />
                 ) : null
