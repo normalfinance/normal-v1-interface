@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 
@@ -13,12 +12,11 @@ import {
   Button,
   Select,
   MenuItem,
-  Divider,
   TextField,
   Typography,
   IconButton,
-  InputAdornment,
   FormControl,
+  InputAdornment,
 } from '@mui/material';
 
 import DonutChart from '../ui/donut-chart';
@@ -405,7 +403,6 @@ export function EarnMoveCapitalPanel({
                   variant="soft"
                   color="inherit"
                   sx={{
-                  
                     bgcolor: '#6F8093',
                     color: 'common.white',
                     '&:hover': {

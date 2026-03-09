@@ -26,8 +26,8 @@ import {
 } from '@mui/material';
 
 import DonutChart from '../ui/donut-chart';
-import { EarnCalculatorPanel } from './earn-calculator-panel';
 import { EarnMoveCapitalPanel } from './move-capital-panel';
+import { EarnCalculatorPanel } from './earn-calculator-panel';
 
 export type EarnAssetKey = 'collateral' | 'liquidity' | 'blend';
 export type EarnOverviewView = 'overview' | 'calculator' | 'move';
@@ -85,7 +85,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
     currency = 'USD',
     defaultView,
     onViewChange,
-    walletBalanceUsd
+    walletBalanceUsd,
   } = props;
 
   const defaultColorByLabel: Record<string, string> = {
@@ -289,7 +289,11 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
               }}
             >
               <DonutChart
-                totalValueUsd={view === 'move' ? previewRowsForMove.reduce((sum, row) => sum + (row.balanceUsd ?? 0), 0) : totalCapitalDeployedUsd}
+                totalValueUsd={
+                  view === 'move'
+                    ? previewRowsForMove.reduce((sum, row) => sum + (row.balanceUsd ?? 0), 0)
+                    : totalCapitalDeployedUsd
+                }
                 series={view === 'move' ? previewDonutSeries : computedDonutSeries}
                 colors={view === 'move' ? previewDonutColors : computedDonutColors}
               />
@@ -341,22 +345,22 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
         </Collapse>
 
         <Collapse in={view === 'move'} timeout={200} unmountOnExit>
-  <EarnMoveCapitalPanel
-    rows={rows}
-    totalCapitalDeployedUsd={totalCapitalDeployedUsd}
-    walletBalanceUsd={walletBalanceUsd}
-    onClose={() => {
-      setMovePreviewRows(null);
-      handleClosePanel();
-    }}
-    onMove={({ previewRows }) => {
-      setMovePreviewRows(previewRows);
-      handleClosePanel();
-    }}
-    moveCtaLabel="Move Capital"
-    cancelCtaLabel="Cancel"
-  />
-</Collapse>
+          <EarnMoveCapitalPanel
+            rows={rows}
+            totalCapitalDeployedUsd={totalCapitalDeployedUsd}
+            walletBalanceUsd={walletBalanceUsd}
+            onClose={() => {
+              setMovePreviewRows(null);
+              handleClosePanel();
+            }}
+            onMove={({ previewRows }) => {
+              setMovePreviewRows(previewRows);
+              handleClosePanel();
+            }}
+            moveCtaLabel="Move Capital"
+            cancelCtaLabel="Cancel"
+          />
+        </Collapse>
       </Box>
 
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
