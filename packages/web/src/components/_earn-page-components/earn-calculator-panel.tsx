@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-
 import { useTranslate } from '@/locales';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 
@@ -20,8 +19,9 @@ import {
   InputAdornment,
 } from '@mui/material';
 
-import type { EarnAssetKey, EarnAllocationRow } from './earn-overview';
 import { EarnProjectionChart } from './earn-projection-chart';
+
+import type { EarnAssetKey, EarnAllocationRow } from './earn-overview';
 
 type CalculatorRow = EarnAllocationRow;
 
@@ -49,10 +49,10 @@ export function EarnCalculatorPanel({
   maxInvestmentAmountUsd,
   balanceLabel,
   projectionDateLabel = new Intl.DateTimeFormat('sl-SI', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-}).format(new Date()),
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date()),
   allocateCtaLabel = 'Allocate Capital',
   onAllocateClick,
   onClose,
@@ -74,9 +74,10 @@ export function EarnCalculatorPanel({
 
     if (!total) {
       const equal = 100 / Math.max(safeRows.length, 1);
-      return Object.fromEntries(
-        safeRows.map((row) => [row.key, equal])
-      ) as Record<EarnAssetKey, number>;
+      return Object.fromEntries(safeRows.map((row) => [row.key, equal])) as Record<
+        EarnAssetKey,
+        number
+      >;
     }
 
     return Object.fromEntries(
@@ -149,12 +150,14 @@ export function EarnCalculatorPanel({
     ) as Record<EarnAssetKey, number>;
   }, [balances, investmentAmountUsd, safeRows, initialAllocations]);
 
-  const blendedYield = React.useMemo(() => {
-    return safeRows.reduce((sum, row) => {
-      const allocation = (allocations[row.key] ?? 0) / 100;
-      return sum + allocation * row.apy;
-    }, 0);
-  }, [safeRows, allocations]);
+  const blendedYield = React.useMemo(
+    () =>
+      safeRows.reduce((sum, row) => {
+        const allocation = (allocations[row.key] ?? 0) / 100;
+        return sum + allocation * row.apy;
+      }, 0),
+    [safeRows, allocations]
+  );
 
   const dailyUsd = (investmentAmountUsd * blendedYield) / 365;
   const monthlyUsd = (investmentAmountUsd * blendedYield) / 12;
@@ -211,10 +214,11 @@ export function EarnCalculatorPanel({
 
       const ratio = nextTotal / currentTotal;
 
-      setBalances((prev) =>
-        Object.fromEntries(
-          safeRows.map((row) => [row.key, Math.max((prev[row.key] ?? 0) * ratio, 0)])
-        ) as Record<EarnAssetKey, number>
+      setBalances(
+        (prev) =>
+          Object.fromEntries(
+            safeRows.map((row) => [row.key, Math.max((prev[row.key] ?? 0) * ratio, 0)])
+          ) as Record<EarnAssetKey, number>
       );
     },
     [balances, createBalancesFromTotal, initialAllocations, safeRows]
@@ -688,13 +692,7 @@ function CalculatorAllocationRow({
   );
 }
 
-function ProjectionMetric({
-  value,
-  suffix,
-}: {
-  value: number;
-  suffix: string;
-}) {
+function ProjectionMetric({ value, suffix }: { value: number; suffix: string }) {
   return (
     <Stack direction="row" alignItems="baseline" spacing={1.5} sx={{ py: 2 }}>
       <Typography variant="h2" sx={{ fontWeight: 700, letterSpacing: -1 }}>
@@ -707,15 +705,10 @@ function ProjectionMetric({
   );
 }
 
-
-function buildBlendedFormula(
-  rows: CalculatorRow[],
-  allocations: Record<EarnAssetKey, number>
-) {
+function buildBlendedFormula(rows: CalculatorRow[], allocations: Record<EarnAssetKey, number>) {
   return `Blended APY = ${rows
     .map(
-      (row) =>
-        `(${((allocations[row.key] ?? 0) / 100).toFixed(2)} × ${(row.apy ?? 0).toFixed(2)})`
+      (row) => `(${((allocations[row.key] ?? 0) / 100).toFixed(2)} × ${(row.apy ?? 0).toFixed(2)})`
     )
     .join(' + ')}`;
 }

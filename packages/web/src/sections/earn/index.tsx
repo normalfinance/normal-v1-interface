@@ -203,7 +203,7 @@ export default function EarnView() {
 
         <InlineError error={error} onClose={clearError} sx={{ mt: 6 }} />
 
-        <Grid2 container spacing={3} sx={{ mt: 6}}>
+        <Grid2 container spacing={3} sx={{ mt: 6 }}>
           <Grid2 size={{ xs: 12, md: 4 }}>
             <BalanceCard
               title={t('Total balance')}

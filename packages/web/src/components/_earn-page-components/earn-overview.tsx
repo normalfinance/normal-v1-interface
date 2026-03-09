@@ -21,8 +21,8 @@ import {
   Divider,
   MenuItem,
   useTheme,
-  Typography,
   Collapse,
+  Typography,
 } from '@mui/material';
 
 import DonutChart from '../ui/donut-chart';
@@ -107,14 +107,16 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
 
   const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
   const [activeRowKey, setActiveRowKey] = React.useState<EarnAssetKey | null>(null);
-  const [internalView, setInternalView] = React.useState<EarnOverviewView>(defaultView ?? 'overview');
+  const [internalView, setInternalView] = React.useState<EarnOverviewView>(
+    defaultView ?? 'overview'
+  );
 
   const view = props.view ?? internalView;
 
   const setView = (next: EarnOverviewView) => {
     props.onViewChange?.(next);
     if (props.view == null) setInternalView(next);
-  }
+  };
 
   const openMenu = (e: React.MouseEvent<HTMLElement>, rowKey: EarnAssetKey) => {
     setMenuAnchor(e.currentTarget);
@@ -241,8 +243,11 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
 
       <Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 3 } }}>
         <Collapse in={view === 'overview'} timeout={200} unmountOnExit>
-
-          <Stack direction={{ xs: 'column', md: 'row' }} alignItems="stretch" sx={{ width: '100%' }}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            alignItems="stretch"
+            sx={{ width: '100%' }}
+          >
             <Box
               sx={{
                 flex: { xs: '1 1 auto', md: '0 0 40%' },
@@ -296,7 +301,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
             rows={rows}
             initialInvestmentAmountUsd={totalCapitalDeployedUsd}
             maxInvestmentAmountUsd={totalCapitalDeployedUsd}
-             balanceLabel={`Total Capital Deployed: ${fCurrency(totalCapitalDeployedUsd)}`}
+            balanceLabel={`Total Capital Deployed: ${fCurrency(totalCapitalDeployedUsd)}`}
             projectionDateLabel="19. 02. 2027"
             onClose={handleClosePanel}
             onAllocateClick={() => handleAllocate()}
