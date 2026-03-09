@@ -280,12 +280,16 @@ export function EarnMoveCapitalPanel({
                                         sx={{
                                             bgcolor: 'background.paper',
                                             borderRadius: 1.5,
+                                            height: 56,
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'divider',
+                                            },
                                             '& .MuiSelect-select': {
                                                 minHeight: 'unset !important',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 boxSizing: 'border-box',
-                                                height: 56,
+                                                height: '100%',
                                                 py: 0,
                                                 fontSize: 22,
                                                 fontWeight: 500,
@@ -374,12 +378,16 @@ export function EarnMoveCapitalPanel({
                                         sx={{
                                             bgcolor: 'background.paper',
                                             borderRadius: 1.5,
+                                            height: 56,
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'divider',
+                                            },
                                             '& .MuiSelect-select': {
                                                 minHeight: 'unset !important',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 boxSizing: 'border-box',
-                                                height: 56,
+                                                height: '100%',
                                                 py: 0,
                                                 fontSize: 22,
                                                 fontWeight: 500,
