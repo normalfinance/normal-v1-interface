@@ -27,6 +27,7 @@ import {
 
 import DonutChart from '../ui/donut-chart';
 import { EarnCalculatorPanel } from './earn-calculator-panel';
+import { EarnMoveCapitalPanel } from './move-capital-panel';
 
 export type EarnAssetKey = 'collateral' | 'liquidity' | 'blend';
 export type EarnOverviewView = 'overview' | 'calculator' | 'move';
@@ -59,6 +60,7 @@ export type EarnOverviewCardProps = {
   view?: EarnOverviewView;
   defaultView?: EarnOverviewView;
   onViewChange?: (view: EarnOverviewView) => void;
+  walletBalanceUsd?: number;
 };
 
 export function EarnOverviewCard(props: EarnOverviewCardProps) {
@@ -83,6 +85,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
     currency = 'USD',
     defaultView,
     onViewChange,
+    walletBalanceUsd
   } = props;
 
   const defaultColorByLabel: Record<string, string> = {
@@ -110,6 +113,23 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
   const [internalView, setInternalView] = React.useState<EarnOverviewView>(
     defaultView ?? 'overview'
   );
+  const [movePreviewRows, setMovePreviewRows] = React.useState<EarnAllocationRow[] | null>(null);
+
+  const previewRowsForMove = movePreviewRows ?? rows;
+
+  const previewDonutSeries = React.useMemo(
+    () =>
+      previewRowsForMove.map((r) => ({
+        label: r.label,
+        value: r.balanceUsd ?? 0,
+      })),
+    [previewRowsForMove]
+  );
+
+  const previewDonutColors = React.useMemo(() => {
+    if (donutColors?.length) return donutColors;
+    return previewDonutSeries.map((s) => defaultColorByLabel[s.label] ?? '#CBD5E1');
+  }, [donutColors, previewDonutSeries]);
 
   const view = props.view ?? internalView;
 
@@ -269,9 +289,9 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
               }}
             >
               <DonutChart
-                totalValueUsd={totalCapitalDeployedUsd}
-                series={computedDonutSeries}
-                colors={computedDonutColors}
+                totalValueUsd={view === 'move' ? previewRowsForMove.reduce((sum, row) => sum + (row.balanceUsd ?? 0), 0) : totalCapitalDeployedUsd}
+                series={view === 'move' ? previewDonutSeries : computedDonutSeries}
+                colors={view === 'move' ? previewDonutColors : computedDonutColors}
               />
             </Box>
 
@@ -321,8 +341,22 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
         </Collapse>
 
         <Collapse in={view === 'move'} timeout={200} unmountOnExit>
-          {/* <EarnMoveCapitalPanel onClose={handleClosePanel} /> */}
-        </Collapse>
+  <EarnMoveCapitalPanel
+    rows={rows}
+    totalCapitalDeployedUsd={totalCapitalDeployedUsd}
+    walletBalanceUsd={walletBalanceUsd}
+    onClose={() => {
+      setMovePreviewRows(null);
+      handleClosePanel();
+    }}
+    onMove={({ previewRows }) => {
+      setMovePreviewRows(previewRows);
+      handleClosePanel();
+    }}
+    moveCtaLabel="Move Capital"
+    cancelCtaLabel="Cancel"
+  />
+</Collapse>
       </Box>
 
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>

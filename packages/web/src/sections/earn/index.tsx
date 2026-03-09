@@ -179,6 +179,7 @@ export default function EarnView() {
             onBridgeClick={() => console.log('bridge')}
             onAllocateClick={() => setOpenEstimate(true)}
             onRowAction={(rowKey, action) => console.log('row action', rowKey, action)}
+            walletBalanceUsd={1200}
           />
         </Grid2>
 
