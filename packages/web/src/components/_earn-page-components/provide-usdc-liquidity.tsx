@@ -4,7 +4,6 @@ import type { Theme, SxProps } from '@mui/material/styles';
 
 import * as React from 'react';
 import { useTranslate } from '@/locales';
-import { cdn } from '@normalfinance/utils';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -262,8 +261,9 @@ export function ProvideUsdcLiquidityCard(props: ProvideUsdcLiquidityCardProps) {
 
                       <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 700 }}>
                         {pool.tokenBBalanceAmount != null
-                          ? `${pool.tokenBBalanceAmount.toFixed(2)} ${pool.tokenBBalanceSymbol ?? pool.tokenB.symbol
-                          }`
+                          ? `${pool.tokenBBalanceAmount.toFixed(2)} ${
+                              pool.tokenBBalanceSymbol ?? pool.tokenB.symbol
+                            }`
                           : '—'}
                       </Typography>
 

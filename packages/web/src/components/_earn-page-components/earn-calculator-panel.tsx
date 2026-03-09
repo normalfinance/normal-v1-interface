@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
@@ -22,7 +23,6 @@ import {
 import { EarnProjectionChart } from './earn-projection-chart';
 
 import type { EarnAssetKey, EarnAllocationRow } from './earn-overview';
-import { cdn } from '@normalfinance/utils';
 
 type CalculatorRow = EarnAllocationRow;
 
