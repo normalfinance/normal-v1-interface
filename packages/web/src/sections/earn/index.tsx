@@ -4,7 +4,7 @@ import type { EarnTransactionRow } from '@/components/_earn-page-components/earn
 
 import { useTranslate } from '@/locales';
 import { useManageLiquidity } from '@/hooks';
-import { logger } from '@normalfinance/utils';
+import { cdn, logger } from '@normalfinance/utils';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -84,8 +84,14 @@ export default function EarnView() {
         {
           id: 'usdc-btc',
           pairLabel: 'USDC / BTC',
-          tokenA: { symbol: 'USDC' },
-          tokenB: { symbol: 'BTC' },
+          tokenA: {
+            symbol: 'USDC',
+            icon: cdn('tokens/USDC.webp'),
+          },
+          tokenB: {
+            symbol: 'BTC',
+            icon: cdn('tokens/bitcoin.webp'),
+          },
           apy: 0.152,
           totalBalanceUsd: 987.65,
           tokenABalanceUsd: 647.65,
@@ -96,8 +102,14 @@ export default function EarnView() {
         {
           id: 'usdc-eth',
           pairLabel: 'USDC / ETH',
-          tokenA: { symbol: 'USDC' },
-          tokenB: { symbol: 'ETH' },
+          tokenA: {
+            symbol: 'USDC',
+            icon: cdn('tokens/USDC.webp'),
+          },
+          tokenB: {
+            symbol: 'ETH',
+            icon: cdn('tokens/ETH.webp'),
+          },
           apy: 0.128,
           totalBalanceUsd: 387.24,
           tokenABalanceUsd: 245.11,
@@ -108,8 +120,14 @@ export default function EarnView() {
         {
           id: 'usdc-sol',
           pairLabel: 'USDC / SOL',
-          tokenA: { symbol: 'USDC' },
-          tokenB: { symbol: 'SOL' },
+          tokenA: {
+            symbol: 'USDC',
+            icon: cdn('tokens/USDC.webp'),
+          },
+          tokenB: {
+            symbol: 'SOL',
+            icon: cdn('tokens/SOL.webp'),
+          },
           apy: 0.104,
           totalBalanceUsd: 57.67,
           tokenABalanceUsd: 31.4,

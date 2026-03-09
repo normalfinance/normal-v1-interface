@@ -22,6 +22,7 @@ import {
 import { EarnProjectionChart } from './earn-projection-chart';
 
 import type { EarnAssetKey, EarnAllocationRow } from './earn-overview';
+import { cdn } from '@normalfinance/utils';
 
 type CalculatorRow = EarnAllocationRow;
 
@@ -714,6 +715,32 @@ function buildBlendedFormula(rows: CalculatorRow[], allocations: Record<EarnAsse
 }
 
 function DefaultRowIcon({ rowKey }: { rowKey: EarnAssetKey }) {
+  const [imgError, setImgError] = React.useState(false);
+
+  const srcByKey: Record<EarnAssetKey, string> = {
+    collateral: cdn('tokens/USDC.webp'),
+    liquidity: cdn('nav/provide-liquidity.svg'),
+    blend: cdn('earn-page/blend.svg'),
+  };
+
+  const size = 26;
+
+  if (!imgError && srcByKey[rowKey]) {
+    return (
+      <Box
+        component="img"
+        src={srcByKey[rowKey]}
+        alt={rowKey}
+        onError={() => setImgError(true)}
+        sx={{
+          width: size,
+          height: size,
+          display: 'block',
+        }}
+      />
+    );
+  }
+
   if (rowKey === 'liquidity') {
     return <BarChartRoundedIcon sx={{ fontSize: 22, color: 'text.primary' }} />;
   }

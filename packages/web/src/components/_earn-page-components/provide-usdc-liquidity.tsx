@@ -25,8 +25,14 @@ import {
 export type UsdcLiquidityPool = {
   id: string;
   pairLabel: string;
-  tokenA: { symbol: string };
-  tokenB: { symbol: string };
+  tokenA: {
+    symbol: string;
+    icon?: string;
+  };
+  tokenB: {
+    symbol: string;
+    icon?: string;
+  };
   apy: number;
   totalBalanceUsd: number;
   tokenABalanceUsd?: number;
@@ -203,8 +209,12 @@ export function ProvideUsdcLiquidityCard(props: ProvideUsdcLiquidityCardProps) {
                   sx={{ width: '100%' }}
                 >
                   <Stack direction="row" spacing={1.5} alignItems="center">
-                    <TokenPairIcon a={pool.tokenA.symbol} b={pool.tokenB.symbol} />
-
+                    <TokenPairIcon
+                      a={pool.tokenA.symbol}
+                      b={pool.tokenB.symbol}
+                      iconA={pool.tokenA.icon}
+                      iconB={pool.tokenB.icon}
+                    />
                     <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.secondary' }}>
                       {pool.pairLabel}
                     </Typography>
@@ -252,9 +262,8 @@ export function ProvideUsdcLiquidityCard(props: ProvideUsdcLiquidityCardProps) {
 
                       <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 700 }}>
                         {pool.tokenBBalanceAmount != null
-                          ? `${pool.tokenBBalanceAmount.toFixed(2)} ${
-                              pool.tokenBBalanceSymbol ?? pool.tokenB.symbol
-                            }`
+                          ? `${pool.tokenBBalanceAmount.toFixed(2)} ${pool.tokenBBalanceSymbol ?? pool.tokenB.symbol
+                          }`
                           : '—'}
                       </Typography>
 
@@ -312,19 +321,23 @@ export function ProvideUsdcLiquidityCard(props: ProvideUsdcLiquidityCardProps) {
   );
 }
 
-function TokenPairIcon({ a, b }: { a: string; b: string }) {
-  const [errA, setErrA] = React.useState(false);
-  const [errB, setErrB] = React.useState(false);
-
-  const srcA = cdn(`tokens/${a.toLowerCase()}.webp`);
-  const srcB = cdn(`tokens/${b.toLowerCase()}.webp`);
-
+function TokenPairIcon({
+  a,
+  b,
+  iconA,
+  iconB,
+}: {
+  a: string;
+  b: string;
+  iconA?: string;
+  iconB?: string;
+}) {
   const letterFor = (sym: string) => sym.toUpperCase().slice(0, 1);
 
   return (
     <Box sx={{ position: 'relative', width: 44, height: 28 }}>
       <Avatar
-        src={!errA ? srcA : undefined}
+        src={iconA}
         sx={{
           width: 32,
           height: 32,
@@ -336,13 +349,12 @@ function TokenPairIcon({ a, b }: { a: string; b: string }) {
           border: '2px solid',
           borderColor: 'background.paper',
         }}
-        imgProps={{ onError: () => setErrA(true) }}
       >
         {letterFor(a)}
       </Avatar>
 
       <Avatar
-        src={!errB ? srcB : undefined}
+        src={iconB}
         sx={{
           width: 32,
           height: 32,
@@ -354,7 +366,6 @@ function TokenPairIcon({ a, b }: { a: string; b: string }) {
           border: '2px solid',
           borderColor: 'background.paper',
         }}
-        imgProps={{ onError: () => setErrB(true) }}
       >
         {letterFor(b)}
       </Avatar>
