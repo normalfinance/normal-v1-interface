@@ -296,7 +296,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
             rows={rows}
             initialInvestmentAmountUsd={totalCapitalDeployedUsd}
             maxInvestmentAmountUsd={totalCapitalDeployedUsd}
-            balanceLabel="Balance: 12,345.21 USDC"
+             balanceLabel={`Total Capital Deployed: ${fCurrency(totalCapitalDeployedUsd)}`}
             projectionDateLabel="19. 02. 2027"
             onClose={handleClosePanel}
             onAllocateClick={() => handleAllocate()}

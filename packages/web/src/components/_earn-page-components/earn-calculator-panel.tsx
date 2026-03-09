@@ -47,7 +47,11 @@ export function EarnCalculatorPanel({
   initialInvestmentAmountUsd,
   maxInvestmentAmountUsd,
   balanceLabel,
-  projectionDateLabel = '19. 02. 2027',
+  projectionDateLabel = new Intl.DateTimeFormat('sl-SI', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+}).format(new Date()),
   allocateCtaLabel = 'Allocate Capital',
   onAllocateClick,
   onClose,
@@ -65,7 +69,7 @@ export function EarnCalculatorPanel({
   );
 
   const initialAllocations = React.useMemo(() => {
-    const total = safeRows.reduce((sum, row) => sum + (row.balanceUsd ?? 0), 0);
+    const total = safeRows.reduce((sum, row) => sum + row.balanceUsd, 0);
 
     if (!total) {
       const equal = 100 / Math.max(safeRows.length, 1);
@@ -75,61 +79,81 @@ export function EarnCalculatorPanel({
     }
 
     return Object.fromEntries(
-      safeRows.map((row) => [row.key, ((row.balanceUsd ?? 0) / total) * 100])
+      safeRows.map((row) => [row.key, (row.balanceUsd / total) * 100])
     ) as Record<EarnAssetKey, number>;
   }, [safeRows]);
 
-  const [investmentAmountUsd, setInvestmentAmountUsd] = React.useState(initialInvestmentAmountUsd);
-  const [inputValue, setInputValue] = React.useState(initialInvestmentAmountUsd.toFixed(2));
-  const [allocations, setAllocations] =
-    React.useState<Record<EarnAssetKey, number>>(initialAllocations);
+  const createBalancesFromTotal = React.useCallback(
+    (totalAmount: number, allocations: Record<EarnAssetKey, number>) =>
+      Object.fromEntries(
+        safeRows.map((row) => [row.key, totalAmount * ((allocations[row.key] ?? 0) / 100)])
+      ) as Record<EarnAssetKey, number>,
+    [safeRows]
+  );
+
+  const initialBalances = React.useMemo(
+    () => createBalancesFromTotal(initialInvestmentAmountUsd, initialAllocations),
+    [createBalancesFromTotal, initialInvestmentAmountUsd, initialAllocations]
+  );
+
+  const [balances, setBalances] = React.useState<Record<EarnAssetKey, number>>(initialBalances);
+  const [investmentInputValue, setInvestmentInputValue] = React.useState(
+    initialInvestmentAmountUsd.toFixed(2)
+  );
+  const [balanceInputValues, setBalanceInputValues] = React.useState<Record<EarnAssetKey, string>>(
+    () =>
+      Object.fromEntries(
+        safeRows.map((row) => [row.key, (initialBalances[row.key] ?? 0).toFixed(2)])
+      ) as Record<EarnAssetKey, string>
+  );
 
   React.useEffect(() => {
-    setInvestmentAmountUsd(initialInvestmentAmountUsd);
-    setInputValue(initialInvestmentAmountUsd.toFixed(2));
-  }, [initialInvestmentAmountUsd]);
+    setBalances(initialBalances);
+    setInvestmentInputValue(initialInvestmentAmountUsd.toFixed(2));
+    setBalanceInputValues(
+      Object.fromEntries(
+        safeRows.map((row) => [row.key, (initialBalances[row.key] ?? 0).toFixed(2)])
+      ) as Record<EarnAssetKey, string>
+    );
+  }, [rowKeysSignature, initialBalances, initialInvestmentAmountUsd, safeRows]);
+
+  const investmentAmountUsd = React.useMemo(
+    () => Object.values(balances).reduce((sum, value) => sum + value, 0),
+    [balances]
+  );
 
   React.useEffect(() => {
-    setAllocations(initialAllocations);
-  }, [rowKeysSignature, initialAllocations]);
+    setInvestmentInputValue(investmentAmountUsd.toFixed(2));
+  }, [investmentAmountUsd]);
 
-  const availableLabel =
-    balanceLabel ??
-    `Balance: ${(maxInvestmentAmountUsd ?? initialInvestmentAmountUsd).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })} USDC`;
+  React.useEffect(() => {
+    setBalanceInputValues((prev) => {
+      const next = { ...prev };
+      safeRows.forEach((row) => {
+        next[row.key] = (balances[row.key] ?? 0).toFixed(2);
+      });
+      return next;
+    });
+  }, [balances, safeRows]);
 
-  const normalizedAllocations = React.useMemo(() => {
-    const total = Object.values(allocations).reduce((sum, value) => sum + value, 0);
+  const allocations = React.useMemo(() => {
+    const total = investmentAmountUsd;
 
     if (!total) {
-      const equal = 100 / Math.max(safeRows.length, 1);
-      return Object.fromEntries(
-        safeRows.map((row) => [row.key, equal])
-      ) as Record<EarnAssetKey, number>;
+      return initialAllocations;
     }
 
     return Object.fromEntries(
-      Object.entries(allocations).map(([key, value]) => [key, (value / total) * 100])
+      safeRows.map((row) => [row.key, ((balances[row.key] ?? 0) / total) * 100])
     ) as Record<EarnAssetKey, number>;
-  }, [allocations, safeRows]);
-
-  const balancesByKey = React.useMemo(() => {
-    return Object.fromEntries(
-      safeRows.map((row) => [
-        row.key,
-        investmentAmountUsd * ((normalizedAllocations[row.key] ?? 0) / 100),
-      ])
-    ) as Record<EarnAssetKey, number>;
-  }, [safeRows, investmentAmountUsd, normalizedAllocations]);
+  }, [balances, investmentAmountUsd, safeRows, initialAllocations]);
 
   const blendedYield = React.useMemo(() => {
     return safeRows.reduce((sum, row) => {
-      const allocation = (normalizedAllocations[row.key] ?? 0) / 100;
-      return sum + allocation * (row.apy ?? 0);
+      const allocation = (allocations[row.key] ?? 0) / 100;
+      return sum + allocation * row.apy;
     }, 0);
-  }, [safeRows, normalizedAllocations]);
+  }, [safeRows, allocations]);
 
   const dailyUsd = (investmentAmountUsd * blendedYield) / 365;
   const monthlyUsd = (investmentAmountUsd * blendedYield) / 12;
@@ -169,69 +193,149 @@ export function EarnCalculatorPanel({
 
   const balanceOnDateUsd = futureBalance(1);
 
-  const handleInvestmentChange = (raw: string) => {
-    const cleaned = raw.replace(/,/g, '').replace(/[^\d.]/g, '');
+  const availableLabel =
+    balanceLabel ??
+    `Total Capital Deployed: ${fCurrency(maxInvestmentAmountUsd ?? initialInvestmentAmountUsd)}`;
 
-    setInputValue(cleaned);
+  const sanitizeNumberInput = (raw: string) => raw.replace(/,/g, '').replace(/[^\d.]/g, '');
+
+  const scaleBalancesToTotal = React.useCallback(
+    (nextTotal: number) => {
+      const currentTotal = Object.values(balances).reduce((sum, value) => sum + value, 0);
+
+      if (currentTotal <= 0) {
+        setBalances(createBalancesFromTotal(nextTotal, initialAllocations));
+        return;
+      }
+
+      const ratio = nextTotal / currentTotal;
+
+      setBalances((prev) =>
+        Object.fromEntries(
+          safeRows.map((row) => [row.key, Math.max((prev[row.key] ?? 0) * ratio, 0)])
+        ) as Record<EarnAssetKey, number>
+      );
+    },
+    [balances, createBalancesFromTotal, initialAllocations, safeRows]
+  );
+
+  const handleInvestmentChange = (raw: string) => {
+    const cleaned = sanitizeNumberInput(raw);
+    setInvestmentInputValue(cleaned);
 
     if (cleaned === '') {
-      setInvestmentAmountUsd(0);
+      setBalances(
+        Object.fromEntries(safeRows.map((row) => [row.key, 0])) as Record<EarnAssetKey, number>
+      );
       return;
     }
 
     const next = Number(cleaned);
-
     if (Number.isNaN(next)) return;
 
-    setInvestmentAmountUsd(Math.max(next, 0));
+    scaleBalancesToTotal(Math.max(next, 0));
   };
 
   const handleInvestmentBlur = () => {
-    setInputValue(investmentAmountUsd.toFixed(2));
+    setInvestmentInputValue(investmentAmountUsd.toFixed(2));
   };
 
   const handleMax = () => {
     const next = maxInvestmentAmountUsd ?? initialInvestmentAmountUsd;
-    setInvestmentAmountUsd(next);
-    setInputValue(next.toFixed(2));
+    scaleBalancesToTotal(next);
+    setInvestmentInputValue(next.toFixed(2));
   };
 
   const handleAllocationChange = (targetKey: EarnAssetKey, nextValue: number) => {
+    const total = investmentAmountUsd;
     const clamped = Math.max(0, Math.min(100, nextValue));
-    const current = normalizedAllocations;
     const otherKeys = safeRows.map((row) => row.key).filter((key) => key !== targetKey);
+
+    if (total <= 0) {
+      const nextAllocations = { ...allocations, [targetKey]: clamped };
+      const remaining = 100 - clamped;
+      const equal = otherKeys.length ? remaining / otherKeys.length : 0;
+
+      otherKeys.forEach((key) => {
+        nextAllocations[key] = equal;
+      });
+
+      setBalances(createBalancesFromTotal(0, nextAllocations));
+      return;
+    }
+
+    const currentAllocations = allocations;
+    const otherTotalPercent = otherKeys.reduce(
+      (sum, key) => sum + (currentAllocations[key] ?? 0),
+      0
+    );
     const remaining = 100 - clamped;
 
     const nextAllocations: Record<EarnAssetKey, number> = {
-      ...current,
+      ...currentAllocations,
       [targetKey]: clamped,
     };
 
     if (otherKeys.length === 0) {
-      setAllocations(nextAllocations);
+      setBalances(createBalancesFromTotal(total, nextAllocations));
       return;
     }
 
-    const otherTotal = otherKeys.reduce((sum, key) => sum + (current[key] ?? 0), 0);
-
-    if (otherTotal <= 0) {
+    if (otherTotalPercent <= 0) {
       const equal = remaining / otherKeys.length;
       otherKeys.forEach((key) => {
         nextAllocations[key] = equal;
       });
-      setAllocations(nextAllocations);
+      setBalances(createBalancesFromTotal(total, nextAllocations));
       return;
     }
 
     otherKeys.forEach((key) => {
-      nextAllocations[key] = ((current[key] ?? 0) / otherTotal) * remaining;
+      nextAllocations[key] = ((currentAllocations[key] ?? 0) / otherTotalPercent) * remaining;
     });
 
-    setAllocations(nextAllocations);
+    setBalances(createBalancesFromTotal(total, nextAllocations));
+  };
+
+  const handleBalanceInputChange = (targetKey: EarnAssetKey, raw: string) => {
+    const cleaned = sanitizeNumberInput(raw);
+
+    setBalanceInputValues((prev) => ({
+      ...prev,
+      [targetKey]: cleaned,
+    }));
+
+    if (cleaned === '') {
+      setBalances((prev) => ({
+        ...prev,
+        [targetKey]: 0,
+      }));
+      return;
+    }
+
+    const next = Number(cleaned);
+    if (Number.isNaN(next)) return;
+
+    setBalances((prev) => ({
+      ...prev,
+      [targetKey]: Math.max(next, 0),
+    }));
+  };
+
+  const handleBalanceInputBlur = (targetKey: EarnAssetKey) => {
+    setBalanceInputValues((prev) => ({
+      ...prev,
+      [targetKey]: (balances[targetKey] ?? 0).toFixed(2),
+    }));
   };
 
   const handleAllocate = () => {
-    
+    onAllocateClick?.({
+      investmentAmountUsd,
+      allocations,
+      balances,
+      blendedYield,
+    });
   };
 
   return (
@@ -278,11 +382,12 @@ export function EarnCalculatorPanel({
 
                 <TextField
                   fullWidth
-                  value={inputValue}
+                  value={investmentInputValue}
                   onChange={(e) => handleInvestmentChange(e.target.value)}
                   onBlur={handleInvestmentBlur}
                   slotProps={{
                     input: {
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
                       endAdornment: (
                         <InputAdornment position="end">
                           <Button
@@ -328,9 +433,12 @@ export function EarnCalculatorPanel({
                 <CalculatorAllocationRow
                   key={row.key}
                   row={row}
-                  allocation={normalizedAllocations[row.key] ?? 0}
-                  balanceUsd={balancesByKey[row.key] ?? 0}
-                  onChange={(value) => handleAllocationChange(row.key, value)}
+                  allocation={allocations[row.key] ?? 0}
+                  balanceUsd={balances[row.key] ?? 0}
+                  balanceInputValue={balanceInputValues[row.key] ?? '0.00'}
+                  onAllocationChange={(value) => handleAllocationChange(row.key, value)}
+                  onBalanceInputChange={(value) => handleBalanceInputChange(row.key, value)}
+                  onBalanceInputBlur={() => handleBalanceInputBlur(row.key)}
                 />
               ))}
             </Stack>
@@ -348,7 +456,7 @@ export function EarnCalculatorPanel({
                 </Typography>
 
                 <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                  {buildBlendedFormula(safeRows, normalizedAllocations)}
+                  {buildBlendedFormula(safeRows, allocations)}
                 </Typography>
               </Stack>
 
@@ -456,12 +564,18 @@ function CalculatorAllocationRow({
   row,
   allocation,
   balanceUsd,
-  onChange,
+  balanceInputValue,
+  onAllocationChange,
+  onBalanceInputChange,
+  onBalanceInputBlur,
 }: {
   row: CalculatorRow;
   allocation: number;
   balanceUsd: number;
-  onChange: (value: number) => void;
+  balanceInputValue: string;
+  onAllocationChange: (value: number) => void;
+  onBalanceInputChange: (value: string) => void;
+  onBalanceInputBlur: () => void;
 }) {
   const { t } = useTranslate();
 
@@ -481,14 +595,39 @@ function CalculatorAllocationRow({
 
         {/* Slider block */}
         <Stack spacing={1.5}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'stretch', md: 'center' }}
+            spacing={1.5}
+          >
             <Typography variant="h5" sx={{ color: 'text.secondary', fontWeight: 700 }}>
               {t('Balance:')}
             </Typography>
 
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              {fCurrency(balanceUsd)}
-            </Typography>
+            <TextField
+              value={balanceInputValue}
+              onChange={(e) => onBalanceInputChange(e.target.value)}
+              onBlur={onBalanceInputBlur}
+              size="small"
+              sx={{
+                width: { xs: '100%', md: 180 },
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: 'background.paper',
+                  borderRadius: 1.5,
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: 18,
+                  fontWeight: 700,
+                  textAlign: 'right',
+                },
+              }}
+              slotProps={{
+                input: {
+                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                },
+              }}
+            />
           </Stack>
 
           <Box sx={{ px: 1 }}>
@@ -498,9 +637,9 @@ function CalculatorAllocationRow({
               max={100}
               step={1}
               marks={[0, 20, 40, 60, 80, 100].map((value) => ({ value }))}
-              onChange={(_, value) => onChange(Number(value))}
+              onChange={(_, value) => onAllocationChange(Number(value))}
               valueLabelDisplay="on"
-              valueLabelFormat={(value) => `${Math.round(value)}`}
+              valueLabelFormat={(value) => `${Math.round(value)}%`}
               sx={{
                 color: 'text.primary',
                 height: 6,
@@ -653,7 +792,10 @@ function buildBlendedFormula(
   allocations: Record<EarnAssetKey, number>
 ) {
   return `Blended APY = ${rows
-    .map((row) => `(${((allocations[row.key] ?? 0) / 100).toFixed(2)} × ${(row.apy ?? 0).toFixed(2)})`)
+    .map(
+      (row) =>
+        `(${((allocations[row.key] ?? 0) / 100).toFixed(2)} × ${(row.apy ?? 0).toFixed(2)})`
+    )
     .join(' + ')}`;
 }
 
