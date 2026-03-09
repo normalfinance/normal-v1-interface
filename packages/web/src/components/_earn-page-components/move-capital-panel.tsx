@@ -269,7 +269,10 @@ export function EarnMoveCapitalPanel({
                                     <Select
                                         displayEmpty
                                         value={from}
-                                        onChange={(e) => setFrom(e.target.value as MoveCapitalKey)}
+                                        onChange={(e) => {
+  setFrom(e.target.value as MoveCapitalKey);
+  setAmountInput('0.00');
+}}
                                         IconComponent={KeyboardArrowDownRoundedIcon}
                                         renderValue={(selected) => {
                                             if (!selected) return t('Select');
