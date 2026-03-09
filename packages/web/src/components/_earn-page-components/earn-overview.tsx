@@ -22,11 +22,14 @@ import {
   MenuItem,
   useTheme,
   Typography,
+  Collapse,
 } from '@mui/material';
 
 import DonutChart from '../ui/donut-chart';
+import { EarnCalculatorPanel } from './earn-calculator-panel';
 
 export type EarnAssetKey = 'collateral' | 'liquidity' | 'blend';
+export type EarnOverviewView = 'overview' | 'calculator' | 'move';
 
 export type EarnAllocationRow = {
   key: EarnAssetKey;
@@ -53,6 +56,9 @@ export type EarnOverviewCardProps = {
   onRowAction?: (rowKey: EarnAssetKey, action: 'deposit' | 'withdraw' | 'info') => void;
   allocateCtaLabel?: string;
   currency?: string;
+  view?: EarnOverviewView;
+  defaultView?: EarnOverviewView;
+  onViewChange?: (view: EarnOverviewView) => void;
 };
 
 export function EarnOverviewCard(props: EarnOverviewCardProps) {
@@ -75,6 +81,8 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
     allocateCtaLabel = t('Allocate Capital'),
     onAllocateClick,
     currency = 'USD',
+    defaultView,
+    onViewChange,
   } = props;
 
   const defaultColorByLabel: Record<string, string> = {
@@ -99,6 +107,14 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
 
   const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
   const [activeRowKey, setActiveRowKey] = React.useState<EarnAssetKey | null>(null);
+  const [internalView, setInternalView] = React.useState<EarnOverviewView>(defaultView ?? 'overview');
+
+  const view = props.view ?? internalView;
+
+  const setView = (next: EarnOverviewView) => {
+    props.onViewChange?.(next);
+    if (props.view == null) setInternalView(next);
+  }
 
   const openMenu = (e: React.MouseEvent<HTMLElement>, rowKey: EarnAssetKey) => {
     setMenuAnchor(e.currentTarget);
@@ -114,6 +130,18 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
     if (activeRowKey) onRowAction?.(activeRowKey, action);
     closeMenu();
   };
+
+  const handleCalculate = () => {
+    onCalculateClick?.();
+    setView('calculator');
+  };
+
+  const handleAllocate = () => {
+    onAllocateClick?.();
+    setView('move');
+  };
+
+  const handleClosePanel = () => setView('overview');
 
   return (
     <Card
@@ -152,7 +180,7 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
               value={fCurrency(annualYieldUsd)}
               action={
                 <Button
-                  onClick={onCalculateClick}
+                  onClick={handleCalculate}
                   variant="text"
                   size="small"
                   sx={{
@@ -212,54 +240,73 @@ export function EarnOverviewCard(props: EarnOverviewCardProps) {
       <Divider />
 
       <Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 3 } }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} alignItems="stretch" sx={{ width: '100%' }}>
-          <Box
-            sx={{
-              flex: { xs: '1 1 auto', md: '0 0 40%' },
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              pr: { md: 4 },
-            }}
-          >
-            <DonutChart
-              totalValueUsd={totalCapitalDeployedUsd}
-              series={computedDonutSeries}
-              colors={computedDonutColors}
+        <Collapse in={view === 'overview'} timeout={200} unmountOnExit>
+
+          <Stack direction={{ xs: 'column', md: 'row' }} alignItems="stretch" sx={{ width: '100%' }}>
+            <Box
+              sx={{
+                flex: { xs: '1 1 auto', md: '0 0 40%' },
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                pr: { md: 4 },
+              }}
+            >
+              <DonutChart
+                totalValueUsd={totalCapitalDeployedUsd}
+                series={computedDonutSeries}
+                colors={computedDonutColors}
+              />
+            </Box>
+
+            <Box
+              sx={{
+                display: { xs: 'none', md: 'block' },
+                width: '1px',
+                bgcolor: 'divider',
+                opacity: 0.8,
+              }}
             />
-          </Box>
 
-          <Box
-            sx={{
-              display: { xs: 'none', md: 'block' },
-              width: '1px',
-              bgcolor: 'divider',
-              opacity: 0.8,
-            }}
+            <Box sx={{ flex: 1, pl: { md: 4 }, minWidth: 0 }}>
+              <Stack spacing={3}>
+                {rows.map((row, idx) => (
+                  <React.Fragment key={row.key}>
+                    <AllocationRow
+                      label={row.label}
+                      icon={row.icon ?? <DefaultRowIcon rowKey={row.key} />}
+                      balanceUsd={row.balanceUsd}
+                      apy={row.apy}
+                      showManage={row.showManage}
+                      onManageClick={(e) => openMenu(e, row.key)}
+                    />
+                    {idx !== rows.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+
+                <Button onClick={handleAllocate} variant="darkSoft" fullWidth>
+                  {t(allocateCtaLabel)}
+                </Button>
+              </Stack>
+            </Box>
+          </Stack>
+        </Collapse>
+        <Collapse in={view === 'calculator'} timeout={200} unmountOnExit>
+          <EarnCalculatorPanel
+            rows={rows}
+            initialInvestmentAmountUsd={totalCapitalDeployedUsd}
+            maxInvestmentAmountUsd={totalCapitalDeployedUsd}
+            balanceLabel="Balance: 12,345.21 USDC"
+            projectionDateLabel="19. 02. 2027"
+            onClose={handleClosePanel}
+            onAllocateClick={() => handleAllocate()}
+            allocateCtaLabel={allocateCtaLabel}
           />
+        </Collapse>
 
-          <Box sx={{ flex: 1, pl: { md: 4 }, minWidth: 0 }}>
-            <Stack spacing={3}>
-              {rows.map((row, idx) => (
-                <React.Fragment key={row.key}>
-                  <AllocationRow
-                    label={row.label}
-                    icon={row.icon ?? <DefaultRowIcon rowKey={row.key} />}
-                    balanceUsd={row.balanceUsd}
-                    apy={row.apy}
-                    showManage={row.showManage}
-                    onManageClick={(e) => openMenu(e, row.key)}
-                  />
-                  {idx !== rows.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-
-              <Button onClick={onAllocateClick} variant="darkSoft" fullWidth>
-                {t(allocateCtaLabel)}
-              </Button>
-            </Stack>
-          </Box>
-        </Stack>
+        <Collapse in={view === 'move'} timeout={200} unmountOnExit>
+          {/* <EarnMoveCapitalPanel onClose={handleClosePanel} /> */}
+        </Collapse>
       </Box>
 
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>

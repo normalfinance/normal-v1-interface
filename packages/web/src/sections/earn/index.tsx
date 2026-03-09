@@ -157,7 +157,7 @@ export default function EarnView() {
     <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
       <DashboardContent maxWidth="xl">
         <Stack spacing={1}>
-          <Typography variant="h4" color="text.primary">
+          <Typography mt={6} variant="h4" color="text.primary">
             {t('Earn Account')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
