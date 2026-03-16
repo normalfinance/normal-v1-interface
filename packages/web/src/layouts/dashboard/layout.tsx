@@ -139,7 +139,23 @@ export function DashboardLayout({
           )}
           <br />
           <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-            <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={handleGiveFeedback}>
+            <Button
+              variant="contained"
+              sx={(thm) => ({
+                mt: 1,
+                bgcolor: thm.palette.grey[100],
+                color: thm.palette.grey[900],
+                '&:hover': {
+                  bgcolor: thm.palette.grey[200],
+                },
+                ...thm.applyStyles('dark', {
+                  bgcolor: thm.palette.grey[800],
+                  color: thm.palette.common.white,
+                  '&:hover': { bgcolor: thm.palette.grey[700] },
+                }),
+              })}
+              onClick={handleGiveFeedback}
+            >
               {t('Give feedback / Report bug')}
             </Button>
           </Box>

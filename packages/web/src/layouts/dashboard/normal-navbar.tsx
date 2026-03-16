@@ -23,6 +23,7 @@ import { Logo } from '@/components/template/logo';
 import { GlowBorder } from '@/components/_common/glow-border';
 
 import { Searchbar } from '../components/searchbar';
+import { LightDarkModeButton } from '../components/light-dark-mode-button';
 
 const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
 const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
@@ -376,6 +377,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           </Box>
 
           <Box sx={{ display: { xs: 'flex', lg: 'flex' }, alignItems: 'center', gap: 1 }}>
+            <LightDarkModeButton />
             {language}
             {account}
           </Box>
@@ -457,13 +459,19 @@ function DesktopDock({
       }}
     >
       <Box
-        sx={{
+        sx={(t) => ({
           px: 2,
-          borderTop: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
-          borderBottom: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
-          bgcolor: theme.palette.background.paper,
-          boxShadow: `0 16px 40px ${alpha('#000', 0.14)}`,
-        }}
+          color: 'text.primary',
+          borderTop: `1px solid ${alpha(t.palette.text.primary, 0.06)}`,
+          borderBottom: `1px solid ${alpha(t.palette.text.primary, 0.06)}`,
+          boxShadow: `0 16px 40px ${alpha(t.palette.common.black, 0.14)}`,
+          bgcolor: t.palette.background.paper,
+          ...t.applyStyles('dark', {
+            bgcolor: t.palette.grey[900],
+            borderTop: `1px solid ${alpha(t.palette.common.white, 0.08)}`,
+            borderBottom: `1px solid ${alpha(t.palette.common.white, 0.08)}`,
+          }),
+        })}
       >
         {children}
       </Box>
@@ -543,7 +551,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                     href={l.url}
                     target={target}
                     rel={rel}
-                    sx={{
+                    sx={(t2) => ({
                       display: 'grid',
                       gridTemplateColumns: 'max-content 1fr',
                       alignItems: 'start',
@@ -554,26 +562,27 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                       color: 'inherit',
                       borderRadius: 1,
                       transition: 'background-color 0.15s ease',
-                      '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
-                      '&:focus-visible': (t2) => ({
+                      '&:hover': { backgroundColor: t2.palette.action.hover },
+                      '&:focus-visible': {
                         outline: `2px solid ${t2.palette.primary.main}`,
                         outlineOffset: 2,
-                      }),
-                    }}
+                      },
+                    })}
                   >
                     <Box
-                      sx={{
+                      sx={(t2) => ({
                         width: 36,
                         height: 36,
                         p: 0.75,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        bgcolor: '#F9FAFB',
+                        bgcolor: t2.palette.grey[100],
                         borderRadius: 1,
-                        border: (t2) => `1px solid ${t2.palette.divider}`,
+                        border: `1px solid ${t2.palette.divider}`,
                         boxSizing: 'border-box',
-                      }}
+                        ...t2.applyStyles('dark', { bgcolor: t2.palette.grey[800] }),
+                      })}
                     >
                       <Box
                         component="img"
@@ -715,14 +724,15 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
         </Box>
 
         <Box
-          sx={{
+          sx={(t2) => ({
             position: 'absolute',
             inset: 0,
             width: '100vw',
             left: { xs: 0, lg: 'calc(-5% - 0px)' },
-            bgcolor: (t2) => t2.palette.grey[100],
+            bgcolor: t2.palette.grey[100],
             zIndex: 0,
-          }}
+            ...t2.applyStyles('dark', { bgcolor: t2.palette.grey[800] }),
+          })}
         />
       </Box>
     </Box>
@@ -800,7 +810,7 @@ function MobileMega({
                     key={li}
                     component="a"
                     href={l.url}
-                    sx={{
+                    sx={(t2) => ({
                       display: 'grid',
                       gridTemplateColumns: 'max-content 1fr',
                       alignItems: 'start',
@@ -811,26 +821,27 @@ function MobileMega({
                       color: 'inherit',
                       borderRadius: 1,
                       transition: 'background-color 0.15s ease',
-                      '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
-                      '&:focus-visible': (t2) => ({
+                      '&:hover': { backgroundColor: t2.palette.action.hover },
+                      '&:focus-visible': {
                         outline: `2px solid ${t2.palette.primary.main}`,
                         outlineOffset: 2,
-                      }),
-                    }}
+                      },
+                    })}
                   >
                     <Box
-                      sx={{
+                      sx={(t2) => ({
                         width: 36,
                         height: 36,
                         p: 0.75,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        bgcolor: '#F9FAFB',
+                        bgcolor: t2.palette.grey[100],
                         borderRadius: 1,
-                        border: (t2) => `1px solid ${t2.palette.divider}`,
+                        border: `1px solid ${t2.palette.divider}`,
                         boxSizing: 'border-box',
-                      }}
+                        ...t2.applyStyles('dark', { bgcolor: t2.palette.grey[800] }),
+                      })}
                     >
                       <Box
                         component="img"
@@ -863,15 +874,16 @@ function MobileMega({
 
       <Box sx={{ mt: 3, position: 'relative', py: 4 }}>
         <Box
-          sx={{
+          sx={(t2) => ({
             position: 'absolute',
             top: 0,
             bottom: 0,
             left: '-5%',
             right: '-5%',
-            bgcolor: (t2) => t2.palette.grey[100],
             zIndex: 0,
-          }}
+            bgcolor: t2.palette.grey[100],
+            ...t2.applyStyles('dark', { bgcolor: t2.palette.grey[800] }),
+          })}
         />
         <Box
           sx={{
@@ -952,18 +964,22 @@ function MobileMega({
             {...btnDefaults}
             {...megaMenu.button}
             fullWidth
-            sx={{
-              bgcolor: '#2b2b2b',
-              color: '#fff',
+            sx={(t2) => ({
               justifyContent: 'center',
               textAlign: 'center',
               fontWeight: 500,
               borderRadius: 1.5,
               py: 3,
+              bgcolor: t2.palette.grey[900],
+              color: t2.palette.common.white,
               '&:hover': {
-                bgcolor: '#1f1f1f',
+                bgcolor: t2.palette.grey[800],
               },
-            }}
+              ...t2.applyStyles('dark', {
+                bgcolor: t2.palette.grey[800],
+                '&:hover': { bgcolor: t2.palette.grey[700] },
+              }),
+            })}
           >
             {tMobile(megaMenu.button.title)}
           </Button>

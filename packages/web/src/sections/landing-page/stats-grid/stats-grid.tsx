@@ -50,15 +50,17 @@ const DEFAULT_PROPS = {
   ],
 };
 
-const paperSx = {
-  bgcolor: '#F9FAFB',
-  borderRadius: 3,
-};
-
 const StatCard: React.FC<StatsProps> = ({ percentage, heading }) => {
   const { t } = useTranslate();
   return (
-    <Paper variant="outlined" sx={{ ...paperSx }}>
+    <Paper
+      variant="outlined"
+      sx={(theme) => ({
+        borderRadius: 3,
+        bgcolor: theme.palette.grey[100],
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
+      })}
+    >
       <Box
         sx={{
           p: { xs: 2.5, md: 4 },

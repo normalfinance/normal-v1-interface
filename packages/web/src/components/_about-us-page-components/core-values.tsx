@@ -62,7 +62,7 @@ export const CoreValuesDefaults: Props = {
 /* --------------------------------- Styles -------------------------------- */
 
 const cardSx = {
-  bgcolor: '#F9FAFB',
+  bgcolor: 'background.neutral',
   borderRadius: 3,
 };
 

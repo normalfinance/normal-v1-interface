@@ -75,14 +75,14 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
           value={currentFilters.name}
           onChange={handleFilterName}
           placeholder={t('Search assets...')}
-          sx={{
+          sx={(theme) => ({
             ml: 'auto',
             maxWidth: 200,
 
-            // ---- wrapper that draws the outline -----------------------------
             '& .MuiOutlinedInput-root': {
-              bgcolor: 'grey.250',
               borderRadius: 9999,
+              bgcolor: theme.palette.grey[100],
+              ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
 
               '& fieldset': {
                 borderColor: 'divider',
@@ -95,12 +95,11 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
               },
             },
 
-            // ---- actual <input> element ------------------------------------
             '& .MuiInputBase-input': {
               py: '12px',
               px: '16px',
             },
-          }}
+          })}
           slotProps={{
             input: {
               startAdornment: (

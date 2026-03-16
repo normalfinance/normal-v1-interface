@@ -111,31 +111,29 @@ export function Searchbar({ sx, ...other }: BoxProps) {
       onClick={onOpen}
       sx={[
         // Base: look like the Explore TextField on every breakpoint
-        {
+        (_theme) => ({
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          pr: 1, // space for the ⌘K label on sm+
+          pr: 1,
           pl: 0.5,
-          py: 0.25, // ~12px like your TextField input
-          borderRadius: 9999, // pill
+          py: 0.25,
+          borderRadius: 9999,
           cursor: 'pointer',
-          bgcolor: 'grey.250', // same background
-          border: (_theme) => `1px solid ${_theme.palette.divider}`,
-          transition: (_theme) =>
-            _theme.transitions.create('background-color', {
-              easing: _theme.transitions.easing.easeInOut,
-              duration: _theme.transitions.duration.shortest,
-            }),
+          bgcolor: _theme.palette.grey[100],
+          border: `1px solid ${_theme.palette.divider}`,
+          ..._theme.applyStyles('dark', { bgcolor: _theme.palette.grey[800] }),
+          transition: _theme.transitions.create('background-color', {
+            easing: _theme.transitions.easing.easeInOut,
+            duration: _theme.transitions.duration.shortest,
+          }),
           '&:hover': {
-            bgcolor: (_theme) =>
-              // subtle lift on hover (works with CSS vars or without)
-              _theme.vars
-                ? `color-mix(in srgb, rgba(${_theme.vars.palette.grey['500Channel']} / 1) 16%, transparent)`
-                : _theme.palette.action.hover,
+            bgcolor: _theme.vars
+              ? `color-mix(in srgb, rgba(${_theme.vars.palette.grey['500Channel']} / 1) 16%, transparent)`
+              : _theme.palette.action.hover,
           },
-          color: 'text.secondary', // placeholder-ish text color
-        },
+          color: 'text.secondary',
+        }),
         // Allow caller to override/extend
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
@@ -167,12 +165,15 @@ export function Searchbar({ sx, ...other }: BoxProps) {
       <Label
         sx={(_theme) => ({
           ml: 'auto',
-          color: 'grey.800',
+          color: 'text.primary',
           cursor: 'inherit',
-          bgcolor: 'common.white',
+          bgcolor: _theme.palette.background.paper,
           fontSize: _theme.typography.pxToRem(12),
           boxShadow: _theme.vars.customShadows.z1,
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
+          ..._theme.applyStyles('dark', {
+            border: `1px solid ${_theme.palette.divider}`,
+          }),
         })}
       >
         {t('⌘K')}

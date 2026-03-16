@@ -7,6 +7,7 @@ import { useTranslate } from '@/locales';
 import { usePostHog } from 'posthog-js/react';
 import { useTrade, useTreasury, useTrustLine } from '@/hooks';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { getConversionTextScaled } from '@/utils/conversion-helpers';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
@@ -80,6 +81,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
   const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
+  const { session } = useSupabaseAuth();
 
   const { setModalView } = useAppStore();
 
@@ -665,6 +667,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
   // Main button with multiple states
   const persist = usePersistStore();
   const isConnected = !!persist.wallet.address;
+  const gateButtonText = session && !isConnected ? 'Connect account' : 'Login to trade';
 
   const getInfoAccordionAlerts = useCallback((): InfoAccordionAlert[] => {
     const alerts: InfoAccordionAlert[] = [];
@@ -865,22 +868,34 @@ const TradeCard: React.FC<TradeCardProps> = ({
                   </Box>
 
                   <Button
-                    variant="contained"
+                    variant="outlined"
                     size="small"
+                    color="secondary"
                     onClick={handleMaxClick}
                     disabled={loading}
-                    sx={{
+                    sx={(t) => ({
                       fontWeight: 500,
                       fontSize: '12px',
                       p: 0,
                       height: '24px',
                       minWidth: '36px',
-                      backgroundColor: 'rgba(148,123,255,0.29)',
-                      color: '#6E4BFF',
+                      borderColor: alpha(t.palette.secondary.main, 0.5),
+                      bgcolor: alpha(t.palette.secondary.main, 0.29),
+                      color: 'secondary.main',
                       '&:hover': {
-                        backgroundColor: 'rgba(148,123,255,0.20)',
+                        borderColor: alpha(t.palette.secondary.main, 0.5),
+                        bgcolor: alpha(t.palette.secondary.main, 0.2),
                       },
-                    }}
+                      ...t.applyStyles('dark', {
+                        bgcolor: alpha(t.palette.secondary.main, 0.4),
+                        borderColor: alpha(t.palette.secondary.main, 0.6),
+                        color: t.palette.secondary.light,
+                        '&:hover': {
+                          bgcolor: alpha(t.palette.secondary.main, 0.35),
+                          borderColor: alpha(t.palette.secondary.main, 0.6),
+                        },
+                      }),
+                    })}
                   >
                     {t('Max')}
                   </Button>
@@ -922,7 +937,7 @@ const TradeCard: React.FC<TradeCardProps> = ({
         </Box>
       )}
 
-      <WalletGate buttonText="Login to trade" fullWidth>
+      <WalletGate buttonText={gateButtonText} fullWidth>
         {(() => {
           const buttonState = getButtonState();
           const buttonConfig = getButtonConfig(buttonState);
