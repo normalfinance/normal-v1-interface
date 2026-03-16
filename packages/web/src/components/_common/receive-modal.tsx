@@ -5,6 +5,7 @@ import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
+import { isWalletLinked } from '@/services/linked-wallets';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
@@ -58,6 +59,21 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
   const handleFundAccount = async () => {
     if (!walletAddress) {
       enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
+      return;
+    }
+
+    try {
+      const linked = await isWalletLinked(walletAddress);
+      if (!linked) {
+        enqueueSnackbar(t('We could not verify wallet link right now. Please retry.'), {
+          variant: 'info',
+        });
+        return;
+      }
+    } catch {
+      enqueueSnackbar(t('We could not verify wallet link right now. Please retry.'), {
+        variant: 'warning',
+      });
       return;
     }
 

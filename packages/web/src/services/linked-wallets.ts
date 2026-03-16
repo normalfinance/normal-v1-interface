@@ -161,6 +161,11 @@ export async function getLinkedWallets(): Promise<LinkedWallet[]> {
   }
 }
 
+export async function isWalletLinked(walletAddress: string): Promise<boolean> {
+  const wallets = await getLinkedWallets();
+  return wallets.some((wallet) => wallet.walletAddress === walletAddress);
+}
+
 /**
  * Update a linked wallet's name
  */

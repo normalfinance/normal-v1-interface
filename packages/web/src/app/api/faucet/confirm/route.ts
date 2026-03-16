@@ -5,14 +5,13 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getClientIP, getAccessToken } from '@/utils/http';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { getClientIP, getAccessToken } from '@/utils/http';
 
 const ConfirmSchema = z.object({
   walletAddress: z.string().regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
   txHash: z.string().min(1, 'Transaction hash is required'),
 });
-
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,11 +35,10 @@ export async function POST(request: NextRequest) {
 
     const { walletAddress, txHash } = validation.data;
 
-    // Assert user owns walletAddress
-    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    // if (!isLinked) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const ipAddress = getClientIP(request);
 

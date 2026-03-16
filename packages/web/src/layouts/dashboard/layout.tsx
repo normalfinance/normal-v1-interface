@@ -141,17 +141,17 @@ export function DashboardLayout({
           <Box sx={{ position: 'relative', display: 'inline-flex' }}>
             <Button
               variant="contained"
-              sx={(theme) => ({
+              sx={(thm) => ({
                 mt: 1,
-                bgcolor: theme.palette.grey[100],
-                color: theme.palette.grey[900],
+                bgcolor: thm.palette.grey[100],
+                color: thm.palette.grey[900],
                 '&:hover': {
-                  bgcolor: theme.palette.grey[200],
+                  bgcolor: thm.palette.grey[200],
                 },
-                ...theme.applyStyles('dark', {
-                  bgcolor: theme.palette.grey[800],
-                  color: theme.palette.common.white,
-                  '&:hover': { bgcolor: theme.palette.grey[700] },
+                ...thm.applyStyles('dark', {
+                  bgcolor: thm.palette.grey[800],
+                  color: thm.palette.common.white,
+                  '&:hover': { bgcolor: thm.palette.grey[700] },
                 }),
               })}
               onClick={handleGiveFeedback}

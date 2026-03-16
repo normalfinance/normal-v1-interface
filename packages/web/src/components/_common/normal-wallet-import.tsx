@@ -48,19 +48,27 @@ export type NormalWalletImportProps = {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  showLinkedWallets?: boolean;
+  onBack?: () => void;
 };
 
 type ImportStage = 'select' | 'import';
 type ImportType = 'mnemonic' | 'private-key';
 
-export default function NormalWalletImport({ open, onClose, onSuccess }: NormalWalletImportProps) {
+export default function NormalWalletImport({
+  open,
+  onClose,
+  onSuccess,
+  showLinkedWallets = true,
+  onBack,
+}: NormalWalletImportProps) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { importWalletFromMnemonic, importWalletFromPrivateKey } = useNormalWallet();
   const { session } = useSupabaseAuth();
 
   // Stage management
-  const [stage, setStage] = useState<ImportStage>('select');
+  const [stage, setStage] = useState<ImportStage>(showLinkedWallets ? 'select' : 'import');
 
   // Linked wallets state
   const [linkedWallets, setLinkedWallets] = useState<LinkedWallet[]>([]);
@@ -81,6 +89,12 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
   // Fetch linked wallets when modal opens
   useEffect(() => {
     const fetchLinkedWallets = async () => {
+      if (!showLinkedWallets) {
+        setLinkedWallets([]);
+        setStage('import');
+        return;
+      }
+
       if (!open || !session) {
         setLinkedWallets([]);
         return;
@@ -108,7 +122,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
     };
 
     fetchLinkedWallets();
-  }, [open, session]);
+  }, [open, session, showLinkedWallets]);
 
   const autoFillMnemonic = useCallback(
     async (walletAddress: string): Promise<string | null> => {
@@ -388,7 +402,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
   };
 
   const resetForm = () => {
-    setStage('select');
+    setStage(showLinkedWallets ? 'select' : 'import');
     setSelectedWallet(null);
     setMnemonic('');
     setPrivateKey('');
@@ -409,6 +423,13 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
 
   const renderWalletSelectStage = () => (
     <Stack spacing={3}>
+      {onBack && (
+        <Box>
+          <Button startIcon={<Iconify icon="mingcute:left-line" />} onClick={onBack} sx={{ mb: 1 }}>
+            {t('Back')}
+          </Button>
+        </Box>
+      )}
       <Typography variant="body2" color="text.secondary">
         {t('Select a linked account, or import a new one.')}
       </Typography>
@@ -483,7 +504,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
 
   const renderImportStage = () => (
     <Stack spacing={3}>
-      {linkedWallets.length > 0 && (
+      {showLinkedWallets && linkedWallets.length > 0 && (
         <Box>
           <Button
             startIcon={<Iconify icon="mingcute:left-line" />}
@@ -605,7 +626,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
     >
       <DialogTitle sx={{ pb: 2, position: 'relative' }}>
         <Typography variant="h5" component="div">
-          {stage === 'select'
+          {showLinkedWallets && stage === 'select'
             ? t('Your Linked Accounts')
             : selectedWallet
               ? t('Reconnect Account')
@@ -626,7 +647,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
       </DialogTitle>
 
       <DialogContent sx={{ py: 5 }}>
-        {stage === 'select' ? renderWalletSelectStage() : renderImportStage()}
+        {showLinkedWallets && stage === 'select' ? renderWalletSelectStage() : renderImportStage()}
       </DialogContent>
     </Dialog>
   );

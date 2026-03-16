@@ -7,7 +7,6 @@ import { getAccessToken } from '@/utils/http';
 import { faucetRateLimiter } from '@/server/faucetRateLimiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { getAccessToken } from '@/utils/http';
 
 const LinkWalletSchema = z.object({
   walletAddress: z
@@ -106,7 +105,7 @@ export async function POST(request: NextRequest) {
           });
           return NextResponse.json(
             {
-              error: 'Weekly wallet creation limit exceeded. Try again next week.',
+              error: 'You can only create 2 wallets per week. Try again next week.',
               reset: rateLimitStatus.reset,
             },
             { status: 429 }

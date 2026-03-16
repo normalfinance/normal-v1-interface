@@ -5,8 +5,8 @@ import type { SwapQueryParams } from '@/types/query-params';
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
-import { alpha, useTheme } from '@mui/material/styles';
 
+import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 import TradeCard from '@/components/_common/trade-card';
@@ -191,7 +191,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 p: 1,
                 borderRadius: 3,
                 bgcolor: 'background.paper',
-                boxShadow: (t) => `0px 9px 50px 0px ${alpha(t.palette.common.black, 0.25)}`,
+                boxShadow: (thm) => `0px 9px 50px 0px ${alpha(thm.palette.common.black, 0.25)}`,
               }}
             >
               <TradeCard queryParams={swapParams} />

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       });
       return NextResponse.json({
         allowed: true,
-        remaining: 1,
+        remaining: 2,
         reset: 0,
       });
     }

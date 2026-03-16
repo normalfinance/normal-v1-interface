@@ -6,6 +6,7 @@ import { logger } from '@normalfinance/utils';
 import { SponsorService } from '@/lib/sponsor-service';
 import { getClientIP, getAccessToken } from '@/utils/http';
 import { faucetRateLimiter } from '@/server/faucetRateLimiter';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const FundWalletSchema = z.object({
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Rate limit by supabaseUid (1 per week)
+    // Rate limit by supabaseUid (2 per week)
     if (!isDev || forceRateLimit) {
       const rateLimitResult = await faucetRateLimiter.limit(user.id);
       if (!rateLimitResult.success) {
@@ -69,11 +70,10 @@ export async function POST(request: NextRequest) {
 
     const { walletAddress } = validation.data;
 
-    // Assert user owns walletAddress
-    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    // if (!isLinked) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
+    const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
+    if (!isLinked) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const hasBeenSponsored = await SponsorService.hasBeenSponsored(walletAddress);
     if (hasBeenSponsored) {

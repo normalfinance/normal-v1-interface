@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+
 import { logger } from '@normalfinance/utils';
 import {
   generateAESKey,

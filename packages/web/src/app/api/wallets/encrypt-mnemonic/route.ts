@@ -9,7 +9,6 @@ import { UserRSAService } from '@/lib/user-rsa-service';
 import { decryptWithRSAPrivateKey } from '@/lib/server-rsa-encryption';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { encryptMnemonicServerV2 } from '@/lib/server-mnemonic-encryption';
-import { getAccessToken } from '@/utils/http';
 
 const EncryptSchema = z.object({
   walletAddress: z

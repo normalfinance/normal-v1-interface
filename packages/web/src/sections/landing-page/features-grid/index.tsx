@@ -49,7 +49,10 @@ export interface FeatureGridProps extends React.ComponentPropsWithoutRef<'sectio
 
 /* ––––– Shared styles ––––– */
 
-const getPaperSx = (theme: { palette: { grey: Record<number, string> }; applyStyles: (mode: string, styles: object) => object }) => ({
+const getPaperSx = (theme: {
+  palette: { grey: Record<number, string> };
+  applyStyles: (mode: string, styles: object) => object;
+}) => ({
   borderRadius: 3,
   bgcolor: theme.palette.grey[100],
   ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
@@ -289,7 +292,11 @@ const TallCardItem: React.FC<TallCard> = (c) => {
   return (
     <Paper
       variant="outlined"
-      sx={(theme) => ({ ...getPaperSx(theme), cursor: isLink ? 'pointer' : 'default', height: '100%' })}
+      sx={(theme) => ({
+        ...getPaperSx(theme),
+        cursor: isLink ? 'pointer' : 'default',
+        height: '100%',
+      })}
       onClick={() => isLink && router.push(c.url!)}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
