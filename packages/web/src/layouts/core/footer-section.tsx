@@ -40,9 +40,8 @@ const LINKS = [
   {
     headline: 'Protocol',
     children: [
-      { name: 'Governance', href: paths.socials.discord },
       { name: 'Developers', href: paths.docs },
-      { name: 'Contract Tracker', href: paths.help.contractTracker },
+      { name: 'Whitepaper', href: paths.help.contractTracker },
     ],
   },
   {
@@ -163,7 +162,14 @@ export function FooterSection({
               })}
             >
               {_socials.map((social) => (
-                <IconButton key={social.label}>{social.icon}</IconButton>
+                <IconButton
+                  key={social.label}
+                  href={social.path}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {social.icon}
+                </IconButton>
               ))}
             </Box>
           </Grid>
