@@ -15,6 +15,8 @@ import { loadingButtonClasses } from '@mui/lab/LoadingButton';
 
 export type ButtonExtendVariant = {
   soft: true;
+  gradientSoft: true;
+  darkSoft: true;
 };
 
 // ----------------------------------------------------------------------
@@ -80,6 +82,67 @@ const softVariant: Record<string, ComponentsVariants<Theme>['MuiButton']> = {
   ],
 };
 
+const gradientSoftVariant: ComponentsVariants<Theme>['MuiButton'] = [
+  {
+    props: ({ ownerState }) => ownerState.variant === 'gradientSoft',
+    style: ({ theme }) => ({
+      borderRadius: 99,
+      textTransform: 'none',
+      fontWeight: 600,
+      height: 38,
+      padding: '8px 16px',
+      gap: 8,
+      color: theme.vars.palette.text.primary,
+      background:
+        'linear-gradient(85.91deg, rgba(45, 233, 200, 0.11) -13.32%, rgba(0, 175, 247, 0.11) 13.05%, rgba(148, 123, 255, 0.11) 39.41%, rgba(248, 39, 156, 0.11) 65.77%, rgba(255, 111, 76, 0.11) 92.13%, rgba(255, 225, 61, 0.11) 118.47%)',
+      position: 'relative',
+      overflow: 'hidden',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        inset: 0,
+        padding: '1px',
+        borderRadius: 'inherit',
+        background:
+          'linear-gradient(85.91deg, rgba(45, 233, 200, 1) -13.32%, rgba(0, 175, 247, 1) 13.05%, rgba(148, 123, 255, 1) 39.41%, rgba(248, 39, 156, 1) 65.77%, rgba(255, 111, 76, 1) 92.13%, rgba(255, 225, 61, 1) 118.47%)',
+        WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+        WebkitMaskComposite: 'xor',
+        maskComposite: 'exclude',
+        pointerEvents: 'none',
+      },
+
+      [`&.${buttonClasses.disabled}`]: {
+        opacity: 0.5,
+      },
+    }),
+  },
+];
+
+const darkSoftVariant: ComponentsVariants<Theme>['MuiButton'] = [
+  {
+    props: ({ ownerState }) => ownerState.variant === 'darkSoft',
+    style: ({ theme }) => ({
+      borderRadius: 99,
+      textTransform: 'none',
+      fontWeight: 700,
+
+      height: 38,
+      padding: '8px 16px',
+      gap: 8,
+
+      backgroundColor: theme.vars.palette.text.primary,
+
+      border: `1px solid ${theme.vars.palette.grey[500]}`,
+
+      color: theme.vars.palette.primary.contrastText,
+
+      [`&.${buttonClasses.disabled}`]: {
+        opacity: 0.5,
+      },
+    }),
+  },
+];
+
 const MuiButton: Components<Theme>['MuiButton'] = {
   /** **************************************
    * DEFAULT PROPS
@@ -90,7 +153,9 @@ const MuiButton: Components<Theme>['MuiButton'] = {
    * STYLE
    *************************************** */
   styleOverrides: {
-    root: { variants: [softVariant.base, softVariant.colors].flat() },
+    root: {
+      variants: [softVariant.base, softVariant.colors, gradientSoftVariant, darkSoftVariant].flat(),
+    },
     /**
      * @variant contained
      */

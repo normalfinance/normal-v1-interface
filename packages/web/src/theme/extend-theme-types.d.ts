@@ -6,6 +6,7 @@ import type {} from '@mui/material/themeCssVarsAugmentation';
 
 import type { FontStyleExtend } from './core/typography';
 import type { CustomShadows } from './core/custom-shadows';
+import type { CustomGradients } from './core/custom-gradients';
 import type { ChipExtendVariant } from './core/components/chip';
 import type { BadgeExtendVariant } from './core/components/badge';
 import type { SliderExtendColor } from './core/components/slider';
@@ -73,14 +74,25 @@ declare module '@mui/material/styles' {
    */
   interface Theme {
     customShadows: CustomShadows;
+    customGradients: CustomGradients;
   }
+
   interface ThemeOptions {
     customShadows?: CustomShadows;
+    customGradients?: CustomGradients;
   }
+
   interface ThemeVars {
     customShadows: CustomShadows;
+    customGradients: CustomGradients;
     typography: Theme['typography'];
     transitions: Theme['transitions'];
+  }
+}
+
+declare module '@mui/material/styles' {
+  interface ColorSystemOptions {
+    customGradients?: CustomGradients;
   }
 }
 

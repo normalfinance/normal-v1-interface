@@ -12,6 +12,7 @@ import { themeConfig } from './theme-config';
 import { components } from './core/components';
 import { typography } from './core/typography';
 import { customShadows } from './core/custom-shadows';
+import { customGradients } from './core/custom-gradients';
 import { updateCoreWithSettings, updateComponentsWithSettings } from './with-settings';
 
 import type { ThemeOptions } from './types';
@@ -24,11 +25,13 @@ export const baseTheme: ThemeOptions = {
       palette: palette.light,
       shadows: shadows.light,
       customShadows: customShadows.light,
+      customGradients: customGradients.light,
     },
     dark: {
       palette: palette.dark,
       shadows: shadows.dark,
       customShadows: customShadows.dark,
+      customGradients: customGradients.dark,
     },
   },
   mixins,
