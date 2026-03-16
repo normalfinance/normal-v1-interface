@@ -149,9 +149,54 @@ export class LinkedWalletService {
     }
   }
 
-  /**
-   * Check if a wallet is linked to a user
-   */
+  static async getLinkedWalletForTransaction(
+    supabaseUid: string,
+    walletAddress: string
+  ): Promise<{ custodyChoice: 'self' | 'platform' | null } | null> {
+    try {
+      const wallet = await prisma.linkedWallet.findUnique({
+        where: {
+          supabaseUid_walletAddress: {
+            supabaseUid,
+            walletAddress,
+          },
+        },
+        select: {
+          custodyChoice: true,
+        },
+      });
+      if (!wallet) return null;
+      return {
+        custodyChoice: (wallet.custodyChoice as 'self' | 'platform' | null) ?? null,
+      };
+    } catch (error) {
+      logger.error('[LinkedWalletService] Failed to get linked wallet for transaction:', error);
+      return null;
+    }
+  }
+
+  static async getLinkedWalletByAddress(
+    walletAddress: string
+  ): Promise<{ supabaseUid: string; custodyChoice: 'self' | 'platform' | null } | null> {
+    try {
+      const wallet = await prisma.linkedWallet.findFirst({
+        where: { walletAddress },
+        select: {
+          supabaseUid: true,
+          custodyChoice: true,
+        },
+      });
+      if (!wallet) return null;
+      return {
+        supabaseUid: wallet.supabaseUid,
+        custodyChoice: (wallet.custodyChoice as 'self' | 'platform' | null) ?? null,
+      };
+    } catch (error) {
+      logger.error('[LinkedWalletService] Failed to get linked wallet by address:', error);
+      return null;
+    }
+  }
+
   static async isWalletLinked(supabaseUid: string, walletAddress: string): Promise<boolean> {
     try {
       const wallet = await prisma.linkedWallet.findUnique({
