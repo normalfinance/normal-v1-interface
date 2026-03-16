@@ -1,4 +1,7 @@
+import type { AxiosHeaders } from 'axios';
+
 import axios from 'axios';
+import { buildAuthHeaders } from '@/utils/http';
 
 export interface CreateUserRequest {
   walletAddress: string;
@@ -31,56 +34,78 @@ export class ReferralAPI {
   private static baseUrl = '/api/referral';
 
   static async getUser(walletAddress: string) {
+    const headers = await buildAuthHeaders();
     const response = await axios.get(`${this.baseUrl}/user`, {
       params: { walletAddress },
+      headers: headers as AxiosHeaders,
     });
     return response.data;
   }
 
   static async createUser(data: CreateUserRequest) {
-    const response = await axios.post(`${this.baseUrl}/user`, data);
+    const headers = await buildAuthHeaders();
+    const response = await axios.post(`${this.baseUrl}/user`, data, {
+      headers: headers as AxiosHeaders,
+    });
     return response.data;
   }
 
   static async createReferralCode(data: CreateReferralRequest) {
-    const response = await axios.post(`${this.baseUrl}/codes`, data);
+    const headers = await buildAuthHeaders();
+    const response = await axios.post(`${this.baseUrl}/codes`, data, {
+      headers: headers as AxiosHeaders,
+    });
     return response.data;
   }
 
   static async getReferralByCode(code: string) {
+    const headers = await buildAuthHeaders();
     const response = await axios.get(`${this.baseUrl}/codes`, {
       params: { code },
+      headers: headers as AxiosHeaders,
     });
     return response.data;
   }
 
   static async activateReferral(data: ActivateReferralRequest) {
-    const response = await axios.post(`${this.baseUrl}/activate`, data);
+    const headers = await buildAuthHeaders();
+    const response = await axios.post(`${this.baseUrl}/activate`, data, {
+      headers: headers as AxiosHeaders,
+    });
     return response.data;
   }
 
   static async recordAction(data: RecordActionRequest) {
-    const response = await axios.post(`${this.baseUrl}/actions`, data);
+    const headers = await buildAuthHeaders();
+    const response = await axios.post(`${this.baseUrl}/actions`, data, {
+      headers: headers as AxiosHeaders,
+    });
     return response.data;
   }
 
   static async getUserActions(userWalletAddress: string, referralCode?: string) {
+    const headers = await buildAuthHeaders();
     const response = await axios.get(`${this.baseUrl}/actions`, {
       params: { userWalletAddress, referralCode },
+      headers: headers as AxiosHeaders,
     });
     return response.data;
   }
 
   static async getReferralStats(walletAddress: string) {
+    const headers = await buildAuthHeaders();
     const response = await axios.get(`${this.baseUrl}/stats`, {
       params: { walletAddress },
+      headers: headers as AxiosHeaders,
     });
     return response.data;
   }
 
   static async getUserReferrals(walletAddress: string) {
+    const headers = await buildAuthHeaders();
     const response = await axios.get(`${this.baseUrl}/user`, {
       params: { walletAddress },
+      headers: headers as AxiosHeaders,
     });
     return response.data;
   }
