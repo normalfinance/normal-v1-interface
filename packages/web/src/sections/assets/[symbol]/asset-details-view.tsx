@@ -4,20 +4,20 @@ import BigNumber from 'bignumber.js';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { useTranslate } from '@/locales';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Avatar from '@mui/material/Avatar';
 import Typography from '@mui/material/Typography';
 import CardContent from '@mui/material/CardContent';
-import { Grid2, useTheme } from '@mui/material';
+import Grid2 from '@mui/material/Grid2';
 
 import { Iconify } from '@/components/template/iconify';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
-import { TokenImage } from '@/components/_common/token-image';
 
 export default function AssetDetailsView({ symbol }: { symbol: string }) {
-  const theme = useTheme();
   const { t } = useTranslate();
 
   const {
@@ -44,7 +44,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             <CardContent>
               <Stack spacing={3}>
                 <Stack direction="row" alignItems="center" spacing={2}>
-                  <TokenImage symbol={token.symbol} size={48} />
+                  <Avatar
+                    src={token.icon || getCryptoIconUrl(token.symbol)}
+                    alt={token.name}
+                    sx={{ width: 48, height: 48 }}
+                  />
                   <Stack>
                     <Typography variant="h5">{token.name}</Typography>
                     <Typography variant="body2" color="text.secondary">
