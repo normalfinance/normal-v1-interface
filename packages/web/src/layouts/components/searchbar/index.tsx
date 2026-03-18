@@ -1,6 +1,5 @@
 'use client';
 
-import type { Pair } from '@normalfinance/types';
 import type { BoxProps } from '@mui/material/Box';
 import type { Breakpoint } from '@mui/material/styles';
 
@@ -48,11 +47,6 @@ export function Searchbar({ sx, ...other }: BoxProps) {
 
   const { globalIsLoading } = useAppStore();
 
-  const {
-    getAllPairs,
-    pairState: { pairs },
-  } = usePersistStore();
-
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -79,32 +73,20 @@ export function Searchbar({ sx, ...other }: BoxProps) {
     };
   }, [handleKeyDown]);
 
-  // Fetch tokens when dialog opens
-  useEffect(() => {
-    if (open && pairs.length === 0) {
-      getAllPairs();
-    }
-  }, [open, getAllPairs, pairs.length]);
-
   const handleAssetClick = useCallback(
     (pair: Pair) => {
       setTimeout(() => handleClose(), 50);
 
       router.push(paths.assets.details(pair.asset));
     },
-    [router, handleClose, pairs]
+    [router, handleClose]
   );
 
   const handleSearch = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSearchQuery(event.target.value);
   }, []);
 
-  const dataFiltered = applyFilter({
-    inputData: pairs,
-    query: searchQuery,
-  });
-
-  const notFound = searchQuery && !dataFiltered.length;
+  const notFound = false;
 
   const renderButton = () => (
     <Box
@@ -182,8 +164,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   );
 
   const renderList = () => {
-    // Show loading state when pairs are being fetched
-    if (globalIsLoading && pairs.length === 0) {
+    if (globalIsLoading) {
       return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
           <Typography variant="body2" color="text.secondary">
@@ -194,7 +175,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
     }
 
     // Show empty state when no pairs are available
-    if (!globalIsLoading && pairs.length === 0) {
+    if (!globalIsLoading) {
       return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
           <Iconify icon="eva:search-fill" width={48} sx={{ color: 'text.disabled', mb: 2 }} />

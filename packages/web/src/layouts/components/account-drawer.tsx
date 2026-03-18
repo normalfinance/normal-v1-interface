@@ -9,7 +9,7 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useUserActivity, useManageLiquidity } from '@/hooks';
+import { useUserActivity } from '@/hooks';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -55,8 +55,6 @@ function WalletConnected({ address }: { address: string }) {
     tokenState: { tokens },
     getAllTokens,
   } = usePersistStore();
-
-  const { liquidityPositions } = useManageLiquidity();
 
   const { recentActivity } = useUserActivity();
 
@@ -107,7 +105,6 @@ function WalletConnected({ address }: { address: string }) {
         balance={totalBalance.toNumber()}
         percentageChange={0}
         tokens={tokens}
-        positions={liquidityPositions}
         activity={recentActivity}
       />
     </Box>

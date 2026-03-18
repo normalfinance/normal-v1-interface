@@ -38,7 +38,7 @@ export const NormalNavbarDefaults: Props = {
                   alt: 'Assets',
                 },
                 title: 'Assets',
-                description: 'Browse supported assets.',
+                description: 'View your wallet assets.',
               },
               {
                 url: paths.portfolio,
