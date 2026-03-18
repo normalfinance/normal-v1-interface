@@ -8,9 +8,10 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Grid2, Stack, Typography } from '@mui/material';
 
-import { MyBalanceSection } from '@/components/_assets-page-components';
+import SavingsCard from '@/components/_common/savings-card';
+import DepositCard from '@/components/_common/deposit-card';
 
-export default function PortfolioView() {
+export default function SavingsView() {
   const { t } = useTranslate();
 
   const { setGlobalIsLoading } = useAppStore();
@@ -35,16 +36,24 @@ export default function PortfolioView() {
     <DashboardContent maxWidth="xl">
       <Stack spacing={1}>
         <Typography variant="h4" color="text.primary">
-          {t('Portfolio')}
+          {t('Savings')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {t('View your total balance and asset breakdown.')}
+          {t('Earn yield on your USDC by depositing into Normal Savings.')}
         </Typography>
       </Stack>
 
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        <Grid2 width={1} sx={{ mt: 3 }}>
-          <MyBalanceSection />
+        <Grid2 size={{ xs: 12, md: 6 }}>
+          <SavingsCard />
+        </Grid2>
+        <Grid2 size={{ xs: 12, md: 6 }}>
+          <Stack spacing={3}>
+            <Typography variant="h6" color="text.primary">
+              {t('Need USDC?')}
+            </Typography>
+            <DepositCard />
+          </Stack>
         </Grid2>
       </Grid2>
     </DashboardContent>

@@ -1,6 +1,5 @@
 'use client';
 
-import type { LiquidityPosition } from '@/hooks';
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
@@ -14,6 +13,7 @@ import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -23,8 +23,6 @@ import { Iconify } from '@/components/template/iconify';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
-import PositionsTab from './positions-tab';
-import { CustomTabsSwapSend } from '../swap-send-card-custom-card';
 
 // ----------------------------------------------------------------------
 export interface ConnectedWalletProps {
@@ -32,7 +30,6 @@ export interface ConnectedWalletProps {
   balance?: number;
   percentageChange?: number;
   tokens?: Token[];
-  positions?: LiquidityPosition[];
   activity?: Activity[];
 }
 
@@ -41,7 +38,6 @@ export default function ConnectedWallet({
   balance,
   percentageChange,
   tokens,
-  positions,
   activity,
 }: ConnectedWalletProps) {
   const { t } = useTranslate();
@@ -50,17 +46,17 @@ export default function ConnectedWallet({
 
   const actionButtons = [
     {
-      label: 'Deposit',
-      icon: 'mingcute:add-line',
+      label: 'Swap',
+      icon: 'solar:transfer-horizontal-bold-duotone',
       onClick: () => {
-        router.push(`${paths.invest}?tab=deposit`);
+        router.push(paths.swap);
       },
     },
     {
-      label: 'Withdraw',
-      icon: 'solar:transfer-horizontal-bold-duotone',
+      label: 'Savings',
+      icon: 'mingcute:safe-box-line',
       onClick: () => {
-        router.push(`${paths.invest}?tab=withdraw`);
+        router.push(paths.savings);
       },
     },
   ];
@@ -69,7 +65,6 @@ export default function ConnectedWallet({
 
   const TAB_ITEMS = [
     { value: 'assets', label: 'Assets' },
-    { value: 'earn', label: 'Earn' },
     { value: 'activity', label: 'Activity' },
   ] as const;
 
@@ -168,7 +163,6 @@ export default function ConnectedWallet({
                   sx={{
                     color: theme.palette.primary.dark,
                     cursor: 'pointer',
-                    rotate: '-90deg',
                   }}
                 />
                 {t(btn.label)}
@@ -178,37 +172,44 @@ export default function ConnectedWallet({
         </Stack>
       </Stack>
 
-      <CustomTabsSwapSend
+      <Tabs
         value={tabs.value}
         onChange={tabs.onChange}
         variant="standard"
-        sx={{ bgcolor: 'background.paper', padding: 0, mt: 1 }}
-        slotProps={{
-          flexContainer: { gap: '8px', padding: 0 },
-          tab: {
+        sx={{
+          bgcolor: 'background.paper',
+          padding: 0,
+          mt: 1,
+          '& .MuiTabs-flexContainer': { gap: '8px', padding: 0 },
+          '& .MuiTab-root': {
             borderRadius: '8px',
             px: '12px',
             height: '34px',
+            minHeight: '34px',
             color: theme.palette.text.primary,
           },
-          selected: {},
-          indicator: {
+          '& .MuiTabs-indicator': {
             boxShadow: 'none !important',
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             border: `1px solid ${theme.palette.divider}`,
+            borderRadius: '8px',
+            height: '100%',
+            zIndex: 0,
+          },
+          '& .Mui-selected': {
+            zIndex: 1,
           },
         }}
       >
         {TAB_ITEMS.map((tab) => (
           <Tab key={tab.value} value={tab.value} label={t(tab.label)} />
         ))}
-      </CustomTabsSwapSend>
+      </Tabs>
 
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'assets' && (
         <TokensTab tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0))} />
       )}
-      {tabs.value === 'positions' && <PositionsTab positions={positions ?? []} />}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
     </Stack>
   );
