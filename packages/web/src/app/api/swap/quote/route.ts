@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const AQUA_API_BASE_URL = process.env.NEXT_PUBLIC_AQUA_API_BASE_URL || 'https://amm-api.aqua.network';
+const AQUA_API_BASE_URL =
+  process.env.NEXT_PUBLIC_AQUA_API_BASE_URL || 'https://amm-api.aqua.network';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { token_in_address, token_out_address, amount, mode = 'strict-send' } = body;
+    const { token_in_address, token_out_address, amount, mode = 'strict-send', sender } = body;
 
     if (!token_in_address || !token_out_address || !amount) {
       return NextResponse.json(
@@ -14,22 +15,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Choose the appropriate endpoint based on mode
+    // Choose endpoint based on mode
     const endpoint =
       mode === 'strict-receive'
         ? '/api/external/v1/find-path-strict-receive/'
         : '/api/external/v1/find-path/';
 
+    const aquaPayload: Record<string, string> = {
+      token_in_address,
+      token_out_address,
+      amount,
+    };
+
+    // When sender is provided Aqua builds a signed-ready Soroban router XDR
+    if (sender) {
+      aquaPayload.sender = sender;
+    }
+
     const response = await fetch(`${AQUA_API_BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        token_in_address,
-        token_out_address,
-        amount,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(aquaPayload),
     });
 
     if (!response.ok) {

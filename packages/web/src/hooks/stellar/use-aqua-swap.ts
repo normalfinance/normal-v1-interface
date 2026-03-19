@@ -35,6 +35,19 @@ interface UseAquaSwapReturn {
 // Slippage tolerance (1%)
 const SLIPPAGE_TOLERANCE = 0.01;
 
+
+function normalizeSignedXDR(result: any): string | null {
+  if (typeof result === 'string' && result.length > 0) return result;
+  return (
+    result?.signedXDR ??
+    result?.signedXdr ??
+    result?.xdr ??
+    result?.result?.signedXDR ??
+    result?.result?.signedXdr ??
+    null
+  );
+}
+
 // ----------------------------------------------------------------------
 
 export function useAquaSwap(): UseAquaSwapReturn {
@@ -72,14 +85,13 @@ export function useAquaSwap(): UseAquaSwapReturn {
 
         const response = await fetch('/api/swap/quote', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             token_in_address: tokenIn,
             token_out_address: tokenOut,
             amount: amountInStroops,
             mode,
+            // No sender here — quote is just for display
           }),
         });
 
@@ -92,20 +104,21 @@ export function useAquaSwap(): UseAquaSwapReturn {
         }
 
         // Convert amounts back from stroops
-        const amountOut = (parseInt(data.amount_out, 10) / 10_000_000).toString();
-        const minAmountOut = (
-          (parseInt(data.amount_out, 10) * (1 - SLIPPAGE_TOLERANCE)) /
-          10_000_000
-        ).toString();
+        const amountOutRaw = parseInt(data.amount_out, 10);
+        const amountOut = (amountOutRaw / 10_000_000).toFixed(7);
+        const minAmountOut = ((amountOutRaw * (1 - SLIPPAGE_TOLERANCE)) / 10_000_000).toFixed(7);
 
         const newQuote: SwapQuote = {
-          path: data.path,
-          amountIn: amount,
+          path: data.path || [],
+          tokenIn,
+          tokenOut,
+          amountIn: parseFloat(amount).toFixed(7),
           amountOut,
           estimatedAmountOut: amountOut,
-          priceImpact: 0, // TODO: Calculate price impact
-          fee: '0', // TODO: Calculate fee
-          xdr: data.xdr,
+          minAmountOut,
+          priceImpact: 0,
+          fee: '0',
+          xdr: data.xdr || '',
         };
 
         setQuote(newQuote);
@@ -129,11 +142,6 @@ export function useAquaSwap(): UseAquaSwapReturn {
         return '';
       }
 
-      if (!swapQuote.xdr) {
-        enqueueSnackbar(t('Invalid swap quote'), { variant: 'error' });
-        return '';
-      }
-
       try {
         setLoading(true);
         setError(null);
@@ -145,10 +153,40 @@ export function useAquaSwap(): UseAquaSwapReturn {
           : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-        // Sign the XDR from Aqua
-        const signedXDR = isNormalWallet
-          ? await signTransaction(swapQuote.xdr, constants.StellarConfig.NETWORK_PASSPHRASE)
-          : await signTransaction(swapQuote.xdr);
+        // Re-fetch the quote with sender so Aqua builds the Soroban router XDR
+        // with the correct source account and a fresh sequence number
+        const amountInStroops = Math.floor(parseFloat(swapQuote.amountIn) * 10_000_000).toString();
+
+        const quoteResponse = await fetch('/api/swap/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token_in_address: swapQuote.tokenIn,
+            token_out_address: swapQuote.tokenOut,
+            amount: amountInStroops,
+            sender: walletAddress,
+          }),
+        });
+
+        const quoteData = await quoteResponse.json();
+
+        if (!quoteData.success) {
+          throw new Error(quoteData.error || 'Failed to build swap transaction');
+        }
+
+        if (!quoteData.xdr) {
+          throw new Error(
+            'Aqua did not return a transaction. Ensure NEXT_PUBLIC_AQUA_API_BASE_URL is set correctly.'
+          );
+        }
+
+        // Sign the Soroban router XDR built by Aqua
+        const signResult = isNormalWallet
+          ? await signTransaction(quoteData.xdr, constants.StellarConfig.NETWORK_PASSPHRASE)
+          : await signTransaction(quoteData.xdr);
+
+        // Normalize — wallet kits return different shapes ({ signedXDR } vs plain string)
+        const signedXDR = normalizeSignedXDR(signResult);
 
         if (!signedXDR) {
           enqueueSnackbar(t('Transaction signing cancelled'), { variant: 'warning' });
@@ -160,12 +198,12 @@ export function useAquaSwap(): UseAquaSwapReturn {
           allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
         });
 
-        const transaction = TransactionBuilder.fromXDR(
+        const signedTx = TransactionBuilder.fromXDR(
           signedXDR,
           constants.StellarConfig.NETWORK_PASSPHRASE
         );
 
-        const result = await horizonServer.submitTransaction(transaction);
+        const result = await horizonServer.submitTransaction(signedTx);
 
         enqueueSnackbar(t('Swap successful!'), { variant: 'success' });
         setQuote(null);

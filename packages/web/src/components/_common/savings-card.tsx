@@ -40,7 +40,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const [amount, setAmount] = useState('');
 
   // Get user USDC balance
-  const usdcBalance = tokenState.tokensBySymbol?.USDC?.balance || '0';
+  const usdcBalance = tokenState.tokens.find((t) => t.symbol === 'USDC')?.balance || '0';
 
   // Handle max button
   const handleMax = useCallback(() => {

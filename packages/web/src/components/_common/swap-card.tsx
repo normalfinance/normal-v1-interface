@@ -59,9 +59,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const [amountIn, setAmountIn] = useState('');
   const debouncedAmountIn = useDebounce(amountIn, 500);
 
-  // Get user balances
-  const xlmBalance = tokenState.tokensBySymbol?.XLM?.balance || '0';
-  const usdcBalance = tokenState.tokensBySymbol?.USDC?.balance || '0';
+  // Get user balances by looking up tokens in the array by symbol
+  const xlmBalance = tokenState.tokens.find((t) => t.symbol === 'XLM')?.balance || '0';
+  const usdcBalance = tokenState.tokens.find((t) => t.symbol === 'USDC')?.balance || '0';
 
   const inputBalance = tokenIn === 'XLM' ? xlmBalance : usdcBalance;
   const outputBalance = tokenOut === 'XLM' ? xlmBalance : usdcBalance;

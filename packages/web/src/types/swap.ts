@@ -2,9 +2,12 @@
 
 export interface SwapQuote {
   path: string[];
+  tokenIn: string;
+  tokenOut: string;
   amountIn: string;
   amountOut: string;
   estimatedAmountOut: string;
+  minAmountOut: string;
   priceImpact: number;
   fee: string;
   xdr: string;
