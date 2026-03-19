@@ -10,6 +10,7 @@ import { constants } from '@normalfinance/utils';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
+import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 
 import { useNormalWallet } from './use-normal-wallet';
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
@@ -34,19 +35,6 @@ interface UseAquaSwapReturn {
 
 // Slippage tolerance (1%)
 const SLIPPAGE_TOLERANCE = 0.01;
-
-
-function normalizeSignedXDR(result: any): string | null {
-  if (typeof result === 'string' && result.length > 0) return result;
-  return (
-    result?.signedXDR ??
-    result?.signedXdr ??
-    result?.xdr ??
-    result?.result?.signedXDR ??
-    result?.result?.signedXdr ??
-    null
-  );
-}
 
 // ----------------------------------------------------------------------
 

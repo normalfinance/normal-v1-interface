@@ -3,17 +3,17 @@
 export interface VaultInfo {
   address: string;
   name: string;
-  totalDeposits: string;
+  symbol?: string;
+  totalDeposits: string; // from totalManagedFunds
   apy: number;
   asset: string; // USDC
-  sharePrice: string;
+  fees?: { vaultFee: number; defindexFee: number };
 }
 
 export interface SavingsPosition {
-  deposited: string;
-  shares: string;
-  currentValue: string;
-  earnings: string;
+  shares: string; // dfTokens
+  currentValue: string; // underlying asset value
+  earnings: string; // derived: currentValue - totalDeposited
 }
 
 export interface DepositParams {

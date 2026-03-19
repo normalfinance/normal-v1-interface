@@ -10,6 +10,7 @@ import { constants } from '@normalfinance/utils';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
+import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 
 import { useNormalWallet } from './use-normal-wallet';
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
@@ -89,11 +90,60 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         setLoading(true);
         setError(null);
 
-        // TODO: Implement actual DeFindex deposit
-        // For now, show a message that this feature is coming soon
-        enqueueSnackbar(t('Deposit feature coming soon!'), { variant: 'info' });
+        const walletType = wallet.walletType;
+        const isNormalWallet = walletType === 'normal-wallet';
+        const walletAddress = isNormalWallet
+          ? normalPublicKey || wallet.address
+          : stellarPublicKey || wallet.address;
+        const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-        return '';
+        // 1. Build deposit XDR via API
+        const response = await fetch('/api/savings/deposit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, caller: walletAddress }),
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to build deposit transaction');
+        }
+
+        if (!data.xdr) {
+          throw new Error('No transaction XDR returned from DeFindex');
+        }
+
+        // 2. Sign the XDR with the user's wallet
+        const signResult = isNormalWallet
+          ? await signTransaction(data.xdr, constants.StellarConfig.NETWORK_PASSPHRASE)
+          : await signTransaction(data.xdr);
+
+        const signedXDR = normalizeSignedXDR(signResult);
+
+        if (!signedXDR) {
+          enqueueSnackbar(t('Transaction signing cancelled'), { variant: 'warning' });
+          return '';
+        }
+
+        // 3. Submit signed transaction to Horizon
+        const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
+          allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+        });
+
+        const signedTx = TransactionBuilder.fromXDR(
+          signedXDR,
+          constants.StellarConfig.NETWORK_PASSPHRASE
+        );
+
+        const result = await horizonServer.submitTransaction(signedTx);
+
+        enqueueSnackbar(t('Deposit successful!'), { variant: 'success' });
+
+        // 4. Refresh vault info to show updated balance
+        await refreshVaultInfo();
+
+        return result.hash;
       } catch (err: any) {
         console.error('Error depositing:', err);
         const errorMessage = err.message || 'Deposit failed';
@@ -104,7 +154,18 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         setLoading(false);
       }
     },
-    [wallet.address, vaultInfo, enqueueSnackbar, t]
+    [
+      wallet.address,
+      wallet.walletType,
+      vaultInfo,
+      normalPublicKey,
+      stellarPublicKey,
+      signNormalWallet,
+      signStellarWalletKit,
+      enqueueSnackbar,
+      t,
+      refreshVaultInfo,
+    ]
   );
 
   // Withdraw from vault
@@ -124,11 +185,60 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         setLoading(true);
         setError(null);
 
-        // TODO: Implement actual DeFindex withdraw
-        // For now, show a message that this feature is coming soon
-        enqueueSnackbar(t('Withdraw feature coming soon!'), { variant: 'info' });
+        const walletType = wallet.walletType;
+        const isNormalWallet = walletType === 'normal-wallet';
+        const walletAddress = isNormalWallet
+          ? normalPublicKey || wallet.address
+          : stellarPublicKey || wallet.address;
+        const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-        return '';
+        // 1. Build withdraw XDR via API
+        const response = await fetch('/api/savings/withdraw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, caller: walletAddress }),
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to build withdraw transaction');
+        }
+
+        if (!data.xdr) {
+          throw new Error('No transaction XDR returned from DeFindex');
+        }
+
+        // 2. Sign the XDR with the user's wallet
+        const signResult = isNormalWallet
+          ? await signTransaction(data.xdr, constants.StellarConfig.NETWORK_PASSPHRASE)
+          : await signTransaction(data.xdr);
+
+        const signedXDR = normalizeSignedXDR(signResult);
+
+        if (!signedXDR) {
+          enqueueSnackbar(t('Transaction signing cancelled'), { variant: 'warning' });
+          return '';
+        }
+
+        // 3. Submit signed transaction to Horizon
+        const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
+          allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+        });
+
+        const signedTx = TransactionBuilder.fromXDR(
+          signedXDR,
+          constants.StellarConfig.NETWORK_PASSPHRASE
+        );
+
+        const result = await horizonServer.submitTransaction(signedTx);
+
+        enqueueSnackbar(t('Withdrawal successful!'), { variant: 'success' });
+
+        // 4. Refresh vault info to show updated balance
+        await refreshVaultInfo();
+
+        return result.hash;
       } catch (err: any) {
         console.error('Error withdrawing:', err);
         const errorMessage = err.message || 'Withdraw failed';
@@ -139,7 +249,18 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         setLoading(false);
       }
     },
-    [wallet.address, vaultInfo, enqueueSnackbar, t]
+    [
+      wallet.address,
+      wallet.walletType,
+      vaultInfo,
+      normalPublicKey,
+      stellarPublicKey,
+      signNormalWallet,
+      signStellarWalletKit,
+      enqueueSnackbar,
+      t,
+      refreshVaultInfo,
+    ]
   );
 
   return {
