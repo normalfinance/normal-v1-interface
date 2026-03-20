@@ -209,24 +209,34 @@ export async function deriveKeyFromPassword(
   );
 }
 
-export async function encryptPrivateKeyForStorage(
-  privateKey: string,
-  userId: string,
-  clientSecret: string
-): Promise<{ encryptedPrivateKey: string; iv: string; salt: string }> {
+export interface TransitEncryptedData {
+  encryptedData: string;
+  iv: string;
+  encryptedTransitKey: string;
+}
+
+/**
+ * Encrypt data for transit to the server using hybrid RSA+AES encryption.
+ * Generates a random AES-256 key, encrypts the data with AES-GCM,
+ * then encrypts the AES key with the server's transit RSA public key.
+ */
+export async function encryptForTransit(
+  data: string,
+  transitPublicKey: string
+): Promise<TransitEncryptedData> {
   if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
     throw new Error('Web Crypto API not available');
   }
 
-  const salt = window.crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
-  const derivedKey = await deriveKeyFromPassword(`${clientSecret}:${userId}`, salt);
-
-  const encrypted = await encryptWithAES(privateKey, derivedKey);
+  const aesKey = await generateAESKey();
+  const encrypted = await encryptWithAES(data, aesKey);
+  const aesKeyBase64 = await exportAESKeyAsBase64(aesKey);
+  const encryptedTransitKey = await encryptWithRSAPublicKey(aesKeyBase64, transitPublicKey);
 
   return {
-    encryptedPrivateKey: encrypted.ciphertext,
+    encryptedData: encrypted.ciphertext,
     iv: encrypted.iv,
-    salt: arrayBufferToBase64(salt.buffer),
+    encryptedTransitKey,
   };
 }
 

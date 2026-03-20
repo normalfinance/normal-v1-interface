@@ -17,10 +17,10 @@ import {
 import {
   generateAESKey,
   encryptWithAES,
+  encryptForTransit,
   generateRSAKeyPair,
   exportAESKeyAsBase64,
   encryptWithRSAPublicKey,
-  encryptPrivateKeyForStorage,
 } from '@/lib/client-crypto';
 
 import Visibility from '@mui/icons-material/Visibility';
@@ -263,12 +263,22 @@ export function CustodySettings({
       if (!rsaKeysData.hasKeys) {
         const rsaKeyPair = await generateRSAKeyPair();
 
-        const clientSecret = session.access_token.substring(0, 32);
-        const encryptedPrivateKeyData = await encryptPrivateKeyForStorage(
-          rsaKeyPair.privateKey,
-          user.id,
-          clientSecret
-        );
+        // Fetch transit public key for hybrid encryption
+        const transitKeyResponse = await fetch('/api/user/transit-public-key', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          credentials: 'include',
+        });
+
+        if (!transitKeyResponse.ok) {
+          throw new Error('Failed to fetch transit public key');
+        }
+
+        const { publicKey: transitPublicKey } = await transitKeyResponse.json();
+        const transitEncrypted = await encryptForTransit(rsaKeyPair.privateKey, transitPublicKey);
 
         const storeRSAKeysResponse = await fetch('/api/user/rsa-keys', {
           method: 'POST',
@@ -279,9 +289,9 @@ export function CustodySettings({
           credentials: 'include',
           body: JSON.stringify({
             publicKey: rsaKeyPair.publicKey,
-            encryptedPrivateKey: encryptedPrivateKeyData.encryptedPrivateKey,
-            iv: encryptedPrivateKeyData.iv,
-            salt: encryptedPrivateKeyData.salt,
+            encryptedPrivateKey: transitEncrypted.encryptedData,
+            iv: transitEncrypted.iv,
+            encryptedTransitKey: transitEncrypted.encryptedTransitKey,
           }),
         });
 

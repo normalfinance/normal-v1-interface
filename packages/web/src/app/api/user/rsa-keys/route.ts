@@ -6,16 +6,14 @@ import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
 import { UserRSAService } from '@/lib/user-rsa-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import {
-  encryptRSAPrivateKey,
-  decryptClientEncryptedRSAPrivateKey,
-} from '@/lib/server-rsa-encryption';
+import { encryptRSAPrivateKey } from '@/lib/server-rsa-encryption';
+import { decryptTransitPayload } from '@/lib/transit-encryption';
 
 const StoreRSASchema = z.object({
   publicKey: z.string().min(1, 'Public key is required'),
   encryptedPrivateKey: z.string().min(1, 'Encrypted private key is required'),
   iv: z.string().min(1, 'IV is required'),
-  salt: z.string().min(1, 'Salt is required'),
+  encryptedTransitKey: z.string().min(1, 'Encrypted transit key is required'),
 });
 
 export async function GET(request: NextRequest) {
@@ -78,16 +76,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { publicKey, encryptedPrivateKey, iv, salt } = validation.data;
+    const { publicKey, encryptedPrivateKey, iv, encryptedTransitKey } = validation.data;
 
-    const clientSecret = token.substring(0, 32);
-    const decryptedPrivateKey = await decryptClientEncryptedRSAPrivateKey(
-      encryptedPrivateKey,
-      iv,
-      salt,
-      clientSecret,
-      user.id
-    );
+    const decryptedPrivateKey = decryptTransitPayload(encryptedTransitKey, encryptedPrivateKey, iv);
 
     const userIdentifier = `${user.id}:${user.email}`;
     const reEncrypted = await encryptRSAPrivateKey(decryptedPrivateKey, userIdentifier);
