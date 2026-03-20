@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
@@ -39,7 +40,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    if (adminSecret !== expectedSecret) {
+    const isValid =
+      adminSecret.length === expectedSecret.length &&
+      crypto.timingSafeEqual(Buffer.from(adminSecret), Buffer.from(expectedSecret));
+    if (!isValid) {
       logger.warn('[API /admin/wallets/custody/repair] Unauthorized repair attempt:', {
         walletAddress: walletAddress.substring(0, 8) + '...',
       });
