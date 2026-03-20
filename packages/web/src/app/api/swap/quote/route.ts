@@ -45,6 +45,12 @@ export async function POST(request: NextRequest) {
 
     // When sender is provided Aqua builds a signed-ready Soroban router XDR
     if (sender) {
+      if (!isValidStellarAddress(sender)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid sender address format' },
+          { status: 400 }
+        );
+      }
       aquaPayload.sender = sender;
     }
 

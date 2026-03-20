@@ -130,8 +130,8 @@ export function useSendToken(): ReturnType {
 
       return '';
     } catch (err: any) {
-      console.log({ err });
-      setError(err);
+      console.error('[SEND TOKEN] Transaction failed:', err);
+      setError(err?.message || 'Transaction failed');
       return '';
     } finally {
       setLoading(false);

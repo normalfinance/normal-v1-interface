@@ -387,10 +387,15 @@ export const useNormalWallet = () => {
     }
   }, [normalWalletStore, persistStore]);
 
+  // canSign is true when the wallet can sign transactions locally:
+  // either a keypair is already in memory, or a v2 password-encrypted key is stored
+  const canSign = !!normalWalletStore.keypair || getStoredKeyFormat() === 'v2';
+
   return {
     publicKey: normalWalletStore.publicKey,
     isConnected: normalWalletStore.isConnected,
     isConnecting: normalWalletStore.isConnecting,
+    canSign,
     mnemonic: normalWalletStore.mnemonic,
     createWallet,
     importWalletFromMnemonic,
