@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
+import { isValidStellarAddress } from '@/utils/stellar-address';
 
 // ----------------------------------------------------------------------
 
@@ -47,6 +48,12 @@ export async function GET(request: NextRequest) {
 
     // User position (if wallet connected)
     let userPosition = null;
+    if (userAddress && !isValidStellarAddress(userAddress)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid user address format' },
+        { status: 400 }
+      );
+    }
     if (userAddress) {
       try {
         const balance = await sdk.getVaultBalance(VAULT_ADDRESS, userAddress);

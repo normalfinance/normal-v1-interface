@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
+import { isValidStellarAddress } from '@/utils/stellar-address';
 
 // ----------------------------------------------------------------------
 
@@ -23,9 +24,24 @@ export async function POST(request: NextRequest) {
   try {
     const { amount, caller } = await request.json();
 
-    if (!amount || !caller) {
+    if (amount === undefined || amount === null || amount === '' || !caller) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields: amount, caller' },
+        { status: 400 }
+      );
+    }
+
+    const parsed = Number(amount);
+    if (isNaN(parsed) || parsed <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Amount must be a positive number' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidStellarAddress(caller)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid caller address format' },
         { status: 400 }
       );
     }
@@ -38,10 +54,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert human-readable amount to stroops (7 decimals for Stellar)
-    const amountInStroops = Math.floor(parseFloat(amount) * 10_000_000);
+    const [whole = '0', frac = ''] = String(amount).split('.');
+    const padded = frac.padEnd(7, '0').slice(0, 7);
+    const amountInStroops = BigInt(whole) * 10_000_000n + BigInt(padded);
 
     const result = await sdk.withdrawFromVault(VAULT_ADDRESS, {
-      amounts: [amountInStroops],
+      amounts: [Number(amountInStroops)],
       caller,
       slippageBps: 100, // 1% slippage
     });

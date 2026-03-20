@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { isValidStellarAddress } from '@/utils/stellar-address';
+
 const AQUA_API_BASE_URL =
   process.env.NEXT_PUBLIC_AQUA_API_BASE_URL || 'https://amm-api.aqua.network';
 
@@ -11,6 +13,20 @@ export async function POST(request: NextRequest) {
     if (!token_in_address || !token_out_address || !amount) {
       return NextResponse.json(
         { success: false, error: 'Missing required parameters' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidStellarAddress(token_in_address) || !isValidStellarAddress(token_out_address)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid token address format' },
+        { status: 400 }
+      );
+    }
+
+    if (mode !== 'strict-send' && mode !== 'strict-receive') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid mode. Must be "strict-send" or "strict-receive"' },
         { status: 400 }
       );
     }
@@ -40,8 +56,9 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('Aqua API error:', errorText);
       return NextResponse.json(
-        { success: false, error: `Aqua API error: ${errorText}` },
+        { success: false, error: 'Swap quote request failed' },
         { status: response.status }
       );
     }

@@ -542,7 +542,7 @@ export function CustodySettings({
                   label={t('Enter 8-digit code')}
                   value={exportOtp}
                   onChange={(e) => {
-                    const numeric = e.target.value.replace(/\\D/g, '').slice(0, 8);
+                    const numeric = e.target.value.replace(/\D/g, '').slice(0, 8);
                     setExportOtp(numeric);
                     if (exportError) setExportError(null);
                   }}
