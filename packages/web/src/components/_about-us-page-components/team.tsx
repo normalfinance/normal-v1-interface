@@ -63,36 +63,11 @@ export const TeamDefaults: Props = {
   teamMembers: [
     {
       image: {
-        src: cdn('about-page/josh.webp'),
-        alt: 'Joshua Blew',
-      },
-      name: 'Joshua Blew',
-      jobTitle: 'Co-founder & CEO',
-      description:
-        "Joshua has over 7 years of coding experience and was employee #2 at Finotta. He's been investing in crypto for 5+ years and holds a BS in Computer Science from DePaul.",
-      socialLinks: [
-        {
-          href: 'https://x.com/0xjblew',
-          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
-        },
-        {
-          href: 'https://www.linkedin.com/in/joshuablew/',
-          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
-        },
-        {
-          href: 'https://github.com/jblewnormal',
-          icon: <GitHubIcon sx={{ color: BRAND.github }} />,
-        },
-        { href: 'https://t.me/joshuablew', icon: <TelegramIcon sx={{ color: BRAND.telegram }} /> }, // ⬅️ new
-      ],
-    },
-    {
-      image: {
         src: cdn('about-page/just.webp'),
         alt: 'Justin Benjamin',
       },
       name: 'Justin Benjamin',
-      jobTitle: 'Co-founder & COO',
+      jobTitle: 'Co-founder & CEO',
       description:
         'Justin formerly designed products at Bitcoin of America and CoinFlip, has invested in crypto for 7+ years, and holds a BS in Learning & Organizational Change from Northwestern.',
       socialLinks: [
