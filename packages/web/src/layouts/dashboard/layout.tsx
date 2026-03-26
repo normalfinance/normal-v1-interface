@@ -27,6 +27,9 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
+import MigrationModal from '@/components/_common/migration-modal';
+import { useBoolean } from '@/hooks';
+import { L } from '@upstash/redis/zmscore-Cq_Bzgy4';
 
 // ----------------------------------------------------------------------
 
@@ -64,6 +67,8 @@ export function DashboardLayout({
   const handleGiveFeedback = () => {
     window.open(paths.help.feedbackForm, '_blank', 'noopener');
   };
+
+  const moreInfoOpen = useBoolean();
 
   const HEADER_H = { xs: 64, lg: 72 };
 
@@ -131,6 +136,27 @@ export function DashboardLayout({
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
     >
+      {/* Migration Alert */}
+      <Alert severity="info" sx={{ m: 2 }}>
+        <AlertTitle>{t('🚨 Important Notice: Normal Protocol Evolution')}</AlertTitle>
+        {t(
+          'The Normal Protocol is evolving from synthetic tokens to real assets, while still focusing on noncustodial, diversification and custom crypto indexes coming soon.'
+        )}
+        <br />
+        {t(
+          'All synthetic positions have been closed, and any remaining USDC balances will be automatically returned to their respective wallet addresses. No action is required on your part.'
+        )}
+        <br />
+        <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+          <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={moreInfoOpen.onTrue}>
+            {t('More info')}
+          </Button>
+        </Box>
+      </Alert>
+
+      <MigrationModal open={moreInfoOpen.value} onClose={moreInfoOpen.onFalse} />
+
+      {/* Testnet Alert */}
       {isTestnet() && (
         <Alert severity="warning" sx={{ m: 2 }}>
           <AlertTitle>{t('Normal Testnet')}&nbsp;🎉</AlertTitle>
