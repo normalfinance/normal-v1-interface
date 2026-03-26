@@ -6,7 +6,6 @@ import type { Pair } from '@normalfinance/types';
 import { BigNumber } from 'bignumber.js';
 import { buildAuthHeaders } from '@/utils/http';
 import { handleHookError } from '@/utils/errors';
-import { TransactionType } from '@/types/transaction';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { TreasuryContract } from '@normalfinance/contracts';
@@ -232,42 +231,42 @@ export function useManageLiquidity(): ReturnType {
 
     setLoading(true);
 
-    await rateLimitCheck();
+    // await rateLimitCheck();
 
-    const precisionAmount = BigInt((amount * 10 ** 7).toFixed(0));
+    // const precisionAmount = BigInt((amount * 10 ** 7).toFixed(0));
 
-    const processedArgs: Parameters<TreasuryContract.Client['deposit']>[0] = {
-      user: wallet.address,
-      pair: pairAddress,
-      pairs_to_deposit: precisionAmount,
-    };
+    // const processedArgs: Parameters<TreasuryContract.Client['deposit']>[0] = {
+    //   user: wallet.address,
+    //   pair: pairAddress,
+    //   pairs_to_deposit: precisionAmount,
+    // };
 
-    await executeContractTransaction({
-      contractType: 'treasury',
-      contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
-      transactionDetails: {
-        type: TransactionType.DEPOSIT_LIQUIDITY,
-        token1: { name: 'asset pairs', amount: String(amount) },
-      },
-      transactionFunction: async (client) => {
-        const tx = await client.deposit(processedArgs, {
-          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
-          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
-        });
+    // await executeContractTransaction({
+    //   contractType: 'treasury',
+    //   contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
+    //   transactionDetails: {
+    //     type: TransactionType.DEPOSIT_LIQUIDITY,
+    //     token1: { name: 'asset pairs', amount: String(amount) },
+    //   },
+    //   transactionFunction: async (client) => {
+    //     const tx = await client.deposit(processedArgs, {
+    //       fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+    //       timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+    //     });
 
-        await tx.sign();
-        const signedXDR = tx.signed?.toXDR();
+    //     await tx.sign();
+    //     const signedXDR = tx.signed?.toXDR();
 
-        if (signedXDR) {
-          const apiRes = await executePair(signedXDR, 'Deposit Liquidity');
-          if (apiRes?.transactionHash) {
-            (tx as any).hash = apiRes.transactionHash;
-          }
-        }
+    //     if (signedXDR) {
+    //       const apiRes = await executePair(signedXDR, 'Deposit Liquidity');
+    //       if (apiRes?.transactionHash) {
+    //         (tx as any).hash = apiRes.transactionHash;
+    //       }
+    //     }
 
-        return tx;
-      },
-    });
+    //     return tx;
+    //   },
+    // });
 
     setLoading(false);
   };
@@ -280,40 +279,40 @@ export function useManageLiquidity(): ReturnType {
 
     setLoading(true);
 
-    await rateLimitCheck();
+    // await rateLimitCheck();
 
-    const processedArgs: Parameters<TreasuryContract.Client['withdraw']>[0] = {
-      user: wallet.address,
-      pair: pairAddress,
-      shares: BigInt((shares * 10 ** 7).toFixed(0)),
-    };
+    // const processedArgs: Parameters<TreasuryContract.Client['withdraw']>[0] = {
+    //   user: wallet.address,
+    //   pair: pairAddress,
+    //   shares: BigInt((shares * 10 ** 7).toFixed(0)),
+    // };
 
-    await executeContractTransaction({
-      contractType: 'treasury',
-      contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
-      transactionDetails: {
-        type: TransactionType.REMOVE_LIQUIDITY,
-        token1: { name: 'shares', amount: String(shares) },
-      },
-      transactionFunction: async (client) => {
-        const tx = await client.withdraw(processedArgs, {
-          fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
-          timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
-        });
+    // await executeContractTransaction({
+    //   contractType: 'treasury',
+    //   contractAddress: constants.StellarConfig.TREASURY_ADDRESS,
+    //   transactionDetails: {
+    //     type: TransactionType.REMOVE_LIQUIDITY,
+    //     token1: { name: 'shares', amount: String(shares) },
+    //   },
+    //   transactionFunction: async (client) => {
+    //     const tx = await client.withdraw(processedArgs, {
+    //       fee: Number(process.env.NEXT_PUBLIC_STELLAR_FEE ?? 5000000),
+    //       timeoutInSeconds: Number(process.env.NEXT_PUBLIC_STELLAR_TIMEOUT ?? 600),
+    //     });
 
-        await tx.sign();
-        const signedXDR = tx.signed?.toXDR();
+    //     await tx.sign();
+    //     const signedXDR = tx.signed?.toXDR();
 
-        if (signedXDR) {
-          const apiRes = await executePair(signedXDR, 'Withdraw Liquidity');
-          if (apiRes?.transactionHash) {
-            (tx as any).hash = apiRes.transactionHash;
-          }
-        }
+    //     if (signedXDR) {
+    //       const apiRes = await executePair(signedXDR, 'Withdraw Liquidity');
+    //       if (apiRes?.transactionHash) {
+    //         (tx as any).hash = apiRes.transactionHash;
+    //       }
+    //     }
 
-        return tx;
-      },
-    });
+    //     return tx;
+    //   },
+    // });
 
     setLoading(false);
   };
