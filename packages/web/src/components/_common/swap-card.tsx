@@ -23,6 +23,9 @@ import {
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
 import { useAquaSwap } from '@/hooks/stellar/use-aqua-swap';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { useSnackbar } from '@/components/template/snackbar';
 
 // ----------------------------------------------------------------------
 
@@ -53,6 +56,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const { wallet, tokenState } = usePersistStore();
 
   const { quote, quoteLoading, loading, error, getQuote, executeSwap, clearQuote } = useAquaSwap();
+  const { enqueueSnackbar } = useSnackbar();
+  const { hasUsdcTrustline, refetch: refetchAccountStatus } = useAccountStatus(wallet.address);
+  const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
 
   const [tokenIn, setTokenIn] = useState<'XLM' | 'USDC'>('XLM');
   const [tokenOut, setTokenOut] = useState<'XLM' | 'USDC'>('USDC');
@@ -106,6 +112,19 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
       : null;
 
   const isInsufficientBalance = parseFloat(amountIn) > parseFloat(inputBalance);
+  const needsTrustline = tokenOut === 'USDC' && !hasUsdcTrustline;
+
+  const handleAddTrustline = useCallback(async () => {
+    const usdcIssuer = constants.StellarConfig.USDC_ISSUER;
+    if (!usdcIssuer) return;
+    try {
+      await addTrustLine('USDC', usdcIssuer);
+      enqueueSnackbar(t('USDC trustline added successfully!'), { variant: 'success' });
+      await refetchAccountStatus();
+    } catch (err: any) {
+      enqueueSnackbar(err.message || t('Failed to add USDC trustline'), { variant: 'error' });
+    }
+  }, [addTrustLine, refetchAccountStatus, enqueueSnackbar, t]);
 
   return (
     <Card
@@ -225,30 +244,51 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
 
         {/* Swap Button */}
         <WalletGate buttonText={t('Connect wallet to swap')} fullWidth variant="contained">
-          <Button
-            variant="contained"
-            color="primary"
-            fullWidth
-            size="large"
-            disabled={
-              !quote ||
-              loading ||
-              quoteLoading ||
-              isInsufficientBalance ||
-              !amountIn ||
-              parseFloat(amountIn) <= 0
-            }
-            onClick={handleSwap}
-            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-          >
-            {loading
-              ? t('Swapping...')
-              : isInsufficientBalance
-                ? t('Insufficient balance')
-                : !amountIn || parseFloat(amountIn) <= 0
-                  ? t('Enter amount')
-                  : t('Swap')}
-          </Button>
+          {needsTrustline ? (
+            <Stack spacing={1}>
+              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                {t('A USDC trustline is required before swapping to USDC')}
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                size="large"
+                disabled={isAddingTrustline}
+                onClick={handleAddTrustline}
+                startIcon={
+                  isAddingTrustline ? <CircularProgress size={20} color="inherit" /> : null
+                }
+              >
+                {isAddingTrustline ? t('Adding Trustline...') : t('Add USDC Trustline')}
+              </Button>
+            </Stack>
+          ) : (
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              size="large"
+              disabled={
+                !quote ||
+                loading ||
+                quoteLoading ||
+                isInsufficientBalance ||
+                !amountIn ||
+                parseFloat(amountIn) <= 0
+              }
+              onClick={handleSwap}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              {loading
+                ? t('Swapping...')
+                : isInsufficientBalance
+                  ? t('Insufficient balance')
+                  : !amountIn || parseFloat(amountIn) <= 0
+                    ? t('Enter amount')
+                    : t('Swap')}
+            </Button>
+          )}
         </WalletGate>
       </Stack>
     </Card>

@@ -12,6 +12,7 @@ export interface NetworkConfig {
 
   // External Contracts
   AQUA_ROUTER_ADDRESS: string;
+  AQUA_API_BASE_URL: string;
   DEFINDEX_VAULT_ADDRESS: string;
 
   // Stellar

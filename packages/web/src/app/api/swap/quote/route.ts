@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { isValidStellarAddress } from '@/utils/stellar-address';
+import { constants } from '@normalfinance/utils';
 
-const AQUA_API_BASE_URL =
-  process.env.NEXT_PUBLIC_AQUA_API_BASE_URL || 'https://amm-api.aqua.network';
+import { isValidStellarAddress } from '@/utils/stellar-address';
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest) {
       aquaPayload.sender = sender;
     }
 
-    const response = await fetch(`${AQUA_API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${constants.StellarConfig.AQUA_API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(aquaPayload),

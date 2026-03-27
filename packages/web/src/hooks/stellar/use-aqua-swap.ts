@@ -164,7 +164,7 @@ export function useAquaSwap(): UseAquaSwapReturn {
 
         if (!quoteData.xdr) {
           throw new Error(
-            'Aqua did not return a transaction. Ensure NEXT_PUBLIC_AQUA_API_BASE_URL is set correctly.'
+            'Aqua did not return a transaction. Ensure NEXT_PUBLIC_{TESTNET|MAINNET}_AQUA_API_BASE_URL is set correctly.'
           );
         }
 
