@@ -1,12 +1,11 @@
 import { ApiToken, AppStorePersist, Token, TokenActions, TokenState } from '@normalfinance/types';
-import axios from 'axios';
 import { usePersistStore } from '../store';
 import {
   checkTrustline,
+  constants,
   format,
   getReflectorExternalPrice,
   getTokenBalance,
-  isTestnet,
   logger,
 } from '@normalfinance/utils';
 import { BigNumber } from 'bignumber.js';
@@ -58,14 +57,8 @@ export const createTokenActions = (): TokenActions => {
       try {
         const now = Date.now();
 
-        let tokens: ApiToken[] = [];
-
-        // Load tokens from token list (XLM, USDC, etc.)
-        const tokenListName = isTestnet() ? 'tokenListTestnet' : 'tokenList';
-        const { data: apiTokens } = await axios.get(
-          `https://raw.githubusercontent.com/normalfinance/token-list/main/${tokenListName}.json`
-        );
-        if (apiTokens) tokens = tokens.concat(apiTokens.assets);
+        // Load tokens from local token list
+        const tokens: ApiToken[] = constants.getTokenList();
 
         // Load all token info
         const persistStore = usePersistStore.getState();
