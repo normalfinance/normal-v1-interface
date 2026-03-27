@@ -19,17 +19,24 @@ export default function SavingsView() {
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
+    if (!wallet.address) return;
+
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllTokens();
+        await getAllTokens(true);
       } catch (e) {
         logger.error(e);
       } finally {
         setGlobalIsLoading(false);
       }
     };
-    refreshTokens();
+
+    const timer = setTimeout(() => {
+      refreshTokens();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
   return (

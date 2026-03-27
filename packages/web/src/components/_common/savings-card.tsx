@@ -19,6 +19,8 @@ import {
   Chip,
 } from '@mui/material';
 
+import { constants } from '@normalfinance/utils';
+
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
@@ -39,8 +41,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
 
-  // Get user USDC balance
-  const usdcBalance = tokenState.tokens.find((t) => t.symbol === 'USDC')?.balance || '0';
+  // Get user USDC balance — match by contract address to avoid stale duplicates in persisted state
+  const usdcBalance =
+    tokenState.tokens.find((t) => t.contract === constants.StellarConfig.USDC_ADDRESS)?.balance ||
+    '0';
 
   // Handle max button
   const handleMax = useCallback(() => {
