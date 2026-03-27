@@ -122,8 +122,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const signedXDR = normalizeSignedXDR(signResult);
 
         if (!signedXDR) {
-          enqueueSnackbar(t('Transaction signing cancelled'), { variant: 'warning' });
-          return '';
+          throw new Error('Transaction signing failed — no signed XDR returned');
         }
 
         // 3. Submit signed transaction to Horizon
@@ -217,8 +216,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const signedXDR = normalizeSignedXDR(signResult);
 
         if (!signedXDR) {
-          enqueueSnackbar(t('Transaction signing cancelled'), { variant: 'warning' });
-          return '';
+          throw new Error('Transaction signing failed — no signed XDR returned');
         }
 
         // 3. Submit signed transaction to Horizon

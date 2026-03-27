@@ -177,8 +177,7 @@ export function useAquaSwap(): UseAquaSwapReturn {
         const signedXDR = normalizeSignedXDR(signResult);
 
         if (!signedXDR) {
-          enqueueSnackbar(t('Transaction signing cancelled'), { variant: 'warning' });
-          return '';
+          throw new Error('Transaction signing failed — no signed XDR returned');
         }
 
         // Submit to Horizon

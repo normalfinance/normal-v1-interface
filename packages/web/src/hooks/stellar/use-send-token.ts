@@ -118,17 +118,17 @@ export function useSendToken(): ReturnType {
         ? await signTransaction(unsignedXDR, constants.StellarConfig.NETWORK_PASSPHRASE)
         : await signTransaction(unsignedXDR);
 
-      if (signedXDR) {
-        const transaction = TransactionBuilder.fromXDR(
-          signedXDR,
-          constants.StellarConfig.NETWORK_PASSPHRASE
-        );
-
-        const result = await horizonServer.submitTransaction(transaction);
-        return result.hash;
+      if (!signedXDR) {
+        throw new Error('Transaction signing failed — no signed XDR returned');
       }
 
-      return '';
+      const transaction = TransactionBuilder.fromXDR(
+        signedXDR,
+        constants.StellarConfig.NETWORK_PASSPHRASE
+      );
+
+      const result = await horizonServer.submitTransaction(transaction);
+      return result.hash;
     } catch (err: any) {
       console.error('[SEND TOKEN] Transaction failed:', err);
       setError(err?.message || 'Transaction failed');
