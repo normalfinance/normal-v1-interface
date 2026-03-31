@@ -28,6 +28,7 @@ import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
 import { CustodySettings } from '@/components/settings/custody-settings';
+import AddBlendUsdcTrustlineButton from '@/components/settings/add-blend-usdc-trustline-button';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 
 export function SettingsAccounts() {
@@ -254,6 +255,8 @@ export function SettingsAccounts() {
                     onUpdate={loadWallets}
                   />
                 </Box>
+
+                <AddBlendUsdcTrustlineButton walletAddress={wallet.walletAddress} />
 
                 <Button
                   variant="soft"

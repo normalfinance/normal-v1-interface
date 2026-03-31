@@ -14,6 +14,8 @@ export interface NetworkConfig {
   AQUA_ROUTER_ADDRESS: string;
   AQUA_API_BASE_URL: string;
   DEFINDEX_VAULT_ADDRESS: string;
+  BLEND_USDC_ADDRESS?: string;
+  BLEND_USDC_ISSUER?: string;
 
   // Stellar
   XLM_ADDRESS: string;

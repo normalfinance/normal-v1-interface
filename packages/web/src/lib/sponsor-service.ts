@@ -103,7 +103,7 @@ export class SponsorService {
 
       const usdcAsset = new Asset('USDC', constants.StellarConfig.USDC_ISSUER);
 
-      const transaction = new TransactionBuilder(sponsorAccount, {
+      const builder = new TransactionBuilder(sponsorAccount, {
         fee: baseFee.toString(),
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
       })
@@ -129,7 +129,20 @@ export class SponsorService {
             asset: usdcAsset,
             source: walletAddress,
           })
-        )
+        );
+
+      // 3b. Add Blend USDC trustline if configured (testnet only, reserve is sponsored)
+      const blendUsdcIssuer = constants.StellarConfig.BLEND_USDC_ISSUER;
+      if (blendUsdcIssuer) {
+        builder.addOperation(
+          Operation.changeTrust({
+            asset: new Asset('USDC', blendUsdcIssuer),
+            source: walletAddress,
+          })
+        );
+      }
+
+      const transaction = builder
         // 4. User ends the sponsorship (required for the sandwich pattern)
         .addOperation(
           Operation.endSponsoringFutureReserves({
@@ -189,7 +202,7 @@ export class SponsorService {
           sponsorAddress,
           ipAddress,
           accountReserve: '0.5',
-          trustlineReserve: '0.5',
+          trustlineReserve: constants.StellarConfig.BLEND_USDC_ISSUER ? '1.0' : '0.5',
           feePayment: '1',
           txHash,
         },
@@ -238,8 +251,8 @@ export class SponsorService {
 
       const usdcAsset = new Asset('USDC', constants.StellarConfig.USDC_ISSUER);
 
-      // Revoke sponsorship for both account and trustline
-      const transaction = new TransactionBuilder(sponsorAccount, {
+      // Revoke sponsorship for account and trustlines
+      const revokeBuilder = new TransactionBuilder(sponsorAccount, {
         fee: baseFee.toString(),
         networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
       })
@@ -253,9 +266,20 @@ export class SponsorService {
             account: walletAddress,
             asset: usdcAsset,
           })
-        )
-        .setTimeout(30)
-        .build();
+        );
+
+      // Revoke Blend USDC trustline sponsorship if configured
+      const blendUsdcIssuer = constants.StellarConfig.BLEND_USDC_ISSUER;
+      if (blendUsdcIssuer) {
+        revokeBuilder.addOperation(
+          Operation.revokeTrustlineSponsorship({
+            account: walletAddress,
+            asset: new Asset('USDC', blendUsdcIssuer),
+          })
+        );
+      }
+
+      const transaction = revokeBuilder.setTimeout(30).build();
 
       transaction.sign(sponsorKeypair);
       const result = await horizonServer.submitTransaction(transaction);
@@ -296,7 +320,7 @@ export class SponsorService {
       prisma.sponsoredAccount.count({ where: { isRevoked: true } }),
     ]);
 
-    // Each active sponsorship locks 1.0 XLM (0.5 base + 0.5 trustline)
+    // Each active sponsorship locks 1.0-1.5 XLM (0.5 base + 0.5-1.0 trustlines)
     const totalLockedXLM = (totalSponsored * 1.0).toFixed(7);
 
     return {

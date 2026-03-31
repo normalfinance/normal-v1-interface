@@ -38,11 +38,11 @@ export async function GET(request: NextRequest) {
       sdk.getVaultAPY(VAULT_ADDRESS),
     ]);
 
-    // Derive total deposits from totalManagedFunds
-    // totalManagedFunds is an array of amounts per asset — sum them
+    // Derive total deposits from totalManagedFunds (values are in stroops, 7 decimals)
+    const DECIMALS = 1e7;
     const totalDeposits = Array.isArray(vaultInfo.totalManagedFunds)
-      ? vaultInfo.totalManagedFunds
-          .reduce((sum: number, val: any) => sum + (Number(val) || 0), 0)
+      ? (vaultInfo.totalManagedFunds
+          .reduce((sum: number, val: any) => sum + (Number(val) || 0), 0) / DECIMALS)
           .toString()
       : '0';
 
@@ -58,11 +58,11 @@ export async function GET(request: NextRequest) {
       try {
         const balance = await sdk.getVaultBalance(VAULT_ADDRESS, userAddress);
         const underlyingValue = Array.isArray(balance.underlyingBalance)
-          ? balance.underlyingBalance.reduce((sum: number, val: number) => sum + val, 0)
+          ? balance.underlyingBalance.reduce((sum: number, val: number) => sum + val, 0) / DECIMALS
           : 0;
 
         userPosition = {
-          shares: balance.dfTokens.toString(),
+          shares: (Number(balance.dfTokens) / DECIMALS).toString(),
           currentValue: underlyingValue.toString(),
           earnings: '0', // Earnings require tracking deposits over time — will be derived client-side or via indexer
         };

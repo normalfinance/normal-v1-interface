@@ -22,6 +22,8 @@ const TESTNET_CONFIG: NetworkConfig = {
     process.env.NEXT_PUBLIC_TESTNET_AQUA_API_BASE_URL ||
     'https://amm-api-testnet.aqua.network',
   DEFINDEX_VAULT_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_DEFINDEX_VAULT || '',
+  BLEND_USDC_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_BLEND_USDC_ADDRESS || '',
+  BLEND_USDC_ISSUER: process.env.NEXT_PUBLIC_TESTNET_BLEND_USDC_ISSUER || '',
 
   // Stellar
   XLM_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_XLM_ADDRESS || '',
