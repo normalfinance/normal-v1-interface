@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+import { prisma } from '@/lib/prisma';
 
 // ----------------------------------------------------------------------
 
@@ -61,10 +62,32 @@ export async function GET(request: NextRequest) {
           ? balance.underlyingBalance.reduce((sum: number, val: number) => sum + val, 0) / DECIMALS
           : 0;
 
+        // Query deposit history to calculate net deposited amount
+        const depositRecords = await prisma.vaultDeposit.findMany({
+          where: { walletAddress: userAddress, vaultAddress: VAULT_ADDRESS },
+          select: { type: true, amount: true },
+        });
+
+        let totalDeposited: number;
+        if (depositRecords.length === 0) {
+          // No DB records — fallback to currentValue for pre-migration users
+          totalDeposited = underlyingValue;
+        } else {
+          totalDeposited = depositRecords.reduce((sum: number, record: { type: string; amount: string }) => {
+            const amt = parseFloat(record.amount) || 0;
+            return record.type === 'deposit' ? sum + amt : sum - amt;
+          }, 0);
+          // Ensure non-negative
+          if (totalDeposited < 0) totalDeposited = 0;
+        }
+
+        const earnings = Math.max(underlyingValue - totalDeposited, 0);
+
         userPosition = {
           shares: (Number(balance.dfTokens) / DECIMALS).toString(),
           currentValue: underlyingValue.toString(),
-          earnings: '0', // Earnings require tracking deposits over time — will be derived client-side or via indexer
+          totalDeposited: totalDeposited.toString(),
+          earnings: earnings.toString(),
         };
       } catch (err) {
         // User may not have a position yet — that's fine
@@ -72,6 +95,7 @@ export async function GET(request: NextRequest) {
         userPosition = {
           shares: '0',
           currentValue: '0',
+          totalDeposited: '0',
           earnings: '0',
         };
       }

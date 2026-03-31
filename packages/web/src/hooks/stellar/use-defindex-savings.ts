@@ -137,6 +137,19 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         const result = await horizonServer.submitTransaction(signedTx);
 
+        // Log deposit to DB (fire-and-forget)
+        fetch('/api/savings/log-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            walletAddress: walletAddress,
+            vaultAddress: vaultInfo.address,
+            type: 'deposit',
+            amount,
+            txHash: result.hash,
+          }),
+        }).catch(console.error);
+
         enqueueSnackbar(t('Deposit successful!'), { variant: 'success' });
 
         // 4. Refresh vault info to show updated balance
@@ -230,6 +243,19 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         );
 
         const result = await horizonServer.submitTransaction(signedTx);
+
+        // Log withdrawal to DB (fire-and-forget)
+        fetch('/api/savings/log-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            walletAddress: walletAddress,
+            vaultAddress: vaultInfo.address,
+            type: 'withdraw',
+            amount,
+            txHash: result.hash,
+          }),
+        }).catch(console.error);
 
         enqueueSnackbar(t('Withdrawal successful!'), { variant: 'success' });
 

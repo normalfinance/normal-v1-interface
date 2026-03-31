@@ -13,6 +13,7 @@ export interface VaultInfo {
 export interface SavingsPosition {
   shares: string; // dfTokens
   currentValue: string; // underlying asset value
+  totalDeposited: string; // net deposits from DB (deposits - withdrawals)
   earnings: string; // derived: currentValue - totalDeposited
 }
 

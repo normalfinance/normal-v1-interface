@@ -109,7 +109,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
               {t('Your Deposits')}
             </Typography>
             <Typography variant="body2" fontWeight="bold">
-              ${parseFloat(userPosition?.currentValue || '0').toLocaleString()} USDC
+              ${parseFloat(userPosition?.totalDeposited || '0').toLocaleString()} USDC
             </Typography>
           </Stack>
           <Stack direction="row" justifyContent="space-between">
