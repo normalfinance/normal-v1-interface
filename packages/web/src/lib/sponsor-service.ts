@@ -16,6 +16,7 @@ export interface SponsorshipRecord {
   isRevoked: boolean;
 }
 
+
 export class SponsorService {
   /**
    * Check if account has already been sponsored

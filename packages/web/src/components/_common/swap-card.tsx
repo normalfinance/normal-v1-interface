@@ -65,9 +65,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const [amountIn, setAmountIn] = useState('');
   const debouncedAmountIn = useDebounce(amountIn, 500);
 
-  // Get user balances by looking up tokens in the array by symbol
+  // XLM: single row per network in token list. USDC: match Soroban contract from env
+  // (NEXT_PUBLIC_TESTNET_USDC_ADDRESS / NEXT_PUBLIC_MAINNET_USDC_ADDRESS → StellarConfig.USDC_ADDRESS)
+  // so we show the same asset as TOKENS.USDC / quotes, not the first duplicate symbol row.
   const xlmBalance = tokenState.tokens.find((t) => t.symbol === 'XLM')?.balance || '0';
-  const usdcBalance = tokenState.tokens.find((t) => t.symbol === 'USDC')?.balance || '0';
+  const usdcBalance =
+    tokenState.tokens.find((t) => t.contract === constants.StellarConfig.USDC_ADDRESS)?.balance ||
+    '0';
 
   const inputBalance = tokenIn === 'XLM' ? xlmBalance : usdcBalance;
   const outputBalance = tokenOut === 'XLM' ? xlmBalance : usdcBalance;

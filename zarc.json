@@ -1,0 +1,36 @@
+{
+  "$schema": "https://zarc.dev/schema.json",
+  "rules": {
+    "no-explicit-any": false,
+    "no-unused-vars": false,
+    "no-console": false,
+    "prefer-const": false,
+    "no-empty-catch": false,
+    "no-debugger": false,
+    "no-nested-ternaries": false,
+    "no-default-export": false,
+    "no-switch": false,
+    "no-try-catch": false,
+    "no-side-effect-imports": false,
+    "max-function-params": 4,
+    "max-file-lines": 500,
+    "naming-functions": false,
+    "naming-classes": false,
+    "naming-constants": false,
+    "banned-imports": ["lodash", "moment", "underscore"],
+    "banned-calls": ["eval", "document.write", "alert"],
+    "no-comments": false,
+    "no-todo-comments": false,
+    "no-fixme-comments": false,
+    "unreachable-code": "error",
+    "unused-exports": false,
+    "unused-files": false,
+    "unused-dependencies": false,
+    "no-missing-return": "error",
+    "no-wrong-arg-count": "error",
+    "no-unsafe-optional-access": "error"
+  },
+  "files": {
+    "exclude": ["node_modules", "dist", "build", ".git", ".next", "coverage", "__generated__"]
+  }
+}
