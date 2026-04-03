@@ -1,15 +1,19 @@
 'use client';
 
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
+import type { SnackbarMessage, OptionsObject } from 'notistack';
 import type { Dispatch, SetStateAction } from 'react';
 
 import { useState, useEffect, useCallback } from 'react';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { constants } from '@normalfinance/utils';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
+import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 
 import { useNormalWallet } from './use-normal-wallet';
@@ -26,6 +30,41 @@ interface UseDefindexSavingsReturn {
   deposit: (amount: string) => Promise<string>;
   withdraw: (amount: string) => Promise<string>;
   refreshVaultInfo: () => Promise<void>;
+}
+
+function enqueueSuccessWithStellarExpert(
+  enqueueSnackbar: (message: SnackbarMessage, options?: OptionsObject) => string | number | null,
+  t: ReturnType<typeof useTranslate>['t'],
+  successMessage: string,
+  txHash: string
+) {
+  const stellarExpertUrl = createStellarExpertUrl('tx', txHash);
+  enqueueSnackbar(
+    <Box component="span">
+      {successMessage}{' '}
+      <Button
+        size="small"
+        onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+        sx={{
+          textTransform: 'none',
+          minWidth: 'auto',
+          p: 0,
+          textDecoration: 'underline',
+          '&:hover': {
+            textDecoration: 'underline',
+            backgroundColor: 'transparent',
+          },
+        }}
+      >
+        {t('View More')}
+      </Button>
+    </Box>,
+    {
+      variant: 'success',
+      persist: false,
+      autoHideDuration: 7500,
+    }
+  );
 }
 
 // ----------------------------------------------------------------------
@@ -150,7 +189,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           }),
         }).catch(console.error);
 
-        enqueueSnackbar(t('Deposit successful!'), { variant: 'success' });
+        enqueueSuccessWithStellarExpert(enqueueSnackbar, t, t('Deposit successful!'), result.hash);
 
         // 4. Refresh vault info to show updated balance
         await refreshVaultInfo();
@@ -257,7 +296,12 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           }),
         }).catch(console.error);
 
-        enqueueSnackbar(t('Withdrawal successful!'), { variant: 'success' });
+        enqueueSuccessWithStellarExpert(
+          enqueueSnackbar,
+          t,
+          t('Withdrawal successful!'),
+          result.hash
+        );
 
         // 4. Refresh vault info to show updated balance
         await refreshVaultInfo();

@@ -1,6 +1,7 @@
 import type { TransactionDetails } from '@/types/transaction';
 import type { StellarExpertResourceType } from '@normalfinance/types';
 
+import { isMainnet } from '@normalfinance/utils';
 import { TransactionType } from '@/types/transaction';
 
 export const getTransactionMessages = (details: TransactionDetails) => {
@@ -65,6 +66,6 @@ export const getTransactionMessages = (details: TransactionDetails) => {
 };
 
 export const createStellarExpertUrl = (type: StellarExpertResourceType, id: string) => {
-  const network = process.env.NEXT_PUBLIC_NETWORK === 'MAINNET' ? 'public' : 'testnet';
+  const network = isMainnet() ? 'public' : 'testnet';
   return `https://stellar.expert/explorer/${network}/${type}/${id}`;
 };

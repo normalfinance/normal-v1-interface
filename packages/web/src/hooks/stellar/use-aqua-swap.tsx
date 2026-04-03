@@ -4,12 +4,15 @@ import type { SwapQuote, SwapMode } from '@/types/swap';
 import type { Dispatch, SetStateAction } from 'react';
 
 import { useState, useCallback } from 'react';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { constants } from '@normalfinance/utils';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
+import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 
 import { useNormalWallet } from './use-normal-wallet';
@@ -191,8 +194,34 @@ export function useAquaSwap(): UseAquaSwapReturn {
         );
 
         const result = await horizonServer.submitTransaction(signedTx);
+        const stellarExpertUrl = createStellarExpertUrl('tx', result.hash);
 
-        enqueueSnackbar(t('Swap successful!'), { variant: 'success' });
+        enqueueSnackbar(
+          <Box component="span">
+            {t('Swap successful!')}{' '}
+            <Button
+              size="small"
+              onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+              sx={{
+                textTransform: 'none',
+                minWidth: 'auto',
+                p: 0,
+                textDecoration: 'underline',
+                '&:hover': {
+                  textDecoration: 'underline',
+                  backgroundColor: 'transparent',
+                },
+              }}
+            >
+              {t('View More')}
+            </Button>
+          </Box>,
+          {
+            variant: 'success',
+            persist: false,
+            autoHideDuration: 7500,
+          }
+        );
         setQuote(null);
         return result.hash;
       } catch (err: any) {
