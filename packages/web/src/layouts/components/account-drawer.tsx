@@ -56,7 +56,7 @@ function WalletConnected({ address }: { address: string }) {
     getAllTokens,
   } = usePersistStore();
 
-  const { recentActivity } = useUserActivity();
+  const { recentActivity } = useUserActivity(address);
 
   // Effect hook to fetch all tokens when the component mounts or address changes
   useEffect(() => {

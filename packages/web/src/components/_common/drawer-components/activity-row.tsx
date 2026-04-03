@@ -37,7 +37,11 @@ export function SplitAvatar({ left, right }: { left: string; right: string }) {
 export function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslate();
 
-  const time = format.ago(activity.timestamp);
+  // `activity.timestamp` is ms (e.g. from Date.parse). `format.ago` expects Unix seconds.
+  const createdAtSec = Number.isFinite(activity.timestamp)
+    ? Math.floor(activity.timestamp / 1000)
+    : Math.floor(Date.now() / 1000);
+  const time = format.ago(createdAtSec);
 
   /* ---------- derive icon + sentence ---------------------------- */
   let icon: React.ReactNode;
@@ -95,6 +99,29 @@ export function ActivityRow({ activity }: { activity: Activity }) {
 
       icon = <Avatar src={iconUrl} sx={{ width: 32, height: 32 }} />;
       sentence = `${amount} ${symbol}`;
+      break;
+    }
+    case 'Savings Deposit':
+    case 'Savings Withdraw': {
+      const { amount } = activity;
+      icon = (
+        <Avatar src={getCryptoIconUrl('usdc')} sx={{ width: 32, height: 32 }} />
+      );
+      sentence = `${amount} USDC`;
+      break;
+    }
+    case 'Swap': {
+      const {
+        tokenIn: { symbol: sIn, amount: aIn, iconUrl: iIn },
+        tokenOut: { symbol: sOut, amount: aOut, iconUrl: iOut },
+      } = activity;
+      icon = <SplitAvatar left={iIn} right={iOut} />;
+      sentence = `${aIn} ${sIn} → ${aOut} ${sOut}`;
+      break;
+    }
+    case 'Account sponsored': {
+      icon = <Avatar src={getCryptoIconUrl('xlm')} sx={{ width: 32, height: 32 }} />;
+      sentence = t('Sponsorship funded this account');
       break;
     }
     default:

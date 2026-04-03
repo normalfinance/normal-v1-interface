@@ -105,9 +105,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   // Handle swap execution
   const handleSwap = useCallback(async () => {
     if (!quote) return;
-    await executeSwap(quote);
+    await executeSwap(quote, {
+      tokenInSymbol: TOKENS[tokenIn].symbol,
+      tokenOutSymbol: TOKENS[tokenOut].symbol,
+    });
     setAmountIn('');
-  }, [quote, executeSwap]);
+  }, [quote, executeSwap, tokenIn, tokenOut]);
 
   // Calculate exchange rate
   const exchangeRate =

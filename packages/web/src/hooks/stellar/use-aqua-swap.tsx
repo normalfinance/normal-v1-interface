@@ -1,6 +1,6 @@
 'use client';
 
-import type { SwapQuote, SwapMode } from '@/types/swap';
+import type { SwapQuote, SwapMode, SwapDisplayMeta } from '@/types/swap';
 import type { Dispatch, SetStateAction } from 'react';
 
 import { useState, useCallback } from 'react';
@@ -32,7 +32,7 @@ interface UseAquaSwapReturn {
     amount: string,
     mode?: SwapMode
   ) => Promise<SwapQuote | null>;
-  executeSwap: (quote: SwapQuote) => Promise<string>;
+  executeSwap: (quote: SwapQuote, display?: SwapDisplayMeta) => Promise<string>;
   clearQuote: () => void;
 }
 
@@ -127,7 +127,7 @@ export function useAquaSwap(): UseAquaSwapReturn {
   );
 
   const executeSwap = useCallback(
-    async (swapQuote: SwapQuote): Promise<string> => {
+    async (swapQuote: SwapQuote, display?: SwapDisplayMeta): Promise<string> => {
       if (!wallet.address) {
         enqueueSnackbar(t('Please connect your wallet first'), { variant: 'error' });
         return '';
@@ -194,6 +194,22 @@ export function useAquaSwap(): UseAquaSwapReturn {
         );
 
         const result = await horizonServer.submitTransaction(signedTx);
+
+        fetch('/api/swap/log-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            walletAddress,
+            tokenInAddress: swapQuote.tokenIn,
+            tokenOutAddress: swapQuote.tokenOut,
+            tokenInSymbol: display?.tokenInSymbol,
+            tokenOutSymbol: display?.tokenOutSymbol,
+            amountIn: swapQuote.amountIn,
+            amountOut: swapQuote.amountOut,
+            txHash: result.hash,
+          }),
+        }).catch(console.error);
+
         const stellarExpertUrl = createStellarExpertUrl('tx', result.hash);
 
         enqueueSnackbar(

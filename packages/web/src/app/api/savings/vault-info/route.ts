@@ -39,12 +39,17 @@ export async function GET(request: NextRequest) {
       sdk.getVaultAPY(VAULT_ADDRESS),
     ]);
 
+    console.log('vaultInfo', vaultInfo);
+
     // Derive total deposits from totalManagedFunds (values are in stroops, 7 decimals)
     const DECIMALS = 1e7;
     const totalDeposits = Array.isArray(vaultInfo.totalManagedFunds)
-      ? (vaultInfo.totalManagedFunds
-          .reduce((sum: number, val: any) => sum + (Number(val) || 0), 0) / DECIMALS)
-          .toString()
+      ? (
+          vaultInfo.totalManagedFunds.reduce(
+            (sum: number, val: any) => sum + (Number(val) || 0),
+            0
+          ) / DECIMALS
+        ).toString()
       : '0';
 
     // User position (if wallet connected)
@@ -73,10 +78,13 @@ export async function GET(request: NextRequest) {
           // No DB records — fallback to currentValue for pre-migration users
           totalDeposited = underlyingValue;
         } else {
-          totalDeposited = depositRecords.reduce((sum: number, record: { type: string; amount: string }) => {
-            const amt = parseFloat(record.amount) || 0;
-            return record.type === 'deposit' ? sum + amt : sum - amt;
-          }, 0);
+          totalDeposited = depositRecords.reduce(
+            (sum: number, record: { type: string; amount: string }) => {
+              const amt = parseFloat(record.amount) || 0;
+              return record.type === 'deposit' ? sum + amt : sum - amt;
+            },
+            0
+          );
           // Ensure non-negative
           if (totalDeposited < 0) totalDeposited = 0;
         }

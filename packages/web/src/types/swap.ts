@@ -38,3 +38,9 @@ export interface AquaFindPathResponse {
 }
 
 export type SwapMode = 'strict-send' | 'strict-receive';
+
+/** Optional labels passed when executing a swap so the server log has accurate symbols. */
+export interface SwapDisplayMeta {
+  tokenInSymbol: string;
+  tokenOutSymbol: string;
+}
