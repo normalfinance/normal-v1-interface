@@ -1,5 +1,12 @@
 import { cdn } from './cdn';
 
+/** Normal index tokens use a leading `n` or `sn` on the symbol (matches assets routing conventions). */
+export function isNormalToken(tokenOrSymbol: string | { symbol: string }): boolean {
+  const symbol = typeof tokenOrSymbol === 'string' ? tokenOrSymbol : tokenOrSymbol.symbol;
+  if (!symbol) return false;
+  return /^(sn|n)/.test(symbol);
+}
+
 export function getCryptoIconUrl(symbol: string): string {
   if (!symbol) return '';
 

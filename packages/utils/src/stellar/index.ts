@@ -1,5 +1,6 @@
 export * as time from './time';
 export * from './convert';
+export * from './pool';
 export * from './prices';
 export * from './trustlines';
 export * from './oracle';

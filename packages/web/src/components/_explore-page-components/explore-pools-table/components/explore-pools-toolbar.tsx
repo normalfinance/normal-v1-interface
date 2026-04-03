@@ -26,7 +26,7 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const { getAllPairs } = usePersistStore();
+  const { getAllTokens } = usePersistStore();
 
   const { state: currentFilters, setState: updateFilters } = filters;
 
@@ -42,7 +42,7 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
     enqueueSnackbar('Refreshing assets', { variant: 'info' });
 
     try {
-      await getAllPairs();
+      await getAllTokens(true);
     } catch (error) {
       logger.error('Asset refresh error:', error);
     } finally {

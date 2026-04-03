@@ -2,6 +2,7 @@
 
 import type { LiquidityPosition } from '@/hooks';
 
+import BigNumber from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
