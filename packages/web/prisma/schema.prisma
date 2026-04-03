@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_MAINNET_URL")
-  directUrl = env("DATABASE_MAINNET_URL")
+  url       = env("DATABASE_TESTNET_URL")
+  directUrl = env("DATABASE_TESTNET_URL")
 }
 
 model User {
@@ -107,6 +107,35 @@ model SponsoredAccount {
   @@index([ipAddress])
   @@index([supabaseUid])
   @@map("sponsored_accounts")
+}
+
+model VaultDeposit {
+  id            String   @id @default(cuid())
+  walletAddress String
+  vaultAddress  String
+  type          String   // "deposit" or "withdraw"
+  amount        String   // USDC amount (human-readable, not stroops)
+  txHash        String?
+  createdAt     DateTime @default(now())
+
+  @@index([walletAddress, vaultAddress])
+  @@map("vault_deposits")
+}
+
+model SwapLog {
+  id               String   @id @default(cuid())
+  walletAddress    String
+  tokenInAddress   String
+  tokenOutAddress  String
+  tokenInSymbol    String?
+  tokenOutSymbol   String?
+  amountIn         String
+  amountOut        String
+  txHash           String?
+  createdAt        DateTime @default(now())
+
+  @@index([walletAddress])
+  @@map("swap_logs")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

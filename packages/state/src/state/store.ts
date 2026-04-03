@@ -7,7 +7,6 @@ import { createDisclaimerAction } from './persist/createDisclaimerActions';
 import { createLoadingActions } from './loading/actions';
 import { createReferralActions } from './persist/createReferralActions';
 import { createModalActions } from './modal/actions';
-import { createPairActions } from './persist/createPairActions';
 
 //@ts-ignore
 export const useAppStore = create<AppStore>()((set, get) => {
@@ -35,9 +34,6 @@ export const usePersistStore = create<AppStorePersist>()(
       // Create referral actions
       const referralActions = createReferralActions();
 
-      // Create pair actions
-      const pairActions = createPairActions();
-
       // Create token actions
       const tokenActions = createTokenActions();
 
@@ -45,18 +41,17 @@ export const usePersistStore = create<AppStorePersist>()(
         ...walletPersist,
         ...disclaimeActions,
         ...referralActions,
-        ...pairActions,
         ...tokenActions,
       };
     },
     {
       name: 'just-some-normal-storage',
-      version: 6,
+      version: 7,
       migrate: (persistedState, version) => {
         if (!persistedState) return {};
 
-        // Upgrade all to v6 schema
-        if (version < 6) {
+        // Upgrade all to v7 schema (removed pair state)
+        if (version < 7) {
           return {};
         }
       },

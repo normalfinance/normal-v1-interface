@@ -2,6 +2,21 @@ import { logger } from '@normalfinance/utils';
 import { buildAuthHeaders } from '@/utils/http';
 
 /**
+ * Safely parse a fetch response as JSON.
+ * Throws a descriptive error if the response body is not valid JSON (e.g. an HTML error page).
+ */
+async function safeJson<T = any>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(
+      `Expected JSON response but got ${contentType || 'unknown content-type'} (status ${response.status}): ${text.slice(0, 200)}`
+    );
+  }
+  return response.json();
+}
+
+/**
  * Format remaining time until rate limit reset
  */
 function formatRateLimitReset(resetTimestamp: number): string {
@@ -65,7 +80,7 @@ export async function linkWallet(
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await safeJson(response);
       // If rate limited, include remaining time in error message
       if (response.status === 429 && error.reset) {
         const remaining = formatRateLimitReset(error.reset);
@@ -74,7 +89,7 @@ export async function linkWallet(
       throw new Error(error.error || 'Failed to link wallet');
     }
 
-    return await response.json();
+    return await safeJson(response);
   } catch (error) {
     logger.error('[linked-wallets] Failed to link wallet:', error);
     throw error;
@@ -104,7 +119,7 @@ export async function updateWalletCustody(
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await safeJson(response);
       throw new Error(error.error || 'Failed to update wallet custody');
     }
   } catch (error) {
@@ -127,7 +142,7 @@ export async function removePlatformCustody(walletAddress: string): Promise<void
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await safeJson(response);
       throw new Error(error.error || 'Failed to remove platform custody');
     }
   } catch (error) {
@@ -149,11 +164,11 @@ export async function getLinkedWallets(): Promise<LinkedWallet[]> {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await safeJson(response);
       throw new Error(error.error || 'Failed to get linked wallets');
     }
 
-    const data: GetLinkedWalletsResponse = await response.json();
+    const data: GetLinkedWalletsResponse = await safeJson(response);
     return data.wallets;
   } catch (error) {
     logger.error('[linked-wallets] Failed to get linked wallets:', error);
@@ -180,7 +195,7 @@ export async function updateWalletName(walletAddress: string, walletName: string
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await safeJson(response);
       throw new Error(error.error || 'Failed to update wallet name');
     }
   } catch (error) {
@@ -228,7 +243,7 @@ export async function unlinkWallet(walletAddress: string): Promise<void> {
     );
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await safeJson(response);
       throw new Error(error.error || 'Failed to unlink wallet');
     }
   } catch (error) {
@@ -257,11 +272,11 @@ export async function checkWalletCreationLimit(): Promise<WalletCreationLimitSta
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await safeJson(response);
       throw new Error(error.error || 'Failed to check rate limit');
     }
 
-    return await response.json();
+    return await safeJson(response);
   } catch (error) {
     logger.error('[linked-wallets] Failed to check rate limit:', error);
     throw error;

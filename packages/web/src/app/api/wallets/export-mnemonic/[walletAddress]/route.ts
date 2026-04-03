@@ -7,12 +7,9 @@ import { getAccessToken } from '@/utils/http';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { decryptMnemonicWithFallback } from '@/lib/server-mnemonic-encryption';
+import { exportMnemonicRateLimiter } from '@/server/rateLimiter';
 
 const STEP_UP_MAX_AGE_SECONDS = 5 * 60;
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const RATE_LIMIT_MAX = 3;
-
-const attempts = new Map<string, { count: number; resetAt: number }>();
 
 const ParamsSchema = z.object({
   walletAddress: z.string().regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
@@ -43,22 +40,6 @@ function isStepUpFresh(token: string): boolean {
   return nowSeconds - iat <= STEP_UP_MAX_AGE_SECONDS;
 }
 
-function checkRateLimit(key: string): { ok: boolean; retryAfterSeconds: number } {
-  const now = Date.now();
-  const existing = attempts.get(key);
-  if (!existing || existing.resetAt <= now) {
-    attempts.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return { ok: true, retryAfterSeconds: 0 };
-  }
-
-  if (existing.count >= RATE_LIMIT_MAX) {
-    return { ok: false, retryAfterSeconds: Math.ceil((existing.resetAt - now) / 1000) };
-  }
-
-  attempts.set(key, { count: existing.count + 1, resetAt: existing.resetAt });
-  return { ok: true, retryAfterSeconds: 0 };
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: { walletAddress: string } }
@@ -85,11 +66,12 @@ export async function POST(
     const walletAddress = validation.data.walletAddress;
 
     const rateKey = `${user.id}:${walletAddress}:export`;
-    const rateLimit = checkRateLimit(rateKey);
-    if (!rateLimit.ok) {
+    const { success, reset } = await exportMnemonicRateLimiter.limit(rateKey);
+    if (!success) {
+      const retryAfterSeconds = Math.ceil((reset - Date.now()) / 1000);
       return NextResponse.json(
-        { error: 'Too many export attempts', retryAfterSeconds: rateLimit.retryAfterSeconds },
-        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+        { error: 'Too many export attempts', retryAfterSeconds },
+        { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } }
       );
     }
 

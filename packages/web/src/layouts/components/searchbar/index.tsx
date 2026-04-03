@@ -1,6 +1,6 @@
 'use client';
 
-import type { Pair } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 import type { BoxProps } from '@mui/material/Box';
 import type { Breakpoint } from '@mui/material/styles';
 
@@ -13,7 +13,7 @@ import match from 'autosuggest-highlight/match';
 import { useBoolean } from 'minimal-shared/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
@@ -35,8 +35,6 @@ import { Iconify } from '@/components/template/iconify';
 import { Scrollbar } from '@/components/template/scrollbar';
 import { SearchNotFound } from '@/components/template/search-not-found';
 
-import { applyFilter } from './utils';
-
 // ----------------------------------------------------------------------
 
 const breakpoint: Breakpoint = 'sm';
@@ -47,10 +45,8 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   const router = useRouter();
 
   const { globalIsLoading } = useAppStore();
-
   const {
-    getAllPairs,
-    pairState: { pairs },
+    tokenState: { tokens },
   } = usePersistStore();
 
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
@@ -79,32 +75,36 @@ export function Searchbar({ sx, ...other }: BoxProps) {
     };
   }, [handleKeyDown]);
 
-  // Fetch tokens when dialog opens
-  useEffect(() => {
-    if (open && pairs.length === 0) {
-      getAllPairs();
-    }
-  }, [open, getAllPairs, pairs.length]);
+  // Filter tokens with balance > 0
+  const tokensWithBalance = useMemo(
+    () => tokens.filter((token) => BigNumber(token.balance).gt(0)),
+    [tokens]
+  );
+
+  // Filter tokens based on search query
+  const dataFiltered = useMemo(() => {
+    if (!searchQuery) return tokensWithBalance;
+
+    const query = searchQuery.toLowerCase();
+    return tokensWithBalance.filter(
+      (token) =>
+        token.symbol.toLowerCase().includes(query) || token.name.toLowerCase().includes(query)
+    );
+  }, [tokensWithBalance, searchQuery]);
 
   const handleAssetClick = useCallback(
-    (pair: Pair) => {
+    (token: Token) => {
       setTimeout(() => handleClose(), 50);
-
-      router.push(paths.assets.details(pair.asset));
+      router.push(paths.assets.details(token.symbol));
     },
-    [router, handleClose, pairs]
+    [router, handleClose]
   );
 
   const handleSearch = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSearchQuery(event.target.value);
   }, []);
 
-  const dataFiltered = applyFilter({
-    inputData: pairs,
-    query: searchQuery,
-  });
-
-  const notFound = searchQuery && !dataFiltered.length;
+  const notFound = searchQuery.length > 0 && dataFiltered.length === 0;
 
   const renderButton = () => (
     <Box
@@ -156,7 +156,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
         </SvgIcon>
       </Box>
 
-      {/* “Placeholder” text */}
+      {/* "Placeholder" text */}
       <Box component="span" sx={{ typography: 'body2', flexShrink: 0 }}>
         {t('Search assets...')}
       </Box>
@@ -182,8 +182,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   );
 
   const renderList = () => {
-    // Show loading state when pairs are being fetched
-    if (globalIsLoading && pairs.length === 0) {
+    if (globalIsLoading) {
       return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
           <Typography variant="body2" color="text.secondary">
@@ -193,16 +192,16 @@ export function Searchbar({ sx, ...other }: BoxProps) {
       );
     }
 
-    // Show empty state when no pairs are available
-    if (!globalIsLoading && pairs.length === 0) {
+    // Show empty state when no tokens are available
+    if (tokensWithBalance.length === 0) {
       return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
           <Iconify icon="eva:search-fill" width={48} sx={{ color: 'text.disabled', mb: 2 }} />
           <Typography variant="body2" color="text.secondary" align="center">
-            {t('No assets available')}
+            {t('No assets in wallet')}
           </Typography>
           <Typography variant="caption" color="text.disabled" align="center">
-            {t('Try refreshing the page or check your connection')}
+            {t('Connect your wallet to see your assets')}
           </Typography>
         </Box>
       );
@@ -219,70 +218,87 @@ export function Searchbar({ sx, ...other }: BoxProps) {
           },
         }}
       >
-        {dataFiltered.length &&
-          dataFiltered.map((item) => {
-            const partsTitle = parse(item.asset, match(item.asset, searchQuery));
-            // const partsSymbol = parse(item.asset, match(item.asset, searchQuery));
+        {dataFiltered.map((token) => {
+          const partsSymbol = parse(token.symbol, match(token.symbol, searchQuery));
+          const partsName = parse(token.name, match(token.name, searchQuery));
+          const balance = BigNumber(token.balance);
+          const value = balance.multipliedBy(token.price);
 
-            return (
-              <MenuItem disableRipple key={item.asset}>
-                <ListItemButton
-                  onClick={() => handleAssetClick(item)}
-                  sx={{
-                    borderWidth: 1,
-                    borderStyle: 'dashed',
-                    borderColor: 'transparent',
-                    borderBottomColor: theme.vars?.palette.divider || theme.palette.divider,
-                    '&:hover': {
-                      borderRadius: 1,
-                      borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
-                      backgroundColor:
-                        theme.vars?.palette.action.hover || theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <ListItemAvatar>
-                    <Avatar src={getCryptoIconUrl(`n${item.asset}`)} sx={{ width: 32, height: 32 }}>
-                      {item.asset.substring(0, 2)}
-                    </Avatar>
-                  </ListItemAvatar>
+          return (
+            <MenuItem disableRipple key={token.contract}>
+              <ListItemButton
+                onClick={() => handleAssetClick(token)}
+                sx={{
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: 'transparent',
+                  borderBottomColor: theme.vars?.palette.divider || theme.palette.divider,
+                  '&:hover': {
+                    borderRadius: 1,
+                    borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
+                    backgroundColor:
+                      theme.vars?.palette.action.hover || theme.palette.action.hover,
+                  },
+                }}
+              >
+                <ListItemAvatar>
+                  <Avatar
+                    src={token.icon || getCryptoIconUrl(token.symbol)}
+                    sx={{ width: 32, height: 32 }}
+                  >
+                    {token.symbol.substring(0, 2)}
+                  </Avatar>
+                </ListItemAvatar>
 
-                  <ListItemText
-                    primary={
-                      <Box component="span">
-                        {partsTitle.map((part, index) => (
-                          <Box
-                            key={index}
-                            component="span"
-                            sx={{
-                              color: part.highlight
-                                ? theme.vars?.palette.primary.main || theme.palette.primary.main
-                                : theme.vars?.palette.text.primary || theme.palette.text.primary,
-                            }}
-                          >
-                            {part.text}
-                          </Box>
-                        ))}
-                      </Box>
-                    }
-                  />
+                <ListItemText
+                  primary={
+                    <Box component="span">
+                      {partsSymbol.map((part, index) => (
+                        <Box
+                          key={index}
+                          component="span"
+                          sx={{
+                            color: part.highlight
+                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                              : theme.vars?.palette.text.primary || theme.palette.text.primary,
+                          }}
+                        >
+                          {part.text}
+                        </Box>
+                      ))}
+                    </Box>
+                  }
+                  secondary={
+                    <Box component="span">
+                      {partsName.map((part, index) => (
+                        <Box
+                          key={index}
+                          component="span"
+                          sx={{
+                            color: part.highlight
+                              ? theme.vars?.palette.primary.main || theme.palette.primary.main
+                              : theme.vars?.palette.text.secondary || theme.palette.text.secondary,
+                          }}
+                        >
+                          {part.text}
+                        </Box>
+                      ))}
+                    </Box>
+                  }
+                />
 
-                  <Box sx={{ textAlign: 'right', minWidth: 80 }}>
-                    {/* {BigNumber(item.balance).gt(0) && (
-                      <Typography variant="body2" color="text.primary">
-                        {t('Balance: ')} {fCurrency(item.balance)}
-                      </Typography>
-                    )} */}
-                    {BigNumber(item.scaledPrice).gt(0) && (
-                      <Typography variant="caption" color="text.secondary">
-                        {fCurrency(item.scaledPrice)}
-                      </Typography>
-                    )}
-                  </Box>
-                </ListItemButton>
-              </MenuItem>
-            );
-          })}
+                <Box sx={{ textAlign: 'right', minWidth: 80 }}>
+                  <Typography variant="body2" color="text.primary">
+                    {fCurrency(value.toNumber())}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {balance.toFixed(token.decimals > 4 ? 4 : token.decimals)} {token.symbol}
+                  </Typography>
+                </Box>
+              </ListItemButton>
+            </MenuItem>
+          );
+        })}
       </MenuList>
     );
   };

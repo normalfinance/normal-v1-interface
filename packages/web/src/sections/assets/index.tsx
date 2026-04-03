@@ -1,97 +1,48 @@
 'use client';
 
-import type { Pair, TokenMapType } from '@normalfinance/types';
+import type { Token } from '@normalfinance/types';
 
+import { useEffect } from 'react';
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
-import { useMemo, useEffect } from 'react';
-import { logger } from '@normalfinance/utils';
-import { fCurrency } from '@/utils/format-number';
+import { useRouter } from 'next/navigation';
+import { logger, getCryptoIconUrl } from '@normalfinance/utils';
+import { fCurrency, fNumber } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { useAgo, useTreasury, useTotalVolume, useTotal1dTradeVolume } from '@/hooks';
-import { useTreasuryLiquidityByPair } from '@/hooks/stellar/useTreasuryLiquidityByPair';
 
-import Grid2 from '@mui/material/Grid2';
-import { Box, Stack, Typography } from '@mui/material';
-
-import ExploreStats from '@/components/_explore-page-components/explore-stats/explore-stats';
 import {
-  type SingleStat,
-  ExploreAssetsTable,
-  type ExploreAssetsRow,
-} from '@/components/_explore-page-components';
+  Box,
+  Card,
+  Stack,
+  Table,
+  Avatar,
+  TableRow,
+  TableBody,
+  TableCell,
+  TableHead,
+  Typography,
+  CardContent,
+  TableContainer,
+} from '@mui/material';
 
 export default function AssetsView() {
   const { t } = useTranslate();
+  const router = useRouter();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
   const {
     wallet,
-    tokenState: { tokensByAddress, lastUpdated: tokensLastUpdated },
+    tokenState: { tokens },
     getAllTokens,
-    pairState: { pairs, lastUpdated: pairsLastUpdated },
-    getAllPairs,
   } = usePersistStore();
 
-  const { totalVolume } = useTotalVolume();
-  const { total1dVolume, volumeByPair } = useTotal1dTradeVolume();
-
-  const { fetchBalances } = useTreasury();
-
-  const { liquidityValueByPair, balancesByPair, totalLiquidityValue, loading } =
-    useTreasuryLiquidityByPair({
-      pairs,
-      tokensByAddress,
-      fetchTreasuryBalancesForPair: fetchBalances,
-    });
-
-  const lastUpdated = useAgo(Math.min(tokensLastUpdated, pairsLastUpdated));
-
-  const tableData = useMemo(() => {
-    if (
-      !pairs ||
-      pairs.length === 0 ||
-      !tokensByAddress ||
-      Object.keys(tokensByAddress).length === 0
-    ) {
-      return [];
-    }
-    return pairs.map((pair) =>
-      formatPairForTable(pair, tokensByAddress, volumeByPair, liquidityValueByPair)
-    );
-  }, [pairs, tokensByAddress, volumeByPair]);
-
-  const totalTvl = tableData.reduce((acc, p) => acc.plus(p.collateral), BigNumber(0));
-
-  const stats: SingleStat[] = [
-    {
-      title: 'Total Volume',
-      total: Number(totalVolume.toFixed(2)),
-      percent: 0,
-      formatter: fCurrency,
-    },
-    {
-      title: '1D Volume',
-      total: Number(total1dVolume.toFixed(2)),
-      percent: 0,
-      formatter: fCurrency,
-    },
-    { title: 'Total TVL', total: Number(totalTvl.toFixed(2)), percent: 0, formatter: fCurrency },
-    {
-      title: 'Total Liquidity',
-      total: Number(totalLiquidityValue.toFixed(2)),
-      percent: 0,
-      formatter: fCurrency,
-    },
-  ];
-
-  // Effect hook to fetch all pools and tokens once the component mounts
+  // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllPairs();
         await getAllTokens();
       } catch (e) {
         logger.error(e);
@@ -102,14 +53,23 @@ export default function AssetsView() {
     refreshTokens();
   }, [wallet.address]);
 
-  useEffect(() => {
-    const fetchAllBalances = async (): Promise<void> => {
-      pairs.forEach(async (pair) => {
-        const balances = await fetchBalances(pair.pairAddress);
-      });
-    };
-    fetchAllBalances();
-  }, [pairs]);
+  // Filter tokens with balance > 0 and sort by value (descending)
+  const tokensWithBalance = tokens
+    .filter((token) => BigNumber(token.balance).gt(0))
+    .sort((a, b) => {
+      const aValue = BigNumber(a.balance).multipliedBy(a.price);
+      const bValue = BigNumber(b.balance).multipliedBy(b.price);
+      return bValue.minus(aValue).toNumber();
+    });
+
+  // Calculate total value
+  const totalValue = tokensWithBalance.reduce((acc, token) => {
+    return acc.plus(BigNumber(token.balance).multipliedBy(token.price));
+  }, BigNumber(0));
+
+  const handleRowClick = (token: Token) => {
+    router.push(paths.assets.details(token.symbol));
+  };
 
   return (
     <Box
@@ -120,52 +80,98 @@ export default function AssetsView() {
       })}
     >
       <DashboardContent maxWidth="xl">
-        <Stack spacing={1}>
+        <Stack spacing={1} mb={3}>
           <Typography variant="h4" color="text.primary">
             {t('Assets')}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t('as of ')}
-            {lastUpdated}
+          <Typography variant="body2" color="text.secondary">
+            {t('Your wallet tokens')}
           </Typography>
         </Stack>
-        <Grid2 width={1} sx={{ mt: 3 }}>
-          <ExploreStats stats={stats} />
-        </Grid2>
-        <Grid2>
-          <ExploreAssetsTable assets={tableData} loading={globalIsLoading} />
-        </Grid2>
+
+        {/* Total Value Card */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="subtitle2" color="text.secondary">
+              {t('Total Value')}
+            </Typography>
+            <Typography variant="h4">{fCurrency(totalValue.toNumber())}</Typography>
+          </CardContent>
+        </Card>
+
+        {/* Tokens Table */}
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('Asset')}</TableCell>
+                  <TableCell align="right">{t('Balance')}</TableCell>
+                  <TableCell align="right">{t('Price')}</TableCell>
+                  <TableCell align="right">{t('Value')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {globalIsLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      <Typography color="text.secondary">{t('Loading...')}</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : tokensWithBalance.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      <Typography color="text.secondary">{t('No assets found')}</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  tokensWithBalance.map((token) => {
+                    const balance = BigNumber(token.balance);
+                    const value = balance.multipliedBy(token.price);
+                    const balanceDisplay = balance.toFixed(
+                      token.decimals > 4 ? 4 : token.decimals
+                    );
+
+                    return (
+                      <TableRow
+                        key={token.contract}
+                        hover
+                        onClick={() => handleRowClick(token)}
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        <TableCell>
+                          <Stack direction="row" spacing={1.5} alignItems="center">
+                            <Avatar
+                              src={token.icon || getCryptoIconUrl(token.symbol)}
+                              alt={token.name}
+                              sx={{ width: 32, height: 32 }}
+                            />
+                            <Stack>
+                              <Typography variant="subtitle2">{token.symbol}</Typography>
+                              <Typography variant="caption" color="text.secondary" noWrap>
+                                {token.name}
+                              </Typography>
+                            </Stack>
+                          </Stack>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2">{fNumber(balanceDisplay)}</Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2">{fCurrency(token.price)}</Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="subtitle2">{fCurrency(value.toNumber())}</Typography>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
       </DashboardContent>
     </Box>
   );
 }
-
-const formatPairForTable = (
-  pair: Pair,
-  tokens: TokenMapType,
-  volumeByPair: Record<string, BigNumber>,
-  liquidityValueByPair: Record<string, BigNumber>
-): ExploreAssetsRow => {
-  const tokenLong = tokens[pair.tokens.long] ?? undefined;
-
-  // Scaled Price
-  const priceBoundaryDelta = BigNumber(pair.priceBounds.upper).minus(pair.priceBounds.lower);
-  const scaledPrice = BigNumber(pair.collateral.collateralPercentLong)
-    .multipliedBy(priceBoundaryDelta)
-    .plus(pair.priceBounds.lower);
-
-  return {
-    asset: pair.asset,
-    address: pair.pairAddress,
-    status: pair.status.tag,
-    price: pair.collateral.collateralPercentLong,
-    scaledPrice: scaledPrice.toFixed(2),
-    collateral: pair.collateral.totalCollateral.toString(),
-    liquidity:
-      pair.pairAddress in liquidityValueByPair
-        ? liquidityValueByPair[pair.pairAddress].toFixed(2)
-        : '0',
-    volume1d: pair.pairAddress in volumeByPair ? volumeByPair[pair.pairAddress].toFixed(2) : '0',
-    tokenLong,
-  };
-};

@@ -9,13 +9,13 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useUserActivity, useManageLiquidity } from '@/hooks';
+import { useUserActivity } from '@/hooks';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { cdn, format, logger, createKeypairFromSecret } from '@normalfinance/utils';
+import { cdn, format, logger } from '@normalfinance/utils';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   getLinkedWallets,
@@ -56,9 +56,7 @@ function WalletConnected({ address }: { address: string }) {
     getAllTokens,
   } = usePersistStore();
 
-  const { liquidityPositions } = useManageLiquidity();
-
-  const { recentActivity } = useUserActivity();
+  const { recentActivity } = useUserActivity(address);
 
   // Effect hook to fetch all tokens when the component mounts or address changes
   useEffect(() => {
@@ -107,7 +105,6 @@ function WalletConnected({ address }: { address: string }) {
         balance={totalBalance.toNumber()}
         percentageChange={0}
         tokens={tokens}
-        positions={liquidityPositions}
         activity={recentActivity}
       />
     </Box>
@@ -241,23 +238,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
           logger.log('[AccountDrawer] Successfully auto-connected platform custody wallet');
           return true;
         } else if (wallet.custodyChoice === 'self') {
-          const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
-          const storedPrivateKey = localStorage.getItem(NORMAL_WALLET_STORAGE_KEY);
-          if (storedPrivateKey) {
-            try {
-              const privateKey = atob(storedPrivateKey);
-              const keypair = createKeypairFromSecret(privateKey);
-              if (keypair.publicKey() === wallet.walletAddress) {
-                await importWalletFromPrivateKey(privateKey, wallet.walletName ?? undefined);
-                logger.log(
-                  '[AccountDrawer] Successfully auto-connected self-custody wallet from localStorage'
-                );
-                return true;
-              }
-            } catch (err) {
-              logger.warn('[AccountDrawer] Failed to restore from localStorage:', err);
-            }
-          }
+          // For self-custody: connect address-only. The restoreWallet useEffect
+          // in use-normal-wallet will handle the password prompt and keypair restoration.
+          await connectWalletWithoutKeypair(wallet.walletAddress);
+          logger.log('[AccountDrawer] Auto-connected self-custody wallet in address-only mode');
+          return true;
         }
         return false;
       } catch (error) {
@@ -265,7 +250,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
         return false;
       }
     },
-    [connectWalletWithoutKeypair, importWalletFromPrivateKey]
+    [connectWalletWithoutKeypair]
   );
 
   const handlePostAuthFlow = useCallback(async () => {
