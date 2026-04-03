@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import type { WalletActivityItem, WalletActivityKind } from '@/types/wallet-activity';
 
+export const dynamic = 'force-dynamic';
+
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 

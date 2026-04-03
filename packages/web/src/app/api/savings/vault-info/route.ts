@@ -4,6 +4,8 @@ import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 // ----------------------------------------------------------------------
 
 const sdk = new DefindexSDK({

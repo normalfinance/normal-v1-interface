@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate min output with 1% slippage
     const amountOutNum = BigInt(amountOut);
-    const minAmountOut = amountOutNum - amountOutNum / 100n; // 1% slippage
+    const minAmountOut = amountOutNum - amountOutNum / BigInt(100); // 1% slippage
 
     // swap_chained(user, swaps_chain, token_in, in_amount, out_min)
     txBuilder.addOperation(

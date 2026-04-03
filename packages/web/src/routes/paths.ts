@@ -24,6 +24,8 @@ export const paths = {
   docs: 'https://normalfinance.gitbook.io/docs',
   // main
   swap: '/swap',
+  /** Same destination as the /invest → /swap permanent redirect */
+  invest: '/swap',
   savings: '/savings',
   portfolio: '/portfolio',
   assets: {

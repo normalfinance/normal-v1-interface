@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     // Convert human-readable amount to stroops (7 decimals for Stellar)
     const [whole = '0', frac = ''] = String(amount).split('.');
     const padded = frac.padEnd(7, '0').slice(0, 7);
-    const amountInStroops = BigInt(whole) * 10_000_000n + BigInt(padded);
+    const amountInStroops = BigInt(whole) * BigInt(10_000_000) + BigInt(padded);
 
     const result = await sdk.depositToVault(VAULT_ADDRESS, {
       amounts: [Number(amountInStroops)],

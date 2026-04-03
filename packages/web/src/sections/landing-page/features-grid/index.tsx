@@ -49,15 +49,6 @@ export interface FeatureGridProps extends React.ComponentPropsWithoutRef<'sectio
 
 /* ––––– Shared styles ––––– */
 
-const getPaperSx = (theme: {
-  palette: { grey: Record<number, string> };
-  applyStyles: (mode: string, styles: object) => object;
-}) => ({
-  borderRadius: 3,
-  bgcolor: theme.palette.grey[100],
-  ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
-});
-
 const cardPadding = { xs: 2.5, md: 4 };
 
 /* ––––– Helper renderers ––––– */
@@ -72,7 +63,12 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
   return (
     <Paper
       variant="outlined"
-      sx={(theme) => ({ ...getPaperSx(theme), cursor: isLink ? 'pointer' : 'default' })}
+      sx={(theme) => ({
+        borderRadius: 3,
+        bgcolor: theme.palette.grey[100],
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
+        cursor: isLink ? 'pointer' : 'default',
+      })}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)} // keyboard focus
@@ -293,7 +289,9 @@ const TallCardItem: React.FC<TallCard> = (c) => {
     <Paper
       variant="outlined"
       sx={(theme) => ({
-        ...getPaperSx(theme),
+        borderRadius: 3,
+        bgcolor: theme.palette.grey[100],
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
         cursor: isLink ? 'pointer' : 'default',
         height: '100%',
       })}
@@ -366,7 +364,12 @@ const WideCardItem: React.FC<WideCard> = (c) => {
   return (
     <Paper
       variant="outlined"
-      sx={(theme) => ({ ...getPaperSx(theme), cursor: isLink ? 'pointer' : 'default' })}
+      sx={(theme) => ({
+        borderRadius: 3,
+        bgcolor: theme.palette.grey[100],
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
+        cursor: isLink ? 'pointer' : 'default',
+      })}
       onClick={() => isLink && router.push(c.url!)}
     >
       <Stack spacing={2} p={cardPadding} textAlign={{ xs: 'center', md: 'left' }}>
