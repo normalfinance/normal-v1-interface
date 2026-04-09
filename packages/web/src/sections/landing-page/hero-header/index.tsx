@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import { Box, Paper, Stack, Container, Typography } from '@mui/material';
+import { Box, Paper, Stack, Container, Typography, Chip } from '@mui/material';
 
 import TradeCard from '@/components/_common/trade-card';
 
@@ -136,7 +136,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 },
               }}
             >
-              {t('Trade and diversify any asset,')}{' '}
+              {t('Earn passive yield, and ')}{' '}
               <Box
                 component="span"
                 sx={{
@@ -154,7 +154,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   backgroundClip: 'text',
                 }}
               >
-                {t('in seconds')}
+                {t('watch it grow')}
               </Box>
             </Typography>
 
@@ -196,8 +196,18 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               <TradeCard queryParams={swapParams} />
             </Box>
 
-            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
-              {t(description)}
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ maxWidth: 340, mx: 'auto', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}
+            >
+              {t('A universal investing app - Trade and diversify any global asset in just one click.')}
+              <Chip
+                label={t('Coming soon')}
+                size="small"
+                color="info"
+                sx={{ fontWeight: 500 }}
+              />
             </Typography>
           </Box>
         </Stack>
