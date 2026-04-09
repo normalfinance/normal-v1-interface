@@ -28,10 +28,9 @@ const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
 const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
 
 const NAV_ITEMS: { url: string; label: string }[] = [
-  { url: paths.assets.root, label: 'Assets' },
-  { url: paths.invest, label: 'Invest' },
-  { url: paths.portfolio, label: 'Portfolio' },
   { url: paths.earn, label: 'Earn' },
+  { url: paths.invest, label: 'Swap' },
+  { url: paths.portfolio, label: 'Portfolio' },
   { url: paths.help.feedbackForm, label: 'Feedback' },
 ];
 
