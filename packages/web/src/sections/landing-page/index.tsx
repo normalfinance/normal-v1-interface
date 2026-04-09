@@ -1,12 +1,10 @@
 'use client';
 
 import type { Token } from '@normalfinance/types';
-import type { SwapQueryParams } from '@/types/query-params';
 
 import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { cdn, logger } from '@normalfinance/utils';
-import { useQueryParams } from '@/hooks/use-query-params';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import AnimatedDevFeature2 from '@/components/ui/animated-dev-feature';
@@ -83,7 +81,7 @@ export const featureCardTall = {
   tagline: 'Earn',
   heading: 'Put every dollar to work and earn 7%+ APY in seconds.',
   image: { component: <AnimatedPoolsFeature /> },
-  url: 'https://normalfinance.gitbook.io/docs/getting-started/guides/providing-liquidity',
+  url: '/savings',
 } as const;
 
 export const featureCardWide = {
@@ -96,8 +94,6 @@ export const featureCardWide = {
 };
 
 export default function LandingPage() {
-  const { params } = useQueryParams<SwapQueryParams>();
-
   const { setGlobalIsLoading } = useAppStore();
   const { wallet, getAllTokens } = usePersistStore();
 
@@ -118,7 +114,7 @@ export default function LandingPage() {
 
   return (
     <>
-      <HeroHeader swapParams={params} />
+      <HeroHeader />
       <FeatureGrid
         cardsSmall={featureCardsSmall}
         cardTall={featureCardTall}
