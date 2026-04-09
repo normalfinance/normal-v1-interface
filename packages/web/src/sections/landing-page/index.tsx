@@ -4,13 +4,9 @@ import type { Token } from '@normalfinance/types';
 import type { SwapQueryParams } from '@/types/query-params';
 
 import { useEffect } from 'react';
-import { Icon } from '@iconify/react';
 import { cdn, logger } from '@normalfinance/utils';
 import { useQueryParams } from '@/hooks/use-query-params';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-
-import AnimatedDevFeature2 from '@/components/ui/animated-dev-feature';
-import AnimatedPoolsFeature from '@/components/ui/animated-pools-feature';
 
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
@@ -18,7 +14,6 @@ import { HeroHeader } from './hero-header';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
 
-import type { SmallCard } from './features-grid';
 
 export type TokenMeta = Pick<Token, 'name' | 'symbol' | 'icon' | 'price' | 'percentageChange'>;
 

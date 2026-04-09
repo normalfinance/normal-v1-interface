@@ -3,6 +3,7 @@
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
+import { useBoolean } from '@/hooks';
 import { paths } from '@/routes/paths';
 import { isTestnet } from '@normalfinance/utils';
 import { allLangs, useTranslate } from '@/locales';
@@ -11,13 +12,13 @@ import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 import { Alert, Button, AlertTitle } from '@mui/material';
 
+import MigrationModal from '@/components/_common/migration-modal';
 import { useSettingsContext } from '@/components/template/settings';
 
 import { FooterSection } from '../core';
 import { NormalNavbar } from './normal-navbar';
 import { layoutClasses } from '../core/classes';
 import { MainSection } from '../core/main-section';
-import { Searchbar } from '../components/searchbar';
 import { NormalNavbarDefaults } from './navbar-props';
 import { LayoutSection } from '../core/layout-section';
 import { AccountDrawer } from '../components/account-drawer';
@@ -27,9 +28,6 @@ import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
-import MigrationModal from '@/components/_common/migration-modal';
-import { useBoolean } from '@/hooks';
-import { L } from '@upstash/redis/zmscore-Cq_Bzgy4';
 
 // ----------------------------------------------------------------------
 

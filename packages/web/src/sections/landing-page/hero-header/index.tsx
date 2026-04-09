@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import { Box, Paper, Stack, Container, Typography, Chip } from '@mui/material';
+import { Box, Chip, Paper, Stack, Container, Typography } from '@mui/material';
 
 import TradeCard from '@/components/_common/trade-card';
 
