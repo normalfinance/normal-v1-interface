@@ -3,5 +3,5 @@
  * Both use base32 encoding: A-Z and 2-7, 56 characters total.
  */
 export function isValidStellarAddress(address: string): boolean {
-  return /^[GC][A-Z2-7]{55}$/.test(address);
+  return address === 'native' || /^[GC][A-Z2-7]{55}$/.test(address);
 }

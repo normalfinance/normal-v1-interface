@@ -1,7 +1,5 @@
 'use client';
 
-import type { SwapQueryParams } from '@/types/query-params';
-
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
@@ -10,7 +8,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Paper, Stack, Container, Typography } from '@mui/material';
 
 import { WavyBackground } from './wavy-background';
-import SwapCard from '@/components/_common/swap-card';
+import SavingsCard from '@/components/_common/savings-card';
 
 type ImageProps = {
   src: string;
@@ -24,22 +22,12 @@ type Props = {
   halbornImage: ImageProps;
   tagline: string;
   taglineLogo: ImageProps;
-  swapParams?: SwapQueryParams;
 };
 
 type HeroHeaderProps = Partial<Props>;
 
 export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
-  const {
-    heading,
-    description,
-    image,
-    halbornImage,
-    tagline,
-    taglineLogo,
-    swapParams,
-    ...sectionProps
-  } = {
+  const { heading, description, image, halbornImage, tagline, taglineLogo, ...sectionProps } = {
     ...HeroHeaderDefaults,
     ...incomingProps,
   } as Props;
@@ -136,7 +124,8 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 },
               }}
             >
-              {t('Trade and diversify any asset,')}{' '}
+              {t('Put your USDC to work.')}
+              <br />
               <Box
                 component="span"
                 sx={{
@@ -154,7 +143,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   backgroundClip: 'text',
                 }}
               >
-                {t('in seconds')}
+                {t('In seconds.')}
               </Box>
             </Typography>
 
@@ -174,11 +163,11 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 justifyContent: 'center',
               }}
             >
-              <span>💸 {t('Low fees')}</span>
+              <span>💰 {t('Competitive yield')}</span>
               <span>•</span>
-              <span>🌍 {t('Global support')}</span>
+              <span>🔓 {t('Fully flexible')}</span>
               <span>•</span>
-              <span>⚡ {t('Instant settlement')}</span>
+              <span>🛡️ {t('Vault secured')}</span>
             </Typography>
 
             <Box
@@ -193,7 +182,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 boxShadow: (thm) => `0px 9px 50px 0px ${alpha(thm.palette.common.black, 0.25)}`,
               }}
             >
-              <SwapCard />
+              <SavingsCard />
             </Box>
 
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
@@ -210,8 +199,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
 
 export const HeroHeaderDefaults: Props = {
   heading: 'Medium length hero heading goes here',
-  description:
-    'A universal investing app - Trade and diversify any global asset in just one click.',
+  description: 'Your dollars deserve better. Earn competitive yield within clicks.',
   image: {
     src: cdn('homepage/stellar-logo.webp'),
     alt: 'Stellar Logo Long',

@@ -5,13 +5,16 @@ const KEY_LENGTH = 32;
 const IV_LENGTH = 12;
 const SALT_LENGTH = 32;
 
-const SERVER_SECRET = process.env.MNEMONIC_ENCRYPTION_SECRET;
-
-if (!SERVER_SECRET || SERVER_SECRET.length < 32) {
-  throw new Error(
-    'MNEMONIC_ENCRYPTION_SECRET environment variable is required and must be at least 32 characters. ' +
-      'Set it in your environment or .env file.'
-  );
+/** Read at call time so `next build` can import this module without the secret in the build environment. */
+function getServerSecret(): string {
+  const secret = process.env.MNEMONIC_ENCRYPTION_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      'MNEMONIC_ENCRYPTION_SECRET environment variable is required and must be at least 32 characters. ' +
+        'Set it in your environment or .env file.'
+    );
+  }
+  return secret;
 }
 
 async function deriveKey(
@@ -58,7 +61,7 @@ export async function encryptMnemonicServer(
     const salt = generateRandomBytes(SALT_LENGTH);
     const iv = generateRandomBytes(IV_LENGTH);
 
-    const key = await deriveKey(userIdentifier, salt, SERVER_SECRET!);
+    const key = await deriveKey(userIdentifier, salt, getServerSecret());
 
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
     const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
@@ -100,7 +103,7 @@ export async function decryptMnemonicServer(
     const encryptedData = encryptedBuffer.subarray(0, encryptedBuffer.length - authTagLength);
     const authTag = encryptedBuffer.subarray(encryptedBuffer.length - authTagLength);
 
-    const key = await deriveKey(userIdentifier, saltBuffer, SERVER_SECRET!);
+    const key = await deriveKey(userIdentifier, saltBuffer, getServerSecret());
 
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, ivBuffer);
     decipher.setAuthTag(authTag);
