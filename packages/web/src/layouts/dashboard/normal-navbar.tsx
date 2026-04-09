@@ -22,8 +22,6 @@ import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/materia
 import { Logo } from '@/components/template/logo';
 import { GlowBorder } from '@/components/_common/glow-border';
 
-import { Searchbar } from '../components/searchbar';
-
 const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
 const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
 
@@ -80,7 +78,6 @@ export interface Props {
   logo: ImageProps;
   links: LinkProps[];
   buttons: NavButton[];
-  searchbar?: React.ReactNode;
   language?: React.ReactNode;
   account?: React.ReactNode;
 }
@@ -89,7 +86,7 @@ export type NormalNavbarProps = React.ComponentPropsWithoutRef<'section'> & Part
 
 export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   const { t } = useTranslate();
-  const { links = [], searchbar, language, account } = props;
+  const { links = [], language, account } = props;
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const pathname = usePathname();
@@ -188,7 +185,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         sx={{
           width: '100%',
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr auto', lg: '1fr minmax(160px, 320px) 1fr' },
+          gridTemplateColumns: { xs: '1fr auto', lg: '1fr auto' },
           alignItems: 'center',
           columnGap: 2,
         }}
@@ -298,17 +295,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           </IconButton>
         </Box>
 
-        <Box
-          sx={{
-            display: { xs: 'none', lg: 'flex' },
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Box sx={{ width: '100%', maxWidth: 320, mx: 'auto' }}>
-            <Searchbar />
-          </Box>
-        </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
           <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center' }}>
@@ -415,7 +401,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               {links
                 .filter((l) => !!l.megaMenu)
                 .map((link, i) => (
-                  <MobileMega key={i} megaMenu={link.megaMenu!} searchbar={searchbar} />
+                  <MobileMega key={i} megaMenu={link.megaMenu!} />
                 ))}
             </Box>
           </m.div>
@@ -749,9 +735,6 @@ function MobileMega({
   };
   return (
     <Box sx={{ py: 0 }}>
-      <Box sx={{ width: '100%', mb: 4 }}>
-        <Searchbar />
-      </Box>
 
       <Box
         sx={{
