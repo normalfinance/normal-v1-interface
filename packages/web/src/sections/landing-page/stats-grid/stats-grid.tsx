@@ -28,23 +28,23 @@ const DEFAULT_PROPS = {
     'Normal powers the largest catalogue of on-chain real-world assets and index funds, with thousands of dollars in weekly volume across 100+ assets and funds.',
   stats: [
     {
-      percentage: '$400K+',
+      percentage: '$1M+',
       heading: 'AUM',
       description: '',
     },
     {
       percentage: '2,000+',
-      heading: 'Investors',
+      heading: 'Users',
       description: '',
     },
     {
-      percentage: 'Soon',
-      heading: 'Average APY',
+      percentage: '50+',
+      heading: 'Countries',
       description: '',
     },
     {
-      percentage: 'Soon',
-      heading: '+24H volume',
+      percentage: 'Coming soon',
+      heading: 'Total volume',
       description: '',
     },
   ],
@@ -138,12 +138,12 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
                   '&:hover': { bgcolor: 'secondary.light' },
                   color: 'text.primary',
                 }}
-                // onClick={() =>
-                //   trackEvent('button_clicked', {
-                //     label: 'Learn more',
-                //     location: 'Home',
-                //   })
-                // }
+              // onClick={() =>
+              //   trackEvent('button_clicked', {
+              //     label: 'Learn more',
+              //     location: 'Home',
+              //   })
+              // }
               >
                 {t('Learn more')}
               </Button>
