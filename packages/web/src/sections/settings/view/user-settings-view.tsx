@@ -42,7 +42,13 @@ export function UserSettingsView() {
   const tabs = useTabs('general');
 
   return (
-    <Box sx={{ bgcolor: 'grey.100', minHeight: '100dvh' }}>
+    <Box
+      sx={(theme) => ({
+        bgcolor: theme.palette.grey[100],
+        minHeight: '100dvh',
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[900] }),
+      })}
+    >
       <DashboardContent maxWidth="xl">
         <CustomBreadcrumbs
           heading={t('Settings')}

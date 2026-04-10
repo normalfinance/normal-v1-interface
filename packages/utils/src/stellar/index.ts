@@ -1,11 +1,10 @@
 export * as time from './time';
 export * from './convert';
+export * from './pool';
 export * from './prices';
 export * from './trustlines';
-export * from './events';
 export * from './oracle';
 export * from './token';
-export * from './pool';
 export * from './normal-wallet';
 export * from './mnemonic-encryption';
 export * from './asset';

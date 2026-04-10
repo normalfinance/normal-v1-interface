@@ -23,18 +23,15 @@ export const paths = {
   blog: 'https://normalfi.substack.com/',
   docs: 'https://normalfinance.gitbook.io/docs',
   // main
-  invest: '/invest',
+  swap: '/swap',
+  /** Same destination as the /invest → /swap permanent redirect */
+  invest: '/swap',
+  savings: '/savings',
   portfolio: '/portfolio',
   assets: {
     root: '/assets',
     details: (symbol: string) => `/assets/${symbol}`,
   },
-  indexes: {
-    root: '/indexes',
-    create: '/indexes/create',
-    details: (id: string) => `/indexes/${id}`,
-  },
-  earn: '/earn',
   rewards: '/rewards',
   settings: '/settings',
   transaction: {

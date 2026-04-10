@@ -9,34 +9,19 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useUserActivity, useManageLiquidity } from '@/hooks';
+import { useUserActivity } from '@/hooks';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { cdn, format, logger } from '@normalfinance/utils';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   getLinkedWallets,
   type LinkedWallet,
   checkWalletCreationLimit,
 } from '@/services/linked-wallets';
-import {
-  generateAESKey,
-  decryptWithAES,
-  exportAESKeyAsBase64,
-  importAESKeyFromBase64,
-  encryptWithRSAPublicKey,
-} from '@/lib/client-crypto';
-import {
-  cdn,
-  format,
-  logger,
-  validateMnemonic,
-  normalizeMnemonic,
-  createKeypairFromSecret,
-  createWalletFromMnemonic,
-} from '@normalfinance/utils';
 
 import {
   Box,
@@ -71,9 +56,7 @@ function WalletConnected({ address }: { address: string }) {
     getAllTokens,
   } = usePersistStore();
 
-  const { liquidityPositions } = useManageLiquidity();
-
-  const { recentActivity } = useUserActivity();
+  const { recentActivity } = useUserActivity(address);
 
   // Effect hook to fetch all tokens when the component mounts or address changes
   useEffect(() => {
@@ -122,7 +105,6 @@ function WalletConnected({ address }: { address: string }) {
         balance={totalBalance.toNumber()}
         percentageChange={0}
         tokens={tokens}
-        positions={liquidityPositions}
         activity={recentActivity}
       />
     </Box>
@@ -143,6 +125,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
+    connectWalletWithoutKeypair,
     publicKey: normalPublicKey,
     isConnected: isNormalConnected,
     disconnectWallet: disconnectNormalWallet,
@@ -178,6 +161,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
+  const [showImportOptionInSelection, setShowImportOptionInSelection] = useState(false);
   const [resetEmail, setResetEmail] = useState<string | null>(null);
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
   const [isCheckingRateLimit, setIsCheckingRateLimit] = useState(false);
@@ -246,132 +230,19 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
   }, [connectWallet, onClose]);
 
-  const handleSwitchToExternalWallet = useCallback(async () => {
-    if (persist.wallet.walletType === 'normal-wallet') {
-      await disconnectNormalWallet();
-    }
-    await handleConnectStellarWallet();
-  }, [persist.wallet.walletType, disconnectNormalWallet, handleConnectStellarWallet]);
-
-  const handleSwitchToCreateNormalWallet = useCallback(async () => {
-    const isExternal =
-      persist.wallet.walletType != null && persist.wallet.walletType !== 'normal-wallet';
-    if (isExternal) {
-      await disconnectWallet();
-    }
-    setShowCreateNormalWallet(true);
-  }, [persist.wallet.walletType, disconnectWallet]);
-
-  const handleSwitchToImportNormalWallet = useCallback(async () => {
-    const isExternal =
-      persist.wallet.walletType != null && persist.wallet.walletType !== 'normal-wallet';
-    if (isExternal) {
-      await disconnectWallet();
-    }
-    setShowImportNormalWallet(true);
-  }, [persist.wallet.walletType, disconnectWallet]);
-
-  const fetchAndDecryptMnemonic = useCallback(
-    async (walletAddress: string): Promise<string | null> => {
-      if (!session?.user?.id || !session?.user?.email || !session?.access_token) {
-        return null;
-      }
-
-      try {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        };
-
-        const rsaKeysResponse = await fetch('/api/user/rsa-keys', {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        });
-
-        if (!rsaKeysResponse.ok) {
-          throw new Error('Could not fetch RSA keys');
-        }
-
-        const rsaKeysData = await rsaKeysResponse.json();
-
-        if (!rsaKeysData.hasKeys) {
-          throw new Error('RSA keys not found');
-        }
-
-        const aesKey = await generateAESKey();
-        const aesKeyBase64 = await exportAESKeyAsBase64(aesKey);
-        const encryptedAESKey = await encryptWithRSAPublicKey(aesKeyBase64, rsaKeysData.publicKey);
-
-        const response = await fetch(`/api/wallets/mnemonic/${walletAddress}`, {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify({
-            encryptedAESKey,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Could not load stored recovery phrase');
-        }
-
-        const { encryptedMnemonic, iv } = await response.json();
-
-        const importedAESKey = await importAESKeyFromBase64(aesKeyBase64);
-        const decryptedMnemonic = await decryptWithAES(encryptedMnemonic, iv, importedAESKey);
-
-        return decryptedMnemonic;
-      } catch (err: any) {
-        logger.warn('[AccountDrawer] Failed to fetch and decrypt mnemonic:', err);
-        return null;
-      }
-    },
-    [session]
-  );
-
   const attemptAutoConnect = useCallback(
     async (wallet: LinkedWallet): Promise<boolean> => {
       try {
         if (wallet.custodyChoice === 'platform') {
-          const mnemonic = await fetchAndDecryptMnemonic(wallet.walletAddress);
-          if (!mnemonic) {
-            return false;
-          }
-
-          const normalized = normalizeMnemonic(mnemonic);
-          if (!validateMnemonic(normalized)) {
-            logger.error('[AccountDrawer] Invalid mnemonic from platform custody');
-            return false;
-          }
-
-          const walletData = createWalletFromMnemonic(normalized);
-          if (walletData.publicKey !== wallet.walletAddress) {
-            logger.error('[AccountDrawer] Mnemonic does not match wallet address');
-            return false;
-          }
-
-          await importWalletFromMnemonic(normalized, undefined, wallet.walletName ?? undefined);
+          await connectWalletWithoutKeypair(wallet.walletAddress);
           logger.log('[AccountDrawer] Successfully auto-connected platform custody wallet');
           return true;
         } else if (wallet.custodyChoice === 'self') {
-          const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
-          const storedPrivateKey = localStorage.getItem(NORMAL_WALLET_STORAGE_KEY);
-          if (storedPrivateKey) {
-            try {
-              const privateKey = atob(storedPrivateKey);
-              const keypair = createKeypairFromSecret(privateKey);
-              if (keypair.publicKey() === wallet.walletAddress) {
-                await importWalletFromPrivateKey(privateKey, wallet.walletName ?? undefined);
-                logger.log(
-                  '[AccountDrawer] Successfully auto-connected self-custody wallet from localStorage'
-                );
-                return true;
-              }
-            } catch (err) {
-              logger.warn('[AccountDrawer] Failed to restore from localStorage:', err);
-            }
-          }
+          // For self-custody: connect address-only. The restoreWallet useEffect
+          // in use-normal-wallet will handle the password prompt and keypair restoration.
+          await connectWalletWithoutKeypair(wallet.walletAddress);
+          logger.log('[AccountDrawer] Auto-connected self-custody wallet in address-only mode');
+          return true;
         }
         return false;
       } catch (error) {
@@ -379,7 +250,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
         return false;
       }
     },
-    [fetchAndDecryptMnemonic, importWalletFromMnemonic, importWalletFromPrivateKey]
+    [connectWalletWithoutKeypair]
   );
 
   const handlePostAuthFlow = useCallback(async () => {
@@ -404,6 +275,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
       if (linkedWallets.length === 0) {
         if (!hasSeenWalletSelectionModal()) {
+          setShowImportOptionInSelection(false);
           setShowWalletSelection(true);
         } else {
           await handleConnectStellarWallet();
@@ -457,7 +329,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     onClose();
   };
 
-  /** Handle Normal wallet import success */
   const handleNormalWalletImported = async () => {
     setShowImportNormalWallet(false);
     if (normalPublicKey) {
@@ -720,7 +591,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       color="primary"
                       fullWidth
                       startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => setShowWalletSelection(true)}
+                      onClick={() => {
+                        setShowImportOptionInSelection(true);
+                        setShowWalletSelection(true);
+                      }}
                     >
                       {t('Switch Wallets')}
                     </Button>
@@ -749,7 +623,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       color="primary"
                       fullWidth
                       startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => setShowWalletSelection(true)}
+                      onClick={() => {
+                        setShowImportOptionInSelection(true);
+                        setShowWalletSelection(true);
+                      }}
                     >
                       {t('Switch Wallets')}
                     </Button>
@@ -772,10 +649,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
       />
       <WalletSelectionModal
         open={showWalletSelection}
-        onClose={() => setShowWalletSelection(false)}
-        onCreateNormalWallet={handleSwitchToCreateNormalWallet}
-        onConnectNormalWallet={handleSwitchToImportNormalWallet}
-        onContinueToOtherWallets={handleSwitchToExternalWallet}
+        onClose={() => {
+          setShowWalletSelection(false);
+          setShowImportOptionInSelection(false);
+        }}
+        onCreateNormalWallet={() => setShowCreateNormalWallet(true)}
+        onConnectNormalWallet={() => setShowImportNormalWallet(true)}
+        onContinueToOtherWallets={handleConnectStellarWallet}
+        showImportOption={showImportOptionInSelection}
       />
       <NormalWalletCreate
         open={showCreateNormalWallet}
@@ -786,6 +667,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
         open={showImportNormalWallet}
         onClose={() => setShowImportNormalWallet(false)}
         onSuccess={handleNormalWalletImported}
+        onBack={() => {
+          setShowImportNormalWallet(false);
+          setShowImportOptionInSelection(true);
+          setShowWalletSelection(true);
+        }}
       />
     </>
   );

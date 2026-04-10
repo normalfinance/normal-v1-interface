@@ -41,6 +41,13 @@ const ipRateLimiter = new Ratelimit({
   limiter: Ratelimit.slidingWindow(50, '10 s'),
 });
 
+// Allow 3 requests per 10 minutes, sliding window (for mnemonic export)
+export const exportMnemonicRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, '10 m'),
+  prefix: 'export-mnemonic',
+});
+
 export const rateLimiter = {
   limit: async (walletAddress: string, ip?: string) => {
     // Rate limit by wallet address

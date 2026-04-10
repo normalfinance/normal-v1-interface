@@ -70,6 +70,25 @@ const nextConfig = {
       // },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/invest',
+        destination: '/swap',
+        permanent: true,
+      },
+      {
+        source: '/earn',
+        destination: '/savings',
+        permanent: true,
+      },
+      {
+        source: '/indexes/:path*',
+        destination: '/',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

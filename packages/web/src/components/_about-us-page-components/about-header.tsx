@@ -73,7 +73,14 @@ export const AboutHeader: React.FC = () => {
   };
 
   return (
-    <Box component="section" py={{ xs: 8, md: 12, lg: 14 }} bgcolor="#F8FAFC">
+    <Box
+      component="section"
+      py={{ xs: 8, md: 12, lg: 14 }}
+      sx={(theme) => ({
+        bgcolor: theme.palette.grey[50],
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[900] }),
+      })}
+    >
       <Container>
         <Grid2 size={{ xs: 12, md: 6 }} mb={{ xs: 2, md: 4 }}>
           <Box
@@ -81,11 +88,11 @@ export const AboutHeader: React.FC = () => {
               display: 'inline-flex',
               borderRadius: 1,
               fontSize: 12,
-              bgcolor: 'white',
-              '&:hover': { bgcolor: 'white' },
+              bgcolor: 'background.paper',
+              '&:hover': { bgcolor: 'background.paper' },
               color: 'text.primary',
               border: 1,
-              borderColor: 'grey.300',
+              borderColor: 'divider',
               px: 1,
               py: 0.5,
               fontWeight: 'bold',
@@ -119,7 +126,7 @@ export const AboutHeader: React.FC = () => {
             </Typography>
           </Grid2>
           <Grid2 size={{ xs: 12, md: 5 }}>
-            <Typography variant="body1" color="grey.700">
+            <Typography variant="body1" color="text.secondary">
               {t(
                 'At Normal, our mission is to make crypto normal—giving everyone friction‑free exposure to the entire digital‑asset ecosystem.'
               )}
@@ -146,11 +153,11 @@ export const AboutHeader: React.FC = () => {
                 onClick={() => router.push('/roadmap')}
                 sx={{
                   borderRadius: 2,
-                  bgcolor: 'white',
-                  '&:hover': { bgcolor: 'white' },
+                  bgcolor: 'background.paper',
+                  '&:hover': { bgcolor: 'background.paper' },
                   color: 'text.primary',
                   border: 1,
-                  borderColor: 'grey.300',
+                  borderColor: 'divider',
                 }}
               >
                 {t('Roadmap')}

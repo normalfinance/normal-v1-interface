@@ -48,7 +48,10 @@ export const Moments: React.FC<MomentsProps> = (props) => {
       component="section"
       {...sectionProps}
       py={{ xs: 8, md: 12, lg: 14 }}
-      sx={{ backgroundColor: '#F8FAFC' }}
+      sx={(theme) => ({
+        backgroundColor: theme.palette.grey[50],
+        ...theme.applyStyles('dark', { backgroundColor: theme.palette.grey[900] }),
+      })}
     >
       <Container>
         <Box textAlign="center" mb={{ xs: 6, md: 9, lg: 10 }} maxWidth={600} mx="auto">

@@ -1,11 +1,9 @@
 'use client';
 
 import type { Token } from '@normalfinance/types';
-import type { SwapQueryParams } from '@/types/query-params';
 
 import { useEffect } from 'react';
 import { cdn, logger } from '@normalfinance/utils';
-import { useQueryParams } from '@/hooks/use-query-params';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { CtaImage } from './cta';
@@ -50,17 +48,14 @@ export const tokens: TokenMeta[] = [
 
 
 export default function LandingPage() {
-  const { params } = useQueryParams<SwapQueryParams>();
-
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens, getAllPairs } = usePersistStore();
+  const { wallet, getAllTokens } = usePersistStore();
 
   // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllPairs();
         await getAllTokens();
       } catch (e) {
         logger.error(e);
@@ -73,7 +68,7 @@ export default function LandingPage() {
 
   return (
     <>
-      <HeroHeader swapParams={params} />
+      <HeroHeader/>
       <StatsGrid />
       <TestimonialGrid />
       <FaqAccordion />

@@ -139,7 +139,7 @@ export const tokens: Token[] = [
 /* -------------------------------------------------------------------------- */
 
 const paperSx = {
-  bgcolor: '#F9FAFB',
+  bgcolor: 'background.neutral',
   borderRadius: 3,
 };
 

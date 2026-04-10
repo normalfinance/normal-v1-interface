@@ -14,14 +14,13 @@ export default function PortfolioView() {
   const { t } = useTranslate();
 
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens, getAllPairs } = usePersistStore();
+  const { wallet, getAllTokens } = usePersistStore();
 
-  // Effect hook to fetch all pairs and tokens once the component mounts
+  // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllPairs();
         await getAllTokens();
       } catch (e) {
         logger.error(e);
@@ -30,7 +29,7 @@ export default function PortfolioView() {
       }
     };
     refreshTokens();
-  }, [wallet.address]);
+  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
   return (
     <DashboardContent maxWidth="xl">
@@ -39,7 +38,7 @@ export default function PortfolioView() {
           {t('Portfolio')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {t('View your total balance, asset breakdown, and more.')}
+          {t('View your total balance and asset breakdown.')}
         </Typography>
       </Stack>
 

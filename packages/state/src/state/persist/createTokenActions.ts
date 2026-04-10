@@ -1,5 +1,4 @@
 import { ApiToken, AppStorePersist, Token, TokenActions, TokenState } from '@normalfinance/types';
-import axios from 'axios';
 import { usePersistStore } from '../store';
 import {
   checkTrustline,
@@ -7,8 +6,6 @@ import {
   format,
   getReflectorExternalPrice,
   getTokenBalance,
-  isNormalToken,
-  isTestnet,
   logger,
 } from '@normalfinance/utils';
 import { BigNumber } from 'bignumber.js';
@@ -30,34 +27,20 @@ const fetchTokenBalance = async (token: ApiToken, address: string): Promise<BigN
 };
 
 const fetchTokenPrice = async (token: ApiToken): Promise<BigNumber> => {
-  if (isNormalToken(token as Token)) {
-    // not the greatest cast, but it'll work
-    const pairByToken = usePersistStore.getState().pairState.pairByToken;
-    if (!pairByToken || !Object.keys(pairByToken).length) return BigNumber(0);
+  let oraclePrice = BigNumber(0);
 
-    const pair = pairByToken[token.contract];
-    if (!pair) return BigNumber(0);
-
-    const isTokenLong = token.contract === pair.tokens.long;
-
-    return BigNumber(
-      isTokenLong
-        ? pair.collateral.collateralPercentLong
-        : 1 - Number(pair.collateral.collateralPercentLong)
-    );
-  } else {
-    let oraclePrice = BigNumber(0);
-
-    try {
-      const { price } = await getReflectorExternalPrice(token.symbol);
-      oraclePrice = BigNumber(format.fTokenAmount(price, 14));
-    } catch (error) {
-      logger.error('Failed getting USDC oracle price: ', error);
-      oraclePrice = BigNumber(1); // fallback
+  try {
+    const { price } = await getReflectorExternalPrice(token.symbol);
+    oraclePrice = BigNumber(format.fTokenAmount(price, 14));
+  } catch (error) {
+    logger.error('Failed getting oracle price: ', error);
+    // Fallback to 1 for stablecoins
+    if (token.symbol === 'USDC') {
+      oraclePrice = BigNumber(1);
     }
-
-    return oraclePrice;
   }
+
+  return oraclePrice;
 };
 
 export const createTokenActions = (): TokenActions => {
@@ -73,60 +56,12 @@ export const createTokenActions = (): TokenActions => {
     getAllTokens: async (override: boolean = false) => {
       try {
         const now = Date.now();
-        // const lastFetched = usePersistStore.getState().tokenState.lastUpdated;
-        // const refreshInterval = 1000 * 60 * 5; // 5 minutes
 
-        const zeroTokenBalance = usePersistStore
-          .getState()
-          .tokenState.tokens.every((tkn) => tkn.balance === '0');
-
-        // `if (lastFetched && !zeroTokenBalance && now - lastFetched < refreshInterval && !override) {
-        //   return;
-        // }`
-
-        let tokens: ApiToken[] = [];
-
-        // Load 3rd party tokens
-        const tokenListName = isTestnet() ? 'tokenListTestnet' : 'tokenList';
-        const { data: apiTokens } = await axios.get(
-          `https://raw.githubusercontent.com/normalfinance/token-list/main/${tokenListName}.json`
-        );
-        if (apiTokens) tokens = tokens.concat(apiTokens.assets);
-
-        // Load Normal tokens from Pairs
-        const persistStore = usePersistStore.getState();
-
-        persistStore.pairState.pairs.forEach((pair) => {
-          // Long
-          const longTkn: ApiToken = {
-            symbol: `n${pair.asset}`,
-            issuer: constants.StellarConfig.NORMAL_ISSUER,
-            contract: pair.tokens.long,
-            name: `${pair.asset}`,
-            org: 'Normal',
-            domain: 'normalfinance.io',
-            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.svg`,
-            decimals: 7,
-            featured: false,
-          };
-
-          // Short
-          const shortTkn: ApiToken = {
-            symbol: `sn${pair.asset}`,
-            issuer: constants.StellarConfig.NORMAL_ISSUER,
-            contract: pair.tokens.short,
-            name: `Short ${pair.asset}`,
-            org: 'Normal',
-            domain: 'normalfinance.io',
-            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.svg`,
-            decimals: 7,
-            featured: false,
-          };
-
-          tokens = tokens.concat([longTkn, shortTkn]);
-        });
+        // Load tokens from local token list
+        const tokens: ApiToken[] = constants.getTokenList();
 
         // Load all token info
+        const persistStore = usePersistStore.getState();
         const allTokens = tokens
           ? tokens.map(async (token: ApiToken) => {
               await persistStore.updateTokenInfo(token);

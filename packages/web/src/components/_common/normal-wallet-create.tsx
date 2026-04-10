@@ -6,7 +6,6 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { linkWallet, updateWalletName } from '@/services/linked-wallets';
-import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
 import {
   logger,
   splitMnemonicToWords,
@@ -16,10 +15,10 @@ import {
 import {
   generateAESKey,
   encryptWithAES,
+  encryptForTransit,
   generateRSAKeyPair,
   exportAESKeyAsBase64,
   encryptWithRSAPublicKey,
-  encryptPrivateKeyForStorage,
 } from '@/lib/client-crypto';
 
 import {
@@ -70,7 +69,7 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
 export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalWalletCreateProps) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { createWallet, signTransaction } = useNormalWallet();
+  const { createWallet } = useNormalWallet();
   const { user } = useSupabaseAuth();
 
   const [stage, setStage] = useState<CreateStage>('creating');
@@ -123,6 +122,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   }, [open, stage]); // Removed createWallet from dependencies to prevent infinite loop
 
   const handleBackupWallet = () => {
+    setCustodyChoice('platform');
     setStage('custody-choice');
   };
 
@@ -172,12 +172,22 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
       if (!rsaKeysData.hasKeys) {
         const rsaKeyPair = await generateRSAKeyPair();
 
-        const clientSecret = session.access_token.substring(0, 32);
-        const encryptedPrivateKeyData = await encryptPrivateKeyForStorage(
-          rsaKeyPair.privateKey,
-          user.id,
-          clientSecret
-        );
+        // Fetch transit public key for hybrid encryption
+        const transitKeyResponse = await fetch('/api/user/transit-public-key', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          credentials: 'include',
+        });
+
+        if (!transitKeyResponse.ok) {
+          throw new Error('Failed to fetch transit public key');
+        }
+
+        const { publicKey: transitPublicKey } = await transitKeyResponse.json();
+        const transitEncrypted = await encryptForTransit(rsaKeyPair.privateKey, transitPublicKey);
 
         const storeRSAKeysResponse = await fetch('/api/user/rsa-keys', {
           method: 'POST',
@@ -188,9 +198,9 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           credentials: 'include',
           body: JSON.stringify({
             publicKey: rsaKeyPair.publicKey,
-            encryptedPrivateKey: encryptedPrivateKeyData.encryptedPrivateKey,
-            iv: encryptedPrivateKeyData.iv,
-            salt: encryptedPrivateKeyData.salt,
+            encryptedPrivateKey: transitEncrypted.encryptedData,
+            iv: transitEncrypted.iv,
+            encryptedTransitKey: transitEncrypted.encryptedTransitKey,
           }),
         });
 
@@ -282,7 +292,6 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
       }
     }
 
-    const walletAddress = publicKey;
     setMnemonic(null);
     setPublicKey(null);
     setWalletName('');
@@ -297,56 +306,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setIsSavingCustody(false);
     enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
     onSuccess();
-
-    if (walletAddress) {
-      requestFaucetFundingAndTrustline(walletAddress).catch((err) => {
-        logger.warn('[NormalWalletCreate] Failed to fund wallet or create trustline:', err);
-      });
-    }
-  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t, signTransaction]);
-
-  const requestFaucetFundingAndTrustline = useCallback(
-    async (walletAddress: string) => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          throw new Error('Authentication required');
-        }
-
-        logger.log('[NormalWalletCreate] Requesting sponsorship for:', walletAddress);
-        const { sponsorshipXDR } = await requestWalletSponsorship(
-          walletAddress,
-          session.access_token
-        );
-        logger.log('[NormalWalletCreate] Received sponsorship XDR');
-
-        if (sponsorshipXDR && signTransaction) {
-          const signedXDR = await signTransaction(sponsorshipXDR);
-          const { hash } = await submitSponsorshipTransaction(
-            signedXDR,
-            walletAddress,
-            session.access_token
-          );
-          logger.log('[NormalWalletCreate] Account sponsored successfully:', hash);
-        }
-      } catch (e: any) {
-        logger.error('[NormalWalletCreate] Error in sponsorship flow:', e);
-        if (
-          e.message?.includes('already been sponsored') ||
-          e.message?.includes('already exists')
-        ) {
-          logger.log('[NormalWalletCreate] Wallet already sponsored, skipping');
-          return;
-        }
-        enqueueSnackbar(e.message || t('Failed to create account and enable USDC'), {
-          variant: 'error',
-        });
-      }
-    },
-    [signTransaction, enqueueSnackbar, t]
-  );
+  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t]);
 
   const handleCustodyConfirm = useCallback(async () => {
     if (custodyChoice === 'self') {

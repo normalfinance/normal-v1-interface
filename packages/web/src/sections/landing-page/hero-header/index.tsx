@@ -1,16 +1,14 @@
 'use client';
 
-import type { SwapQueryParams } from '@/types/query-params';
-
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
 import { Box, Chip, Paper, Stack, Container, Typography } from '@mui/material';
-
-import TradeCard from '@/components/_common/trade-card';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { WavyBackground } from './wavy-background';
+import SavingsCard from '@/components/_common/savings-card';
 
 type ImageProps = {
   src: string;
@@ -24,27 +22,18 @@ type Props = {
   halbornImage: ImageProps;
   tagline: string;
   taglineLogo: ImageProps;
-  swapParams?: SwapQueryParams;
 };
 
 type HeroHeaderProps = Partial<Props>;
 
 export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
-  const {
-    heading,
-    description,
-    image,
-    halbornImage,
-    tagline,
-    taglineLogo,
-    swapParams,
-    ...sectionProps
-  } = {
+  const { heading, description, image, halbornImage, tagline, taglineLogo, ...sectionProps } = {
     ...HeroHeaderDefaults,
     ...incomingProps,
   } as Props;
 
   const { t } = useTranslate();
+  const theme = useTheme();
 
   return (
     <Box
@@ -54,7 +43,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
         overflow: 'hidden',
         px: '5%',
         py: { xs: 6, md: 8, lg: 10 },
-        backgroundColor: 'white',
+        bgcolor: 'background.paper',
       }}
       {...sectionProps}
     >
@@ -67,15 +56,14 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
           pointerEvents: 'none',
         }}
       >
-        {/* animated waves */}
         <WavyBackground
           sizing="viewport"
-          baseline="center" // or "top"
+          baseline="center"
           yOffset={0}
           colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
           waveOpacity={0.35}
           speed="slow"
-          backgroundFill="white"
+          backgroundFill={theme.palette.background.paper}
         />
       </Box>
 
@@ -87,7 +75,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               variant="outlined"
               sx={{
                 justifyContent: 'center',
-                backgroundColor: 'rgba(145, 158, 171, 0.12)',
+                backgroundColor: alpha(theme.palette.grey[500], 0.12),
                 px: '10px',
                 py: '4px',
                 display: 'inline-flex',
@@ -112,7 +100,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   sx={{
                     width: '2px',
                     height: '10px',
-                    backgroundColor: 'rgba(145, 158, 171, 0.12)',
+                    backgroundColor: alpha(theme.palette.grey[500], 0.12),
                   }}
                 />
                 <Box
@@ -174,11 +162,11 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 justifyContent: 'center',
               }}
             >
-              <span>💸 {t('Low fees')}</span>
+              <span>💰 {t('Competitive yield')}</span>
               <span>•</span>
-              <span>🌍 {t('Global support')}</span>
+              <span>🔓 {t('Fully flexible')}</span>
               <span>•</span>
-              <span>⚡ {t('Instant settlement')}</span>
+              <span>🛡️ {t('Vault secured')}</span>
             </Typography>
 
             <Box
@@ -189,11 +177,11 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 my: { xs: 4, md: 5 },
                 p: 1,
                 borderRadius: 3,
-                backgroundColor: 'white',
-                boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
+                bgcolor: 'background.paper',
+                boxShadow: (thm) => `0px 9px 50px 0px ${alpha(thm.palette.common.black, 0.25)}`,
               }}
             >
-              <TradeCard queryParams={swapParams} />
+              <SavingsCard />
             </Box>
 
             <Typography
@@ -220,8 +208,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
 
 export const HeroHeaderDefaults: Props = {
   heading: 'Medium length hero heading goes here',
-  description:
-    'A universal investing app - Trade and diversify any global asset in just one click.',
+  description: 'Your dollars deserve better. Earn competitive yield within clicks.',
   image: {
     src: cdn('homepage/stellar-logo.webp'),
     alt: 'Stellar Logo Long',

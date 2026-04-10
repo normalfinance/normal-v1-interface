@@ -3,7 +3,7 @@ import type { CardProps } from '@mui/material';
 import React from 'react';
 import { useTranslate } from '@/locales';
 import { ModalType } from '@normalfinance/types';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useAppStore } from '@normalfinance/state';
 
 import { Box, Button } from '@mui/material';
 
@@ -17,11 +17,6 @@ const DepositCard: React.FC<DepositCardProps> = ({ ...other }) => {
 
   const { setModalView } = useAppStore();
 
-  // Main button with multiple states
-  const persist = usePersistStore();
-  const userAddress = persist.wallet.address;
-  const isConnected = !!userAddress;
-
   return (
     <Box
       sx={{
@@ -32,30 +27,35 @@ const DepositCard: React.FC<DepositCardProps> = ({ ...other }) => {
         gap: 2,
       }}
     >
-      <WalletGate buttonText="Login to deposit" fullWidth variant="soft">
-        <>
-          <Button
-            variant="soft"
-            color="success"
-            fullWidth
-            size="large"
-            startIcon={<Iconify icon="solar:wad-of-money-bold" />}
-            onClick={() => setModalView(ModalType.ON_RAMP, true)}
-          >
-            {t('Deposit cash')}
-          </Button>
+      <WalletGate
+        buttonText="Login to deposit cash"
+        fullWidth
+        variant="soft"
+        requireWalletConnection={false}
+      >
+        <Button
+          variant="soft"
+          color="success"
+          fullWidth
+          size="large"
+          startIcon={<Iconify icon="solar:wad-of-money-bold" />}
+          onClick={() => setModalView(ModalType.ON_RAMP, true)}
+        >
+          {t('Deposit cash')}
+        </Button>
+      </WalletGate>
 
-          <Button
-            variant="soft"
-            color="primary"
-            fullWidth
-            size="large"
-            startIcon={<Iconify icon="solar:wallet-bold" />}
-            onClick={() => setModalView(ModalType.DEPOSIT_CRYPTO, true)}
-          >
-            {t('Deposit crypto')}
-          </Button>
-        </>
+      <WalletGate buttonText="Login to deposit crypto" fullWidth variant="soft">
+        <Button
+          variant="soft"
+          color="primary"
+          fullWidth
+          size="large"
+          startIcon={<Iconify icon="solar:wallet-bold" />}
+          onClick={() => setModalView(ModalType.DEPOSIT_CRYPTO, true)}
+        >
+          {t('Deposit crypto')}
+        </Button>
       </WalletGate>
     </Box>
   );

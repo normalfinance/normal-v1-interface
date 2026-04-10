@@ -5,7 +5,6 @@ import type { Token } from '@normalfinance/types';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
-import { usePersistStore } from '@normalfinance/state';
 import { fNumber, fPercent, fCurrency } from '@/utils/format-number';
 import { isNormalToken, getCryptoIconUrl } from '@normalfinance/utils';
 
@@ -30,13 +29,7 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
 
   const router = useRouter();
 
-  const {
-    pairState: { pairByToken },
-  } = usePersistStore();
-
   const isNormal = isNormalToken(token);
-
-  const pair = isNormal ? pairByToken[token.contract] : null;
 
   const handleRowClick = () => {
     if (isNormal) {
@@ -44,12 +37,6 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
         paths.assets.details(isNormal ? token.symbol.replace(/^(sn|n)/, '') : token.symbol)
       );
     }
-  };
-
-  const priceDisplay = () => {
-    if (!isNormal) return token.price;
-    if (!pair) return token.price;
-    return pair.scaledPrice;
   };
 
   const balanceDisplay = BigNumber(token.balance).toFixed(token.decimals > 4 ? 4 : token.decimals);
@@ -80,7 +67,7 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
 
       {/* Target Price */}
       <TableCell align="right">
-        <Typography variant="body2">{isNormal ? fCurrency(priceDisplay()) : null}</Typography>
+        <Typography variant="body2">{isNormal ? fCurrency(token.price) : null}</Typography>
       </TableCell>
 
       {/* Price */}

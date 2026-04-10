@@ -3,6 +3,8 @@ import { getAccessToken } from '@/utils/http';
 import { logWithConfig } from '@/lib/edge-config-middleware';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     // Authenticate

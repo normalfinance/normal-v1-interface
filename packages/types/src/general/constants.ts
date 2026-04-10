@@ -10,10 +10,12 @@ export interface NetworkConfig {
   NORMAL_DISTRIBUTOR: string;
   NORMAL_HOT_A: string;
 
-  // Normal Contracts
-  LONG_SHORT_PAIR_FACTORY_ADDRESS: string;
-  TREASURY_ADDRESS: string;
-  INDEX_FACTORY_ADDRESS: string;
+  // External Contracts
+  AQUA_ROUTER_ADDRESS: string;
+  AQUA_API_BASE_URL: string;
+  DEFINDEX_VAULT_ADDRESS: string;
+  BLEND_USDC_ADDRESS?: string;
+  BLEND_USDC_ISSUER?: string;
 
   // Stellar
   XLM_ADDRESS: string;
