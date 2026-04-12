@@ -233,18 +233,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const attemptAutoConnect = useCallback(
     async (wallet: LinkedWallet): Promise<boolean> => {
       try {
-        if (wallet.custodyChoice === 'platform') {
-          await connectWalletWithoutKeypair(wallet.walletAddress);
-          logger.log('[AccountDrawer] Successfully auto-connected platform custody wallet');
-          return true;
-        } else if (wallet.custodyChoice === 'self') {
-          // For self-custody: connect address-only. The restoreWallet useEffect
-          // in use-normal-wallet will handle the password prompt and keypair restoration.
-          await connectWalletWithoutKeypair(wallet.walletAddress);
-          logger.log('[AccountDrawer] Auto-connected self-custody wallet in address-only mode');
-          return true;
-        }
-        return false;
+        // Self-custody only: connect address-only. The restoreWallet useEffect
+        // in use-normal-wallet handles the password prompt and keypair restoration.
+        await connectWalletWithoutKeypair(wallet.walletAddress);
+        logger.log('[AccountDrawer] Auto-connected wallet in address-only mode');
+        return true;
       } catch (error) {
         logger.error('[AccountDrawer] Error during auto-connect:', error);
         return false;

@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 
-import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -27,7 +26,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
-import { CustodySettings } from '@/components/settings/custody-settings';
 import AddBlendUsdcTrustlineButton from '@/components/settings/add-blend-usdc-trustline-button';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 
@@ -246,15 +244,6 @@ export function SettingsAccounts() {
                     </Typography>
                   </Stack>
                 )}
-
-                <Box sx={{ mt: 2 }}>
-                  <CustodySettings
-                    walletAddress={wallet.walletAddress}
-                    walletName={wallet.walletName}
-                    custodyChoice={wallet.custodyChoice}
-                    onUpdate={loadWallets}
-                  />
-                </Box>
 
                 <AddBlendUsdcTrustlineButton walletAddress={wallet.walletAddress} />
 

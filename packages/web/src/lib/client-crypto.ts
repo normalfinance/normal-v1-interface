@@ -4,53 +4,10 @@ const PBKDF2_ITERATIONS = 100000;
 const KEY_LENGTH = 32;
 const IV_LENGTH = 12;
 const SALT_LENGTH = 32;
-const RSA_KEY_SIZE = 2048;
-
-export interface RSAKeyPair {
-  publicKey: string;
-  privateKey: string;
-}
 
 export interface AESEncryptedData {
   ciphertext: string;
   iv: string;
-}
-
-export async function generateRSAKeyPair(): Promise<RSAKeyPair> {
-  if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
-    throw new Error('Web Crypto API not available');
-  }
-
-  const keyPair = await window.crypto.subtle.generateKey(
-    {
-      name: 'RSA-OAEP',
-      modulusLength: RSA_KEY_SIZE,
-      publicExponent: new Uint8Array([1, 0, 1]),
-      hash: 'SHA-256',
-    },
-    true,
-    ['encrypt', 'decrypt']
-  );
-
-  const publicKeyPem = await exportPublicKey(keyPair.publicKey);
-  const privateKeyPem = await exportPrivateKey(keyPair.privateKey);
-
-  return {
-    publicKey: publicKeyPem,
-    privateKey: privateKeyPem,
-  };
-}
-
-async function exportPublicKey(key: CryptoKey): Promise<string> {
-  const exported = await window.crypto.subtle.exportKey('spki', key);
-  const exportedAsBase64 = arrayBufferToBase64(exported);
-  return `-----BEGIN PUBLIC KEY-----\n${exportedAsBase64}\n-----END PUBLIC KEY-----`;
-}
-
-async function exportPrivateKey(key: CryptoKey): Promise<string> {
-  const exported = await window.crypto.subtle.exportKey('pkcs8', key);
-  const exportedAsBase64 = arrayBufferToBase64(exported);
-  return `-----BEGIN PRIVATE KEY-----\n${exportedAsBase64}\n-----END PRIVATE KEY-----`;
 }
 
 export function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -73,59 +30,7 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-async function importPublicKey(pem: string): Promise<CryptoKey> {
-  const pemHeader = '-----BEGIN PUBLIC KEY-----';
-  const pemFooter = '-----END PUBLIC KEY-----';
-  const pemContents = pem.replace(pemHeader, '').replace(pemFooter, '').replace(/\s/g, '');
-  const binaryDer = base64ToArrayBuffer(pemContents);
-
-  return window.crypto.subtle.importKey(
-    'spki',
-    binaryDer,
-    {
-      name: 'RSA-OAEP',
-      hash: 'SHA-256',
-    },
-    false,
-    ['encrypt']
-  );
-}
-
-export async function encryptWithRSAPublicKey(data: string, publicKeyPem: string): Promise<string> {
-  if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
-    throw new Error('Web Crypto API not available');
-  }
-
-  const publicKey = await importPublicKey(publicKeyPem);
-  const dataBuffer = new TextEncoder().encode(data);
-
-  const encrypted = await window.crypto.subtle.encrypt(
-    {
-      name: 'RSA-OAEP',
-    },
-    publicKey,
-    new Uint8Array(dataBuffer)
-  );
-
-  return arrayBufferToBase64(encrypted);
-}
-
-export async function generateAESKey(): Promise<CryptoKey> {
-  if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
-    throw new Error('Web Crypto API not available');
-  }
-
-  return window.crypto.subtle.generateKey(
-    {
-      name: 'AES-GCM',
-      length: 256,
-    },
-    true,
-    ['encrypt', 'decrypt']
-  );
-}
-
-export async function encryptWithAES(plaintext: string, key: CryptoKey): Promise<AESEncryptedData> {
+async function encryptWithAES(plaintext: string, key: CryptoKey): Promise<AESEncryptedData> {
   if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
     throw new Error('Web Crypto API not available');
   }
@@ -142,20 +47,13 @@ export async function encryptWithAES(plaintext: string, key: CryptoKey): Promise
     new Uint8Array(dataBuffer)
   );
 
-  const ivBase64 = arrayBufferToBase64(iv.buffer);
-  const encryptedBase64 = arrayBufferToBase64(encrypted);
-
   return {
-    ciphertext: encryptedBase64,
-    iv: ivBase64,
+    ciphertext: arrayBufferToBase64(encrypted),
+    iv: arrayBufferToBase64(iv.buffer),
   };
 }
 
-export async function decryptWithAES(
-  ciphertext: string,
-  iv: string,
-  key: CryptoKey
-): Promise<string> {
+async function decryptWithAES(ciphertext: string, iv: string, key: CryptoKey): Promise<string> {
   if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
     throw new Error('Web Crypto API not available');
   }
@@ -209,67 +107,8 @@ export async function deriveKeyFromPassword(
   );
 }
 
-export interface TransitEncryptedData {
-  encryptedData: string;
-  iv: string;
-  encryptedTransitKey: string;
-}
-
-/**
- * Encrypt data for transit to the server using hybrid RSA+AES encryption.
- * Generates a random AES-256 key, encrypts the data with AES-GCM,
- * then encrypts the AES key with the server's transit RSA public key.
- */
-export async function encryptForTransit(
-  data: string,
-  transitPublicKey: string
-): Promise<TransitEncryptedData> {
-  if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
-    throw new Error('Web Crypto API not available');
-  }
-
-  const aesKey = await generateAESKey();
-  const encrypted = await encryptWithAES(data, aesKey);
-  const aesKeyBase64 = await exportAESKeyAsBase64(aesKey);
-  const encryptedTransitKey = await encryptWithRSAPublicKey(aesKeyBase64, transitPublicKey);
-
-  return {
-    encryptedData: encrypted.ciphertext,
-    iv: encrypted.iv,
-    encryptedTransitKey,
-  };
-}
-
-export async function exportAESKeyAsBase64(key: CryptoKey): Promise<string> {
-  if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
-    throw new Error('Web Crypto API not available');
-  }
-
-  const exported = await window.crypto.subtle.exportKey('raw', key);
-  return arrayBufferToBase64(exported);
-}
-
-export async function importAESKeyFromBase64(keyBase64: string): Promise<CryptoKey> {
-  if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
-    throw new Error('Web Crypto API not available');
-  }
-
-  const keyBuffer = base64ToArrayBuffer(keyBase64);
-
-  return window.crypto.subtle.importKey(
-    'raw',
-    keyBuffer,
-    {
-      name: 'AES-GCM',
-      length: 256,
-    },
-    true,
-    ['encrypt', 'decrypt']
-  );
-}
-
 // ---------------------------------------------------------------------------
-// IndexedDB-backed non-extractable AES key for localStorage encryption
+// IndexedDB-backed non-extractable AES key for legacy v1 localStorage decryption
 // ---------------------------------------------------------------------------
 
 const IDB_DB_NAME = 'normal-wallet-keys';
@@ -334,8 +173,7 @@ export interface LocalEncryptedData {
 }
 
 /**
- * @deprecated Use encryptPrivateKeyWithPassword instead. Kept for v1 migration.
- * Encrypt a string using the IndexedDB-backed non-extractable key.
+ * @deprecated Use encryptPrivateKeyWithPassword instead. Kept for v1 migration only.
  */
 export async function encryptForLocalStorage(plaintext: string): Promise<string> {
   const key = await getOrCreateLocalEncryptionKey();
@@ -356,8 +194,7 @@ export async function encryptForLocalStorage(plaintext: string): Promise<string>
 }
 
 /**
- * @deprecated Use decryptPrivateKeyWithPassword instead. Kept for v1 migration.
- * Decrypt a string that was encrypted with `encryptForLocalStorage`.
+ * @deprecated Use decryptPrivateKeyWithPassword instead. Kept for v1 migration only.
  */
 export async function decryptFromLocalStorage(stored: string): Promise<string> {
   const key = await getOrCreateLocalEncryptionKey();
@@ -388,7 +225,7 @@ export function isLegacyBase64(stored: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// v2: Password-derived key encryption
+// v2: Password-derived key encryption (current standard)
 // ---------------------------------------------------------------------------
 
 export interface PasswordEncryptedData {

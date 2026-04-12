@@ -111,18 +111,6 @@ async function transactionHandler(req: NextRequest) {
       });
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    if (linkedWallet && linkedWallet.supabaseUid === user.id) {
-      const custodyChoice = linkedWallet.custodyChoice;
-      if (custodyChoice !== 'self' && custodyChoice !== 'platform' && custodyChoice !== null) {
-        await logWithConfig('warn', 'Transaction API: wallet custody not allowed for transaction', {
-          userId: user.id.substring(0, 8) + '...',
-          walletAddress: canonicalAddress.substring(0, 8) + '...',
-          transactionType,
-          custodyChoice,
-        });
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
-    }
 
     try {
       const keypair = Keypair.fromPublicKey(canonicalAddress);

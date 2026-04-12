@@ -1,8 +1,6 @@
 import type { MnemonicStrength } from '@normalfinance/utils';
 
 import { useRef, useEffect, useCallback } from 'react';
-import { fetchAndDecryptMnemonic } from '@/lib/fetch-mnemonic';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
 import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
 import { useWalletPassword } from '@/providers/WalletPasswordProvider';
@@ -14,13 +12,7 @@ import {
   encryptPrivateKeyWithPassword,
   decryptPrivateKeyWithPassword,
 } from '@/lib/client-crypto';
-import {
-  logger,
-  validateMnemonic,
-  normalizeMnemonic,
-  createKeypairFromSecret,
-  createWalletFromMnemonic,
-} from '@normalfinance/utils';
+import { logger, createKeypairFromSecret } from '@normalfinance/utils';
 
 const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
 
@@ -86,7 +78,6 @@ const removeStoredPrivateKey = (): void => {
 export const useNormalWallet = () => {
   const persistStore = usePersistStore();
   const normalWalletStore = useNormalWalletStore();
-  const { session } = useSupabaseAuth();
   const { requestPassword } = useWalletPassword();
 
   const connectionChecked = useRef(false);
@@ -310,11 +301,6 @@ export const useNormalWallet = () => {
     [persistStore, normalWalletStore]
   );
 
-  const clearKeypairForPlatformCustody = useCallback(() => {
-    removeStoredPrivateKey();
-    normalWalletStore.setKeypair(null);
-  }, [normalWalletStore]);
-
   const signTransaction = useCallback(
     async (xdr: string, networkPassphrase?: string) => {
       const { keypair, publicKey } = normalWalletStore;
@@ -327,27 +313,7 @@ export const useNormalWallet = () => {
         throw new Error('No wallet connected');
       }
 
-      const mnemonic = await fetchAndDecryptMnemonic(walletAddress, session);
-      if (mnemonic) {
-        const normalized = normalizeMnemonic(mnemonic);
-        if (!validateMnemonic(normalized)) {
-          throw new Error('Invalid mnemonic from platform custody');
-        }
-        const walletData = createWalletFromMnemonic(normalized);
-        if (walletData.publicKey !== walletAddress) {
-          throw new Error('Mnemonic does not match wallet address');
-        }
-        normalWalletStore.setKeypair(walletData.keypair);
-        try {
-          const signedXDR = await normalWalletStore.signTransaction(xdr, networkPassphrase);
-          return signedXDR;
-        } finally {
-          normalWalletStore.setKeypair(null);
-          removeStoredPrivateKey();
-        }
-      }
-
-      // Self-custody fallback: prompt for password and decrypt
+      // Self-custody: prompt for password and decrypt the locally-stored key
       const keyFormat = getStoredKeyFormat();
       if (keyFormat === 'v2') {
         try {
@@ -371,7 +337,7 @@ export const useNormalWallet = () => {
 
       throw new Error('No wallet key available. Sign in and try again.');
     },
-    [normalWalletStore, persistStore.wallet.address, session, requestPassword]
+    [normalWalletStore, persistStore.wallet.address, requestPassword]
   );
 
   const disconnectWallet = useCallback(async () => {
@@ -402,7 +368,6 @@ export const useNormalWallet = () => {
     importWalletFromPrivateKey,
     connectWallet,
     connectWalletWithoutKeypair,
-    clearKeypairForPlatformCustody,
     signTransaction,
     disconnectWallet,
   };
