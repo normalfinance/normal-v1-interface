@@ -56,12 +56,16 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
     tokenState.tokens.find((t) => t.contract === constants.StellarConfig.USDC_ADDRESS)?.balance ||
     '0';
 
+  // Truncate to 2 decimal places (no rounding up) so MAX never exceeds actual balance
+  const truncateToTwoDecimals = (value: number): string =>
+    (Math.floor(value * 100) / 100).toFixed(2);
+
   // Handle max button
   const handleMax = useCallback(() => {
     if (mode === 'deposit') {
-      setAmount(parseFloat(usdcBalance).toFixed(2));
+      setAmount(truncateToTwoDecimals(parseFloat(usdcBalance)));
     } else if (userPosition) {
-      setAmount(parseFloat(userPosition.currentValue).toFixed(2));
+      setAmount(truncateToTwoDecimals(parseFloat(userPosition.currentValue)));
     }
   }, [mode, usdcBalance, userPosition]);
 
@@ -171,7 +175,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
               {mode === 'deposit' ? t('Amount to deposit') : t('Amount to withdraw')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {t('Available')}: {parseFloat(availableBalance).toFixed(2)} USDC
+              {t('Available')}: {truncateToTwoDecimals(parseFloat(availableBalance))} USDC
             </Typography>
           </Stack>
           <TextField
