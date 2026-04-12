@@ -145,7 +145,7 @@ export function FooterSection({
               })}
             >
               {t(
-                'A universal investing app - Trade and diversify any global asset in just one click.'
+                'Earn passive yield, and watch it grow.'
               )}
             </Typography>
 
