@@ -26,9 +26,6 @@ export default function AddBlendUsdcTrustlineButton({
 
   const blendUsdcIssuer = constants.StellarConfig.BLEND_USDC_ISSUER;
 
-  // DEBUG: remove after fixing
-  console.log('[BlendUSDC] issuer:', blendUsdcIssuer, 'wallet:', walletAddress, 'hasTrustline:', hasTrustline);
-
   useEffect(() => {
     if (!blendUsdcIssuer || !walletAddress) return;
 
