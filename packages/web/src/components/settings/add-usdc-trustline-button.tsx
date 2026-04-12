@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { constants, checkTrustline } from '@normalfinance/utils';
+import { checkTrustline } from '@normalfinance/utils';
 
 import { Button, CircularProgress } from '@mui/material';
 
@@ -11,39 +11,46 @@ import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 
 // ----------------------------------------------------------------------
 
-interface AddBlendUsdcTrustlineButtonProps {
+interface AddUsdcTrustlineButtonProps {
   walletAddress: string;
+  assetIssuer: string | undefined;
+  label: string;
+  loadingLabel: string;
+  successMessage: string;
+  errorFallback: string;
 }
 
 // ----------------------------------------------------------------------
 
-export default function AddBlendUsdcTrustlineButton({
+export default function AddUsdcTrustlineButton({
   walletAddress,
-}: AddBlendUsdcTrustlineButtonProps) {
+  assetIssuer,
+  label,
+  loadingLabel,
+  successMessage,
+  errorFallback,
+}: AddUsdcTrustlineButtonProps) {
   const { enqueueSnackbar } = useSnackbar();
   const { addTrustLine, loading } = useTrustLine();
   const [hasTrustline, setHasTrustline] = useState<boolean | null>(null);
 
-  const blendUsdcIssuer = constants.StellarConfig.BLEND_USDC_ISSUER;
-
   useEffect(() => {
-    if (!blendUsdcIssuer || !walletAddress) return;
+    if (!assetIssuer || !walletAddress) return;
 
-    checkTrustline(walletAddress, 'USDC', blendUsdcIssuer)
+    checkTrustline(walletAddress, 'USDC', assetIssuer)
       .then((result) => setHasTrustline(result.exists))
       .catch(() => setHasTrustline(false));
-  }, [walletAddress, blendUsdcIssuer]);
+  }, [walletAddress, assetIssuer]);
 
-  // Don't render if Blend USDC is not configured or trustline already exists
-  if (!blendUsdcIssuer || hasTrustline === true) return null;
+  if (!assetIssuer || hasTrustline === true) return null;
 
   const handleClick = async () => {
     try {
-      await addTrustLine('USDC', blendUsdcIssuer);
+      await addTrustLine('USDC', assetIssuer);
       setHasTrustline(true);
-      enqueueSnackbar('Blend USDC trustline added!', { variant: 'success' });
+      enqueueSnackbar(successMessage, { variant: 'success' });
     } catch (e: any) {
-      enqueueSnackbar(e?.message || 'Failed to add Blend USDC trustline', { variant: 'error' });
+      enqueueSnackbar(e?.message || errorFallback, { variant: 'error' });
     }
   };
 
@@ -62,7 +69,7 @@ export default function AddBlendUsdcTrustlineButton({
       }
       onClick={handleClick}
     >
-      {loading ? 'Adding trustline...' : 'Add Blend USDC Trustline'}
+      {loading ? loadingLabel : label}
     </Button>
   );
 }

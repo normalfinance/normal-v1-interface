@@ -4,7 +4,7 @@ import type { LinkedWallet } from '@/services/linked-wallets';
 
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
-import { format } from '@normalfinance/utils';
+import { format, constants } from '@normalfinance/utils';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 
 import Card from '@mui/material/Card';
@@ -26,7 +26,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
-import AddBlendUsdcTrustlineButton from '@/components/settings/add-blend-usdc-trustline-button';
+import AddUsdcTrustlineButton from '@/components/settings/add-usdc-trustline-button';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 
 export function SettingsAccounts() {
@@ -245,7 +245,23 @@ export function SettingsAccounts() {
                   </Stack>
                 )}
 
-                <AddBlendUsdcTrustlineButton walletAddress={wallet.walletAddress} />
+                <AddUsdcTrustlineButton
+                  walletAddress={wallet.walletAddress}
+                  assetIssuer={constants.StellarConfig.USDC_ISSUER}
+                  label={t('Add Stellar USDC Trustline')}
+                  loadingLabel={t('Adding trustline...')}
+                  successMessage={t('Stellar USDC trustline added!')}
+                  errorFallback={t('Failed to add Stellar USDC trustline')}
+                />
+
+                <AddUsdcTrustlineButton
+                  walletAddress={wallet.walletAddress}
+                  assetIssuer={constants.StellarConfig.BLEND_USDC_ISSUER}
+                  label={t('Add Blend USDC Trustline')}
+                  loadingLabel={t('Adding trustline...')}
+                  successMessage={t('Blend USDC trustline added!')}
+                  errorFallback={t('Failed to add Blend USDC trustline')}
+                />
 
                 <Button
                   variant="soft"
