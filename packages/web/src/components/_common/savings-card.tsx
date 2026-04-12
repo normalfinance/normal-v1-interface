@@ -23,6 +23,7 @@ import { constants } from '@normalfinance/utils';
 
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
+import { TrustlineModal } from './trustline-modal';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 
 // ----------------------------------------------------------------------
@@ -35,8 +36,17 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const { t } = useTranslate();
   const { tokenState } = usePersistStore();
 
-  const { vaultInfo, userPosition, loading, error, deposit, withdraw, refreshVaultInfo } =
-    useDefindexSavings();
+  const {
+    vaultInfo,
+    userPosition,
+    loading,
+    error,
+    needsTrustline,
+    setNeedsTrustline,
+    deposit,
+    withdraw,
+    refreshVaultInfo,
+  } = useDefindexSavings();
 
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
@@ -260,6 +270,13 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* Trustline Modal — shown when deposit fails due to missing trustline */}
+      <TrustlineModal
+        open={needsTrustline}
+        onClose={() => setNeedsTrustline(false)}
+        onSuccess={() => setNeedsTrustline(false)}
+      />
     </Card>
   );
 };
