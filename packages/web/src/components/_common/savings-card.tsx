@@ -2,28 +2,31 @@
 
 import type { CardProps } from '@mui/material';
 
-import React, { useState, useCallback } from 'react';
 import { useTranslate } from '@/locales';
+import React, { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
+import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
+import {
+  getTokenBalance,
+  getSavingsDepositToken,
+  getSavingsDepositTokenLabel,
+} from '@/utils/token-selectors';
 
 import {
   Box,
   Card,
+  Chip,
   Stack,
   Button,
+  Divider,
   TextField,
   Typography,
   InputAdornment,
   CircularProgress,
-  Divider,
-  Chip,
 } from '@mui/material';
-
-import { constants } from '@normalfinance/utils';
 
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
-import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 
 // ----------------------------------------------------------------------
 
@@ -41,19 +44,18 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
 
-  // Get user USDC balance — match by contract address to avoid stale duplicates in persisted state
-  const usdcBalance =
-    tokenState.tokens.find((t) => t.contract === constants.StellarConfig.USDC_ADDRESS)?.balance ||
-    '0';
+  // Savings deposit availability uses Blend USDC when configured.
+  const savingsDepositBalance = getTokenBalance(getSavingsDepositToken(tokenState.tokens));
+  const savingsDepositLabel = getSavingsDepositTokenLabel();
 
   // Handle max button
   const handleMax = useCallback(() => {
     if (mode === 'deposit') {
-      setAmount(parseFloat(usdcBalance).toFixed(2));
+      setAmount(parseFloat(savingsDepositBalance).toFixed(2));
     } else if (userPosition) {
       setAmount(parseFloat(userPosition.currentValue).toFixed(2));
     }
-  }, [mode, usdcBalance, userPosition]);
+  }, [mode, savingsDepositBalance, userPosition]);
 
   // Handle action
   const handleAction = useCallback(async () => {
@@ -69,7 +71,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   }, [mode, amount, deposit, withdraw, refreshVaultInfo]);
 
   const availableBalance =
-    mode === 'deposit' ? usdcBalance : userPosition?.currentValue || '0';
+    mode === 'deposit' ? savingsDepositBalance : userPosition?.currentValue || '0';
+  const availableAssetLabel = mode === 'deposit' ? savingsDepositLabel : 'USDC';
+  const estimatedYearlyEarningsText = `${t('Estimated yearly earnings')}: $${(
+    (parseFloat(amount || '0') * (vaultInfo?.apy || 0)) /
+    100
+  ).toFixed(2)} ${availableAssetLabel}`;
 
   const isInsufficientBalance = parseFloat(amount) > parseFloat(availableBalance);
 
@@ -161,7 +168,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
               {mode === 'deposit' ? t('Amount to deposit') : t('Amount to withdraw')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {t('Available')}: {parseFloat(availableBalance).toFixed(2)} USDC
+              {t('Available')}: {parseFloat(availableBalance).toFixed(2)}{' '}
+              {availableAssetLabel}
             </Typography>
           </Stack>
           <TextField
@@ -175,7 +183,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
                 <InputAdornment position="start">
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <Iconify icon="cryptocurrency-color:usdc" width={24} />
-                    <Typography variant="subtitle2">USDC</Typography>
+                    <Typography variant="subtitle2">{availableAssetLabel}</Typography>
                   </Stack>
                 </InputAdornment>
               ),
@@ -196,8 +204,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
         {mode === 'deposit' && amount && parseFloat(amount) > 0 && vaultInfo && (
           <Box sx={{ px: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              {t('Estimated yearly earnings')}: $
-              {((parseFloat(amount) * vaultInfo.apy) / 100).toFixed(2)} USDC
+              {estimatedYearlyEarningsText}
             </Typography>
           </Box>
         )}

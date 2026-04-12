@@ -2,11 +2,15 @@
 
 import type { CardProps } from '@mui/material';
 
-import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslate } from '@/locales';
-import { usePersistStore } from '@normalfinance/state';
 import { constants } from '@normalfinance/utils';
 import { useDebounce } from '@/hooks/use-debounce';
+import { usePersistStore } from '@normalfinance/state';
+import { useAquaSwap } from '@/hooks/stellar/use-aqua-swap';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { getXlmToken, getTokenBalance, getSwapUsdcToken } from '@/utils/token-selectors';
 
 import {
   Box,
@@ -20,12 +24,10 @@ import {
   CircularProgress,
 } from '@mui/material';
 
+import { useSnackbar } from '@/components/template/snackbar';
+
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
-import { useAquaSwap } from '@/hooks/stellar/use-aqua-swap';
-import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
-import { useSnackbar } from '@/components/template/snackbar';
 
 // ----------------------------------------------------------------------
 
@@ -65,13 +67,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const [amountIn, setAmountIn] = useState('');
   const debouncedAmountIn = useDebounce(amountIn, 500);
 
-  // XLM: single row per network in token list. USDC: match Soroban contract from env
-  // (NEXT_PUBLIC_TESTNET_USDC_ADDRESS / NEXT_PUBLIC_MAINNET_USDC_ADDRESS → StellarConfig.USDC_ADDRESS)
-  // so we show the same asset as TOKENS.USDC / quotes, not the first duplicate symbol row.
-  const xlmBalance = tokenState.tokens.find((t) => t.symbol === 'XLM')?.balance || '0';
-  const usdcBalance =
-    tokenState.tokens.find((t) => t.contract === constants.StellarConfig.USDC_ADDRESS)?.balance ||
-    '0';
+  // Swap uses canonical Stellar USDC from StellarConfig.USDC_ADDRESS, not Blend USDC.
+  const xlmBalance = getTokenBalance(getXlmToken(tokenState.tokens));
+  const usdcBalance = getTokenBalance(getSwapUsdcToken(tokenState.tokens));
 
   const inputBalance = tokenIn === 'XLM' ? xlmBalance : usdcBalance;
   const outputBalance = tokenOut === 'XLM' ? xlmBalance : usdcBalance;
