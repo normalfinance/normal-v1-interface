@@ -1,17 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
 
-import { constants } from '@normalfinance/utils';
-import {
-  rpc,
-  xdr,
-  nativeToScVal,
-  Account,
-  Address,
-  Operation,
-  TransactionBuilder,
-} from '@stellar/stellar-sdk';
-
+import { NextResponse } from 'next/server';
+import { getCurrentNetwork } from '@normalfinance/utils';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+
+const DEFAULT_SOROSWAP_API_BASE_URL = 'https://api.soroswap.finance';
+const DEFAULT_PROTOCOLS = ['soroswap', 'phoenix', 'aqua', 'sdex'];
+const DEFAULT_SLIPPAGE_BPS = 100; // 1%
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,143 +34,140 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Choose endpoint based on mode
-    const endpoint =
-      mode === 'strict-receive'
-        ? '/api/external/v1/find-path-strict-receive/'
-        : '/api/external/v1/find-path/';
-
-    const aquaPayload: Record<string, string> = {
-      token_in_address,
-      token_out_address,
-      amount,
-    };
-
-    if (sender) {
-      if (!isValidStellarAddress(sender)) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid sender address format' },
-          { status: 400 }
-        );
-      }
-      aquaPayload.sender = sender;
-    }
-
-    const aquaUrl = `${constants.StellarConfig.AQUA_API_BASE_URL}${endpoint}`;
-    console.log('[swap/quote] Aqua request:', { url: aquaUrl, payload: aquaPayload });
-
-    const response = await fetch(aquaUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(aquaPayload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Aqua API error:', errorText);
+    const apiKey = process.env.SOROSWAP_API_KEY;
+    if (!apiKey) {
+      console.error('[swap/quote] SOROSWAP_API_KEY is not configured');
       return NextResponse.json(
-        { success: false, error: 'Swap quote request failed' },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    console.log('[swap/quote] Aqua response:', JSON.stringify(data, null, 2));
-
-    const swapChainXdr = data.swap_chain_xdr || '';
-    const amountOut = String(data.amount ?? data.amount_out ?? '0');
-    const pools = data.pools || data.path || [];
-
-    // If no sender or no swap_chain_xdr, return quote-only (no transaction to build)
-    if (!sender || !swapChainXdr) {
-      return NextResponse.json({
-        success: true,
-        path: pools,
-        amount_in: data.amount_in || amount,
-        amount_out: amountOut,
-        xdr: '',
-      });
-    }
-
-    // Build a full Soroban transaction envelope from the swap_chain_xdr
-    const rpcServer = new rpc.Server(constants.StellarConfig.RPC_URL, {
-      allowHttp: constants.StellarConfig.RPC_URL.startsWith('http://'),
-    });
-
-    // Get the sender's account to obtain the current sequence number
-    const accountInfo = await rpcServer.getAccount(sender);
-    const account = new Account(accountInfo.accountId(), accountInfo.sequenceNumber());
-
-    // Decode the swap_chain_xdr — it's the swap chain Vec (pool steps)
-    const swapChain = xdr.ScVal.fromXDR(swapChainXdr, 'base64');
-
-    // Build the sender address as an ScVal
-    const senderAddress = new Address(sender);
-    const senderScVal = senderAddress.toScVal();
-
-    const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
-
-    // Build the transaction with the Aqua router contract invocation
-    const txBuilder = new TransactionBuilder(account, {
-      fee: '10000000', // 1 XLM max fee — will be adjusted by simulation
-      networkPassphrase,
-    });
-
-    const routerAddress = new Address(constants.StellarConfig.AQUA_ROUTER_ADDRESS);
-
-    // token_in is the first token in the swap chain (what the user is selling)
-    const tokenInAddress = new Address(token_in_address);
-
-    // Calculate min output with 1% slippage
-    const amountOutNum = BigInt(amountOut);
-    const minAmountOut = amountOutNum - amountOutNum / BigInt(100); // 1% slippage
-
-    // swap_chained(user, swaps_chain, token_in, in_amount, out_min)
-    txBuilder.addOperation(
-      Operation.invokeHostFunction({
-        func: xdr.HostFunction.hostFunctionTypeInvokeContract(
-          new xdr.InvokeContractArgs({
-            contractAddress: routerAddress.toScAddress(),
-            functionName: 'swap_chained',
-            args: [
-              senderScVal,
-              swapChain,
-              tokenInAddress.toScVal(),
-              nativeToScVal(BigInt(amount), { type: 'u128' }),
-              nativeToScVal(minAmountOut, { type: 'u128' }),
-            ],
-          })
-        ),
-        auth: [],
-      })
-    );
-
-    txBuilder.setTimeout(300);
-    const builtTx = txBuilder.build();
-
-    // Simulate the transaction to get proper resource estimates and auth
-    const simResponse = await rpcServer.simulateTransaction(builtTx);
-
-    if (rpc.Api.isSimulationError(simResponse)) {
-      console.error('[swap/quote] Simulation failed:', simResponse);
-      return NextResponse.json(
-        { success: false, error: `Simulation failed: ${simResponse.error}` },
+        { success: false, error: 'Swap aggregator is not configured on the server' },
         { status: 500 }
       );
     }
 
-    // Assemble the simulated transaction (adds resource fees, auth, etc.)
-    const assembledTx = rpc.assembleTransaction(builtTx, simResponse).build();
-    const txXdr = assembledTx.toXDR();
+    const apiBaseUrl = process.env.SOROSWAP_API_BASE_URL || DEFAULT_SOROSWAP_API_BASE_URL;
+    const network = getCurrentNetwork() === 'mainnet' ? 'mainnet' : 'testnet';
+    const tradeType = mode === 'strict-send' ? 'EXACT_IN' : 'EXACT_OUT';
 
-    console.log('[swap/quote] Built transaction envelope successfully');
+    const quotePayload = {
+      assetIn: token_in_address,
+      assetOut: token_out_address,
+      amount,
+      tradeType,
+      protocols: DEFAULT_PROTOCOLS,
+      slippageBps: DEFAULT_SLIPPAGE_BPS,
+    };
+
+    const quoteUrl = `${apiBaseUrl}/quote?network=${network}`;
+    console.log('[swap/quote] Soroswap quote request:', { url: quoteUrl, payload: quotePayload });
+
+    const quoteResponse = await fetch(quoteUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(quotePayload),
+    });
+
+    if (!quoteResponse.ok) {
+      const errorText = await quoteResponse.text();
+      console.error('[swap/quote] Soroswap /quote error:', quoteResponse.status, errorText);
+      return NextResponse.json(
+        { success: false, error: `Swap quote request failed (${quoteResponse.status})` },
+        { status: quoteResponse.status }
+      );
+    }
+
+    const quote = await quoteResponse.json();
+    console.log('[swap/quote] Soroswap quote response:', JSON.stringify(quote, null, 2));
+
+    const amountIn = String(quote.amountIn ?? amount);
+    const amountOut = String(quote.amountOut ?? '0');
+    const minAmountOut = String(quote.otherAmountThreshold ?? '0');
+
+    const path: string[] = Array.isArray(quote.routePlan)
+      ? quote.routePlan.flatMap((step: { swapInfo?: { path?: string[] } }) =>
+          Array.isArray(step?.swapInfo?.path) ? step.swapInfo!.path : []
+        )
+      : [];
+
+    if (amountOut === '0') {
+      return NextResponse.json({
+        success: false,
+        error: 'No route available for this token pair',
+        path,
+        amount_in: amountIn,
+        amount_out: amountOut,
+        min_amount_out: minAmountOut,
+        xdr: '',
+      });
+    }
+
+    // Quote-only response (no sender, so no transaction to build)
+    if (!sender) {
+      return NextResponse.json({
+        success: true,
+        path,
+        amount_in: amountIn,
+        amount_out: amountOut,
+        min_amount_out: minAmountOut,
+        xdr: '',
+      });
+    }
+
+    if (!isValidStellarAddress(sender)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid sender address format' },
+        { status: 400 }
+      );
+    }
+
+    const buildUrl = `${apiBaseUrl}/quote/build?network=${network}`;
+    const buildPayload = { quote, from: sender };
+
+    const buildResponse = await fetch(buildUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(buildPayload),
+    });
+
+    if (buildResponse.status === 428) {
+      // Sponsored / gasless trustline multi-step flow — not supported yet
+      console.error('[swap/quote] Soroswap /quote/build returned 428 (gasless multi-step)');
+      return NextResponse.json(
+        { success: false, error: 'Gasless/sponsored swap flow is not supported' },
+        { status: 400 }
+      );
+    }
+
+    if (!buildResponse.ok) {
+      const errorText = await buildResponse.text();
+      console.error('[swap/quote] Soroswap /quote/build error:', buildResponse.status, errorText);
+      return NextResponse.json(
+        { success: false, error: `Swap build request failed (${buildResponse.status})` },
+        { status: buildResponse.status }
+      );
+    }
+
+    const built = await buildResponse.json();
+    const xdr = typeof built?.xdr === 'string' ? built.xdr : '';
+
+    if (!xdr) {
+      return NextResponse.json(
+        { success: false, error: 'Swap aggregator did not return a transaction XDR' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      path: pools,
-      amount_in: data.amount_in || amount,
+      path,
+      amount_in: amountIn,
       amount_out: amountOut,
-      xdr: txXdr,
+      min_amount_out: minAmountOut,
+      xdr,
     });
   } catch (error) {
     console.error('Swap quote error:', error);

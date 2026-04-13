@@ -5,8 +5,8 @@ import type { CardProps } from '@mui/material';
 import { useTranslate } from '@/locales';
 import { constants } from '@normalfinance/utils';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useSwap } from '@/hooks/stellar/use-swap';
 import { usePersistStore } from '@normalfinance/state';
-import { useAquaSwap } from '@/hooks/stellar/use-aqua-swap';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
@@ -57,7 +57,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const { t } = useTranslate();
   const { wallet, tokenState } = usePersistStore();
 
-  const { quote, quoteLoading, loading, error, getQuote, executeSwap, clearQuote } = useAquaSwap();
+  const { quote, quoteLoading, loading, error, getQuote, executeSwap, clearQuote } = useSwap();
   const { enqueueSnackbar } = useSnackbar();
   const { hasUsdcTrustline, refetch: refetchAccountStatus } = useAccountStatus(wallet.address);
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
