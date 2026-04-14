@@ -25,6 +25,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 
+import { TrustlineModal } from './trustline-modal';
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
 
