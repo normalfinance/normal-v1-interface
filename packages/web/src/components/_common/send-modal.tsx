@@ -79,7 +79,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
     setIsFiatMode(true);
     setShowOptions(false);
     const best = [...sendableTokens].sort((a, b) =>
-      BigNumber(b.balance).multipliedBy(b.price).comparedTo(BigNumber(a.balance).multipliedBy(a.price))
+      BigNumber(b.balance).multipliedBy(b.price).comparedTo(BigNumber(a.balance).multipliedBy(a.price)) ?? 0
     )[0];
     setSendToken(best ?? sendableTokens[0] ?? null);
   }, [open, sendableTokens]);
