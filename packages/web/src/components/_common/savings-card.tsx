@@ -38,8 +38,17 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const { t } = useTranslate();
   const { tokenState } = usePersistStore();
 
-  const { vaultInfo, userPosition, loading, error, deposit, withdraw, refreshVaultInfo } =
-    useDefindexSavings();
+  const {
+    vaultInfo,
+    userPosition,
+    loading,
+    error,
+    needsTrustline,
+    setNeedsTrustline,
+    deposit,
+    withdraw,
+    refreshVaultInfo,
+  } = useDefindexSavings();
 
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
@@ -48,12 +57,16 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const savingsDepositBalance = getTokenBalance(getSavingsDepositToken(tokenState.tokens));
   const savingsDepositLabel = getSavingsDepositTokenLabel();
 
+  // Truncate to 2 decimal places (no rounding up) so MAX never exceeds actual balance
+  const truncateToTwoDecimals = (value: number): string =>
+    (Math.floor(value * 100) / 100).toFixed(2);
+
   // Handle max button
   const handleMax = useCallback(() => {
     if (mode === 'deposit') {
       setAmount(parseFloat(savingsDepositBalance).toFixed(2));
     } else if (userPosition) {
-      setAmount(parseFloat(userPosition.currentValue).toFixed(2));
+      setAmount(truncateToTwoDecimals(parseFloat(userPosition.currentValue)));
     }
   }, [mode, savingsDepositBalance, userPosition]);
 
@@ -267,6 +280,13 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* Trustline Modal — shown when deposit fails due to missing trustline */}
+      <TrustlineModal
+        open={needsTrustline}
+        onClose={() => setNeedsTrustline(false)}
+        onSuccess={() => setNeedsTrustline(false)}
+      />
     </Card>
   );
 };

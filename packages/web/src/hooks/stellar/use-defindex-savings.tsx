@@ -27,6 +27,8 @@ interface UseDefindexSavingsReturn {
   loading: boolean;
   vaultInfo: VaultInfo | null;
   userPosition: SavingsPosition | null;
+  needsTrustline: boolean;
+  setNeedsTrustline: Dispatch<SetStateAction<boolean>>;
   deposit: (amount: string) => Promise<string>;
   withdraw: (amount: string) => Promise<string>;
   refreshVaultInfo: () => Promise<void>;
@@ -80,6 +82,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [needsTrustline, setNeedsTrustline] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
   const [userPosition, setUserPosition] = useState<SavingsPosition | null>(null);
 
@@ -128,6 +131,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       try {
         setLoading(true);
         setError(null);
+        setNeedsTrustline(false);
 
         const walletType = wallet.walletType;
         const isNormalWallet = walletType === 'normal-wallet';
@@ -198,6 +202,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       } catch (err: any) {
         console.error('Error depositing:', err);
         const errorMessage = err.message || 'Deposit failed';
+        if (errorMessage.toLowerCase().includes('trustline')) {
+          setNeedsTrustline(true);
+        }
         setError(errorMessage);
         enqueueSnackbar(errorMessage, { variant: 'error' });
         return '';
@@ -337,6 +344,8 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
     loading,
     vaultInfo,
     userPosition,
+    needsTrustline,
+    setNeedsTrustline,
     deposit,
     withdraw,
     refreshVaultInfo,
