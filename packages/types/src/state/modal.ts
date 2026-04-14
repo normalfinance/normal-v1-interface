@@ -3,6 +3,7 @@ export enum ModalType {
   OFF_RAMP = 'OFF_RAMP',
 
   DEPOSIT_CRYPTO = 'DEPOSIT_CRYPTO',
+  SEND_CRYPTO = 'SEND_CRYPTO',
 
   // Liquidity management
   ADD_LIQUIDITY = 'ADD_LIQUIDITY',
