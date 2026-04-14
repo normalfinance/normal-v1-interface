@@ -6,7 +6,9 @@ import type { Token } from '@normalfinance/types';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { ModalType } from '@normalfinance/types';
 import { useRouter } from 'next/navigation';
+import { useAppStore } from '@normalfinance/state';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
@@ -43,8 +45,19 @@ export default function ConnectedWallet({
   const { t } = useTranslate();
   const theme = useTheme();
   const router = useRouter();
+  const { setModalView } = useAppStore();
 
   const actionButtons = [
+    {
+      label: 'Send',
+      icon: 'solar:upload-bold-duotone',
+      onClick: () => setModalView(ModalType.SEND_CRYPTO, true),
+    },
+    {
+      label: 'Receive',
+      icon: 'solar:download-bold-duotone',
+      onClick: () => setModalView(ModalType.DEPOSIT_CRYPTO, true),
+    },
     {
       label: 'Swap',
       icon: 'solar:transfer-horizontal-bold-duotone',

@@ -11,8 +11,6 @@ export interface NetworkConfig {
   NORMAL_HOT_A: string;
 
   // External Contracts
-  AQUA_ROUTER_ADDRESS: string;
-  AQUA_API_BASE_URL: string;
   DEFINDEX_VAULT_ADDRESS: string;
   BLEND_USDC_ADDRESS?: string;
   BLEND_USDC_ISSUER?: string;

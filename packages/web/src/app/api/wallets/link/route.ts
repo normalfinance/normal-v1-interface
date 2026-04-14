@@ -14,11 +14,6 @@ const LinkWalletSchema = z.object({
     .min(1, 'Wallet address is required')
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
   walletName: z.string().max(50, 'Wallet name must be 50 characters or less').optional(),
-  custodyChoice: z.enum(['self', 'platform']).optional(),
-  encryptedMnemonic: z.string().optional(),
-  encryptionIV: z.string().optional(),
-  encryptionSalt: z.string().optional(),
-  custodyConsentEmail: z.string().email().optional(),
   userId: z.string().uuid().optional(), // Required for admin requests
 });
 
@@ -61,16 +56,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const {
-      walletAddress,
-      walletName,
-      custodyChoice,
-      encryptedMnemonic,
-      encryptionIV,
-      encryptionSalt,
-      custodyConsentEmail,
-      userId: adminProvidedUserId,
-    } = validation.data;
+    const { walletAddress, walletName, userId: adminProvidedUserId } = validation.data;
 
     // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     // if (isLinked) {
@@ -118,34 +104,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate custody data if platform custody is chosen
-    if (custodyChoice === 'platform') {
-      if (!encryptedMnemonic || !encryptionIV || !encryptionSalt || !custodyConsentEmail) {
-        return NextResponse.json(
-          {
-            error:
-              'Platform custody requires encryptedMnemonic, encryptionIV, encryptionSalt, and custodyConsentEmail',
-          },
-          { status: 400 }
-        );
-      }
-    }
-
     // Link the wallet
-    const linkedWallet = await LinkedWalletService.linkWallet(
-      userId,
-      walletAddress,
-      walletName,
-      custodyChoice
-        ? {
-            custodyChoice,
-            encryptedMnemonic,
-            encryptionIV,
-            encryptionSalt,
-            custodyConsentEmail,
-          }
-        : undefined
-    );
+    const linkedWallet = await LinkedWalletService.linkWallet(userId, walletAddress, walletName);
 
     logger.log('[API /wallets/link] Wallet linked successfully:', {
       userId: userId.substring(0, 8) + '...',
@@ -172,7 +132,6 @@ export async function POST(request: NextRequest) {
           walletName: linkedWallet.walletName,
           createdAt: linkedWallet.createdAt,
           lastUsedAt: linkedWallet.lastUsedAt,
-          custodyChoice: linkedWallet.custodyChoice,
         },
       },
       { status: 201 }

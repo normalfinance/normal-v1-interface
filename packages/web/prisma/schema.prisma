@@ -56,35 +56,16 @@ model ReferralAction {
 }
 
 model LinkedWallet {
-  id                  String    @id @default(cuid())
-  supabaseUid         String
-  walletAddress       String
-  walletName          String?
-  createdAt           DateTime  @default(now())
-  lastUsedAt          DateTime  @default(now())
-  custodyChoice       String?
-  encryptedMnemonic   String?
-  encryptionIV        String?
-  encryptionSalt      String?
-  custodyConsentEmail String?
-  custodyConsentDate  DateTime?
+  id            String   @id @default(cuid())
+  supabaseUid   String
+  walletAddress String
+  walletName    String?
+  createdAt     DateTime @default(now())
+  lastUsedAt    DateTime @default(now())
 
   @@unique([supabaseUid, walletAddress])
   @@index([supabaseUid])
   @@map("linked_wallets")
-}
-
-model UserRSAKeys {
-  id                  String   @id @default(cuid())
-  supabaseUid         String   @unique
-  publicKey           String   @db.Text
-  encryptedPrivateKey String   @db.Text
-  privateKeyIV        String
-  privateKeySalt      String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@map("user_rsa_keys")
 }
 
 model SponsoredAccount {

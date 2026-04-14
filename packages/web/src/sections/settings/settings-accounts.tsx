@@ -4,10 +4,9 @@ import type { LinkedWallet } from '@/services/linked-wallets';
 
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
-import { format } from '@normalfinance/utils';
+import { format, constants } from '@normalfinance/utils';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 
-import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -27,8 +26,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
-import { CustodySettings } from '@/components/settings/custody-settings';
-import AddBlendUsdcTrustlineButton from '@/components/settings/add-blend-usdc-trustline-button';
+import AddUsdcTrustlineButton from '@/components/settings/add-usdc-trustline-button';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 
 export function SettingsAccounts() {
@@ -247,16 +245,23 @@ export function SettingsAccounts() {
                   </Stack>
                 )}
 
-                <Box sx={{ mt: 2 }}>
-                  <CustodySettings
-                    walletAddress={wallet.walletAddress}
-                    walletName={wallet.walletName}
-                    custodyChoice={wallet.custodyChoice}
-                    onUpdate={loadWallets}
-                  />
-                </Box>
+                <AddUsdcTrustlineButton
+                  walletAddress={wallet.walletAddress}
+                  assetIssuer={constants.StellarConfig.USDC_ISSUER}
+                  label={t('Add Stellar USDC Trustline')}
+                  loadingLabel={t('Adding trustline...')}
+                  successMessage={t('Stellar USDC trustline added!')}
+                  errorFallback={t('Failed to add Stellar USDC trustline')}
+                />
 
-                <AddBlendUsdcTrustlineButton walletAddress={wallet.walletAddress} />
+                <AddUsdcTrustlineButton
+                  walletAddress={wallet.walletAddress}
+                  assetIssuer={constants.StellarConfig.BLEND_USDC_ISSUER}
+                  label={t('Add Blend USDC Trustline')}
+                  loadingLabel={t('Adding trustline...')}
+                  successMessage={t('Blend USDC trustline added!')}
+                  errorFallback={t('Failed to add Blend USDC trustline')}
+                />
 
                 <Button
                   variant="soft"

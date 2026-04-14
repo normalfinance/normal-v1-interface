@@ -1,8 +1,6 @@
 import type { MnemonicStrength } from '@normalfinance/utils';
 
 import { useRef, useEffect, useCallback } from 'react';
-import { fetchAndDecryptMnemonic } from '@/lib/fetch-mnemonic';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
 import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
 import { useWalletPassword } from '@/providers/WalletPasswordProvider';
@@ -14,13 +12,7 @@ import {
   encryptPrivateKeyWithPassword,
   decryptPrivateKeyWithPassword,
 } from '@/lib/client-crypto';
-import {
-  logger,
-  validateMnemonic,
-  normalizeMnemonic,
-  createKeypairFromSecret,
-  createWalletFromMnemonic,
-} from '@normalfinance/utils';
+import { logger, createKeypairFromSecret } from '@normalfinance/utils';
 
 const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
 
@@ -86,7 +78,6 @@ const removeStoredPrivateKey = (): void => {
 export const useNormalWallet = () => {
   const persistStore = usePersistStore();
   const normalWalletStore = useNormalWalletStore();
-  const { session } = useSupabaseAuth();
   const { requestPassword } = useWalletPassword();
 
   const connectionChecked = useRef(false);
@@ -122,7 +113,14 @@ export const useNormalWallet = () => {
         const format = getStoredKeyFormat();
 
         if (format === 'none') {
-          // No key stored — connect address-only
+          // No local private key. This can happen if the user previously relied
+          // on platform custody (now removed) or cleared browser storage. We keep
+          // the wallet marked as 'normal-wallet' in the persist store (address-only)
+          // so that UI read paths still work, but signTransaction will throw a clear
+          // "please re-import" error when the user tries to sign.
+          logger.warn(
+            '[NORMAL WALLET] Stored wallet address has no local private key — address-only mode. User must re-import to sign.'
+          );
           normalWalletStore.setPublicKey(storedAddress);
           normalWalletStore.setConnected(true);
           return;
@@ -310,68 +308,56 @@ export const useNormalWallet = () => {
     [persistStore, normalWalletStore]
   );
 
-  const clearKeypairForPlatformCustody = useCallback(() => {
-    removeStoredPrivateKey();
-    normalWalletStore.setKeypair(null);
-  }, [normalWalletStore]);
-
   const signTransaction = useCallback(
     async (xdr: string, networkPassphrase?: string) => {
-      const { keypair, publicKey } = normalWalletStore;
-      if (keypair && publicKey) {
-        return normalWalletStore.signTransaction(xdr, networkPassphrase);
+      // Always read the latest zustand state — the hook-captured `normalWalletStore`
+      // can be stale if the store updated between render and this call.
+      const latest = useNormalWalletStore.getState();
+      if (latest.keypair && latest.publicKey) {
+        return latest.signTransaction(xdr, networkPassphrase);
       }
 
-      const walletAddress = persistStore.wallet.address;
+      const walletAddress = persistStore.wallet.address || latest.publicKey;
       if (!walletAddress) {
         throw new Error('No wallet connected');
       }
 
-      const mnemonic = await fetchAndDecryptMnemonic(walletAddress, session);
-      if (mnemonic) {
-        const normalized = normalizeMnemonic(mnemonic);
-        if (!validateMnemonic(normalized)) {
-          throw new Error('Invalid mnemonic from platform custody');
-        }
-        const walletData = createWalletFromMnemonic(normalized);
-        if (walletData.publicKey !== walletAddress) {
-          throw new Error('Mnemonic does not match wallet address');
-        }
-        normalWalletStore.setKeypair(walletData.keypair);
-        try {
-          const signedXDR = await normalWalletStore.signTransaction(xdr, networkPassphrase);
-          return signedXDR;
-        } finally {
-          normalWalletStore.setKeypair(null);
-          removeStoredPrivateKey();
-        }
-      }
-
-      // Self-custody fallback: prompt for password and decrypt
+      // Self-custody: prompt for password and decrypt the locally-stored key
       const keyFormat = getStoredKeyFormat();
       if (keyFormat === 'v2') {
         try {
           const password = await requestPassword('enter');
           const storedPrivateKey = await getStoredPrivateKey(password);
-          if (storedPrivateKey) {
-            const keypairFromStorage = createKeypairFromSecret(storedPrivateKey);
-            if (keypairFromStorage.publicKey() !== walletAddress) {
-              throw new Error('Stored private key does not match wallet address');
-            }
-            normalWalletStore.setKeypair(keypairFromStorage);
-            return normalWalletStore.signTransaction(xdr, networkPassphrase);
+          if (!storedPrivateKey) {
+            throw new Error(
+              'Could not decrypt your local wallet key. Please re-import your wallet using your recovery phrase.'
+            );
           }
+          const keypairFromStorage = createKeypairFromSecret(storedPrivateKey);
+          if (keypairFromStorage.publicKey() !== walletAddress) {
+            throw new Error(
+              'The stored local key does not match your wallet address. Please re-import your wallet using your recovery phrase.'
+            );
+          }
+          latest.setKeypair(keypairFromStorage);
+          latest.setPublicKey(keypairFromStorage.publicKey());
+          latest.setConnected(true);
+          return useNormalWalletStore.getState().signTransaction(xdr, networkPassphrase);
         } catch (error) {
           if (error instanceof Error && error.message === 'User cancelled password entry') {
-            throw new Error('No wallet key available. Sign in and try again.');
+            throw new Error('Password required to sign. Please try again.');
           }
           throw error;
         }
       }
 
-      throw new Error('No wallet key available. Sign in and try again.');
+      // No local key at all — only possible for users whose wallet was created
+      // under the removed platform-custody flow. They must re-import.
+      throw new Error(
+        'No local wallet key found. Please re-import your wallet using your recovery phrase to continue signing.'
+      );
     },
-    [normalWalletStore, persistStore.wallet.address, session, requestPassword]
+    [persistStore.wallet.address, requestPassword]
   );
 
   const disconnectWallet = useCallback(async () => {
@@ -402,7 +388,6 @@ export const useNormalWallet = () => {
     importWalletFromPrivateKey,
     connectWallet,
     connectWalletWithoutKeypair,
-    clearKeypairForPlatformCustody,
     signTransaction,
     disconnectWallet,
   };

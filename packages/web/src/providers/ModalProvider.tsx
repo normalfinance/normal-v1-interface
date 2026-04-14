@@ -4,6 +4,7 @@ import { ModalType } from '@normalfinance/types';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 // components
+import SendModal from '@/components/_common/send-modal';
 import OnRampDialog from '@/components/_common/onramp-dialog';
 import OffRampDialog from '@/components/_common/offramp-dialog';
 
@@ -45,6 +46,13 @@ export function ModalProvider({ children }: ModalProviderProps) {
         <ReceiveModal
           open={modalState.DEPOSIT_CRYPTO}
           onClose={() => setModalView(ModalType.DEPOSIT_CRYPTO, false)}
+        />
+      )}
+
+      {modalState.SEND_CRYPTO && wallet.address && (
+        <SendModal
+          open={modalState.SEND_CRYPTO}
+          onClose={() => setModalView(ModalType.SEND_CRYPTO, false)}
         />
       )}
     </>

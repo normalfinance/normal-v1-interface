@@ -1,26 +1,27 @@
 'use client';
 
-import type { SwapQuote, SwapMode, SwapDisplayMeta } from '@/types/swap';
 import type { Dispatch, SetStateAction } from 'react';
+import type { SwapMode, SwapQuote, SwapDisplayMeta } from '@/types/swap';
 
+import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
+import { constants } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
+import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
+import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
+import { createStellarExpertUrl } from '@/utils/transactions.utils';
+
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import { useTranslate } from '@/locales';
-import { usePersistStore } from '@normalfinance/state';
-import { constants } from '@normalfinance/utils';
-import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
-import { createStellarExpertUrl } from '@/utils/transactions.utils';
-import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 
 import { useNormalWallet } from './use-normal-wallet';
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
 
 // ----------------------------------------------------------------------
 
-interface UseAquaSwapReturn {
+interface UseSwapReturn {
   error: string | null;
   setError: Dispatch<SetStateAction<string | null>>;
   loading: boolean;
@@ -36,12 +37,9 @@ interface UseAquaSwapReturn {
   clearQuote: () => void;
 }
 
-// Slippage tolerance (1%)
-const SLIPPAGE_TOLERANCE = 0.01;
-
 // ----------------------------------------------------------------------
 
-export function useAquaSwap(): UseAquaSwapReturn {
+export function useSwap(): UseSwapReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
@@ -95,9 +93,8 @@ export function useAquaSwap(): UseAquaSwapReturn {
         }
 
         // Convert amounts back from stroops
-        const amountOutRaw = parseInt(data.amount_out, 10);
-        const amountOut = (amountOutRaw / 10_000_000).toFixed(7);
-        const minAmountOut = ((amountOutRaw * (1 - SLIPPAGE_TOLERANCE)) / 10_000_000).toFixed(7);
+        const amountOut = (parseInt(data.amount_out, 10) / 10_000_000).toFixed(7);
+        const minAmountOut = (parseInt(data.min_amount_out || '0', 10) / 10_000_000).toFixed(7);
 
         const newQuote: SwapQuote = {
           path: data.path || [],
@@ -144,8 +141,8 @@ export function useAquaSwap(): UseAquaSwapReturn {
           : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-        // Re-fetch the quote with sender so Aqua builds the Soroban router XDR
-        // with the correct source account and a fresh sequence number
+        // Re-fetch the quote with sender so the aggregator builds the Soroban
+        // router XDR with the correct source account and fresh sequence number
         const amountInStroops = Math.floor(parseFloat(swapQuote.amountIn) * 10_000_000).toString();
 
         const quoteResponse = await fetch('/api/swap/quote', {
@@ -167,11 +164,11 @@ export function useAquaSwap(): UseAquaSwapReturn {
 
         if (!quoteData.xdr) {
           throw new Error(
-            'Aqua did not return a transaction. Ensure NEXT_PUBLIC_{TESTNET|MAINNET}_AQUA_API_BASE_URL is set correctly.'
+            'Swap aggregator did not return a transaction. Ensure SOROSWAP_API_KEY is set on the server.'
           );
         }
 
-        // Sign the Soroban router XDR built by Aqua
+        // Sign the Soroban router XDR built by the aggregator
         const signResult = isNormalWallet
           ? await signTransaction(quoteData.xdr, constants.StellarConfig.NETWORK_PASSPHRASE)
           : await signTransaction(quoteData.xdr);
