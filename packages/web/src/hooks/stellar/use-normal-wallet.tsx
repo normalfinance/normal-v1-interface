@@ -110,95 +110,14 @@ export const useNormalWallet = () => {
         const storedAddress = persistStore.wallet.address;
         if (!storedAddress) return;
 
-        const format = getStoredKeyFormat();
-
-        if (format === 'none') {
-          // No local private key. This can happen if the user previously relied
-          // on platform custody (now removed) or cleared browser storage. We keep
-          // the wallet marked as 'normal-wallet' in the persist store (address-only)
-          // so that UI read paths still work, but signTransaction will throw a clear
-          // "please re-import" error when the user tries to sign.
-          logger.warn(
-            '[NORMAL WALLET] Stored wallet address has no local private key — address-only mode. User must re-import to sign.'
-          );
-          normalWalletStore.setPublicKey(storedAddress);
-          normalWalletStore.setConnected(true);
-          return;
-        }
-
-        let decryptedKey: string | null = null;
-
-        if (format === 'v2') {
-          // Password-encrypted — prompt user
-          try {
-            const password = await requestPassword('enter');
-            decryptedKey = await getStoredPrivateKey(password);
-          } catch {
-            // User cancelled or password reset — connect address-only
-            normalWalletStore.setPublicKey(storedAddress);
-            normalWalletStore.setConnected(true);
-            return;
-          }
-        } else {
-          // Legacy or v1 — decrypt old way, then migrate to v2
-          try {
-            const stored = localStorage.getItem(NORMAL_WALLET_STORAGE_KEY);
-            if (!stored) {
-              normalWalletStore.setPublicKey(storedAddress);
-              normalWalletStore.setConnected(true);
-              return;
-            }
-
-            if (format === 'legacy') {
-              decryptedKey = atob(stored);
-            } else {
-              // v1: IndexedDB-encrypted
-              decryptedKey = await decryptFromLocalStorage(stored);
-            }
-
-            // Migrate: prompt for new password and re-encrypt as v2
-            if (decryptedKey) {
-              try {
-                const password = await requestPassword('migrate');
-                await storePrivateKey(decryptedKey, password);
-                logger.log('[NORMAL WALLET] Migrated to v2 password encryption');
-              } catch {
-                // User cancelled migration — still restore the key this time
-                logger.warn('[NORMAL WALLET] User cancelled migration, continuing with decrypted key');
-              }
-            }
-          } catch (error) {
-            logger.error('[NORMAL WALLET] Failed to decrypt legacy/v1 key:', error);
-            removeStoredPrivateKey();
-            persistStore.disconnectWallet();
-            return;
-          }
-        }
-
-        if (decryptedKey) {
-          try {
-            const keypair = createKeypairFromSecret(decryptedKey);
-            const publicKey = keypair.publicKey();
-
-            if (publicKey === storedAddress) {
-              normalWalletStore.setKeypair(keypair);
-              normalWalletStore.setPublicKey(publicKey);
-              normalWalletStore.setConnected(true);
-              logger.log('[NORMAL WALLET] Wallet restored successfully');
-            } else {
-              logger.warn('[NORMAL WALLET] Stored private key does not match stored address');
-              removeStoredPrivateKey();
-              persistStore.disconnectWallet();
-            }
-          } catch (error) {
-            logger.error('[NORMAL WALLET] Failed to restore keypair:', error);
-            removeStoredPrivateKey();
-            persistStore.disconnectWallet();
-          }
-        } else {
-          normalWalletStore.setPublicKey(storedAddress);
-          normalWalletStore.setConnected(true);
-        }
+        // Address-only restore: never prompt for password on mount. The
+        // decrypted keypair is populated lazily by signTransaction on the
+        // first sign, which caches it in the zustand store for the session.
+        // This keeps the wallet "connected" for all read paths (balances,
+        // history, etc.) without disturbing the user with a modal on every
+        // page load.
+        normalWalletStore.setPublicKey(storedAddress);
+        normalWalletStore.setConnected(true);
       } catch (error) {
         logger.error('[NORMAL WALLET] Failed to restore wallet:', error);
       }
@@ -217,8 +136,6 @@ export const useNormalWallet = () => {
     persistStore.wallet.address,
     normalWalletStore.isConnected,
     normalWalletStore.isConnecting,
-    normalWalletStore.publicKey,
-    requestPassword,
   ]);
 
   const createWallet = useCallback(
@@ -324,6 +241,20 @@ export const useNormalWallet = () => {
 
       // Self-custody: prompt for password and decrypt the locally-stored key
       const keyFormat = getStoredKeyFormat();
+
+      const finalizeSign = (decryptedKey: string) => {
+        const keypairFromStorage = createKeypairFromSecret(decryptedKey);
+        if (keypairFromStorage.publicKey() !== walletAddress) {
+          throw new Error(
+            'The stored local key does not match your wallet address. Please re-import your wallet using your recovery phrase.'
+          );
+        }
+        latest.setKeypair(keypairFromStorage);
+        latest.setPublicKey(keypairFromStorage.publicKey());
+        latest.setConnected(true);
+        return useNormalWalletStore.getState().signTransaction(xdr, networkPassphrase);
+      };
+
       if (keyFormat === 'v2') {
         try {
           const password = await requestPassword('enter');
@@ -333,22 +264,45 @@ export const useNormalWallet = () => {
               'Could not decrypt your local wallet key. Please re-import your wallet using your recovery phrase.'
             );
           }
-          const keypairFromStorage = createKeypairFromSecret(storedPrivateKey);
-          if (keypairFromStorage.publicKey() !== walletAddress) {
-            throw new Error(
-              'The stored local key does not match your wallet address. Please re-import your wallet using your recovery phrase.'
-            );
-          }
-          latest.setKeypair(keypairFromStorage);
-          latest.setPublicKey(keypairFromStorage.publicKey());
-          latest.setConnected(true);
-          return useNormalWalletStore.getState().signTransaction(xdr, networkPassphrase);
+          return finalizeSign(storedPrivateKey);
         } catch (error) {
           if (error instanceof Error && error.message === 'User cancelled password entry') {
             throw new Error('Password required to sign. Please try again.');
           }
           throw error;
         }
+      }
+
+      if (keyFormat === 'legacy' || keyFormat === 'v1') {
+        // Lazy migration: silently decrypt the legacy/v1 key, prompt the user
+        // for a new password, re-encrypt as v2, then proceed with the sign.
+        let decryptedKey: string;
+        try {
+          const stored = localStorage.getItem(NORMAL_WALLET_STORAGE_KEY);
+          if (!stored) {
+            throw new Error('No local key');
+          }
+          decryptedKey =
+            keyFormat === 'legacy' ? atob(stored) : await decryptFromLocalStorage(stored);
+        } catch (error) {
+          logger.error('[NORMAL WALLET] Failed to decrypt legacy/v1 key:', error);
+          throw new Error(
+            'Could not decrypt your local wallet key. Please re-import your wallet using your recovery phrase.'
+          );
+        }
+
+        try {
+          const password = await requestPassword('migrate');
+          await storePrivateKey(decryptedKey, password);
+          logger.log('[NORMAL WALLET] Migrated to v2 password encryption');
+        } catch (error) {
+          if (error instanceof Error && error.message === 'User cancelled password entry') {
+            throw new Error('Password required to sign. Please try again.');
+          }
+          throw error;
+        }
+
+        return finalizeSign(decryptedKey);
       }
 
       // No local key at all — only possible for users whose wallet was created
@@ -374,8 +328,14 @@ export const useNormalWallet = () => {
   }, [normalWalletStore, persistStore]);
 
   // canSign is true when the wallet can sign transactions locally:
-  // either a keypair is already in memory, or a v2 password-encrypted key is stored
-  const canSign = !!normalWalletStore.keypair || getStoredKeyFormat() === 'v2';
+  // either a keypair is already in memory, or a locally-stored key exists
+  // (v2, v1, or legacy) that signTransaction can unlock on demand.
+  const storedKeyFormat = getStoredKeyFormat();
+  const canSign =
+    !!normalWalletStore.keypair ||
+    storedKeyFormat === 'v2' ||
+    storedKeyFormat === 'v1' ||
+    storedKeyFormat === 'legacy';
 
   return {
     publicKey: normalWalletStore.publicKey,
