@@ -96,6 +96,8 @@ model VaultDeposit {
   vaultAddress  String
   type          String   // "deposit" or "withdraw"
   amount        String   // USDC amount (human-readable, not stroops)
+  feeAmount     String?  // Normal fee (deposit) or commission (withdraw), human-readable USDC
+  feeTxHash     String?  // Hash of the classic fee payment transaction
   txHash        String?
   createdAt     DateTime @default(now())
 
@@ -112,6 +114,8 @@ model SwapLog {
   tokenOutSymbol   String?
   amountIn         String
   amountOut        String
+  feeAmount        String?  // 0.5% fee charged in tokenIn (human-readable)
+  feeTxHash        String?  // Hash of the classic fee payment transaction
   txHash           String?
   createdAt        DateTime @default(now())
 

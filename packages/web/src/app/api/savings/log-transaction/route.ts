@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 // ----------------------------------------------------------------------
@@ -10,7 +11,7 @@ const VALID_TYPES = ['deposit', 'withdraw'] as const;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { walletAddress, vaultAddress, type, amount, txHash } = body;
+    const { walletAddress, vaultAddress, type, amount, txHash, feeAmount, feeTxHash } = body;
 
     // Validate required fields
     if (!walletAddress || !vaultAddress || !type || !amount) {
@@ -48,6 +49,8 @@ export async function POST(request: NextRequest) {
         type,
         amount: String(amount),
         txHash: txHash || null,
+        feeAmount: feeAmount != null ? String(feeAmount) : null,
+        feeTxHash: typeof feeTxHash === 'string' ? feeTxHash : null,
       },
     });
 

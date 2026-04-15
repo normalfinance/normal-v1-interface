@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 function isValidTokenRef(ref: string): boolean {
@@ -19,6 +20,8 @@ export async function POST(request: NextRequest) {
       amountIn,
       amountOut,
       txHash,
+      feeAmount,
+      feeTxHash,
     } = body;
 
     if (!walletAddress || !tokenInAddress || !tokenOutAddress || !amountIn || !amountOut) {
@@ -61,6 +64,8 @@ export async function POST(request: NextRequest) {
         amountIn: String(amountIn),
         amountOut: String(amountOut),
         txHash: typeof txHash === 'string' ? txHash : null,
+        feeAmount: feeAmount != null ? String(feeAmount) : null,
+        feeTxHash: typeof feeTxHash === 'string' ? feeTxHash : null,
       },
     });
 

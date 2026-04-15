@@ -231,12 +231,34 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
           />
         </Box>
 
-        {/* Exchange Rate */}
-        {exchangeRate && (
-          <Box sx={{ px: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              1 {tokenIn} = {exchangeRate} {tokenOut}
-            </Typography>
+        {/* Exchange Rate + Fee Breakdown */}
+        {quote && parseFloat(quote.amountIn) > 0 && (
+          <Box
+            sx={{
+              px: 1.5,
+              py: 1,
+              borderRadius: 1,
+              bgcolor: 'action.hover',
+            }}
+          >
+            <Stack spacing={0.5}>
+              {exchangeRate && (
+                <Typography variant="caption" color="text.secondary">
+                  1 {tokenIn} = {exchangeRate} {tokenOut}
+                </Typography>
+              )}
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="caption" color="text.secondary">
+                  {t('Normal fee (0.5%)')}
+                </Typography>
+                <Typography variant="caption" fontWeight="medium">
+                  -{parseFloat(quote.fee || '0').toFixed(4)} {tokenIn}
+                </Typography>
+              </Stack>
+              <Typography variant="caption" color="text.secondary">
+                {t("You'll sign two transactions: the Normal fee and your swap.")}
+              </Typography>
+            </Stack>
           </Box>
         )}
 
