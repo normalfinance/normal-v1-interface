@@ -331,9 +331,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
     ]
   );
 
-  // Withdraw from vault — two transactions: (1) DeFindex withdraw to the
-  // user, (2) classic USDC payment for the 7% yield commission. Withdraw
-  // goes first because the commission is paid FROM the withdrawn funds.
+  // Withdraw from vault — two transactions: (1) classic USDC payment for
+  // the 7% yield commission, (2) DeFindex withdraw to the user. Commission
+  // fee goes first so the withdrawal is blocked if the fee cannot be sent.
   const withdraw = useCallback(
     async (amount: string): Promise<string> => {
       if (!wallet.address) {
@@ -389,7 +389,34 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           return horizonServer.submitTransaction(signedTx);
         };
 
-        // 1. Build + sign + submit the DeFindex withdraw
+        // 1. Build + sign + submit the yield commission fee first.
+        // If this fails the withdrawal is aborted entirely.
+        let commissionTxHash: string | null = null;
+        if (commissionAmount > 0) {
+          const commissionResponse = await fetch('/api/fees/build-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              caller: walletAddress,
+              amount: commissionAmount.toFixed(7),
+              assetCode: 'USDC',
+            }),
+          });
+          const commissionData = await commissionResponse.json();
+          if (!commissionData.success || !commissionData.xdr) {
+            throw new Error(commissionData.error || 'Failed to build commission transaction');
+          }
+
+          let commissionResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
+          try {
+            commissionResult = await signAndSubmit(commissionData.xdr);
+          } catch (commissionErr: any) {
+            throw new Error(`Yield commission payment failed: ${parseHorizonError(commissionErr)}`);
+          }
+          commissionTxHash = commissionResult.hash;
+        }
+
+        // 2. Build + sign + submit the DeFindex withdraw.
         const withdrawResponse = await fetch('/api/savings/withdraw', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -397,74 +424,23 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         });
         const withdrawData = await withdrawResponse.json();
         if (!withdrawData.success) {
-          throw new Error(withdrawData.error || 'Failed to build withdraw transaction');
+          throw new Error(
+            `${withdrawData.error || 'Failed to build withdraw transaction'}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
+          );
         }
         if (!withdrawData.xdr) {
-          throw new Error('No transaction XDR returned from DeFindex');
+          throw new Error(
+            `No transaction XDR returned from DeFindex${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
+          );
         }
 
         let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
         try {
           withdrawResult = await signAndSubmit(withdrawData.xdr);
         } catch (withdrawErr: any) {
-          throw new Error(`Withdraw failed: ${parseHorizonError(withdrawErr)}`);
-        }
-
-        // 2. If there's a yield commission owed, build + sign + submit it.
-        // Wait briefly first so Horizon nodes have time to propagate the
-        // updated account sequence from the just-confirmed withdraw tx,
-        // avoiding a tx_bad_seq 400 on the commission payment.
-        let commissionTxHash: string | null = null;
-        if (commissionAmount > 0) {
-          try {
-            const buildCommission = async (): Promise<string> => {
-              const resp = await fetch('/api/fees/build-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  caller: walletAddress,
-                  amount: commissionAmount.toFixed(7),
-                  assetCode: 'USDC',
-                }),
-              });
-              const data = await resp.json();
-              if (!data.success || !data.xdr) {
-                throw new Error(data.error || 'Failed to build commission transaction');
-              }
-              return data.xdr;
-            };
-
-            // Retry up to 3 times with increasing delays to handle stale
-            // sequence numbers across Horizon nodes on testnet.
-            let commissionXdr: string | null = null;
-            let commissionResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>> | null =
-              null;
-            const retryDelaysMs = [2000, 4000, 8000];
-            for (let attempt = 0; attempt <= retryDelaysMs.length; attempt++) {
-              if (attempt > 0) {
-                await new Promise<void>((r) => setTimeout(r, retryDelaysMs[attempt - 1]));
-              }
-              try {
-                commissionXdr = await buildCommission();
-                commissionResult = await signAndSubmit(commissionXdr);
-                break;
-              } catch (attemptErr: any) {
-                const txCode = attemptErr?.response?.data?.extras?.result_codes?.transaction ?? '';
-                const isBadSeq = txCode === 'tx_bad_seq';
-                const isLastAttempt = attempt === retryDelaysMs.length;
-                if (!isBadSeq || isLastAttempt) {
-                  throw new Error(parseHorizonError(attemptErr));
-                }
-              }
-            }
-            if (commissionResult) commissionTxHash = commissionResult.hash;
-          } catch (commissionErr: any) {
-            // Withdraw already succeeded — surface commission failure but don't rethrow.
-            console.error('Yield commission tx failed:', commissionErr);
-            enqueueSnackbar(t('Withdrawal successful, but yield commission payment failed.'), {
-              variant: 'warning',
-            });
-          }
+          throw new Error(
+            `${parseHorizonError(withdrawErr)}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
+          );
         }
 
         // Log withdrawal to DB (fire-and-forget)

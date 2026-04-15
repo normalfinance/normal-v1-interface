@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
 
     const destination = getFeesDepositAddress();
 
+    //TODO: need to fix this to accomodate swaps
+
     const assetIssuer =
       assetCode === 'USDC' ? constants.StellarConfig.BLEND_USDC_ISSUER : undefined;
 
