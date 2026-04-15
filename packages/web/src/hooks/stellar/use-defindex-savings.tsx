@@ -9,8 +9,8 @@ import { constants } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
-import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
-import { createStellarExpertUrl } from '@/utils/transactions.utils';
+import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
+import { createStellarExpertUrl, parseHorizonError } from '@/utils/transactions.utils';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
 
 import Box from '@mui/material/Box';
@@ -179,6 +179,57 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           return horizonServer.submitTransaction(signedTx);
         };
 
+        // Pre-flight: verify USDC balance matches the expected issuer and
+        // covers the full deposit amount (fee + net) before signing anything.
+        const usdcIssuer = constants.StellarConfig.BLEND_USDC_ISSUER;
+        const usdcAsset = new Asset('USDC', usdcIssuer);
+        const usdcAssetId = usdcAsset.toString(); // "USDC:G..."
+        try {
+          const account = await horizonServer.loadAccount(walletAddress);
+          const usdcBalance = account.balances.find(
+            (b) =>
+              b.asset_type === 'credit_alphanum4' &&
+              (b as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>).asset_code === 'USDC' &&
+              (b as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>).asset_issuer === usdcIssuer
+          );
+          console.log('usdcBalance', usdcBalance);
+          if (!usdcBalance) {
+            const anyUsdc = account.balances.find(
+              (b) =>
+                b.asset_type === 'credit_alphanum4' &&
+                (b as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>).asset_code === 'USDC'
+            );
+            console.log('anyUsdc', anyUsdc);
+            if (anyUsdc) {
+              const wrongIssuer = (anyUsdc as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>)
+                .asset_issuer;
+              throw new Error(
+                `You have USDC from a different issuer (${wrongIssuer.slice(0, 8)}…) — the app requires ${usdcAssetId}. Please fund your wallet with the correct USDC on ${constants.StellarConfig.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet'}.`
+              );
+            }
+            throw new Error(
+              `No ${usdcAssetId} balance found. Please add a USDC trustline and fund your wallet before depositing.`
+            );
+          }
+          const available = parseFloat(usdcBalance.balance);
+          const needed = parsedAmount; // fee + net
+          if (available < needed) {
+            throw new Error(
+              `Insufficient USDC balance: you have ${available.toFixed(2)} USDC but need ${needed.toFixed(2)} USDC (${feeAmount.toFixed(2)} fee + ${netAmount.toFixed(2)} deposit).`
+            );
+          }
+        } catch (balanceErr: any) {
+          if (
+            balanceErr.message.startsWith('Insufficient') ||
+            balanceErr.message.startsWith('You have USDC') ||
+            balanceErr.message.startsWith('No ')
+          ) {
+            throw balanceErr;
+          }
+          // Horizon load failure — proceed and let the tx surface the error naturally
+          console.warn('Could not pre-check USDC balance:', balanceErr.message);
+        }
+
         // 1. Build + sign + submit the Normal fee payment first
         const feeResponse = await fetch('/api/fees/build-payment', {
           method: 'POST',
@@ -198,11 +249,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         try {
           feeResult = await signAndSubmit(feeData.xdr);
         } catch (feeErr: any) {
-          throw new Error(
-            feeErr?.message
-              ? `Fee payment failed: ${feeErr.message}`
-              : 'Fee payment failed — deposit not submitted'
-          );
+          throw new Error(`Fee payment failed: ${parseHorizonError(feeErr)}`);
         }
 
         // 2. Build the DeFindex deposit XDR for the NET amount (fresh sequence)
@@ -227,9 +274,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           depositResult = await signAndSubmit(depositData.xdr);
         } catch (depositErr: any) {
           throw new Error(
-            depositErr?.message
-              ? `${depositErr.message} (Normal fee already charged — tx ${feeResult.hash})`
-              : 'Deposit failed after fee was charged'
+            `${parseHorizonError(depositErr)} (Normal fee already charged — tx ${feeResult.hash})`
           );
         }
 
@@ -358,34 +403,67 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           throw new Error('No transaction XDR returned from DeFindex');
         }
 
-        const withdrawResult = await signAndSubmit(withdrawData.xdr);
+        let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
+        try {
+          withdrawResult = await signAndSubmit(withdrawData.xdr);
+        } catch (withdrawErr: any) {
+          throw new Error(`Withdraw failed: ${parseHorizonError(withdrawErr)}`);
+        }
 
-        // 2. If there's a yield commission owed, build + sign + submit it
+        // 2. If there's a yield commission owed, build + sign + submit it.
+        // Wait briefly first so Horizon nodes have time to propagate the
+        // updated account sequence from the just-confirmed withdraw tx,
+        // avoiding a tx_bad_seq 400 on the commission payment.
         let commissionTxHash: string | null = null;
         if (commissionAmount > 0) {
           try {
-            const commissionResponse = await fetch('/api/fees/build-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                caller: walletAddress,
-                amount: commissionAmount.toFixed(7),
-                assetCode: 'USDC',
-              }),
-            });
-            const commissionData = await commissionResponse.json();
-            if (!commissionData.success || !commissionData.xdr) {
-              throw new Error(commissionData.error || 'Failed to build commission transaction');
+            const buildCommission = async (): Promise<string> => {
+              const resp = await fetch('/api/fees/build-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  caller: walletAddress,
+                  amount: commissionAmount.toFixed(7),
+                  assetCode: 'USDC',
+                }),
+              });
+              const data = await resp.json();
+              if (!data.success || !data.xdr) {
+                throw new Error(data.error || 'Failed to build commission transaction');
+              }
+              return data.xdr;
+            };
+
+            // Retry up to 3 times with increasing delays to handle stale
+            // sequence numbers across Horizon nodes on testnet.
+            let commissionXdr: string | null = null;
+            let commissionResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>> | null =
+              null;
+            const retryDelaysMs = [2000, 4000, 8000];
+            for (let attempt = 0; attempt <= retryDelaysMs.length; attempt++) {
+              if (attempt > 0) {
+                await new Promise<void>((r) => setTimeout(r, retryDelaysMs[attempt - 1]));
+              }
+              try {
+                commissionXdr = await buildCommission();
+                commissionResult = await signAndSubmit(commissionXdr);
+                break;
+              } catch (attemptErr: any) {
+                const txCode = attemptErr?.response?.data?.extras?.result_codes?.transaction ?? '';
+                const isBadSeq = txCode === 'tx_bad_seq';
+                const isLastAttempt = attempt === retryDelaysMs.length;
+                if (!isBadSeq || isLastAttempt) {
+                  throw new Error(parseHorizonError(attemptErr));
+                }
+              }
             }
-            const commissionResult = await signAndSubmit(commissionData.xdr);
-            commissionTxHash = commissionResult.hash;
+            if (commissionResult) commissionTxHash = commissionResult.hash;
           } catch (commissionErr: any) {
             // Withdraw already succeeded — surface commission failure but don't rethrow.
             console.error('Yield commission tx failed:', commissionErr);
-            enqueueSnackbar(
-              t('Withdrawal successful, but yield commission payment failed.'),
-              { variant: 'warning' }
-            );
+            enqueueSnackbar(t('Withdrawal successful, but yield commission payment failed.'), {
+              variant: 'warning',
+            });
           }
         }
 

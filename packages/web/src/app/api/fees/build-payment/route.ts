@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const destination = getFeesDepositAddress();
 
     const assetIssuer =
-      assetCode === 'USDC' ? constants.StellarConfig.USDC_ISSUER : undefined;
+      assetCode === 'USDC' ? constants.StellarConfig.BLEND_USDC_ISSUER : undefined;
 
     if (assetCode === 'USDC' && !assetIssuer) {
       return NextResponse.json(
