@@ -235,7 +235,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           console.warn('Could not pre-check USDC balance:', balanceErr.message);
         }
 
-        // 1. Build + sign + submit the Normal fee payment first
+        // 1. Build + sign + submit the Normal fee payment first.
+        // Savings uses Blend USDC on testnet and canonical USDC on mainnet —
+        // getSavingsUsdcIssuer resolves to the right issuer for this network.
         const feeResponse = await fetch('/api/fees/build-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -243,6 +245,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             caller: walletAddress,
             amount: feeAmount.toFixed(7),
             assetCode: 'USDC',
+            assetIssuer: getSavingsUsdcIssuer(config),
           }),
         });
         const feeData = await feeResponse.json();
@@ -406,6 +409,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
               caller: walletAddress,
               amount: commissionAmount.toFixed(7),
               assetCode: 'USDC',
+              assetIssuer: getSavingsUsdcIssuer(config),
             }),
           });
           const commissionData = await commissionResponse.json();

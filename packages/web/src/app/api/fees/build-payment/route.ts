@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
     const config = getStellarConfigForNetwork(network);
 
-    const { caller, amount, assetCode } = await request.json();
+    const { caller, amount, assetCode, assetIssuer: clientAssetIssuer } = await request.json();
 
     if (!caller || !amount || !assetCode) {
       return NextResponse.json(
@@ -37,18 +37,33 @@ export async function POST(request: NextRequest) {
 
     const destination = getFeesDepositAddress();
 
-    //TODO: need to fix this to accomodate swaps
+    // USDC fees default to canonical USDC. The one exception — testnet
+    // savings pays fees in Blend USDC — is handled by the caller passing
+    // an explicit `assetIssuer`, which we validate against this network's
+    // known USDC issuers to prevent fees being routed through arbitrary assets.
+    let assetIssuer: string | undefined;
+    if (assetCode === 'USDC') {
+      const canonicalIssuer = config.USDC_ISSUER;
+      const blendIssuer = config.BLEND_USDC_ISSUER;
 
-    const assetIssuer =
-      assetCode === 'USDC'
-        ? config.BLEND_USDC_ISSUER || config.USDC_ISSUER
-        : undefined;
+      if (clientAssetIssuer) {
+        if (clientAssetIssuer !== canonicalIssuer && clientAssetIssuer !== blendIssuer) {
+          return NextResponse.json(
+            { success: false, error: 'assetIssuer does not match a known USDC issuer for this network' },
+            { status: 400 }
+          );
+        }
+        assetIssuer = clientAssetIssuer;
+      } else {
+        assetIssuer = canonicalIssuer;
+      }
 
-    if (assetCode === 'USDC' && !assetIssuer) {
-      return NextResponse.json(
-        { success: false, error: 'USDC issuer is not configured for this network' },
-        { status: 500 }
-      );
+      if (!assetIssuer) {
+        return NextResponse.json(
+          { success: false, error: 'USDC issuer is not configured for this network' },
+          { status: 500 }
+        );
+      }
     }
 
     const xdr = await buildFeePaymentXdr({
