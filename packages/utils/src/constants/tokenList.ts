@@ -1,5 +1,5 @@
 import { ApiToken } from '@normalfinance/types';
-import { getCurrentNetwork } from '../network';
+import { getCurrentNetwork, NetworkType } from '../network';
 
 const TESTNET_TOKENS: ApiToken[] = [
   {
@@ -63,9 +63,15 @@ const MAINNET_TOKENS: ApiToken[] = [
 ];
 
 /**
- * Get the supported token list for the current network.
+ * Get the supported token list for a specific network.
+ */
+export function getTokenListForNetwork(network: NetworkType): ApiToken[] {
+  return network === 'mainnet' ? MAINNET_TOKENS : TESTNET_TOKENS;
+}
+
+/**
+ * Get the supported token list for the current network (build-time).
  */
 export function getTokenList(): ApiToken[] {
-  const network = getCurrentNetwork();
-  return network === 'mainnet' ? MAINNET_TOKENS : TESTNET_TOKENS;
+  return getTokenListForNetwork(getCurrentNetwork());
 }

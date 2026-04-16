@@ -5,6 +5,7 @@ import type { CardProps } from '@mui/material';
 import { useTranslate } from '@/locales';
 import React, { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
+import { useStellarConfig } from '@/hooks';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
 import {
@@ -39,6 +40,7 @@ interface SavingsCardProps extends CardProps {}
 const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const { t } = useTranslate();
   const { tokenState } = usePersistStore();
+  const config = useStellarConfig();
 
   const {
     vaultInfo,
@@ -55,9 +57,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
 
-  // Savings deposit availability uses Blend USDC when configured.
-  const savingsDepositBalance = getTokenBalance(getSavingsDepositToken(tokenState.tokens));
-  const savingsDepositLabel = getSavingsDepositTokenLabel();
+  const savingsDepositBalance = getTokenBalance(
+    getSavingsDepositToken(tokenState.tokens, config)
+  );
+  const savingsDepositLabel = getSavingsDepositTokenLabel(config);
 
   // Truncate to 2 decimal places (no rounding up) so MAX never exceeds actual balance
   const truncateToTwoDecimals = (value: number): string =>

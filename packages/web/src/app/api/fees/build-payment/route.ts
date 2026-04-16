@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
     //TODO: need to fix this to accomodate swaps
 
     const assetIssuer =
-      assetCode === 'USDC' ? config.BLEND_USDC_ISSUER : undefined;
+      assetCode === 'USDC'
+        ? config.BLEND_USDC_ISSUER || config.USDC_ISSUER
+        : undefined;
 
     if (assetCode === 'USDC' && !assetIssuer) {
       return NextResponse.json(

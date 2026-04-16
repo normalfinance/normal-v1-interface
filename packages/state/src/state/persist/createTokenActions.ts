@@ -1,5 +1,6 @@
 import { ApiToken, AppStorePersist, Token, TokenActions, TokenState } from '@normalfinance/types';
 import { usePersistStore } from '../store';
+import { useNetworkStore } from '../network/store';
 import {
   checkTrustline,
   constants,
@@ -57,8 +58,9 @@ export const createTokenActions = (): TokenActions => {
       try {
         const now = Date.now();
 
-        // Load tokens from local token list
-        const tokens: ApiToken[] = constants.getTokenList();
+        // Load tokens from local token list (runtime network-aware)
+        const network = useNetworkStore.getState().network;
+        const tokens: ApiToken[] = constants.getTokenListForNetwork(network);
 
         // Load all token info
         const persistStore = usePersistStore.getState();

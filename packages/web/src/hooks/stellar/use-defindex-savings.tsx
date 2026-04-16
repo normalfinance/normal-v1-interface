@@ -12,6 +12,7 @@ import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 import { createStellarExpertUrl, parseHorizonError } from '@/utils/transactions.utils';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
+import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -182,7 +183,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         // Pre-flight: verify USDC balance matches the expected issuer and
         // covers the full deposit amount (fee + net) before signing anything.
-        const usdcIssuer = config.BLEND_USDC_ISSUER;
+        const usdcIssuer = getSavingsUsdcIssuer(config);
+        if (!usdcIssuer) {
+          throw new Error('USDC issuer is not configured for this network');
+        }
         const usdcAsset = new Asset('USDC', usdcIssuer);
         const usdcAssetId = usdcAsset.toString(); // "USDC:G..."
         try {

@@ -49,8 +49,6 @@ export const MAINNET_CONFIG: NetworkConfig = {
 
   // External Contracts
   DEFINDEX_VAULT_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_DEFINDEX_VAULT || '',
-  BLEND_USDC_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_BLEND_USDC_ADDRESS || '',
-  BLEND_USDC_ISSUER: process.env.NEXT_PUBLIC_MAINNET_BLEND_USDC_ISSUER || '',
 
   // Stellar
   XLM_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_XLM_ADDRESS || '',

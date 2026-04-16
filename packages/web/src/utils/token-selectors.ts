@@ -29,11 +29,17 @@ export function getSavingsDepositToken(
   tokens: Token[],
   config: NetworkConfig = constants.StellarConfig
 ): Token | undefined {
-  return getTokenByContract(tokens, config.BLEND_USDC_ADDRESS ?? config.USDC_ADDRESS);
+  return getTokenByContract(tokens, config.BLEND_USDC_ADDRESS || config.USDC_ADDRESS);
 }
 
 export function getSavingsDepositTokenLabel(
   config: NetworkConfig = constants.StellarConfig
 ): string {
   return config.BLEND_USDC_ADDRESS ? 'Blend USDC' : 'USDC';
+}
+
+export function getSavingsUsdcIssuer(
+  config: NetworkConfig = constants.StellarConfig
+): string | undefined {
+  return config.BLEND_USDC_ISSUER || config.USDC_ISSUER || undefined;
 }

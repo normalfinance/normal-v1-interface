@@ -256,14 +256,16 @@ export function SettingsAccounts() {
                   errorFallback={t('Failed to add Stellar USDC trustline')}
                 />
 
-                <AddUsdcTrustlineButton
-                  walletAddress={wallet.walletAddress}
-                  assetIssuer={config.BLEND_USDC_ISSUER}
-                  label={t('Add Blend USDC Trustline')}
-                  loadingLabel={t('Adding trustline...')}
-                  successMessage={t('Blend USDC trustline added!')}
-                  errorFallback={t('Failed to add Blend USDC trustline')}
-                />
+                {config.BLEND_USDC_ISSUER && (
+                  <AddUsdcTrustlineButton
+                    walletAddress={wallet.walletAddress}
+                    assetIssuer={config.BLEND_USDC_ISSUER}
+                    label={t('Add Blend USDC Trustline')}
+                    loadingLabel={t('Adding trustline...')}
+                    successMessage={t('Blend USDC trustline added!')}
+                    errorFallback={t('Failed to add Blend USDC trustline')}
+                  />
+                )}
 
                 <Button
                   variant="soft"
