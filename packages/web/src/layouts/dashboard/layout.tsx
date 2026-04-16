@@ -23,6 +23,7 @@ import { NormalNavbarDefaults } from './navbar-props';
 import { LayoutSection } from '../core/layout-section';
 import { AccountDrawer } from '../components/account-drawer';
 import { LanguagePopover } from '../components/language-popover';
+import { NetworkToggle, NETWORK_SWITCH_ENABLED } from '../components/network-toggle';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 
 import type { MainSectionProps } from '../core/main-section';
@@ -85,6 +86,7 @@ export function DashboardLayout({
           logo={NormalNavbarDefaults.logo}
           links={NormalNavbarDefaults.links}
           buttons={NormalNavbarDefaults.buttons}
+          networkToggle={NETWORK_SWITCH_ENABLED ? <NetworkToggle /> : undefined}
           language={<LanguagePopover data={allLangs} />}
           account={<AccountDrawer />}
         />
