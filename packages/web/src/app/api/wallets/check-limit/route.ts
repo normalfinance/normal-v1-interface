@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
-import { faucetRateLimiter } from '@/server/faucetRateLimiter';
+import { faucetRateLimiter } from '@/server/faucet-rate-limiter';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**

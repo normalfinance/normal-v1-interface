@@ -55,13 +55,6 @@ function mapWalletActivityItem(item: WalletActivityItem): Activity {
         },
       };
     }
-    case 'sponsorship':
-      return {
-        id: item.id,
-        timestamp,
-        type: 'Account sponsored',
-        txHash: item.txHash,
-      };
   }
 }
 

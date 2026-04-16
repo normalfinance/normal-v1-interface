@@ -133,15 +133,6 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(buildPayload),
     });
 
-    if (buildResponse.status === 428) {
-      // Sponsored / gasless trustline multi-step flow — not supported yet
-      console.error('[swap/quote] Soroswap /quote/build returned 428 (gasless multi-step)');
-      return NextResponse.json(
-        { success: false, error: 'Gasless/sponsored swap flow is not supported' },
-        { status: 400 }
-      );
-    }
-
     if (!buildResponse.ok) {
       const errorText = await buildResponse.text();
       console.error('[swap/quote] Soroswap /quote/build error:', buildResponse.status, errorText);

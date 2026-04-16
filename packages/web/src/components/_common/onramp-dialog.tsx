@@ -6,12 +6,10 @@ import { buildAuthHeaders } from '@/utils/http';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { isWalletLinked } from '@/services/linked-wallets';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
 import {
   cdn,
   logger,
@@ -74,12 +72,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const { enqueueSnackbar } = useSnackbar();
 
   const persist = usePersistStore();
-  const { signTransaction, connectWallet: connectNormalWallet } = useNormalWallet();
+  const { connectWallet: connectNormalWallet } = useNormalWallet();
 
   const moneyGramAmountDialog = useBoolean();
 
   const [mgiLoading, setMgiLoading] = useState(false);
-  const [isFunding, setIsFunding] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
 
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
@@ -105,74 +102,6 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
     setShowCreateNormalWallet(false);
     await connectNormalWallet();
     await refetchAccountStatus();
-  };
-
-  // Handle funding account via sponsored reserves
-  const handleFundAccount = async () => {
-    if (!userAddress) {
-      enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
-      return;
-    }
-
-    try {
-      const linked = await isWalletLinked(userAddress);
-      if (!linked) {
-        enqueueSnackbar(t('We could not verify wallet link right now. Please retry.'), {
-          variant: 'info',
-        });
-        return;
-      }
-    } catch {
-      enqueueSnackbar(t('We could not verify wallet link right now. Please retry.'), {
-        variant: 'warning',
-      });
-      return;
-    }
-
-    setIsFunding(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Authentication required');
-      }
-
-      logger.log('[OnRampDialog] Requesting sponsorship for:', userAddress);
-      const { sponsorshipXDR } = await requestWalletSponsorship(userAddress, session.access_token);
-      logger.log('[OnRampDialog] Received sponsorship XDR');
-
-      if (sponsorshipXDR && signTransaction) {
-        const signedXDR = await signTransaction(sponsorshipXDR);
-        const { hash } = await submitSponsorshipTransaction(
-          signedXDR,
-          userAddress,
-          session.access_token
-        );
-        logger.log('[OnRampDialog] Account sponsored successfully:', hash);
-        enqueueSnackbar(t('Account created and USDC enabled!'), { variant: 'success' });
-      }
-
-      // Refetch account status
-      await refetchAccountStatus();
-    } catch (error: any) {
-      logger.error('[OnRampDialog] Sponsorship failed:', error);
-      if (
-        error.message?.includes('already been sponsored') ||
-        error.message?.includes('already exists')
-      ) {
-        enqueueSnackbar(t('Account already exists. Refreshing status...'), { variant: 'info' });
-        await refetchAccountStatus();
-      } else if (error.message?.includes('Rate limit')) {
-        enqueueSnackbar(t('Rate limit exceeded. Please try again later.'), { variant: 'error' });
-      } else {
-        enqueueSnackbar(error.message || t('Failed to create account and enable USDC'), {
-          variant: 'error',
-        });
-      }
-    } finally {
-      setIsFunding(false);
-    }
   };
 
   // Handle adding USDC trustline
@@ -368,38 +297,6 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                 {t('Checking account status...')}
               </Typography>
-            </Stack>
-          )}
-
-          {!isCheckingAccount && isConnected && !accountExists && (
-            <Stack spacing={2} sx={{ mb: 2 }}>
-              <Alert severity="warning" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  {t('Account Not Funded')}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    'Your account needs XLM to exist on the Stellar blockchain before you can use onramp services.'
-                  )}
-                </Typography>
-              </Alert>
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                size="large"
-                onClick={handleFundAccount}
-                disabled={isFunding}
-                startIcon={
-                  isFunding ? (
-                    <CircularProgress size={18} color="inherit" />
-                  ) : (
-                    <Iconify icon="solar:rocket-bold" />
-                  )
-                }
-              >
-                {isFunding ? t('Funding Account...') : t('Fund Account (Free)')}
-              </Button>
             </Stack>
           )}
 

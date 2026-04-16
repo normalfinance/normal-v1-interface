@@ -3,15 +3,11 @@
 import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
-import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { isWalletLinked } from '@/services/linked-wallets';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
-import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -40,11 +36,9 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
   const { copy } = useCopyToClipboard();
   const { enqueueSnackbar } = useSnackbar();
   const persist = usePersistStore();
-  const { signTransaction } = useNormalWallet();
 
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
-  const [isFunding, setIsFunding] = useState(false);
 
   const walletAddress = persist.wallet.address;
 
@@ -52,79 +46,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
   const {
     isLoading: isCheckingAccount,
     accountExists,
-    refetch: refetchAccountStatus,
   } = useAccountStatus(walletAddress);
-
-  // Handle funding account via sponsored reserves
-  const handleFundAccount = async () => {
-    if (!walletAddress) {
-      enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
-      return;
-    }
-
-    try {
-      const linked = await isWalletLinked(walletAddress);
-      if (!linked) {
-        enqueueSnackbar(t('We could not verify wallet link right now. Please retry.'), {
-          variant: 'info',
-        });
-        return;
-      }
-    } catch {
-      enqueueSnackbar(t('We could not verify wallet link right now. Please retry.'), {
-        variant: 'warning',
-      });
-      return;
-    }
-
-    setIsFunding(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Authentication required');
-      }
-
-      logger.log('[ReceiveModal] Requesting sponsorship for:', walletAddress);
-      const { sponsorshipXDR } = await requestWalletSponsorship(
-        walletAddress,
-        session.access_token
-      );
-      logger.log('[ReceiveModal] Received sponsorship XDR');
-
-      if (sponsorshipXDR && signTransaction) {
-        const signedXDR = await signTransaction(sponsorshipXDR);
-        const { hash } = await submitSponsorshipTransaction(
-          signedXDR,
-          walletAddress,
-          session.access_token
-        );
-        logger.log('[ReceiveModal] Account sponsored successfully:', hash);
-        enqueueSnackbar(t('Account created and USDC enabled!'), { variant: 'success' });
-      }
-
-      // Refetch account status
-      await refetchAccountStatus();
-    } catch (error: any) {
-      logger.error('[ReceiveModal] Sponsorship failed:', error);
-      if (
-        error.message?.includes('already been sponsored') ||
-        error.message?.includes('already exists')
-      ) {
-        enqueueSnackbar(t('Account already exists. Refreshing status...'), { variant: 'info' });
-        await refetchAccountStatus();
-      } else if (error.message?.includes('Rate limit')) {
-        enqueueSnackbar(t('Rate limit exceeded. Please try again later.'), { variant: 'error' });
-      } else {
-        enqueueSnackbar(error.message || t('Failed to create account and enable USDC'), {
-          variant: 'error',
-        });
-      }
-    } finally {
-      setIsFunding(false);
-    }
-  };
 
   const generateQRCode = useCallback(async () => {
     if (!walletAddress) return;
@@ -204,48 +126,6 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
               {t('Checking account status...')}
             </Typography>
-          </Stack>
-        )}
-
-        {/* Account not funded - show faucet button */}
-        {!isCheckingAccount && !accountExists && (
-          <Stack spacing={3} alignItems="center">
-            <Box
-              sx={{
-                p: 3,
-                borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
-                backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                width: '100%',
-              }}
-            >
-              <Iconify icon="solar:wallet-bold" width={48} sx={{ color: 'warning.main', mb: 2 }} />
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                {t('Account Not Funded')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                {t(
-                  'Your account needs to be funded with XLM before you can receive crypto from external sources.'
-                )}
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                fullWidth
-                onClick={handleFundAccount}
-                disabled={isFunding}
-                startIcon={
-                  isFunding ? (
-                    <CircularProgress size={18} color="inherit" />
-                  ) : (
-                    <Iconify icon="solar:rocket-bold" />
-                  )
-                }
-              >
-                {isFunding ? t('Funding Account...') : t('Fund Account (Free)')}
-              </Button>
-            </Box>
           </Stack>
         )}
 

@@ -68,28 +68,6 @@ model LinkedWallet {
   @@map("linked_wallets")
 }
 
-model SponsoredAccount {
-  id               String    @id @default(cuid())
-  supabaseUid      String?
-  walletAddress    String    @unique
-  sponsorAddress   String
-  ipAddress        String
-  sponsoredAt      DateTime  @default(now())
-  accountReserve   String    @default("0.5")
-  trustlineReserve String    @default("0.5")
-  feePayment       String    @default("1")
-  txHash           String?
-  isRevoked        Boolean   @default(false)
-  revokedAt        DateTime?
-  revocationTxHash String?
-  revocationReason String?
-
-  @@index([sponsorAddress])
-  @@index([ipAddress])
-  @@index([supabaseUid])
-  @@map("sponsored_accounts")
-}
-
 model VaultDeposit {
   id            String   @id @default(cuid())
   walletAddress String

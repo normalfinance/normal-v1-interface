@@ -27,7 +27,7 @@ function getUpstashConfig() {
 logger.log('getUpstashConfig', getUpstashConfig());
 
 // Create a Redis client from your .env
-const redis = new Redis(getUpstashConfig());
+export const redis = new Redis(getUpstashConfig());
 
 // Allow 30 requests per 10 seconds, sliding window
 const walletRateLimiter = new Ratelimit({
