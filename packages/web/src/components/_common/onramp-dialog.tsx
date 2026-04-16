@@ -14,10 +14,10 @@ import {
   cdn,
   logger,
   isTestnet,
-  constants,
   createStripeURL,
   createCoinbasePayOnrampURL,
 } from '@normalfinance/utils';
+import { useStellarConfig } from '@/hooks';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -70,6 +70,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
+  const config = useStellarConfig();
 
   const persist = usePersistStore();
   const { connectWallet: connectNormalWallet } = useNormalWallet();
@@ -111,7 +112,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       return;
     }
 
-    const usdcIssuer = constants.StellarConfig.USDC_ISSUER;
+    const usdcIssuer = config.USDC_ISSUER;
     if (!usdcIssuer) {
       enqueueSnackbar(t('USDC issuer not configured'), { variant: 'error' });
       return;

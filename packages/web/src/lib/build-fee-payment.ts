@@ -1,3 +1,4 @@
+import { NetworkConfig } from '@normalfinance/types';
 import { constants } from '@normalfinance/utils';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import {
@@ -20,6 +21,7 @@ export interface BuildFeePaymentParams {
   amount: string; // human-readable (e.g. "0.99")
   assetCode: FeeAssetCode;
   assetIssuer?: string; // required for non-native assets
+  config?: NetworkConfig;
 }
 
 /**
@@ -28,7 +30,7 @@ export interface BuildFeePaymentParams {
  * commissions as a separate pre-step around Soroban invocations.
  */
 export async function buildFeePaymentXdr(params: BuildFeePaymentParams): Promise<string> {
-  const { caller, destination, amount, assetCode, assetIssuer } = params;
+  const { caller, destination, amount, assetCode, assetIssuer, config = constants.StellarConfig } = params;
 
   if (!isValidStellarAddress(caller)) {
     throw new Error('Invalid caller address');
@@ -52,8 +54,8 @@ export async function buildFeePaymentXdr(params: BuildFeePaymentParams): Promise
     asset = new Asset(assetCode, assetIssuer);
   }
 
-  const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-    allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+  const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+    allowHttp: config.HORIZON_URL.startsWith('http://'),
   });
 
   const account = await horizonServer.loadAccount(caller);
@@ -63,7 +65,7 @@ export async function buildFeePaymentXdr(params: BuildFeePaymentParams): Promise
 
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+    networkPassphrase: config.NETWORK_PASSPHRASE,
   })
     .addOperation(
       Operation.payment({

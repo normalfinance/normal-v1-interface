@@ -1,7 +1,8 @@
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { constants } from '@normalfinance/utils';
+import { getStellarConfigForNetwork, NetworkType } from '@normalfinance/utils';
 import {
   type FeeAssetCode,
   buildFeePaymentXdr,
@@ -14,6 +15,10 @@ const VALID_ASSETS: FeeAssetCode[] = ['XLM', 'USDC'];
 
 export async function POST(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
+    const config = getStellarConfigForNetwork(network);
+
     const { caller, amount, assetCode } = await request.json();
 
     if (!caller || !amount || !assetCode) {
@@ -35,7 +40,7 @@ export async function POST(request: NextRequest) {
     //TODO: need to fix this to accomodate swaps
 
     const assetIssuer =
-      assetCode === 'USDC' ? constants.StellarConfig.BLEND_USDC_ISSUER : undefined;
+      assetCode === 'USDC' ? config.BLEND_USDC_ISSUER : undefined;
 
     if (assetCode === 'USDC' && !assetIssuer) {
       return NextResponse.json(
@@ -50,6 +55,7 @@ export async function POST(request: NextRequest) {
       amount: String(amount),
       assetCode,
       assetIssuer,
+      config,
     });
 
     return NextResponse.json({ success: true, xdr, destination });

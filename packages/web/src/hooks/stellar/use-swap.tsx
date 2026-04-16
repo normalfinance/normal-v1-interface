@@ -5,8 +5,8 @@ import type { SwapMode, SwapQuote, SwapDisplayMeta } from '@/types/swap';
 
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
-import { constants } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
+import { useStellarConfig } from '@/hooks';
 import { getSwapFeeAmount } from '@/utils/normal-fees';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
@@ -44,6 +44,7 @@ export function useSwap(): UseSwapReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
+  const config = useStellarConfig();
 
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
@@ -146,26 +147,26 @@ export function useSwap(): UseSwapReturn {
           : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-        const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-          allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+        const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+          allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
 
         const signAndSubmit = async (xdr: string) => {
           const signResult = isNormalWallet
-            ? await signTransaction(xdr, constants.StellarConfig.NETWORK_PASSPHRASE)
+            ? await signTransaction(xdr, config.NETWORK_PASSPHRASE)
             : await signTransaction(xdr);
           const signed = normalizeSignedXDR(signResult);
           if (!signed) throw new Error('Transaction signing failed — no signed XDR returned');
           const signedTx = TransactionBuilder.fromXDR(
             signed,
-            constants.StellarConfig.NETWORK_PASSPHRASE
+            config.NETWORK_PASSPHRASE
           );
           return horizonServer.submitTransaction(signedTx);
         };
 
         // Resolve the fee asset from the swap quote's tokenIn contract address
-        const xlmAddress = constants.StellarConfig.XLM_ADDRESS;
-        const usdcAddress = constants.StellarConfig.USDC_ADDRESS;
+        const xlmAddress = config.XLM_ADDRESS;
+        const usdcAddress = config.USDC_ADDRESS;
         let feeAssetCode: 'XLM' | 'USDC' | null = null;
         if (swapQuote.tokenIn === xlmAddress || swapQuote.tokenIn === 'native') {
           feeAssetCode = 'XLM';
@@ -310,6 +311,7 @@ export function useSwap(): UseSwapReturn {
       }
     },
     [
+      config,
       wallet.address,
       wallet.walletType,
       normalPublicKey,

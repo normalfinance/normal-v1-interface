@@ -5,8 +5,8 @@ import type { OptionsObject, SnackbarMessage } from 'notistack';
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
 import { useTranslate } from '@/locales';
-import { constants } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
+import { useStellarConfig } from '@/hooks';
 import { useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
@@ -77,6 +77,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
+  const config = useStellarConfig();
 
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
@@ -162,26 +163,26 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-        const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-          allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+        const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+          allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
 
         const signAndSubmit = async (xdr: string) => {
           const signResult = isNormalWallet
-            ? await signTransaction(xdr, constants.StellarConfig.NETWORK_PASSPHRASE)
+            ? await signTransaction(xdr, config.NETWORK_PASSPHRASE)
             : await signTransaction(xdr);
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           const signedTx = TransactionBuilder.fromXDR(
             signedXDR,
-            constants.StellarConfig.NETWORK_PASSPHRASE
+            config.NETWORK_PASSPHRASE
           );
           return horizonServer.submitTransaction(signedTx);
         };
 
         // Pre-flight: verify USDC balance matches the expected issuer and
         // covers the full deposit amount (fee + net) before signing anything.
-        const usdcIssuer = constants.StellarConfig.BLEND_USDC_ISSUER;
+        const usdcIssuer = config.BLEND_USDC_ISSUER;
         const usdcAsset = new Asset('USDC', usdcIssuer);
         const usdcAssetId = usdcAsset.toString(); // "USDC:G..."
         try {
@@ -204,7 +205,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
               const wrongIssuer = (anyUsdc as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>)
                 .asset_issuer;
               throw new Error(
-                `You have USDC from a different issuer (${wrongIssuer.slice(0, 8)}…) — the app requires ${usdcAssetId}. Please fund your wallet with the correct USDC on ${constants.StellarConfig.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet'}.`
+                `You have USDC from a different issuer (${wrongIssuer.slice(0, 8)}…) — the app requires ${usdcAssetId}. Please fund your wallet with the correct USDC on ${config.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet'}.`
               );
             }
             throw new Error(
@@ -318,6 +319,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       }
     },
     [
+      config,
       wallet.address,
       wallet.walletType,
       vaultInfo,
@@ -372,19 +374,19 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-        const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-          allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+        const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+          allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
 
         const signAndSubmit = async (xdr: string) => {
           const signResult = isNormalWallet
-            ? await signTransaction(xdr, constants.StellarConfig.NETWORK_PASSPHRASE)
+            ? await signTransaction(xdr, config.NETWORK_PASSPHRASE)
             : await signTransaction(xdr);
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           const signedTx = TransactionBuilder.fromXDR(
             signedXDR,
-            constants.StellarConfig.NETWORK_PASSPHRASE
+            config.NETWORK_PASSPHRASE
           );
           return horizonServer.submitTransaction(signedTx);
         };
@@ -479,6 +481,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       }
     },
     [
+      config,
       wallet.address,
       wallet.walletType,
       vaultInfo,

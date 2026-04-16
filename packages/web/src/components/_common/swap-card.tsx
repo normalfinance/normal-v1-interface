@@ -3,8 +3,8 @@
 import type { CardProps } from '@mui/material';
 
 import { useTranslate } from '@/locales';
-import { constants } from '@normalfinance/utils';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useStellarConfig } from '@/hooks';
 import { useSwap } from '@/hooks/stellar/use-swap';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -33,29 +33,29 @@ import { Iconify } from '../template/iconify';
 
 interface SwapCardProps extends CardProps {}
 
-// Token definitions for XLM and USDC
-const TOKENS = {
-  XLM: {
-    symbol: 'XLM',
-    name: 'Stellar Lumens',
-    address: constants.StellarConfig.XLM_ADDRESS || 'native',
-    decimals: 7,
-    icon: 'cryptocurrency:xlm',
-  },
-  USDC: {
-    symbol: 'USDC',
-    name: 'USD Coin',
-    address: constants.StellarConfig.USDC_ADDRESS,
-    decimals: 7,
-    icon: 'cryptocurrency-color:usdc',
-  },
-};
-
 // ----------------------------------------------------------------------
 
 const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const { t } = useTranslate();
   const { wallet, tokenState } = usePersistStore();
+  const config = useStellarConfig();
+
+  const TOKENS = {
+    XLM: {
+      symbol: 'XLM',
+      name: 'Stellar Lumens',
+      address: config.XLM_ADDRESS || 'native',
+      decimals: 7,
+      icon: 'cryptocurrency:xlm',
+    },
+    USDC: {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      address: config.USDC_ADDRESS,
+      decimals: 7,
+      icon: 'cryptocurrency-color:usdc',
+    },
+  };
 
   const { quote, quoteLoading, loading, error, getQuote, executeSwap, clearQuote } = useSwap();
   const { enqueueSnackbar } = useSnackbar();
@@ -120,7 +120,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const needsTrustline = tokenOut === 'USDC' && !hasUsdcTrustline;
 
   const handleAddTrustline = useCallback(async () => {
-    const usdcIssuer = constants.StellarConfig.USDC_ISSUER;
+    const usdcIssuer = config.USDC_ISSUER;
     if (!usdcIssuer) return;
     try {
       await addTrustLine('USDC', usdcIssuer);

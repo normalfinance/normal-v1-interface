@@ -1,4 +1,5 @@
 import { Horizon, StrKey } from '@stellar/stellar-sdk';
+import { NetworkConfig } from '@normalfinance/types';
 import { constants } from '..';
 
 /**
@@ -9,11 +10,14 @@ import { constants } from '..';
  * @returns {Promise<AccountRecord>} Object containing whether or not the account is funded, and (if it is) account details
  * @throws {error} Will throw an error if the account is not funded on the Stellar network, or if an invalid public key was provided.
  */
-export async function fetchAccount(publicKey: string) {
+export async function fetchAccount(
+  publicKey: string,
+  config: NetworkConfig = constants.StellarConfig
+) {
   if (StrKey.isValidEd25519PublicKey(publicKey)) {
     try {
-      const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-        allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+      const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+        allowHttp: config.HORIZON_URL.startsWith('http://'),
       });
 
       let account: Horizon.ServerApi.AccountRecord = await horizonServer
@@ -37,10 +41,13 @@ export async function fetchAccount(publicKey: string) {
  * @returns {Promise<TransactionRecord>} Object containing transaction details
  * @throws {error} Will throw an error if an invalid  transaction hash was provided.
  */
-export async function fetchTransaction(transactionHash: string) {
+export async function fetchTransaction(
+  transactionHash: string,
+  config: NetworkConfig = constants.StellarConfig
+) {
   try {
-    const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-      allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+    const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+      allowHttp: config.HORIZON_URL.startsWith('http://'),
     });
 
     let transaction = await horizonServer.transactions().transaction(transactionHash).call();

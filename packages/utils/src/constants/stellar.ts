@@ -1,8 +1,8 @@
 import { NetworkConfig } from '@normalfinance/types';
-import { getCurrentNetwork } from '../network';
+import { getCurrentNetwork, NetworkType } from '../network';
 import { logger } from '../logger';
 
-const TESTNET_CONFIG: NetworkConfig = {
+export const TESTNET_CONFIG: NetworkConfig = {
   // Network,
   NETWORK_PASSPHRASE: 'Test SDF Network ; September 2015',
   HORIZON_URL: process.env.NEXT_PUBLIC_TESTNET_HORIZON_URL || 'https://horizon-testnet.stellar.org',
@@ -35,7 +35,7 @@ const TESTNET_CONFIG: NetworkConfig = {
   EVENTS_TABLENAME: 'normal_contract_events',
 };
 
-const MAINNET_CONFIG: NetworkConfig = {
+export const MAINNET_CONFIG: NetworkConfig = {
   // Network
   NETWORK_PASSPHRASE: 'Public Global Stellar Network ; September 2015',
   HORIZON_URL: process.env.NEXT_PUBLIC_MAINNET_HORIZON_URL || 'https://horizon.stellar.org',
@@ -69,12 +69,19 @@ const MAINNET_CONFIG: NetworkConfig = {
 };
 
 /**
+ * Get the Stellar config for a specific network value.
+ */
+export function getStellarConfigForNetwork(network: NetworkType): NetworkConfig {
+  return network === 'mainnet' ? MAINNET_CONFIG : TESTNET_CONFIG;
+}
+
+/**
  * Get the current network configuration based on NEXT_PUBLIC_NETWORK environment variable
  */
 function getStellarConfig(): NetworkConfig {
   const network = getCurrentNetwork();
   logger.log('[getStellarConfig] network', network);
-  return network === 'mainnet' ? MAINNET_CONFIG : TESTNET_CONFIG;
+  return getStellarConfigForNetwork(network);
 }
 
 // Export the current stellar configuration

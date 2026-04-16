@@ -1,7 +1,8 @@
 import { Horizon } from '@stellar/stellar-sdk';
 import { AppStorePersist, Token, TokenState, Wallet } from '@normalfinance/types';
 import { usePersistStore } from '../store';
-import { constants, logger } from '@normalfinance/utils';
+import { logger, getStellarConfigForNetwork } from '@normalfinance/utils';
+import { useNetworkStore } from '../network/store';
 
 export const createConnectWalletActions = () => {
   return {
@@ -20,19 +21,18 @@ export const createConnectWalletActions = () => {
         walletType,
       });
 
-      // Get the network details
-      const network =
-        (process.env.NEXT_PUBLIC_NETWORK ?? '').toUpperCase() === 'TESTNET' ? 'testnet' : 'public';
+      const currentNetwork = useNetworkStore.getState().network;
+      const config = getStellarConfigForNetwork(currentNetwork);
 
       const activeChain = {
-        id: network,
-        name: network === 'testnet' ? 'Stellar Testnet' : 'Stellar Public',
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        id: currentNetwork,
+        name: currentNetwork === 'testnet' ? 'Stellar Testnet' : 'Stellar Public',
+        networkPassphrase: config.NETWORK_PASSPHRASE,
       };
 
       // Create a server object to connect to the blockchain
-      const server = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-        allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+      const server = new Horizon.Server(config.HORIZON_URL, {
+        allowHttp: config.HORIZON_URL.startsWith('http://'),
       });
 
       // Update the state to store the wallet address and server

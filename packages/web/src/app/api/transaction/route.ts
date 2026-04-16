@@ -1,11 +1,12 @@
 import type { NextRequest } from 'next/server';
 
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
-import { ContractErrorType } from '@normalfinance/types';
+import { ContractErrorType, NetworkConfig } from '@normalfinance/types';
 import { getClientIP, getAccessToken } from '@/utils/http';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
-import { logger, constants, parseError } from '@normalfinance/utils';
+import { logger, parseError, getStellarConfigForNetwork, NetworkType } from '@normalfinance/utils';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createNodeConfigHandler } from '@/lib/edge-config-middleware';
@@ -15,6 +16,10 @@ export const runtime = 'nodejs';
 
 async function transactionHandler(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
+    const config: NetworkConfig = getStellarConfigForNetwork(network);
+
     // Authenticate
     const token = getAccessToken(req);
     const user = await getAuthenticatedUser(token);
@@ -44,7 +49,7 @@ async function transactionHandler(req: NextRequest) {
     try {
       transaction = new Transaction(
         signedTransactionXDR,
-        constants.StellarConfig.NETWORK_PASSPHRASE
+        config.NETWORK_PASSPHRASE
       );
     } catch (parseError: any) {
       await logWithConfig('warn', 'Transaction API: invalid XDR', {
@@ -150,8 +155,8 @@ async function transactionHandler(req: NextRequest) {
 
     // Execute the contract transaction server-side
     try {
-      const rpcServer = new rpc.Server(constants.StellarConfig.RPC_URL, {
-        allowHttp: constants.StellarConfig.RPC_URL.startsWith('http://'),
+      const rpcServer = new rpc.Server(config.RPC_URL, {
+        allowHttp: config.RPC_URL.startsWith('http://'),
       });
 
       logger.log('[Transaction API] Stellar Server: ', rpcServer);

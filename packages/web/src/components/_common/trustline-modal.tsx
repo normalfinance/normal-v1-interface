@@ -1,7 +1,8 @@
 'use client';
 
-import { constants } from '@normalfinance/utils';
 import { useTranslate } from '@/locales';
+
+import { useStellarConfig } from '@/hooks';
 
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -29,8 +30,9 @@ export function TrustlineModal({ open, onClose, onSuccess }: TrustlineModalProps
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { addTrustLine, loading } = useTrustLine();
+  const config = useStellarConfig();
 
-  const blendUsdcIssuer = constants.StellarConfig.BLEND_USDC_ISSUER;
+  const blendUsdcIssuer = config.BLEND_USDC_ISSUER;
 
   const handleAddTrustline = async () => {
     if (!blendUsdcIssuer) return;
