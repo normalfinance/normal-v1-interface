@@ -41,7 +41,7 @@ export function useAccountStatus(walletAddress: string | undefined): AccountStat
 
     try {
       // Fetch account from Horizon
-      const account = await fetchAccount(walletAddress);
+      const account = await fetchAccount(walletAddress, config);
 
       if (!account) {
         // Account doesn't exist on the network
@@ -63,7 +63,7 @@ export function useAccountStatus(walletAddress: string | undefined): AccountStat
       // Check USDC trustline
       const usdcIssuer = config.USDC_ISSUER;
       if (usdcIssuer) {
-        const trustlineResult = await checkTrustline(walletAddress, 'USDC', usdcIssuer);
+        const trustlineResult = await checkTrustline(walletAddress, 'USDC', usdcIssuer, config);
         setHasUsdcTrustline(trustlineResult.exists);
       } else {
         logger.warn('[useAccountStatus] USDC_ISSUER not configured');

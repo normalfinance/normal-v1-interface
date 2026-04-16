@@ -7,6 +7,7 @@ import { Button, CircularProgress } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import { useStellarConfig } from '@/hooks';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 
 // ----------------------------------------------------------------------
@@ -30,6 +31,7 @@ export default function AddUsdcTrustlineButton({
   successMessage,
   errorFallback,
 }: AddUsdcTrustlineButtonProps) {
+  const config = useStellarConfig();
   const { enqueueSnackbar } = useSnackbar();
   const { addTrustLine, loading } = useTrustLine();
   const [hasTrustline, setHasTrustline] = useState<boolean | null>(null);
@@ -37,10 +39,10 @@ export default function AddUsdcTrustlineButton({
   useEffect(() => {
     if (!assetIssuer || !walletAddress) return;
 
-    checkTrustline(walletAddress, 'USDC', assetIssuer)
+    checkTrustline(walletAddress, 'USDC', assetIssuer, config)
       .then((result) => setHasTrustline(result.exists))
       .catch(() => setHasTrustline(false));
-  }, [walletAddress, assetIssuer]);
+  }, [walletAddress, assetIssuer, config]);
 
   if (!assetIssuer || hasTrustline === true) return null;
 
