@@ -1,7 +1,7 @@
 import type { NextRequest} from 'next/server';
 
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { getCurrentNetwork } from '@normalfinance/utils';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 const DEFAULT_SOROSWAP_API_BASE_URL = 'https://api.soroswap.finance';
@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
     }
 
     const apiBaseUrl = process.env.SOROSWAP_API_BASE_URL || DEFAULT_SOROSWAP_API_BASE_URL;
-    const network = getCurrentNetwork() === 'mainnet' ? 'mainnet' : 'testnet';
+    const cookieStore = await cookies();
+    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as 'mainnet' | 'testnet';
     const tradeType = mode === 'strict-send' ? 'EXACT_IN' : 'EXACT_OUT';
 
     const quotePayload = {
