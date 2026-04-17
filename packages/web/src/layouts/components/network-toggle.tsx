@@ -1,8 +1,18 @@
 'use client';
 
-import { Box, Typography } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
+import { m } from 'framer-motion';
+import { usePopover } from 'minimal-shared/hooks';
 
+import Box from '@mui/material/Box';
+import MenuList from '@mui/material/MenuList';
+import MenuItem from '@mui/material/MenuItem';
+import IconButton from '@mui/material/IconButton';
+import { useTheme } from '@mui/material/styles';
+
+import { Iconify } from '@/components/template/iconify';
+import { CustomPopover } from '@/components/template/custom-popover';
+import { varTap, varHover, transitionTap } from '@/components/template/animate';
+import { useSnackbar } from '@/components/template/snackbar';
 import { useNetwork } from '@/hooks';
 
 // ---------------------------------------------------------------------------
@@ -15,65 +25,77 @@ export const NETWORK_SWITCH_ENABLED = networkEnv !== 'MAINNET' || switchAllowed;
 
 // ---------------------------------------------------------------------------
 
+const NETWORK_OPTIONS = [
+  { value: 'mainnet', label: 'Mainnet' },
+  { value: 'testnet', label: 'Testnet' },
+] as const;
+
 export function NetworkToggle() {
+  const { open, anchorEl, onClose, onOpen } = usePopover();
   const { network, toggleNetwork } = useNetwork();
+  const { enqueueSnackbar } = useSnackbar();
   const theme = useTheme();
 
-  const isMainnet = network === 'mainnet';
-
-  const dotColor = isMainnet ? theme.palette.success.main : theme.palette.warning.main;
-  const pillBg = isMainnet
-    ? alpha(theme.palette.success.main, 0.1)
-    : alpha(theme.palette.warning.main, 0.1);
-  const pillBorder = isMainnet
-    ? alpha(theme.palette.success.main, 0.3)
-    : alpha(theme.palette.warning.main, 0.3);
+  const handleSelect = (selected: 'mainnet' | 'testnet') => {
+    if (selected !== network) {
+      toggleNetwork();
+      enqueueSnackbar(`Network switched to ${selected === 'mainnet' ? 'Mainnet' : 'Testnet'}`, {
+        variant: 'success',
+      });
+    }
+    onClose();
+  };
 
   return (
-    <Box
-      component="button"
-      onClick={toggleNetwork}
-      aria-label={`Switch to ${isMainnet ? 'testnet' : 'mainnet'}`}
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 0.75,
-        px: 1.25,
-        py: 0.5,
-        borderRadius: 99,
-        border: `1px solid ${pillBorder}`,
-        bgcolor: pillBg,
-        cursor: 'pointer',
-        outline: 'none',
-        transition: 'background-color 0.2s, border-color 0.2s',
-        '&:hover': {
-          bgcolor: isMainnet
-            ? alpha(theme.palette.success.main, 0.18)
-            : alpha(theme.palette.warning.main, 0.18),
-        },
-        '&:focus-visible': {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: 2,
-        },
-      }}
-    >
-      {/* Status dot */}
-      <Box
-        sx={{
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          bgcolor: dotColor,
-          flexShrink: 0,
-        }}
-      />
-      <Typography
-        variant="caption"
-        fontWeight={600}
-        sx={{ lineHeight: 1, color: dotColor, userSelect: 'none', letterSpacing: 0.2 }}
+    <>
+      <IconButton
+        component={m.button}
+        whileTap={varTap(0.96)}
+        whileHover={varHover(1.04)}
+        transition={transitionTap()}
+        aria-label="network-picker-button"
+        onClick={onOpen}
+        sx={[
+          {
+            p: 0,
+            width: 40,
+            height: 40,
+            ...(open && { bgcolor: theme.vars.palette.action.selected }),
+          },
+        ]}
       >
-        {isMainnet ? 'Mainnet' : 'Testnet'}
-      </Typography>
-    </Box>
+        <Iconify icon="ph:globe" width={24} />
+      </IconButton>
+
+      <CustomPopover open={open} anchorEl={anchorEl} onClose={onClose}>
+        <MenuList sx={{ width: 160, minHeight: 72 }}>
+          {NETWORK_OPTIONS.map((option) => {
+            const dotColor =
+              option.value === 'mainnet'
+                ? theme.palette.success.main
+                : theme.palette.warning.main;
+            return (
+              <MenuItem
+                key={option.value}
+                selected={option.value === network}
+                onClick={() => handleSelect(option.value)}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: dotColor,
+                    mr: 1.5,
+                    flexShrink: 0,
+                  }}
+                />
+                {option.label}
+              </MenuItem>
+            );
+          })}
+        </MenuList>
+      </CustomPopover>
+    </>
   );
 }
