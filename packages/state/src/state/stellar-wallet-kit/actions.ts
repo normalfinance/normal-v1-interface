@@ -43,7 +43,7 @@ export interface StellarWalletKitState {
   setModalOpen: (open: boolean) => void;
   setConnectionPromise: (promise: Promise<void> | null) => void;
   connectWallet: (persistStore?: any) => Promise<void>;
-  signTransaction: (xdr: string) => Promise<string>;
+  signTransaction: (xdr: string, networkPassphrase?: string) => Promise<string>;
   disconnectWallet: () => Promise<void>;
   getSupportedWallets: () => Promise<ISupportedWallet[]>;
   resetWalletKitState: () => void;
@@ -58,11 +58,10 @@ export function createStellarWalletKitActions(
     if (typeof window === 'undefined' || isInitialized) return;
 
     try {
+      const isMainnet = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet';
+
       const kit = new StellarWalletsKit({
-        network:
-          process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
-            ? WalletNetwork.PUBLIC
-            : WalletNetwork.TESTNET,
+        network: isMainnet ? WalletNetwork.PUBLIC : WalletNetwork.TESTNET,
         modules: [
           new HanaModule(),
           new xBullModule(),
@@ -75,10 +74,7 @@ export function createStellarWalletKitActions(
             description: 'Synthetic asset and index fund protocol on Stellar',
             name: 'Normal',
             icons: ['https://normalfinance.io/favicon.ico'],
-            network:
-              process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
-                ? WalletNetwork.PUBLIC
-                : WalletNetwork.TESTNET,
+            network: isMainnet ? WalletNetwork.PUBLIC : WalletNetwork.TESTNET,
           }),
           new LedgerModule(),
         ],
@@ -157,7 +153,7 @@ export function createStellarWalletKitActions(
                 try {
                   await kit.signMessage('Welcome to Normal', {
                     networkPassphrase:
-                      process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
+                      process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet'
                         ? Networks.PUBLIC
                         : Networks.TESTNET,
                     address: address.address,
@@ -221,7 +217,7 @@ export function createStellarWalletKitActions(
     }
   };
 
-  const signTransaction = async (xdr: string): Promise<string> => {
+  const signTransaction = async (xdr: string, networkPassphrase?: string): Promise<string> => {
     const { kit, publicKey, selectedWallet } = get();
 
     if (typeof window === 'undefined') {
@@ -241,9 +237,22 @@ export function createStellarWalletKitActions(
     }
 
     try {
+      const passphrase =
+        networkPassphrase ||
+        (process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet'
+          ? Networks.PUBLIC
+          : Networks.TESTNET);
+
+      logger.log('[WALLET KIT] signTransaction', {
+        rawEnv: process.env.NEXT_PUBLIC_NETWORK,
+        requestedPassphrase: networkPassphrase,
+        resolvedPassphrase: passphrase,
+        selectedWallet,
+        publicKey,
+      });
+
       const { signedTxXdr } = await kit.signTransaction(xdr, {
-        networkPassphrase:
-          process.env.NEXT_PUBLIC_NETWORK === 'MAINNET' ? Networks.PUBLIC : Networks.TESTNET,
+        networkPassphrase: passphrase,
         address: publicKey,
       });
 

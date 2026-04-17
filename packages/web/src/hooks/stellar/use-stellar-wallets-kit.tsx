@@ -161,7 +161,8 @@ export const useStellarWalletsKit = () => {
   }, [walletKitStore, persistStore]);
 
   const signTransaction = useCallback(
-    async (xdr: string) => await walletKitStore.signTransaction(xdr),
+    async (xdr: string, networkPassphrase?: string) =>
+      await walletKitStore.signTransaction(xdr, networkPassphrase),
     [walletKitStore]
   );
 

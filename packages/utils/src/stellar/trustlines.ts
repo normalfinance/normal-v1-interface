@@ -65,7 +65,7 @@ export async function createTrustline(
   publicKey: string,
   assetCode: string,
   assetIssuer: string,
-  signTransaction?: (xdr: string) => Promise<string>,
+  signTransaction?: (xdr: string, networkPassphrase?: string) => Promise<string>,
   config: NetworkConfig = constants.StellarConfig
 ) {
   // Fetch Account
@@ -95,9 +95,29 @@ export async function createTrustline(
     .setTimeout(30)
     .build();
 
+  logger.log('[TRUSTLINE] Built transaction', {
+    publicKey,
+    assetCode,
+    assetIssuer,
+    horizonUrl: config.HORIZON_URL,
+    networkPassphrase: config.NETWORK_PASSPHRASE,
+    unsignedXdrLength: transaction.toXDR().length,
+    unsignedXdrPrefix: transaction.toXDR().slice(0, 24),
+  });
+
   if (signTransaction) {
     // If signTransaction is provided, sign and submit the transaction
-    const signedXDR = await signTransaction(transaction.toXDR());
+    logger.log('[TRUSTLINE] Passing network passphrase to signer', {
+      networkPassphrase: config.NETWORK_PASSPHRASE,
+    });
+
+    const signedXDR = await signTransaction(transaction.toXDR(), config.NETWORK_PASSPHRASE);
+
+    logger.log('[TRUSTLINE] Received signed transaction', {
+      signedXdrLength: signedXDR.length,
+      signedXdrPrefix: signedXDR.slice(0, 24),
+    });
+
     const signedTransaction = TransactionBuilder.fromXDR(
       signedXDR,
       config.NETWORK_PASSPHRASE

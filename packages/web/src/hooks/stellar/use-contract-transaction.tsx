@@ -136,9 +136,7 @@ export const useContractTransaction = () => {
               throw new Error('Sign transaction function not available');
             }
 
-            const res = isNormalWallet
-              ? await signTransaction(xdr, networkPassphrase)
-              : await signTransaction(xdr);
+            const res = await signTransaction(xdr, networkPassphrase);
 
             logger.log('[USE CONTRACT TRANSACTION] signTransaction raw result:', res);
             logger.log('[USE CONTRACT TRANSACTION] signTransaction raw typeof:', typeof res);

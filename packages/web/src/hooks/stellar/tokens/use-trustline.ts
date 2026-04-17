@@ -59,6 +59,13 @@ export function useTrustLine(): ReturnType {
         }
 
         logger.log('[TRUSTLINE] Creating trustline for:', assetCode, 'with issuer:', assetIssuer);
+        logger.log('[TRUSTLINE] Signer context', {
+          walletType: storePersist.wallet.walletType,
+          walletAddress,
+          configNetworkPassphrase: config.NETWORK_PASSPHRASE,
+          horizonUrl: config.HORIZON_URL,
+          envNetwork: process.env.NEXT_PUBLIC_NETWORK,
+        });
 
         await createTrustline(walletAddress, assetCode, assetIssuer, signTransaction, config);
 

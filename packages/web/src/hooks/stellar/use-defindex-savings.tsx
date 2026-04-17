@@ -169,9 +169,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         });
 
         const signAndSubmit = async (xdr: string) => {
-          const signResult = isNormalWallet
-            ? await signTransaction(xdr, config.NETWORK_PASSPHRASE)
-            : await signTransaction(xdr);
+          const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           const signedTx = TransactionBuilder.fromXDR(
@@ -386,9 +384,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         });
 
         const signAndSubmit = async (xdr: string) => {
-          const signResult = isNormalWallet
-            ? await signTransaction(xdr, config.NETWORK_PASSPHRASE)
-            : await signTransaction(xdr);
+          const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           const signedTx = TransactionBuilder.fromXDR(
