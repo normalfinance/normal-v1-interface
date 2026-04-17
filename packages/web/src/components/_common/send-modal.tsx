@@ -67,7 +67,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
   const [coinValue, setCoinValue] = useState<number>(0);
   const [fiatValue, setFiatValue] = useState<number>(0);
 
-  const [inputWidth, setInputWidth] = useState<number>(0);
+  const [inputWidth, setInputWidth] = useState<number>(50);
   const spanRef = useRef<HTMLSpanElement>(null);
 
   // Reset form each time the dialog opens and default-select the highest-balance token
@@ -256,6 +256,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
                   sx={{
                     display: 'inline-flex',
                     maxWidth: '100%',
+                    minWidth: '50px',
                     width: `${inputWidth}px`,
                     border: 'none',
                     padding: 0,

@@ -12,7 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserActivity } from '@/hooks';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { cdn, format, logger } from '@normalfinance/utils';
@@ -55,10 +55,11 @@ function WalletConnected({ address }: { address: string }) {
     tokenState: { tokens },
     getAllTokens,
   } = usePersistStore();
+  const network = useNetworkStore((s) => s.network);
 
   const { recentActivity } = useUserActivity(address);
 
-  // Effect hook to fetch all tokens when the component mounts or address changes
+  // Effect hook to fetch all tokens when the component mounts, address changes, or network toggles
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       if (!address) return; // Don't fetch tokens if no address
@@ -78,7 +79,7 @@ function WalletConnected({ address }: { address: string }) {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [address, getAllTokens]);
+  }, [address, getAllTokens, network, setGlobalIsLoading]);
 
   // Total balance
   const totalBalance = tokens.reduce((acc, tkn) => {

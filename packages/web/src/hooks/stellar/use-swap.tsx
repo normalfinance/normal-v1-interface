@@ -5,8 +5,9 @@ import type { SwapMode, SwapQuote, SwapDisplayMeta } from '@/types/swap';
 
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
-import { constants } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
+import { useStellarConfig } from '@/hooks';
+import { getSwapFeeAmount } from '@/utils/normal-fees';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
@@ -43,6 +44,7 @@ export function useSwap(): UseSwapReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
+  const config = useStellarConfig();
 
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
@@ -60,7 +62,8 @@ export function useSwap(): UseSwapReturn {
       amount: string,
       mode: SwapMode = 'strict-send'
     ): Promise<SwapQuote | null> => {
-      if (!amount || parseFloat(amount) <= 0) {
+      const parsedAmount = parseFloat(amount);
+      if (!amount || parsedAmount <= 0) {
         setQuote(null);
         return null;
       }
@@ -69,8 +72,11 @@ export function useSwap(): UseSwapReturn {
         setQuoteLoading(true);
         setError(null);
 
-        // Convert amount to stroops (7 decimals)
-        const amountInStroops = Math.floor(parseFloat(amount) * 10_000_000).toString();
+        // Deduct the 0.5% Normal fee up-front and route the NET amount
+        // through Soroswap so the displayed amountOut reflects reality.
+        const feeAmount = getSwapFeeAmount(parsedAmount);
+        const netAmountIn = parsedAmount - feeAmount;
+        const amountInStroops = Math.floor(netAmountIn * 10_000_000).toString();
 
         const response = await fetch('/api/swap/quote', {
           method: 'POST',
@@ -100,12 +106,12 @@ export function useSwap(): UseSwapReturn {
           path: data.path || [],
           tokenIn,
           tokenOut,
-          amountIn: parseFloat(amount).toFixed(7),
+          amountIn: parsedAmount.toFixed(7),
           amountOut,
           estimatedAmountOut: amountOut,
           minAmountOut,
           priceImpact: 0,
-          fee: '0',
+          fee: feeAmount.toFixed(7),
           xdr: data.xdr || '',
         };
 
@@ -141,9 +147,72 @@ export function useSwap(): UseSwapReturn {
           : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-        // Re-fetch the quote with sender so the aggregator builds the Soroban
-        // router XDR with the correct source account and fresh sequence number
-        const amountInStroops = Math.floor(parseFloat(swapQuote.amountIn) * 10_000_000).toString();
+        const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+          allowHttp: config.HORIZON_URL.startsWith('http://'),
+        });
+
+        const signAndSubmit = async (xdr: string) => {
+          const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
+          const signed = normalizeSignedXDR(signResult);
+          if (!signed) throw new Error('Transaction signing failed — no signed XDR returned');
+          const signedTx = TransactionBuilder.fromXDR(
+            signed,
+            config.NETWORK_PASSPHRASE
+          );
+          return horizonServer.submitTransaction(signedTx);
+        };
+
+        // Resolve the fee asset from the swap quote's tokenIn contract address
+        const xlmAddress = config.XLM_ADDRESS;
+        const usdcAddress = config.USDC_ADDRESS;
+        let feeAssetCode: 'XLM' | 'USDC' | null = null;
+        if (swapQuote.tokenIn === xlmAddress || swapQuote.tokenIn === 'native') {
+          feeAssetCode = 'XLM';
+        } else if (swapQuote.tokenIn === usdcAddress) {
+          feeAssetCode = 'USDC';
+        } else if (display?.tokenInSymbol === 'XLM' || display?.tokenInSymbol === 'USDC') {
+          feeAssetCode = display.tokenInSymbol as 'XLM' | 'USDC';
+        }
+        if (!feeAssetCode) {
+          throw new Error(
+            'Unable to determine fee asset for this swap. Only XLM and USDC are supported.'
+          );
+        }
+
+        const feeAmount = parseFloat(swapQuote.fee || '0');
+        if (feeAmount <= 0) {
+          throw new Error('Swap fee was not computed — please refresh the quote');
+        }
+
+        // 1. Build + sign + submit the Normal fee payment first
+        const feeResponse = await fetch('/api/fees/build-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            caller: walletAddress,
+            amount: feeAmount.toFixed(7),
+            assetCode: feeAssetCode,
+          }),
+        });
+        const feeData = await feeResponse.json();
+        if (!feeData.success || !feeData.xdr) {
+          throw new Error(feeData.error || 'Failed to build Normal fee transaction');
+        }
+
+        let feeResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
+        try {
+          feeResult = await signAndSubmit(feeData.xdr);
+        } catch (feeErr: any) {
+          throw new Error(
+            feeErr?.message
+              ? `Fee payment failed: ${feeErr.message}`
+              : 'Fee payment failed — swap not submitted'
+          );
+        }
+
+        // 2. Re-fetch the Soroswap quote with sender and NET amount (fresh seq)
+        const netAmountIn = parseFloat(swapQuote.amountIn) - feeAmount;
+        const amountInStroops = Math.floor(netAmountIn * 10_000_000).toString();
 
         const quoteResponse = await fetch('/api/swap/quote', {
           method: 'POST',
@@ -159,7 +228,9 @@ export function useSwap(): UseSwapReturn {
         const quoteData = await quoteResponse.json();
 
         if (!quoteData.success) {
-          throw new Error(quoteData.error || 'Failed to build swap transaction');
+          throw new Error(
+            `${quoteData.error || 'Failed to build swap transaction'} (Normal fee already charged — tx ${feeResult.hash})`
+          );
         }
 
         if (!quoteData.xdr) {
@@ -168,29 +239,17 @@ export function useSwap(): UseSwapReturn {
           );
         }
 
-        // Sign the Soroban router XDR built by the aggregator
-        const signResult = isNormalWallet
-          ? await signTransaction(quoteData.xdr, constants.StellarConfig.NETWORK_PASSPHRASE)
-          : await signTransaction(quoteData.xdr);
-
-        // Normalize — wallet kits return different shapes ({ signedXDR } vs plain string)
-        const signedXDR = normalizeSignedXDR(signResult);
-
-        if (!signedXDR) {
-          throw new Error('Transaction signing failed — no signed XDR returned');
+        // 3. Sign + submit the Soroban swap
+        let result: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
+        try {
+          result = await signAndSubmit(quoteData.xdr);
+        } catch (swapErr: any) {
+          throw new Error(
+            swapErr?.message
+              ? `${swapErr.message} (Normal fee already charged — tx ${feeResult.hash})`
+              : 'Swap failed after fee was charged'
+          );
         }
-
-        // Submit to Horizon
-        const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-          allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
-        });
-
-        const signedTx = TransactionBuilder.fromXDR(
-          signedXDR,
-          constants.StellarConfig.NETWORK_PASSPHRASE
-        );
-
-        const result = await horizonServer.submitTransaction(signedTx);
 
         fetch('/api/swap/log-transaction', {
           method: 'POST',
@@ -201,9 +260,11 @@ export function useSwap(): UseSwapReturn {
             tokenOutAddress: swapQuote.tokenOut,
             tokenInSymbol: display?.tokenInSymbol,
             tokenOutSymbol: display?.tokenOutSymbol,
-            amountIn: swapQuote.amountIn,
+            amountIn: netAmountIn.toFixed(7),
             amountOut: swapQuote.amountOut,
             txHash: result.hash,
+            feeAmount: feeAmount.toFixed(7),
+            feeTxHash: feeResult.hash,
           }),
         }).catch(console.error);
 
@@ -248,6 +309,7 @@ export function useSwap(): UseSwapReturn {
       }
     },
     [
+      config,
       wallet.address,
       wallet.walletType,
       normalPublicKey,

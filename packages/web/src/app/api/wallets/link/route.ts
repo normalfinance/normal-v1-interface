@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
-import { faucetRateLimiter } from '@/server/faucetRateLimiter';
+import { faucetRateLimiter } from '@/server/faucet-rate-limiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -83,16 +83,16 @@ export async function POST(request: NextRequest) {
 
       // Check rate limit for non-admin requests
       if (!isDev || forceRateLimit) {
-        const rateLimitStatus = await faucetRateLimiter.check(userId);
-        if (rateLimitStatus.remaining === 0) {
+        const rateLimitResult = await faucetRateLimiter.reserve(userId);
+        if (!rateLimitResult.success) {
           logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
             userId: userId.substring(0, 8) + '...',
-            reset: rateLimitStatus.reset,
+            reset: rateLimitResult.reset,
           });
           return NextResponse.json(
             {
               error: 'You can only create 2 wallets per week. Try again next week.',
-              reset: rateLimitStatus.reset,
+              reset: rateLimitResult.reset,
             },
             { status: 429 }
           );

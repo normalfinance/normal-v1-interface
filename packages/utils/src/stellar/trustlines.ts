@@ -6,13 +6,19 @@ import {
   StrKey,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
+import { NetworkConfig } from '@normalfinance/types';
 import { constants } from '..';
 import { logger } from '../logger';
 import { fetchAccount } from './horizon';
 
-export async function checkTrustline(publicKey: string, assetCode: string, assetIssuer: string) {
+export async function checkTrustline(
+  publicKey: string,
+  assetCode: string,
+  assetIssuer: string,
+  config: NetworkConfig = constants.StellarConfig
+) {
   // Fetch Account
-  const account = await fetchAccount(publicKey);
+  const account = await fetchAccount(publicKey, config);
 
   if (!account) {
     return {
@@ -59,10 +65,11 @@ export async function createTrustline(
   publicKey: string,
   assetCode: string,
   assetIssuer: string,
-  signTransaction?: (xdr: string) => Promise<string>
+  signTransaction?: (xdr: string, networkPassphrase?: string) => Promise<string>,
+  config: NetworkConfig = constants.StellarConfig
 ) {
   // Fetch Account
-  const account = await fetchAccount(publicKey);
+  const account = await fetchAccount(publicKey, config);
 
   if (!account) {
     throw new Error('Account not found');
@@ -73,12 +80,12 @@ export async function createTrustline(
 
   // Build transaction
   const stellarAccount = new Account(account.account_id, account.sequence);
-  const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-    allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+  const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+    allowHttp: config.HORIZON_URL.startsWith('http://'),
   });
   const transaction = new TransactionBuilder(stellarAccount, {
     fee: await horizonServer.feeStats().then((fs) => fs.fee_charged.p90),
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+    networkPassphrase: config.NETWORK_PASSPHRASE,
   })
     .addOperation(
       Operation.changeTrust({
@@ -88,12 +95,32 @@ export async function createTrustline(
     .setTimeout(30)
     .build();
 
+  logger.log('[TRUSTLINE] Built transaction', {
+    publicKey,
+    assetCode,
+    assetIssuer,
+    horizonUrl: config.HORIZON_URL,
+    networkPassphrase: config.NETWORK_PASSPHRASE,
+    unsignedXdrLength: transaction.toXDR().length,
+    unsignedXdrPrefix: transaction.toXDR().slice(0, 24),
+  });
+
   if (signTransaction) {
     // If signTransaction is provided, sign and submit the transaction
-    const signedXDR = await signTransaction(transaction.toXDR());
+    logger.log('[TRUSTLINE] Passing network passphrase to signer', {
+      networkPassphrase: config.NETWORK_PASSPHRASE,
+    });
+
+    const signedXDR = await signTransaction(transaction.toXDR(), config.NETWORK_PASSPHRASE);
+
+    logger.log('[TRUSTLINE] Received signed transaction', {
+      signedXdrLength: signedXDR.length,
+      signedXdrPrefix: signedXDR.slice(0, 24),
+    });
+
     const signedTransaction = TransactionBuilder.fromXDR(
       signedXDR,
-      constants.StellarConfig.NETWORK_PASSPHRASE
+      config.NETWORK_PASSPHRASE
     );
 
     const result = await horizonServer.submitTransaction(signedTransaction);
@@ -108,10 +135,11 @@ export async function createTrustline(
 export async function fetchAndIssueTrustline(
   publicKey: string,
   assetCode: string,
-  assetIssuer: string
+  assetIssuer: string,
+  config: NetworkConfig = constants.StellarConfig
 ) {
   // Fetch Account
-  const account = await fetchAccount(publicKey);
+  const account = await fetchAccount(publicKey, config);
 
   if (!account) {
     throw new Error('Account not found');
@@ -131,7 +159,7 @@ export async function fetchAndIssueTrustline(
 
   // If trustline does not exist, issue trustline
   if (!trustlineExists) {
-    const result = await createTrustline(publicKey, assetCode, assetIssuer);
+    const result = await createTrustline(publicKey, assetCode, assetIssuer, undefined, config);
     return result;
   }
 }

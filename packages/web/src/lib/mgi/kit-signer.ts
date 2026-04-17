@@ -26,13 +26,14 @@ export async function signXDRWithWalletKit(
   }
 
   // The store already exposes a signer. Some implementations accept (xdr) only,
-  // some accept (xdr, opts). Call in a way that supports both.
+  // some accept (xdr, networkPassphrase). The connected wallet address is
+  // already verified above, so only the passphrase needs to be forwarded.
   const sign = s.signTransaction as unknown as (
     xdr: string,
-    opts?: { networkPassphrase?: string; accountToSign?: string }
+    networkPassphrase?: string
   ) => Promise<string | { xdr?: string; signedXDR?: string }>;
 
-  const res = await sign(xdr, { networkPassphrase, accountToSign: account });
+  const res = await sign(xdr, networkPassphrase);
 
   // Normalize return shape to a string XDR
   if (typeof res === 'string') return res;

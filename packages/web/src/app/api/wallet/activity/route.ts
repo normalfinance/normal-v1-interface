@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
 import { isValidStellarAddress } from '@/utils/stellar-address';
-import type { WalletActivityItem, WalletActivityKind } from '@/types/wallet-activity';
+import type { WalletActivityItem } from '@/types/wallet-activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const [vaultRows, swapRows, sponsored] = await Promise.all([
+    const [vaultRows, swapRows] = await Promise.all([
       prisma.vaultDeposit.findMany({
         where: { walletAddress },
         orderBy: { createdAt: 'desc' },
@@ -45,16 +45,12 @@ export async function GET(request: NextRequest) {
         where: { walletAddress },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.sponsoredAccount.findUnique({
-        where: { walletAddress },
-      }),
     ]);
 
     const items: WalletActivityItem[] = [];
 
     for (const row of vaultRows) {
-      const kind: WalletActivityKind =
-        row.type === 'withdraw' ? 'vault_withdraw' : 'vault_deposit';
+      const kind = row.type === 'withdraw' ? 'vault_withdraw' : 'vault_deposit';
       items.push({
         kind,
         id: `vault:${row.id}`,
@@ -77,15 +73,6 @@ export async function GET(request: NextRequest) {
         tokenOutSymbol: row.tokenOutSymbol,
         amountIn: row.amountIn,
         amountOut: row.amountOut,
-      });
-    }
-
-    if (sponsored?.txHash) {
-      items.push({
-        kind: 'sponsorship',
-        id: `sponsorship:${sponsored.id}`,
-        createdAt: sponsored.sponsoredAt.toISOString(),
-        txHash: sponsored.txHash,
       });
     }
 

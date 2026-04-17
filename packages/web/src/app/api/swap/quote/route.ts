@@ -1,7 +1,7 @@
 import type { NextRequest} from 'next/server';
 
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { getCurrentNetwork } from '@normalfinance/utils';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 const DEFAULT_SOROSWAP_API_BASE_URL = 'https://api.soroswap.finance';
@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
     }
 
     const apiBaseUrl = process.env.SOROSWAP_API_BASE_URL || DEFAULT_SOROSWAP_API_BASE_URL;
-    const network = getCurrentNetwork() === 'mainnet' ? 'mainnet' : 'testnet';
+    const cookieStore = await cookies();
+    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as 'mainnet' | 'testnet';
     const tradeType = mode === 'strict-send' ? 'EXACT_IN' : 'EXACT_OUT';
 
     const quotePayload = {
@@ -132,15 +133,6 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(buildPayload),
     });
-
-    if (buildResponse.status === 428) {
-      // Sponsored / gasless trustline multi-step flow — not supported yet
-      console.error('[swap/quote] Soroswap /quote/build returned 428 (gasless multi-step)');
-      return NextResponse.json(
-        { success: false, error: 'Gasless/sponsored swap flow is not supported' },
-        { status: 400 }
-      );
-    }
 
     if (!buildResponse.ok) {
       const errorText = await buildResponse.text();

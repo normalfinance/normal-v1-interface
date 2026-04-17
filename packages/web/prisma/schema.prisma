@@ -68,34 +68,14 @@ model LinkedWallet {
   @@map("linked_wallets")
 }
 
-model SponsoredAccount {
-  id               String    @id @default(cuid())
-  supabaseUid      String?
-  walletAddress    String    @unique
-  sponsorAddress   String
-  ipAddress        String
-  sponsoredAt      DateTime  @default(now())
-  accountReserve   String    @default("0.5")
-  trustlineReserve String    @default("0.5")
-  feePayment       String    @default("1")
-  txHash           String?
-  isRevoked        Boolean   @default(false)
-  revokedAt        DateTime?
-  revocationTxHash String?
-  revocationReason String?
-
-  @@index([sponsorAddress])
-  @@index([ipAddress])
-  @@index([supabaseUid])
-  @@map("sponsored_accounts")
-}
-
 model VaultDeposit {
   id            String   @id @default(cuid())
   walletAddress String
   vaultAddress  String
   type          String   // "deposit" or "withdraw"
   amount        String   // USDC amount (human-readable, not stroops)
+  feeAmount     String?  // Normal fee (deposit) or commission (withdraw), human-readable USDC
+  feeTxHash     String?  // Hash of the classic fee payment transaction
   txHash        String?
   createdAt     DateTime @default(now())
 
@@ -112,6 +92,8 @@ model SwapLog {
   tokenOutSymbol   String?
   amountIn         String
   amountOut        String
+  feeAmount        String?  // 0.5% fee charged in tokenIn (human-readable)
+  feeTxHash        String?  // Hash of the classic fee payment transaction
   txHash           String?
   createdAt        DateTime @default(now())
 

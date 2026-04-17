@@ -1,4 +1,4 @@
-export type WalletActivityKind = 'vault_deposit' | 'vault_withdraw' | 'swap' | 'sponsorship';
+export type WalletActivityKind = 'vault_deposit' | 'vault_withdraw' | 'swap';
 
 interface ActivityItemBase {
   kind: WalletActivityKind;
@@ -26,9 +26,6 @@ export type WalletActivityItem =
       tokenOutSymbol: string | null;
       amountIn: string;
       amountOut: string;
-    })
-  | (ActivityItemBase & {
-      kind: 'sponsorship';
     });
 
 export interface WalletActivityResponse {

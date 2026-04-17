@@ -216,11 +216,6 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       sentence = `${aIn} ${sIn} → ${aOut} ${sOut}`;
       break;
     }
-    case 'Account sponsored': {
-      icon = <ActivityTokenImage src={getCryptoIconUrl('XLM')} symbol="XLM" />;
-      sentence = t('Sponsorship funded this account');
-      break;
-    }
     default:
       icon = null;
   }

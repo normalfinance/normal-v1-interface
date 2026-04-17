@@ -1,7 +1,9 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/utils/http';
 import { Keypair, Transaction } from '@stellar/stellar-sdk';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { getStellarConfigForNetwork, type NetworkType } from '@normalfinance/utils';
 
 /**
  * POST /api/mgi/sep10/complete
@@ -29,8 +31,9 @@ export async function POST(req: Request) {
 
     const authSecret = process.env.AUTH_SECRET_KEY;
     const mgiHost = process.env.MGI_ACCESS_HOST;
-    const passphrase =
-      process.env.HORIZON_NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015';
+    const cookieStore = await cookies();
+    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
+    const passphrase = getStellarConfigForNetwork(network).NETWORK_PASSPHRASE;
 
     if (!authSecret) {
       return NextResponse.json({ error: 'Server missing AUTH_SECRET_KEY' }, { status: 500 });

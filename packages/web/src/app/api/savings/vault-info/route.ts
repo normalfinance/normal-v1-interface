@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
@@ -8,23 +9,21 @@ export const dynamic = 'force-dynamic';
 
 // ----------------------------------------------------------------------
 
-const sdk = new DefindexSDK({
-  apiKey: process.env.DEFINDEX_API_KEY,
-  defaultNetwork:
-    process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
-      ? SupportedNetworks.MAINNET
-      : SupportedNetworks.TESTNET,
-});
-
-const VAULT_ADDRESS =
-  process.env.NEXT_PUBLIC_NETWORK === 'MAINNET'
-    ? process.env.NEXT_PUBLIC_MAINNET_DEFINDEX_VAULT || ''
-    : process.env.NEXT_PUBLIC_TESTNET_DEFINDEX_VAULT || '';
-
-// ----------------------------------------------------------------------
-
 export async function GET(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const network = cookieStore.get('normal-network')?.value ?? 'testnet';
+    const isMainnet = network === 'mainnet';
+
+    const sdk = new DefindexSDK({
+      apiKey: process.env.DEFINDEX_API_KEY,
+      defaultNetwork: isMainnet ? SupportedNetworks.MAINNET : SupportedNetworks.TESTNET,
+    });
+
+    const VAULT_ADDRESS = isMainnet
+      ? process.env.NEXT_PUBLIC_MAINNET_DEFINDEX_VAULT || ''
+      : process.env.NEXT_PUBLIC_TESTNET_DEFINDEX_VAULT || '';
+
     if (!VAULT_ADDRESS) {
       return NextResponse.json(
         { success: false, error: 'Vault address not configured' },

@@ -1,7 +1,8 @@
 'use client';
 
-import { constants } from '@normalfinance/utils';
 import { useTranslate } from '@/locales';
+
+import { useStellarConfig } from '@/hooks';
 
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -14,6 +15,7 @@ import Typography from '@mui/material/Typography';
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { getSavingsUsdcIssuer, getSavingsDepositTokenLabel } from '@/utils/token-selectors';
 
 // ----------------------------------------------------------------------
 
@@ -29,14 +31,18 @@ export function TrustlineModal({ open, onClose, onSuccess }: TrustlineModalProps
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { addTrustLine, loading } = useTrustLine();
+  const config = useStellarConfig();
 
-  const blendUsdcIssuer = constants.StellarConfig.BLEND_USDC_ISSUER;
+  const usdcIssuer = getSavingsUsdcIssuer(config);
+  const usdcLabel = getSavingsDepositTokenLabel(config);
 
   const handleAddTrustline = async () => {
-    if (!blendUsdcIssuer) return;
+    if (!usdcIssuer) return;
     try {
-      await addTrustLine('USDC', blendUsdcIssuer);
-      enqueueSnackbar(t('Blend USDC trustline added!'), { variant: 'success' });
+      await addTrustLine('USDC', usdcIssuer);
+      enqueueSnackbar(t('{{label}} trustline added!', { label: usdcLabel }), {
+        variant: 'success',
+      });
       onSuccess();
     } catch (e: any) {
       enqueueSnackbar(e?.message || t('Failed to add trustline'), { variant: 'error' });
@@ -50,7 +56,8 @@ export function TrustlineModal({ open, onClose, onSuccess }: TrustlineModalProps
       <DialogContent>
         <Typography variant="body2" color="text.secondary">
           {t(
-            'To deposit USDC into savings, you need to enable the Blend USDC trustline on your wallet. This is a one-time setup.'
+            'To deposit USDC into savings, you need to enable the {{label}} trustline on your wallet. This is a one-time setup.',
+            { label: usdcLabel }
           )}
         </Typography>
       </DialogContent>

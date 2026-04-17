@@ -90,11 +90,6 @@ export interface SwapActivity extends ActivityBase {
   tokenOut: TokenAmount;
 }
 
-export interface SponsorshipActivity extends ActivityBase {
-  type: 'Account sponsored';
-  txHash: string | null;
-}
-
 // -----------------------------------------------------------------------------
 //  Discriminated union
 // -----------------------------------------------------------------------------
@@ -109,5 +104,4 @@ export type Activity =
   | RemoveLiquidityActivity
   | SavingsDepositActivity
   | SavingsWithdrawActivity
-  | SwapActivity
-  | SponsorshipActivity;
+  | SwapActivity;

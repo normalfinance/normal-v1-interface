@@ -6,7 +6,8 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
-import { constants, detectMemoType } from '@normalfinance/utils';
+import { detectMemoType } from '@normalfinance/utils';
+import { useStellarConfig } from '@/hooks';
 import { Memo, Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
@@ -38,6 +39,7 @@ export function useSendToken(): ReturnType {
   const { enqueueSnackbar } = useSnackbar();
 
   const { wallet } = usePersistStore();
+  const config = useStellarConfig();
 
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
@@ -62,8 +64,8 @@ export function useSendToken(): ReturnType {
         : stellarPublicKey || wallet.address;
       const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-      const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-        allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+      const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+        allowHttp: config.HORIZON_URL.startsWith('http://'),
       });
 
       const account = await horizonServer.loadAccount(walletAddress);
@@ -71,7 +73,7 @@ export function useSendToken(): ReturnType {
       const tx = new TransactionBuilder(account, {
         fee: '2000',
         timebounds: { minTime: 0, maxTime: Math.floor(Date.now() / 1000) + 2 * 60 * 1000 },
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        networkPassphrase: config.NETWORK_PASSPHRASE,
       });
 
       // BigInt((tokenValue * 10 ** (sendToken?.decimals || 7)).toFixed(0)),
@@ -115,7 +117,7 @@ export function useSendToken(): ReturnType {
       const unsignedXDR = builtTx.toXDR();
 
       const signedXDR = isNormalWallet
-        ? await signTransaction(unsignedXDR, constants.StellarConfig.NETWORK_PASSPHRASE)
+        ? await signTransaction(unsignedXDR, config.NETWORK_PASSPHRASE)
         : await signTransaction(unsignedXDR);
 
       if (!signedXDR) {
@@ -124,7 +126,7 @@ export function useSendToken(): ReturnType {
 
       const transaction = TransactionBuilder.fromXDR(
         signedXDR,
-        constants.StellarConfig.NETWORK_PASSPHRASE
+        config.NETWORK_PASSPHRASE
       );
 
       const result = await horizonServer.submitTransaction(transaction);
