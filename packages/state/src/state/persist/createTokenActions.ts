@@ -1,4 +1,4 @@
-import { ApiToken, AppStorePersist, Token, TokenActions, TokenState } from '@normalfinance/types';
+import { ApiToken, AppStorePersist, NetworkConfig, Token, TokenActions, TokenState } from '@normalfinance/types';
 import { usePersistStore } from '../store';
 import { useNetworkStore } from '../network/store';
 import {
@@ -6,20 +6,21 @@ import {
   constants,
   format,
   getReflectorExternalPrice,
+  getStellarConfigForNetwork,
   getTokenBalance,
   logger,
 } from '@normalfinance/utils';
 import { BigNumber } from 'bignumber.js';
 
-const fetchTokenBalance = async (token: ApiToken, address: string): Promise<BigNumber> => {
+const fetchTokenBalance = async (token: ApiToken, address: string, config: NetworkConfig): Promise<BigNumber> => {
   let balance = BigNumber(0);
 
   try {
     // Check trustline
-    const trustlineStatus = await checkTrustline(address, token.symbol, token.issuer);
+    const trustlineStatus = await checkTrustline(address, token.symbol, token.issuer, config);
     if (!trustlineStatus.exists) return balance;
 
-    const rawBalance = await getTokenBalance(token.contract, address);
+    const rawBalance = await getTokenBalance(token.contract, address, config);
     balance = BigNumber(format.fTokenAmount(rawBalance, token.decimals));
   } catch (error) {
     logger.warn('[WALLET ACTIONS] Error getting API token balance:', error);
@@ -101,6 +102,8 @@ export const createTokenActions = (): TokenActions => {
       try {
         // Get wallet address from persist store
         const walletAddress = usePersistStore.getState().wallet.address;
+        const network = useNetworkStore.getState().network;
+        const networkConfig = getStellarConfigForNetwork(network);
 
         logger.log(
           '[WALLET ACTIONS] Fetching API token for address:',
@@ -113,7 +116,7 @@ export const createTokenActions = (): TokenActions => {
 
         let balance = BigNumber(0);
 
-        if (walletAddress) balance = await fetchTokenBalance(token, walletAddress);
+        if (walletAddress) balance = await fetchTokenBalance(token, walletAddress, networkConfig);
 
         const price = await fetchTokenPrice(token);
 
