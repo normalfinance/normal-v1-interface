@@ -62,6 +62,12 @@ export const createTokenActions = (): TokenActions => {
         const network = useNetworkStore.getState().network;
         const tokens: ApiToken[] = constants.getTokenListForNetwork(network);
 
+        // Clear stale tokens from previous network before loading new ones
+        usePersistStore.setState((state: AppStorePersist) => ({
+          ...state,
+          tokenState: { tokens: [], tokensByAddress: {}, lastUpdated: state.tokenState.lastUpdated },
+        }));
+
         // Load all token info
         const persistStore = usePersistStore.getState();
         const allTokens = tokens
