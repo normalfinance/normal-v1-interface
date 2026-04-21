@@ -7,21 +7,25 @@ import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useBoolean } from 'minimal-shared/hooks';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserActivity } from '@/hooks';
+import { useBoolean } from 'minimal-shared/hooks';
+import { cdn, format, logger } from '@normalfinance/utils';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
-import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { cdn, format, logger } from '@normalfinance/utils';
+import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   getLinkedWallets,
   type LinkedWallet,
   checkWalletCreationLimit,
 } from '@/services/linked-wallets';
+import {
+  useNormalWallet,
+  hasStoredNormalWalletKey,
+  NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,
+} from '@/hooks/stellar/use-normal-wallet';
 
 import {
   Box,
@@ -130,8 +134,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     publicKey: normalPublicKey,
     isConnected: isNormalConnected,
     disconnectWallet: disconnectNormalWallet,
-    importWalletFromMnemonic,
-    importWalletFromPrivateKey,
   } = useNormalWallet();
   const { session, isLoading: authLoading, signOut } = useSupabaseAuth();
   const { enqueueSnackbar } = useSnackbar();
@@ -232,16 +234,20 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [connectWallet, onClose]);
 
   const attemptAutoConnect = useCallback(
-    async (wallet: LinkedWallet): Promise<boolean> => {
+    async (wallet: LinkedWallet): Promise<'connected' | 'requires-reimport' | 'failed'> => {
       try {
+        if (!hasStoredNormalWalletKey()) {
+          return 'requires-reimport';
+        }
+
         // Self-custody only: connect address-only. The restoreWallet useEffect
         // in use-normal-wallet handles the password prompt and keypair restoration.
         await connectWalletWithoutKeypair(wallet.walletAddress);
         logger.log('[AccountDrawer] Auto-connected wallet in address-only mode');
-        return true;
+        return 'connected';
       } catch (error) {
         logger.error('[AccountDrawer] Error during auto-connect:', error);
-        return false;
+        return 'failed';
       }
     },
     [connectWalletWithoutKeypair]
@@ -281,8 +287,17 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
       const autoConnected = await attemptAutoConnect(mostRecentWallet);
 
-      if (autoConnected) {
+      if (autoConnected === 'connected') {
         enqueueSnackbar(t('Wallet connected successfully'), { variant: 'success' });
+        return;
+      }
+
+      if (autoConnected === 'requires-reimport') {
+        enqueueSnackbar(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE, {
+          variant: 'info',
+          autoHideDuration: 8000,
+        });
+        setShowImportNormalWallet(true);
         return;
       }
 

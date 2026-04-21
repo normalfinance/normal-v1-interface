@@ -5,6 +5,25 @@ import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module
 import { HANA_ID, XBULL_ID, LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
 
+const getWalletIdFromType = (walletType?: string): string | null => {
+  switch (walletType) {
+    case 'hana':
+      return HANA_ID;
+    case 'xbull':
+      return XBULL_ID;
+    case 'freighter':
+      return FREIGHTER_ID;
+    case 'lobstr':
+      return LOBSTR_ID;
+    case 'wallet-connect':
+      return WALLET_CONNECT_ID;
+    case 'ledger':
+      return LEDGER_ID;
+    default:
+      return null;
+  }
+};
+
 export const useStellarWalletsKit = () => {
   const persistStore = usePersistStore();
   const walletKitStore = useStellarWalletKitStore();
@@ -16,14 +35,17 @@ export const useStellarWalletsKit = () => {
     if (!walletKitStore.isInitialized) {
       walletKitStore.initializeKit();
     }
-  }, [walletKitStore.isInitialized]);
+  }, [walletKitStore.isInitialized, walletKitStore]);
 
   useEffect(() => {
     const checkConnection = async () => {
       try {
         if (typeof window === 'undefined') return;
 
-        if (connectionChecked.current) {
+        const hasIncompleteConnection =
+          walletKitStore.isConnected && walletKitStore.publicKey && !walletKitStore.selectedWallet;
+
+        if (connectionChecked.current && !hasIncompleteConnection) {
           return;
         }
 
@@ -31,109 +53,55 @@ export const useStellarWalletsKit = () => {
           return;
         }
 
-        if (walletKitStore.isConnected && walletKitStore.publicKey) {
+        if (
+          walletKitStore.isConnected &&
+          walletKitStore.publicKey &&
+          walletKitStore.selectedWallet
+        ) {
           return;
         }
 
-        connectionChecked.current = true;
-
-        if (persistStore.wallet.address) {
-          walletKitStore.setPublicKey(persistStore.wallet.address);
-          walletKitStore.setConnected(true);
-
-          const storedWalletType = persistStore.wallet.walletType;
-          if (storedWalletType) {
-            let walletId: string | null = null;
-            switch (storedWalletType) {
-              case 'hana':
-                walletId = HANA_ID;
-                break;
-              case 'xbull':
-                walletId = XBULL_ID;
-                break;
-              case 'freighter':
-                walletId = FREIGHTER_ID;
-                break;
-              case 'lobstr':
-                walletId = LOBSTR_ID;
-                break;
-              case 'wallet-connect':
-                walletId = WALLET_CONNECT_ID;
-                break;
-              case 'ledger':
-                walletId = LEDGER_ID;
-                break;
-              default:
-                walletId = null;
-                break;
-            }
-            if (walletId) {
-              walletKitStore.setSelectedWallet(walletId);
-
-              if (walletKitStore.kit) {
-                try {
-                  walletKitStore.kit.setWallet(walletId);
-                } catch (setWalletError) {
-                  // Silent fail
-                }
-              }
-            }
-          }
+        const storedWalletType = persistStore.wallet.walletType;
+        if (!storedWalletType || storedWalletType === 'normal-wallet') {
           return;
         }
 
         if (!walletKitStore.kit) return;
 
-        const storedWalletType = persistStore.wallet.walletType;
-
-        if (!storedWalletType) {
+        const walletId = getWalletIdFromType(storedWalletType);
+        if (!walletId) {
+          logger.warn('[WALLET KIT] Persisted wallet type cannot be restored:', storedWalletType);
+          walletKitStore.setPublicKey(null);
+          walletKitStore.setConnected(false);
+          walletKitStore.setSelectedWallet(null);
+          persistStore.disconnectWallet();
           return;
         }
 
-        let walletId: string | null = null;
-        switch (storedWalletType) {
-          case 'hana':
-            walletId = HANA_ID;
-            break;
-          case 'xbull':
-            walletId = XBULL_ID;
-            break;
-          case 'freighter':
-            walletId = FREIGHTER_ID;
-            break;
-          case 'lobstr':
-            walletId = LOBSTR_ID;
-            break;
-          case 'wallet-connect':
-            walletId = WALLET_CONNECT_ID;
-            break;
-          case 'ledger':
-            walletId = LEDGER_ID;
-            break;
-          default:
-            walletId = null;
-            break;
-        }
+        connectionChecked.current = true;
 
-        if (walletId) {
-          try {
-            walletKitStore.kit.setWallet(walletId);
-            walletKitStore.setSelectedWallet(walletId);
+        try {
+          walletKitStore.kit.setWallet(walletId);
+          walletKitStore.setSelectedWallet(walletId);
 
-            await new Promise((resolve) => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
-            const address = await walletKitStore.kit.getAddress();
-            if (address?.address) {
-              walletKitStore.setPublicKey(address.address);
-              walletKitStore.setConnected(true);
+          const address = await walletKitStore.kit.getAddress();
+          if (address?.address) {
+            walletKitStore.setPublicKey(address.address);
+            walletKitStore.setConnected(true);
 
-              if (address.address !== persistStore.wallet.address) {
-                await persistStore.connectWallet(address.address, storedWalletType);
-              }
+            if (address.address !== persistStore.wallet.address) {
+              await persistStore.connectWallet(address.address, storedWalletType);
             }
-          } catch (restoreError) {
-            logger.error('Failed to restore wallet:', restoreError);
           }
+        } catch (restoreError) {
+          connectionChecked.current = false;
+          walletKitStore.setPublicKey(null);
+          walletKitStore.setConnected(false);
+          walletKitStore.setSelectedWallet(null);
+          persistStore.disconnectWallet();
+          logger.error('Failed to restore wallet:', restoreError);
         }
       } catch (error) {
         logger.error('Failed to check connection:', error);
@@ -141,8 +109,9 @@ export const useStellarWalletsKit = () => {
     };
 
     if (
-      (persistStore.wallet.walletType || persistStore.wallet.address) &&
-      !walletKitStore.isConnected &&
+      persistStore.wallet.walletType &&
+      persistStore.wallet.walletType !== 'normal-wallet' &&
+      (!walletKitStore.isConnected || !walletKitStore.selectedWallet) &&
       !walletKitStore.isConnecting
     ) {
       checkConnection();
@@ -153,7 +122,10 @@ export const useStellarWalletsKit = () => {
     walletKitStore.isConnected,
     walletKitStore.isConnecting,
     walletKitStore.publicKey,
+    walletKitStore.selectedWallet,
     walletKitStore.kit,
+    persistStore,
+    walletKitStore,
   ]);
 
   const connectWallet = useCallback(async () => {
@@ -170,7 +142,7 @@ export const useStellarWalletsKit = () => {
     try {
       connectionChecked.current = false;
       await walletKitStore.disconnectWallet();
-    } catch (error) {
+    } catch {
       connectionChecked.current = false;
       // Let the store handle the error state
     }
@@ -179,7 +151,7 @@ export const useStellarWalletsKit = () => {
   const getSupportedWallets = useCallback(async () => {
     try {
       return await walletKitStore.getSupportedWallets();
-    } catch (error) {
+    } catch {
       return [];
     }
   }, [walletKitStore]);

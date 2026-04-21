@@ -2,8 +2,9 @@ import type { MnemonicStrength } from '@normalfinance/utils';
 
 import { useRef, useEffect, useCallback } from 'react';
 import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
-import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
 import { useWalletPassword } from '@/providers/WalletPasswordProvider';
+import { logger, createKeypairFromSecret } from '@normalfinance/utils';
+import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
 import {
   isLegacyBase64,
   isPasswordEncrypted,
@@ -12,9 +13,11 @@ import {
   encryptPrivateKeyWithPassword,
   decryptPrivateKeyWithPassword,
 } from '@/lib/client-crypto';
-import { logger, createKeypairFromSecret } from '@normalfinance/utils';
 
 const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
+
+export const NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE =
+  'No local wallet key found. Please re-import your wallet using your recovery phrase to continue signing.';
 
 /**
  * Encrypt and store private key in localStorage using password-derived key (v2).
@@ -61,6 +64,11 @@ const getStoredKeyFormat = (): StoredKeyFormat => {
   if (isIndexedDBEncrypted(stored)) return 'v1';
   if (isLegacyBase64(stored)) return 'legacy';
   return 'none';
+};
+
+export const hasStoredNormalWalletKey = (): boolean => {
+  const storedKeyFormat = getStoredKeyFormat();
+  return storedKeyFormat === 'v2' || storedKeyFormat === 'v1' || storedKeyFormat === 'legacy';
 };
 
 /**
@@ -110,6 +118,17 @@ export const useNormalWallet = () => {
         const storedAddress = persistStore.wallet.address;
         if (!storedAddress) return;
 
+        if (!hasStoredNormalWalletKey()) {
+          logger.warn(
+            '[NORMAL WALLET] Persisted Normal wallet is missing a local key; clearing stale connection state'
+          );
+          normalWalletStore.setKeypair(null);
+          normalWalletStore.setPublicKey(null);
+          normalWalletStore.setConnected(false);
+          persistStore.disconnectWallet();
+          return;
+        }
+
         // Address-only restore: never prompt for password on mount. The
         // decrypted keypair is populated lazily by signTransaction on the
         // first sign, which caches it in the zustand store for the session.
@@ -136,6 +155,8 @@ export const useNormalWallet = () => {
     persistStore.wallet.address,
     normalWalletStore.isConnected,
     normalWalletStore.isConnecting,
+    normalWalletStore,
+    persistStore,
   ]);
 
   const createWallet = useCallback(
@@ -217,6 +238,10 @@ export const useNormalWallet = () => {
 
   const connectWalletWithoutKeypair = useCallback(
     async (address: string) => {
+      if (!hasStoredNormalWalletKey()) {
+        throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+      }
+
       await persistStore.connectWallet(address, 'normal-wallet');
       normalWalletStore.setPublicKey(address);
       normalWalletStore.setConnected(true);
@@ -307,9 +332,7 @@ export const useNormalWallet = () => {
 
       // No local key at all — only possible for users whose wallet was created
       // under the removed platform-custody flow. They must re-import.
-      throw new Error(
-        'No local wallet key found. Please re-import your wallet using your recovery phrase to continue signing.'
-      );
+      throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
     },
     [persistStore.wallet.address, requestPassword]
   );
@@ -330,12 +353,7 @@ export const useNormalWallet = () => {
   // canSign is true when the wallet can sign transactions locally:
   // either a keypair is already in memory, or a locally-stored key exists
   // (v2, v1, or legacy) that signTransaction can unlock on demand.
-  const storedKeyFormat = getStoredKeyFormat();
-  const canSign =
-    !!normalWalletStore.keypair ||
-    storedKeyFormat === 'v2' ||
-    storedKeyFormat === 'v1' ||
-    storedKeyFormat === 'legacy';
+  const canSign = !!normalWalletStore.keypair || hasStoredNormalWalletKey();
 
   return {
     publicKey: normalWalletStore.publicKey,

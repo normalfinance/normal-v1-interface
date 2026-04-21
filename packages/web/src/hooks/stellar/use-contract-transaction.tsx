@@ -7,14 +7,17 @@ import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 import { useCallback } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
-import { useRouter } from 'next/navigation';
-import { usePersistStore } from '@normalfinance/state';
-import { logger } from '@normalfinance/utils';
 import { useStellarConfig } from '@/hooks';
+import { useRouter } from 'next/navigation';
+import { logger } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
 import { type TransactionDetails } from '@/types/transaction';
-import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
+import {
+  useNormalWallet,
+  NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,
+} from '@/hooks/stellar/use-normal-wallet';
 import {
   TreasuryContract,
   IndexFundContract,
@@ -88,7 +91,11 @@ export const useContractTransaction = () => {
   const config = useStellarConfig();
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
-  const { signTransaction: signNormalWallet, publicKey: normalPublicKey } = useNormalWallet();
+  const {
+    signTransaction: signNormalWallet,
+    publicKey: normalPublicKey,
+    canSign: normalCanSign,
+  } = useNormalWallet();
   const { t } = useTranslate();
   const router = useRouter();
 
@@ -105,6 +112,9 @@ export const useContractTransaction = () => {
       // Determine wallet type and get appropriate address and sign function
       const walletType = storePersist.wallet.walletType;
       const isNormalWallet = walletType === 'normal-wallet';
+      if (isNormalWallet && !normalCanSign) {
+        throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+      }
       const walletAddress = isNormalWallet
         ? normalPublicKey || storePersist.wallet.address
         : stellarPublicKey || storePersist.wallet.address;
@@ -283,7 +293,17 @@ export const useContractTransaction = () => {
           throw error;
         });
     },
-    [storePersist, config, signStellarWalletKit, signNormalWallet, stellarPublicKey, normalPublicKey, t]
+    [
+      storePersist,
+      config,
+      signStellarWalletKit,
+      signNormalWallet,
+      stellarPublicKey,
+      normalPublicKey,
+      normalCanSign,
+      router,
+      t,
+    ]
   );
 
   return {

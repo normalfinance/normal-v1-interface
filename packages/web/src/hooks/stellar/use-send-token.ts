@@ -5,15 +5,15 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { usePersistStore } from '@normalfinance/state';
-import { detectMemoType } from '@normalfinance/utils';
 import { useStellarConfig } from '@/hooks';
+import { detectMemoType } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
 import { Memo, Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
 
-import { useNormalWallet } from './use-normal-wallet';
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
+import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 
 // ----------------------------------------------------------------------
 
@@ -43,7 +43,11 @@ export function useSendToken(): ReturnType {
 
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
-  const { signTransaction: signNormalWallet, publicKey: normalPublicKey } = useNormalWallet();
+  const {
+    signTransaction: signNormalWallet,
+    publicKey: normalPublicKey,
+    canSign: normalCanSign,
+  } = useNormalWallet();
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,6 +63,9 @@ export function useSendToken(): ReturnType {
 
       const walletType = wallet.walletType;
       const isNormalWallet = walletType === 'normal-wallet';
+      if (isNormalWallet && !normalCanSign) {
+        throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+      }
       const walletAddress = isNormalWallet
         ? normalPublicKey || wallet.address
         : stellarPublicKey || wallet.address;

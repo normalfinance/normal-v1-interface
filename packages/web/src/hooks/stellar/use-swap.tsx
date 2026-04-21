@@ -4,9 +4,9 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { SwapMode, SwapQuote, SwapDisplayMeta } from '@/types/swap';
 
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
-import { useStellarConfig } from '@/hooks';
 import { getSwapFeeAmount } from '@/utils/normal-fees';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
@@ -17,8 +17,8 @@ import Button from '@mui/material/Button';
 
 import { useSnackbar } from '@/components/template/snackbar';
 
-import { useNormalWallet } from './use-normal-wallet';
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
+import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 
 // ----------------------------------------------------------------------
 
@@ -48,7 +48,11 @@ export function useSwap(): UseSwapReturn {
 
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
-  const { signTransaction: signNormalWallet, publicKey: normalPublicKey } = useNormalWallet();
+  const {
+    signTransaction: signNormalWallet,
+    publicKey: normalPublicKey,
+    canSign: normalCanSign,
+  } = useNormalWallet();
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -142,6 +146,9 @@ export function useSwap(): UseSwapReturn {
 
         const walletType = wallet.walletType;
         const isNormalWallet = walletType === 'normal-wallet';
+        if (isNormalWallet && !normalCanSign) {
+          throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+        }
         const walletAddress = isNormalWallet
           ? normalPublicKey || wallet.address
           : stellarPublicKey || wallet.address;
@@ -312,6 +319,7 @@ export function useSwap(): UseSwapReturn {
       config,
       wallet.address,
       wallet.walletType,
+      normalCanSign,
       normalPublicKey,
       stellarPublicKey,
       signNormalWallet,

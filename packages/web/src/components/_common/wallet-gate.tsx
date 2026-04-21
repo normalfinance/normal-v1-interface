@@ -34,7 +34,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   const persist = usePersistStore();
   const { t } = useTranslate();
   const { session, isLoading } = useSupabaseAuth();
-  const { connectWallet, publicKey, isConnected } = useStellarWalletsKit();
+  const { connectWallet, isConnected } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
     publicKey: normalPublicKey,
@@ -74,11 +74,6 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   const handleConnectStellarWallet = async () => {
     try {
       await connectWallet();
-
-      // After successful connection, store the wallet info in our state
-      if (publicKey) {
-        await persist.connectWallet(publicKey, 'stellar-wallets-kit');
-      }
     } catch (error) {
       logger.error('Error connecting wallet:', error);
     }

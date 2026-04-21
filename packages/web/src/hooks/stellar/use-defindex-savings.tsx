@@ -5,22 +5,22 @@ import type { OptionsObject, SnackbarMessage } from 'notistack';
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
 import { useTranslate } from '@/locales';
-import { usePersistStore } from '@normalfinance/state';
 import { useStellarConfig } from '@/hooks';
+import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
+import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
-import { createStellarExpertUrl, parseHorizonError } from '@/utils/transactions.utils';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
-import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
+import { parseHorizonError, createStellarExpertUrl } from '@/utils/transactions.utils';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 
 import { useSnackbar } from '@/components/template/snackbar';
 
-import { useNormalWallet } from './use-normal-wallet';
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
+import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 
 // ----------------------------------------------------------------------
 
@@ -82,7 +82,11 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
-  const { signTransaction: signNormalWallet, publicKey: normalPublicKey } = useNormalWallet();
+  const {
+    signTransaction: signNormalWallet,
+    publicKey: normalPublicKey,
+    canSign: normalCanSign,
+  } = useNormalWallet();
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -159,6 +163,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         const walletType = wallet.walletType;
         const isNormalWallet = walletType === 'normal-wallet';
+        if (isNormalWallet && !normalCanSign) {
+          throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+        }
         const walletAddress = isNormalWallet
           ? normalPublicKey || wallet.address
           : stellarPublicKey || wallet.address;
@@ -327,6 +334,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       config,
       wallet.address,
       wallet.walletType,
+      normalCanSign,
       vaultInfo,
       normalPublicKey,
       stellarPublicKey,
@@ -374,6 +382,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         const walletType = wallet.walletType;
         const isNormalWallet = walletType === 'normal-wallet';
+        if (isNormalWallet && !normalCanSign) {
+          throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+        }
         const walletAddress = isNormalWallet
           ? normalPublicKey || wallet.address
           : stellarPublicKey || wallet.address;
@@ -488,6 +499,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       config,
       wallet.address,
       wallet.walletType,
+      normalCanSign,
       vaultInfo,
       userPosition,
       normalPublicKey,

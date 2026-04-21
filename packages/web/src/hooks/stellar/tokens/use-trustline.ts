@@ -1,12 +1,12 @@
 'use client';
 
+import { useStellarConfig } from '@/hooks';
 import { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { logger, createTrustline } from '@normalfinance/utils';
 
-import { useStellarConfig } from '@/hooks';
-import { useNormalWallet } from '../use-normal-wallet';
 import { useStellarWalletsKit } from '../use-stellar-wallets-kit';
+import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from '../use-normal-wallet';
 
 // ----------------------------------------------------------------------
 
@@ -25,8 +25,11 @@ export function useTrustLine(): ReturnType {
   const storePersist = usePersistStore();
   const { signTransaction: signWithStellarKit, publicKey: stellarKitPublicKey } =
     useStellarWalletsKit();
-  const { signTransaction: signWithNormalWallet, publicKey: normalWalletPublicKey } =
-    useNormalWallet();
+  const {
+    signTransaction: signWithNormalWallet,
+    publicKey: normalWalletPublicKey,
+    canSign: normalWalletCanSign,
+  } = useNormalWallet();
 
   // Determine which signer to use based on wallet type
   const isNormalWallet = storePersist.wallet.walletType === 'normal-wallet';
@@ -51,6 +54,10 @@ export function useTrustLine(): ReturnType {
         setError(null);
         setLoading(true);
         setTxBroadcasting(true);
+
+        if (isNormalWallet && !normalWalletCanSign) {
+          throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+        }
 
         const walletAddress = publicKey || storePersist.wallet.address;
 
@@ -82,7 +89,15 @@ export function useTrustLine(): ReturnType {
       setTxBroadcasting(false);
       setLoading(false);
     },
-    [storePersist.wallet.address, storePersist.wallet.walletType, publicKey, signTransaction, config]
+    [
+      storePersist.wallet.address,
+      storePersist.wallet.walletType,
+      publicKey,
+      signTransaction,
+      config,
+      isNormalWallet,
+      normalWalletCanSign,
+    ]
   );
 
   return {
