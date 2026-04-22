@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     logger.error('[API /wallets/link] Error linking wallet:', error);
-    console.error('[API /wallets/link] Error linking wallet:', error);
+    console.log('[API /wallets/link] Error linking wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -192,7 +192,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error('[API /wallets/link] Error updating wallet:', error);
-    console.error('[API /wallets/link] Error updating wallet:', error);
+    console.log('[API /wallets/link] Error updating wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -236,7 +236,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error('[API /wallets/link] Error unlinking wallet:', error);
-    console.error('[API /wallets/link] Error unlinking wallet:', error);
+    console.log('[API /wallets/link] Error unlinking wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
