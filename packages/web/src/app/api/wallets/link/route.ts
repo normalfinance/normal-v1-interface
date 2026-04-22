@@ -84,6 +84,11 @@ export async function POST(request: NextRequest) {
       // Check rate limit for non-admin requests
       if (!isDev || forceRateLimit) {
         const rateLimitResult = await faucetRateLimiter.reserve(userId);
+        if (rateLimitResult.degraded) {
+          logger.warn('[API /wallets/link] Rate limiter unavailable, allowing wallet creation:', {
+            userId: userId.substring(0, 8) + '...',
+          });
+        }
         if (!rateLimitResult.success) {
           logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
             userId: userId.substring(0, 8) + '...',

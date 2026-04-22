@@ -43,10 +43,17 @@ export async function GET(request: NextRequest) {
 
     const rateLimitStatus = await faucetRateLimiter.check(user.id);
 
+    if (rateLimitStatus.degraded) {
+      logger.warn('[API /wallets/check-limit] Rate limiter unavailable, allowing request:', {
+        userId: user.id.substring(0, 8) + '...',
+      });
+    }
+
     logger.log('[API /wallets/check-limit] Rate limit checked for user:', {
       userId: user.id.substring(0, 8) + '...',
       remaining: rateLimitStatus.remaining,
       reset: rateLimitStatus.reset,
+      degraded: Boolean(rateLimitStatus.degraded),
     });
 
     return NextResponse.json({
