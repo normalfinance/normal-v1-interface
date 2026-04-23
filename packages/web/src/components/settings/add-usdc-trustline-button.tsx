@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { checkTrustline } from '@normalfinance/utils';
+import { useTranslate } from '@/locales';
 
-import { Button, CircularProgress } from '@mui/material';
+import { Button, CircularProgress, Typography } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import { useStellarConfig } from '@/hooks';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 
 // ----------------------------------------------------------------------
 
@@ -19,6 +21,7 @@ interface AddUsdcTrustlineButtonProps {
   loadingLabel: string;
   successMessage: string;
   errorFallback: string;
+  showInactiveAccountHelper?: boolean;
 }
 
 // ----------------------------------------------------------------------
@@ -30,23 +33,62 @@ export default function AddUsdcTrustlineButton({
   loadingLabel,
   successMessage,
   errorFallback,
+  showInactiveAccountHelper = true,
 }: AddUsdcTrustlineButtonProps) {
+  const { t } = useTranslate();
   const config = useStellarConfig();
   const { enqueueSnackbar } = useSnackbar();
   const { addTrustLine, loading } = useTrustLine();
+  const { isLoading: isCheckingAccount, accountExists } = useAccountStatus(walletAddress);
   const [hasTrustline, setHasTrustline] = useState<boolean | null>(null);
-
-  console.log('assetIssuer', assetIssuer);
 
   useEffect(() => {
     if (!assetIssuer || !walletAddress) return;
 
+    if (isCheckingAccount) {
+      setHasTrustline(null);
+      return;
+    }
+
+    if (!accountExists) {
+      setHasTrustline(false);
+      return;
+    }
+
+    let isMounted = true;
+
     checkTrustline(walletAddress, 'USDC', assetIssuer, config)
-      .then((result) => setHasTrustline(result.exists))
-      .catch(() => setHasTrustline(false));
-  }, [walletAddress, assetIssuer, config]);
+      .then((result) => {
+        if (isMounted) {
+          setHasTrustline(result.exists);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setHasTrustline(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [walletAddress, assetIssuer, config, accountExists, isCheckingAccount]);
 
   if (!assetIssuer || hasTrustline === true) return null;
+
+  if (!isCheckingAccount && !accountExists) {
+    if (!showInactiveAccountHelper) {
+      return null;
+    }
+
+    return (
+      <Typography variant="caption" color="text.secondary">
+        {t(
+          'Fund this account with at least 1 XLM to activate Stellar before adding a USDC trustline.'
+        )}
+      </Typography>
+    );
+  }
 
   const handleClick = async () => {
     try {
@@ -63,7 +105,7 @@ export default function AddUsdcTrustlineButton({
       variant="soft"
       color="primary"
       size="small"
-      disabled={loading || hasTrustline === null}
+      disabled={loading || hasTrustline === null || isCheckingAccount}
       startIcon={
         loading ? (
           <CircularProgress size={16} color="inherit" />

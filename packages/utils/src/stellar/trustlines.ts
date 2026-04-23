@@ -11,6 +11,9 @@ import { constants } from '..';
 import { logger } from '../logger';
 import { fetchAccount } from './horizon';
 
+const INACTIVE_STELLAR_ACCOUNT_MESSAGE =
+  'This Stellar account is not active yet. Please fund it with at least 1 XLM first.';
+
 export async function checkTrustline(
   publicKey: string,
   assetCode: string,
@@ -72,7 +75,7 @@ export async function createTrustline(
   const account = await fetchAccount(publicKey, config);
 
   if (!account) {
-    throw new Error('Account not found');
+    throw new Error(INACTIVE_STELLAR_ACCOUNT_MESSAGE);
   }
 
   // Create Asset
@@ -142,7 +145,7 @@ export async function fetchAndIssueTrustline(
   const account = await fetchAccount(publicKey, config);
 
   if (!account) {
-    throw new Error('Account not found');
+    throw new Error(INACTIVE_STELLAR_ACCOUNT_MESSAGE);
   }
 
   // Check trustlines

@@ -46,6 +46,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
   const {
     isLoading: isCheckingAccount,
     accountExists,
+    error: accountStatusError,
   } = useAccountStatus(walletAddress);
 
   const generateQRCode = useCallback(async () => {
@@ -116,6 +117,11 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
             {t('Scan the QR code or copy your account ID below')}
           </Typography>
         )}
+        {!isCheckingAccount && !accountExists && !accountStatusError && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {t('Activate your Stellar account first, then deposit other Stellar assets')}
+          </Typography>
+        )}
       </DialogTitle>
 
       <DialogContent sx={{ textAlign: 'center', py: 3 }}>
@@ -126,6 +132,116 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
               {t('Checking account status...')}
             </Typography>
+          </Stack>
+        )}
+
+        {/* Account status error */}
+        {!isCheckingAccount && accountStatusError && (
+          <Stack spacing={2} alignItems="center">
+            <Alert severity="error" sx={{ width: '100%', textAlign: 'left' }}>
+              <Typography variant="body2">
+                {t('We could not check your Stellar account right now. Please try again in a moment.')}
+              </Typography>
+            </Alert>
+
+            <Button
+              variant="soft"
+              color="info"
+              startIcon={<Iconify icon="solar:copy-outline" />}
+              onClick={handleCopyAddress}
+            >
+              {t('Copy Account ID')}
+            </Button>
+          </Stack>
+        )}
+
+        {/* Account not funded yet - show activation instructions */}
+        {!isCheckingAccount && !accountExists && !accountStatusError && (
+          <Stack spacing={3} alignItems="center">
+            <Alert severity="info" sx={{ width: '100%', textAlign: 'left' }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {t('This Stellar account is not active on-chain yet.')}
+              </Typography>
+              <Typography variant="body2">
+                {t('Send at least 1 XLM to this account ID first. Once the account is funded, you can receive USDC and other Stellar assets here.')}
+              </Typography>
+            </Alert>
+
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.divider}`,
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: 220,
+                minWidth: 220,
+              }}
+            >
+              {isGeneratingQR ? (
+                <CircularProgress size={40} />
+              ) : qrCodeUrl ? (
+                <Box
+                  component="img"
+                  src={qrCodeUrl}
+                  alt="Wallet Address QR Code"
+                  sx={{
+                    maxWidth: '100%',
+                    height: 'auto',
+                  }}
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  {t('Unable to generate QR code')}
+                </Typography>
+              )}
+            </Box>
+
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1.5,
+                border: `1px solid ${theme.palette.divider}`,
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                width: '100%',
+                wordBreak: 'break-all',
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.875rem',
+                  color: theme.palette.text.primary,
+                }}
+              >
+                {walletAddress}
+              </Typography>
+            </Box>
+
+            <Stack direction="row" spacing={1}>
+              <Button
+                key="copy"
+                variant="soft"
+                color="info"
+                startIcon={<Iconify icon="solar:copy-outline" />}
+                onClick={handleCopyAddress}
+              >
+                {t('Copy Account ID')}
+              </Button>
+
+              <Button
+                key="view"
+                variant="soft"
+                color="secondary"
+                startIcon={<Iconify icon="eva:external-link-outline" />}
+                onClick={handleViewOnExplorer}
+              >
+                {t('View Explorer')}
+              </Button>
+            </Stack>
           </Stack>
         )}
 

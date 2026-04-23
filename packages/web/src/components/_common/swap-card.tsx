@@ -59,7 +59,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
 
   const { quote, quoteLoading, loading, error, getQuote, executeSwap, clearQuote } = useSwap();
   const { enqueueSnackbar } = useSnackbar();
-  const { hasUsdcTrustline, refetch: refetchAccountStatus } = useAccountStatus(wallet.address);
+  const {
+    isLoading: isCheckingAccount,
+    accountExists,
+    hasUsdcTrustline,
+    refetch: refetchAccountStatus,
+  } = useAccountStatus(wallet.address);
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
 
   const [tokenIn, setTokenIn] = useState<'XLM' | 'USDC'>('XLM');
@@ -117,7 +122,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
       : null;
 
   const isInsufficientBalance = parseFloat(amountIn) > parseFloat(inputBalance);
-  const needsTrustline = tokenOut === 'USDC' && !hasUsdcTrustline;
+  const needsAccountActivation = tokenOut === 'USDC' && !isCheckingAccount && !accountExists;
+  const needsTrustline = tokenOut === 'USDC' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
 
   const handleAddTrustline = useCallback(async () => {
     const usdcIssuer = config.USDC_ISSUER;
@@ -271,7 +277,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
 
         {/* Swap Button */}
         <WalletGate buttonText={t('Connect wallet to swap')} fullWidth variant="contained">
-          {needsTrustline ? (
+          {needsAccountActivation ? (
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+              {t(
+                'Fund this account with at least 1 XLM to activate Stellar before adding a USDC trustline.'
+              )}
+            </Typography>
+          ) : needsTrustline ? (
             <Stack spacing={1}>
               <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
                 {t('A USDC trustline is required before swapping to USDC')}
@@ -300,6 +312,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                 !quote ||
                 loading ||
                 quoteLoading ||
+                isCheckingAccount ||
                 isInsufficientBalance ||
                 !amountIn ||
                 parseFloat(amountIn) <= 0

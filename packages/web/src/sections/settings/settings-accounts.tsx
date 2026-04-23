@@ -254,6 +254,7 @@ export function SettingsAccounts() {
                   loadingLabel={t('Adding trustline...')}
                   successMessage={t('Stellar USDC trustline added!')}
                   errorFallback={t('Failed to add Stellar USDC trustline')}
+                  showInactiveAccountHelper
                 />
 
                 {config.BLEND_USDC_ISSUER && (
@@ -264,6 +265,7 @@ export function SettingsAccounts() {
                     loadingLabel={t('Adding trustline...')}
                     successMessage={t('Blend USDC trustline added!')}
                     errorFallback={t('Failed to add Blend USDC trustline')}
+                    showInactiveAccountHelper={!config.USDC_ISSUER}
                   />
                 )}
 
