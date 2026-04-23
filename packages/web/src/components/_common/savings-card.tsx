@@ -3,13 +3,16 @@
 import type { CardProps } from '@mui/material';
 
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import React, { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
-import { useStellarConfig } from '@/hooks';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
 import {
   getTokenBalance,
+  getSavingsUsdcIssuer,
   getSavingsDepositToken,
   getSavingsDepositTokenLabel,
 } from '@/utils/token-selectors';
@@ -29,6 +32,7 @@ import {
 
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
+import { useSnackbar } from '../template/snackbar';
 import { TrustlineModal } from './trustline-modal';
 
 // ----------------------------------------------------------------------
@@ -39,8 +43,18 @@ interface SavingsCardProps extends CardProps {}
 
 const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const { t } = useTranslate();
-  const { tokenState } = usePersistStore();
+  const { enqueueSnackbar } = useSnackbar();
+  const { tokenState, wallet } = usePersistStore();
   const config = useStellarConfig();
+  const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
+
+  const {
+    isLoading: isCheckingAccount,
+    accountExists,
+    hasUsdcTrustline,
+    refetch: refetchAccountStatus,
+  } = useAccountStatus(wallet.address, { assetIssuer: savingsUsdcIssuer });
+  const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
 
   const {
     vaultInfo,
@@ -57,9 +71,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
 
-  const savingsDepositBalance = getTokenBalance(
-    getSavingsDepositToken(tokenState.tokens, config)
-  );
+  const savingsDepositBalance = getTokenBalance(getSavingsDepositToken(tokenState.tokens, config));
   const savingsDepositLabel = getSavingsDepositTokenLabel(config);
 
   // Truncate to 2 decimal places (no rounding up) so MAX never exceeds actual balance
@@ -103,7 +115,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const depositFee =
     mode === 'deposit' && parsedAmount > 0 ? getSavingsDepositFee(parsedAmount) : 0;
   const netDepositAmount = mode === 'deposit' ? Math.max(parsedAmount - depositFee, 0) : 0;
-  const isBelowMinimumDeposit = mode === 'deposit' && parsedAmount > 0 && parsedAmount <= depositFee;
+  const isBelowMinimumDeposit =
+    mode === 'deposit' && parsedAmount > 0 && parsedAmount <= depositFee;
 
   const yieldCommission =
     mode === 'withdraw' && parsedAmount > 0
@@ -113,6 +126,58 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
           earnings: parseFloat(userPosition?.earnings || '0'),
         })
       : 0;
+  const isAmountMissing = !amount || parsedAmount <= 0;
+  const showAddTrustlineAction = accountExists && !hasUsdcTrustline && !!savingsUsdcIssuer;
+
+  const handleAddTrustline = useCallback(async () => {
+    if (!savingsUsdcIssuer) {
+      enqueueSnackbar(t('USDC issuer not configured'), { variant: 'error' });
+      return;
+    }
+
+    try {
+      await addTrustLine('USDC', savingsUsdcIssuer);
+      enqueueSnackbar(t('USDC trustline added successfully!'), { variant: 'success' });
+      setAmount('');
+      setNeedsTrustline(false);
+      await refetchAccountStatus();
+    } catch (err: any) {
+      enqueueSnackbar(err.message || t('Failed to add USDC trustline'), { variant: 'error' });
+    }
+  }, [
+    addTrustLine,
+    savingsUsdcIssuer,
+    enqueueSnackbar,
+    t,
+    setNeedsTrustline,
+    refetchAccountStatus,
+  ]);
+
+  const handleTrustlineSuccess = useCallback(async () => {
+    setAmount('');
+    setNeedsTrustline(false);
+    await refetchAccountStatus();
+  }, [setNeedsTrustline, refetchAccountStatus]);
+
+  const isActionDisabled =
+    isCheckingAccount ||
+    loading ||
+    isInsufficientBalance ||
+    isBelowMinimumDeposit ||
+    isAmountMissing;
+  const actionButtonText = loading
+    ? mode === 'deposit'
+      ? t('Depositing...')
+      : t('Withdrawing...')
+    : isInsufficientBalance
+      ? t('Insufficient balance')
+      : isBelowMinimumDeposit
+        ? t('Amount must exceed ${{fee}} fee', { fee: depositFee.toFixed(2) })
+        : isAmountMissing
+          ? t('Enter amount')
+          : mode === 'deposit'
+            ? t('Deposit')
+            : t('Withdraw');
 
   return (
     <Card
@@ -202,8 +267,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
               {mode === 'deposit' ? t('Amount to deposit') : t('Amount to withdraw')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {t('Available')}: {parseFloat(availableBalance).toFixed(2)}{' '}
-              {availableAssetLabel}
+              {t('Available')}: {parseFloat(availableBalance).toFixed(2)} {availableAssetLabel}
             </Typography>
           </Stack>
           <TextField
@@ -308,48 +372,46 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
         )}
 
         {/* Action Button */}
-        <WalletGate
-          buttonText={t('Connect wallet to save')}
-          fullWidth
-          variant="contained"
-        >
-          <Button
-            variant="contained"
-            color={mode === 'deposit' ? 'success' : 'primary'}
-            fullWidth
-            size="large"
-            disabled={
-              loading ||
-              isInsufficientBalance ||
-              isBelowMinimumDeposit ||
-              !amount ||
-              parseFloat(amount) <= 0
-            }
-            onClick={handleAction}
-            startIcon={
-              loading ? (
-                <CircularProgress size={20} color="inherit" />
-              ) : mode === 'deposit' ? (
-                <Iconify icon="solar:add-circle-bold" />
-              ) : (
-                <Iconify icon="solar:minus-circle-bold" />
-              )
-            }
-          >
-            {loading
-              ? mode === 'deposit'
-                ? t('Depositing...')
-                : t('Withdrawing...')
-              : isInsufficientBalance
-                ? t('Insufficient balance')
-                : isBelowMinimumDeposit
-                  ? t('Amount must exceed ${{fee}} fee', { fee: depositFee.toFixed(2) })
-                  : !amount || parseFloat(amount) <= 0
-                    ? t('Enter amount')
-                    : mode === 'deposit'
-                      ? t('Deposit')
-                      : t('Withdraw')}
-          </Button>
+        <WalletGate buttonText={t('Connect wallet to save')} fullWidth variant="contained">
+          {showAddTrustlineAction ? (
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              size="large"
+              disabled={isAddingTrustline}
+              onClick={handleAddTrustline}
+              startIcon={
+                isAddingTrustline ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <Iconify icon="solar:add-circle-bold" />
+                )
+              }
+            >
+              {isAddingTrustline ? t('Adding trustline...') : t('Add USDC trustline')}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              color={mode === 'deposit' ? 'success' : 'primary'}
+              fullWidth
+              size="large"
+              disabled={isActionDisabled}
+              onClick={handleAction}
+              startIcon={
+                loading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : mode === 'deposit' ? (
+                  <Iconify icon="solar:add-circle-bold" />
+                ) : (
+                  <Iconify icon="solar:minus-circle-bold" />
+                )
+              }
+            >
+              {actionButtonText}
+            </Button>
+          )}
         </WalletGate>
       </Stack>
 
@@ -365,11 +427,11 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
         </Stack>
       </Box>
 
-      {/* Trustline Modal — shown when deposit fails due to missing trustline */}
+      {/* Trustline Modal — shown when a savings action fails due to a missing trustline */}
       <TrustlineModal
         open={needsTrustline}
         onClose={() => setNeedsTrustline(false)}
-        onSuccess={() => setNeedsTrustline(false)}
+        onSuccess={handleTrustlineSuccess}
       />
     </Card>
   );

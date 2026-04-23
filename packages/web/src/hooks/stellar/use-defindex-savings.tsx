@@ -179,10 +179,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
-          const signedTx = TransactionBuilder.fromXDR(
-            signedXDR,
-            config.NETWORK_PASSPHRASE
-          );
+          const signedTx = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
           return horizonServer.submitTransaction(signedTx);
         };
 
@@ -398,10 +395,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
-          const signedTx = TransactionBuilder.fromXDR(
-            signedXDR,
-            config.NETWORK_PASSPHRASE
-          );
+          const signedTx = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
           return horizonServer.submitTransaction(signedTx);
         };
 
@@ -488,6 +482,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       } catch (err: any) {
         console.error('Error withdrawing:', err);
         const errorMessage = err.message || 'Withdraw failed';
+        if (errorMessage.toLowerCase().includes('trustline')) {
+          setNeedsTrustline(true);
+        }
         setError(errorMessage);
         enqueueSnackbar(errorMessage, { variant: 'error' });
         return '';

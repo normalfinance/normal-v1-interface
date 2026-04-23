@@ -409,7 +409,7 @@ export default function NormalWalletImport({
       ) : (
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
-            {t('Enter your password (private key) below to import your account.')}
+            {t('Enter your private key below to import your account.')}
           </Typography>
           <TextField
             multiline
@@ -420,7 +420,7 @@ export default function NormalWalletImport({
             onChange={(e) => handlePrivateKeyChange(e.target.value)}
             error={!!privateKeyError}
             helperText={
-              privateKeyError || t('Your password should start with "S" and be 56 characters long.')
+              privateKeyError || t('Your private key should be 56 characters long.')
             }
             disabled={isImporting}
           />

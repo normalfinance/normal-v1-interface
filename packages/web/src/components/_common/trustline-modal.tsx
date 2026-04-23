@@ -1,28 +1,27 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-
 import { useStellarConfig } from '@/hooks';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { getSavingsUsdcIssuer, getSavingsDepositTokenLabel } from '@/utils/token-selectors';
 
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
-import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
-import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
-import { getSavingsUsdcIssuer, getSavingsDepositTokenLabel } from '@/utils/token-selectors';
 
 // ----------------------------------------------------------------------
 
 interface TrustlineModalProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }
 
 // ----------------------------------------------------------------------
@@ -43,7 +42,7 @@ export function TrustlineModal({ open, onClose, onSuccess }: TrustlineModalProps
       enqueueSnackbar(t('{{label}} trustline added!', { label: usdcLabel }), {
         variant: 'success',
       });
-      onSuccess();
+      await onSuccess();
     } catch (e: any) {
       enqueueSnackbar(e?.message || t('Failed to add trustline'), { variant: 'error' });
     }
@@ -56,7 +55,7 @@ export function TrustlineModal({ open, onClose, onSuccess }: TrustlineModalProps
       <DialogContent>
         <Typography variant="body2" color="text.secondary">
           {t(
-            'To deposit USDC into savings, you need to enable the {{label}} trustline on your wallet. This is a one-time setup.',
+            'To use savings, you need to enable the {{label}} trustline on your wallet. This is a one-time setup.',
             { label: usdcLabel }
           )}
         </Typography>
@@ -80,7 +79,7 @@ export function TrustlineModal({ open, onClose, onSuccess }: TrustlineModalProps
             )
           }
         >
-          {loading ? t('Adding trustline...') : t('Enable Trustline')}
+          {loading ? t('Adding trustline...') : t('Add USDC trustline')}
         </Button>
       </DialogActions>
     </Dialog>
