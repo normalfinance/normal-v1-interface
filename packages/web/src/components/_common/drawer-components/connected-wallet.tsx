@@ -3,30 +3,97 @@
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
+import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { ModalType } from '@normalfinance/types';
 import { useRouter } from 'next/navigation';
-import { useAppStore } from '@normalfinance/state';
 import { useTabs } from 'minimal-shared/hooks';
 import { varAlpha } from 'minimal-shared/utils';
+import { ModalType } from '@normalfinance/types';
+import { useAppStore } from '@normalfinance/state';
 import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
+import Dialog from '@mui/material/Dialog';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import DialogTitle from '@mui/material/DialogTitle';
 import { alpha, useTheme } from '@mui/material/styles';
+import DialogContent from '@mui/material/DialogContent';
 
 import { Iconify } from '@/components/template/iconify';
+import ReceiveModal from '@/components/_common/receive-modal';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
 
 // ----------------------------------------------------------------------
+type ActionChooserOption = {
+  label: string;
+  icon: string;
+  onClick: () => void;
+};
+
+type ActionChooserDialogProps = {
+  open: boolean;
+  title: string;
+  actions: ActionChooserOption[];
+  onClose: () => void;
+};
+
+function ActionChooserDialog({ open, title, actions, onClose }: ActionChooserDialogProps) {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 2,
+            p: 1,
+          },
+        },
+      }}
+    >
+      <DialogTitle sx={{ p: 2, pb: 1 }}>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
+        >
+          <Typography variant="h6">{title}</Typography>
+          <IconButton onClick={onClose} aria-label="close dialog">
+            <Iconify icon="mingcute:close-line" width={20} />
+          </IconButton>
+        </Box>
+      </DialogTitle>
+
+      <DialogContent sx={{ p: 2, pt: 1.5 }}>
+        <Stack spacing={1}>
+          {actions.map((action) => (
+            <Button
+              key={action.label}
+              fullWidth
+              variant="outlined"
+              color="inherit"
+              onClick={action.onClick}
+              startIcon={<Iconify icon={action.icon} width={20} />}
+              sx={{ justifyContent: 'flex-start', py: 1.5, px: 2, textTransform: 'none' }}
+            >
+              {action.label}
+            </Button>
+          ))}
+        </Stack>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export interface ConnectedWalletProps {
   address: string;
   balance?: number;
@@ -46,39 +113,84 @@ export default function ConnectedWallet({
   const theme = useTheme();
   const router = useRouter();
   const { setModalView } = useAppStore();
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [receiveContext, setReceiveContext] = useState<'deposit' | 'receive' | null>(null);
+
+  const openReceiveModal = (context: 'deposit' | 'receive') => {
+    setTransferDialogOpen(false);
+    setDepositDialogOpen(false);
+    setReceiveContext(context);
+  };
+
+  const openSendModal = () => {
+    setTransferDialogOpen(false);
+    setModalView(ModalType.SEND_CRYPTO, true);
+  };
+
+  const openDepositCashModal = () => {
+    setDepositDialogOpen(false);
+    setModalView(ModalType.ON_RAMP, true);
+  };
 
   const actionButtons = [
     {
-      label: 'Send',
-      icon: 'solar:upload-bold-duotone',
-      onClick: () => setModalView(ModalType.SEND_CRYPTO, true),
-    },
-    {
-      label: 'Receive',
-      icon: 'solar:download-bold-duotone',
-      onClick: () => setModalView(ModalType.DEPOSIT_CRYPTO, true),
-    },
-    {
-      label: 'Swap',
+      label: t('Transfer'),
       icon: 'solar:transfer-horizontal-bold-duotone',
-      onClick: () => {
-        router.push(paths.swap);
-      },
+      onClick: () => setTransferDialogOpen(true),
     },
     {
-      label: 'Savings',
+      label: t('Deposit'),
+      icon: 'solar:wad-of-money-bold',
+      onClick: () => setDepositDialogOpen(true),
+    },
+    {
+      label: t('Savings'),
       icon: 'mingcute:safe-box-line',
       onClick: () => {
         router.push(paths.savings);
       },
+    },
+    {
+      label: t('Swap'),
+      icon: 'solar:transfer-vertical-bold',
+      onClick: () => {
+        router.push(paths.swap);
+      },
+    },
+  ];
+
+  const transferActions: ActionChooserOption[] = [
+    {
+      label: t('Send'),
+      icon: 'solar:upload-bold-duotone',
+      onClick: openSendModal,
+    },
+    {
+      label: t('Receive'),
+      icon: 'solar:download-bold-duotone',
+      onClick: () => openReceiveModal('receive'),
+    },
+  ];
+
+  const depositActions: ActionChooserOption[] = [
+    {
+      label: t('Deposit cash'),
+      icon: 'solar:wad-of-money-bold',
+      onClick: openDepositCashModal,
+    },
+    {
+      label: t('Deposit crypto'),
+      icon: 'solar:wallet-bold',
+      onClick: () => openReceiveModal('deposit'),
     },
   ];
 
   const tabs = useTabs('assets');
 
   const TAB_ITEMS = [
-    { value: 'assets', label: 'Assets' },
-    { value: 'activity', label: 'Activity' },
+    { value: 'assets', label: t('Assets') },
+    { value: 'activity', label: t('Activity') },
   ] as const;
 
   return (
@@ -153,9 +265,9 @@ export default function ConnectedWallet({
           </Stack>
         )}
         <Stack direction="row" spacing={1} width="100%" mt={2}>
-          {actionButtons.map((btn, idx) => (
+          {actionButtons.map((btn) => (
             <Button
-              key={idx}
+              key={btn.label}
               fullWidth
               variant="soft"
               color="success"
@@ -178,12 +290,32 @@ export default function ConnectedWallet({
                     cursor: 'pointer',
                   }}
                 />
-                {t(btn.label)}
+                {btn.label}
               </Box>
             </Button>
           ))}
         </Stack>
       </Stack>
+
+      <ActionChooserDialog
+        open={transferDialogOpen}
+        title={t('Transfer')}
+        actions={transferActions}
+        onClose={() => setTransferDialogOpen(false)}
+      />
+
+      <ActionChooserDialog
+        open={depositDialogOpen}
+        title={t('Deposit')}
+        actions={depositActions}
+        onClose={() => setDepositDialogOpen(false)}
+      />
+
+      <ReceiveModal
+        open={!!receiveContext}
+        context={receiveContext ?? 'deposit'}
+        onClose={() => setReceiveContext(null)}
+      />
 
       <Tabs
         value={tabs.value}
@@ -226,7 +358,7 @@ export default function ConnectedWallet({
         }}
       >
         {TAB_ITEMS.map((tab) => (
-          <Tab key={tab.value} value={tab.value} label={t(tab.label)} />
+          <Tab key={tab.value} value={tab.value} label={tab.label} />
         ))}
       </Tabs>
 

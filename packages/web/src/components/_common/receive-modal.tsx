@@ -25,12 +25,15 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
+export type ReceiveModalContext = 'deposit' | 'receive';
+
 interface ReceiveModalProps {
   open: boolean;
   onClose: () => void;
+  context?: ReceiveModalContext;
 }
 
-export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
+export default function ReceiveModal({ open, onClose, context = 'deposit' }: ReceiveModalProps) {
   const theme = useTheme();
   const { t } = useTranslate();
   const { copy } = useCopyToClipboard();
@@ -41,6 +44,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
 
   const walletAddress = persist.wallet.address;
+  const isReceiveContext = context === 'receive';
 
   // Account status check
   const {
@@ -110,7 +114,7 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
     >
       <DialogTitle sx={{ textAlign: 'center', pb: 2 }}>
         <Typography variant="h6" component="div">
-          {t('Deposit Crypto')}
+          {t(isReceiveContext ? 'Receive Crypto' : 'Deposit Crypto')}
         </Typography>
         {!isCheckingAccount && accountExists && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -119,7 +123,11 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
         )}
         {!isCheckingAccount && !accountExists && !accountStatusError && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {t('Activate your Stellar account first, then deposit other Stellar assets')}
+            {t(
+              isReceiveContext
+                ? 'Activate your Stellar account first, then receive other Stellar assets'
+                : 'Activate your Stellar account first, then deposit other Stellar assets'
+            )}
           </Typography>
         )}
       </DialogTitle>
@@ -140,7 +148,9 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
           <Stack spacing={2} alignItems="center">
             <Alert severity="error" sx={{ width: '100%', textAlign: 'left' }}>
               <Typography variant="body2">
-                {t('We could not check your Stellar account right now. Please try again in a moment.')}
+                {t(
+                  'We could not check your Stellar account right now. Please try again in a moment.'
+                )}
               </Typography>
             </Alert>
 
@@ -163,7 +173,9 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
                 {t('This Stellar account is not active on-chain yet.')}
               </Typography>
               <Typography variant="body2">
-                {t('Send at least 1 XLM to this account ID first. Once the account is funded, you can receive USDC and other Stellar assets here.')}
+                {t(
+                  'Send at least 1 XLM to this account ID first. Once the account is funded, you can receive USDC and other Stellar assets here.'
+                )}
               </Typography>
             </Alert>
 
