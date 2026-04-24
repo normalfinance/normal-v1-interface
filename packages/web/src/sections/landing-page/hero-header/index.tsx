@@ -146,28 +146,60 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               </Box>
             </Typography>
 
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              component="div"
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                columnGap: '10px',
-                rowGap: '10px',
-                fontSize: 14,
-                fontWeight: 600,
-                mx: 'auto',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-              }}
+            <Stack
+              direction="row"
+              spacing={{ xs: 3, md: 5 }}
+              justifyContent="center"
+              alignItems="center"
+              flexWrap="wrap"
+              sx={{ rowGap: 2 }}
             >
-              <span>💰 {t('Competitive yield')}</span>
-              <span>•</span>
-              <span>🔓 {t('Fully flexible')}</span>
-              <span>•</span>
-              <span>🛡️ {t('Vault secured')}</span>
-            </Typography>
+              {[
+                {
+                  label: t('Audited by'),
+                  src: cdn('homepage/halborn-logo.webp'),
+                  alt: 'Halborn',
+                  width: 72,
+                  height: 8,
+                },
+                {
+                  label: t('Backed by'),
+                  src: cdn('homepage/draper-university.webp'),
+                  alt: 'Draper University',
+                  width: 56,
+                  height: 18,
+                },
+                {
+                  label: t('Backed by'),
+                  src: cdn('homepage/stellar-logo.webp'),
+                  alt: 'Stellar',
+                  width: 52,
+                  height: 13,
+                },
+              ].map((item, i) => (
+                <Stack key={i} alignItems="center" spacing="6px">
+                  <Typography
+                    variant="caption"
+                    color="text.disabled"
+                    sx={{ fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap' }}
+                  >
+                    {item.label}
+                  </Typography>
+                  <Box
+                    component="img"
+                    src={item.src}
+                    alt={item.alt}
+                    sx={{
+                      width: item.width,
+                      height: item.height,
+                      objectFit: 'contain',
+                      filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none',
+                      opacity: 0.75,
+                    }}
+                  />
+                </Stack>
+              ))}
+            </Stack>
 
             <Box
               sx={{
