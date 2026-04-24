@@ -2,12 +2,17 @@ import type { NextRequest} from 'next/server';
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 const DEFAULT_SOROSWAP_API_BASE_URL = 'https://api.soroswap.finance';
 const DEFAULT_PROTOCOLS = ['soroswap'];
 const DEFAULT_SLIPPAGE_BPS = 100; // 1%
+
+// Wrapped XLM contract addresses on Soroban (not available via NEXT_PUBLIC_ env in API routes)
+const XLM_CONTRACT: Record<'mainnet' | 'testnet', string> = {
+  mainnet: 'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA',
+  testnet: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCN4',
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,8 +55,7 @@ export async function POST(request: NextRequest) {
     const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as 'mainnet' | 'testnet';
     const tradeType = mode === 'strict-send' ? 'EXACT_IN' : 'EXACT_OUT';
 
-    const stellarConfig = getStellarConfigForNetwork(network);
-    const resolveAddress = (addr: string) => addr === 'native' ? stellarConfig.XLM_ADDRESS : addr;
+    const resolveAddress = (addr: string) => addr === 'native' ? XLM_CONTRACT[network] : addr;
 
     const quotePayload = {
       assetIn: resolveAddress(token_in_address),
