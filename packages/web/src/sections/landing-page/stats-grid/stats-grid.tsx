@@ -25,7 +25,7 @@ const DEFAULT_PROPS = {
   tagline: 'Tagline',
   heading: 'Trusted by thousands',
   description:
-    'Normal powers the largest catalogue of on-chain real-world assets and index funds, with thousands of dollars in weekly volume across 100+ assets and funds.',
+    "Normal is building the simplest way to grow your money on-chain. It's an automated savings account that gives you complete diversification across yield, crypto, and tokenized real-world assets (RWAs) — all in one place.",
   stats: [
     {
       percentage: '$1M+',

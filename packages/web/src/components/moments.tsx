@@ -27,11 +27,11 @@ export const MomentsDefaults: Props = {
     'We believe great work starts with great relationships. From impromptu coffee runs to cross-team hackathons and weekend hikes, these snapshots capture the energy, laughter, and collaboration that fuel our day-to-day.',
   images: [
     { url: '#', src: cdn('about-page/t1.webp'), alt: 'Team image 1' },
-    { url: '#', src: cdn('about-page/t2.webp'), alt: 'Team image 2' },
+    { url: '#', src: cdn('about-page/img2.webp'), alt: 'Team image 2' },
     { url: '#', src: cdn('about-page/t3.webp'), alt: 'Team image 3' },
-    { url: '#', src: cdn('about-page/t4.webp'), alt: 'Team image 4' },
+    { url: '#', src: cdn('about-page/img3.webp'), alt: 'Team image 4' },
     { url: '#', src: cdn('about-page/t5.webp'), alt: 'Team image 5' },
-    { url: '#', src: cdn('about-page/t6.webp'), alt: 'Team image 7' },
+    { url: '#', src: cdn('about-page/img4.webp'), alt: 'Team image 7' },
   ],
 };
 
