@@ -146,13 +146,17 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               </Box>
             </Typography>
 
-            <Stack
-              direction="row"
-              spacing={{ xs: 3, md: 5 }}
-              justifyContent="center"
-              alignItems="center"
-              flexWrap="wrap"
-              sx={{ rowGap: 2 }}
+            <Paper
+              variant="outlined"
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'flex-start',
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                borderRadius: '9999px',
+                px: 3,
+                py: 1.5,
+                gap: 0,
+              }}
             >
               {[
                 {
@@ -176,30 +180,35 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   width: 52,
                   height: 13,
                 },
-              ].map((item, i) => (
-                <Stack key={i} alignItems="center" spacing="6px">
-                  <Typography
-                    variant="caption"
-                    color="text.disabled"
-                    sx={{ fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap' }}
-                  >
-                    {item.label}
-                  </Typography>
-                  <Box
-                    component="img"
-                    src={item.src}
-                    alt={item.alt}
-                    sx={{
-                      width: item.width,
-                      height: item.height,
-                      objectFit: 'contain',
-                      filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none',
-                      opacity: 0.75,
-                    }}
-                  />
-                </Stack>
+              ].map((item, i, arr) => (
+                <React.Fragment key={i}>
+                  <Stack alignItems="center" spacing="5px" sx={{ px: 2.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.disabled"
+                      sx={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}
+                    >
+                      {item.label}
+                    </Typography>
+                    <Box
+                      component="img"
+                      src={item.src}
+                      alt={item.alt}
+                      sx={{
+                        width: item.width,
+                        height: item.height,
+                        objectFit: 'contain',
+                        filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
+                        opacity: 0.5,
+                      }}
+                    />
+                  </Stack>
+                  {i < arr.length - 1 && (
+                    <Box sx={{ width: '1px', height: 32, backgroundColor: alpha(theme.palette.grey[500], 0.24), flexShrink: 0 }} />
+                  )}
+                </React.Fragment>
               ))}
-            </Stack>
+            </Paper>
 
             <Box
               sx={{
