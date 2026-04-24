@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 const DEFAULT_SOROSWAP_API_BASE_URL = 'https://api.soroswap.finance';
@@ -20,7 +21,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isValidStellarAddress(token_in_address) || !isValidStellarAddress(token_out_address)) {
+    const isValidAddress = (addr: string) => addr === 'native' || isValidStellarAddress(addr);
+    if (!isValidAddress(token_in_address) || !isValidAddress(token_out_address)) {
       return NextResponse.json(
         { success: false, error: 'Invalid token address format' },
         { status: 400 }
@@ -48,9 +50,12 @@ export async function POST(request: NextRequest) {
     const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as 'mainnet' | 'testnet';
     const tradeType = mode === 'strict-send' ? 'EXACT_IN' : 'EXACT_OUT';
 
+    const stellarConfig = getStellarConfigForNetwork(network);
+    const resolveAddress = (addr: string) => addr === 'native' ? stellarConfig.XLM_ADDRESS : addr;
+
     const quotePayload = {
-      assetIn: token_in_address,
-      assetOut: token_out_address,
+      assetIn: resolveAddress(token_in_address),
+      assetOut: resolveAddress(token_out_address),
       amount,
       tradeType,
       protocols: DEFAULT_PROTOCOLS,
