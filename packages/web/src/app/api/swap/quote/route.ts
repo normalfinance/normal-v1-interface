@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 const DEFAULT_SOROSWAP_API_BASE_URL = 'https://api.soroswap.finance';
-const DEFAULT_PROTOCOLS = ['soroswap', 'phoenix', 'aqua', 'sdex'];
+const DEFAULT_PROTOCOLS = ['soroswap'];
 const DEFAULT_SLIPPAGE_BPS = 100; // 1%
 
 export async function POST(request: NextRequest) {
