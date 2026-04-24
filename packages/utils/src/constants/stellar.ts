@@ -1,6 +1,11 @@
 import { NetworkConfig } from '@normalfinance/types';
 import { getCurrentNetwork, NetworkType } from '../network';
 import { logger } from '../logger';
+import { getBlendUsdcTokenForNetwork, getCanonicalUsdcTokenForNetwork } from './tokenList';
+
+const TESTNET_USDC = getCanonicalUsdcTokenForNetwork('testnet');
+const TESTNET_BLEND_USDC = getBlendUsdcTokenForNetwork('testnet');
+const MAINNET_USDC = getCanonicalUsdcTokenForNetwork('mainnet');
 
 export const TESTNET_CONFIG: NetworkConfig = {
   // Network,
@@ -16,15 +21,15 @@ export const TESTNET_CONFIG: NetworkConfig = {
 
   // External Contracts
   DEFINDEX_VAULT_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_DEFINDEX_VAULT || '',
-  BLEND_USDC_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_BLEND_USDC_ADDRESS || '',
-  BLEND_USDC_ISSUER: process.env.NEXT_PUBLIC_TESTNET_BLEND_USDC_ISSUER || '',
+  BLEND_USDC_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_BLEND_USDC_ADDRESS || TESTNET_BLEND_USDC?.contract || '',
+  BLEND_USDC_ISSUER: process.env.NEXT_PUBLIC_TESTNET_BLEND_USDC_ISSUER || TESTNET_BLEND_USDC?.issuer || '',
 
   // Stellar
   XLM_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_XLM_ADDRESS || '',
   XLM_DECIMALS: 7,
-  USDC_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_USDC_ADDRESS || '',
+  USDC_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_USDC_ADDRESS || TESTNET_USDC.contract,
   USDC_DECIMALS: 7,
-  USDC_ISSUER: process.env.NEXT_PUBLIC_TESTNET_USDC_ISSUER || '',
+  USDC_ISSUER: process.env.NEXT_PUBLIC_TESTNET_USDC_ISSUER || TESTNET_USDC.issuer,
 
   // Oracle
   REFLECTOR_EXTERNAL_ORACLE_ADDRESS:
@@ -53,9 +58,9 @@ export const MAINNET_CONFIG: NetworkConfig = {
   // Stellar
   XLM_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_XLM_ADDRESS || '',
   XLM_DECIMALS: 7,
-  USDC_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_USDC_ADDRESS || '',
+  USDC_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_USDC_ADDRESS || MAINNET_USDC.contract,
   USDC_DECIMALS: 7,
-  USDC_ISSUER: process.env.NEXT_PUBLIC_MAINNET_USDC_ISSUER || '',
+  USDC_ISSUER: process.env.NEXT_PUBLIC_MAINNET_USDC_ISSUER || MAINNET_USDC.issuer,
 
   // Oracle
   REFLECTOR_EXTERNAL_ORACLE_ADDRESS:

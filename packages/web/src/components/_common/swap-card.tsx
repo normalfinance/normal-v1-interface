@@ -72,9 +72,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const [amountIn, setAmountIn] = useState('');
   const debouncedAmountIn = useDebounce(amountIn, 500);
 
-  // Swap uses canonical Stellar USDC from StellarConfig.USDC_ADDRESS, not Blend USDC.
+  // Swap uses canonical Stellar USDC from the selected network config, not Blend USDC.
   const xlmBalance = getTokenBalance(getXlmToken(tokenState.tokens));
-  const usdcBalance = getTokenBalance(getSwapUsdcToken(tokenState.tokens));
+  const usdcBalance = getTokenBalance(getSwapUsdcToken(tokenState.tokens, config));
 
   const inputBalance = tokenIn === 'XLM' ? xlmBalance : usdcBalance;
   const outputBalance = tokenOut === 'XLM' ? xlmBalance : usdcBalance;

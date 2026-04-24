@@ -62,6 +62,22 @@ const MAINNET_TOKENS: ApiToken[] = [
   },
 ];
 
+export function getCanonicalUsdcTokenForNetwork(network: NetworkType): ApiToken {
+  const token = getTokenListForNetwork(network).find(
+    (candidate) => candidate.symbol === 'USDC' && candidate.name === 'USD Coin'
+  );
+
+  if (!token) {
+    throw new Error(`Canonical USDC token is not configured for ${network}`);
+  }
+
+  return token;
+}
+
+export function getBlendUsdcTokenForNetwork(network: NetworkType): ApiToken | undefined {
+  return getTokenListForNetwork(network).find((candidate) => candidate.name === 'Blend USDC');
+}
+
 /**
  * Get the supported token list for a specific network.
  */
