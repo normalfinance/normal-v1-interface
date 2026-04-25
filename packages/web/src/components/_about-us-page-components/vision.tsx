@@ -1,7 +1,5 @@
 'use client';
 
-import type { Token } from '@normalfinance/types';
-
 import React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
@@ -10,7 +8,7 @@ import Grid2 from '@mui/material/Grid2';
 import { Box, Paper, Stack, Container, Typography, CardContent } from '@mui/material';
 
 import WorldMap from '../ui/world-map';
-import LoadingCoins from '../ui/loading-coins';
+import EarnAnimation from '../ui/earn-animation';
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
@@ -76,65 +74,6 @@ export const VisionDefaults: Props = {
     },
   ],
 };
-
-export const tokens: Token[] = [
-  {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'Bitcoin',
-    symbol: 'BTC',
-    icon: cdn('about-page/btc-flat.svg'),
-    price: '67600.18',
-    percentageChange: 2.45435,
-    decimals: 7,
-    balance: '0',
-    featured: false,
-  },
-  {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'Ethereum',
-    symbol: 'ETH',
-    icon: cdn('about-page/eth-flat.svg'),
-    price: '3150',
-    percentageChange: 1.1,
-    decimals: 7,
-    balance: '0',
-    featured: false,
-  },
-  {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'XRP',
-    symbol: 'XRP',
-    icon: cdn('about-page/xrp-flat.svg'),
-    price: '0.48',
-    percentageChange: 0.5,
-    decimals: 7,
-    balance: '0',
-    featured: false,
-  },
-  {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'Cardano',
-    symbol: 'ADA',
-    icon: cdn('about-page/ada-flat.svg'),
-    price: '0.32',
-    percentageChange: -0.8,
-    decimals: 7,
-    balance: '0',
-    featured: false,
-  },
-];
 
 /* -------------------------------------------------------------------------- */
 /*                                   Styles                                   */
@@ -204,7 +143,7 @@ const TopFeatureCard: React.FC<TopCard & { map?: boolean }> = ({
             ]}
           />
         ) : (
-          <LoadingCoins tokens={tokens} />
+          <EarnAnimation />
         )}
       </Box>
       <Typography variant="subtitle1" fontWeight={700} mb={1}>
