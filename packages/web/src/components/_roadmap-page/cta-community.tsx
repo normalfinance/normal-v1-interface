@@ -6,6 +6,7 @@ import * as React from 'react';
 import { paths } from '@/routes/paths';
 
 import { Box, Stack, Button, Container, Typography } from '@mui/material';
+import { cdn } from '@normalfinance/utils';
 
 export type CtaCommunityProps = React.ComponentPropsWithoutRef<'section'> & {
   heading?: string;
@@ -25,7 +26,7 @@ export const CtaCommunity: React.FC<CtaCommunityProps> = ({
   discordUrl = paths.socials.discord,
   twitterLabel = 'Follow us on X (Twitter)',
   discordLabel = 'Join our Discord',
-  image = '/assets/images/landing-page/cta-bg.webp',
+  image = cdn('homepage/cta-bg.webp'),
   sx,
   ...sectionProps
 }) => (
