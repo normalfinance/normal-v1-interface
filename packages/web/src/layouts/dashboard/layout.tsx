@@ -10,10 +10,9 @@ import { allLangs, useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
-import { Accordion, AccordionSummary, AccordionDetails, Button } from '@mui/material';
+import { Button, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
-
 import MigrationModal from '@/components/_common/migration-modal';
 import { useSettingsContext } from '@/components/template/settings';
 
@@ -25,8 +24,8 @@ import { NormalNavbarDefaults } from './navbar-props';
 import { LayoutSection } from '../core/layout-section';
 import { AccountDrawer } from '../components/account-drawer';
 import { LanguagePopover } from '../components/language-popover';
-import { NetworkToggle, NETWORK_SWITCH_ENABLED } from '../components/network-toggle';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
+import { NetworkToggle, NETWORK_SWITCH_ENABLED } from '../components/network-toggle';
 
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';

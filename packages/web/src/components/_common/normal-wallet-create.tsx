@@ -1,9 +1,9 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { updateWalletName } from '@/services/linked-wallets';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   logger,
   splitMnemonicToWords,
@@ -11,11 +11,11 @@ import {
   getRandomVerificationWords,
 } from '@normalfinance/utils';
 
-import {
-  Box,
+import { Box ,
   Stack,
   Paper,
   Alert,
+  Dialog,
   Button,
   Checkbox,
   TextField,
@@ -26,8 +26,6 @@ import {
   CircularProgress,
   FormControlLabel,
 } from '@mui/material';
-
-import { Dialog } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';

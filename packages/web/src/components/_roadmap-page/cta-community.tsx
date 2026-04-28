@@ -4,9 +4,9 @@ import type { Theme, SxProps } from '@mui/material/styles';
 
 import * as React from 'react';
 import { paths } from '@/routes/paths';
+import { cdn } from '@normalfinance/utils';
 
 import { Box, Stack, Button, Container, Typography } from '@mui/material';
-import { cdn } from '@normalfinance/utils';
 
 export type CtaCommunityProps = React.ComponentPropsWithoutRef<'section'> & {
   heading?: string;

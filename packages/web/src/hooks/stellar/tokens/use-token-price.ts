@@ -1,8 +1,7 @@
 import { BigNumber } from 'bignumber.js';
+import { useStellarConfig } from '@/hooks';
 import { useState, useEffect, useCallback } from 'react';
 import { format, logger, getReflectorExternalPrice } from '@normalfinance/utils';
-
-import { useStellarConfig } from '@/hooks';
 
 // ----------------------------------------------------------------------
 

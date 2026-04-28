@@ -7,8 +7,8 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
-import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+import React, { useRef, useMemo, useState, useEffect } from 'react';
 import {
   getMaxAmount,
   getCryptoIconUrl,

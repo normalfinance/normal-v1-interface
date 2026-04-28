@@ -4,11 +4,12 @@ import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import { Box, Chip, Paper, Stack, Container, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Chip, Paper, Stack, Container, Typography } from '@mui/material';
+
+import SavingsCard from '@/components/_common/savings-card';
 
 import { WavyBackground } from './wavy-background';
-import SavingsCard from '@/components/_common/savings-card';
 
 type ImageProps = {
   src: string;

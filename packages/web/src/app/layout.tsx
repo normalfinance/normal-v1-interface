@@ -14,8 +14,8 @@ import { PostHogProvider } from '@/providers/PostHogProvider';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
-import { WalletPasswordProvider } from '@/providers/WalletPasswordProvider';
 import { SupabaseAuthProvider } from '@/providers/SupabaseAuthProvider';
+import { WalletPasswordProvider } from '@/providers/WalletPasswordProvider';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';

@@ -8,7 +8,7 @@ import Divider from '@mui/material/Divider';
 import { useTheme } from '@mui/material/styles';
 import CardHeader from '@mui/material/CardHeader';
 
-import { Chart, ChartLegends, useChart } from '@/components/template/chart';
+import { Chart, useChart, ChartLegends } from '@/components/template/chart';
 
 import type { HoldingData } from './my-holdings-table-row';
 

@@ -1,9 +1,10 @@
-import { cookies } from 'next/headers';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
 
+import { prisma } from '@/lib/prisma';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
-import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 

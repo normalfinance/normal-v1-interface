@@ -1,4 +1,5 @@
-import { NetworkConfig } from '@normalfinance/types';
+import type { NetworkConfig } from '@normalfinance/types';
+
 import { constants } from '@normalfinance/utils';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import {

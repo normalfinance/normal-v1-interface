@@ -3,8 +3,8 @@
 import type { ChipProps } from '@mui/material';
 
 import React from 'react';
-import { format } from '@normalfinance/utils';
 import { useStellarConfig } from '@/hooks';
+import { format } from '@normalfinance/utils';
 
 import { Chip } from '@mui/material';
 

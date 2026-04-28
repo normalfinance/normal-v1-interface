@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useState, useContext, useCallback, createContext } from 'react';
 import { useSnackbar } from 'notistack';
 import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
+import { useRef, useState, useContext, useCallback, createContext } from 'react';
 
 import WalletPasswordModal, {
   type WalletPasswordMode,

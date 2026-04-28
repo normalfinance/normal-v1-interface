@@ -4,8 +4,8 @@
 
 import type { Activity } from '@/types/activity';
 
-import { useState, useCallback } from 'react';
 import { useTranslate } from '@/locales';
+import { useState, useCallback } from 'react';
 import { format, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
