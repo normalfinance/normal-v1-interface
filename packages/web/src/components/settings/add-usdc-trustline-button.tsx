@@ -43,16 +43,16 @@ export default function AddUsdcTrustlineButton({
   const [hasTrustline, setHasTrustline] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!assetIssuer || !walletAddress) return;
+    if (!assetIssuer || !walletAddress) return undefined;
 
     if (isCheckingAccount) {
       setHasTrustline(null);
-      return;
+      return undefined;
     }
 
     if (!accountExists) {
       setHasTrustline(false);
-      return;
+      return undefined;
     }
 
     let isMounted = true;

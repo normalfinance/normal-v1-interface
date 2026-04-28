@@ -53,9 +53,9 @@ async function transactionHandler(req: NextRequest) {
         signedTransactionXDR,
         config.NETWORK_PASSPHRASE
       );
-    } catch (parseError: any) {
+    } catch (xdrParseError: any) {
       await logWithConfig('warn', 'Transaction API: invalid XDR', {
-        error: parseError?.message,
+        error: xdrParseError?.message,
       });
       return NextResponse.json({ error: 'Invalid transaction XDR' }, { status: 400 });
     }

@@ -19,7 +19,7 @@ export default function SavingsView() {
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
-    if (!wallet.address) return;
+    if (!wallet.address) return undefined;
 
     const refreshTokens = async (): Promise<void> => {
       try {

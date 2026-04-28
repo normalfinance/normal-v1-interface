@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslate } from '@/locales';
 import React, { useRef, useState, useEffect } from 'react';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -38,6 +39,7 @@ const MAX_BALANCE = INITIAL * Math.pow(1 + APY / 100, YEARS);
 
 const EarnAnimation: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslate();
   const [progress, setProgress] = useState(0);
   const startRef = useRef(Date.now());
   const pathRef = useRef<SVGPathElement>(null);
@@ -78,7 +80,7 @@ const EarnAnimation: React.FC = () => {
           color="text.secondary"
           sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 11 }}
         >
-          Normal Savings
+          {t('Normal Savings')}
         </Typography>
         <Chip
           label={`${APY}% APY`}
@@ -96,7 +98,7 @@ const EarnAnimation: React.FC = () => {
       {/* Balance */}
       <Box>
         <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
-          Balance
+          {t('Balance')}
         </Typography>
         <Typography
           sx={{
@@ -132,7 +134,7 @@ const EarnAnimation: React.FC = () => {
           }}
         />
         <Typography variant="caption" color="success.main" fontWeight={600} sx={{ fontSize: 12 }}>
-          +${fmt(earned)}&nbsp;earned
+          +${fmt(earned)}&nbsp;{t('earned')}
         </Typography>
       </Stack>
 
