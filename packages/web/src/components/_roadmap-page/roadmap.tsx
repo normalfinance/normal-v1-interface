@@ -67,7 +67,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
               <Typography
                 variant="h2"
                 sx={{
-                  fontWeight: 800,
+                  fontWeight: 600,
                   lineHeight: 1.05,
                   mb: { xs: 2, md: 3 },
                 }}
@@ -116,7 +116,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
                       py: 0.5,
                       borderRadius: 1.5,
                       fontSize: 12,
-                      fontWeight: 700,
+                      fontWeight: 500,
                       letterSpacing: 0.2,
                       mb: 1.5,
                       backgroundColor: status.bg,
@@ -127,7 +127,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
                     {status.label}
                   </Box>
 
-                  <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                  <Typography variant="h5" sx={{ fontWeight: 500, mb: 1 }}>
                     {t(item.title)}
                   </Typography>
 
