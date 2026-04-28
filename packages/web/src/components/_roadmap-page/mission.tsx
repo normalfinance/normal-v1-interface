@@ -18,35 +18,35 @@ export function MissionSection() {
   const pillars = [
     {
       title: t('Simplicity first'),
-      body: t('One-click, diversified exposure. Clear fees. Plain-language UX.'),
+      body: t('Deposit in minutes. Earn automatically. No strategy required.'),
       emoji: '✨',
     },
     {
       title: t('Transparency & sovereignty'),
-      body: t('Fully on-chain design, open data, verifiable rules; you keep your keys.'),
+      body: t('Your funds are yours at all times. Every rate, balance, and transaction is visible and verifiable.'),
       emoji: '🔍',
     },
     {
       title: t('Composability & reach'),
       body: t(
-        'Built for fast, low-cost rails (Stellar) and designed to plug into the broader DeFi stack.'
+        'Built on Stellar and designed to plug into the broader DeFi stack - making Normal the simplest way to access yield today, with real assets like Bitcoin, gold, and commodities coming soon.'
       ),
       emoji: '🧩',
     },
     {
       title: t('Community-led evolution'),
       body: t(
-        'Roadmaps in public, feedback loops with users, and indexes that reflect real needs.'
+        'We build in public. Our roadmap is open, our decisions are explained, and your feedback shapes what gets built next.'
       ),
       emoji: '🌱',
     },
   ];
 
   const shippingItems = [
-    t('On-chain index funds with programmable rebalancing and guardrails'),
-    t('Synthetic assets that broaden access to diversified exposures'),
-    t('Open analytics, proofs of rebalance, and audit-friendly data'),
-    t('Education and UX that lowers the learning curve for everyone'),
+    t('A USDC savings account that pays real yield, automatically'),
+    t('Cash deposits and withdrawals via MoneyGram, Coinbase, and Stripe'),
+    t('Full on-chain transparency so you can verify everything yourself'),
+    t('Crypto, equities, and real assets - coming soon'),
   ];
 
   return (
@@ -54,16 +54,11 @@ export function MissionSection() {
       <Container maxWidth="lg" disableGutters>
         <Stack spacing={3} sx={{ maxWidth: 960 }}>
           <Typography variant="h2" sx={{ fontWeight: 800, lineHeight: 1.05 }}>
-            {t('Normal’s Product Roadmap')}
+            {t("Normal’s Product Roadmap")}
           </Typography>
           <Typography variant="body1" color="text.secondary">
             {t(
-              'Our mission: to make sophisticated, low-cost crypto investing accessible to everyone — by turning complex on-chain primitives into simple, transparent index products.'
-            )}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            {t(
-              'Most people don’t have time to chase tokens, rebalance portfolios, or audit contracts. They want safety rails, fair fees, and a clear path to diversified exposure. We build that path — non-custodial, verifiable, and easy to use.'
+              "Most people are earning next to nothing on their savings. Normal is built to change that - starting with a USDC savings account that pays real yield with no bank in the middle. Simple to use, transparent by design, and built to grow with you."
             )}
           </Typography>
         </Stack>
@@ -98,7 +93,7 @@ export function MissionSection() {
             <Paper variant="outlined" sx={{ ...paperSx }}>
               <Stack spacing={2} p={cardPadding} flexGrow={1} justifyContent="flex-start">
                 <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1 }}>
-                  {t('What we’re shipping')}
+                  {t("What we’re shipping")}
                 </Typography>
                 <Box component="ul" sx={{ m: 0 }}>
                   {shippingItems.map((text, idx) => (
@@ -123,7 +118,7 @@ export function MissionSection() {
                 </Typography>
                 <Typography variant="body1" sx={{ mt: 1.5 }}>
                   {t(
-                    'We default to transparency, prioritize user safety, and align incentives with long-term outcomes — not hype. Help us shape the future of on-chain indexes by sharing feedback and co-creating what gets built next.'
+                    "We default to transparency, prioritize your safety, and build for the long term - not the hype cycle. Help us shape what Normal becomes next by sharing your feedback."
                   )}
                 </Typography>
               </Stack>
