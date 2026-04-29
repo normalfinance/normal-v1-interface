@@ -4,10 +4,9 @@
 
 import type { Horizon } from '@stellar/stellar-sdk';
 
+import { useStellarConfig } from '@/hooks';
 import { logger, fetchTransaction } from '@normalfinance/utils';
 import { useRef, useState, useEffect, useCallback } from 'react';
-
-import { useStellarConfig } from '@/hooks';
 
 export interface TransactionStatus {
   isLoading: boolean;

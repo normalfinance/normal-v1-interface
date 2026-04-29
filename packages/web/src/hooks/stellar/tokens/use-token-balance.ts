@@ -1,9 +1,9 @@
-import useSWRImmutable from 'swr/immutable';
-import { usePersistStore } from '@normalfinance/state';
-import { getTokenBalance } from '@normalfinance/utils';
 import type { NetworkConfig } from '@normalfinance/types';
 
 import { useStellarConfig } from '@/hooks';
+import useSWRImmutable from 'swr/immutable';
+import { usePersistStore } from '@normalfinance/state';
+import { getTokenBalance } from '@normalfinance/utils';
 
 interface FetchTokenBalanceProps {
   tokenAddress: string;

@@ -13,7 +13,7 @@ import match from 'autosuggest-highlight/match';
 import { useBoolean } from 'minimal-shared/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';

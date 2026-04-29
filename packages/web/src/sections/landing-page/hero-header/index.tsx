@@ -4,11 +4,12 @@ import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import { Box, Chip, Paper, Stack, Container, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Chip, Paper, Stack, Container, Typography } from '@mui/material';
+
+import SavingsCard from '@/components/_common/savings-card';
 
 import { WavyBackground } from './wavy-background';
-import SavingsCard from '@/components/_common/savings-card';
 
 type ImageProps = {
   src: string;
@@ -146,28 +147,69 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               </Box>
             </Typography>
 
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              component="div"
+            <Paper
+              variant="outlined"
               sx={{
                 display: 'inline-flex',
-                alignItems: 'center',
-                columnGap: '10px',
-                rowGap: '10px',
-                fontSize: 14,
-                fontWeight: 600,
-                mx: 'auto',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
+                alignItems: 'flex-start',
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                borderRadius: '9999px',
+                px: 3,
+                py: 1.5,
+                gap: 0,
               }}
             >
-              <span>💰 {t('Competitive yield')}</span>
-              <span>•</span>
-              <span>🔓 {t('Fully flexible')}</span>
-              <span>•</span>
-              <span>🛡️ {t('Vault secured')}</span>
-            </Typography>
+              {[
+                {
+                  label: t('Audited by'),
+                  src: cdn('homepage/halborn-logo.webp'),
+                  alt: 'Halborn',
+                  width: 72,
+                  height: 8,
+                },
+                {
+                  label: t('Backed by'),
+                  src: cdn('homepage/draper-university.webp'),
+                  alt: 'Draper University',
+                  width: 56,
+                  height: 18,
+                },
+                {
+                  label: t('Backed by'),
+                  src: cdn('homepage/stellar-logo.webp'),
+                  alt: 'Stellar',
+                  width: 52,
+                  height: 13,
+                },
+              ].map((item, i, arr) => (
+                <React.Fragment key={i}>
+                  <Stack alignItems="center" spacing="5px" sx={{ px: 2.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.disabled"
+                      sx={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}
+                    >
+                      {item.label}
+                    </Typography>
+                    <Box
+                      component="img"
+                      src={item.src}
+                      alt={item.alt}
+                      sx={{
+                        width: item.width,
+                        height: item.height,
+                        objectFit: 'contain',
+                        filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
+                        opacity: 0.5,
+                      }}
+                    />
+                  </Stack>
+                  {i < arr.length - 1 && (
+                    <Box sx={{ width: '1px', height: 32, backgroundColor: alpha(theme.palette.grey[500], 0.24), flexShrink: 0 }} />
+                  )}
+                </React.Fragment>
+              ))}
+            </Paper>
 
             <Box
               sx={{

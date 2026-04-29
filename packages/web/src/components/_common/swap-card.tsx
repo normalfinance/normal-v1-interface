@@ -3,8 +3,8 @@
 import type { CardProps } from '@mui/material';
 
 import { useTranslate } from '@/locales';
-import { useDebounce } from '@/hooks/use-debounce';
 import { useStellarConfig } from '@/hooks';
+import { useDebounce } from '@/hooks/use-debounce';
 import { useSwap } from '@/hooks/stellar/use-swap';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';

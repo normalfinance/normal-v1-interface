@@ -7,9 +7,9 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
-import { logger, getCryptoIconUrl } from '@normalfinance/utils';
-import { fCurrency, fNumber } from '@/utils/format-number';
 import { DashboardContent } from '@/layouts/dashboard';
+import { fNumber, fCurrency } from '@/utils/format-number';
+import { logger, getCryptoIconUrl } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import {
@@ -63,9 +63,7 @@ export default function AssetsView() {
     });
 
   // Calculate total value
-  const totalValue = tokensWithBalance.reduce((acc, token) => {
-    return acc.plus(BigNumber(token.balance).multipliedBy(token.price));
-  }, BigNumber(0));
+  const totalValue = tokensWithBalance.reduce((acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)), BigNumber(0));
 
   const handleRowClick = (token: Token) => {
     router.push(paths.assets.details(token.symbol));

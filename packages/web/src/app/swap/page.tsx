@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from '@/global-config';
 import SwapView from '@/sections/swap';
+import { CONFIG } from '@/global-config';
 
 // ----------------------------------------------------------------------
 

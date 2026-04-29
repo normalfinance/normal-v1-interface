@@ -1,16 +1,16 @@
 'use client';
 
+import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import React, { useState, useEffect } from 'react';
 import { checkTrustline } from '@normalfinance/utils';
-import { useTranslate } from '@/locales';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 
-import { Button, CircularProgress, Typography } from '@mui/material';
+import { Button, Typography, CircularProgress } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
-import { useStellarConfig } from '@/hooks';
-import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
-import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 
 // ----------------------------------------------------------------------
 
@@ -43,16 +43,16 @@ export default function AddUsdcTrustlineButton({
   const [hasTrustline, setHasTrustline] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!assetIssuer || !walletAddress) return;
+    if (!assetIssuer || !walletAddress) return undefined;
 
     if (isCheckingAccount) {
       setHasTrustline(null);
-      return;
+      return undefined;
     }
 
     if (!accountExists) {
       setHasTrustline(false);
-      return;
+      return undefined;
     }
 
     let isMounted = true;

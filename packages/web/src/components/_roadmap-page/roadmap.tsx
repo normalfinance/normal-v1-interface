@@ -67,7 +67,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
               <Typography
                 variant="h2"
                 sx={{
-                  fontWeight: 800,
+                  fontWeight: 600,
                   lineHeight: 1.05,
                   mb: { xs: 2, md: 3 },
                 }}
@@ -116,7 +116,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
                       py: 0.5,
                       borderRadius: 1.5,
                       fontSize: 12,
-                      fontWeight: 700,
+                      fontWeight: 500,
                       letterSpacing: 0.2,
                       mb: 1.5,
                       backgroundColor: status.bg,
@@ -127,7 +127,7 @@ export const Roadmap: React.FC<RoadmapProps> = (props) => {
                     {status.label}
                   </Box>
 
-                  <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                  <Typography variant="h5" sx={{ fontWeight: 500, mb: 1 }}>
                     {t(item.title)}
                   </Typography>
 
@@ -203,32 +203,50 @@ export const RoadmapDefaults: Props = {
       completed: true,
     },
     {
-      title: 'Released synthetic assets on Stellar testnet',
-      description: 'Public testnet release for synthetic assets on Stellar.',
-      date: 'August 2025',
+      title: 'Launch USDC Savings MVP',
+      description: "Deposit USDC and earn real yield automatically. Normal's first live product on Stellar mainnet.",
+      date: 'April 2026',
       completed: true,
     },
     {
-      title: 'Release synthetic assets on Stellar mainnet',
-      description: 'Mainnet launch of synthetic assets on Stellar.',
-      date: 'September 2025',
+      title: 'Bitcoin and Top Cryptocurrency Support',
+      description: 'Buy, hold, and manage Bitcoin and the top cryptocurrencies - fully noncustodial, fully yours.',
+      date: 'TBD',
       completed: false,
     },
     {
-      title: 'Release index funds on Stellar testnet',
-      description: 'Testnet release of Normal index funds on Stellar.',
-      date: 'September 2025',
+      title: 'Real World Assets',
+      description: 'Invest in Gold, Silver, the S&P 500, ETFs, commodities, and other securities - all in one place.',
+      date: 'TBD',
       completed: false,
     },
     {
-      title: 'Release index funds on Stellar mainnet',
-      description: 'Mainnet release of Normal index funds on Stellar.',
-      date: 'October 2025',
+      title: 'Normal Mobile App',
+      description: 'Normal in your pocket. A native iOS and Android app bringing the full Normal experience to mobile.',
+      date: 'TBD',
       completed: false,
     },
     {
-      title: 'Launch Normal Liquidity Provider incentive program',
-      description: 'Incentives to deepen liquidity and improve market quality.',
+      title: 'Normal Crypto Indexes',
+      description: 'Build and invest in custom crypto indexes tailored to your strategy.',
+      date: 'TBD',
+      completed: false,
+    },
+    {
+      title: 'Normal Credit Card',
+      description: 'Spend your earnings in the real world with a Normal credit card.',
+      date: 'TBD',
+      completed: false,
+    },
+    {
+      title: 'Normal Hardware Wallet',
+      description: "Bank-grade security for your assets. Normal's own hardware wallet, built for everyday people.",
+      date: 'TBD',
+      completed: false,
+    },
+    {
+      title: 'Expand Our DeFi Yield',
+      description: 'More protocols, more strategies, more ways to put your money to work.',
       date: 'TBD',
       completed: false,
     },

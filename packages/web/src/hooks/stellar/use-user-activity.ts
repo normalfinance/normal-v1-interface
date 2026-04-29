@@ -55,6 +55,8 @@ function mapWalletActivityItem(item: WalletActivityItem): Activity {
         },
       };
     }
+    default:
+      throw new Error(`Unhandled activity kind: ${(item as WalletActivityItem).kind}`);
   }
 }
 

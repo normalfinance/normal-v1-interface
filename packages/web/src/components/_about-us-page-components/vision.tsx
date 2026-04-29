@@ -1,7 +1,5 @@
 'use client';
 
-import type { Token } from '@normalfinance/types';
-
 import React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
@@ -10,7 +8,7 @@ import Grid2 from '@mui/material/Grid2';
 import { Box, Paper, Stack, Container, Typography, CardContent } from '@mui/material';
 
 import WorldMap from '../ui/world-map';
-import LoadingCoins from '../ui/loading-coins';
+import EarnAnimation from '../ui/earn-animation';
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
@@ -45,94 +43,37 @@ export const VisionDefaults: Props = {
   heading: 'Our Vision',
   topCards: [
     {
-      title: '1-Click diversification',
+      title: 'Deposit. Earn. Compound.',
       description:
-        'Build a balanced portfolio instantly with custom crypto baskets in a single tap.',
+        'Your USDC goes into audited lending pools on Stellar. Borrowers pay interest to access liquidity — you collect it. Yield compounds daily and you can withdraw anytime.',
     },
     {
       title: 'Borderless Access',
       description:
-        'Trade and invest globally without barriers. Wherever you are, Normal connects you to opportunities.',
+        "Your zip code shouldn't determine your returns. Normal gives everyone access to yields that used to require the right bank, the right broker, or the right country.",
     },
   ],
   bottomCards: [
     {
-      icon: { src: cdn('about-page/n1.svg'), alt: 'Swaps' },
-      title: 'Sub-Second Swaps & Deep Liquidity',
-      description: 'Execute trades instantly with optimized routing and deep liquidity pools.',
+      icon: { src: cdn('about-page/n1.svg'), alt: 'Deposits' },
+      title: 'Instant Deposits',
+      description:
+        'Cash hits your account in seconds. No hold times, no business-day delays — just your money, moving when you need it to.',
     },
     {
-      icon: { src: cdn('about-page/n2.svg'), alt: 'Governance' },
-      title: '100 % Community Governance',
+      icon: { src: cdn('about-page/n2.svg'), alt: 'Transparent' },
+      title: 'Transparent by Default',
       description:
-        'Every decision is driven by the community — powered by open participation and voting.',
+        'Normal never takes custody of your funds. Your USDC is secured by Stellar\'s blockchain — the same infrastructure trusted by financial institutions and payment networks worldwide. Every rate and every transaction is public. Check it anytime.',
     },
     {
       icon: { src: cdn('about-page/n3.svg'), alt: 'Growth' },
-      title: 'Sustainable Growth',
-      description: 'Normal grows with the community — expanding responsibly, together.',
+      title: 'The Start of Something Bigger',
+      description:
+        'USDC savings is the foundation. Crypto, equities, and real assets are coming — all in one place, all yours to control.',
     },
   ],
 };
-
-export const tokens: Token[] = [
-  {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'Bitcoin',
-    symbol: 'BTC',
-    icon: cdn('about-page/btc-flat.svg'),
-    price: '67600.18',
-    percentageChange: 2.45435,
-    decimals: 7,
-    balance: '0',
-    featured: false,
-  },
-  {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'Ethereum',
-    symbol: 'ETH',
-    icon: cdn('about-page/eth-flat.svg'),
-    price: '3150',
-    percentageChange: 1.1,
-    decimals: 7,
-    balance: '0',
-    featured: false,
-  },
-  {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'XRP',
-    symbol: 'XRP',
-    icon: cdn('about-page/xrp-flat.svg'),
-    price: '0.48',
-    percentageChange: 0.5,
-    decimals: 7,
-    balance: '0',
-    featured: false,
-  },
-  {
-    contract: '<insert_pool_address>',
-    issuer: '',
-    org: 'Normal',
-    domain: 'normalfinance.io',
-    name: 'Cardano',
-    symbol: 'ADA',
-    icon: cdn('about-page/ada-flat.svg'),
-    price: '0.32',
-    percentageChange: -0.8,
-    decimals: 7,
-    balance: '0',
-    featured: false,
-  },
-];
 
 /* -------------------------------------------------------------------------- */
 /*                                   Styles                                   */
@@ -202,7 +143,7 @@ const TopFeatureCard: React.FC<TopCard & { map?: boolean }> = ({
             ]}
           />
         ) : (
-          <LoadingCoins tokens={tokens} />
+          <EarnAnimation />
         )}
       </Box>
       <Typography variant="subtitle1" fontWeight={700} mb={1}>

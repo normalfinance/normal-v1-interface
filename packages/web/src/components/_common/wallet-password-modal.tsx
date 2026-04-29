@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslate } from '@/locales';
 
 import {
   Box,
@@ -13,8 +14,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress,
   InputAdornment,
+  CircularProgress,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -59,6 +60,8 @@ export default function WalletPasswordModal({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  const { t } = useTranslate();
 
   const needsConfirm = mode === 'set' || mode === 'migrate';
   const displayError = error || localError;
@@ -152,14 +155,14 @@ export default function WalletPasswordModal({
         {mode === 'enter' && onForgotPassword && (
           <Box sx={{ textAlign: 'right' }}>
             <Button size="small" onClick={onForgotPassword} disabled={loading}>
-              Forgot password?
+              {t('Forgot password?')}
             </Button>
           </Box>
         )}
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={loading}>
-          Cancel
+          {t('Cancel')}
         </Button>
         <Button
           variant="contained"

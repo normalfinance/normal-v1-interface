@@ -1,16 +1,18 @@
 import type { NextRequest } from 'next/server';
+import type { NetworkType } from '@normalfinance/utils';
+import type { NetworkConfig } from '@normalfinance/types';
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
-import { ContractErrorType, NetworkConfig } from '@normalfinance/types';
+import { ContractErrorType } from '@normalfinance/types';
 import { getClientIP, getAccessToken } from '@/utils/http';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
-import { logger, parseError, getStellarConfigForNetwork, NetworkType } from '@normalfinance/utils';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { logger, parseError, getStellarConfigForNetwork } from '@normalfinance/utils';
 import { logWithConfig, createNodeConfigHandler } from '@/lib/edge-config-middleware';
-import { LinkedWalletService } from '@/lib/linked-wallet-service';
 
 export const runtime = 'nodejs';
 
@@ -51,9 +53,9 @@ async function transactionHandler(req: NextRequest) {
         signedTransactionXDR,
         config.NETWORK_PASSPHRASE
       );
-    } catch (parseError: any) {
+    } catch (xdrParseError: any) {
       await logWithConfig('warn', 'Transaction API: invalid XDR', {
-        error: parseError?.message,
+        error: xdrParseError?.message,
       });
       return NextResponse.json({ error: 'Invalid transaction XDR' }, { status: 400 });
     }

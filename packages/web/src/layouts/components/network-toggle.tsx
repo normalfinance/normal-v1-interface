@@ -1,19 +1,19 @@
 'use client';
 
 import { m } from 'framer-motion';
+import { useNetwork } from '@/hooks';
 import { usePopover } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
-import IconButton from '@mui/material/IconButton';
 import { useTheme } from '@mui/material/styles';
+import IconButton from '@mui/material/IconButton';
 
 import { Iconify } from '@/components/template/iconify';
+import { useSnackbar } from '@/components/template/snackbar';
 import { CustomPopover } from '@/components/template/custom-popover';
 import { varTap, varHover, transitionTap } from '@/components/template/animate';
-import { useSnackbar } from '@/components/template/snackbar';
-import { useNetwork } from '@/hooks';
 
 // ---------------------------------------------------------------------------
 // Guard: hide toggle when the deployment is hard-locked to mainnet.

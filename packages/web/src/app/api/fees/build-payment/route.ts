@@ -1,8 +1,9 @@
 import type { NextRequest } from 'next/server';
+import type { NetworkType } from '@normalfinance/utils';
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { getStellarConfigForNetwork, NetworkType } from '@normalfinance/utils';
+import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import {
   type FeeAssetCode,
   buildFeePaymentXdr,

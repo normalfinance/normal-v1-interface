@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import type { WalletActivityItem } from '@/types/wallet-activity';
 
 import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
 import { isValidStellarAddress } from '@/utils/stellar-address';
-import type { WalletActivityItem } from '@/types/wallet-activity';
 
 export const dynamic = 'force-dynamic';
 

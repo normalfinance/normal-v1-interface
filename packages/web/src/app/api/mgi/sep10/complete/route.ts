@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/utils/http';
 import { Keypair, Transaction } from '@stellar/stellar-sdk';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { getStellarConfigForNetwork, type NetworkType } from '@normalfinance/utils';
+import { type NetworkType, getStellarConfigForNetwork } from '@normalfinance/utils';
 
 /**
  * POST /api/mgi/sep10/complete

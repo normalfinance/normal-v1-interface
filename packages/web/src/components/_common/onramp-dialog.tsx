@@ -1,4 +1,3 @@
-import { useBoolean } from '@/hooks';
 import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
@@ -6,6 +5,7 @@ import { buildAuthHeaders } from '@/utils/http';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
+import { useBoolean , useStellarConfig } from '@/hooks';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
@@ -17,7 +17,6 @@ import {
   createStripeURL,
   createCoinbasePayOnrampURL,
 } from '@normalfinance/utils';
-import { useStellarConfig } from '@/hooks';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
