@@ -65,7 +65,7 @@ const DEFAULT_QUESTIONS: Question[] = [
   {
     title: 'How much does Normal cost?',
     answer:
-      'It is 100% free to create an account. A small fee may be collected when depositing/withdrawing using our financial partners. All trades on Normal incur a 0.30% fee and all index funds have a volume scaling transaction fee.',
+      'It is 100% free to create an account. A small fee may be collected when depositing or withdrawing using our financial partners. Savings deposits incur a flat 0.5% fee. Withdrawals incur a tiered yield commission based on the withdrawal amount: 20% under $500, 15% from $500 to $2,499, 10% from $2,500 to $50,000, and 5% above $50,000. Swaps incur a 0.5% fee on the input amount.',
   },
   {
     title: 'Does Normal require KYC?',

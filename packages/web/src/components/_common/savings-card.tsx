@@ -9,7 +9,11 @@ import { usePersistStore } from '@normalfinance/state';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
-import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
+import {
+  getYieldCommission,
+  getSavingsDepositFee,
+  getYieldCommissionRate,
+} from '@/utils/normal-fees';
 import {
   getTokenBalance,
   getSavingsUsdcIssuer,
@@ -115,8 +119,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   const depositFee =
     mode === 'deposit' && parsedAmount > 0 ? getSavingsDepositFee(parsedAmount) : 0;
   const netDepositAmount = mode === 'deposit' ? Math.max(parsedAmount - depositFee, 0) : 0;
-  const isBelowMinimumDeposit =
-    mode === 'deposit' && parsedAmount > 0 && parsedAmount <= depositFee;
 
   const yieldCommission =
     mode === 'withdraw' && parsedAmount > 0
@@ -125,6 +127,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
           currentValue: parseFloat(userPosition?.currentValue || '0'),
           earnings: parseFloat(userPosition?.earnings || '0'),
         })
+      : 0;
+  const yieldCommissionRatePct =
+    mode === 'withdraw' && parsedAmount > 0
+      ? Math.round(getYieldCommissionRate(parsedAmount) * 100)
       : 0;
   const isAmountMissing = !amount || parsedAmount <= 0;
   const showAddTrustlineAction = accountExists && !hasUsdcTrustline && !!savingsUsdcIssuer;
@@ -160,24 +166,18 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   }, [setNeedsTrustline, refetchAccountStatus]);
 
   const isActionDisabled =
-    isCheckingAccount ||
-    loading ||
-    isInsufficientBalance ||
-    isBelowMinimumDeposit ||
-    isAmountMissing;
+    isCheckingAccount || loading || isInsufficientBalance || isAmountMissing;
   const actionButtonText = loading
     ? mode === 'deposit'
       ? t('Depositing...')
       : t('Withdrawing...')
     : isInsufficientBalance
       ? t('Insufficient balance')
-      : isBelowMinimumDeposit
-        ? t('Amount must exceed ${{fee}} fee', { fee: depositFee.toFixed(2) })
-        : isAmountMissing
-          ? t('Enter amount')
-          : mode === 'deposit'
-            ? t('Deposit')
-            : t('Withdraw');
+      : isAmountMissing
+        ? t('Enter amount')
+        : mode === 'deposit'
+          ? t('Deposit')
+          : t('Withdraw');
 
   return (
     <Card
@@ -311,7 +311,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
             <Stack spacing={0.5}>
               <Stack direction="row" justifyContent="space-between">
                 <Typography variant="caption" color="text.secondary">
-                  {t('Normal fee')}
+                  {t('Normal fee (0.5%)')}
                 </Typography>
                 <Typography variant="caption" fontWeight="medium">
                   -${depositFee.toFixed(2)} USDC
@@ -346,7 +346,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
           >
             <Stack direction="row" justifyContent="space-between">
               <Typography variant="caption" color="text.secondary">
-                {t('Normal 7% yield commission')}
+                {t('Normal {{rate}}% yield commission', { rate: yieldCommissionRatePct })}
               </Typography>
               <Typography variant="caption" fontWeight="medium">
                 -${yieldCommission.toFixed(2)} USDC
