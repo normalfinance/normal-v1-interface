@@ -43,6 +43,8 @@ export class LinkedWalletService {
         walletAddress: walletAddress.substring(0, 8) + '...',
       });
 
+      
+
       return linkedWallet as LinkedWallet;
     } catch (error) {
       logger.error('[LinkedWalletService] Failed to link wallet:', error);

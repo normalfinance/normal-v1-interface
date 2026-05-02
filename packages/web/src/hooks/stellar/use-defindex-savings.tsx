@@ -145,15 +145,6 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       }
 
       const feeAmount = getSavingsDepositFee(parsedAmount);
-      if (parsedAmount <= feeAmount) {
-        const msg = t('Deposit must exceed the Normal fee of ${{fee}}', {
-          fee: feeAmount.toFixed(2),
-        });
-        setError(msg);
-        enqueueSnackbar(msg, { variant: 'error' });
-        return '';
-      }
-
       const netAmount = +(parsedAmount - feeAmount).toFixed(7);
 
       try {
