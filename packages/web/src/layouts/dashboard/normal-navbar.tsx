@@ -534,82 +534,95 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
   );
 }
 
-function MobileMega({
-  megaMenu,
-}: {
-  megaMenu: MegaMenuProps;
-}) {
+function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
   const { t: tMobile } = useTranslate();
-  const allLinks = megaMenu.categoryLinks.flatMap((group) => group.links);
   return (
-    <Box
-      sx={{
-        py: 1,
-        display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-        alignContent: 'start',
-        gap: 0.5,
-      }}
-    >
-      {allLinks.map((l, li) => {
-        const { target, rel } = linkAttrs(l.url, l.target, l.rel);
-        return (
-          <Box
-            key={li}
-            component="a"
-            href={l.url}
-            target={target}
-            rel={rel}
+    <Box sx={{ py: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      {megaMenu.categoryLinks.map((group, gi) => (
+        <Box key={gi}>
+          <Typography
+            variant="caption"
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              py: 1.25,
+              display: 'block',
               px: 1.5,
-              textDecoration: 'none',
-              color: 'inherit',
-              borderRadius: 1,
-              transition: 'background-color 0.15s ease',
-              '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.55)' },
-              '&:focus-visible': (t2) => ({
-                outline: `2px solid ${t2.palette.primary.main}`,
-                outlineOffset: 2,
-              }),
+              mb: 0.5,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: 'text.disabled',
             }}
           >
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                p: 0.75,
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, rgb(190, 232, 255) 0%, rgb(220, 205, 255) 100%)',
-                borderRadius: 1,
-                border: '1px solid rgba(180, 200, 255, 0.5)',
-                boxSizing: 'border-box',
-              }}
-            >
-              <Box
-                component="img"
-                src={l.image.src}
-                alt={tMobile(l.image.alt || '')}
-                sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-              />
-            </Box>
-            <Box>
-              <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
-                {tMobile(l.title)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                {tMobile(l.description)}
-              </Typography>
-            </Box>
+            {tMobile(group.title)}
+          </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              gap: 0.5,
+            }}
+          >
+            {group.links.map((l, li) => {
+              const { target, rel } = linkAttrs(l.url, l.target, l.rel);
+              return (
+                <Box
+                  key={li}
+                  component="a"
+                  href={l.url}
+                  target={target}
+                  rel={rel}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    py: 1.25,
+                    px: 1.5,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    borderRadius: 1,
+                    transition: 'background-color 0.15s ease',
+                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.55)' },
+                    '&:focus-visible': (t2) => ({
+                      outline: `2px solid ${t2.palette.primary.main}`,
+                      outlineOffset: 2,
+                    }),
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      p: 0.75,
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, rgb(190, 232, 255) 0%, rgb(220, 205, 255) 100%)',
+                      borderRadius: 1,
+                      border: '1px solid rgba(180, 200, 255, 0.5)',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src={l.image.src}
+                      alt={tMobile(l.image.alt || '')}
+                      sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                    />
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" fontWeight={500} sx={{ lineHeight: 1.3 }}>
+                      {tMobile(l.title)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                      {tMobile(l.description)}
+                    </Typography>
+                  </Box>
+                </Box>
+              );
+            })}
           </Box>
-        );
-      })}
+        </Box>
+      ))}
     </Box>
   );
 }

@@ -19,6 +19,20 @@ export const NormalNavbarDefaults: Props = {
       megaMenu: {
         categoryLinks: [
           {
+            title: 'Earn',
+            links: [
+              {
+                url: paths.savings,
+                image: {
+                  src: cdn('nav/provide-liquidity.svg'),
+                  alt: 'Savings',
+                },
+                title: 'Savings',
+                description: 'Earn yield on your USDC.',
+              },
+            ],
+          },
+          {
             title: 'Trade',
             links: [
               {
@@ -38,20 +52,6 @@ export const NormalNavbarDefaults: Props = {
                 },
                 title: 'Portfolio',
                 description: 'View your account holdings.',
-              },
-            ],
-          },
-          {
-            title: 'Earn',
-            links: [
-              {
-                url: paths.savings,
-                image: {
-                  src: cdn('nav/provide-liquidity.svg'),
-                  alt: 'Savings',
-                },
-                title: 'Savings',
-                description: 'Earn yield on your USDC.',
               },
             ],
           },
