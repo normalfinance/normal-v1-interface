@@ -479,9 +479,9 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  bgcolor: 'rgba(255, 255, 255, 0.75)',
+                  bgcolor: 'rgba(196, 221, 252, 0.55)',
                   borderRadius: 1,
-                  border: '1px solid rgba(255, 255, 255, 0.9)',
+                  border: '1px solid rgba(160, 200, 245, 0.6)',
                   boxSizing: 'border-box',
                 }}
               >
@@ -561,9 +561,9 @@ function MobileMega({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                bgcolor: 'rgba(255, 255, 255, 0.75)',
+                bgcolor: 'rgba(196, 221, 252, 0.55)',
                 borderRadius: 1,
-                border: '1px solid rgba(255, 255, 255, 0.9)',
+                border: '1px solid rgba(160, 200, 245, 0.6)',
                 boxSizing: 'border-box',
               }}
             >
