@@ -232,7 +232,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                   py: 0.5,
                   px: 1.5,
                   color: 'text.primary',
-                  fontWeight: pathname.startsWith(item.url) ? 600 : 400,
+                  fontWeight: pathname.startsWith(item.url) ? 700 : 600,
                 }}
               >
                 {t(item.label)}
@@ -272,7 +272,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                       py: 1,
                       px: 1.5,
                       color: 'text.primary',
-                      fontWeight: 400,
+                      fontWeight: 600,
                     }}
                   >
                     {t(link.title)}
@@ -301,7 +301,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                     py: 1,
                     px: 1.5,
                     color: 'text.primary',
-                    fontWeight: 400,
+                    fontWeight: 600,
                   }}
                 >
                   {t(link.title)}
