@@ -2,6 +2,14 @@ import '@/global.css';
 
 import type { Metadata, Viewport } from 'next';
 
+import { Instrument_Sans } from 'next/font/google';
+
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  variable: '--font-instrument-sans',
+  display: 'swap',
+});
+
 import { CONFIG } from '@/global-config';
 import { primary } from '@/theme/core/palette';
 import { LocalizationProvider } from '@/locales';
@@ -97,7 +105,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   const appConfig = await getAppConfig();
 
   return (
-    <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
+    <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning className={instrumentSans.variable}>
       <body>
         <InitColorSchemeScript
             defaultMode={themeConfig.defaultMode}

@@ -3,8 +3,6 @@
 import { paths } from '@/routes/paths';
 import { cdn } from '@normalfinance/utils';
 
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-
 import type { Props } from './normal-navbar';
 
 export const NormalNavbarDefaults: Props = {
@@ -20,6 +18,20 @@ export const NormalNavbarDefaults: Props = {
       megaMenu: {
         categoryLinks: [
           {
+            title: 'Earn',
+            links: [
+              {
+                url: paths.savings,
+                image: {
+                  src: cdn('nav/provide-liquidity.svg'),
+                  alt: 'Savings',
+                },
+                title: 'Savings',
+                description: 'Earn yield on your USDC.',
+              },
+            ],
+          },
+          {
             title: 'Trade',
             links: [
               {
@@ -32,15 +44,6 @@ export const NormalNavbarDefaults: Props = {
                 description: 'Exchange XLM and USDC.',
               },
               {
-                url: paths.assets.root,
-                image: {
-                  src: cdn('nav/explore.svg'),
-                  alt: 'Assets',
-                },
-                title: 'Assets',
-                description: 'View your wallet assets.',
-              },
-              {
                 url: paths.portfolio,
                 image: {
                   src: cdn('nav/portfolio.svg'),
@@ -48,29 +51,6 @@ export const NormalNavbarDefaults: Props = {
                 },
                 title: 'Portfolio',
                 description: 'View your account holdings.',
-              },
-            ],
-          },
-          {
-            title: 'Earn',
-            links: [
-              {
-                url: paths.savings,
-                image: {
-                  src: cdn('nav/provide-liquidity.svg'),
-                  alt: 'Savings',
-                },
-                title: 'Savings',
-                description: 'Earn yield on your USDC.',
-              },
-              {
-                url: paths.rewards,
-                image: {
-                  src: cdn('nav/rewards.svg'),
-                  alt: 'Rewards',
-                },
-                title: 'Rewards',
-                description: 'Refer friends & earn bonuses',
               },
             ],
           },
@@ -124,35 +104,23 @@ export const NormalNavbarDefaults: Props = {
                 title: 'Roadmap',
                 description: 'See where Normal is going.',
               },
+              {
+                url: 'https://normalfi.substack.com/',
+                image: {
+                  src: cdn('nav/blog.svg'),
+                  alt: 'Blog',
+                },
+                title: 'Blog',
+                description: 'News and updates from Normal.',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              },
             ],
           },
         ],
-        featuredSections: {
-          title: 'Shortcuts',
-          links: [
-            {
-              url: 'https://normalfi.substack.com/p/normal-partners-with-halborn-for',
-              image: {
-                src: cdn('nav/halborn.webp'),
-                alt: 'Normal Partners with Halborn',
-              },
-              title: 'Normal Partners with Halborn',
-              description: 'Comprehensive Security Audit, Backed by Stellar Development Foundation',
-              button: { title: 'Read more', variant: 'text', size: 'small' },
-            },
-          ],
-        },
-        button: {
-          title: 'All posts',
-          variant: 'text',
-          size: 'small',
-          endIcon: <ChevronRightIcon />,
-          href: paths.blog,
-          target: '_blank',
-          rel: 'noopener noreferrer',
-        },
       },
     },
+    { title: 'Savings', url: paths.savings },
     {
       title: 'Docs',
       url: paths.docs,

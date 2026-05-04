@@ -1,238 +1,297 @@
 'use client';
 
 import * as React from 'react';
-import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import Masonry from '@mui/lab/Masonry';
-import { Box, Paper, Stack, Avatar, Container, Typography, type ButtonProps } from '@mui/material';
+import Box from '@mui/material/Box';
+import Avatar from '@mui/material/Avatar';
+import { styled } from '@mui/material/styles';
 
-type ImageProps = { src: string; alt?: string };
+// ----------------------------------------------------------------------
 
 type Testimonial = {
-  quote: string;
-  avatar: ImageProps;
+  body: string;
   name: string;
-  position: string;
-  numberOfStars: number;
+  role: string;
+  avatar: string;
 };
 
-type CTA = {
-  title: string;
-  variant?: 'text' | 'outlined' | 'contained';
-} & Omit<ButtonProps, 'variant'>;
+const ALL: Testimonial[] = [
+  {
+    body: `"In portfolios, you're not just investing in assets; you're investing in teams. The Normal team's drive and positive energy are truly building something special that's inclusive to everyone."`,
+    name: 'Raphael Fortin',
+    role: 'Co-founder at Lumen Loop',
+    avatar: cdn('testimonials/6.webp'),
+  },
+  {
+    body: `"I believe in the Normal Team and their mission of index funds. I look forward to supporting them!"`,
+    name: 'Nima Beheshtian',
+    role: 'Head of Business at Luganodes',
+    avatar: cdn('testimonials/12.webp'),
+  },
+  {
+    body: `"Normal has made transitioning from traditional finance to DeFi effortless by streamlining the entire investing process. It serves as the perfect bridge connecting the old world with the new."`,
+    name: 'Clair Gamoke',
+    role: 'Head of Community at Bitcoin OS',
+    avatar: cdn('testimonials/13.webp'),
+  },
+  {
+    body: `"The Normal team is a beast and their product is awesome! I aspire to be Normal!"`,
+    name: 'Srijeth Padmesh',
+    role: 'Growth at Reclaim Protocol',
+    avatar: cdn('testimonials/11.webp'),
+  },
+  {
+    body: `"Normal index funds make financial freedom easy for my family."`,
+    name: 'Richie Lewis',
+    role: 'Professional Fighter and World Champion Wrestler',
+    avatar: cdn('testimonials/7.webp'),
+  },
+  {
+    body: `"Normal has the best team and makes investing simpler, smarter, and exactly how it should be."`,
+    name: 'Zahid Valencia',
+    role: 'Professional USA Wrestler',
+    avatar: cdn('testimonials/8.webp'),
+  },
+  {
+    body: `"Normal makes investing automated and customizable, perfect for users to diversify."`,
+    name: 'Roshan Vadassery',
+    role: 'Founder of Permissionaless.net and Crypto Influencer',
+    avatar: cdn('testimonials/10.webp'),
+  },
+  {
+    body: `"The Normal Team is legendary and their vision is clear with Normal index funds."`,
+    name: 'Shabbir Khan',
+    role: 'Investment Partner at EAK Ventures',
+    avatar: cdn('testimonials/14.webp'),
+  },
+  {
+    body: `"Normal saves me time and money — all while being as easy to use as my traditional banking apps."`,
+    name: 'Devin Kopp',
+    role: 'Co-founder @ Rodeo Money',
+    avatar: cdn('testimonials/1.webp'),
+  },
+  {
+    body: `"Normal is a platform that simplifies investing. The platform is very clean and easy to use."`,
+    name: 'Victor Acevedo',
+    role: 'An OG normie',
+    avatar: cdn('testimonials/3.webp'),
+  },
+];
 
-type Props = {
-  heading?: string;
-  description?: string;
-  testimonials?: Testimonial[];
-  cta?: CTA;
-};
+// Row 1: original order. Row 2: reversed — they scroll in opposite directions.
+const row1Base = ALL;
+const row2Base = [...ALL].reverse();
 
-export type TestimonialGridProps = React.ComponentPropsWithoutRef<'section'> & Props;
+// ----------------------------------------------------------------------
 
-const DEFAULT_PROPS = {
-  heading: 'Be anything but ',
-  description: '',
-  testimonials: [
-    {
-      quote: `"In portfolios, you're not just investing in assets; you're investing in teams. The Normal team’s drive and positive energy are truly building something special that’s inclusive to everyone."`,
-      avatar: { src: cdn('testimonials/6.webp') },
-      name: 'Raphael Fortin',
-      position: 'Co-founder at Lumen Loop',
-      numberOfStars: 5,
-    },
-    {
-      quote: `"I believe in the Normal Team and their mission of index funds. I look forward to supporting them!"`,
-      avatar: { src: cdn('testimonials/12.webp') },
-      name: 'Nima Beheshtian',
-      position: 'Head of Business at Luganodes',
-      numberOfStars: 4,
-    },
-    {
-      quote: `"Normal has made transitioning from traditional finance to DeFi effortless by streamlining the entire investing process. It serves as the perfect bridge connecting the old world with the new."`,
-      avatar: { src: cdn('testimonials/13.webp') },
-      name: 'Clair Gamoke',
-      position: 'Head of Community at Bitcoin OS',
-      numberOfStars: 5,
-    },
-    {
-      quote: `"The Normal team is a beast and their product is awesome! I aspire to be Normal!"`,
-      avatar: { src: cdn('testimonials/11.webp') },
-      name: 'Srijeth Padmesh',
-      position: 'Growth at Reclaim Protocol',
-      numberOfStars: 5,
-    },
-    // {
-    //   quote:
-    //     '"Hito Wallet, crypto friendly hardware, looks forward to storing Normal Crypto Index tokens."',
-    //   avatar: { src: cdn('testimonials/5.webp') },
-    //   name: 'Mikhail Kirillov',
-    //   position: 'Founder of Hito Wallet',
-    //   numberOfStars: 5,
-    // },
-    {
-      quote: `"Normal index funds make financial freedom easy for my family."`,
-      avatar: { src: cdn('testimonials/7.webp') },
-      name: 'Richie Lewis',
-      position: 'Professional Fighter and World Champion Wrestler',
-      numberOfStars: 5,
-    },
-    {
-      quote: `"Normal has the best team and makes investing simpler, smarter, and exactly how it should be."`,
-      avatar: { src: cdn('testimonials/8.webp') },
-      name: 'Zahid Valencia',
-      position: 'Professional USA Wrestler',
-      numberOfStars: 4,
-    },
-    {
-      quote: `"Normal makes investing automated and customizable, perfect for users to diversify."`,
-      avatar: { src: cdn('testimonials/10.webp') },
-      name: 'Roshan Vadassery',
-      position: 'Founder of Permissionaless.net and Crypto Influencer',
-      numberOfStars: 4,
-    },
-    // {
-    //   quote: `"Shoutout to Normal Crypto Indexes! Excited for the new protocol and token!"`,
-    //   avatar: { src: cdn('testimonials/9.webp') },
-    //   name: 'Lor Albrighi',
-    //   position: 'Founder of SPIN.FASHION',
-    //   numberOfStars: 5,
-    // },
-    {
-      quote: `"The Normal Team is legendary and their vision is clear with Normal index funds."`,
-      avatar: { src: cdn('testimonials/14.webp') },
-      name: 'Shabbir Khan',
-      position: 'Investment Partner at EAK Ventures',
-      numberOfStars: 5,
-    },
-    {
-      quote:
-        '"Normal saves me time and money - all while being as easy to use as my traditional banking apps."',
-      avatar: { src: cdn('testimonials/1.webp') },
-      name: 'Devin Kopp',
-      position: 'Co-founder @ Rodeo Money',
-      numberOfStars: 4,
-    },
-    // {
-    //   quote:
-    //     '"Whether you’re new to crypto or a long standing investor I would highly recommend checking out Normal. Through Normal’s investment indexes, you have the opportunity to invest in many components within the market, as well as still zeroing in on individual crypto’s should choose that direction."',
-    //   avatar: { src: cdn('testimonials/4.webp') },
-    //   name: 'Dr. McGuire',
-    //   position: 'Doctor of Education (Ed. D.)',
-    //   numberOfStars: 5,
-    // },
-    // {
-    //   quote:
-    //     '"Instead of picking out each coin, Normal allows you to invest in the whole market at once. Normal makes it a no brainer."',
-    //   avatar: { src: cdn('testimonials/2.webp') },
-    //   name: 'Jake Penzato',
-    //   position: 'Student at Aurora University',
-    //   numberOfStars: 5,
-    // },
-    {
-      quote:
-        '"Normal is a platform that simplifies investing. The platform is very clean and easy to use."',
-      avatar: { src: cdn('testimonials/3.webp') },
-      name: 'Victor Acevedo',
-      position: 'An OG normie',
-      numberOfStars: 5,
-    },
-  ],
-};
+const SectionRoot = styled('section')({
+  backgroundColor: '#fff',
+});
 
-const TestimonialCard: React.FC<Testimonial> = ({
-  quote,
-  avatar,
-  name,
-  position,
-  numberOfStars,
-}) => {
-  const { t } = useTranslate();
+const CarouselWrapper = styled('div')({
+  position: 'relative',
+  overflowX: 'clip',
+  '&::before, &::after': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 120,
+    pointerEvents: 'none',
+    zIndex: 2,
+  },
+  '&::before': {
+    left: 0,
+    background: 'linear-gradient(90deg, #fff, transparent)',
+  },
+  '&::after': {
+    right: 0,
+    background: 'linear-gradient(-90deg, #fff, transparent)',
+  },
+  '&:hover .testi-row': {
+    animationPlayState: 'paused',
+  },
+  '@media (prefers-reduced-motion: reduce)': {
+    '& .testi-row': {
+      animationPlayState: 'paused',
+    },
+  },
+});
 
-  return (
-    <Paper
-      variant="outlined"
-      sx={(theme) => ({
-        borderRadius: 2,
-        p: { xs: 3, md: 4 },
-        display: 'flex',
-        flexDirection: 'column',
-        bgcolor: theme.palette.grey[100],
-        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
-      })}
+const Row = styled('div')<{ direction: 'left' | 'right' }>(({ direction }) => ({
+  display: 'flex',
+  gap: 16,
+  width: 'max-content',
+  willChange: 'transform',
+  ...(direction === 'left'
+    ? {
+        animation: 'testi-scroll-left 70s linear infinite',
+        '@keyframes testi-scroll-left': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
+      }
+    : {
+        animation: 'testi-scroll-right 90s linear infinite',
+        '@keyframes testi-scroll-right': {
+          from: { transform: 'translateX(-50%)' },
+          to: { transform: 'translateX(0)' },
+        },
+      }),
+}));
+
+const Card = styled('figure')({
+  margin: 0,
+  width: 360,
+  flexShrink: 0,
+  backgroundColor: '#fafafa',
+  border: '1px solid #e8e8ec',
+  borderRadius: 18,
+  padding: 22,
+  minHeight: 200,
+  display: 'flex',
+  flexDirection: 'column',
+});
+
+// ----------------------------------------------------------------------
+
+type CardProps = { testimonial: Testimonial; hidden?: boolean };
+
+const TestimonialCard: React.FC<CardProps> = ({ testimonial, hidden }) => (
+  <Card aria-hidden={hidden || undefined}>
+    <Box
+      component="blockquote"
+      sx={{
+        m: 0,
+        fontSize: 15,
+        lineHeight: 1.5,
+        color: '#0a0a0b',
+        letterSpacing: '-0.005em',
+        flex: 1,
+      }}
     >
-      <Box mb={{ xs: 2.5, md: 3 }} display="flex">
-        {Array.from({ length: numberOfStars }).map((_, i) => (
-          <Box key={i} component="span" sx={{ color: 'warning.main', display: 'inline-flex' }}>
-            <Icon icon="material-symbols:star-rounded" width={24} height={24} />
-          </Box>
-        ))}
-      </Box>
+      {testimonial.body}
+    </Box>
 
-      <Typography variant="body1" mb={{ xs: 2.5, md: 3 }}>
-        {t(quote)}
-      </Typography>
-
-      <Stack direction="row" spacing={2} alignItems="center" mt="auto">
-        <Avatar src={avatar.src} alt={avatar.alt} sx={{ width: 48, height: 48 }} />
-        <Box>
-          <Typography fontWeight={600}>{t(name)}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t(position)}
-          </Typography>
+    <Box
+      component="figcaption"
+      sx={{
+        mt: 'auto',
+        pt: '18px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+      }}
+    >
+      <Avatar
+        src={testimonial.avatar}
+        alt={testimonial.name}
+        sx={{ width: 32, height: 32 }}
+      />
+      <Box>
+        <Box
+          component="span"
+          sx={{ display: 'block', fontSize: 13.5, fontWeight: 500, color: '#0a0a0b' }}
+        >
+          {testimonial.name}
         </Box>
-      </Stack>
-    </Paper>
-  );
-};
+        <Box
+          component="span"
+          sx={{ display: 'block', fontSize: 12.5, color: '#6b6b76' }}
+        >
+          {testimonial.role}
+        </Box>
+      </Box>
+    </Box>
+  </Card>
+);
 
-export const TestimonialGrid: React.FC<TestimonialGridProps> = ({
-  heading = DEFAULT_PROPS.heading,
-  description = DEFAULT_PROPS.description,
-  testimonials = DEFAULT_PROPS.testimonials,
-  ...sectionProps
-}) => {
+// ----------------------------------------------------------------------
+
+export type TestimonialGridProps = React.ComponentPropsWithoutRef<'section'>;
+
+export const TestimonialGrid: React.FC<TestimonialGridProps> = (props) => {
   const { t } = useTranslate();
 
   return (
-    <Box component="section" sx={{ px: '5%', py: { xs: 6, md: 12, lg: 14 } }} {...sectionProps}>
-      <Container disableGutters>
-        <Stack spacing={2} maxWidth={640} mx="auto" textAlign="center" mb={{ xs: 6, md: 8 }}>
-          <Typography variant="h2" fontWeight={500}>
-            {t(heading)}
+    <SectionRoot aria-labelledby="testimonials-heading" {...props}>
+      <Box sx={{ py: 12 }}>
+        {/* Header — constrained */}
+        <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
+          <Box
+            component="p"
+            sx={{
+              m: 0,
+              mb: '14px',
+              fontSize: 12,
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: '#6b6b76',
+            }}
+          >
+            {t('— Loved by')}
+          </Box>
+
+          <Box
+            component="h2"
+            id="testimonials-heading"
+            sx={{
+              m: 0,
+              fontSize: 'clamp(34px, 4.4vw, 56px)',
+              fontWeight: 600,
+              letterSpacing: '-0.03em',
+              lineHeight: 1.04,
+              color: '#0a0a0b',
+            }}
+          >
+            {t('Loved by')}{' '}
             <Box
               component="span"
               sx={{
-                background: `linear-gradient(
-                                            90deg,
-                                            #2DE9C8 0%,
-                                            #00AFF7 20%,
-                                            #947BFF 40%,
-                                            #F8279C 60%,
-                                            #FF6F4C 80%,
-                                            #FFE13D 100%
-                                          )`,
+                fontStyle: 'italic',
+                background: 'linear-gradient(90deg, #2bd2ff 0%, #b561ff 40%, #ff5cb1 70%, #ffb347 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
               }}
             >
-              {t('normal')}
+              {t('Normies')}
             </Box>
-          </Typography>
-          {description && <Typography color="text.secondary">{t(description)}</Typography>}
-        </Stack>
+          </Box>
+        </Box>
 
-        <Masonry columns={{ xs: 1, md: 2, lg: 3 }} sx={{ m: 0 }} spacing={2}>
-          {testimonials.map((tItem, i) => (
-            <TestimonialCard key={i} {...tItem} />
-          ))}
-        </Masonry>
-      </Container>
-    </Box>
+        {/* Carousel — full-bleed */}
+        <CarouselWrapper sx={{ mt: 7, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Row 1 — scrolls left */}
+          <Row direction="left" className="testi-row">
+            {[...row1Base, ...row1Base].map((item, i) => (
+              <TestimonialCard
+                key={`r1-${i}`}
+                testimonial={item}
+                hidden={i >= row1Base.length}
+              />
+            ))}
+          </Row>
+
+          {/* Row 2 — scrolls right */}
+          <Row direction="right" className="testi-row">
+            {[...row2Base, ...row2Base].map((item, i) => (
+              <TestimonialCard
+                key={`r2-${i}`}
+                testimonial={item}
+                hidden={i >= row2Base.length}
+              />
+            ))}
+          </Row>
+        </CarouselWrapper>
+      </Box>
+    </SectionRoot>
   );
 };
 
 TestimonialGrid.displayName = 'TestimonialGrid';
+
+export default TestimonialGrid;

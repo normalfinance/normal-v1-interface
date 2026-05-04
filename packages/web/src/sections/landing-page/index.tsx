@@ -6,6 +6,10 @@ import { useEffect } from 'react';
 import { cdn, logger } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
+import BrandMarquee from '@/components/BrandMarquee';
+import RoadmapSection from '@/components/RoadmapSection';
+import { Vision } from '@/components/_about-us-page-components/vision';
+
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
 import { HeroHeader } from './hero-header';
@@ -69,7 +73,10 @@ export default function LandingPage() {
   return (
     <>
       <HeroHeader/>
+      <BrandMarquee />
+      <Vision />
       <StatsGrid />
+      <RoadmapSection />
       <TestimonialGrid />
       <FaqAccordion />
       <CtaImage />

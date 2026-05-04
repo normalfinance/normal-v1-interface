@@ -1,169 +1,207 @@
 'use client';
 
 import * as React from 'react';
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 
-import Grid2 from '@mui/material/Grid2';
-import { Box, Paper, Button, Container, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import { styled } from '@mui/material/styles';
 
-type StatsProps = {
-  percentage: string;
-  heading: string;
-  description: string;
-};
+import { Iconify } from '@/components/template/iconify';
 
-type Props = {
-  tagline?: string;
-  heading?: string;
-  description?: string;
-  stats?: StatsProps[];
-};
+// ----------------------------------------------------------------------
 
-export type StatsGridProps = React.ComponentPropsWithoutRef<'section'> & Props;
+const STATS = [
+  { label: 'Total deposits', value: '$24M+', hint: 'across USDC vaults' },
+  { label: 'Active wallets', value: '12.8K', hint: 'and growing daily' },
+  { label: 'Countries served', value: '50+', hint: 'fiat ramps live' },
+  { label: 'Avg. settlement', value: '0.5s', hint: 'on Stellar mainnet' },
+];
 
-const DEFAULT_PROPS = {
-  tagline: 'Tagline',
-  heading: 'Trusted by thousands',
-  description:
-    "Normal is building the simplest way to grow your money on-chain. It's an automated savings account that gives you complete diversification across yield, crypto, and tokenized real-world assets (RWAs) — all in one place.",
-  stats: [
-    {
-      percentage: '$1M+',
-      heading: 'AUM',
-      description: '',
-    },
-    {
-      percentage: '2,000+',
-      heading: 'Users',
-      description: '',
-    },
-    {
-      percentage: '50+',
-      heading: 'Countries',
-      description: '',
-    },
-    {
-      percentage: 'Coming soon',
-      heading: 'Total volume',
-      description: '',
-    },
-  ],
-};
+// ----------------------------------------------------------------------
 
-const StatCard: React.FC<StatsProps> = ({ percentage, heading }) => {
+const SectionRoot = styled('section')({
+  backgroundColor: '#0c0c0e',
+  color: '#fff',
+});
+
+const Inner = styled('div')(({ theme }) => ({
+  maxWidth: 1200,
+  margin: '0 auto',
+  padding: `${theme.spacing(12)} ${theme.spacing(3)}`,
+}));
+
+const StatCard = styled('div')({
+  backgroundColor: '#15151a',
+  border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: 18,
+  padding: 28,
+  minHeight: 180,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'space-between',
+});
+
+// ----------------------------------------------------------------------
+
+export type StatsGridProps = React.ComponentPropsWithoutRef<'section'>;
+
+export const StatsGrid: React.FC<StatsGridProps> = (props) => {
   const { t } = useTranslate();
-  return (
-    <Paper
-      variant="outlined"
-      sx={(theme) => ({
-        borderRadius: 3,
-        bgcolor: theme.palette.grey[100],
-        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
-      })}
-    >
-      <Box
-        sx={{
-          p: { xs: 2.5, md: 4 },
-          height: '100%',
-        }}
-      >
-        <Typography variant="h6" component="h3" fontWeight={400} sx={{ lineHeight: 1.4 }}>
-          {t(heading)}
-        </Typography>
 
-        <Typography
-          component="p"
-          fontWeight={500}
+  return (
+    <SectionRoot aria-labelledby="trusted-heading" {...props}>
+      <Inner>
+        {/* Header row */}
+        <Box
           sx={{
-            fontSize: '48px',
-            mt: { xs: 4, md: 5, lg: 6 },
-            lineHeight: 1.3,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', md: 'flex-end' },
+            gap: 4,
+            flexDirection: { xs: 'column', md: 'row' },
           }}
         >
-          {percentage}
-        </Typography>
-      </Box>
-    </Paper>
-  );
-};
-
-export const StatsGrid: React.FC<StatsGridProps> = ({
-  tagline = DEFAULT_PROPS.tagline,
-  heading = DEFAULT_PROPS.heading,
-  description = DEFAULT_PROPS.description,
-  stats = DEFAULT_PROPS.stats,
-  ...sectionProps
-}) => {
-  const { t } = useTranslate();
-
-  return (
-    <Box
-      component="section"
-      sx={{
-        px: '5%',
-        py: { xs: 6, md: 8, lg: 10 },
-      }}
-      {...sectionProps}
-    >
-      <Container>
-        <Grid2
-          container
-          spacing={{ xs: 6, lg: 8 }}
-          alignItems="center"
-          columns={{ xs: 1, lg: 12 }}
-          height={1}
-        >
-          <Grid2
-            size={{ xs: 12, lg: 5 }}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              pt: { md: '0 !important' },
-            }}
-            height={1}
-          >
-            <Typography variant="h3" fontWeight={500} mb={2}>
-              {heading}
-            </Typography>
-
-            <Box sx={{ mt: 'auto' }}>
-              <Typography color="text.secondary" mb={2}>
-                {description}
-              </Typography>
-
-              <Button
-                variant="contained"
-                sx={{
-                  mt: 0.5,
-                  borderRadius: 1,
-                  bgcolor: 'secondary.light',
-                  '&:hover': { bgcolor: 'secondary.light' },
-                  color: 'text.primary',
-                }}
-              // onClick={() =>
-              //   trackEvent('button_clicked', {
-              //     label: 'Learn more',
-              //     location: 'Home',
-              //   })
-              // }
-              >
-                {t('Learn more')}
-              </Button>
+          {/* Left */}
+          <Box>
+            <Box
+              component="p"
+              sx={{
+                m: 0,
+                mb: '14px',
+                fontSize: 12,
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: '#8a8a93',
+              }}
+            >
+              {t('— Trusted globally')}
             </Box>
-          </Grid2>
 
-          <Grid2 size={{ xs: 1, lg: 7 }}>
-            <Grid2 container spacing={4}>
-              {stats.map((s, i) => (
-                <Grid2 size={{ xs: 12, md: 6 }} key={i}>
-                  <StatCard {...s} />
-                </Grid2>
-              ))}
-            </Grid2>
-          </Grid2>
-        </Grid2>
-      </Container>
-    </Box>
+            <Box
+              component="h2"
+              id="trusted-heading"
+              sx={{
+                m: 0,
+                fontSize: 'clamp(34px, 4.4vw, 56px)',
+                fontWeight: 600,
+                letterSpacing: '-0.03em',
+                lineHeight: 1.04,
+                color: '#fff',
+                maxWidth: '22ch',
+              }}
+            >
+              {t('Where money meets the future.')}
+            </Box>
+
+            <Box
+              component="p"
+              sx={{
+                m: 0,
+                mt: '14px',
+                fontSize: 17,
+                color: '#a8a8b0',
+                maxWidth: '60ch',
+                lineHeight: 1.5,
+              }}
+            >
+              {t(
+                'Built on Stellar, audited by Halborn, and trusted by thousands of users sending, saving, and earning across borders.'
+              )}
+            </Box>
+          </Box>
+
+          {/* Right — CTA */}
+          <Box sx={{ flexShrink: 0 }}>
+            <Button
+              component="a"
+              href={paths.socials.discord}
+              target="_blank"
+              rel="noopener noreferrer"
+              startIcon={<Iconify icon="bxl:discord-alt" width={16} />}
+              sx={{
+                height: 44,
+                px: '20px',
+                borderRadius: '999px',
+                bgcolor: '#fff',
+                color: '#0c0c0e',
+                fontWeight: 600,
+                fontSize: '14.5px',
+                textTransform: 'none',
+                whiteSpace: 'nowrap',
+                transition: 'background 150ms, transform 150ms',
+                '&:hover': {
+                  bgcolor: '#f4f4f7',
+                  transform: 'translateY(-1px)',
+                },
+              }}
+            >
+              {t('Join our Discord')}
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Stats grid */}
+        <Box
+          sx={{
+            mt: 7,
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: '1fr 1fr',
+              md: 'repeat(4, 1fr)',
+            },
+            gap: 2,
+          }}
+        >
+          {STATS.map((stat) => (
+            <StatCard key={stat.label}>
+              <Box
+                component="span"
+                sx={{
+                  fontSize: 11.5,
+                  fontWeight: 500,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  color: '#8a8a93',
+                }}
+              >
+                {t(stat.label)}
+              </Box>
+
+              <Box>
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'block',
+                    fontSize: 48,
+                    fontWeight: 600,
+                    letterSpacing: '-0.03em',
+                    lineHeight: 1,
+                    color: '#fff',
+                  }}
+                >
+                  {stat.value}
+                </Box>
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'block',
+                    fontSize: 12.5,
+                    color: '#8a8a93',
+                    mt: '6px',
+                  }}
+                >
+                  {t(stat.hint)}
+                </Box>
+              </Box>
+            </StatCard>
+          ))}
+        </Box>
+      </Inner>
+    </SectionRoot>
   );
 };
 
