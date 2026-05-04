@@ -121,6 +121,7 @@ export const NormalNavbarDefaults: Props = {
         ],
       },
     },
+    { title: 'Savings', url: paths.savings },
     {
       title: 'Docs',
       url: paths.docs,

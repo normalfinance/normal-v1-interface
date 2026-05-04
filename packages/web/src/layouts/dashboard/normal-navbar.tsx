@@ -19,8 +19,6 @@ import { Logo } from '@/components/template/logo';
 
 
 const NAV_ITEMS: { url: string; label: string }[] = [
-  { url: paths.invest, label: 'Invest' },
-  { url: paths.portfolio, label: 'Portfolio' },
   { url: paths.help.feedbackForm, label: 'Feedback' },
 ];
 
@@ -368,6 +366,26 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                 .map((link, i) => (
                   <MobileMega key={i} megaMenu={link.megaMenu!} />
                 ))}
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  className="rainbow-button"
+                  component="a"
+                  variant="soft"
+                  fullWidth
+                  href={paths.help.feedbackForm}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    textTransform: 'none',
+                    py: 1.5,
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('Feedback')}
+                </Button>
+              </Box>
             </Box>
           </m.div>
         )}
