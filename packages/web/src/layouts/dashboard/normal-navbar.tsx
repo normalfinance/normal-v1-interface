@@ -20,14 +20,12 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/material';
 
 import { Logo } from '@/components/template/logo';
-import { GlowBorder } from '@/components/_common/glow-border';
 
 
 const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
 const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
 
 const NAV_ITEMS: { url: string; label: string }[] = [
-  { url: paths.assets.root, label: 'Assets' },
   { url: paths.invest, label: 'Invest' },
   { url: paths.portfolio, label: 'Portfolio' },
   { url: paths.help.feedbackForm, label: 'Feedback' },
@@ -187,85 +185,14 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         sx={{
           width: '100%',
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr auto', lg: '1fr auto' },
+          gridTemplateColumns: { xs: '1fr auto', lg: 'auto 1fr auto' },
           alignItems: 'center',
           columnGap: 2,
         }}
       >
+        {/* Column 1: Logo + mobile hamburger */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Logo isSingle={false} sx={{ display: { xs: 'none', lg: 'inline-flex' }, height: 28 }} />
-
-          {/* Quick nav links - desktop only */}
-          <Box
-            sx={{
-              display: { xs: 'none', lg: 'flex' },
-              alignItems: 'center',
-              ml: 2,
-              gap: 0.5,
-            }}
-          >
-            {NAV_ITEMS.map((item) => (
-              <div key={item.url}>
-                {item.label === 'Feedback' ? (
-                  <Button
-                    className="rainbow-button"
-                    component="a"
-                    variant="soft"
-                    onClick={() => window.open(item.url, '_blank', 'noopener')}
-                    sx={{
-                      textTransform: 'none',
-                      py: 0.5,
-                      px: 1.5,
-                      color: '#fff',
-                      fontSize: '12px',
-                    }}
-                  >
-                    {t(item.label)}
-                  </Button>
-                ) : (
-                  <>
-                    {pathname.startsWith(item.url) ? (
-                      <GlowBorder
-                        radius={8}
-                        borderWidth={1}
-                        glowOpacity={0}
-                        glowSpread={0}
-                        glowBlur={0}
-                      >
-                        <Button
-                          component="a"
-                          href={item.url}
-                          sx={{
-                            textTransform: 'none',
-                            py: 0.5,
-                            px: 1.5,
-                            color: 'text.primary',
-                            fontWeight: 400,
-                          }}
-                        >
-                          {t(item.label)}
-                        </Button>
-                      </GlowBorder>
-                    ) : (
-                      <Button
-                        component="a"
-                        href={item.url}
-                        sx={{
-                          textTransform: 'none',
-                          py: 0.5,
-                          px: 1.5,
-                          color: 'text.primary',
-                          fontWeight: 400,
-                        }}
-                      >
-                        {t(item.label)}
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
-          </Box>
           <IconButton
             onClick={toggleMobile}
             aria-label={mobileOpen ? t('Close menu') : t('Open menu')}
@@ -297,55 +224,59 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           </IconButton>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-          <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center' }}>
-            {links.map((link, i) => {
-              const hasMega = !!link.megaMenu;
-              const { target, rel } = linkAttrs(link.url, link.target, link.rel);
-              const chevronVariants = { open: { rotate: 180 }, closed: { rotate: 0 } } as const;
-              if (hasMega) {
-                return (
-                  <Box
-                    key={i}
-                    onMouseEnter={() => openDock(i)}
-                    onMouseLeave={() => scheduleClose()}
-                  >
-                    <Button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openDock(i);
-                      }}
-                      aria-expanded={dockOpen && activeIdx === i ? true : undefined}
-                      endIcon={
-                        <m.span
-                          style={{ display: 'inline-flex', alignItems: 'center' }}
-                          animate={dockOpen && activeIdx === i ? 'open' : 'closed'}
-                          variants={chevronVariants}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <ExpandMoreIcon />
-                        </m.span>
-                      }
-                      sx={{
-                        textTransform: 'none',
-                        py: 1,
-                        px: 1.5,
-                        color: 'text.primary',
-                        fontWeight: 400,
-                      }}
-                    >
-                      {t(link.title)}
-                    </Button>
-                  </Box>
-                );
-              }
+        {/* Column 2: All nav links — desktop only, centered */}
+        <Box
+          sx={{
+            display: { xs: 'none', lg: 'flex' },
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 0.5,
+          }}
+        >
+          {NAV_ITEMS.filter((item) => item.label !== 'Feedback').map((item) => (
+            <div key={item.url}>
+              <Button
+                component="a"
+                href={item.url}
+                sx={{
+                  textTransform: 'none',
+                  py: 0.5,
+                  px: 1.5,
+                  color: 'text.primary',
+                  fontWeight: pathname.startsWith(item.url) ? 600 : 400,
+                }}
+              >
+                {t(item.label)}
+              </Button>
+            </div>
+          ))}
+          {links.map((link, i) => {
+            const hasMega = !!link.megaMenu;
+            const { target, rel } = linkAttrs(link.url, link.target, link.rel);
+            const chevronVariants = { open: { rotate: 180 }, closed: { rotate: 0 } } as const;
+            if (hasMega) {
               return (
-                <Box key={i}>
+                <Box
+                  key={i}
+                  onMouseEnter={() => openDock(i)}
+                  onMouseLeave={() => scheduleClose()}
+                >
                   <Button
-                    component="a"
-                    href={link.url}
-                    target={target}
-                    rel={rel}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openDock(i);
+                    }}
+                    aria-expanded={dockOpen && activeIdx === i ? true : undefined}
+                    endIcon={
+                      <m.span
+                        style={{ display: 'inline-flex', alignItems: 'center' }}
+                        animate={dockOpen && activeIdx === i ? 'open' : 'closed'}
+                        variants={chevronVariants}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ExpandMoreIcon />
+                      </m.span>
+                    }
                     sx={{
                       textTransform: 'none',
                       py: 1,
@@ -358,14 +289,52 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                   </Button>
                 </Box>
               );
-            })}
-          </Box>
+            }
+            return (
+              <Box key={i}>
+                <Button
+                  component="a"
+                  href={link.url}
+                  target={target}
+                  rel={rel}
+                  sx={{
+                    textTransform: 'none',
+                    py: 1,
+                    px: 1.5,
+                    color: 'text.primary',
+                    fontWeight: 400,
+                  }}
+                >
+                  {t(link.title)}
+                </Button>
+              </Box>
+            );
+          })}
+          {NAV_ITEMS.filter((item) => item.label === 'Feedback').map((item) => (
+            <Button
+              key={item.url}
+              className="rainbow-button"
+              component="a"
+              variant="soft"
+              onClick={() => window.open(item.url, '_blank', 'noopener')}
+              sx={{
+                textTransform: 'none',
+                py: 0.5,
+                px: 1.5,
+                color: '#fff',
+                fontSize: '12px',
+              }}
+            >
+              {t(item.label)}
+            </Button>
+          ))}
+        </Box>
 
-          <Box sx={{ display: { xs: 'flex', lg: 'flex' }, alignItems: 'center', gap: 1 }}>
-            {networkToggle}
-            {language}
-            {account}
-          </Box>
+        {/* Column 3: Account controls */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+          {networkToggle}
+          {language}
+          {account}
         </Box>
       </Box>
 

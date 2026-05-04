@@ -32,15 +32,6 @@ export const NormalNavbarDefaults: Props = {
                 description: 'Exchange XLM and USDC.',
               },
               {
-                url: paths.assets.root,
-                image: {
-                  src: cdn('nav/explore.svg'),
-                  alt: 'Assets',
-                },
-                title: 'Assets',
-                description: 'View your wallet assets.',
-              },
-              {
                 url: paths.portfolio,
                 image: {
                   src: cdn('nav/portfolio.svg'),
@@ -62,15 +53,6 @@ export const NormalNavbarDefaults: Props = {
                 },
                 title: 'Savings',
                 description: 'Earn yield on your USDC.',
-              },
-              {
-                url: paths.rewards,
-                image: {
-                  src: cdn('nav/rewards.svg'),
-                  alt: 'Rewards',
-                },
-                title: 'Rewards',
-                description: 'Refer friends & earn bonuses',
               },
             ],
           },
