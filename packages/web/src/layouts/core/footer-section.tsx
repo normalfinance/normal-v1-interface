@@ -22,7 +22,9 @@ const LINKS = [
   {
     headline: 'App',
     children: [
-      { name: 'Assets', href: paths.assets },
+      { name: 'Savings', href: paths.savings },
+      { name: 'Swap', href: paths.swap },
+      { name: 'Portfolio', href: paths.portfolio },
     ],
   },
   {
