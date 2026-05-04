@@ -30,7 +30,6 @@ import { NetworkToggle, NETWORK_SWITCH_ENABLED } from '../components/network-tog
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
-import { L } from '@upstash/redis/zmscore-Cq_Bzgy4';
 
 // ----------------------------------------------------------------------
 
