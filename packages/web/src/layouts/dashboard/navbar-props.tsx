@@ -3,7 +3,6 @@
 import { paths } from '@/routes/paths';
 import { cdn } from '@normalfinance/utils';
 
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import type { Props } from './normal-navbar';
 
@@ -106,33 +105,20 @@ export const NormalNavbarDefaults: Props = {
                 title: 'Roadmap',
                 description: 'See where Normal is going.',
               },
+              {
+                url: 'https://normalfi.substack.com/',
+                image: {
+                  src: cdn('nav/blog.svg'),
+                  alt: 'Blog',
+                },
+                title: 'Blog',
+                description: 'News and updates from Normal.',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              },
             ],
           },
         ],
-        featuredSections: {
-          title: 'Shortcuts',
-          links: [
-            {
-              url: 'https://normalfi.substack.com/p/normal-partners-with-halborn-for',
-              image: {
-                src: cdn('nav/halborn.webp'),
-                alt: 'Normal Partners with Halborn',
-              },
-              title: 'Normal Partners with Halborn',
-              description: 'Comprehensive Security Audit, Backed by Stellar Development Foundation',
-              button: { title: 'Read more', variant: 'text', size: 'small' },
-            },
-          ],
-        },
-        button: {
-          title: 'All posts',
-          variant: 'text',
-          size: 'small',
-          endIcon: <ChevronRightIcon />,
-          href: paths.blog,
-          target: '_blank',
-          rel: 'noopener noreferrer',
-        },
       },
     },
     {

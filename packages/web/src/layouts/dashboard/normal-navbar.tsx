@@ -6,24 +6,17 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { usePathname } from '@/routes/hooks';
 import { m, AnimatePresence } from 'framer-motion';
-import React, { useRef, useMemo, useState, useEffect, useCallback, useLayoutEffect } from 'react';
-import {
-  GROUP_ACCENTS,
-  GROUP_ACCENTS_DARK,
-  groupAccentByIndex,
-  groupAccentDarkByIndex,
-} from '@/theme/accents';
+import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { groupAccentByIndex, groupAccentDarkByIndex } from '@/theme/accents';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+
 import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/material';
 
 import { Logo } from '@/components/template/logo';
 
 
-const FEATURED_ACCENT = GROUP_ACCENTS[5] ?? '#FFB020';
-const FEATURED_ACCENT_TEXT = GROUP_ACCENTS_DARK[5] ?? groupAccentDarkByIndex(5);
 
 const NAV_ITEMS: { url: string; label: string }[] = [
   { url: paths.invest, label: 'Invest' },
@@ -61,8 +54,8 @@ type CategoryLink = { title: string; links: MegaMenuLink[] };
 
 type MegaMenuProps = {
   categoryLinks: CategoryLink[];
-  featuredSections: { title: string; links: MegaMenuLink[] };
-  button: NavButton;
+  featuredSections?: { title: string; links: MegaMenuLink[] };
+  button?: NavButton;
 };
 
 type LinkProps = {
@@ -95,10 +88,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   const [dockOpen, setDockOpen] = useState(false);
   const hoverTimerRef = useRef<number | null>(null);
 
-  const activeMega = useMemo(
-    () => (activeIdx != null ? (links[activeIdx]?.megaMenu ?? null) : null),
-    [activeIdx, links]
-  );
 
   const clearTimer = () => {
     if (hoverTimerRef.current) {
@@ -176,7 +165,8 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         alignItems: 'center',
         justifyContent: 'space-between',
         borderBottom: `1px solid ${theme.palette.divider}`,
-        backgroundColor: theme.palette.background.paper,
+        background: 'linear-gradient(180deg, rgba(234, 250, 254, 0.85) 0%, rgba(245, 240, 255, 0.78) 100%)',
+        backdropFilter: 'blur(20px) saturate(180%)',
         minHeight: { xs: 64, lg: 72 },
         px: { xs: 2, lg: 4 },
       }}
@@ -187,7 +177,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           maxWidth: 1400,
           mx: 'auto',
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr auto', lg: 'auto 1fr auto' },
+          gridTemplateColumns: { xs: '1fr auto', lg: 'auto auto 1fr' },
           alignItems: 'center',
           columnGap: 2,
         }}
@@ -226,12 +216,11 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           </IconButton>
         </Box>
 
-        {/* Column 2: All nav links — desktop only, centered */}
+        {/* Column 2: All nav links — desktop only, left-aligned */}
         <Box
           sx={{
             display: { xs: 'none', lg: 'flex' },
             alignItems: 'center',
-            justifyContent: 'center',
             gap: 0.5,
           }}
         >
@@ -260,6 +249,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               return (
                 <Box
                   key={i}
+                  sx={{ position: 'relative' }}
                   onMouseEnter={() => openDock(i)}
                   onMouseLeave={() => scheduleClose()}
                 >
@@ -289,6 +279,15 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                   >
                     {t(link.title)}
                   </Button>
+                  {isDesktop && (
+                    <DesktopDock
+                      open={dockOpen && activeIdx === i}
+                      onMouseEnter={() => clearTimer()}
+                      onMouseLeave={() => scheduleClose()}
+                    >
+                      <DockContent mega={link.megaMenu!} />
+                    </DesktopDock>
+                  )}
                 </Box>
               );
             }
@@ -340,13 +339,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         </Box>
       </Box>
 
-      <DesktopDock
-        open={isDesktop && dockOpen && !!activeMega}
-        onMouseEnter={() => clearTimer()}
-        onMouseLeave={() => scheduleClose()}
-      >
-        {activeMega && <DockContent mega={activeMega} />}
-      </DesktopDock>
 
       <AnimatePresence initial={false}>
         {mobileOpen && (
@@ -408,19 +400,20 @@ function DesktopDock({
       transition={{ duration: 0.2 }}
       style={{
         position: 'absolute',
-        left: 0,
-        right: 0,
         top: '100%',
+        left: 0,
         zIndex: theme.zIndex.appBar + 1,
+        marginTop: 4,
       }}
     >
       <Box
         sx={{
-          px: 2,
-          borderTop: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
-          borderBottom: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
-          bgcolor: theme.palette.background.paper,
+          borderRadius: 2,
+          border: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+          background: 'linear-gradient(180deg, rgb(234, 250, 254) 0%, rgb(245, 240, 255) 100%)',
           boxShadow: `0 16px 40px ${alpha('#000', 0.14)}`,
+          overflow: 'hidden',
+          px: 1,
         }}
       >
         {children}
@@ -431,258 +424,87 @@ function DesktopDock({
 
 function DockContent({ mega }: { mega: MegaMenuProps }) {
   const { t: tDock } = useTranslate();
-
-  const href = mega.button.href;
-  const isExternal = !!href && /^https?:\/\//i.test(href);
-
-  const btnDefaults = {
-    component: mega.button.component ?? (href ? 'a' : undefined),
-    target: mega.button.target ?? (isExternal ? '_blank' : undefined),
-    rel:
-      mega.button.rel ??
-      ((mega.button.target ?? (isExternal ? '_blank' : '')) === '_blank'
-        ? 'noopener noreferrer'
-        : undefined),
-  };
+  const allLinks = mega.categoryLinks.flatMap((group) => group.links);
 
   return (
-    <Box sx={{ display: 'flex', gap: { xs: 2, lg: 4 }, alignItems: 'stretch' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'stretch',
+      }}
+    >
+      {/* Left: flat link list — 2 columns */}
       <Box
         sx={{
-          flex: 1,
+          width: 480,
+          py: 2,
           display: 'grid',
-          gridTemplateColumns: 'repeat(1, minmax(0, 1fr))',
-          columnGap: { xs: 2, md: 2 },
-          rowGap: { xs: 4, md: 4 },
-          pr: { lg: 3 },
-          py: 4,
-          px: 2,
-          '@media (min-width: 900px)': { gridTemplateColumns: 'repeat(2, minmax(0, 320px))' },
-          '@media (min-width: 1200px)': { gridTemplateColumns: 'repeat(3, minmax(0, 320px))' },
-          '@media (min-width: 1440px)': { gridTemplateColumns: 'repeat(4, minmax(0, 320px))' },
-          '@media (min-width: 1600px)': { gridTemplateColumns: 'repeat(5, minmax(0, 320px))' },
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          alignContent: 'start',
+          gap: 0.5,
         }}
       >
-        {mega.categoryLinks.map((group, gi) => {
-          const accent = groupAccentByIndex(gi);
-          const accentText = groupAccentDarkByIndex(gi);
+        {allLinks.map((l, li) => {
+          const { target, rel } = linkAttrs(l.url, l.target, l.rel);
           return (
             <Box
-              key={gi}
-              sx={{ display: 'grid', gridAutoRows: 'max-content', rowGap: { xs: 1, md: 2 } }}
+              key={li}
+              component="a"
+              href={l.url}
+              target={target}
+              rel={rel}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                py: 1.25,
+                px: 1.5,
+                textDecoration: 'none',
+                color: 'inherit',
+                borderRadius: 1,
+                transition: 'background-color 0.15s ease',
+                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.55)' },
+                '&:focus-visible': (t2) => ({
+                  outline: `2px solid ${t2.palette.primary.main}`,
+                  outlineOffset: 2,
+                }),
+              }}
             >
               <Box
                 sx={{
-                  display: 'inline-flex',
+                  width: 32,
+                  height: 32,
+                  p: 0.75,
+                  flexShrink: 0,
+                  display: 'flex',
                   alignItems: 'center',
-                  px: 1,
-                  py: 0.5,
+                  justifyContent: 'center',
+                  bgcolor: 'rgba(255, 255, 255, 0.75)',
                   borderRadius: 1,
-                  bgcolor: alpha(accent, 0.1),
-                  width: 'fit-content',
-                  whiteSpace: 'nowrap',
-                  alignSelf: 'start',
+                  border: '1px solid rgba(255, 255, 255, 0.9)',
+                  boxSizing: 'border-box',
                 }}
               >
-                <Typography
-                  variant="subtitle2"
-                  fontWeight={400}
-                  sx={{ lineHeight: 1.3, color: accentText }}
-                >
-                  {tDock(group.title)}
+                <Box
+                  component="img"
+                  src={l.image.src}
+                  alt={tDock(l.image.alt || '')}
+                  sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                />
+              </Box>
+              <Box>
+                <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
+                  {tDock(l.title)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                  {tDock(l.description)}
                 </Typography>
               </Box>
-              {group.links.map((l, li) => {
-                const { target, rel } = linkAttrs(l.url, l.target, l.rel);
-                return (
-                  <Box
-                    key={li}
-                    component="a"
-                    href={l.url}
-                    target={target}
-                    rel={rel}
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: 'max-content 1fr',
-                      alignItems: 'start',
-                      columnGap: '12px',
-                      py: 1,
-                      px: 1,
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      borderRadius: 1,
-                      transition: 'background-color 0.15s ease',
-                      '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
-                      '&:focus-visible': (t2) => ({
-                        outline: `2px solid ${t2.palette.primary.main}`,
-                        outlineOffset: 2,
-                      }),
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        p: 0.75,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: '#F9FAFB',
-                        borderRadius: 1,
-                        border: (t2) => `1px solid ${t2.palette.divider}`,
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={l.image.src}
-                        alt={tDock(l.image.alt || '')}
-                        sx={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain',
-                          display: 'block',
-                        }}
-                      />
-                    </Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="body2" fontWeight={700}>
-                        {tDock(l.title)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {tDock(l.description)}
-                      </Typography>
-                    </Box>
-                  </Box>
-                );
-              })}
             </Box>
           );
         })}
       </Box>
 
-      <Box
-        sx={{ flex: 1, position: 'relative', maxWidth: { lg: 448 }, px: { xs: 2, md: 3 }, py: 4 }}
-      >
-        <Box
-          sx={{
-            position: 'relative',
-            zIndex: 1,
-            display: 'grid',
-            gridTemplateRows: 'max-content auto max-content',
-            gap: 2,
-          }}
-        >
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              bgcolor: alpha(FEATURED_ACCENT, 0.2),
-              width: 'fit-content',
-              whiteSpace: 'nowrap',
-              alignSelf: 'start',
-            }}
-          >
-            <Typography
-              variant="subtitle2"
-              fontWeight={400}
-              sx={{ lineHeight: 1.3, color: FEATURED_ACCENT_TEXT }}
-            >
-              {tDock(mega.featuredSections.title)}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'grid', gap: 2 }}>
-            {mega.featuredSections.links.map((item, k) => (
-              <a
-                key={k}
-                href={item.url}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '0.6fr 1fr',
-                  gap: '16px',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  padding: '8px 0',
-                }}
-              >
-                <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
-                  <img
-                    src={item.image.src}
-                    alt={tDock(item.image.alt || '')}
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      borderRadius: 8,
-                    }}
-                  />
-                </Box>
-                <Box
-                  sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}
-                >
-                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-                    {tDock(item.title)}
-                  </Typography>
-                  <Typography variant="body2">{tDock(item.description)}</Typography>
-                  {item.button && (
-                    <Box sx={{ mt: 1 }}>
-                      <Button
-                        variant="text"
-                        size="small"
-                        sx={{ textDecoration: 'underline', p: 0, minWidth: 0 }}
-                        endIcon={<ChevronRightIcon />}
-                        {...item.button}
-                      >
-                        {tDock(item.button.title)}
-                      </Button>
-                    </Box>
-                  )}
-                </Box>
-              </a>
-            ))}
-          </Box>
-
-          <Box
-            sx={{ mt: 1 }}
-            component="a"
-            href="https://normalfi.substack.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button
-              {...btnDefaults}
-              {...mega.button}
-              sx={{
-                color: 'text.primary',
-                textDecoration: 'none',
-                '&:hover': {
-                  textDecoration: 'none',
-                  backgroundColor: (t2) => t2.palette.action.hover,
-                },
-                '&:link, &:visited': { color: 'text.primary' },
-              }}
-            >
-              {tDock(mega.button.title)}
-            </Button>
-          </Box>
-        </Box>
-
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            width: '100vw',
-            left: { xs: 0, lg: 'calc(-5% - 0px)' },
-            bgcolor: (t2) => t2.palette.grey[100],
-            zIndex: 0,
-          }}
-        />
-      </Box>
     </Box>
   );
 }
@@ -693,17 +515,6 @@ function MobileMega({
   megaMenu: MegaMenuProps;
 }) {
   const { t: tMobile } = useTranslate();
-  const href = megaMenu.button.href;
-  const isExternal = !!href && /^https?:\/\//i.test(href);
-  const btnDefaults = {
-    component: megaMenu.button.component ?? (href ? 'a' : undefined),
-    target: megaMenu.button.target ?? (isExternal ? '_blank' : undefined),
-    rel:
-      megaMenu.button.rel ??
-      ((megaMenu.button.target ?? (isExternal ? '_blank' : '')) === '_blank'
-        ? 'noopener noreferrer'
-        : undefined),
-  };
   return (
     <Box sx={{ py: 0 }}>
       <Box
@@ -815,114 +626,6 @@ function MobileMega({
         })}
       </Box>
 
-      <Box sx={{ mt: 3, position: 'relative', py: 4 }}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: '-5%',
-            right: '-5%',
-            bgcolor: (t2) => t2.palette.grey[100],
-            zIndex: 0,
-          }}
-        />
-        <Box
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            px: 1,
-            py: 0.5,
-            borderRadius: 1,
-            bgcolor: alpha(FEATURED_ACCENT, 0.2),
-            width: 'fit-content',
-            whiteSpace: 'nowrap',
-            alignSelf: 'start',
-            mb: 1.5,
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          <Typography
-            variant="subtitle2"
-            fontWeight={400}
-            sx={{ lineHeight: 1.3, color: FEATURED_ACCENT_TEXT }}
-          >
-            {tMobile(megaMenu.featuredSections.title)}
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'grid', gap: 2, position: 'relative', zIndex: 1 }}>
-          {megaMenu.featuredSections.links.map((item, k) => (
-            <a
-              key={k}
-              href={item.url}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr',
-                gap: '12px',
-                textDecoration: 'none',
-                color: 'inherit',
-              }}
-            >
-              <Box sx={{ position: 'relative', width: '100%', pt: '66.66%' }}>
-                <img
-                  src={item.image.src}
-                  alt={tMobile(item.image.alt || '')}
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    borderRadius: 8,
-                  }}
-                />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-                  {tMobile(item.title)}
-                </Typography>
-                <Typography variant="body2">{tMobile(item.description)}</Typography>
-                {item.button && (
-                  <Box sx={{ mt: 1 }}>
-                    <Button
-                      variant="text"
-                      size="small"
-                      sx={{ textDecoration: 'underline', p: 0, minWidth: 0 }}
-                      endIcon={<ChevronRightIcon />}
-                      {...item.button}
-                    >
-                      {tMobile(item.button.title)}
-                    </Button>
-                  </Box>
-                )}
-              </Box>
-            </a>
-          ))}
-        </Box>
-        <Box sx={{ mt: 2 }}>
-          <Button
-            {...btnDefaults}
-            {...megaMenu.button}
-            fullWidth
-            sx={{
-              bgcolor: '#2b2b2b',
-              color: '#fff',
-              justifyContent: 'center',
-              textAlign: 'center',
-              fontWeight: 500,
-              borderRadius: 1.5,
-              py: 3,
-              '&:hover': {
-                bgcolor: '#1f1f1f',
-              },
-            }}
-          >
-            {tMobile(megaMenu.button.title)}
-          </Button>
-        </Box>
-      </Box>
     </Box>
   );
 }
