@@ -178,12 +178,14 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         borderBottom: `1px solid ${theme.palette.divider}`,
         backgroundColor: theme.palette.background.paper,
         minHeight: { xs: 64, lg: 72 },
-        px: { xs: 2, lg: 2 },
+        px: { xs: 2, lg: 4 },
       }}
     >
       <Box
         sx={{
           width: '100%',
+          maxWidth: 1400,
+          mx: 'auto',
           display: 'grid',
           gridTemplateColumns: { xs: '1fr auto', lg: 'auto 1fr auto' },
           alignItems: 'center',
