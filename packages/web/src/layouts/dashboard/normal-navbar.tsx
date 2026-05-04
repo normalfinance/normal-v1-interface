@@ -17,7 +17,7 @@ import { Logo } from '@/components/template/logo';
 
 
 const NAV_ITEMS: { url: string; label: string }[] = [
-  { url: paths.help.feedbackForm, label: 'Feedback' },
+  { url: paths.socials.discord, label: 'Contact' },
 ];
 
 const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: string) => {
@@ -224,7 +224,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
             gap: 0.5,
           }}
         >
-          {NAV_ITEMS.filter((item) => item.label !== 'Feedback').map((item) => (
+          {NAV_ITEMS.filter((item) => item.label !== 'Contact').map((item) => (
             <div key={item.url}>
               <Button
                 component="a"
@@ -315,7 +315,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
 
         {/* Column 3: Account controls */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
-          {NAV_ITEMS.filter((item) => item.label === 'Feedback').map((item) => (
+          {NAV_ITEMS.filter((item) => item.label === 'Contact').map((item) => (
             <Button
               key={item.url}
               component="a"
@@ -376,7 +376,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                 <Button
                   component="a"
                   fullWidth
-                  href={paths.help.feedbackForm}
+                  href={paths.socials.discord}
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{
@@ -392,7 +392,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                     },
                   }}
                 >
-                  {t('Feedback')}
+                  {t('Contact')}
                 </Button>
               </Box>
             </Box>
