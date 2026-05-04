@@ -58,10 +58,9 @@ export const StatsGrid: React.FC<StatsGridProps> = (props) => {
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-end',
+            alignItems: { xs: 'flex-start', md: 'flex-end' },
             gap: 4,
             flexDirection: { xs: 'column', md: 'row' },
-            alignItems: { xs: 'flex-start', md: 'flex-end' },
           }}
         >
           {/* Left */}
