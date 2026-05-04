@@ -70,7 +70,7 @@ const LINK_COLUMNS = [
     title: 'Need help?',
     links: [
       { label: 'Contact us', href: paths.core.contact },
-      { label: 'Report bugs', href: paths.help.feedbackForm, target: '_blank' },
+      { label: 'Report bugs', href: paths.socials.discord, target: '_blank' },
       { label: 'Terms of Service', href: paths.legal.tos },
       { label: 'Privacy Policy', href: paths.legal.pp },
     ],
