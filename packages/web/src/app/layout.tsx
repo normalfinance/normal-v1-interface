@@ -10,7 +10,6 @@ import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
 import { ModalProvider } from '@/providers/ModalProvider';
-import { PostHogProvider } from '@/providers/PostHogProvider';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
@@ -100,8 +99,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
       <body>
-        <PostHogProvider>
-          <InitColorSchemeScript
+        <InitColorSchemeScript
             defaultMode={themeConfig.defaultMode}
             modeStorageKey={themeConfig.modeStorageKey}
             attribute={themeConfig.cssVariables.colorSchemeSelector}
@@ -142,7 +140,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
               </LocalizationProvider>
             </SettingsProvider>
           </I18nProvider>
-        </PostHogProvider>
       </body>
     </html>
   );

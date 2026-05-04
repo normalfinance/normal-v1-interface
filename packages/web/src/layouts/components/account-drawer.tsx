@@ -2,7 +2,6 @@
 
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import posthog from 'posthog-js';
 import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
@@ -192,8 +191,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
       const WALLET_SELECTION_SEEN_KEY = 'wallet-selection-modal-seen';
       localStorage.removeItem(WALLET_SELECTION_SEEN_KEY);
 
-      posthog.reset();
-
       enqueueSnackbar('Logged out successfully', { variant: 'success' });
 
       window.location.reload();
@@ -213,16 +210,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const userEmail = session?.user?.email ?? '';
   const userAvatar = userMetadata?.picture || userMetadata?.avatar_url || avatarURL;
   const displayName = userMetadata?.name || userEmail || ' ';
-
-  useEffect(() => {
-    if (connectedAddress) {
-      posthog.identify(
-        connectedAddress,
-        { last_login: new Date() }, // updates every time
-        { signup_date: new Date() } // sets only once
-      );
-    }
-  }, [connectedAddress]);
 
   const handleConnectStellarWallet = useCallback(async () => {
     try {
