@@ -5,204 +5,219 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import { styled } from '@mui/material/styles';
+
+/* ------------------------------------------------------------------ */
+/*  Constants                                                          */
+/* ------------------------------------------------------------------ */
+
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-type CtaButton = { label: string; href: string };
-
-export type CtaImageProps = React.ComponentPropsWithoutRef<'section'> & {
-  eyebrow?: string;
-  heading?: string;
-  subhead?: string;
-  primaryCta?: CtaButton;
-  secondaryCta?: CtaButton;
-};
+export type CtaImageProps = React.ComponentPropsWithoutRef<'section'>;
 
 /* ------------------------------------------------------------------ */
 /*  Styled                                                             */
 /* ------------------------------------------------------------------ */
 
-const Card = styled('div')({
+const SectionRoot = styled('section')({
   position: 'relative',
   overflow: 'hidden',
-  maxWidth: 1100,
-  margin: '0 auto',
-  backgroundColor: '#fff',
-  border: '1px solid #e8e8ec',
-  borderRadius: 28,
-  textAlign: 'center',
+  backgroundColor: '#eee8f7',
+  borderTop: '1px solid #e8e8ec',
   '&::before': {
     content: '""',
     position: 'absolute',
-    top: -100,
-    left: -100,
-    width: 380,
-    height: 380,
-    borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(43,210,255,0.20) 0%, transparent 70%)',
+    inset: 0,
+    background: 'radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.4), transparent 60%)',
     pointerEvents: 'none',
+    zIndex: 0,
   },
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    bottom: -100,
-    right: -100,
-    width: 380,
-    height: 380,
-    borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(181,97,255,0.20) 0%, transparent 70%)',
-    pointerEvents: 'none',
+});
+
+const BlobWrapper = styled('div')({
+  position: 'absolute',
+  inset: 0,
+  pointerEvents: 'none',
+  overflow: 'hidden',
+  zIndex: 0,
+});
+
+const Blob1 = styled('div')({
+  position: 'absolute',
+  borderRadius: '50%',
+  filter: 'blur(90px)',
+  willChange: 'transform',
+  width: 560,
+  height: 560,
+  top: '10%',
+  left: '-8%',
+  background: 'radial-gradient(closest-side, #2bd2ff, transparent 70%)',
+  opacity: 0.32,
+  '@keyframes cta-float1': {
+    '0%, 100%': { transform: 'translate(0, 0)' },
+    '50%': { transform: 'translate(40px, -30px)' },
   },
+  animation: 'cta-float1 20s ease-in-out infinite',
+  '@media (prefers-reduced-motion: reduce)': { animationPlayState: 'paused' },
+});
+
+const Blob2 = styled('div')({
+  position: 'absolute',
+  borderRadius: '50%',
+  filter: 'blur(90px)',
+  willChange: 'transform',
+  width: 520,
+  height: 520,
+  top: '5%',
+  right: '-6%',
+  background: 'radial-gradient(closest-side, #b561ff, transparent 70%)',
+  opacity: 0.28,
+  '@keyframes cta-float2': {
+    '0%, 100%': { transform: 'translate(0, 0)' },
+    '50%': { transform: 'translate(-30px, 40px)' },
+  },
+  animation: 'cta-float2 24s ease-in-out infinite',
+  '@media (prefers-reduced-motion: reduce)': { animationPlayState: 'paused' },
+});
+
+const Blob3 = styled('div')({
+  position: 'absolute',
+  borderRadius: '50%',
+  filter: 'blur(90px)',
+  willChange: 'transform',
+  width: 460,
+  height: 460,
+  bottom: '-15%',
+  left: '30%',
+  background: 'radial-gradient(closest-side, #ff5cb1, transparent 70%)',
+  opacity: 0.26,
+  '@keyframes cta-float3': {
+    '0%, 100%': { transform: 'translate(0, 0)' },
+    '50%': { transform: 'translate(20px, -40px)' },
+  },
+  animation: 'cta-float3 26s ease-in-out infinite',
+  '@media (prefers-reduced-motion: reduce)': { animationPlayState: 'paused' },
+});
+
+const EyebrowPill = styled('div')({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '7px 14px',
+  borderRadius: 999,
+  background: 'rgba(255,255,255,0.6)',
+  backdropFilter: 'blur(8px)',
+  border: '1px solid rgba(255,255,255,0.8)',
+  fontSize: 12.5,
+  color: '#3a3a44',
 });
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export const CtaImage: React.FC<CtaImageProps> = ({
-  eyebrow = '— Get started',
-  heading = 'Ready to make your money work harder?',
-  subhead = 'Join thousands of users earning yield on their savings. No bank required.',
-  primaryCta = { label: 'Start earning', href: paths.invest },
-  secondaryCta = { label: 'Learn more', href: paths.about },
-  ...sectionProps
-}) => {
+export const CtaImage: React.FC<CtaImageProps> = (sectionProps) => {
   const { t } = useTranslate();
 
   return (
-    <Box
-      component="section"
-      sx={{ bgcolor: '#fafafa', py: 12 }}
-      {...sectionProps}
-    >
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-        <Card sx={{ padding: { xs: '48px 28px', md: '64px 48px' } }}>
-          {/* centered pink glow */}
+    <SectionRoot aria-labelledby="cta-heading" {...sectionProps}>
+      {/* Animated blobs */}
+      <BlobWrapper aria-hidden="true">
+        <Blob1 />
+        <Blob2 />
+        <Blob3 />
+      </BlobWrapper>
+
+      {/* Padding wrapper */}
+      <Box
+        sx={{
+          pt: { xs: '100px', md: '160px' },
+          pb: { xs: '120px', md: '200px' },
+          textAlign: 'center',
+          position: 'relative',
+        }}
+      >
+        {/* Inner content */}
+        <Box sx={{ maxWidth: 880, mx: 'auto', px: 3, position: 'relative', zIndex: 1 }}>
+
+          {/* Heading */}
           <Box
+            component="h2"
+            id="cta-heading"
             sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 500,
-              height: 220,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(255,92,177,0.12) 0%, transparent 70%)',
-              pointerEvents: 'none',
+              m: 0,
+              fontSize: 'clamp(48px, 7vw, 96px)',
+              fontWeight: 600,
+              letterSpacing: '-0.04em',
+              lineHeight: 1,
+              color: '#0a0a0b',
             }}
-          />
-
-          {/* content */}
-          <Box sx={{ position: 'relative', zIndex: 1 }}>
+          >
+            {t('Make crypto')}{' '}
             <Box
-              component="p"
+              component="span"
               sx={{
-                m: 0,
-                mb: '14px',
-                fontSize: 12,
-                fontWeight: 500,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: '#6b6b76',
+                fontStyle: 'italic',
+                fontWeight: 400,
+                background:
+                  'linear-gradient(90deg, #2bd2ff 0%, #b561ff 40%, #ff5cb1 70%, #ffb347 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
               }}
             >
-              {t(eyebrow)}
-            </Box>
-
-            <Box
-              component="h2"
-              sx={{
-                m: 0,
-                fontSize: 'clamp(34px, 4.4vw, 56px)',
-                fontWeight: 600,
-                letterSpacing: '-0.03em',
-                lineHeight: 1.04,
-                color: '#0a0a0b',
-                maxWidth: '20ch',
-                mx: 'auto',
-              }}
-            >
-              {t(heading)}
-            </Box>
-
-            <Box
-              component="p"
-              sx={{
-                m: 0,
-                mt: '14px',
-                fontSize: 17,
-                color: '#6b6b76',
-                maxWidth: '56ch',
-                mx: 'auto',
-                lineHeight: 1.5,
-              }}
-            >
-              {t(subhead)}
-            </Box>
-
-            <Box
-              sx={{
-                mt: 5,
-                display: 'flex',
-                gap: 2,
-                justifyContent: 'center',
-                flexWrap: 'wrap',
-              }}
-            >
-              <Button
-                component="a"
-                href={primaryCta.href}
-                sx={{
-                  height: 48,
-                  px: '28px',
-                  borderRadius: '999px',
-                  bgcolor: '#0a0a0b',
-                  color: '#fff',
-                  fontWeight: 600,
-                  fontSize: '15px',
-                  textTransform: 'none',
-                  transition: 'background 150ms, transform 150ms',
-                  '&:hover': {
-                    bgcolor: '#2a2a30',
-                    transform: 'translateY(-1px)',
-                  },
-                }}
-              >
-                {t(primaryCta.label)}
-              </Button>
-
-              <Button
-                component="a"
-                href={secondaryCta.href}
-                sx={{
-                  height: 48,
-                  px: '28px',
-                  borderRadius: '999px',
-                  bgcolor: 'transparent',
-                  color: '#0a0a0b',
-                  fontWeight: 600,
-                  fontSize: '15px',
-                  textTransform: 'none',
-                  border: '1px solid #d0d0d8',
-                  transition: 'border-color 150ms, background 150ms, transform 150ms',
-                  '&:hover': {
-                    bgcolor: 'rgba(10,10,11,0.04)',
-                    borderColor: '#0a0a0b',
-                    transform: 'translateY(-1px)',
-                  },
-                }}
-              >
-                {t(secondaryCta.label)}
-              </Button>
+              {t('normal.')}
             </Box>
           </Box>
-        </Card>
+
+          {/* Subhead */}
+          <Box
+            component="p"
+            sx={{
+              m: 0,
+              mt: '28px',
+              fontSize: 19,
+              color: '#6b6b76',
+              maxWidth: '56ch',
+              mx: 'auto',
+              lineHeight: 1.55,
+            }}
+          >
+            {t(
+              'Join thousands earning yield, sending money globally, and keeping full custody of their funds.'
+            )}
+          </Box>
+
+          {/* CTA button */}
+          <Box sx={{ mt: '40px' }}>
+            <Box
+              component="a"
+              href={paths.savings}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                height: 52,
+                px: '32px',
+                borderRadius: '999px',
+                bgcolor: '#0a0a0b',
+                color: '#fff',
+                fontSize: '15px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                boxShadow: '0 8px 20px -10px rgba(15,15,25,0.4)',
+                transition: 'background 150ms, transform 150ms',
+                '&:hover': { bgcolor: '#1a1a20', transform: 'translateY(-1px)' },
+              }}
+            >
+              {t('Start saving')}
+            </Box>
+          </Box>
+        </Box>
       </Box>
-    </Box>
+    </SectionRoot>
   );
 };
 

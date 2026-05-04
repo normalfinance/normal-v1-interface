@@ -98,7 +98,7 @@ const AccordionDetails = styled(MuiAccordionDetails)({
 });
 
 /* ------------------------------------------------------------------ */
-/*  Component                                                           */
+/*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
 export const FaqAccordion: React.FC<FaqAccordionProps> = ({
