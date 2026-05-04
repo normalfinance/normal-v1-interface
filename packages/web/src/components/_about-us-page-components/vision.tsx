@@ -185,7 +185,7 @@ export const Vision: React.FC<VisionProps> = (props) => {
   };
 
   return (
-    <Box component="section" {...sectionProps} py={{ xs: 8, md: 12, lg: 14 }} id="our-vision">
+    <Box component="section" {...sectionProps} py={{ xs: 8, md: 12, lg: 14 }} id="our-vision" bgcolor="#FAFAFA" sx={(theme) => ({ borderBottom: `1px solid ${theme.palette.divider}` })}>
       <Container>
         <Box maxWidth={720} textAlign="left" mb={{ xs: 4, md: 6 }}>
           <Typography
