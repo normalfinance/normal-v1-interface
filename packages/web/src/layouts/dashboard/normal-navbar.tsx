@@ -313,6 +313,10 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               </Box>
             );
           })}
+        </Box>
+
+        {/* Column 3: Account controls */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
           {NAV_ITEMS.filter((item) => item.label === 'Feedback').map((item) => (
             <Button
               key={item.url}
@@ -335,10 +339,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               {t(item.label)}
             </Button>
           ))}
-        </Box>
-
-        {/* Column 3: Account controls */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
           {networkToggle}
           {language}
           {account}
