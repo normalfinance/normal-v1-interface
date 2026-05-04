@@ -63,7 +63,7 @@ export const TeamDefaults: Props = {
   teamMembers: [
     {
       image: {
-        src: cdn('about-page/just.webp'),
+        src: cdn('about-page/justin.webp'),
         alt: 'Justin Benjamin',
       },
       name: 'Justin Benjamin',
