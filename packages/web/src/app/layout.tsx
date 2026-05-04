@@ -15,6 +15,7 @@ import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 import { SupabaseAuthProvider } from '@/providers/SupabaseAuthProvider';
+import { WalletPasswordProvider } from '@/providers/WalletPasswordProvider';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
@@ -125,9 +126,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                               <ProgressBar />
                               <SettingsDrawer defaultSettings={defaultSettings} />
                               <AnnouncementProvider>
-                                <ModalProvider>
-                                  <DashboardLayout>{children}</DashboardLayout>
-                                </ModalProvider>
+                                <WalletPasswordProvider>
+                                  <ModalProvider>
+                                    <DashboardLayout>{children}</DashboardLayout>
+                                  </ModalProvider>
+                                </WalletPasswordProvider>
                               </AnnouncementProvider>
                             </SnackbarProvider>
                           </MotionLazy>

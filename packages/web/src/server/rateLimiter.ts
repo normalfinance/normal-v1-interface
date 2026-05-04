@@ -24,10 +24,80 @@ function getUpstashConfig() {
   }
 }
 
-logger.log('getUpstashConfig', getUpstashConfig());
+const upstashConfig = getUpstashConfig();
+
+function getSafeUrlDiagnostics(url?: string) {
+  if (!url) {
+    return {
+      urlHost: null,
+      urlPath: null,
+      urlProtocol: null,
+      urlValid: false,
+    };
+  }
+
+  try {
+    const parsed = new URL(url);
+    return {
+      urlHost: parsed.host,
+      urlPath: parsed.pathname || '/',
+      urlProtocol: parsed.protocol,
+      urlValid: true,
+    };
+  } catch {
+    return {
+      urlHost: null,
+      urlPath: null,
+      urlProtocol: null,
+      urlValid: false,
+    };
+  }
+}
+
+function formatErrorForLog(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+    };
+  }
+
+  return {
+    message: String(error),
+  };
+}
+
+export function getUpstashConfigDiagnostics() {
+  const token = upstashConfig.token;
+
+  return {
+    network: constants.getCurrentNetwork(),
+    hasUrl: Boolean(upstashConfig.url),
+    hasToken: Boolean(token),
+    tokenLength: token?.length ?? 0,
+    tokenHasWhitespace:
+      typeof token === 'string' ? token.trim() !== token || /\s/.test(token) : false,
+    ...getSafeUrlDiagnostics(upstashConfig.url),
+  };
+}
+
+logger.log('[RateLimiter] Upstash config diagnostics:', getUpstashConfigDiagnostics());
 
 // Create a Redis client from your .env
-const redis = new Redis(getUpstashConfig());
+export let redis: Redis;
+
+try {
+  redis = new Redis(upstashConfig);
+} catch (error) {
+  logger.error('[RateLimiter] Failed to initialize Upstash Redis client:', {
+    error: formatErrorForLog(error),
+    diagnostics: getUpstashConfigDiagnostics(),
+  });
+
+  // Keep the app booting even if Redis is misconfigured. Individual routes can
+  // decide whether to fail open or fail closed when requests reach the limiter.
+  redis = new Redis({ url: '', token: '' });
+}
 
 // Allow 30 requests per 10 seconds, sliding window
 const walletRateLimiter = new Ratelimit({
@@ -39,6 +109,13 @@ const walletRateLimiter = new Ratelimit({
 const ipRateLimiter = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(50, '10 s'),
+});
+
+// Allow 3 requests per 10 minutes, sliding window (for mnemonic export)
+export const exportMnemonicRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, '10 m'),
+  prefix: 'export-mnemonic',
 });
 
 export const rateLimiter = {

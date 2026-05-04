@@ -8,8 +8,7 @@ import Divider from '@mui/material/Divider';
 import { useTheme } from '@mui/material/styles';
 import CardHeader from '@mui/material/CardHeader';
 
-import { ChartLegends } from '@/components/template/chart';
-import IndexDonutChart from '@/components/_index-details/index-donut-chart';
+import { Chart, useChart, ChartLegends } from '@/components/template/chart';
 
 import type { HoldingData } from './my-holdings-table-row';
 
@@ -39,16 +38,35 @@ export default function MyHoldingsChart({ holdingsData }: MyHoldingsChartProps) 
   ];
   const chartColors = labels.map((_, idx) => paletteSwatches[idx % paletteSwatches.length]);
 
+  const chartOptions = useChart({
+    labels,
+    colors: chartColors,
+    legend: { show: false },
+    stroke: { width: 0 },
+    tooltip: {
+      fillSeriesColor: false,
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '72%',
+          labels: {
+            show: false,
+          },
+        },
+      },
+    },
+  });
+
   return (
     <Card sx={{ height: '100%' }}>
       <CardHeader title={t('Allocation')} />
 
-      <IndexDonutChart
-        labels={labels}
-        values={values}
-        colors={chartColors}
-        height={220}
-        sx={{ my: 2, mx: 'auto' }}
+      <Chart
+        type="donut"
+        series={values}
+        options={chartOptions}
+        sx={{ my: 2, mx: 'auto', width: 220, height: 220 }}
       />
 
       <Divider sx={{ borderStyle: 'dashed' }} />

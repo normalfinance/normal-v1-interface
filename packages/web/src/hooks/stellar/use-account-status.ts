@@ -1,7 +1,8 @@
 'use client';
 
+import { useStellarConfig } from '@/hooks';
 import { useState, useEffect, useCallback } from 'react';
-import { logger, constants, fetchAccount, checkTrustline } from '@normalfinance/utils';
+import { logger, fetchAccount, checkTrustline } from '@normalfinance/utils';
 
 export interface AccountStatus {
   isLoading: boolean;
@@ -12,13 +13,24 @@ export interface AccountStatus {
   refetch: () => Promise<void>;
 }
 
+interface AccountStatusOptions {
+  assetCode?: string;
+  assetIssuer?: string;
+}
+
 /**
  * Hook to check account status on Stellar network
  * - Checks if account exists (funded with XLM)
  * - Gets XLM balance
- * - Checks if USDC trustline exists
+ * - Checks if the requested asset trustline exists
  */
-export function useAccountStatus(walletAddress: string | undefined): AccountStatus {
+export function useAccountStatus(
+  walletAddress: string | undefined,
+  options: AccountStatusOptions = {}
+): AccountStatus {
+  const config = useStellarConfig();
+  const assetCode = options.assetCode || 'USDC';
+  const assetIssuer = options.assetIssuer || config.USDC_ISSUER;
   const [isLoading, setIsLoading] = useState(true);
   const [accountExists, setAccountExists] = useState(false);
   const [xlmBalance, setXlmBalance] = useState('0');
@@ -39,7 +51,7 @@ export function useAccountStatus(walletAddress: string | undefined): AccountStat
 
     try {
       // Fetch account from Horizon
-      const account = await fetchAccount(walletAddress);
+      const account = await fetchAccount(walletAddress, config);
 
       if (!account) {
         // Account doesn't exist on the network
@@ -58,13 +70,12 @@ export function useAccountStatus(walletAddress: string | undefined): AccountStat
       const xlmAmount = nativeBalance ? nativeBalance.balance : '0';
       setXlmBalance(xlmAmount);
 
-      // Check USDC trustline
-      const usdcIssuer = constants.StellarConfig.USDC_ISSUER;
-      if (usdcIssuer) {
-        const trustlineResult = await checkTrustline(walletAddress, 'USDC', usdcIssuer);
+      // Check requested asset trustline
+      if (assetIssuer) {
+        const trustlineResult = await checkTrustline(walletAddress, assetCode, assetIssuer, config);
         setHasUsdcTrustline(trustlineResult.exists);
       } else {
-        logger.warn('[useAccountStatus] USDC_ISSUER not configured');
+        logger.warn(`[useAccountStatus] ${assetCode}_ISSUER not configured`);
         setHasUsdcTrustline(false);
       }
     } catch (err: any) {
@@ -76,7 +87,7 @@ export function useAccountStatus(walletAddress: string | undefined): AccountStat
     } finally {
       setIsLoading(false);
     }
-  }, [walletAddress]);
+  }, [walletAddress, assetCode, assetIssuer, config]);
 
   // Check status on mount and when wallet address changes
   useEffect(() => {

@@ -1,14 +1,13 @@
 'use client';
 
-import type { SwapQueryParams } from '@/types/query-params';
-
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import { Box, Paper, Stack, Container, Typography } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
+import { Box, Chip, Paper, Stack, Container, Typography } from '@mui/material';
 
-import TradeCard from '@/components/_common/trade-card';
+import SavingsCard from '@/components/_common/savings-card';
 
 import { WavyBackground } from './wavy-background';
 
@@ -24,27 +23,18 @@ type Props = {
   halbornImage: ImageProps;
   tagline: string;
   taglineLogo: ImageProps;
-  swapParams?: SwapQueryParams;
 };
 
 type HeroHeaderProps = Partial<Props>;
 
 export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
-  const {
-    heading,
-    description,
-    image,
-    halbornImage,
-    tagline,
-    taglineLogo,
-    swapParams,
-    ...sectionProps
-  } = {
+  const { heading, description, image, halbornImage, tagline, taglineLogo, ...sectionProps } = {
     ...HeroHeaderDefaults,
     ...incomingProps,
   } as Props;
 
   const { t } = useTranslate();
+  const theme = useTheme();
 
   return (
     <Box
@@ -54,7 +44,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
         overflow: 'hidden',
         px: '5%',
         py: { xs: 6, md: 8, lg: 10 },
-        backgroundColor: 'white',
+        bgcolor: 'background.paper',
       }}
       {...sectionProps}
     >
@@ -67,15 +57,14 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
           pointerEvents: 'none',
         }}
       >
-        {/* animated waves */}
         <WavyBackground
           sizing="viewport"
-          baseline="center" // or "top"
+          baseline="center"
           yOffset={0}
           colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
           waveOpacity={0.35}
           speed="slow"
-          backgroundFill="white"
+          backgroundFill={theme.palette.background.paper}
         />
       </Box>
 
@@ -87,7 +76,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               variant="outlined"
               sx={{
                 justifyContent: 'center',
-                backgroundColor: 'rgba(145, 158, 171, 0.12)',
+                backgroundColor: alpha(theme.palette.grey[500], 0.12),
                 px: '10px',
                 py: '4px',
                 display: 'inline-flex',
@@ -112,7 +101,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   sx={{
                     width: '2px',
                     height: '10px',
-                    backgroundColor: 'rgba(145, 158, 171, 0.12)',
+                    backgroundColor: alpha(theme.palette.grey[500], 0.12),
                   }}
                 />
                 <Box
@@ -136,7 +125,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 },
               }}
             >
-              {t('Trade and diversify any asset,')}{' '}
+              {t('Earn passive yield, and ')}{' '}
               <Box
                 component="span"
                 sx={{
@@ -154,32 +143,73 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                   backgroundClip: 'text',
                 }}
               >
-                {t('in seconds')}
+                {t('watch it grow')}
               </Box>
             </Typography>
 
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              component="div"
+            <Paper
+              variant="outlined"
               sx={{
                 display: 'inline-flex',
-                alignItems: 'center',
-                columnGap: '10px',
-                rowGap: '10px',
-                fontSize: 14,
-                fontWeight: 600,
-                mx: 'auto',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
+                alignItems: 'flex-start',
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                borderRadius: '9999px',
+                px: 3,
+                py: 1.5,
+                gap: 0,
               }}
             >
-              <span>💸 {t('Low fees')}</span>
-              <span>•</span>
-              <span>🌍 {t('Global support')}</span>
-              <span>•</span>
-              <span>⚡ {t('Instant settlement')}</span>
-            </Typography>
+              {[
+                {
+                  label: t('Audited by'),
+                  src: cdn('homepage/halborn-logo.webp'),
+                  alt: 'Halborn',
+                  width: 72,
+                  height: 8,
+                },
+                {
+                  label: t('Backed by'),
+                  src: cdn('homepage/draper-university.webp'),
+                  alt: 'Draper University',
+                  width: 56,
+                  height: 18,
+                },
+                {
+                  label: t('Backed by'),
+                  src: cdn('homepage/stellar-logo.webp'),
+                  alt: 'Stellar',
+                  width: 52,
+                  height: 13,
+                },
+              ].map((item, i, arr) => (
+                <React.Fragment key={i}>
+                  <Stack alignItems="center" spacing="5px" sx={{ px: 2.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.disabled"
+                      sx={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}
+                    >
+                      {item.label}
+                    </Typography>
+                    <Box
+                      component="img"
+                      src={item.src}
+                      alt={item.alt}
+                      sx={{
+                        width: item.width,
+                        height: item.height,
+                        objectFit: 'contain',
+                        filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
+                        opacity: 0.5,
+                      }}
+                    />
+                  </Stack>
+                  {i < arr.length - 1 && (
+                    <Box sx={{ width: '1px', height: 32, backgroundColor: alpha(theme.palette.grey[500], 0.24), flexShrink: 0 }} />
+                  )}
+                </React.Fragment>
+              ))}
+            </Paper>
 
             <Box
               sx={{
@@ -189,15 +219,25 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 my: { xs: 4, md: 5 },
                 p: 1,
                 borderRadius: 3,
-                backgroundColor: 'white',
-                boxShadow: '0px 9px 50px 0px rgba(0,0,0,0.25)',
+                bgcolor: 'background.paper',
+                boxShadow: (thm) => `0px 9px 50px 0px ${alpha(thm.palette.common.black, 0.25)}`,
               }}
             >
-              <TradeCard queryParams={swapParams} />
+              <SavingsCard />
             </Box>
 
-            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 340, mx: 'auto' }}>
-              {t(description)}
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ maxWidth: 340, mx: 'auto', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}
+            >
+              {t('A universal investing app - Trade and diversify any global asset in just one click.')}
+              <Chip
+                label={t('Coming soon')}
+                size="small"
+                color="info"
+                sx={{ fontWeight: 500 }}
+              />
             </Typography>
           </Box>
         </Stack>
@@ -210,8 +250,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
 
 export const HeroHeaderDefaults: Props = {
   heading: 'Medium length hero heading goes here',
-  description:
-    'A universal investing app - Trade and diversify any global asset in just one click.',
+  description: 'Your dollars deserve better. Earn competitive yield within clicks.',
   image: {
     src: cdn('homepage/stellar-logo.webp'),
     alt: 'Stellar Logo Long',

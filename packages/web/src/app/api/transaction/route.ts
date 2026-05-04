@@ -1,19 +1,27 @@
 import type { NextRequest } from 'next/server';
+import type { NetworkType } from '@normalfinance/utils';
+import type { NetworkConfig } from '@normalfinance/types';
 
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ContractErrorType } from '@normalfinance/types';
 import { getClientIP, getAccessToken } from '@/utils/http';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
-import { logger, constants, parseError } from '@normalfinance/utils';
+import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { logger, parseError, getStellarConfigForNetwork } from '@normalfinance/utils';
 import { logWithConfig, createNodeConfigHandler } from '@/lib/edge-config-middleware';
 
 export const runtime = 'nodejs';
 
 async function transactionHandler(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
+    const config: NetworkConfig = getStellarConfigForNetwork(network);
+
     // Authenticate
     const token = getAccessToken(req);
     const user = await getAuthenticatedUser(token);
@@ -39,6 +47,35 @@ async function transactionHandler(req: NextRequest) {
       );
     }
 
+    let transaction: Transaction;
+    try {
+      transaction = new Transaction(
+        signedTransactionXDR,
+        config.NETWORK_PASSPHRASE
+      );
+    } catch (xdrParseError: any) {
+      await logWithConfig('warn', 'Transaction API: invalid XDR', {
+        error: xdrParseError?.message,
+      });
+      return NextResponse.json({ error: 'Invalid transaction XDR' }, { status: 400 });
+    }
+
+    const xdrSourceAddress = transaction.source;
+    if (walletAddress !== xdrSourceAddress) {
+      await logWithConfig('warn', 'Transaction API: walletAddress does not match XDR source', {
+        userId: user.id.substring(0, 8) + '...',
+        walletAddress: walletAddress.substring(0, 8) + '...',
+        xdrSourceAddress: xdrSourceAddress.substring(0, 8) + '...',
+        transactionType,
+      });
+      return NextResponse.json(
+        { error: 'Wallet address does not match transaction source' },
+        { status: 403 }
+      );
+    }
+
+    const canonicalAddress = xdrSourceAddress;
+
     // Get Edge Config for rate limiting
     const rateLimitConfig = await getRateLimitConfig('transaction');
     const apiConfig = await getApiConfig('transaction');
@@ -52,44 +89,38 @@ async function transactionHandler(req: NextRequest) {
       windowMs: rateLimitConfig.windowMs,
     };
 
-    const { success, limit, remaining, reset } = await rateLimiter.limit(walletAddress, ip);
+    const { success, limit, remaining, reset } = await rateLimiter.limit(canonicalAddress, ip);
 
     await logWithConfig('info', `${transactionType || 'Transaction'} rate limit check`, {
       success,
       limit,
       remaining,
       reset,
-      walletAddress: walletAddress.substring(0, 8) + '...',
+      walletAddress: canonicalAddress.substring(0, 8) + '...',
       effectiveLimit,
       transactionType,
     });
 
     if (!success) {
       await logWithConfig('warn', 'Rate limit exceeded for transaction API', {
-        walletAddress,
+        walletAddress: canonicalAddress,
         transactionType,
       });
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    // Assert user owns walletAddress
-    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    // if (!isLinked) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
+    const linkedWallet = await LinkedWalletService.getLinkedWalletByAddress(canonicalAddress);
+    if (linkedWallet && linkedWallet.supabaseUid !== user.id) {
+      await logWithConfig('warn', 'Transaction API: wallet linked to different user', {
+        userId: user.id.substring(0, 8) + '...',
+        walletAddress: canonicalAddress.substring(0, 8) + '...',
+        transactionType,
+      });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
-    // Verify signature
     try {
-      const transaction = new Transaction(
-        signedTransactionXDR,
-        constants.StellarConfig.NETWORK_PASSPHRASE
-      );
-      logger.log('[Transaction API] transaction: ', transaction);
-      const keypair = Keypair.fromPublicKey(walletAddress);
-
-      logger.log('[Transaction API] keypair: ', keypair);
-
-      // Verify that the transaction is signed by the correct wallet
+      const keypair = Keypair.fromPublicKey(canonicalAddress);
       const hasValidSignature = transaction.signatures.some((sig) => {
         try {
           return keypair.verify(transaction.hash(), sig.signature());
@@ -97,11 +128,10 @@ async function transactionHandler(req: NextRequest) {
           return false;
         }
       });
-      logger.log('[Transaction API] hasValidSignature: ', hasValidSignature);
 
       if (!hasValidSignature) {
         await logWithConfig('warn', 'Invalid signature for wallet address', {
-          walletAddress,
+          walletAddress: canonicalAddress,
           transactionType,
         });
         return NextResponse.json(
@@ -114,7 +144,7 @@ async function transactionHandler(req: NextRequest) {
     } catch (error) {
       await logWithConfig('error', 'Signature verification failed', {
         error,
-        walletAddress,
+        walletAddress: canonicalAddress,
         transactionType,
       });
       return NextResponse.json(
@@ -127,17 +157,12 @@ async function transactionHandler(req: NextRequest) {
 
     // Execute the contract transaction server-side
     try {
-      const rpcServer = new rpc.Server(constants.StellarConfig.RPC_URL, {
-        allowHttp: constants.StellarConfig.RPC_URL.startsWith('http://'),
+      const rpcServer = new rpc.Server(config.RPC_URL, {
+        allowHttp: config.RPC_URL.startsWith('http://'),
       });
 
       logger.log('[Transaction API] Stellar Server: ', rpcServer);
 
-      // Submit the signed transaction
-      const transaction = new Transaction(
-        signedTransactionXDR,
-        constants.StellarConfig.NETWORK_PASSPHRASE
-      );
       let sendTxResponse = await rpcServer.sendTransaction(transaction);
 
       logger.log('[Transaction API] Result server.sendTransaction: ', sendTxResponse);
@@ -220,7 +245,7 @@ async function transactionHandler(req: NextRequest) {
       logger.log('[Transaction API] Contract error: ', contractError);
       await logWithConfig('error', `${transactionType || 'Contract'} execution failed`, {
         error: contractError?.message,
-        walletAddress,
+        walletAddress: canonicalAddress,
       });
       return NextResponse.json(
         {

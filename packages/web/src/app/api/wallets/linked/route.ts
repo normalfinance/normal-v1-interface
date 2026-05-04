@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
         walletName: wallet.walletName,
         createdAt: wallet.createdAt,
         lastUsedAt: wallet.lastUsedAt,
-        custodyChoice: wallet.custodyChoice,
       })),
     });
   } catch (error) {

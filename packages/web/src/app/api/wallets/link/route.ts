@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
-import { faucetRateLimiter } from '@/server/faucetRateLimiter';
+import { faucetRateLimiter } from '@/server/faucet-rate-limiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -14,11 +14,6 @@ const LinkWalletSchema = z.object({
     .min(1, 'Wallet address is required')
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
   walletName: z.string().max(50, 'Wallet name must be 50 characters or less').optional(),
-  custodyChoice: z.enum(['self', 'platform']).optional(),
-  encryptedMnemonic: z.string().optional(),
-  encryptionIV: z.string().optional(),
-  encryptionSalt: z.string().optional(),
-  custodyConsentEmail: z.string().email().optional(),
   userId: z.string().uuid().optional(), // Required for admin requests
 });
 
@@ -61,16 +56,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const {
-      walletAddress,
-      walletName,
-      custodyChoice,
-      encryptedMnemonic,
-      encryptionIV,
-      encryptionSalt,
-      custodyConsentEmail,
-      userId: adminProvidedUserId,
-    } = validation.data;
+    const { walletAddress, walletName, userId: adminProvidedUserId } = validation.data;
 
     // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     // if (isLinked) {
@@ -97,16 +83,21 @@ export async function POST(request: NextRequest) {
 
       // Check rate limit for non-admin requests
       if (!isDev || forceRateLimit) {
-        const rateLimitStatus = await faucetRateLimiter.check(userId);
-        if (rateLimitStatus.remaining === 0) {
+        const rateLimitResult = await faucetRateLimiter.reserve(userId);
+        if (rateLimitResult.degraded) {
+          logger.warn('[API /wallets/link] Rate limiter unavailable, allowing wallet creation:', {
+            userId: userId.substring(0, 8) + '...',
+          });
+        }
+        if (!rateLimitResult.success) {
           logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
             userId: userId.substring(0, 8) + '...',
-            reset: rateLimitStatus.reset,
+            reset: rateLimitResult.reset,
           });
           return NextResponse.json(
             {
-              error: 'Weekly wallet creation limit exceeded. Try again next week.',
-              reset: rateLimitStatus.reset,
+              error: 'You can only create 2 wallets per week. Try again next week.',
+              reset: rateLimitResult.reset,
             },
             { status: 429 }
           );
@@ -118,34 +109,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate custody data if platform custody is chosen
-    if (custodyChoice === 'platform') {
-      if (!encryptedMnemonic || !encryptionIV || !encryptionSalt || !custodyConsentEmail) {
-        return NextResponse.json(
-          {
-            error:
-              'Platform custody requires encryptedMnemonic, encryptionIV, encryptionSalt, and custodyConsentEmail',
-          },
-          { status: 400 }
-        );
-      }
-    }
-
     // Link the wallet
-    const linkedWallet = await LinkedWalletService.linkWallet(
-      userId,
-      walletAddress,
-      walletName,
-      custodyChoice
-        ? {
-            custodyChoice,
-            encryptedMnemonic,
-            encryptionIV,
-            encryptionSalt,
-            custodyConsentEmail,
-          }
-        : undefined
-    );
+    const linkedWallet = await LinkedWalletService.linkWallet(userId, walletAddress, walletName);
 
     logger.log('[API /wallets/link] Wallet linked successfully:', {
       userId: userId.substring(0, 8) + '...',
@@ -172,13 +137,13 @@ export async function POST(request: NextRequest) {
           walletName: linkedWallet.walletName,
           createdAt: linkedWallet.createdAt,
           lastUsedAt: linkedWallet.lastUsedAt,
-          custodyChoice: linkedWallet.custodyChoice,
         },
       },
       { status: 201 }
     );
   } catch (error) {
     logger.error('[API /wallets/link] Error linking wallet:', error);
+    console.log('[API /wallets/link] Error linking wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -206,7 +171,7 @@ export async function PATCH(request: NextRequest) {
         { error: 'Invalid request body', details: validation.error.errors },
         { status: 400 }
       );
-    }
+    } 
 
     const { walletAddress, walletName } = validation.data;
 
@@ -232,6 +197,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error('[API /wallets/link] Error updating wallet:', error);
+    console.log('[API /wallets/link] Error updating wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -275,6 +241,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error('[API /wallets/link] Error unlinking wallet:', error);
+    console.log('[API /wallets/link] Error unlinking wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,4 +1,3 @@
-import { useBoolean } from '@/hooks';
 import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
@@ -6,16 +5,15 @@ import { buildAuthHeaders } from '@/utils/http';
 import { runDepositFlow } from '@/lib/mgi/client';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
+import { useBoolean , useStellarConfig } from '@/hooks';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
-import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
 import {
   cdn,
   logger,
   isTestnet,
-  constants,
   createStripeURL,
   createCoinbasePayOnrampURL,
 } from '@normalfinance/utils';
@@ -41,6 +39,7 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 
 import AmountDialog from '../deposit-amount-dialog';
 
@@ -70,14 +69,15 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
+  const config = useStellarConfig();
 
   const persist = usePersistStore();
-  const { signTransaction } = useNormalWallet();
+  const { connectWallet: connectNormalWallet } = useNormalWallet();
 
   const moneyGramAmountDialog = useBoolean();
 
   const [mgiLoading, setMgiLoading] = useState(false);
-  const [isFunding, setIsFunding] = useState(false);
+  const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
 
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 
@@ -98,57 +98,10 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   // Check if prerequisites are met
   const prerequisitesMet = accountExists && hasUsdcTrustline;
 
-  // Handle funding account via sponsored reserves
-  const handleFundAccount = async () => {
-    if (!userAddress) {
-      enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
-      return;
-    }
-
-    setIsFunding(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Authentication required');
-      }
-
-      logger.log('[OnRampDialog] Requesting sponsorship for:', userAddress);
-      const { sponsorshipXDR } = await requestWalletSponsorship(userAddress, session.access_token);
-      logger.log('[OnRampDialog] Received sponsorship XDR');
-
-      if (sponsorshipXDR && signTransaction) {
-        const signedXDR = await signTransaction(sponsorshipXDR);
-        const { hash } = await submitSponsorshipTransaction(
-          signedXDR,
-          userAddress,
-          session.access_token
-        );
-        logger.log('[OnRampDialog] Account sponsored successfully:', hash);
-        enqueueSnackbar(t('Account created and USDC enabled!'), { variant: 'success' });
-      }
-
-      // Refetch account status
-      await refetchAccountStatus();
-    } catch (error: any) {
-      logger.error('[OnRampDialog] Sponsorship failed:', error);
-      if (
-        error.message?.includes('already been sponsored') ||
-        error.message?.includes('already exists')
-      ) {
-        enqueueSnackbar(t('Account already exists. Refreshing status...'), { variant: 'info' });
-        await refetchAccountStatus();
-      } else if (error.message?.includes('Rate limit')) {
-        enqueueSnackbar(t('Rate limit exceeded. Please try again later.'), { variant: 'error' });
-      } else {
-        enqueueSnackbar(error.message || t('Failed to create account and enable USDC'), {
-          variant: 'error',
-        });
-      }
-    } finally {
-      setIsFunding(false);
-    }
+  const handleNormalWalletCreated = async () => {
+    setShowCreateNormalWallet(false);
+    await connectNormalWallet();
+    await refetchAccountStatus();
   };
 
   // Handle adding USDC trustline
@@ -158,7 +111,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       return;
     }
 
-    const usdcIssuer = constants.StellarConfig.USDC_ISSUER;
+    const usdcIssuer = config.USDC_ISSUER;
     if (!usdcIssuer) {
       enqueueSnackbar(t('USDC issuer not configured'), { variant: 'error' });
       return;
@@ -315,8 +268,30 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             },
           }}
         >
-          {/* Loading state */}
-          {isCheckingAccount && (
+          {!isConnected && (
+            <Stack spacing={2} sx={{ mb: 2 }}>
+              <Alert severity="info" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                  {t('Normal Account Required')}
+                </Typography>
+                <Typography variant="body2">
+                  {t('Create a Normal account to start your first USDC deposit.')}
+                </Typography>
+              </Alert>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                size="large"
+                onClick={() => setShowCreateNormalWallet(true)}
+                startIcon={<Iconify icon="solar:add-circle-bold" />}
+              >
+                {t('Create Normal Account')}
+              </Button>
+            </Stack>
+          )}
+
+          {isConnected && isCheckingAccount && (
             <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
               <CircularProgress size={32} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
@@ -325,41 +300,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             </Stack>
           )}
 
-          {/* Account not funded - show faucet button */}
-          {!isCheckingAccount && !accountExists && (
-            <Stack spacing={2} sx={{ mb: 2 }}>
-              <Alert severity="warning" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  {t('Account Not Funded')}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    'Your account needs XLM to exist on the Stellar blockchain before you can use onramp services.'
-                  )}
-                </Typography>
-              </Alert>
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                size="large"
-                onClick={handleFundAccount}
-                disabled={isFunding}
-                startIcon={
-                  isFunding ? (
-                    <CircularProgress size={18} color="inherit" />
-                  ) : (
-                    <Iconify icon="solar:rocket-bold" />
-                  )
-                }
-              >
-                {isFunding ? t('Funding Account...') : t('Fund Account (Free)')}
-              </Button>
-            </Stack>
-          )}
-
-          {/* Account funded but no USDC trustline */}
-          {!isCheckingAccount && accountExists && !hasUsdcTrustline && (
+          {!isCheckingAccount && isConnected && accountExists && !hasUsdcTrustline && (
             <Stack spacing={2} sx={{ mb: 2 }}>
               <Alert severity="info" icon={<Iconify icon="solar:link-bold" width={22} />}>
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
@@ -389,8 +330,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             </Stack>
           )}
 
-          {/* Onramp options - only show when prerequisites met */}
-          {!isCheckingAccount && prerequisitesMet && (
+          {!isCheckingAccount && isConnected && prerequisitesMet && (
             <List disablePadding>
               {ONRAMPS.map((checkout) => (
                 <ListItemButton
@@ -433,8 +373,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
           )}
         </DialogContent>
 
-        {/* Footer text - only show when prerequisites met */}
-        {!isCheckingAccount && prerequisitesMet && (
+        {!isCheckingAccount && isConnected && prerequisitesMet && (
           <Box sx={{ px: 4, pb: 4, width: '100%' }}>
             <Typography
               variant="body2"
@@ -455,6 +394,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
         }}
         min={1}
         max={900}
+      />
+      <NormalWalletCreate
+        open={showCreateNormalWallet}
+        onClose={() => setShowCreateNormalWallet(false)}
+        onSuccess={handleNormalWalletCreated}
       />
     </>
   );

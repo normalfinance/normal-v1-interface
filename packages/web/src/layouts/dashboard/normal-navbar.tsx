@@ -31,7 +31,6 @@ const NAV_ITEMS: { url: string; label: string }[] = [
   { url: paths.assets.root, label: 'Assets' },
   { url: paths.invest, label: 'Invest' },
   { url: paths.portfolio, label: 'Portfolio' },
-  { url: paths.earn, label: 'Earn' },
   { url: paths.help.feedbackForm, label: 'Feedback' },
 ];
 
@@ -84,13 +83,14 @@ export interface Props {
   searchbar?: React.ReactNode;
   language?: React.ReactNode;
   account?: React.ReactNode;
+  networkToggle?: React.ReactNode;
 }
 
 export type NormalNavbarProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
 
 export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   const { t } = useTranslate();
-  const { links = [], searchbar, language, account } = props;
+  const { links = [], searchbar, language, account, networkToggle } = props;
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const pathname = usePathname();
@@ -376,6 +376,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           </Box>
 
           <Box sx={{ display: { xs: 'flex', lg: 'flex' }, alignItems: 'center', gap: 1 }}>
+            {networkToggle}
             {language}
             {account}
           </Box>

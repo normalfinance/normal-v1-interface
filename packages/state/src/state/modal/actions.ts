@@ -6,6 +6,7 @@ export function createModalActions(set: SetStateType, get: GetStateType): ModalA
       ON_RAMP: false,
       OFF_RAMP: false,
       DEPOSIT_CRYPTO: false,
+      SEND_CRYPTO: false,
       ADD_LIQUIDITY: false,
       REMOVE_LIQUIDITY: false,
     },

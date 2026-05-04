@@ -2,38 +2,73 @@ import type { MnemonicStrength } from '@normalfinance/utils';
 
 import { useRef, useEffect, useCallback } from 'react';
 import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
+import { useWalletPassword } from '@/providers/WalletPasswordProvider';
 import { logger, createKeypairFromSecret } from '@normalfinance/utils';
 import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
+import {
+  isLegacyBase64,
+  isPasswordEncrypted,
+  isIndexedDBEncrypted,
+  decryptFromLocalStorage,
+  encryptPrivateKeyWithPassword,
+  decryptPrivateKeyWithPassword,
+} from '@/lib/client-crypto';
 
 const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
 
+export const NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE =
+  'No local wallet key found. Please re-import your wallet using your recovery phrase to continue signing.';
+
 /**
- * Encrypt and store private key in localStorage
- * Note: Simple base64 encoding is used for now. should consider something more secure in the future.
+ * Encrypt and store private key in localStorage using password-derived key (v2).
  */
-const storePrivateKey = (privateKey: string): void => {
+const storePrivateKey = async (privateKey: string, password: string): Promise<void> => {
   if (typeof window === 'undefined') return;
   try {
-    const encoded = btoa(privateKey); // we should consider using Buffer.from(randomBytes).toString("hex") instead of btoa in the future.
-    localStorage.setItem(NORMAL_WALLET_STORAGE_KEY, encoded);
+    const encrypted = await encryptPrivateKeyWithPassword(privateKey, password);
+    localStorage.setItem(NORMAL_WALLET_STORAGE_KEY, encrypted);
   } catch (error) {
     logger.error('[NORMAL WALLET] Failed to store private key:', error);
   }
 };
 
 /**
- * Retrieve and decrypt private key from localStorage
+ * Retrieve and decrypt a v2 password-encrypted private key from localStorage.
  */
-const getStoredPrivateKey = (): string | null => {
+const getStoredPrivateKey = async (password: string): Promise<string | null> => {
   if (typeof window === 'undefined') return null;
   try {
-    const encoded = localStorage.getItem(NORMAL_WALLET_STORAGE_KEY);
-    if (!encoded) return null;
-    return atob(encoded); // we should consider using Buffer.from(randomBytes).toString("hex") instead of atob in the future.
+    const stored = localStorage.getItem(NORMAL_WALLET_STORAGE_KEY);
+    if (!stored) return null;
+    return await decryptPrivateKeyWithPassword(stored, password);
   } catch (error) {
+    // Re-throw password errors so callers can handle them
+    if (error instanceof Error && error.message === 'Incorrect password') {
+      throw error;
+    }
     logger.error('[NORMAL WALLET] Failed to retrieve private key:', error);
     return null;
   }
+};
+
+type StoredKeyFormat = 'none' | 'legacy' | 'v1' | 'v2';
+
+/**
+ * Detect the format of the stored private key.
+ */
+const getStoredKeyFormat = (): StoredKeyFormat => {
+  if (typeof window === 'undefined') return 'none';
+  const stored = localStorage.getItem(NORMAL_WALLET_STORAGE_KEY);
+  if (!stored) return 'none';
+  if (isPasswordEncrypted(stored)) return 'v2';
+  if (isIndexedDBEncrypted(stored)) return 'v1';
+  if (isLegacyBase64(stored)) return 'legacy';
+  return 'none';
+};
+
+export const hasStoredNormalWalletKey = (): boolean => {
+  const storedKeyFormat = getStoredKeyFormat();
+  return storedKeyFormat === 'v2' || storedKeyFormat === 'v1' || storedKeyFormat === 'legacy';
 };
 
 /**
@@ -51,6 +86,7 @@ const removeStoredPrivateKey = (): void => {
 export const useNormalWallet = () => {
   const persistStore = usePersistStore();
   const normalWalletStore = useNormalWalletStore();
+  const { requestPassword } = useWalletPassword();
 
   const connectionChecked = useRef(false);
 
@@ -80,38 +116,27 @@ export const useNormalWallet = () => {
         connectionChecked.current = true;
 
         const storedAddress = persistStore.wallet.address;
-        if (storedAddress) {
-          // Try to restore keypair from localStorage
-          const storedPrivateKey = getStoredPrivateKey();
-          if (storedPrivateKey) {
-            try {
-              const keypair = createKeypairFromSecret(storedPrivateKey);
-              const publicKey = keypair.publicKey();
+        if (!storedAddress) return;
 
-              // Verify the public key matches the stored address
-              if (publicKey === storedAddress) {
-                normalWalletStore.setKeypair(keypair);
-                normalWalletStore.setPublicKey(publicKey);
-                normalWalletStore.setConnected(true);
-                logger.log('[NORMAL WALLET] Wallet restored successfully');
-              } else {
-                logger.warn('[NORMAL WALLET] Stored private key does not match stored address');
-                // Clear invalid data
-                removeStoredPrivateKey();
-                persistStore.disconnectWallet();
-              }
-            } catch (error) {
-              logger.error('[NORMAL WALLET] Failed to restore keypair:', error);
-              // Clear invalid data
-              removeStoredPrivateKey();
-              persistStore.disconnectWallet();
-            }
-          } else {
-            // No private key stored, disconnect
-            logger.warn('[NORMAL WALLET] No private key found in storage');
-            persistStore.disconnectWallet();
-          }
+        if (!hasStoredNormalWalletKey()) {
+          logger.warn(
+            '[NORMAL WALLET] Persisted Normal wallet is missing a local key; clearing stale connection state'
+          );
+          normalWalletStore.setKeypair(null);
+          normalWalletStore.setPublicKey(null);
+          normalWalletStore.setConnected(false);
+          persistStore.disconnectWallet();
+          return;
         }
+
+        // Address-only restore: never prompt for password on mount. The
+        // decrypted keypair is populated lazily by signTransaction on the
+        // first sign, which caches it in the zustand store for the session.
+        // This keeps the wallet "connected" for all read paths (balances,
+        // history, etc.) without disturbing the user with a modal on every
+        // page load.
+        normalWalletStore.setPublicKey(storedAddress);
+        normalWalletStore.setConnected(true);
       } catch (error) {
         logger.error('[NORMAL WALLET] Failed to restore wallet:', error);
       }
@@ -130,7 +155,8 @@ export const useNormalWallet = () => {
     persistStore.wallet.address,
     normalWalletStore.isConnected,
     normalWalletStore.isConnecting,
-    normalWalletStore.publicKey,
+    normalWalletStore,
+    persistStore,
   ]);
 
   const createWallet = useCallback(
@@ -139,15 +165,13 @@ export const useNormalWallet = () => {
         const result = await normalWalletStore.createWallet(strength, passphrase);
         const stateToStore = useNormalWalletStore.getState();
         if (stateToStore.keypair) {
-          storePrivateKey(stateToStore.keypair.secret());
+          const password = await requestPassword('set');
+          await storePrivateKey(stateToStore.keypair.secret(), password);
         }
         // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
 
-        // Link wallet to user's auth account (fire and forget - don't block on this)
-        linkWallet(result.publicKey, walletName).catch((error) => {
-          logger.warn('[NORMAL WALLET] Failed to link wallet to account:', error);
-        });
+        await linkWallet(result.publicKey, walletName);
 
         return result;
       } catch (error) {
@@ -155,75 +179,162 @@ export const useNormalWallet = () => {
         throw error;
       }
     },
-    [normalWalletStore, persistStore]
+    [normalWalletStore, persistStore, requestPassword]
   );
 
   const importWalletFromMnemonic = useCallback(
-    async (mnemonic: string, passphrase?: string, walletName?: string) => {
+    async (
+      mnemonic: string,
+      passphrase?: string,
+      walletName?: string,
+      options?: { persistLocally?: boolean }
+    ) => {
       try {
         const result = await normalWalletStore.importWalletFromMnemonic(mnemonic, passphrase);
         const stateToStore = useNormalWalletStore.getState();
-        if (stateToStore.keypair) {
-          storePrivateKey(stateToStore.keypair.secret());
+        if (stateToStore.keypair && options?.persistLocally !== false) {
+          const password = await requestPassword('set');
+          await storePrivateKey(stateToStore.keypair.secret(), password);
         }
-        // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
-
-        // Link wallet to user's auth account (fire and forget - don't block on this)
-        linkWallet(result.publicKey, walletName).catch((error) => {
-          logger.warn('[NORMAL WALLET] Failed to link wallet to account:', error);
-        });
-
+        await linkWallet(result.publicKey, walletName);
         return result;
       } catch (error) {
         logger.error('[NORMAL WALLET] Failed to import wallet from mnemonic:', error);
         throw error;
       }
     },
-    [normalWalletStore, persistStore]
+    [normalWalletStore, persistStore, requestPassword]
   );
 
   const importWalletFromPrivateKey = useCallback(
-    async (privateKey: string, walletName?: string) => {
+    async (privateKey: string, walletName?: string, options?: { persistLocally?: boolean }) => {
       try {
         const result = await normalWalletStore.importWalletFromPrivateKey(privateKey);
         const stateToStore = useNormalWalletStore.getState();
-        if (stateToStore.keypair) {
-          storePrivateKey(stateToStore.keypair.secret());
+        if (stateToStore.keypair && options?.persistLocally !== false) {
+          const password = await requestPassword('set');
+          await storePrivateKey(stateToStore.keypair.secret(), password);
         }
-        // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
-
-        // Link wallet to user's auth account (fire and forget - don't block on this)
-        linkWallet(result.publicKey, walletName).catch((error) => {
-          logger.warn('[NORMAL WALLET] Failed to link wallet to account:', error);
-        });
-
+        await linkWallet(result.publicKey, walletName);
         return result;
       } catch (error) {
         logger.error('[NORMAL WALLET] Failed to import wallet from private key:', error);
         throw error;
       }
     },
-    [normalWalletStore, persistStore]
+    [normalWalletStore, persistStore, requestPassword]
   );
 
   const connectWallet = useCallback(async () => {
     await normalWalletStore.connectWallet(persistStore);
 
-    // Update lastUsedAt for the linked wallet (fire and forget)
     const publicKey = normalWalletStore.publicKey;
     if (publicKey) {
-      updateLastUsed(publicKey).catch(() => {
-        // Silently ignore - non-critical operation
-      });
+      updateLastUsed(publicKey).catch(() => {});
     }
   }, [normalWalletStore, persistStore]);
 
+  const connectWalletWithoutKeypair = useCallback(
+    async (address: string) => {
+      if (!hasStoredNormalWalletKey()) {
+        throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+      }
+
+      await persistStore.connectWallet(address, 'normal-wallet');
+      normalWalletStore.setPublicKey(address);
+      normalWalletStore.setConnected(true);
+      updateLastUsed(address).catch(() => {});
+    },
+    [persistStore, normalWalletStore]
+  );
+
   const signTransaction = useCallback(
-    async (xdr: string, networkPassphrase?: string) =>
-      await normalWalletStore.signTransaction(xdr, networkPassphrase),
-    [normalWalletStore]
+    async (xdr: string, networkPassphrase?: string) => {
+      // Always read the latest zustand state — the hook-captured `normalWalletStore`
+      // can be stale if the store updated between render and this call.
+      const latest = useNormalWalletStore.getState();
+      if (latest.keypair && latest.publicKey) {
+        return latest.signTransaction(xdr, networkPassphrase);
+      }
+
+      const walletAddress = persistStore.wallet.address || latest.publicKey;
+      if (!walletAddress) {
+        throw new Error('No wallet connected');
+      }
+
+      // Self-custody: prompt for password and decrypt the locally-stored key
+      const keyFormat = getStoredKeyFormat();
+
+      const finalizeSign = (decryptedKey: string) => {
+        const keypairFromStorage = createKeypairFromSecret(decryptedKey);
+        if (keypairFromStorage.publicKey() !== walletAddress) {
+          throw new Error(
+            'The stored local key does not match your wallet address. Please re-import your wallet using your recovery phrase.'
+          );
+        }
+        latest.setKeypair(keypairFromStorage);
+        latest.setPublicKey(keypairFromStorage.publicKey());
+        latest.setConnected(true);
+        return useNormalWalletStore.getState().signTransaction(xdr, networkPassphrase);
+      };
+
+      if (keyFormat === 'v2') {
+        try {
+          const password = await requestPassword('enter');
+          const storedPrivateKey = await getStoredPrivateKey(password);
+          if (!storedPrivateKey) {
+            throw new Error(
+              'Could not decrypt your local wallet key. Please re-import your wallet using your recovery phrase.'
+            );
+          }
+          return finalizeSign(storedPrivateKey);
+        } catch (error) {
+          if (error instanceof Error && error.message === 'User cancelled password entry') {
+            throw new Error('Password required to sign. Please try again.');
+          }
+          throw error;
+        }
+      }
+
+      if (keyFormat === 'legacy' || keyFormat === 'v1') {
+        // Lazy migration: silently decrypt the legacy/v1 key, prompt the user
+        // for a new password, re-encrypt as v2, then proceed with the sign.
+        let decryptedKey: string;
+        try {
+          const stored = localStorage.getItem(NORMAL_WALLET_STORAGE_KEY);
+          if (!stored) {
+            throw new Error('No local key');
+          }
+          decryptedKey =
+            keyFormat === 'legacy' ? atob(stored) : await decryptFromLocalStorage(stored);
+        } catch (error) {
+          logger.error('[NORMAL WALLET] Failed to decrypt legacy/v1 key:', error);
+          throw new Error(
+            'Could not decrypt your local wallet key. Please re-import your wallet using your recovery phrase.'
+          );
+        }
+
+        try {
+          const password = await requestPassword('migrate');
+          await storePrivateKey(decryptedKey, password);
+          logger.log('[NORMAL WALLET] Migrated to v2 password encryption');
+        } catch (error) {
+          if (error instanceof Error && error.message === 'User cancelled password entry') {
+            throw new Error('Password required to sign. Please try again.');
+          }
+          throw error;
+        }
+
+        return finalizeSign(decryptedKey);
+      }
+
+      // No local key at all — only possible for users whose wallet was created
+      // under the removed platform-custody flow. They must re-import.
+      throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+    },
+    [persistStore.wallet.address, requestPassword]
   );
 
   const disconnectWallet = useCallback(async () => {
@@ -239,15 +350,22 @@ export const useNormalWallet = () => {
     }
   }, [normalWalletStore, persistStore]);
 
+  // canSign is true when the wallet can sign transactions locally:
+  // either a keypair is already in memory, or a locally-stored key exists
+  // (v2, v1, or legacy) that signTransaction can unlock on demand.
+  const canSign = !!normalWalletStore.keypair || hasStoredNormalWalletKey();
+
   return {
     publicKey: normalWalletStore.publicKey,
     isConnected: normalWalletStore.isConnected,
     isConnecting: normalWalletStore.isConnecting,
-    mnemonic: normalWalletStore.mnemonic, // Only available during creation/import
+    canSign,
+    mnemonic: normalWalletStore.mnemonic,
     createWallet,
     importWalletFromMnemonic,
     importWalletFromPrivateKey,
     connectWallet,
+    connectWalletWithoutKeypair,
     signTransaction,
     disconnectWallet,
   };

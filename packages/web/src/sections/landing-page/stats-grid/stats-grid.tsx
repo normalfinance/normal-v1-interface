@@ -25,40 +25,42 @@ const DEFAULT_PROPS = {
   tagline: 'Tagline',
   heading: 'Trusted by thousands',
   description:
-    'Normal powers the largest catalogue of on-chain real-world assets and index funds, with thousands of dollars in weekly volume across 100+ assets and funds.',
+    "Normal is building the simplest way to grow your money on-chain. It's an automated savings account that gives you complete diversification across yield, crypto, and tokenized real-world assets (RWAs) — all in one place.",
   stats: [
     {
-      percentage: '$400K+',
+      percentage: '$1M+',
       heading: 'AUM',
       description: '',
     },
     {
       percentage: '2,000+',
-      heading: 'Investors',
+      heading: 'Users',
       description: '',
     },
     {
-      percentage: 'Soon',
-      heading: 'Average APY',
+      percentage: '50+',
+      heading: 'Countries',
       description: '',
     },
     {
-      percentage: 'Soon',
-      heading: '+24H volume',
+      percentage: 'Coming soon',
+      heading: 'Total volume',
       description: '',
     },
   ],
 };
 
-const paperSx = {
-  bgcolor: '#F9FAFB',
-  borderRadius: 3,
-};
-
 const StatCard: React.FC<StatsProps> = ({ percentage, heading }) => {
   const { t } = useTranslate();
   return (
-    <Paper variant="outlined" sx={{ ...paperSx }}>
+    <Paper
+      variant="outlined"
+      sx={(theme) => ({
+        borderRadius: 3,
+        bgcolor: theme.palette.grey[100],
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
+      })}
+    >
       <Box
         sx={{
           p: { xs: 2.5, md: 4 },
@@ -138,12 +140,12 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
                   '&:hover': { bgcolor: 'secondary.light' },
                   color: 'text.primary',
                 }}
-                // onClick={() =>
-                //   trackEvent('button_clicked', {
-                //     label: 'Learn more',
-                //     location: 'Home',
-                //   })
-                // }
+              // onClick={() =>
+              //   trackEvent('button_clicked', {
+              //     label: 'Learn more',
+              //     location: 'Home',
+              //   })
+              // }
               >
                 {t('Learn more')}
               </Button>

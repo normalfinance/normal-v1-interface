@@ -68,14 +68,42 @@ const AuthLoginModal = ({
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [showTosHelper, setShowTosHelper] = useState(false);
 
+  const requiresTosAcceptance = !disclaimer.accepted;
+  const isTosAcceptanceMissing = requiresTosAcceptance && !tosAccepted;
+  const tosHelperMessage = t('Please review and accept our ToS and Disclaimer to continue');
+
   const handleDisabledButtonClick = () => {
-    setShowTosHelper(true);
+    if (isTosAcceptanceMissing) {
+      setShowTosHelper(true);
+    }
   };
 
   const handleClickTos = (value: boolean) => {
-    setShowTosHelper(!value);
+    setShowTosHelper(requiresTosAcceptance && !value);
     setTosAccepted(value);
   };
+
+  const enforceTosAcceptance = () => {
+    if (!isTosAcceptanceMissing) {
+      return true;
+    }
+
+    setShowTosHelper(true);
+    return false;
+  };
+
+  const persistTosAcceptance = async () => {
+    if (requiresTosAcceptance && tosAccepted) {
+      await setDisclaimerAccepted(true);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      setTosAccepted(disclaimer.accepted);
+      setShowTosHelper(false);
+    }
+  }, [disclaimer.accepted, open]);
 
   useEffect(() => {
     if (passwordResetSuccess && open) {
@@ -87,11 +115,15 @@ const AuthLoginModal = ({
   }, [passwordResetSuccess, open, resetEmail]);
 
   const handleGoogle = async () => {
+    if (!enforceTosAcceptance()) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      await setDisclaimerAccepted(true);
+      await persistTosAcceptance();
       await signInWithGoogle();
     } catch (err) {
       console.error('Error signing in with Google:', err);
@@ -102,6 +134,10 @@ const AuthLoginModal = ({
   };
 
   const handleEmailAuth = async () => {
+    if (!enforceTosAcceptance()) {
+      return;
+    }
+
     if (!email.trim()) {
       setError(t('Please enter your email address'));
       return;
@@ -122,7 +158,7 @@ const AuthLoginModal = ({
       setError(null);
 
       try {
-        await setDisclaimerAccepted(true);
+        await persistTosAcceptance();
         if (isSignUp) {
           await signUpWithPassword(email.trim(), password, captchaToken);
           setError(t('Account created! Please check your email to verify your account.'));
@@ -143,6 +179,7 @@ const AuthLoginModal = ({
       setError(null);
 
       try {
+        await persistTosAcceptance();
         await signInWithOtp(email.trim(), captchaToken);
         setOtpSent(true);
         setLoading(false);
@@ -157,6 +194,10 @@ const AuthLoginModal = ({
   };
 
   const handleVerifyOtp = async (token?: string) => {
+    if (!enforceTosAcceptance()) {
+      return;
+    }
+
     const codeToVerify = token ?? otpToken;
     if (!codeToVerify.trim() || codeToVerify.trim().length !== 6) {
       setError(t('Please enter the 6-digit code'));
@@ -167,7 +208,7 @@ const AuthLoginModal = ({
     setError(null);
 
     try {
-      await setDisclaimerAccepted(true);
+      await persistTosAcceptance();
       await verifyOtp(email.trim(), codeToVerify.trim());
       onClose();
     } catch (err) {
@@ -226,7 +267,7 @@ const AuthLoginModal = ({
     setError(null);
     setAuthMode('magic-link');
     setIsSignUp(false);
-    setTosAccepted(false);
+    setTosAccepted(disclaimer.accepted);
     setForgotPassword(false);
     setResetEmailSent(false);
     setShowTosHelper(false);
@@ -273,19 +314,24 @@ const AuthLoginModal = ({
             </Box>
           )}
 
-          {showTosHelper && (
+          {showTosHelper && isTosAcceptanceMissing && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              {t('Please review and accept our ToS and Disclaimer to continue')}
+              {tosHelperMessage}
             </Alert>
           )}
 
-          {!disclaimer.accepted && (
+          {requiresTosAcceptance && (
             <FormControlLabel
               control={
                 <Checkbox
                   checked={tosAccepted}
                   onChange={(e) => handleClickTos(e.target.checked)}
+                  color="primary"
+                  inputProps={{
+                    'aria-label': t('Accept Terms of Service and Disclaimer'),
+                  }}
                   data-testid="tos-checkbox"
+                  sx={{ mt: 0.25, mr: 0.5 }}
                 />
               }
               label={
@@ -319,30 +365,26 @@ const AuthLoginModal = ({
           <Box
             component="span"
             onClick={() => {
-              if (loading || !tosAccepted) handleDisabledButtonClick();
+              if (isTosAcceptanceMissing) handleDisabledButtonClick();
             }}
             sx={{
               display: 'flex',
               width: '100%',
             }}
           >
-            <Tooltip
-              title={
-                loading || !tosAccepted
-                  ? 'Please review and accept our ToS and Disclaimer to continue'
-                  : ''
-              }
-            >
-              <Button
-                variant="outlined"
-                color="inherit"
-                size="large"
-                onClick={handleGoogle}
-                disabled={loading || !tosAccepted}
-                startIcon={<Iconify icon="logos:google-icon" width={24} />}
-              >
-                {loading ? t('Redirecting…') : t('Sign in with Google')}
-              </Button>
+            <Tooltip title={isTosAcceptanceMissing ? tosHelperMessage : ''}>
+              <span>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  size="large"
+                  onClick={handleGoogle}
+                  disabled={loading || isTosAcceptanceMissing}
+                  startIcon={<Iconify icon="logos:google-icon" width={24} />}
+                >
+                  {loading ? t('Redirecting…') : t('Sign in with Google')}
+                </Button>
+              </span>
             </Tooltip>
           </Box>
 
@@ -428,16 +470,10 @@ const AuthLoginModal = ({
                 </>
               )}
 
-              <Tooltip
-                title={
-                  loading || !tosAccepted
-                    ? 'Please review and accept our ToS and Disclaimer to continue'
-                    : ''
-                }
-              >
+              <Tooltip title={isTosAcceptanceMissing ? tosHelperMessage : ''}>
                 <span
                   onClick={() => {
-                    if (loading || !tosAccepted) handleDisabledButtonClick();
+                    if (isTosAcceptanceMissing) handleDisabledButtonClick();
                   }}
                 >
                   <Button
@@ -448,7 +484,7 @@ const AuthLoginModal = ({
                       loading ||
                       !email.trim() ||
                       (authMode === 'password' && !password.trim()) ||
-                      !tosAccepted
+                      isTosAcceptanceMissing
                     }
                     fullWidth
                   >

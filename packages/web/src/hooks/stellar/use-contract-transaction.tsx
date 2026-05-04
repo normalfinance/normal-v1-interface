@@ -7,13 +7,17 @@ import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
 import { useCallback } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
+import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
-import { logger, constants } from '@normalfinance/utils';
 import { type TransactionDetails } from '@/types/transaction';
-import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
+import {
+  useNormalWallet,
+  NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,
+} from '@/hooks/stellar/use-normal-wallet';
 import {
   TreasuryContract,
   IndexFundContract,
@@ -84,9 +88,14 @@ const getContractClient = <T extends ContractType>(
 
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
+  const config = useStellarConfig();
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
-  const { signTransaction: signNormalWallet, publicKey: normalPublicKey } = useNormalWallet();
+  const {
+    signTransaction: signNormalWallet,
+    publicKey: normalPublicKey,
+    canSign: normalCanSign,
+  } = useNormalWallet();
   const { t } = useTranslate();
   const router = useRouter();
 
@@ -97,12 +106,15 @@ export const useContractTransaction = () => {
       transactionFunction,
       transactionDetails,
     }: ExecuteContractTransactionParams<T>) => {
-      const networkPassphrase = constants.StellarConfig.NETWORK_PASSPHRASE;
-      const rpcUrl = constants.StellarConfig.RPC_URL;
+      const networkPassphrase = config.NETWORK_PASSPHRASE;
+      const rpcUrl = config.RPC_URL;
 
       // Determine wallet type and get appropriate address and sign function
       const walletType = storePersist.wallet.walletType;
       const isNormalWallet = walletType === 'normal-wallet';
+      if (isNormalWallet && !normalCanSign) {
+        throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+      }
       const walletAddress = isNormalWallet
         ? normalPublicKey || storePersist.wallet.address
         : stellarPublicKey || storePersist.wallet.address;
@@ -134,9 +146,7 @@ export const useContractTransaction = () => {
               throw new Error('Sign transaction function not available');
             }
 
-            const res = isNormalWallet
-              ? await signTransaction(xdr, networkPassphrase)
-              : await signTransaction(xdr);
+            const res = await signTransaction(xdr, networkPassphrase);
 
             logger.log('[USE CONTRACT TRANSACTION] signTransaction raw result:', res);
             logger.log('[USE CONTRACT TRANSACTION] signTransaction raw typeof:', typeof res);
@@ -283,7 +293,17 @@ export const useContractTransaction = () => {
           throw error;
         });
     },
-    [storePersist, signStellarWalletKit, signNormalWallet, stellarPublicKey, normalPublicKey, t]
+    [
+      storePersist,
+      config,
+      signStellarWalletKit,
+      signNormalWallet,
+      stellarPublicKey,
+      normalPublicKey,
+      normalCanSign,
+      router,
+      t,
+    ]
   );
 
   return {

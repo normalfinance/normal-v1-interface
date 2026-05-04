@@ -1,181 +1,163 @@
 'use client';
 
-import type { PairTxRow } from '@/types/pools';
-import type { events } from '@normalfinance/types';
-
 import BigNumber from 'bignumber.js';
-import { usePair, usePairEvents } from '@/hooks';
+import { useTranslate } from '@/locales';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
-import { useTreasuryBalances } from '@/hooks/stellar/use-treasury-balances';
+import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fCurrencyTwoDecimals } from '@/utils/format-number';
 
-import { Grid2, useTheme } from '@mui/material';
+import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
+import Grid2 from '@mui/material/Grid2';
+import Avatar from '@mui/material/Avatar';
+import Typography from '@mui/material/Typography';
+import CardContent from '@mui/material/CardContent';
 
-import { useSnackbar } from '@/components/template/snackbar';
-import { PairTransactionsTable } from '@/components/_pool-page-components';
+import { Iconify } from '@/components/template/iconify';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
-import { PoolOverview } from '@/components/_pool-page-components/pool-overview';
 
-export default function AssetDetailsView({
-  symbol,
-  pairAddress,
-}: {
-  symbol: string;
-  pairAddress: string;
-}) {
-  const theme = useTheme();
-  const { enqueueSnackbar } = useSnackbar();
+export default function AssetDetailsView({ symbol }: { symbol: string }) {
+  const { t } = useTranslate();
 
   const {
     tokenState: { tokens },
   } = usePersistStore();
 
-  const { loading, error, pair, fetchPair: refreshPair } = usePair(pairAddress);
+  // Find the token by symbol
+  const token = tokens.find((tkn) => tkn.symbol.toLowerCase() === symbol.toLowerCase());
 
-  const { balances: treasuryBalances } = useTreasuryBalances(pairAddress);
-
-  const { events } = usePairEvents(pairAddress, 20);
-
-  if (!pair) {
-    return <SpecificNotFound type="pair" />;
+  if (!token) {
+    return <SpecificNotFound type="asset" />;
   }
 
-  // Format the pair events
-  const rows = events
-    .map(convertToPairTxRow)
-    .sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
-
-  const past24hVolume = BigNumber(0);
-
-  // Find tokens
-  const collateralToken = tokens.find((tkn) => tkn.contract === pair.tokens.collateral);
-  const longToken = tokens.find((tkn) => tkn.contract === pair.tokens.long);
-  const shortToken = tokens.find((tkn) => tkn.contract === pair.tokens.short);
-
-  const collateralValue =
-    pair && collateralToken
-      ? BigNumber(pair.collateral.totalCollateral).multipliedBy(collateralToken.price)
-      : BigNumber(0);
-
-  const onRefresh = async () => {
-    enqueueSnackbar('Refreshing asset', { variant: 'info' });
-    await refreshPair();
-  };
+  const balance = BigNumber(token.balance || 0);
+  const price = BigNumber(token.price || 0);
+  const value = balance.multipliedBy(price);
 
   return (
     <DashboardContent maxWidth="xl">
       <Grid2 container spacing={3}>
-        <Grid2 size={{ xs: 12, md: 4 }}>
-          <PoolOverview
-            pair={pair}
-            treasuryBalances={[
-              {
-                address: pair.tokens.long,
-                type: 'LONG',
-                amount: treasuryBalances?.long ?? BigNumber(0),
-                fiatValue:
-                  longToken && treasuryBalances
-                    ? treasuryBalances.long.multipliedBy(longToken.price)
-                    : BigNumber(0),
-              },
-              {
-                address: pair.tokens.short,
-                type: 'SHORT',
-                amount: treasuryBalances?.short ?? BigNumber(0),
-                fiatValue:
-                  shortToken && treasuryBalances
-                    ? treasuryBalances.short.multipliedBy(shortToken.price)
-                    : BigNumber(0),
-              },
-              {
-                address: pair.tokens.collateral,
-                type: 'USDC',
-                amount: treasuryBalances?.usdc ?? BigNumber(0),
-                fiatValue:
-                  collateralToken && treasuryBalances
-                    ? treasuryBalances.usdc.multipliedBy(collateralToken.price)
-                    : BigNumber(0),
-              },
-            ]}
-            stats={[
-              {
-                statName: 'Collateral % Long',
-                value: BigNumber(pair.collateral.collateralPercentLong),
-              },
-              { statName: 'Lower Price Bound', value: BigNumber(pair.priceBounds.lower) },
-              {
-                statName: 'Upper Price Bound',
-                value: BigNumber(pair.priceBounds.upper),
-              },
-            ]}
-            onRefresh={onRefresh}
-          />
+        {/* Asset Overview Card */}
+        <Grid2 size={{ xs: 12, md: 6 }}>
+          <Card>
+            <CardContent>
+              <Stack spacing={3}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Avatar
+                    src={token.icon || getCryptoIconUrl(token.symbol)}
+                    alt={token.name}
+                    sx={{ width: 48, height: 48 }}
+                  />
+                  <Stack>
+                    <Typography variant="h5">{token.name}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {token.symbol}
+                    </Typography>
+                  </Stack>
+                </Stack>
+
+                <Stack spacing={1}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      {t('Price')}
+                    </Typography>
+                    <Typography variant="body2">{fCurrencyTwoDecimals(price.toNumber())}</Typography>
+                  </Stack>
+
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      {t('Your Balance')}
+                    </Typography>
+                    <Typography variant="body2">
+                      {balance.toFormat(token.decimals > 4 ? 4 : token.decimals)} {token.symbol}
+                    </Typography>
+                  </Stack>
+
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      {t('Value')}
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {fCurrencyTwoDecimals(value.toNumber())}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
         </Grid2>
 
-        <Grid2 size={{ xs: 12, md: 8 }}>
-          <PairTransactionsTable assetSymbol={symbol} rows={rows} />
+        {/* Token Info Card */}
+        <Grid2 size={{ xs: 12, md: 6 }}>
+          <Card>
+            <CardContent>
+              <Stack spacing={3}>
+                <Typography variant="h6">{t('Token Information')}</Typography>
+
+                <Stack spacing={1}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      {t('Contract')}
+                    </Typography>
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          maxWidth: 200,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {token.contract}
+                      </Typography>
+                      <Iconify
+                        icon="solar:copy-linear"
+                        width={16}
+                        sx={{ cursor: 'pointer', color: 'text.secondary' }}
+                        onClick={() => navigator.clipboard.writeText(token.contract)}
+                      />
+                    </Stack>
+                  </Stack>
+
+                  {token.issuer && (
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">
+                        {t('Issuer')}
+                      </Typography>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            maxWidth: 200,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {token.issuer}
+                        </Typography>
+                        <Iconify
+                          icon="solar:copy-linear"
+                          width={16}
+                          sx={{ cursor: 'pointer', color: 'text.secondary' }}
+                          onClick={() => navigator.clipboard.writeText(token.issuer || '')}
+                        />
+                      </Stack>
+                    </Stack>
+                  )}
+
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      {t('Decimals')}
+                    </Typography>
+                    <Typography variant="body2">{token.decimals}</Typography>
+                  </Stack>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
         </Grid2>
       </Grid2>
     </DashboardContent>
   );
-}
-
-function convertToPairTxRow(event: events.NormalContractEvent): PairTxRow {
-  switch (event.type) {
-    case 'deposit':
-      return {
-        type: 'Deposit',
-        user: event.user,
-        usdcAmount: BigNumber(event.usdcAmount),
-        assetAmount: BigNumber(event.pairAmount),
-        timestamp: Number(event.ts),
-        txHash: event.txHash,
-      };
-
-    case 'withdraw':
-      return {
-        type: 'Withdraw',
-        user: event.user,
-        usdcAmount: BigNumber(event.usdcAmount),
-        assetAmount: BigNumber(event.pairAmount),
-        timestamp: Number(event.ts),
-        txHash: event.txHash,
-      };
-
-    case 'mint':
-      return {
-        type: 'Mint',
-        usdcAmount: BigNumber(event.collateral),
-        assetAmount: BigNumber(event.tokensMinted),
-        user: event.user,
-        timestamp: Number(event.ts),
-        txHash: event.txHash,
-      };
-
-    case 'redeem':
-      return {
-        type: 'Redeem',
-        usdcAmount: BigNumber(event.collateral),
-        assetAmount: BigNumber(event.tokensRedeemed),
-        user: event.user,
-        timestamp: Number(event.ts),
-        txHash: event.txHash,
-      };
-
-    case 'trade': {
-      const buying = event.direction === 'Buy';
-      return {
-        type: buying ? 'Buy' : 'Sell',
-        side: event.side === 'Long' ? 'Long' : 'Short',
-        usdcAmount: BigNumber(buying ? event.inAmount : event.outAmount),
-        assetAmount: BigNumber(buying ? event.outAmount : event.inAmount),
-        user: event.user,
-        timestamp: Number(event.ts),
-        txHash: event.txHash,
-      };
-    }
-
-    default:
-      throw new Error('Unsupported pair event type');
-  }
 }

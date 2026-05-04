@@ -19,6 +19,8 @@ export const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
 
 // Fallback fee constant if SDK doesn’t expose BASE_FEE
 const BASE_FEE: string = typeof BASE_FEE_CONST === 'string' ? BASE_FEE_CONST : '100';
+const INACTIVE_STELLAR_ACCOUNT_MESSAGE =
+  'This Stellar account is not active yet. Please fund it with at least 1 XLM first.';
 
 // -----------------------
 // USDC on TESTNET
@@ -32,6 +34,9 @@ export const USDC = new Asset('USDC', USDC_TESTNET_ISSUER);
 async function fetchAccountRaw(publicKey: string): Promise<any> {
   const r = await fetch(`${HORIZON}/accounts/${encodeURIComponent(publicKey)}`);
   if (!r.ok) {
+    if (r.status === 404) {
+      throw new Error(INACTIVE_STELLAR_ACCOUNT_MESSAGE);
+    }
     const body = await r.text().catch(() => '');
     throw new Error(`Horizon loadAccount failed (${r.status}): ${body || r.statusText}`);
   }
@@ -74,7 +79,7 @@ export async function hasUSDCTrustline(publicKey: string): Promise<boolean> {
 export async function buildUSDCTrustlineTxXDR(publicKey: string): Promise<string> {
   const acct = await fetchAccountRaw(publicKey);
   const sequence = acct?.sequence;
-  if (!sequence) throw new Error('Account sequence not found (is the account funded/created?)');
+  if (!sequence) throw new Error(INACTIVE_STELLAR_ACCOUNT_MESSAGE);
 
   // Build a minimal Account instance (no Server needed)
   const account = new Account(publicKey, sequence);

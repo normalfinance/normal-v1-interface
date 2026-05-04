@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
-import { faucetRateLimiter } from '@/server/faucetRateLimiter';
+import { faucetRateLimiter } from '@/server/faucet-rate-limiter';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
@@ -36,17 +36,24 @@ export async function GET(request: NextRequest) {
       });
       return NextResponse.json({
         allowed: true,
-        remaining: 1,
+        remaining: 2,
         reset: 0,
       });
     }
 
     const rateLimitStatus = await faucetRateLimiter.check(user.id);
 
+    if (rateLimitStatus.degraded) {
+      logger.warn('[API /wallets/check-limit] Rate limiter unavailable, allowing request:', {
+        userId: user.id.substring(0, 8) + '...',
+      });
+    }
+
     logger.log('[API /wallets/check-limit] Rate limit checked for user:', {
       userId: user.id.substring(0, 8) + '...',
       remaining: rateLimitStatus.remaining,
       reset: rateLimitStatus.reset,
+      degraded: Boolean(rateLimitStatus.degraded),
     });
 
     return NextResponse.json({

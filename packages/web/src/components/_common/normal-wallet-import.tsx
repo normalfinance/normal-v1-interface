@@ -6,13 +6,6 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
 import {
-  generateAESKey,
-  decryptWithAES,
-  exportAESKeyAsBase64,
-  importAESKeyFromBase64,
-  encryptWithRSAPublicKey,
-} from '@/lib/client-crypto';
-import {
   logger,
   format,
   validateMnemonic,
@@ -26,7 +19,6 @@ import {
   Box,
   Tab,
   Tabs,
-  Chip,
   Stack,
   Alert,
   Paper,
@@ -48,19 +40,27 @@ export type NormalWalletImportProps = {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  showLinkedWallets?: boolean;
+  onBack?: () => void;
 };
 
 type ImportStage = 'select' | 'import';
 type ImportType = 'mnemonic' | 'private-key';
 
-export default function NormalWalletImport({ open, onClose, onSuccess }: NormalWalletImportProps) {
+export default function NormalWalletImport({
+  open,
+  onClose,
+  onSuccess,
+  showLinkedWallets = true,
+  onBack,
+}: NormalWalletImportProps) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { importWalletFromMnemonic, importWalletFromPrivateKey } = useNormalWallet();
   const { session } = useSupabaseAuth();
 
   // Stage management
-  const [stage, setStage] = useState<ImportStage>('select');
+  const [stage, setStage] = useState<ImportStage>(showLinkedWallets ? 'select' : 'import');
 
   // Linked wallets state
   const [linkedWallets, setLinkedWallets] = useState<LinkedWallet[]>([]);
@@ -75,12 +75,16 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
   const [privateKeyError, setPrivateKeyError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [autoFilledMnemonic, setAutoFilledMnemonic] = useState(false);
-  const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
 
   // Fetch linked wallets when modal opens
   useEffect(() => {
     const fetchLinkedWallets = async () => {
+      if (!showLinkedWallets) {
+        setLinkedWallets([]);
+        setStage('import');
+        return;
+      }
+
       if (!open || !session) {
         setLinkedWallets([]);
         return;
@@ -108,96 +112,14 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
     };
 
     fetchLinkedWallets();
-  }, [open, session]);
+  }, [open, session, showLinkedWallets]);
 
-  const autoFillMnemonic = useCallback(
-    async (walletAddress: string): Promise<string | null> => {
-      if (!session?.user?.id || !session?.user?.email) {
-        return null;
-      }
-
-      setIsLoadingMnemonic(true);
-      try {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        };
-
-        if (session?.access_token) {
-          headers.Authorization = `Bearer ${session.access_token}`;
-        }
-
-        const rsaKeysResponse = await fetch('/api/user/rsa-keys', {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        });
-
-        if (!rsaKeysResponse.ok) {
-          throw new Error('Could not fetch RSA keys');
-        }
-
-        const rsaKeysData = await rsaKeysResponse.json();
-
-        if (!rsaKeysData.hasKeys) {
-          throw new Error('RSA keys not found');
-        }
-
-        const aesKey = await generateAESKey();
-        const aesKeyBase64 = await exportAESKeyAsBase64(aesKey);
-        const encryptedAESKey = await encryptWithRSAPublicKey(aesKeyBase64, rsaKeysData.publicKey);
-
-        const response = await fetch(`/api/wallets/mnemonic/${walletAddress}`, {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify({
-            encryptedAESKey,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Could not load stored recovery phrase');
-        }
-
-        const { encryptedMnemonic, iv } = await response.json();
-
-        const importedAESKey = await importAESKeyFromBase64(aesKeyBase64);
-        const decryptedMnemonic = await decryptWithAES(encryptedMnemonic, iv, importedAESKey);
-
-        setMnemonic(decryptedMnemonic);
-        setImportType('mnemonic');
-        setAutoFilledMnemonic(true);
-        return decryptedMnemonic;
-      } catch (err: any) {
-        logger.warn('[NormalWalletImport] Failed to auto-fill mnemonic:', err);
-        enqueueSnackbar(t('Could not load stored recovery phrase. Enter manually.'), {
-          variant: 'warning',
-        });
-        return null;
-      } finally {
-        setIsLoadingMnemonic(false);
-      }
-    },
-    [session, enqueueSnackbar, t]
-  );
-
-  const handleSelectWallet = async (wallet: LinkedWallet) => {
+  const handleSelectWallet = (wallet: LinkedWallet) => {
     setSelectedWallet(wallet);
     setStage('import');
     setError(null);
-    setAutoFilledMnemonic(false);
     setMnemonic('');
     setPrivateKey('');
-
-    if (wallet.custodyChoice === 'platform') {
-      const fetchedMnemonic = await autoFillMnemonic(wallet.walletAddress);
-      if (fetchedMnemonic) {
-        enqueueSnackbar(t('Recovery phrase loaded. Connecting automatically...'), {
-          variant: 'success',
-        });
-        await handleAutoImport(fetchedMnemonic, wallet);
-      }
-    }
   };
 
   const handleImportNew = () => {
@@ -261,55 +183,6 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
     [selectedWallet, t]
   );
 
-  const handleAutoImport = useCallback(
-    async (mnemonicToImport: string, wallet: LinkedWallet) => {
-      if (!mnemonicToImport || !wallet) {
-        return;
-      }
-
-      try {
-        setIsImporting(true);
-        setError(null);
-
-        const normalized = normalizeMnemonic(mnemonicToImport);
-        if (!validateMnemonic(normalized)) {
-          setMnemonicError(t('Invalid recovery phrase'));
-          setIsImporting(false);
-          return;
-        }
-
-        // Verify the key matches the selected wallet
-        try {
-          const walletData = createWalletFromMnemonic(normalized);
-          if (walletData.publicKey !== wallet.walletAddress) {
-            setError(
-              t(
-                'This key does not match the selected account. Please make sure you are using the correct recovery phrase or password.'
-              )
-            );
-            setIsImporting(false);
-            return;
-          }
-        } catch {
-          setMnemonicError(t('Invalid mnemonic phrase'));
-          setIsImporting(false);
-          return;
-        }
-
-        await importWalletFromMnemonic(normalized, undefined, wallet.walletName ?? undefined);
-
-        // Reset form
-        resetForm();
-        onSuccess();
-      } catch (err: any) {
-        logger.error('Failed to auto-import account:', err);
-        setError(err.message || t('Failed to import account. Please try manually.'));
-        setIsImporting(false);
-      }
-    },
-    [importWalletFromMnemonic, t, onSuccess]
-  );
-
   const handleImport = async () => {
     try {
       setIsImporting(true);
@@ -341,7 +214,8 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         await importWalletFromMnemonic(
           normalized,
           undefined,
-          selectedWallet?.walletName ?? undefined
+          selectedWallet?.walletName ?? undefined,
+          { persistLocally: true }
         );
       } else {
         const trimmed = privateKey.trim();
@@ -370,7 +244,9 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
           }
         }
 
-        await importWalletFromPrivateKey(trimmed, selectedWallet?.walletName ?? undefined);
+        await importWalletFromPrivateKey(trimmed, selectedWallet?.walletName ?? undefined, {
+          persistLocally: true,
+        });
       }
 
       // Reset form
@@ -384,7 +260,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
   };
 
   const resetForm = () => {
-    setStage('select');
+    setStage(showLinkedWallets ? 'select' : 'import');
     setSelectedWallet(null);
     setMnemonic('');
     setPrivateKey('');
@@ -405,6 +281,13 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
 
   const renderWalletSelectStage = () => (
     <Stack spacing={3}>
+      {onBack && (
+        <Box>
+          <Button startIcon={<Iconify icon="mingcute:left-line" />} onClick={onBack} sx={{ mb: 1 }}>
+            {t('Back')}
+          </Button>
+        </Box>
+      )}
       <Typography variant="body2" color="text.secondary">
         {t('Select a linked account, or import a new one.')}
       </Typography>
@@ -446,14 +329,9 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
                   <Iconify icon="solar:wallet-bold" width={24} sx={{ color: 'primary.main' }} />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="subtitle2" noWrap>
-                      {wallet.walletName || t('Unnamed Account')}
-                    </Typography>
-                    {wallet.custodyChoice === 'platform' && (
-                      <Chip label={t('Auto-Connect')} size="small" color="primary" />
-                    )}
-                  </Stack>
+                  <Typography variant="subtitle2" noWrap>
+                    {wallet.walletName || t('Unnamed Account')}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary" noWrap>
                     {format.fTruncate(wallet.walletAddress, 20)}
                   </Typography>
@@ -479,7 +357,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
 
   const renderImportStage = () => (
     <Stack spacing={3}>
-      {linkedWallets.length > 0 && (
+      {showLinkedWallets && linkedWallets.length > 0 && (
         <Box>
           <Button
             startIcon={<Iconify icon="mingcute:left-line" />}
@@ -500,22 +378,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
         </Alert>
       )}
 
-      {autoFilledMnemonic && !isImporting && (
-        <Alert severity="success" sx={{ mb: 1 }}>
-          {t('Recovery phrase loaded from secure storage.')}
-        </Alert>
-      )}
-
       {error && <Alert severity="error">{error}</Alert>}
-
-      {isLoadingMnemonic && (
-        <Alert severity="info" sx={{ mb: 1 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CircularProgress size={16} />
-            <Typography variant="body2">{t('Loading stored recovery phrase...')}</Typography>
-          </Stack>
-        </Alert>
-      )}
 
       <Tabs
         value={importType}
@@ -540,13 +403,13 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
             onChange={(e) => handleMnemonicChange(e.target.value)}
             error={!!mnemonicError}
             helperText={mnemonicError}
-            disabled={isImporting || isLoadingMnemonic}
+            disabled={isImporting}
           />
         </Stack>
       ) : (
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
-            {t('Enter your password (private key) below to import your account.')}
+            {t('Enter your private key below to import your account.')}
           </Typography>
           <TextField
             multiline
@@ -557,7 +420,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
             onChange={(e) => handlePrivateKeyChange(e.target.value)}
             error={!!privateKeyError}
             helperText={
-              privateKeyError || t('Your password should start with "S" and be 56 characters long.')
+              privateKeyError || t('Your private key should be 56 characters long.')
             }
             disabled={isImporting}
           />
@@ -601,7 +464,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
     >
       <DialogTitle sx={{ pb: 2, position: 'relative' }}>
         <Typography variant="h5" component="div">
-          {stage === 'select'
+          {showLinkedWallets && stage === 'select'
             ? t('Your Linked Accounts')
             : selectedWallet
               ? t('Reconnect Account')
@@ -622,7 +485,7 @@ export default function NormalWalletImport({ open, onClose, onSuccess }: NormalW
       </DialogTitle>
 
       <DialogContent sx={{ py: 5 }}>
-        {stage === 'select' ? renderWalletSelectStage() : renderImportStage()}
+        {showLinkedWallets && stage === 'select' ? renderWalletSelectStage() : renderImportStage()}
       </DialogContent>
     </Dialog>
   );

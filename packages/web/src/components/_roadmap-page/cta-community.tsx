@@ -4,6 +4,7 @@ import type { Theme, SxProps } from '@mui/material/styles';
 
 import * as React from 'react';
 import { paths } from '@/routes/paths';
+import { cdn } from '@normalfinance/utils';
 
 import { Box, Stack, Button, Container, Typography } from '@mui/material';
 
@@ -25,7 +26,7 @@ export const CtaCommunity: React.FC<CtaCommunityProps> = ({
   discordUrl = paths.socials.discord,
   twitterLabel = 'Follow us on X (Twitter)',
   discordLabel = 'Join our Discord',
-  image = '/assets/images/landing-page/cta-bg.webp',
+  image = cdn('homepage/cta-bg.webp'),
   sx,
   ...sectionProps
 }) => (

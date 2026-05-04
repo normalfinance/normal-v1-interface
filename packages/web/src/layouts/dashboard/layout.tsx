@@ -3,32 +3,33 @@
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
+import { useBoolean } from '@/hooks';
 import { paths } from '@/routes/paths';
 import { isTestnet } from '@normalfinance/utils';
 import { allLangs, useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
-import { Alert, Button, AlertTitle } from '@mui/material';
+import { Button, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 
+import { Iconify } from '@/components/template/iconify';
+import MigrationModal from '@/components/_common/migration-modal';
 import { useSettingsContext } from '@/components/template/settings';
 
 import { FooterSection } from '../core';
 import { NormalNavbar } from './normal-navbar';
 import { layoutClasses } from '../core/classes';
 import { MainSection } from '../core/main-section';
-import { Searchbar } from '../components/searchbar';
 import { NormalNavbarDefaults } from './navbar-props';
 import { LayoutSection } from '../core/layout-section';
 import { AccountDrawer } from '../components/account-drawer';
 import { LanguagePopover } from '../components/language-popover';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
+import { NetworkToggle, NETWORK_SWITCH_ENABLED } from '../components/network-toggle';
 
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
-import MigrationModal from '@/components/_common/migration-modal';
-import { useBoolean } from '@/hooks';
 import { L } from '@upstash/redis/zmscore-Cq_Bzgy4';
 
 // ----------------------------------------------------------------------
@@ -87,7 +88,7 @@ export function DashboardLayout({
           logo={NormalNavbarDefaults.logo}
           links={NormalNavbarDefaults.links}
           buttons={NormalNavbarDefaults.buttons}
-          searchbar={<Searchbar />}
+          networkToggle={NETWORK_SWITCH_ENABLED ? <NetworkToggle /> : undefined}
           language={<LanguagePopover data={allLangs} />}
           account={<AccountDrawer />}
         />
@@ -137,39 +138,63 @@ export function DashboardLayout({
       ]}
     >
       {/* Migration Alert */}
-      <Alert severity="info" sx={{ m: 2 }}>
-        <AlertTitle>{t('🚨 Important Notice: Normal Protocol Evolution')}</AlertTitle>
-        {t(
-          'The Normal Protocol is evolving from synthetic tokens to real assets, while still focusing on noncustodial, diversification and custom crypto indexes coming soon.'
-        )}
-        <br />
-        {t(
-          'All synthetic positions have been closed, and any remaining USDC balances will be automatically returned to their respective wallet addresses. No action is required on your part.'
-        )}
-        <br />
-        <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-          <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={moreInfoOpen.onTrue}>
-            {t('More info')}
-          </Button>
-        </Box>
-      </Alert>
+      <Accordion defaultExpanded={false} sx={{ m: 2, bgcolor: theme.palette.info.lighter }}>
+        <AccordionSummary expandIcon={<Iconify icon="eva:chevron-down-fill" />}>
+          {t('🚨 Important Notice: Normal Protocol Evolution')}
+        </AccordionSummary>
+        <AccordionDetails>
+          {t(
+            'The Normal Protocol is evolving from synthetic tokens to real assets, while still focusing on noncustodial, diversification and custom crypto indexes coming soon.'
+          )}
+          <br />
+          {t(
+            'All synthetic positions have been closed, and any remaining USDC balances will be automatically returned to their respective wallet addresses. No action is required on your part.'
+          )}
+          <br />
+          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+            <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={moreInfoOpen.onTrue}>
+              {t('More info')}
+            </Button>
+          </Box>
+        </AccordionDetails>
+      </Accordion>
 
       <MigrationModal open={moreInfoOpen.value} onClose={moreInfoOpen.onFalse} />
 
       {/* Testnet Alert */}
       {isTestnet() && (
-        <Alert severity="warning" sx={{ m: 2 }}>
-          <AlertTitle>{t('Normal Testnet')}&nbsp;🎉</AlertTitle>
-          {t(
-            'You are using a testnet version of the Normal Protocol. All tokens are NOT real. You WILL experience bugs. Please report all bugs and feedback to our team. Thank you!'
-          )}
-          <br />
-          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-            <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={handleGiveFeedback}>
-              {t('Give feedback / Report bug')}
-            </Button>
-          </Box>
-        </Alert>
+        <Accordion defaultExpanded={false} sx={{ m: 2, bgcolor: theme.palette.warning.lighter }}>
+          <AccordionSummary expandIcon={<Iconify icon="eva:chevron-down-fill" />}>
+            {t('Normal Testnet')}&nbsp;🎉
+          </AccordionSummary>
+          <AccordionDetails>
+            {t(
+              'You are using a testnet version of the Normal Protocol. All tokens are NOT real. You WILL experience bugs. Please report all bugs and feedback to our team. Thank you!'
+            )}
+            <br />
+            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+              <Button
+                variant="contained"
+                sx={(thm) => ({
+                  mt: 1,
+                  bgcolor: thm.palette.grey[100],
+                  color: thm.palette.grey[900],
+                  '&:hover': {
+                    bgcolor: thm.palette.grey[200],
+                  },
+                  ...thm.applyStyles('dark', {
+                    bgcolor: thm.palette.grey[800],
+                    color: thm.palette.common.white,
+                    '&:hover': { bgcolor: thm.palette.grey[700] },
+                  }),
+                })}
+                onClick={handleGiveFeedback}
+              >
+                {t('Give feedback / Report bug')}
+              </Button>
+            </Box>
+          </AccordionDetails>
+        </Accordion>
       )}
 
       {renderMain()}

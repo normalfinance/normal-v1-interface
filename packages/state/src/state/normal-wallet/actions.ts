@@ -205,7 +205,16 @@ export function createNormalWalletActions(
     try {
       const passphrase =
         networkPassphrase ||
-        (process.env.NEXT_PUBLIC_NETWORK === 'MAINNET' ? Networks.PUBLIC : Networks.TESTNET);
+        (process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet'
+          ? Networks.PUBLIC
+          : Networks.TESTNET);
+
+      logger.log('[NORMAL WALLET] signTransaction', {
+        rawEnv: process.env.NEXT_PUBLIC_NETWORK,
+        requestedPassphrase: networkPassphrase,
+        resolvedPassphrase: passphrase,
+        publicKey,
+      });
 
       const signedXDR = signTransactionWithKeypair(xdr, keypair, passphrase);
 

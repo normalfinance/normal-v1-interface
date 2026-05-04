@@ -24,8 +24,36 @@ const DEFAULT_LOGOS: LogoItem[] = [
     height: 20,
     href: 'https://stellar.org/',
   },
+   {
+    name: 'Draper University',
+    src: cdn('homepage/draper-university.webp'),
+    width: 62,
+    height: 20,
+    href: 'https://draperuniversity.com/',
+  },
   {
-    name: 'Mailchimp',
+    name: 'Draper University Ventures',
+    src: cdn('homepage/draper-university-ventures.webp'),
+    width: 62,
+    height: 20,
+    href: 'https://draperuniversity.com/ventures',
+  },
+   {
+    name: 'Blend Capital',
+    src: cdn('homepage/blend-capital.png'),
+    width: 62,
+    height: 20,
+    href: 'https://blend.capital/',
+  },
+   {
+    name: 'DeFindex',
+    src: cdn('homepage/defiindex.png'),
+    width: 78,
+    height: 20,
+    href: 'https://www.defindex.io/',
+  },
+  {
+    name: 'Halborn',
     src: cdn('homepage/halborn-logo.webp'),
     width: 113,
     height: 13,
@@ -45,7 +73,14 @@ export const AboutHeader: React.FC = () => {
   };
 
   return (
-    <Box component="section" py={{ xs: 8, md: 12, lg: 14 }} bgcolor="#F8FAFC">
+    <Box
+      component="section"
+      py={{ xs: 8, md: 12, lg: 14 }}
+      sx={(theme) => ({
+        bgcolor: theme.palette.grey[50],
+        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[900] }),
+      })}
+    >
       <Container>
         <Grid2 size={{ xs: 12, md: 6 }} mb={{ xs: 2, md: 4 }}>
           <Box
@@ -53,11 +88,11 @@ export const AboutHeader: React.FC = () => {
               display: 'inline-flex',
               borderRadius: 1,
               fontSize: 12,
-              bgcolor: 'white',
-              '&:hover': { bgcolor: 'white' },
+              bgcolor: 'background.paper',
+              '&:hover': { bgcolor: 'background.paper' },
               color: 'text.primary',
               border: 1,
-              borderColor: 'grey.300',
+              borderColor: 'divider',
               px: 1,
               py: 0.5,
               fontWeight: 'bold',
@@ -91,9 +126,9 @@ export const AboutHeader: React.FC = () => {
             </Typography>
           </Grid2>
           <Grid2 size={{ xs: 12, md: 5 }}>
-            <Typography variant="body1" color="grey.700">
+            <Typography variant="body1" color="text.secondary">
               {t(
-                'At Normal, our mission is to make crypto normal—giving everyone friction‑free exposure to the entire digital‑asset ecosystem.'
+                'At Normal, our mission is to make crypto normal - starting with a savings account that pays real yield, works for everyone, and puts you in full control of your money.'
               )}
             </Typography>
             <Stack direction="row" gap={2} mt={4}>
@@ -118,11 +153,11 @@ export const AboutHeader: React.FC = () => {
                 onClick={() => router.push('/roadmap')}
                 sx={{
                   borderRadius: 2,
-                  bgcolor: 'white',
-                  '&:hover': { bgcolor: 'white' },
+                  bgcolor: 'background.paper',
+                  '&:hover': { bgcolor: 'background.paper' },
                   color: 'text.primary',
                   border: 1,
-                  borderColor: 'grey.300',
+                  borderColor: 'divider',
                 }}
               >
                 {t('Roadmap')}

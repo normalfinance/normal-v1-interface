@@ -70,6 +70,26 @@ export interface RemoveLiquidityActivity extends ActivityBase {
   amount: number;
 }
 
+export interface SavingsDepositActivity extends ActivityBase {
+  type: 'Savings Deposit';
+  amount: string;
+  vaultAddress: string;
+  txHash: string | null;
+}
+
+export interface SavingsWithdrawActivity extends ActivityBase {
+  type: 'Savings Withdraw';
+  amount: string;
+  vaultAddress: string;
+  txHash: string | null;
+}
+
+export interface SwapActivity extends ActivityBase {
+  type: 'Swap';
+  tokenIn: TokenAmount;
+  tokenOut: TokenAmount;
+}
+
 // -----------------------------------------------------------------------------
 //  Discriminated union
 // -----------------------------------------------------------------------------
@@ -81,4 +101,7 @@ export type Activity =
   | BuyActivity
   | SellActivity
   | AddLiquidityActivity
-  | RemoveLiquidityActivity;
+  | RemoveLiquidityActivity
+  | SavingsDepositActivity
+  | SavingsWithdrawActivity
+  | SwapActivity;

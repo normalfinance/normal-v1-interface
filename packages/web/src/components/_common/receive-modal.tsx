@@ -3,14 +3,11 @@
 import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
 import { logger } from '@normalfinance/utils';
-import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
-import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -28,87 +25,33 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
+export type ReceiveModalContext = 'deposit' | 'receive';
+
 interface ReceiveModalProps {
   open: boolean;
   onClose: () => void;
+  context?: ReceiveModalContext;
 }
 
-export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
+export default function ReceiveModal({ open, onClose, context = 'deposit' }: ReceiveModalProps) {
   const theme = useTheme();
   const { t } = useTranslate();
   const { copy } = useCopyToClipboard();
   const { enqueueSnackbar } = useSnackbar();
   const persist = usePersistStore();
-  const { signTransaction } = useNormalWallet();
 
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
-  const [isFunding, setIsFunding] = useState(false);
 
   const walletAddress = persist.wallet.address;
+  const isReceiveContext = context === 'receive';
 
   // Account status check
   const {
     isLoading: isCheckingAccount,
     accountExists,
-    refetch: refetchAccountStatus,
+    error: accountStatusError,
   } = useAccountStatus(walletAddress);
-
-  // Handle funding account via sponsored reserves
-  const handleFundAccount = async () => {
-    if (!walletAddress) {
-      enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
-      return;
-    }
-
-    setIsFunding(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Authentication required');
-      }
-
-      logger.log('[ReceiveModal] Requesting sponsorship for:', walletAddress);
-      const { sponsorshipXDR } = await requestWalletSponsorship(
-        walletAddress,
-        session.access_token
-      );
-      logger.log('[ReceiveModal] Received sponsorship XDR');
-
-      if (sponsorshipXDR && signTransaction) {
-        const signedXDR = await signTransaction(sponsorshipXDR);
-        const { hash } = await submitSponsorshipTransaction(
-          signedXDR,
-          walletAddress,
-          session.access_token
-        );
-        logger.log('[ReceiveModal] Account sponsored successfully:', hash);
-        enqueueSnackbar(t('Account created and USDC enabled!'), { variant: 'success' });
-      }
-
-      // Refetch account status
-      await refetchAccountStatus();
-    } catch (error: any) {
-      logger.error('[ReceiveModal] Sponsorship failed:', error);
-      if (
-        error.message?.includes('already been sponsored') ||
-        error.message?.includes('already exists')
-      ) {
-        enqueueSnackbar(t('Account already exists. Refreshing status...'), { variant: 'info' });
-        await refetchAccountStatus();
-      } else if (error.message?.includes('Rate limit')) {
-        enqueueSnackbar(t('Rate limit exceeded. Please try again later.'), { variant: 'error' });
-      } else {
-        enqueueSnackbar(error.message || t('Failed to create account and enable USDC'), {
-          variant: 'error',
-        });
-      }
-    } finally {
-      setIsFunding(false);
-    }
-  };
 
   const generateQRCode = useCallback(async () => {
     if (!walletAddress) return;
@@ -171,11 +114,20 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
     >
       <DialogTitle sx={{ textAlign: 'center', pb: 2 }}>
         <Typography variant="h6" component="div">
-          {t('Deposit Crypto')}
+          {t(isReceiveContext ? 'Receive Crypto' : 'Deposit Crypto')}
         </Typography>
         {!isCheckingAccount && accountExists && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {t('Scan the QR code or copy your account ID below')}
+          </Typography>
+        )}
+        {!isCheckingAccount && !accountExists && !accountStatusError && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {t(
+              isReceiveContext
+                ? 'Activate your Stellar account first, then receive other Stellar assets'
+                : 'Activate your Stellar account first, then deposit other Stellar assets'
+            )}
           </Typography>
         )}
       </DialogTitle>
@@ -191,45 +143,117 @@ export default function ReceiveModal({ open, onClose }: ReceiveModalProps) {
           </Stack>
         )}
 
-        {/* Account not funded - show faucet button */}
-        {!isCheckingAccount && !accountExists && (
+        {/* Account status error */}
+        {!isCheckingAccount && accountStatusError && (
+          <Stack spacing={2} alignItems="center">
+            <Alert severity="error" sx={{ width: '100%', textAlign: 'left' }}>
+              <Typography variant="body2">
+                {t(
+                  'We could not check your Stellar account right now. Please try again in a moment.'
+                )}
+              </Typography>
+            </Alert>
+
+            <Button
+              variant="soft"
+              color="info"
+              startIcon={<Iconify icon="solar:copy-outline" />}
+              onClick={handleCopyAddress}
+            >
+              {t('Copy Account ID')}
+            </Button>
+          </Stack>
+        )}
+
+        {/* Account not funded yet - show activation instructions */}
+        {!isCheckingAccount && !accountExists && !accountStatusError && (
           <Stack spacing={3} alignItems="center">
+            <Alert severity="info" sx={{ width: '100%', textAlign: 'left' }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {t('This Stellar account is not active on-chain yet.')}
+              </Typography>
+              <Typography variant="body2">
+                {t(
+                  'Send at least 1 XLM to this account ID first. Once the account is funded, you can receive USDC and other Stellar assets here.'
+                )}
+              </Typography>
+            </Alert>
+
             <Box
               sx={{
-                p: 3,
+                p: 2,
                 borderRadius: 2,
                 border: `1px solid ${theme.palette.divider}`,
                 backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: 220,
+                minWidth: 220,
               }}
             >
-              <Iconify icon="solar:wallet-bold" width={48} sx={{ color: 'warning.main', mb: 2 }} />
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                {t('Account Not Funded')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                {t(
-                  'Your account needs to be funded with XLM before you can receive crypto from external sources.'
-                )}
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                fullWidth
-                onClick={handleFundAccount}
-                disabled={isFunding}
-                startIcon={
-                  isFunding ? (
-                    <CircularProgress size={18} color="inherit" />
-                  ) : (
-                    <Iconify icon="solar:rocket-bold" />
-                  )
-                }
-              >
-                {isFunding ? t('Funding Account...') : t('Fund Account (Free)')}
-              </Button>
+              {isGeneratingQR ? (
+                <CircularProgress size={40} />
+              ) : qrCodeUrl ? (
+                <Box
+                  component="img"
+                  src={qrCodeUrl}
+                  alt="Wallet Address QR Code"
+                  sx={{
+                    maxWidth: '100%',
+                    height: 'auto',
+                  }}
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  {t('Unable to generate QR code')}
+                </Typography>
+              )}
             </Box>
+
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1.5,
+                border: `1px solid ${theme.palette.divider}`,
+                backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                width: '100%',
+                wordBreak: 'break-all',
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.875rem',
+                  color: theme.palette.text.primary,
+                }}
+              >
+                {walletAddress}
+              </Typography>
+            </Box>
+
+            <Stack direction="row" spacing={1}>
+              <Button
+                key="copy"
+                variant="soft"
+                color="info"
+                startIcon={<Iconify icon="solar:copy-outline" />}
+                onClick={handleCopyAddress}
+              >
+                {t('Copy Account ID')}
+              </Button>
+
+              <Button
+                key="view"
+                variant="soft"
+                color="secondary"
+                startIcon={<Iconify icon="eva:external-link-outline" />}
+                onClick={handleViewOnExplorer}
+              >
+                {t('View Explorer')}
+              </Button>
+            </Stack>
           </Stack>
         )}
 

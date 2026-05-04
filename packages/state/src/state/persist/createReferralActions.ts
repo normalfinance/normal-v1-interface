@@ -29,13 +29,25 @@ function deleteCookie(name: string): void {
 }
 
 function getLocalStorageValue(key: string): string | null {
-  if (typeof localStorage === 'undefined') return null;
-  return localStorage.getItem(key);
+  try {
+    if (typeof window === 'undefined') return null;
+    const { localStorage: ls } = window;
+    if (!ls || typeof ls.getItem !== 'function') return null;
+    return ls.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 function setLocalStorageValue(key: string, value: string): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(key, value);
+  try {
+    if (typeof window === 'undefined') return;
+    const { localStorage: ls } = window;
+    if (!ls || typeof ls.setItem !== 'function') return;
+    ls.setItem(key, value);
+  } catch {
+    // ignore quota / private mode / unusable storage (e.g. Node experimental localStorage)
+  }
 }
 
 function getCurrentReferralState(): ReferralState {
@@ -91,9 +103,16 @@ export function createReferralActions(): ReferralActions {
       deleteCookie(REFERRAL_COOKIE_NAME);
       deleteCookie(REFERRAL_TIMESTAMP_COOKIE_NAME);
 
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(REFERRAL_USED_KEY);
-        localStorage.removeItem(REFERRAL_USED_ACTIONS_KEY);
+      try {
+        if (typeof window !== 'undefined') {
+          const { localStorage: ls } = window;
+          if (ls && typeof ls.removeItem === 'function') {
+            ls.removeItem(REFERRAL_USED_KEY);
+            ls.removeItem(REFERRAL_USED_ACTIONS_KEY);
+          }
+        }
+      } catch {
+        // ignore
       }
 
       const newState: ReferralState = {

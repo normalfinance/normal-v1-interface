@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/mgi/sep24/transactions/proxy
  * Query: account? kind? status? asset_code? order? limit?

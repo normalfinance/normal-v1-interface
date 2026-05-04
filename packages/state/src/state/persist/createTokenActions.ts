@@ -1,27 +1,26 @@
-import { ApiToken, AppStorePersist, Token, TokenActions, TokenState } from '@normalfinance/types';
-import axios from 'axios';
+import { ApiToken, AppStorePersist, NetworkConfig, Token, TokenActions, TokenState } from '@normalfinance/types';
 import { usePersistStore } from '../store';
+import { useNetworkStore } from '../network/store';
 import {
   checkTrustline,
   constants,
   format,
   getReflectorExternalPrice,
+  getStellarConfigForNetwork,
   getTokenBalance,
-  isNormalToken,
-  isTestnet,
   logger,
 } from '@normalfinance/utils';
 import { BigNumber } from 'bignumber.js';
 
-const fetchTokenBalance = async (token: ApiToken, address: string): Promise<BigNumber> => {
+const fetchTokenBalance = async (token: ApiToken, address: string, config: NetworkConfig): Promise<BigNumber> => {
   let balance = BigNumber(0);
 
   try {
     // Check trustline
-    const trustlineStatus = await checkTrustline(address, token.symbol, token.issuer);
+    const trustlineStatus = await checkTrustline(address, token.symbol, token.issuer, config);
     if (!trustlineStatus.exists) return balance;
 
-    const rawBalance = await getTokenBalance(token.contract, address);
+    const rawBalance = await getTokenBalance(token.contract, address, config);
     balance = BigNumber(format.fTokenAmount(rawBalance, token.decimals));
   } catch (error) {
     logger.warn('[WALLET ACTIONS] Error getting API token balance:', error);
@@ -30,34 +29,20 @@ const fetchTokenBalance = async (token: ApiToken, address: string): Promise<BigN
 };
 
 const fetchTokenPrice = async (token: ApiToken): Promise<BigNumber> => {
-  if (isNormalToken(token as Token)) {
-    // not the greatest cast, but it'll work
-    const pairByToken = usePersistStore.getState().pairState.pairByToken;
-    if (!pairByToken || !Object.keys(pairByToken).length) return BigNumber(0);
+  let oraclePrice = BigNumber(0);
 
-    const pair = pairByToken[token.contract];
-    if (!pair) return BigNumber(0);
-
-    const isTokenLong = token.contract === pair.tokens.long;
-
-    return BigNumber(
-      isTokenLong
-        ? pair.collateral.collateralPercentLong
-        : 1 - Number(pair.collateral.collateralPercentLong)
-    );
-  } else {
-    let oraclePrice = BigNumber(0);
-
-    try {
-      const { price } = await getReflectorExternalPrice(token.symbol);
-      oraclePrice = BigNumber(format.fTokenAmount(price, 14));
-    } catch (error) {
-      logger.error('Failed getting USDC oracle price: ', error);
-      oraclePrice = BigNumber(1); // fallback
+  try {
+    const { price } = await getReflectorExternalPrice(token.symbol);
+    oraclePrice = BigNumber(format.fTokenAmount(price, 14));
+  } catch (error) {
+    logger.error('Failed getting oracle price: ', error);
+    // Fallback to 1 for stablecoins
+    if (token.symbol === 'USDC') {
+      oraclePrice = BigNumber(1);
     }
-
-    return oraclePrice;
   }
+
+  return oraclePrice;
 };
 
 export const createTokenActions = (): TokenActions => {
@@ -73,60 +58,19 @@ export const createTokenActions = (): TokenActions => {
     getAllTokens: async (override: boolean = false) => {
       try {
         const now = Date.now();
-        // const lastFetched = usePersistStore.getState().tokenState.lastUpdated;
-        // const refreshInterval = 1000 * 60 * 5; // 5 minutes
 
-        const zeroTokenBalance = usePersistStore
-          .getState()
-          .tokenState.tokens.every((tkn) => tkn.balance === '0');
+        // Load tokens from local token list (runtime network-aware)
+        const network = useNetworkStore.getState().network;
+        const tokens: ApiToken[] = constants.getTokenListForNetwork(network);
 
-        // `if (lastFetched && !zeroTokenBalance && now - lastFetched < refreshInterval && !override) {
-        //   return;
-        // }`
-
-        let tokens: ApiToken[] = [];
-
-        // Load 3rd party tokens
-        const tokenListName = isTestnet() ? 'tokenListTestnet' : 'tokenList';
-        const { data: apiTokens } = await axios.get(
-          `https://raw.githubusercontent.com/normalfinance/token-list/main/${tokenListName}.json`
-        );
-        if (apiTokens) tokens = tokens.concat(apiTokens.assets);
-
-        // Load Normal tokens from Pairs
-        const persistStore = usePersistStore.getState();
-
-        persistStore.pairState.pairs.forEach((pair) => {
-          // Long
-          const longTkn: ApiToken = {
-            symbol: `n${pair.asset}`,
-            issuer: constants.StellarConfig.NORMAL_ISSUER,
-            contract: pair.tokens.long,
-            name: `${pair.asset}`,
-            org: 'Normal',
-            domain: 'normalfinance.io',
-            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.svg`,
-            decimals: 7,
-            featured: false,
-          };
-
-          // Short
-          const shortTkn: ApiToken = {
-            symbol: `sn${pair.asset}`,
-            issuer: constants.StellarConfig.NORMAL_ISSUER,
-            contract: pair.tokens.short,
-            name: `Short ${pair.asset}`,
-            org: 'Normal',
-            domain: 'normalfinance.io',
-            icon: `https://cdn.normalapi.com/tokens/normal/n${pair.asset}.svg`,
-            decimals: 7,
-            featured: false,
-          };
-
-          tokens = tokens.concat([longTkn, shortTkn]);
-        });
+        // Clear stale tokens from previous network before loading new ones
+        usePersistStore.setState((state: AppStorePersist) => ({
+          ...state,
+          tokenState: { tokens: [], tokensByAddress: {}, lastUpdated: state.tokenState.lastUpdated },
+        }));
 
         // Load all token info
+        const persistStore = usePersistStore.getState();
         const allTokens = tokens
           ? tokens.map(async (token: ApiToken) => {
               await persistStore.updateTokenInfo(token);
@@ -158,6 +102,8 @@ export const createTokenActions = (): TokenActions => {
       try {
         // Get wallet address from persist store
         const walletAddress = usePersistStore.getState().wallet.address;
+        const network = useNetworkStore.getState().network;
+        const networkConfig = getStellarConfigForNetwork(network);
 
         logger.log(
           '[WALLET ACTIONS] Fetching API token for address:',
@@ -170,7 +116,7 @@ export const createTokenActions = (): TokenActions => {
 
         let balance = BigNumber(0);
 
-        if (walletAddress) balance = await fetchTokenBalance(token, walletAddress);
+        if (walletAddress) balance = await fetchTokenBalance(token, walletAddress, networkConfig);
 
         const price = await fetchTokenPrice(token);
 

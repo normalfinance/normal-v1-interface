@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_MAINNET_URL")
-  directUrl = env("DATABASE_MAINNET_URL")
+  url       = env("DATABASE_TESTNET_URL")
+  directUrl = env("DATABASE_TESTNET_URL")
 }
 
 model User {
@@ -56,57 +56,49 @@ model ReferralAction {
 }
 
 model LinkedWallet {
-  id                  String    @id @default(cuid())
-  supabaseUid         String
-  walletAddress       String
-  walletName          String?
-  createdAt           DateTime  @default(now())
-  lastUsedAt          DateTime  @default(now())
-  custodyChoice       String?
-  encryptedMnemonic   String?
-  encryptionIV        String?
-  encryptionSalt      String?
-  custodyConsentEmail String?
-  custodyConsentDate  DateTime?
+  id            String   @id @default(cuid())
+  supabaseUid   String
+  walletAddress String
+  walletName    String?
+  createdAt     DateTime @default(now())
+  lastUsedAt    DateTime @default(now())
 
   @@unique([supabaseUid, walletAddress])
   @@index([supabaseUid])
   @@map("linked_wallets")
 }
 
-model UserRSAKeys {
-  id                  String   @id @default(cuid())
-  supabaseUid         String   @unique
-  publicKey           String   @db.Text
-  encryptedPrivateKey String   @db.Text
-  privateKeyIV        String
-  privateKeySalt      String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+model VaultDeposit {
+  id            String   @id @default(cuid())
+  walletAddress String
+  vaultAddress  String
+  type          String   // "deposit" or "withdraw"
+  amount        String   // USDC amount (human-readable, not stroops)
+  feeAmount     String?  // Normal fee (deposit) or commission (withdraw), human-readable USDC
+  feeTxHash     String?  // Hash of the classic fee payment transaction
+  txHash        String?
+  createdAt     DateTime @default(now())
 
-  @@map("user_rsa_keys")
+  @@index([walletAddress, vaultAddress])
+  @@map("vault_deposits")
 }
 
-model SponsoredAccount {
-  id               String    @id @default(cuid())
-  supabaseUid      String?
-  walletAddress    String    @unique
-  sponsorAddress   String
-  ipAddress        String
-  sponsoredAt      DateTime  @default(now())
-  accountReserve   String    @default("0.5")
-  trustlineReserve String    @default("0.5")
-  feePayment       String    @default("1")
+model SwapLog {
+  id               String   @id @default(cuid())
+  walletAddress    String
+  tokenInAddress   String
+  tokenOutAddress  String
+  tokenInSymbol    String?
+  tokenOutSymbol   String?
+  amountIn         String
+  amountOut        String
+  feeAmount        String?  // 0.5% fee charged in tokenIn (human-readable)
+  feeTxHash        String?  // Hash of the classic fee payment transaction
   txHash           String?
-  isRevoked        Boolean   @default(false)
-  revokedAt        DateTime?
-  revocationTxHash String?
-  revocationReason String?
+  createdAt        DateTime @default(now())
 
-  @@index([sponsorAddress])
-  @@index([ipAddress])
-  @@index([supabaseUid])
-  @@map("sponsored_accounts")
+  @@index([walletAddress])
+  @@map("swap_logs")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

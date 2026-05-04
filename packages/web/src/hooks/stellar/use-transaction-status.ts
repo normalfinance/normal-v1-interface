@@ -4,6 +4,7 @@
 
 import type { Horizon } from '@stellar/stellar-sdk';
 
+import { useStellarConfig } from '@/hooks';
 import { logger, fetchTransaction } from '@normalfinance/utils';
 import { useRef, useState, useEffect, useCallback } from 'react';
 
@@ -19,6 +20,7 @@ export function useTransactionStatus(
   transactionHash: string,
   refreshMs?: number
 ): TransactionStatus {
+  const config = useStellarConfig();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [transaction, setTransaction] = useState<Horizon.ServerApi.TransactionRecord | undefined>(
@@ -53,7 +55,7 @@ export function useTransactionStatus(
     setError(null);
 
     try {
-      const trx = await fetchTransaction(transactionHash);
+      const trx = await fetchTransaction(transactionHash, config);
 
       if (!trx) {
         setTransaction(undefined);
@@ -68,7 +70,7 @@ export function useTransactionStatus(
       setIsLoading(false);
       scheduleNextRefresh();
     }
-  }, [transactionHash, scheduleNextRefresh]);
+  }, [transactionHash, scheduleNextRefresh, config]);
 
   // Initial fetch / hash change
   useEffect(() => {

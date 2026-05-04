@@ -23,22 +23,22 @@ export const NormalNavbarDefaults: Props = {
             title: 'Trade',
             links: [
               {
+                url: paths.swap,
+                image: {
+                  src: cdn('nav/swap.svg'),
+                  alt: 'Swap',
+                },
+                title: 'Swap',
+                description: 'Exchange XLM and USDC.',
+              },
+              {
                 url: paths.assets.root,
                 image: {
                   src: cdn('nav/explore.svg'),
-                  alt: 'Explore',
+                  alt: 'Assets',
                 },
                 title: 'Assets',
-                description: 'Browse supported assets.',
-              },
-              {
-                url: paths.invest,
-                image: {
-                  src: cdn('nav/swap.svg'),
-                  alt: 'Invest',
-                },
-                title: 'Invest',
-                description: 'Trade assets instantly.',
+                description: 'View your wallet assets.',
               },
               {
                 url: paths.portfolio,
@@ -52,33 +52,16 @@ export const NormalNavbarDefaults: Props = {
             ],
           },
           {
-            title: 'Diversify',
-            links: [
-              {
-                url: paths.indexes.root,
-                image: { src: cdn('nav/indexes.svg'), alt: 'Browse Index Funds' },
-                title: 'Browse index funds',
-                description: 'Discover curated index funds.',
-              },
-              {
-                url: paths.indexes.create,
-                image: { src: cdn('nav/create-index.svg'), alt: 'Create Index Fund' },
-                title: 'Create a fund',
-                description: 'Build your own index fund.',
-              },
-            ],
-          },
-          {
             title: 'Earn',
             links: [
               {
-                url: paths.earn,
+                url: paths.savings,
                 image: {
                   src: cdn('nav/provide-liquidity.svg'),
-                  alt: 'Dividends',
+                  alt: 'Savings',
                 },
-                title: 'Dividends',
-                description: 'Earn 7%+ APY on your portfolio',
+                title: 'Savings',
+                description: 'Earn yield on your USDC.',
               },
               {
                 url: paths.rewards,
@@ -91,7 +74,6 @@ export const NormalNavbarDefaults: Props = {
               },
             ],
           },
-
           {
             title: 'Support',
             links: [
@@ -156,16 +138,6 @@ export const NormalNavbarDefaults: Props = {
               },
               title: 'Normal Partners with Halborn',
               description: 'Comprehensive Security Audit, Backed by Stellar Development Foundation',
-              button: { title: 'Read more', variant: 'text', size: 'small' },
-            },
-            {
-              url: 'https://normalfi.substack.com/p/the-normal-top-10-index',
-              image: {
-                src: cdn('nav/index.webp'),
-                alt: 'The Normal Top 10 Index',
-              },
-              title: 'The Normal Top 10 Index',
-              description: 'Composed of the top 10 cryptocurrencies by market capitalization.',
               button: { title: 'Read more', variant: 'text', size: 'small' },
             },
           ],

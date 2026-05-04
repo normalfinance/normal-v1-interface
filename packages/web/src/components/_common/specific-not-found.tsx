@@ -9,17 +9,20 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 type SpecificNotFoundProps = {
-  type: 'pair' | 'index' | 'default';
+  type: 'pair' | 'asset' | 'index' | 'default';
   title?: string;
   description?: string;
 };
 
+const assetOrPairNotFound = {
+  src: cdn('placeholders/pool-not-found.svg'),
+  defaultTitle: 'Asset Not Found',
+  defaultDescription: "The asset you're looking for doesn't exist",
+};
+
 const notFoundConfig = {
-  pair: {
-    src: cdn('placeholders/pool-not-found.svg'),
-    defaultTitle: 'Asset Not Found',
-    defaultDescription: "The asset you're looking for doesn't exist",
-  },
+  pair: assetOrPairNotFound,
+  asset: assetOrPairNotFound,
   index: {
     src: cdn('placeholders/index-not-found.svg'),
     defaultTitle: 'Index Not Found',

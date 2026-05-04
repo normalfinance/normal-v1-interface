@@ -1,8 +1,13 @@
 import { NetworkConfig } from '@normalfinance/types';
-import { getCurrentNetwork } from '../network';
+import { getCurrentNetwork, NetworkType } from '../network';
 import { logger } from '../logger';
+import { getBlendUsdcTokenForNetwork, getCanonicalUsdcTokenForNetwork } from './tokenList';
 
-const TESTNET_CONFIG: NetworkConfig = {
+const TESTNET_USDC = getCanonicalUsdcTokenForNetwork('testnet');
+const TESTNET_BLEND_USDC = getBlendUsdcTokenForNetwork('testnet');
+const MAINNET_USDC = getCanonicalUsdcTokenForNetwork('mainnet');
+
+export const TESTNET_CONFIG: NetworkConfig = {
   // Network,
   NETWORK_PASSPHRASE: 'Test SDF Network ; September 2015',
   HORIZON_URL: process.env.NEXT_PUBLIC_TESTNET_HORIZON_URL || 'https://horizon-testnet.stellar.org',
@@ -14,17 +19,17 @@ const TESTNET_CONFIG: NetworkConfig = {
   NORMAL_DISTRIBUTOR: process.env.NEXT_PUBLIC_TESTNET_DISTRIBUTOR || '',
   NORMAL_HOT_A: process.env.NEXT_PUBLIC_TESTNET_HOT_A || '',
 
-  // Normal Contracts
-  TREASURY_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_TREASURY || '',
-  LONG_SHORT_PAIR_FACTORY_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_LONG_SHORT_PAIR_FACTORY || '',
-  INDEX_FACTORY_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_INDEX_FACTORY || '',
+  // External Contracts
+  DEFINDEX_VAULT_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_DEFINDEX_VAULT || '',
+  BLEND_USDC_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_BLEND_USDC_ADDRESS || TESTNET_BLEND_USDC?.contract || '',
+  BLEND_USDC_ISSUER: process.env.NEXT_PUBLIC_TESTNET_BLEND_USDC_ISSUER || TESTNET_BLEND_USDC?.issuer || '',
 
   // Stellar
   XLM_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_XLM_ADDRESS || '',
   XLM_DECIMALS: 7,
-  USDC_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_USDC_ADDRESS || '',
+  USDC_ADDRESS: process.env.NEXT_PUBLIC_TESTNET_USDC_ADDRESS || TESTNET_USDC.contract,
   USDC_DECIMALS: 7,
-  USDC_ISSUER: process.env.NEXT_PUBLIC_TESTNET_USDC_ISSUER || '',
+  USDC_ISSUER: process.env.NEXT_PUBLIC_TESTNET_USDC_ISSUER || TESTNET_USDC.issuer,
 
   // Oracle
   REFLECTOR_EXTERNAL_ORACLE_ADDRESS:
@@ -35,7 +40,7 @@ const TESTNET_CONFIG: NetworkConfig = {
   EVENTS_TABLENAME: 'normal_contract_events',
 };
 
-const MAINNET_CONFIG: NetworkConfig = {
+export const MAINNET_CONFIG: NetworkConfig = {
   // Network
   NETWORK_PASSPHRASE: 'Public Global Stellar Network ; September 2015',
   HORIZON_URL: process.env.NEXT_PUBLIC_MAINNET_HORIZON_URL || 'https://horizon.stellar.org',
@@ -47,17 +52,15 @@ const MAINNET_CONFIG: NetworkConfig = {
   NORMAL_DISTRIBUTOR: process.env.NEXT_PUBLIC_MAINNET_DISTRIBUTOR || '',
   NORMAL_HOT_A: process.env.NEXT_PUBLIC_MAINNET_HOT_A || '',
 
-  // Normal Contracts
-  TREASURY_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_TREASURY || '',
-  LONG_SHORT_PAIR_FACTORY_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_LONG_SHORT_PAIR_FACTORY || '',
-  INDEX_FACTORY_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_INDEX_FACTORY || '',
+  // External Contracts
+  DEFINDEX_VAULT_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_DEFINDEX_VAULT || '',
 
   // Stellar
   XLM_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_XLM_ADDRESS || '',
   XLM_DECIMALS: 7,
-  USDC_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_USDC_ADDRESS || '',
+  USDC_ADDRESS: process.env.NEXT_PUBLIC_MAINNET_USDC_ADDRESS || MAINNET_USDC.contract,
   USDC_DECIMALS: 7,
-  USDC_ISSUER: process.env.NEXT_PUBLIC_MAINNET_USDC_ISSUER || '',
+  USDC_ISSUER: process.env.NEXT_PUBLIC_MAINNET_USDC_ISSUER || MAINNET_USDC.issuer,
 
   // Oracle
   REFLECTOR_EXTERNAL_ORACLE_ADDRESS:
@@ -69,12 +72,19 @@ const MAINNET_CONFIG: NetworkConfig = {
 };
 
 /**
+ * Get the Stellar config for a specific network value.
+ */
+export function getStellarConfigForNetwork(network: NetworkType): NetworkConfig {
+  return network === 'mainnet' ? MAINNET_CONFIG : TESTNET_CONFIG;
+}
+
+/**
  * Get the current network configuration based on NEXT_PUBLIC_NETWORK environment variable
  */
 function getStellarConfig(): NetworkConfig {
   const network = getCurrentNetwork();
   logger.log('[getStellarConfig] network', network);
-  return network === 'mainnet' ? MAINNET_CONFIG : TESTNET_CONFIG;
+  return getStellarConfigForNetwork(network);
 }
 
 // Export the current stellar configuration

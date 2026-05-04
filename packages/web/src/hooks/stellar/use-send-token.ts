@@ -5,14 +5,15 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
+import { detectMemoType } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
-import { constants, detectMemoType } from '@normalfinance/utils';
 import { Memo, Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
 
-import { useNormalWallet } from './use-normal-wallet';
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
+import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 
 // ----------------------------------------------------------------------
 
@@ -38,10 +39,15 @@ export function useSendToken(): ReturnType {
   const { enqueueSnackbar } = useSnackbar();
 
   const { wallet } = usePersistStore();
+  const config = useStellarConfig();
 
   const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
     useStellarWalletsKit();
-  const { signTransaction: signNormalWallet, publicKey: normalPublicKey } = useNormalWallet();
+  const {
+    signTransaction: signNormalWallet,
+    publicKey: normalPublicKey,
+    canSign: normalCanSign,
+  } = useNormalWallet();
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,13 +63,16 @@ export function useSendToken(): ReturnType {
 
       const walletType = wallet.walletType;
       const isNormalWallet = walletType === 'normal-wallet';
+      if (isNormalWallet && !normalCanSign) {
+        throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+      }
       const walletAddress = isNormalWallet
         ? normalPublicKey || wallet.address
         : stellarPublicKey || wallet.address;
       const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
 
-      const horizonServer = new Horizon.Server(constants.StellarConfig.HORIZON_URL, {
-        allowHttp: constants.StellarConfig.HORIZON_URL.startsWith('http://'),
+      const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+        allowHttp: config.HORIZON_URL.startsWith('http://'),
       });
 
       const account = await horizonServer.loadAccount(walletAddress);
@@ -71,7 +80,7 @@ export function useSendToken(): ReturnType {
       const tx = new TransactionBuilder(account, {
         fee: '2000',
         timebounds: { minTime: 0, maxTime: Math.floor(Date.now() / 1000) + 2 * 60 * 1000 },
-        networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+        networkPassphrase: config.NETWORK_PASSPHRASE,
       });
 
       // BigInt((tokenValue * 10 ** (sendToken?.decimals || 7)).toFixed(0)),
@@ -115,23 +124,23 @@ export function useSendToken(): ReturnType {
       const unsignedXDR = builtTx.toXDR();
 
       const signedXDR = isNormalWallet
-        ? await signTransaction(unsignedXDR, constants.StellarConfig.NETWORK_PASSPHRASE)
+        ? await signTransaction(unsignedXDR, config.NETWORK_PASSPHRASE)
         : await signTransaction(unsignedXDR);
 
-      if (signedXDR) {
-        const transaction = TransactionBuilder.fromXDR(
-          signedXDR,
-          constants.StellarConfig.NETWORK_PASSPHRASE
-        );
-
-        const result = await horizonServer.submitTransaction(transaction);
-        return result.hash;
+      if (!signedXDR) {
+        throw new Error('Transaction signing failed — no signed XDR returned');
       }
 
-      return '';
+      const transaction = TransactionBuilder.fromXDR(
+        signedXDR,
+        config.NETWORK_PASSPHRASE
+      );
+
+      const result = await horizonServer.submitTransaction(transaction);
+      return result.hash;
     } catch (err: any) {
-      console.log({ err });
-      setError(err);
+      console.error('[SEND TOKEN] Transaction failed:', err);
+      setError(err?.message || 'Transaction failed');
       return '';
     } finally {
       setLoading(false);

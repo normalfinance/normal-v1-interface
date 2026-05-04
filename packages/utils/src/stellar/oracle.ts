@@ -7,6 +7,7 @@ import {
   Address,
   Account,
 } from '@stellar/stellar-sdk';
+import { NetworkConfig } from '@normalfinance/types';
 import { constants } from '..';
 
 export interface PriceData {
@@ -19,20 +20,23 @@ const TESTING_SOURCE = new Account(
   '123'
 );
 
-export async function getReflectorExternalPrice(tokenSymbol: string): Promise<PriceData> {
+export async function getReflectorExternalPrice(
+  tokenSymbol: string,
+  config: NetworkConfig = constants.StellarConfig
+): Promise<PriceData> {
   const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+    networkPassphrase: config.NETWORK_PASSPHRASE,
   });
 
   const asset = xdr.ScVal.scvVec([xdr.ScVal.scvSymbol('Other'), xdr.ScVal.scvSymbol(tokenSymbol)]);
 
   tx_builder.addOperation(
-    new Contract(constants.StellarConfig.REFLECTOR_EXTERNAL_ORACLE_ADDRESS).call('lastprice', asset)
+    new Contract(config.REFLECTOR_EXTERNAL_ORACLE_ADDRESS).call('lastprice', asset)
   );
 
-  const stellar_rpc = new rpc.Server(constants.StellarConfig.RPC_URL);
+  const stellar_rpc = new rpc.Server(config.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
 
   if (rpc.Api.isSimulationSuccess(result)) {
@@ -54,11 +58,14 @@ export async function getReflectorExternalPrice(tokenSymbol: string): Promise<Pr
   }
 }
 
-export async function getReflectorPubnetPrice(tokenAddress: string): Promise<PriceData> {
+export async function getReflectorPubnetPrice(
+  tokenAddress: string,
+  config: NetworkConfig = constants.StellarConfig
+): Promise<PriceData> {
   const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+    networkPassphrase: config.NETWORK_PASSPHRASE,
   });
 
   const asset = xdr.ScVal.scvVec([
@@ -67,10 +74,10 @@ export async function getReflectorPubnetPrice(tokenAddress: string): Promise<Pri
   ]);
 
   tx_builder.addOperation(
-    new Contract(constants.StellarConfig.REFLECTOR_PUBNET_ORACLE_ADDRESS).call('lastprice', asset)
+    new Contract(config.REFLECTOR_PUBNET_ORACLE_ADDRESS).call('lastprice', asset)
   );
 
-  const stellar_rpc = new rpc.Server(constants.StellarConfig.RPC_URL);
+  const stellar_rpc = new rpc.Server(config.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
 
   if (rpc.Api.isSimulationSuccess(result)) {
@@ -93,16 +100,17 @@ export async function getReflectorPubnetPrice(tokenAddress: string): Promise<Pri
 }
 
 export async function getOracleDecimals(
-  oracle_id: string
+  oracle_id: string,
+  config: NetworkConfig = constants.StellarConfig
 ): Promise<{ decimals: number; latestLedger: number }> {
   const tx_builder = new TransactionBuilder(TESTING_SOURCE, {
     fee: '1000',
     timebounds: { minTime: 0, maxTime: 0 },
-    networkPassphrase: constants.StellarConfig.NETWORK_PASSPHRASE,
+    networkPassphrase: config.NETWORK_PASSPHRASE,
   });
   tx_builder.addOperation(new Contract(oracle_id).call('decimals'));
 
-  const stellar_rpc = new rpc.Server(constants.StellarConfig.RPC_URL);
+  const stellar_rpc = new rpc.Server(config.RPC_URL);
   const result = await stellar_rpc.simulateTransaction(tx_builder.build());
 
   if (rpc.Api.isSimulationSuccess(result)) {

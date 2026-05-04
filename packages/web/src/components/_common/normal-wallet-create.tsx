@@ -1,41 +1,26 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-import { supabase } from '@/lib/createSupabaseClient';
-import React, { useMemo, useState, useCallback } from 'react';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { updateWalletName } from '@/services/linked-wallets';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
-import { linkWallet, updateWalletName } from '@/services/linked-wallets';
-import { requestWalletSponsorship, submitSponsorshipTransaction } from '@/services/faucet';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   logger,
   splitMnemonicToWords,
   formatMnemonicForDisplay,
   getRandomVerificationWords,
 } from '@normalfinance/utils';
-import {
-  generateAESKey,
-  encryptWithAES,
-  generateRSAKeyPair,
-  exportAESKeyAsBase64,
-  encryptWithRSAPublicKey,
-  encryptPrivateKeyForStorage,
-} from '@/lib/client-crypto';
 
-import {
-  Box,
+import { Box ,
   Stack,
   Paper,
   Alert,
-  Radio,
   Dialog,
   Button,
-  Divider,
   Checkbox,
   TextField,
   Typography,
   IconButton,
-  RadioGroup,
   DialogTitle,
   DialogContent,
   CircularProgress,
@@ -51,13 +36,21 @@ export type NormalWalletCreateProps = {
   onSuccess: () => void;
 };
 
-type CreateStage = 'creating' | 'summary' | 'custody-choice' | 'backup' | 'verify';
+type CreateStage = 'creating' | 'summary' | 'backup' | 'verify';
 
 interface VerificationQuestion {
   index: number;
   correctWord: string;
   options: string[];
 }
+
+// Number of words the user must correctly identify before their wallet is
+// considered "backed up". Self-custody is the only option — make this strict.
+const VERIFICATION_WORD_COUNT = 3;
+
+// After this many seconds, the clipboard is overwritten to blank so the
+// recovery phrase does not linger across paste operations.
+const CLIPBOARD_CLEAR_SECONDS = 30;
 
 const chunkArray = <T,>(array: T[], size: number): T[][] => {
   const result: T[][] = [];
@@ -70,8 +63,7 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
 export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalWalletCreateProps) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { createWallet, signTransaction } = useNormalWallet();
-  const { user } = useSupabaseAuth();
+  const { createWallet } = useNormalWallet();
 
   const [stage, setStage] = useState<CreateStage>('creating');
   const [mnemonic, setMnemonic] = useState<string | null>(null);
@@ -82,18 +74,21 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [answerErrors, setAnswerErrors] = useState<Record<number, string>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [custodyChoice, setCustodyChoice] = useState<'self' | 'platform' | null>(null);
-  const [custodyConsent, setCustodyConsent] = useState(false);
-  const [isSavingCustody, setIsSavingCustody] = useState(false);
+  const [backupAcknowledged, setBackupAcknowledged] = useState(false);
 
   const formattedMnemonic = useMemo(
     () => (mnemonic ? formatMnemonicForDisplay(mnemonic) : []),
     [mnemonic]
   );
 
+  // Stages during which the dialog must not be dismissable. The user has just
+  // seen their recovery phrase and they have one chance to write it down —
+  // letting them accidentally close the dialog (ESC, backdrop click, X button)
+  // would strand them with a wallet they cannot recover.
+  const isLocked = stage === 'backup' || stage === 'verify';
+
   // Create wallet on mount
-  // eslint-disable-next-line consistent-return
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && stage === 'creating') {
       let cancelled = false;
 
@@ -120,133 +115,43 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         cancelled = true;
       };
     }
-  }, [open, stage]); // Removed createWallet from dependencies to prevent infinite loop
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, stage]);
 
   const handleBackupWallet = () => {
-    setStage('custody-choice');
+    setStage('backup');
   };
 
   const handleCopyMnemonic = async () => {
     if (!mnemonic) return;
     try {
       await navigator.clipboard.writeText(mnemonic);
-      enqueueSnackbar(t('Backup phrase copied to clipboard'), { variant: 'success' });
+      enqueueSnackbar(
+        t('Backup phrase copied. Clipboard will be cleared in ') +
+          CLIPBOARD_CLEAR_SECONDS +
+          t('s.'),
+        { variant: 'success' }
+      );
+      // Overwrite the clipboard after a short delay. We cannot verify the
+      // clipboard contents without prompting for permission, so we just blank
+      // it out — the user has been warned.
+      setTimeout(() => {
+        navigator.clipboard.writeText('').catch(() => {
+          /* ignore — user may have lost focus */
+        });
+      }, CLIPBOARD_CLEAR_SECONDS * 1000);
     } catch (err) {
       logger.error('Failed to copy mnemonic:', err);
       enqueueSnackbar(t('Failed to copy backup phrase'), { variant: 'error' });
     }
   };
 
-  const encryptAndSaveMnemonic = useCallback(async () => {
-    if (!mnemonic || !publicKey || !user?.id || !user?.email) {
-      throw new Error('Missing required data for encryption');
-    }
-
-    setIsSavingCustody(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        throw new Error('Authentication required');
-      }
-
-      let rsaPublicKey: string;
-
-      const rsaKeysCheckResponse = await fetch('/api/user/rsa-keys', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        credentials: 'include',
-      });
-
-      if (!rsaKeysCheckResponse.ok) {
-        throw new Error('Failed to check RSA keys');
-      }
-
-      const rsaKeysData = await rsaKeysCheckResponse.json();
-
-      if (!rsaKeysData.hasKeys) {
-        const rsaKeyPair = await generateRSAKeyPair();
-
-        const clientSecret = session.access_token.substring(0, 32);
-        const encryptedPrivateKeyData = await encryptPrivateKeyForStorage(
-          rsaKeyPair.privateKey,
-          user.id,
-          clientSecret
-        );
-
-        const storeRSAKeysResponse = await fetch('/api/user/rsa-keys', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            publicKey: rsaKeyPair.publicKey,
-            encryptedPrivateKey: encryptedPrivateKeyData.encryptedPrivateKey,
-            iv: encryptedPrivateKeyData.iv,
-            salt: encryptedPrivateKeyData.salt,
-          }),
-        });
-
-        if (!storeRSAKeysResponse.ok) {
-          throw new Error('Failed to store RSA keys');
-        }
-
-        rsaPublicKey = rsaKeyPair.publicKey;
-      } else {
-        rsaPublicKey = rsaKeysData.publicKey;
-      }
-
-      const aesKey = await generateAESKey();
-      const aesKeyBase64 = await exportAESKeyAsBase64(aesKey);
-      const encryptedMnemonicData = await encryptWithAES(mnemonic, aesKey);
-      const encryptedAESKey = await encryptWithRSAPublicKey(aesKeyBase64, rsaPublicKey);
-
-      const encryptResponse = await fetch('/api/wallets/encrypt-mnemonic', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          walletAddress: publicKey,
-          encryptedMnemonic: encryptedMnemonicData.ciphertext,
-          encryptedAESKey,
-          iv: encryptedMnemonicData.iv,
-        }),
-      });
-
-      if (!encryptResponse.ok) {
-        const e = await encryptResponse.json();
-        throw new Error(e.error || 'Failed to encrypt mnemonic');
-      }
-
-      const { encryptedMnemonic, encryptionIV, encryptionSalt } = await encryptResponse.json();
-
-      await linkWallet(publicKey, walletName.trim() || undefined, {
-        custodyChoice: 'platform',
-        encryptedMnemonic,
-        encryptionIV,
-        encryptionSalt,
-        custodyConsentEmail: user.email,
-      });
-    } finally {
-      setIsSavingCustody(false);
-    }
-  }, [mnemonic, publicKey, walletName, user]);
-
   const startVerification = useCallback(() => {
     if (!mnemonic) return;
 
     const words = splitMnemonicToWords(mnemonic);
-    const requiredCount = words.length >= 24 ? 3 : 2;
+    const requiredCount = Math.min(VERIFICATION_WORD_COUNT, words.length);
     const verificationWords = getRandomVerificationWords(mnemonic, requiredCount);
     const formatted = formatMnemonicForDisplay(mnemonic);
 
@@ -273,16 +178,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setStage('verify');
   }, [mnemonic]);
 
-  const handleComplete = useCallback(async () => {
-    if (walletName.trim() && publicKey) {
-      try {
-        await updateWalletName(publicKey, walletName.trim());
-      } catch (err) {
-        logger.warn('Failed to update wallet name:', err);
-      }
-    }
-
-    const walletAddress = publicKey;
+  const resetState = useCallback(() => {
     setMnemonic(null);
     setPublicKey(null);
     setWalletName('');
@@ -292,94 +188,22 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     setAnswerErrors({});
     setCurrentQuestionIndex(0);
     setError(null);
-    setCustodyChoice(null);
-    setCustodyConsent(false);
-    setIsSavingCustody(false);
+    setBackupAcknowledged(false);
+  }, []);
+
+  const handleComplete = useCallback(async () => {
+    if (walletName.trim() && publicKey) {
+      try {
+        await updateWalletName(publicKey, walletName.trim());
+      } catch (err) {
+        logger.warn('Failed to update wallet name:', err);
+      }
+    }
+
+    resetState();
     enqueueSnackbar(t('Account created successfully!'), { variant: 'success' });
     onSuccess();
-
-    if (walletAddress) {
-      requestFaucetFundingAndTrustline(walletAddress).catch((err) => {
-        logger.warn('[NormalWalletCreate] Failed to fund wallet or create trustline:', err);
-      });
-    }
-  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t, signTransaction]);
-
-  const requestFaucetFundingAndTrustline = useCallback(
-    async (walletAddress: string) => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          throw new Error('Authentication required');
-        }
-
-        logger.log('[NormalWalletCreate] Requesting sponsorship for:', walletAddress);
-        const { sponsorshipXDR } = await requestWalletSponsorship(
-          walletAddress,
-          session.access_token
-        );
-        logger.log('[NormalWalletCreate] Received sponsorship XDR');
-
-        if (sponsorshipXDR && signTransaction) {
-          const signedXDR = await signTransaction(sponsorshipXDR);
-          const { hash } = await submitSponsorshipTransaction(
-            signedXDR,
-            walletAddress,
-            session.access_token
-          );
-          logger.log('[NormalWalletCreate] Account sponsored successfully:', hash);
-        }
-      } catch (e: any) {
-        logger.error('[NormalWalletCreate] Error in sponsorship flow:', e);
-        if (
-          e.message?.includes('already been sponsored') ||
-          e.message?.includes('already exists')
-        ) {
-          logger.log('[NormalWalletCreate] Wallet already sponsored, skipping');
-          return;
-        }
-        enqueueSnackbar(e.message || t('Failed to create account and enable USDC'), {
-          variant: 'error',
-        });
-      }
-    },
-    [signTransaction, enqueueSnackbar, t]
-  );
-
-  const handleCustodyConfirm = useCallback(async () => {
-    if (custodyChoice === 'self') {
-      setStage('backup');
-    } else if (custodyChoice === 'platform') {
-      if (!custodyConsent) {
-        enqueueSnackbar(t('Please provide consent to store your recovery phrase'), {
-          variant: 'warning',
-        });
-        return;
-      }
-
-      try {
-        await encryptAndSaveMnemonic();
-        await handleComplete();
-      } catch (err: any) {
-        logger.error('Failed to save encrypted mnemonic:', err);
-        enqueueSnackbar(
-          err.message || t('Failed to save encrypted recovery phrase. Please try self-custody.'),
-          { variant: 'error' }
-        );
-        setError(err.message || t('Failed to save encrypted recovery phrase'));
-      }
-    }
-  }, [
-    custodyChoice,
-    custodyConsent,
-    encryptAndSaveMnemonic,
-    handleComplete,
-    startVerification,
-    enqueueSnackbar,
-    t,
-  ]);
+  }, [walletName, publicKey, onSuccess, enqueueSnackbar, t, resetState]);
 
   const handleSelectAnswer = useCallback(
     (index: number, value: string) => {
@@ -423,7 +247,17 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
     });
 
     if (hasError) {
+      // Any wrong answer sends the user back to re-read the phrase. Self-custody
+      // means we cannot afford a user who half-remembered their words.
       setAnswerErrors(newErrors);
+      setSelectedAnswers({});
+      setCurrentQuestionIndex(0);
+      setBackupAcknowledged(false);
+      enqueueSnackbar(
+        t('One or more words were incorrect. Please re-read your recovery phrase carefully.'),
+        { variant: 'error' }
+      );
+      setStage('backup');
       return;
     }
 
@@ -431,25 +265,22 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
   };
 
   const handleClose = () => {
-    setMnemonic(null);
-    setPublicKey(null);
-    setWalletName('');
-    setStage('creating');
-    setVerificationQuestions([]);
-    setSelectedAnswers({});
-    setAnswerErrors({});
-    setCurrentQuestionIndex(0);
-    setError(null);
-    setCustodyChoice(null);
-    setCustodyConsent(false);
-    setIsSavingCustody(false);
+    if (isLocked) return;
+    resetState();
     onClose();
   };
 
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      onClose={(_event, reason) => {
+        // Block backdrop clicks and ESC during the locked stages.
+        if (isLocked && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
+          return;
+        }
+        handleClose();
+      }}
+      disableEscapeKeyDown={isLocked}
       fullWidth
       maxWidth="sm"
       slotProps={{
@@ -464,22 +295,23 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         <Typography variant="h5" component="div">
           {stage === 'creating' && t('Creating Account...')}
           {stage === 'summary' && t('Account Created Successfully!')}
-          {stage === 'backup' && t('Manual Account Backup')}
-          {stage === 'custody-choice' && t('Backup Your Account')}
-          {stage === 'verify' && t('Verify Your Account')}
+          {stage === 'backup' && t('Back Up Your Recovery Phrase')}
+          {stage === 'verify' && t('Verify Your Recovery Phrase')}
         </Typography>
-        <IconButton
-          aria-label="close"
-          onClick={handleClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[500],
-          }}
-        >
-          <Iconify icon="mingcute:close-line" />
-        </IconButton>
+        {!isLocked && (
+          <IconButton
+            aria-label="close"
+            onClick={handleClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <Iconify icon="mingcute:close-line" />
+          </IconButton>
+        )}
       </DialogTitle>
 
       <DialogContent sx={{ py: 5 }}>
@@ -512,12 +344,14 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               helperText=""
             />
 
-            <Alert severity="warning">
+            <Alert severity="error">
               <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-                {t('IMPORTANT')}
+                {t('IMPORTANT — READ THIS')}
               </Typography>
               <Typography variant="body2">
-                {t('Backup your account to ensure you can recover it later!')}
+                {t(
+                  'Normal does NOT store your recovery phrase. If you lose it, your funds are gone forever and no one can recover them for you. You must back it up now.'
+                )}
               </Typography>
             </Alert>
 
@@ -529,10 +363,12 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               }}
             >
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t('Backup your recovery phrase to ensure you can recover your account later.')}
+                {t(
+                  'You will now be shown your recovery phrase. Once you proceed, you cannot close this dialog until you have written it down and verified it.'
+                )}
               </Typography>
-              <Button variant="contained" fullWidth onClick={handleBackupWallet}>
-                {t('Back up')}
+              <Button variant="contained" fullWidth size="large" onClick={handleBackupWallet}>
+                {t('Show My Recovery Phrase')}
               </Button>
             </Paper>
           </Stack>
@@ -540,32 +376,25 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
         {stage === 'backup' && mnemonic && (
           <Stack spacing={3}>
-            <Box>
-              <Button
-                startIcon={<Iconify icon="mingcute:left-line" />}
-                onClick={() => setStage('summary')}
-                sx={{ mb: 1 }}
-              >
-                {t('Back')}
-              </Button>
-            </Box>
-
             <Alert severity="error">
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+                {t('Your Recovery Phrase — NEVER SHARE')}
+              </Typography>
               <Typography variant="body2">
                 {t(
-                  'This is your Recovery Phrase. Do NOT share it with anyone, ever! Otherwise, you risk losing all funds.'
+                  'Anyone with this phrase can steal all of your funds. Normal will NEVER ask for it. Normal CANNOT recover it for you.'
                 )}
               </Typography>
             </Alert>
 
             <Typography variant="body2" color="text.secondary">
               {t(
-                'Write down these words in order and keep them in a safe place. You will need them to recover your account.'
+                'Write down these words in order on paper and keep them in a safe, offline location. You will need them to recover your account on a new device.'
               )}
             </Typography>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-              {chunkArray(formattedMnemonic, 3).map((row, rowIndex) =>
+              {chunkArray(formattedMnemonic, 3).map((row) =>
                 row.map((item) => (
                   <Paper
                     key={item.index}
@@ -576,7 +405,10 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
                       backgroundColor: 'background.paper',
                     }}
                   >
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
+                      {item.index}.
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600} component="span">
                       {item.word}
                     </Typography>
                   </Paper>
@@ -584,183 +416,48 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
               )}
             </Box>
 
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={backupAcknowledged}
+                  onChange={(e) => setBackupAcknowledged(e.target.checked)}
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  {t(
+                    'I have written down my recovery phrase and stored it in a secure location. I understand Normal cannot recover it for me.'
+                  )}
+                </Typography>
+              }
+            />
+
             <Stack spacing={2}>
-              <Button variant="contained" fullWidth onClick={startVerification}>
-                {t("I've Written Them Down")}
+              <Button
+                variant="contained"
+                fullWidth
+                size="large"
+                disabled={!backupAcknowledged}
+                onClick={startVerification}
+              >
+                {t("I've Written It Down — Verify Now")}
               </Button>
               <Button variant="outlined" fullWidth onClick={handleCopyMnemonic}>
-                {t('Copy Recovery Phrase')}
+                {t('Copy Recovery Phrase (clears in ') + CLIPBOARD_CLEAR_SECONDS + t('s)')}
               </Button>
             </Stack>
           </Stack>
         )}
 
-        {stage === 'custody-choice' && (
-          <Stack spacing={3}>
-            <Box>
-              <Button
-                startIcon={<Iconify icon="mingcute:left-line" />}
-                onClick={() => setStage('backup')}
-                sx={{ mb: 2 }}
-              >
-                {t('Back')}
-              </Button>
-            </Box>
-
-            <Typography variant="h6">
-              {t('How would you like to secure your recovery phrase?')}
-            </Typography>
-
-            <RadioGroup
-              value={custodyChoice || ''}
-              onChange={(e) => {
-                setCustodyChoice(e.target.value as 'self' | 'platform');
-                if (e.target.value === 'self') {
-                  setCustodyConsent(false);
-                }
-              }}
-            >
-              <Alert severity="success" sx={{ mb: 1 }}>
-                <Typography variant="body2">{t('Recommended for most users.')}</Typography>
-              </Alert>
-
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  mb: 2,
-                  cursor: 'pointer',
-                  borderColor: custodyChoice === 'platform' ? 'primary.main' : 'divider',
-                  bgcolor: custodyChoice === 'platform' ? 'action.selected' : 'background.paper',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                  },
-                }}
-                onClick={() => setCustodyChoice('platform')}
-              >
-                <FormControlLabel
-                  value="platform"
-                  control={<Radio />}
-                  label={
-                    <Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        {t('Store Securely with Normal')}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {t(
-                          'Fast. Convenient. AES-256 Encryption. Auto-reconnect without re-entering.'
-                        )}
-                      </Typography>
-                    </Box>
-                  }
-                  sx={{ m: 0 }}
-                />
-              </Paper>
-
-              <Divider sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  {t('or')}
-                </Typography>
-              </Divider>
-
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  mb: 2,
-                  cursor: 'pointer',
-                  borderColor: custodyChoice === 'self' ? 'primary.main' : 'divider',
-                  bgcolor: custodyChoice === 'self' ? 'action.selected' : 'background.paper',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                  },
-                }}
-                onClick={() => {
-                  setCustodyChoice('self');
-                  setCustodyConsent(false);
-                }}
-              >
-                <FormControlLabel
-                  value="self"
-                  control={<Radio />}
-                  label={
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('Tedious. Maximum security. You keep your backup.')}
-                      </Typography>
-
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        {t("I'll Store It Myself (Self-Custody)")}
-                      </Typography>
-                    </Box>
-                  }
-                  sx={{ m: 0 }}
-                />
-              </Paper>
-            </RadioGroup>
-
-            {custodyChoice === 'platform' && (
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={custodyConsent}
-                    onChange={(e) => setCustodyConsent(e.target.checked)}
-                  />
-                }
-                label={t('I authorize Normal to store my encrypted recovery phrase')}
-              />
-            )}
-
-            {custodyChoice === 'self' && (
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={custodyConsent}
-                    onChange={(e) => setCustodyConsent(e.target.checked)}
-                  />
-                }
-                label={t(
-                  'I understand the risks of self-custody and accept all liability if I lose my recovery phrase.'
-                )}
-              />
-            )}
-
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleCustodyConfirm}
-              disabled={
-                !custodyChoice ||
-                (custodyChoice === 'platform' && !custodyConsent) ||
-                (custodyChoice === 'self' && !custodyConsent) ||
-                isSavingCustody
-              }
-              startIcon={isSavingCustody ? <CircularProgress size={16} /> : null}
-            >
-              {isSavingCustody ? t('Saving...') : t('Continue')}
-            </Button>
-          </Stack>
-        )}
-
         {stage === 'verify' && verificationQuestions.length > 0 && (
           <Stack spacing={3}>
-            <Box>
-              <Button
-                startIcon={<Iconify icon="mingcute:left-line" />}
-                onClick={() => setStage('backup')}
-                sx={{ mb: 2 }}
-              >
-                {t('Back')}
-              </Button>
-            </Box>
-
             <Alert severity="warning" sx={{ mb: 2 }}>
               <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
                 {t('Final Step')}
               </Typography>
               <Typography variant="body2">
                 {t(
-                  'This is your only chance to save your backup phrase. Once you complete this step, the phrase will be permanently removed for security. Make sure you have safely written it down before proceeding.'
+                  'Prove you have written down your recovery phrase. If any answer is wrong, you will be sent back to re-read it.'
                 )}
               </Typography>
             </Alert>

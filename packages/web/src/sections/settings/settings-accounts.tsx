@@ -3,11 +3,11 @@
 import type { LinkedWallet } from '@/services/linked-wallets';
 
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 
-import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -27,11 +27,13 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
-import { CustodySettings } from '@/components/settings/custody-settings';
+import NormalWalletImport from '@/components/_common/normal-wallet-import';
+import AddUsdcTrustlineButton from '@/components/settings/add-usdc-trustline-button';
 
 export function SettingsAccounts() {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
+  const config = useStellarConfig();
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingWallet, setEditingWallet] = useState<string | null>(null);
@@ -40,6 +42,7 @@ export function SettingsAccounts() {
   const [walletToUnlink, setWalletToUnlink] = useState<string | null>(null);
   const [isUnlinking, setIsUnlinking] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
 
   const loadWallets = async () => {
     try {
@@ -107,6 +110,11 @@ export function SettingsAccounts() {
     return name.includes(query) || address.includes(query);
   });
 
+  const handleImportSuccess = async () => {
+    setShowImportNormalWallet(false);
+    await loadWallets();
+  };
+
   if (loading) {
     return (
       <Stack spacing={3}>
@@ -135,6 +143,15 @@ export function SettingsAccounts() {
 
   return (
     <Stack spacing={3}>
+      <Button
+        variant="outlined"
+        color="primary"
+        startIcon={<Iconify icon="solar:import-bold" />}
+        onClick={() => setShowImportNormalWallet(true)}
+      >
+        {t('Import Account')}
+      </Button>
+
       {wallets.length > 0 && (
         <TextField
           size="small"
@@ -230,14 +247,27 @@ export function SettingsAccounts() {
                   </Stack>
                 )}
 
-                <Box sx={{ mt: 2 }}>
-                  <CustodySettings
+                <AddUsdcTrustlineButton
+                  walletAddress={wallet.walletAddress}
+                  assetIssuer={config.USDC_ISSUER}
+                  label={t('Add Stellar USDC Trustline')}
+                  loadingLabel={t('Adding trustline...')}
+                  successMessage={t('Stellar USDC trustline added!')}
+                  errorFallback={t('Failed to add Stellar USDC trustline')}
+                  showInactiveAccountHelper
+                />
+
+                {config.BLEND_USDC_ISSUER && (
+                  <AddUsdcTrustlineButton
                     walletAddress={wallet.walletAddress}
-                    walletName={wallet.walletName}
-                    custodyChoice={wallet.custodyChoice}
-                    onUpdate={loadWallets}
+                    assetIssuer={config.BLEND_USDC_ISSUER}
+                    label={t('Add Blend USDC Trustline')}
+                    loadingLabel={t('Adding trustline...')}
+                    successMessage={t('Blend USDC trustline added!')}
+                    errorFallback={t('Failed to add Blend USDC trustline')}
+                    showInactiveAccountHelper={!config.USDC_ISSUER}
                   />
-                </Box>
+                )}
 
                 <Button
                   variant="soft"
@@ -276,6 +306,12 @@ export function SettingsAccounts() {
           </Button>
         </DialogActions>
       </Dialog>
+      <NormalWalletImport
+        open={showImportNormalWallet}
+        onClose={() => setShowImportNormalWallet(false)}
+        onSuccess={handleImportSuccess}
+        showLinkedWallets={false}
+      />
     </Stack>
   );
 }
