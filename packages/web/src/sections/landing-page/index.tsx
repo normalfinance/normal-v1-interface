@@ -7,6 +7,7 @@ import { cdn, logger } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import BrandMarquee from '@/components/BrandMarquee';
+import RoadmapSection from '@/components/RoadmapSection';
 import { Vision } from '@/components/_about-us-page-components/vision';
 
 import { CtaImage } from './cta';
@@ -75,6 +76,7 @@ export default function LandingPage() {
       <BrandMarquee />
       <Vision />
       <StatsGrid />
+      <RoadmapSection />
       <TestimonialGrid />
       <FaqAccordion />
       <CtaImage />
