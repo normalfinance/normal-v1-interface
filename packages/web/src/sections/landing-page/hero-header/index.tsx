@@ -129,15 +129,8 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
               <Box
                 component="span"
                 sx={{
-                  background: `linear-gradient(
-                                90deg,
-                                #2DE9C8 0%,
-                                #00AFF7 20%,
-                                #947BFF 40%,
-                                #F8279C 60%,
-                                #FF6F4C 80%,
-                                #FFE13D 100%
-                              )`,
+                  fontStyle: 'italic',
+                  background: 'linear-gradient(90deg, #2bd2ff 0%, #b561ff 40%, #ff5cb1 70%, #ffb347 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
