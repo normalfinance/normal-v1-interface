@@ -364,13 +364,13 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
             aria-modal="true"
             role="dialog"
           >
-            <Box sx={{ height: '100%', overflow: 'auto', px: '5%', py: 2 }}>
+            <Box sx={{ height: '100%', overflow: 'auto', px: '5%', py: 2, display: 'flex', flexDirection: 'column' }}>
               {links
                 .filter((l) => !!l.megaMenu)
                 .map((link, i) => (
                   <MobileMega key={i} megaMenu={link.megaMenu!} />
                 ))}
-              <Box sx={{ mt: 2 }}>
+              <Box sx={{ mt: 'auto', pt: 2 }}>
                 <Button
                   component="a"
                   fullWidth
@@ -449,87 +449,112 @@ function DesktopDock({
 
 function DockContent({ mega }: { mega: MegaMenuProps }) {
   const { t: tDock } = useTranslate();
-  const allLinks = mega.categoryLinks.flatMap((group) => group.links);
+  const leftGroups = mega.categoryLinks.slice(0, 2);
+  const rightGroups = mega.categoryLinks.slice(2);
 
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'stretch',
-      }}
-    >
-      {/* Left: flat link list — 2 columns */}
+  const renderLink = (l: MegaMenuLink, li: number) => {
+    const { target, rel } = linkAttrs(l.url, l.target, l.rel);
+    return (
       <Box
+        key={li}
+        component="a"
+        href={l.url}
+        target={target}
+        rel={rel}
         sx={{
-          width: 480,
-          py: 2,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          alignContent: 'start',
-          gap: 0.5,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          py: 1.25,
+          px: 1.5,
+          textDecoration: 'none',
+          color: 'inherit',
+          borderRadius: 1,
+          transition: 'background-color 0.15s ease',
+          '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.55)' },
+          '&:focus-visible': (t2) => ({
+            outline: `2px solid ${t2.palette.primary.main}`,
+            outlineOffset: 2,
+          }),
         }}
       >
-        {allLinks.map((l, li) => {
-          const { target, rel } = linkAttrs(l.url, l.target, l.rel);
-          return (
-            <Box
-              key={li}
-              component="a"
-              href={l.url}
-              target={target}
-              rel={rel}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                py: 1.25,
-                px: 1.5,
-                textDecoration: 'none',
-                color: 'inherit',
-                borderRadius: 1,
-                transition: 'background-color 0.15s ease',
-                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.55)' },
-                '&:focus-visible': (t2) => ({
-                  outline: `2px solid ${t2.palette.primary.main}`,
-                  outlineOffset: 2,
-                }),
-              }}
-            >
-              <Box
-                sx={{
-                  width: 32,
-                  height: 32,
-                  p: 0.75,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'linear-gradient(135deg, rgb(190, 232, 255) 0%, rgb(220, 205, 255) 100%)',
-                  borderRadius: 1,
-                  border: '1px solid rgba(180, 200, 255, 0.5)',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <Box
-                  component="img"
-                  src={l.image.src}
-                  alt={tDock(l.image.alt || '')}
-                  sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
-                  {tDock(l.title)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                  {tDock(l.description)}
-                </Typography>
-              </Box>
-            </Box>
-          );
-        })}
+        <Box
+          sx={{
+            width: 32,
+            height: 32,
+            p: 0.75,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, rgb(190, 232, 255) 0%, rgb(220, 205, 255) 100%)',
+            borderRadius: 1,
+            border: '1px solid rgba(180, 200, 255, 0.5)',
+            boxSizing: 'border-box',
+          }}
+        >
+          <Box
+            component="img"
+            src={l.image.src}
+            alt={tDock(l.image.alt || '')}
+            sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+          />
+        </Box>
+        <Box>
+          <Typography variant="body2" fontWeight={500} sx={{ lineHeight: 1.3 }}>
+            {tDock(l.title)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+            {tDock(l.description)}
+          </Typography>
+        </Box>
+      </Box>
+    );
+  };
+
+  const subheader = (title: string) => (
+    <Typography
+      variant="caption"
+      sx={{
+        display: 'block',
+        px: 1.5,
+        mb: 0.5,
+        fontWeight: 600,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        color: 'text.disabled',
+      }}
+    >
+      {tDock(title)}
+    </Typography>
+  );
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'stretch' }}>
+      {/* Left: first 2 sections stacked */}
+      <Box sx={{ width: 300, py: 2, px: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {leftGroups.map((group, gi) => (
+          <Box key={gi}>
+            {subheader(group.title)}
+            {group.links.map(renderLink)}
+          </Box>
+        ))}
       </Box>
 
+      {/* Divider */}
+      <Box sx={{ width: '1px', bgcolor: (t2) => t2.palette.divider, my: 2 }} />
+
+      {/* Right: remaining sections (Support) — 2-column link grid */}
+      <Box sx={{ width: 500, py: 2, px: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {rightGroups.map((group, gi) => (
+          <Box key={gi}>
+            {subheader(group.title)}
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 0.5 }}>
+              {group.links.map(renderLink)}
+            </Box>
+          </Box>
+        ))}
+      </Box>
     </Box>
   );
 }
