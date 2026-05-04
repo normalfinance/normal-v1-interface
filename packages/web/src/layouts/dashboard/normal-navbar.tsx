@@ -121,6 +121,10 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
     }
   }, [mobileOpen]);
 
+  useEffect(() => {
+    if (isDesktop && mobileOpen) setMobileOpen(false);
+  }, [isDesktop, mobileOpen]);
+
   const headerRef = useRef<HTMLDivElement | null>(null);
   const [headerH, setHeaderH] = useState(64);
 
