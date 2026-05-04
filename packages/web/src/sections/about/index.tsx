@@ -9,7 +9,6 @@ import AboutHeader from '@/components/_about-us-page-components/about-header';
 const AboutUsView: React.FC = () => (
   <>
     <AboutHeader />
-    <Vision />
     <Moments />
     <CoreValues />
     <Team />

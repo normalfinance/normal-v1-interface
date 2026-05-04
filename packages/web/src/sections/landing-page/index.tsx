@@ -11,6 +11,7 @@ import { FaqAccordion } from './faq';
 import { HeroHeader } from './hero-header';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
+import { Vision } from '@/components/_about-us-page-components/vision';
 
 
 export type TokenMeta = Pick<Token, 'name' | 'symbol' | 'icon' | 'price' | 'percentageChange'>;
@@ -69,6 +70,7 @@ export default function LandingPage() {
   return (
     <>
       <HeroHeader/>
+      <Vision />
       <StatsGrid />
       <TestimonialGrid />
       <FaqAccordion />
