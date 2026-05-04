@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { useTranslate } from '@/locales';
 import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';

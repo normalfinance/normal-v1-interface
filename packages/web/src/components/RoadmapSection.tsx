@@ -1,8 +1,9 @@
 'use client';
 
+import { useTranslate } from '@/locales';
+
 import Box from '@mui/material/Box';
 import { styled } from '@mui/material/styles';
-import { useTranslate } from '@/locales';
 
 // ----------------------------------------------------------------------
 
@@ -54,6 +55,8 @@ const PHASES: Phase[] = [
     ],
   },
 ];
+
+const BULLET = '●';
 
 // ----------------------------------------------------------------------
 
@@ -173,7 +176,7 @@ export default function RoadmapSection() {
                   }}
                 >
                   <Box component="span" sx={{ color: s.dot, fontSize: 8, lineHeight: 1 }}>
-                    ●
+                    {BULLET}
                   </Box>
                   {t(phase.statusLabel)}
                 </Box>
@@ -233,7 +236,7 @@ export default function RoadmapSection() {
                         aria-hidden="true"
                         sx={{ color: s.dot, flexShrink: 0, fontSize: 10, mt: '4px' }}
                       >
-                        ●
+                        {BULLET}
                       </Box>
                       {t(bullet)}
                     </Box>

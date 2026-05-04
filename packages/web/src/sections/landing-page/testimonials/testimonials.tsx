@@ -159,57 +159,54 @@ const Card = styled('figure')({
 
 type CardProps = { testimonial: Testimonial; hidden?: boolean };
 
-const TestimonialCard: React.FC<CardProps> = ({ testimonial, hidden }) => {
-  const { t } = useTranslate();
-  return (
-    <Card aria-hidden={hidden || undefined}>
-      <Box
-        component="blockquote"
-        sx={{
-          m: 0,
-          fontSize: 15,
-          lineHeight: 1.5,
-          color: '#0a0a0b',
-          letterSpacing: '-0.005em',
-          flex: 1,
-        }}
-      >
-        {t(testimonial.body)}
-      </Box>
+const TestimonialCard: React.FC<CardProps> = ({ testimonial, hidden }) => (
+  <Card aria-hidden={hidden || undefined}>
+    <Box
+      component="blockquote"
+      sx={{
+        m: 0,
+        fontSize: 15,
+        lineHeight: 1.5,
+        color: '#0a0a0b',
+        letterSpacing: '-0.005em',
+        flex: 1,
+      }}
+    >
+      {testimonial.body}
+    </Box>
 
-      <Box
-        component="figcaption"
-        sx={{
-          mt: 'auto',
-          pt: '18px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-        }}
-      >
-        <Avatar
-          src={testimonial.avatar}
-          alt={testimonial.name}
-          sx={{ width: 32, height: 32 }}
-        />
-        <Box>
-          <Box
-            component="span"
-            sx={{ display: 'block', fontSize: 13.5, fontWeight: 500, color: '#0a0a0b' }}
-          >
-            {t(testimonial.name)}
-          </Box>
-          <Box
-            component="span"
-            sx={{ display: 'block', fontSize: 12.5, color: '#6b6b76' }}
-          >
-            {t(testimonial.role)}
-          </Box>
+    <Box
+      component="figcaption"
+      sx={{
+        mt: 'auto',
+        pt: '18px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+      }}
+    >
+      <Avatar
+        src={testimonial.avatar}
+        alt={testimonial.name}
+        sx={{ width: 32, height: 32 }}
+      />
+      <Box>
+        <Box
+          component="span"
+          sx={{ display: 'block', fontSize: 13.5, fontWeight: 500, color: '#0a0a0b' }}
+        >
+          {testimonial.name}
+        </Box>
+        <Box
+          component="span"
+          sx={{ display: 'block', fontSize: 12.5, color: '#6b6b76' }}
+        >
+          {testimonial.role}
         </Box>
       </Box>
-    </Card>
-  );
-};
+    </Box>
+  </Card>
+);
 
 // ----------------------------------------------------------------------
 
@@ -270,10 +267,10 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = (props) => {
         <CarouselWrapper sx={{ mt: 7, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Row 1 — scrolls left */}
           <Row direction="left" className="testi-row">
-            {[...row1Base, ...row1Base].map((t, i) => (
+            {[...row1Base, ...row1Base].map((item, i) => (
               <TestimonialCard
                 key={`r1-${i}`}
-                testimonial={t}
+                testimonial={item}
                 hidden={i >= row1Base.length}
               />
             ))}
@@ -281,10 +278,10 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = (props) => {
 
           {/* Row 2 — scrolls right */}
           <Row direction="right" className="testi-row">
-            {[...row2Base, ...row2Base].map((t, i) => (
+            {[...row2Base, ...row2Base].map((item, i) => (
               <TestimonialCard
                 key={`r2-${i}`}
-                testimonial={t}
+                testimonial={item}
                 hidden={i >= row2Base.length}
               />
             ))}
