@@ -230,6 +230,10 @@ export function FooterSection({ sx }: FooterProps = {}) {
             © 2026 Normal Finance Inc.
           </Typography>
 
+          <Typography sx={{ fontSize: 13, color: '#8a8a93' }}>
+            {t('Built on Stellar · Audited by Halborn')}
+          </Typography>
+
         </Box>
       </Box>
     </Box>
