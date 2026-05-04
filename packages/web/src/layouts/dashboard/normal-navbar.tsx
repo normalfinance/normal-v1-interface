@@ -232,7 +232,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                   py: 0.5,
                   px: 1.5,
                   color: 'text.primary',
-                  fontWeight: pathname.startsWith(item.url) ? 700 : 600,
+                  fontWeight: pathname.startsWith(item.url) ? 600 : 500,
                 }}
               >
                 {t(item.label)}
@@ -272,7 +272,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                       py: 1,
                       px: 1.5,
                       color: 'text.primary',
-                      fontWeight: 600,
+                      fontWeight: 500,
                     }}
                   >
                     {t(link.title)}
@@ -301,7 +301,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                     py: 1,
                     px: 1.5,
                     color: 'text.primary',
-                    fontWeight: 600,
+                    fontWeight: 500,
                   }}
                 >
                   {t(link.title)}
@@ -312,9 +312,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           {NAV_ITEMS.filter((item) => item.label === 'Feedback').map((item) => (
             <Button
               key={item.url}
-              className="rainbow-button"
               component="a"
-              variant="soft"
               onClick={() => window.open(item.url, '_blank', 'noopener')}
               sx={{
                 textTransform: 'none',
@@ -322,6 +320,12 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                 px: 1.5,
                 color: '#fff',
                 fontSize: '12px',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #00aff7 0%, #6E4BFF 100%)',
+                borderRadius: 1.5,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #008ac7 0%, #4B29DB 100%)',
+                },
               }}
             >
               {t(item.label)}
@@ -368,9 +372,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                 ))}
               <Box sx={{ mt: 2 }}>
                 <Button
-                  className="rainbow-button"
                   component="a"
-                  variant="soft"
                   fullWidth
                   href={paths.help.feedbackForm}
                   target="_blank"
@@ -380,7 +382,12 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                     py: 1.5,
                     color: '#fff',
                     fontSize: '14px',
-                    fontWeight: 500,
+                    fontWeight: 600,
+                    background: 'linear-gradient(135deg, #00aff7 0%, #6E4BFF 100%)',
+                    borderRadius: 1.5,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #008ac7 0%, #4B29DB 100%)',
+                    },
                   }}
                 >
                   {t('Feedback')}
@@ -497,9 +504,9 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  bgcolor: 'rgba(196, 221, 252, 0.55)',
+                  background: 'linear-gradient(135deg, rgb(190, 232, 255) 0%, rgb(220, 205, 255) 100%)',
                   borderRadius: 1,
-                  border: '1px solid rgba(160, 200, 245, 0.6)',
+                  border: '1px solid rgba(180, 200, 255, 0.5)',
                   boxSizing: 'border-box',
                 }}
               >
@@ -579,9 +586,9 @@ function MobileMega({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                bgcolor: 'rgba(196, 221, 252, 0.55)',
+                background: 'linear-gradient(135deg, rgb(190, 232, 255) 0%, rgb(220, 205, 255) 100%)',
                 borderRadius: 1,
-                border: '1px solid rgba(160, 200, 245, 0.6)',
+                border: '1px solid rgba(180, 200, 255, 0.5)',
                 boxSizing: 'border-box',
               }}
             >
