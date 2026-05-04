@@ -8,10 +8,8 @@ import { usePathname } from '@/routes/hooks';
 import { m, AnimatePresence } from 'framer-motion';
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 
-
 import { alpha, useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-
 import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/material';
 
 import { Logo } from '@/components/template/logo';

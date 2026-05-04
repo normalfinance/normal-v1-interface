@@ -5,6 +5,8 @@ import { Fragment } from 'react';
 import Box from '@mui/material/Box';
 import { styled } from '@mui/material/styles';
 
+const SEPARATOR = '★';
+
 const BRANDS = [
   'Stellar',
   'USDC',
@@ -100,7 +102,7 @@ export default function BrandMarquee() {
                 aria-hidden="true"
                 sx={{ color: '#d0d0d8', flexShrink: 0, fontSize: '0.75rem', userSelect: 'none' }}
               >
-                ★
+                {SEPARATOR}
               </Box>
             </Fragment>
           ))}

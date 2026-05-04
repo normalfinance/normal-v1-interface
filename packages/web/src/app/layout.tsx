@@ -1,7 +1,8 @@
 import '@/global.css';
 
-import { Instrument_Sans } from 'next/font/google';
 import type { Metadata, Viewport } from 'next';
+
+import { Instrument_Sans } from 'next/font/google';
 
 const instrumentSans = Instrument_Sans({
   subsets: ['latin'],

@@ -1,6 +1,7 @@
 'use client';
 
 import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
 import { RouterLink } from '@/routes/components';
 
 import Box from '@mui/material/Box';
@@ -82,6 +83,8 @@ const LINK_COLUMNS = [
 export type FooterProps = { sx?: object };
 
 export function FooterSection({ sx }: FooterProps = {}) {
+  const { t } = useTranslate();
+
   return (
     <Box
       component="footer"
@@ -134,7 +137,7 @@ export function FooterSection({ sx }: FooterProps = {}) {
                 lineHeight: 1.6,
               }}
             >
-              Crypto that feels like home.
+              {t('Crypto that feels like home.')}
             </Typography>
 
             <Stack direction="row" spacing={0.5} sx={{ mt: 3 }}>

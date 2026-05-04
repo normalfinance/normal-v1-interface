@@ -6,13 +6,14 @@ import { useEffect } from 'react';
 import { cdn, logger } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
+import BrandMarquee from '@/components/BrandMarquee';
+import { Vision } from '@/components/_about-us-page-components/vision';
+
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
 import { HeroHeader } from './hero-header';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
-import { Vision } from '@/components/_about-us-page-components/vision';
-import BrandMarquee from '@/components/BrandMarquee';
 
 
 export type TokenMeta = Pick<Token, 'name' | 'symbol' | 'icon' | 'price' | 'percentageChange'>;

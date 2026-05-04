@@ -3,7 +3,6 @@
 import { paths } from '@/routes/paths';
 import { cdn } from '@normalfinance/utils';
 
-
 import type { Props } from './normal-navbar';
 
 export const NormalNavbarDefaults: Props = {
