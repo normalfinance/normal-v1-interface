@@ -7,7 +7,7 @@ import { useTranslate } from '@/locales';
 import { usePathname } from '@/routes/hooks';
 import { m, AnimatePresence } from 'framer-motion';
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
-import { groupAccentByIndex, groupAccentDarkByIndex } from '@/theme/accents';
+
 
 import { alpha, useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -356,7 +356,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               right: 0,
               top: headerH,
               zIndex: theme.zIndex.modal,
-              background: theme.palette.background.paper,
+              background: 'linear-gradient(180deg, rgb(234, 250, 254) 0%, rgb(245, 240, 255) 100%)',
               overflow: 'hidden',
             }}
             aria-modal="true"
@@ -515,117 +515,76 @@ function MobileMega({
   megaMenu: MegaMenuProps;
 }) {
   const { t: tMobile } = useTranslate();
+  const allLinks = megaMenu.categoryLinks.flatMap((group) => group.links);
   return (
-    <Box sx={{ py: 0 }}>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: 'repeat(1, minmax(0, 1fr))', sm: 'repeat(2, minmax(0, 1fr))' },
-          columnGap: 2,
-          rowGap: 4,
-        }}
-      >
-        {megaMenu.categoryLinks.map((group, gi) => {
-          const accent = groupAccentByIndex(gi);
-          const accentText = groupAccentDarkByIndex(gi);
-          return (
+    <Box
+      sx={{
+        py: 1,
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+        alignContent: 'start',
+        gap: 0.5,
+      }}
+    >
+      {allLinks.map((l, li) => {
+        const { target, rel } = linkAttrs(l.url, l.target, l.rel);
+        return (
+          <Box
+            key={li}
+            component="a"
+            href={l.url}
+            target={target}
+            rel={rel}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              py: 1.25,
+              px: 1.5,
+              textDecoration: 'none',
+              color: 'inherit',
+              borderRadius: 1,
+              transition: 'background-color 0.15s ease',
+              '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.55)' },
+              '&:focus-visible': (t2) => ({
+                outline: `2px solid ${t2.palette.primary.main}`,
+                outlineOffset: 2,
+              }),
+            }}
+          >
             <Box
-              key={gi}
-              sx={{ display: 'grid', gridAutoRows: 'max-content', rowGap: { xs: 1, md: 2 } }}
+              sx={{
+                width: 32,
+                height: 32,
+                p: 0.75,
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(255, 255, 255, 0.75)',
+                borderRadius: 1,
+                border: '1px solid rgba(255, 255, 255, 0.9)',
+                boxSizing: 'border-box',
+              }}
             >
               <Box
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  px: 1,
-                  py: 0.5,
-                  borderRadius: 1,
-                  bgcolor: alpha(accent, 0.1),
-                  width: 'fit-content',
-                  whiteSpace: 'nowrap',
-                  alignSelf: 'start',
-                  mb: 1,
-                }}
-              >
-                <Typography
-                  variant="subtitle2"
-                  fontWeight={400}
-                  sx={{ lineHeight: 1.3, color: accentText }}
-                >
-                  {tMobile(group.title)}
-                </Typography>
-              </Box>
-
-              {group.links.map((l, li) => {
-                const { target, rel } = linkAttrs(l.url, l.target, l.rel);
-                return (
-                  <Box
-                    key={li}
-                    component="a"
-                    href={l.url}
-                    target={target}
-                    rel={rel}
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: 'max-content 1fr',
-                      alignItems: 'start',
-                      columnGap: '12px',
-                      py: 1,
-                      px: 1,
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      borderRadius: 1,
-                      transition: 'background-color 0.15s ease',
-                      '&:hover': { backgroundColor: (t2) => t2.palette.grey[200] },
-                      '&:focus-visible': (t2) => ({
-                        outline: `2px solid ${t2.palette.primary.main}`,
-                        outlineOffset: 2,
-                      }),
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        p: 0.75,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: '#F9FAFB',
-                        borderRadius: 1,
-                        border: (t2) => `1px solid ${t2.palette.divider}`,
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={l.image.src}
-                        alt={tMobile(l.image.alt || '')}
-                        sx={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain',
-                          display: 'block',
-                        }}
-                      />
-                    </Box>
-
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="body2" fontWeight={700}>
-                        {tMobile(l.title)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {tMobile(l.description)}
-                      </Typography>
-                    </Box>
-                  </Box>
-                );
-              })}
+                component="img"
+                src={l.image.src}
+                alt={tMobile(l.image.alt || '')}
+                sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+              />
             </Box>
-          );
-        })}
-      </Box>
-
+            <Box>
+              <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
+                {tMobile(l.title)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                {tMobile(l.description)}
+              </Typography>
+            </Box>
+          </Box>
+        );
+      })}
     </Box>
   );
 }
