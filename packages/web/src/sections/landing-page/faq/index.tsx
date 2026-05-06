@@ -4,11 +4,12 @@ import * as React from 'react';
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
 import MuiAccordion from '@mui/material/Accordion';
 import MuiAccordionSummary from '@mui/material/AccordionSummary';
 import MuiAccordionDetails from '@mui/material/AccordionDetails';
-import Box from '@mui/material/Box';
-import { styled } from '@mui/material/styles';
+
 import { Iconify } from '@/components/template/iconify';
 
 /* ------------------------------------------------------------------ */

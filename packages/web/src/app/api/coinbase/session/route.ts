@@ -22,7 +22,15 @@ export async function POST(req: NextRequest) {
 
     const { jwt, host, path } = await getCdpBearerToken();
 
-    const clientIp = getClientIP(req);
+    const rawIp = getClientIP(req);
+    const isPrivateIp = !rawIp || rawIp === 'unknown' || /^(::1|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(rawIp);
+    const clientIp = isPrivateIp ? undefined : rawIp;
+
+    const body: Record<string, unknown> = {
+      addresses: [{ address, blockchains: ['stellar'] }],
+      assets: [asset],
+    };
+    if (clientIp) body.clientIp = clientIp;
 
     const resp = await fetch(`https://${host}${path}`, {
       method: 'POST',
@@ -31,11 +39,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: JSON.stringify({
-        addresses: [{ address, blockchains: ['stellar'] }],
-        clientIp,
-        assets: [asset],
-      }),
+      body: JSON.stringify(body),
     });
 
     const text = await resp.text();
