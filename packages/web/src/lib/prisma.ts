@@ -17,15 +17,11 @@ const getDirectUrl = () =>
     process.env.DIRECT_MAINNET_URL || process.env.DIRECT_URL
   );
 
+const _dbUrl = getDatabaseUrl();
+
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient({
-    datasources: {
-      db: {
-        url: getDatabaseUrl(),
-      },
-    },
-  });
+  new PrismaClient(_dbUrl ? { datasources: { db: { url: _dbUrl } } } : undefined);
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
