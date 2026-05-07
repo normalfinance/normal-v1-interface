@@ -19,8 +19,8 @@ export async function fetchSwapVolume(): Promise<VolumeDailyRow[]> {
   for (const swap of swaps) {
     const day = swap.createdAt.toISOString().slice(0, 10) + 'T00:00:00.000Z';
     const existing = byDay.get(day) ?? { volume: 0, fee: 0, count: 0 };
-    existing.volume += Number(swap.amountIn ?? 0) / 1e7;
-    existing.fee += Number(swap.feeAmount ?? 0) / 1e7;
+    existing.volume += Number(swap.amountIn ?? 0);
+    existing.fee += Number(swap.feeAmount ?? 0);
     existing.count += 1;
     byDay.set(day, existing);
   }
