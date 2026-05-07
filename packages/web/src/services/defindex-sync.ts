@@ -29,9 +29,9 @@ export async function fetchVaultSnapshots(): Promise<VaultSnapshotRow[]> {
       date: new Date(point.timestamp).toISOString(),
       vault_address: VAULT_ADDRESS,
       network: NETWORK,
-      tvl_usd: Number(point.totalManagedFunds ?? point.tvl ?? 0),
-      pps: Number(point.pps ?? 0),
-      total_supply: Number(point.totalSupply ?? 0),
+      tvl_usd: Number(point.totalManagedFunds ?? point.tvl ?? 0) / 1e7,
+      pps: Number(point.pps ?? 0) / 1e7,
+      total_supply: Number(point.totalSupply ?? 0) / 1e7,
     });
   }
 
@@ -55,8 +55,8 @@ export async function fetchSavingsVolume(): Promise<VolumeDailyRow[]> {
         date,
         type: 'savings_deposit',
         network: NETWORK,
-        volume_usd: Number(point.deposits ?? 0),
-        fee_usd: Number(point.deposits ?? 0) * 0.005, // 0.5% deposit fee
+        volume_usd: Number(point.deposits ?? 0) / 1e7,
+        fee_usd: (Number(point.deposits ?? 0) / 1e7) * 0.005,
         tx_count: Number(point.depositCount ?? 1),
       });
     }
@@ -66,7 +66,7 @@ export async function fetchSavingsVolume(): Promise<VolumeDailyRow[]> {
         date,
         type: 'savings_withdraw',
         network: NETWORK,
-        volume_usd: Number(point.withdrawals ?? 0),
+        volume_usd: Number(point.withdrawals ?? 0) / 1e7,
         fee_usd: 0, // withdrawal commission handled separately
         tx_count: Number(point.withdrawalCount ?? 1),
       });
