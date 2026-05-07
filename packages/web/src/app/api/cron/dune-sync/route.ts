@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
-import { duneInsert, duneClear } from '@/lib/dune/client';
+import { duneClear, duneInsert } from '@/lib/dune/client';
 import {
-  fetchVaultSnapshots,
   fetchSavingsVolume,
+  fetchVaultSnapshots,
   fetchYieldSnapshots,
 } from '@/services/defindex-sync';
 import {
+  fetchReferrals,
   fetchSwapVolume,
   fetchWalletActivity,
   fetchAllDepositWallets,
-  fetchReferrals,
 } from '@/services/prisma-sync';
 
 // Vercel Cron calls this with a secret to prevent unauthorized triggers

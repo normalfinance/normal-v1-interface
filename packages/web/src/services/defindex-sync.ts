@@ -1,8 +1,15 @@
-import type { VaultSnapshotRow, VolumeDailyRow, WalletActivityRow, YieldSnapshotRow } from '@/lib/dune/tables';
+import type { VolumeDailyRow, VaultSnapshotRow, YieldSnapshotRow, WalletActivityRow } from '@/lib/dune/tables';
 
 const DEFINDEX_API = 'https://api.defindex.io';
 const VAULT_ADDRESS = process.env.NEXT_PUBLIC_MAINNET_DEFINDEX_VAULT!;
 const NETWORK = 'mainnet';
+const DEFINDEX_API_KEY = process.env.DEFINDEX_API_KEY;
+
+function defindexHeaders(): HeadersInit {
+  return DEFINDEX_API_KEY
+    ? { Authorization: `Bearer ${DEFINDEX_API_KEY}` }
+    : {};
+}
 
 // ---------------------------------------------------------------------------
 // Vault history → vault snapshots + savings volume
@@ -10,7 +17,7 @@ const NETWORK = 'mainnet';
 
 export async function fetchVaultSnapshots(): Promise<VaultSnapshotRow[]> {
   const url = `${DEFINDEX_API}/vault/${VAULT_ADDRESS}/history?network=${NETWORK}&period=all&interval=daily`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: defindexHeaders() });
   if (!res.ok) throw new Error(`DeFindex vault history failed: ${res.status}`);
 
   const json = await res.json();
@@ -33,7 +40,7 @@ export async function fetchVaultSnapshots(): Promise<VaultSnapshotRow[]> {
 
 export async function fetchSavingsVolume(): Promise<VolumeDailyRow[]> {
   const url = `${DEFINDEX_API}/vault/${VAULT_ADDRESS}/history?network=${NETWORK}&period=all&interval=daily`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: defindexHeaders() });
   if (!res.ok) throw new Error(`DeFindex vault history failed: ${res.status}`);
 
   const json = await res.json();
@@ -81,7 +88,7 @@ export async function fetchYieldSnapshots(walletAddresses: string[]): Promise<Yi
     walletAddresses.map(async (wallet) => {
       try {
         const url = `${DEFINDEX_API}/account/${wallet}/vault/${VAULT_ADDRESS}?network=${NETWORK}`;
-        const res = await fetch(url);
+        const res = await fetch(url, { headers: defindexHeaders() });
         if (!res.ok) return; // wallet may have no position — skip
 
         const json = await res.json();
@@ -109,7 +116,7 @@ export async function fetchYieldSnapshots(walletAddresses: string[]): Promise<Yi
 
 export async function fetchSavingsWalletActivity(): Promise<WalletActivityRow[]> {
   const url = `${DEFINDEX_API}/vault/${VAULT_ADDRESS}/history?network=${NETWORK}&period=all&interval=daily`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: defindexHeaders() });
   if (!res.ok) throw new Error(`DeFindex vault history failed: ${res.status}`);
 
   const json = await res.json();

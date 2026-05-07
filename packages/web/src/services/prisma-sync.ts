@@ -1,4 +1,5 @@
-import type { VolumeDailyRow, WalletActivityRow, ReferralRow } from '@/lib/dune/tables';
+import type { ReferralRow, VolumeDailyRow, WalletActivityRow } from '@/lib/dune/tables';
+
 import { prisma } from '@/lib/prisma';
 
 const NETWORK = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet' ? 'mainnet' : 'testnet';
