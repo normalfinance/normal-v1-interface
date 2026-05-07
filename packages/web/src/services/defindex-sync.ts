@@ -17,7 +17,7 @@ function defindexHeaders(): HeadersInit {
 
 export async function fetchVaultSnapshots(): Promise<VaultSnapshotRow[]> {
   const url = `${DEFINDEX_API}/vault/${VAULT_ADDRESS}/history?network=${NETWORK}&period=all&interval=daily`;
-  const res = await fetch(url, { headers: defindexHeaders() });
+  const res = await fetch(url, { headers: defindexHeaders(), cache: 'no-store' });
   if (!res.ok) throw new Error(`DeFindex vault history failed: ${res.status}`);
 
   const json = await res.json();
@@ -40,7 +40,7 @@ export async function fetchVaultSnapshots(): Promise<VaultSnapshotRow[]> {
 
 export async function fetchSavingsVolume(): Promise<VolumeDailyRow[]> {
   const url = `${DEFINDEX_API}/vault/${VAULT_ADDRESS}/history?network=${NETWORK}&period=all&interval=daily`;
-  const res = await fetch(url, { headers: defindexHeaders() });
+  const res = await fetch(url, { headers: defindexHeaders(), cache: 'no-store' });
   if (!res.ok) throw new Error(`DeFindex vault history failed: ${res.status}`);
 
   const json = await res.json();
@@ -88,7 +88,7 @@ export async function fetchYieldSnapshots(walletAddresses: string[]): Promise<Yi
     walletAddresses.map(async (wallet) => {
       try {
         const url = `${DEFINDEX_API}/account/${wallet}/vault/${VAULT_ADDRESS}?network=${NETWORK}`;
-        const res = await fetch(url, { headers: defindexHeaders() });
+        const res = await fetch(url, { headers: defindexHeaders(), cache: 'no-store' });
         if (!res.ok) return; // wallet may have no position — skip
 
         const json = await res.json();
@@ -116,7 +116,7 @@ export async function fetchYieldSnapshots(walletAddresses: string[]): Promise<Yi
 
 export async function fetchSavingsWalletActivity(): Promise<WalletActivityRow[]> {
   const url = `${DEFINDEX_API}/vault/${VAULT_ADDRESS}/history?network=${NETWORK}&period=all&interval=daily`;
-  const res = await fetch(url, { headers: defindexHeaders() });
+  const res = await fetch(url, { headers: defindexHeaders(), cache: 'no-store' });
   if (!res.ok) throw new Error(`DeFindex vault history failed: ${res.status}`);
 
   const json = await res.json();
