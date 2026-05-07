@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
 import { duneClear, duneInsert } from '@/lib/dune/client';
 import {
   fetchSavingsVolume,
@@ -13,6 +11,8 @@ import {
   fetchWalletActivity,
   fetchAllDepositWallets,
 } from '@/services/prisma-sync';
+
+export const dynamic = 'force-dynamic';
 
 // Vercel Cron calls this with a secret to prevent unauthorized triggers
 const CRON_SECRET = process.env.CRON_SECRET;
