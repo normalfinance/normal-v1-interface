@@ -1,4 +1,4 @@
-import type { ReferralRow, VolumeDailyRow, WalletActivityRow } from '@/lib/dune/tables';
+import type { ReferralRow, VolumeDailyRow, WalletActivityRow, LinkedWalletRow } from '@/lib/dune/tables';
 
 import { prisma } from '@/lib/prisma';
 
@@ -78,6 +78,24 @@ export async function fetchAllDepositWallets(): Promise<string[]> {
     distinct: ['walletAddress'],
   });
   return results.map((r) => r.walletAddress);
+}
+
+// ---------------------------------------------------------------------------
+// Linked wallets (supabaseUid ↔ walletAddress mapping)
+// ---------------------------------------------------------------------------
+
+export async function fetchLinkedWallets(): Promise<LinkedWalletRow[]> {
+  const wallets = await prisma.linkedWallet.findMany({
+    orderBy: { createdAt: 'asc' },
+  });
+
+  return wallets.map((w) => ({
+    supabase_uid: w.supabaseUid,
+    wallet_address: w.walletAddress,
+    created_at: w.createdAt.toISOString(),
+    last_used_at: w.lastUsedAt.toISOString(),
+    network: NETWORK,
+  }));
 }
 
 // ---------------------------------------------------------------------------

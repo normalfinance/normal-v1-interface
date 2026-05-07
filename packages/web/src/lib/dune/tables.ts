@@ -41,3 +41,18 @@ export interface ReferralRow {
   action: string;
   network: string;
 }
+
+export interface UserRow {
+  user_id: string;
+  email: string;
+  created_at: string;
+  network: string;
+}
+
+export interface LinkedWalletRow {
+  supabase_uid: string;
+  wallet_address: string;
+  created_at: string;
+  last_used_at: string;
+  network: string;
+}

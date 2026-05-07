@@ -71,6 +71,27 @@ $Tables = @(
             @{ name = "action";         type = "varchar"   }
             @{ name = "network";        type = "varchar"   }
         )
+    },
+    @{
+        table_name  = "normal_users"
+        description = "Registered users from Supabase Auth"
+        schema      = @(
+            @{ name = "user_id";    type = "varchar"   }
+            @{ name = "email";      type = "varchar"   }
+            @{ name = "created_at"; type = "timestamp" }
+            @{ name = "network";    type = "varchar"   }
+        )
+    },
+    @{
+        table_name  = "normal_linked_wallets"
+        description = "Supabase user to Stellar wallet address mapping"
+        schema      = @(
+            @{ name = "supabase_uid";   type = "varchar"   }
+            @{ name = "wallet_address"; type = "varchar"   }
+            @{ name = "created_at";     type = "timestamp" }
+            @{ name = "last_used_at";   type = "timestamp" }
+            @{ name = "network";        type = "varchar"   }
+        )
     }
 )
 

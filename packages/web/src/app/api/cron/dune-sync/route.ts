@@ -10,7 +10,9 @@ import {
   fetchSwapVolume,
   fetchWalletActivity,
   fetchAllDepositWallets,
+  fetchLinkedWallets,
 } from '@/services/prisma-sync';
+import { fetchSupabaseUsers } from '@/services/supabase-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +84,26 @@ export async function GET(req: Request) {
     results.referrals = `${referrals.length} rows`;
   } catch (e: any) {
     results.referrals = `ERROR: ${e.message}`;
+  }
+
+  try {
+    // 7. Registered users (from Supabase Auth)
+    const users = await fetchSupabaseUsers();
+    await duneClear('normal_users');
+    await duneInsert('normal_users', users);
+    results.users = `${users.length} rows`;
+  } catch (e: any) {
+    results.users = `ERROR: ${e.message}`;
+  }
+
+  try {
+    // 8. Linked wallets (supabaseUid ↔ walletAddress mapping)
+    const linkedWallets = await fetchLinkedWallets();
+    await duneClear('normal_linked_wallets');
+    await duneInsert('normal_linked_wallets', linkedWallets);
+    results.linked_wallets = `${linkedWallets.length} rows`;
+  } catch (e: any) {
+    results.linked_wallets = `ERROR: ${e.message}`;
   }
 
   return NextResponse.json({ ok: true, results });
