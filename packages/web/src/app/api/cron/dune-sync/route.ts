@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { duneClear, duneInsert } from '@/lib/dune/client';
 import {
   fetchSavingsVolume,
