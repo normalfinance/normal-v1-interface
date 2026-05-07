@@ -2,7 +2,7 @@ const DUNE_API_KEY = process.env.DUNE_API_KEY!;
 const DUNE_NAMESPACE = process.env.DUNE_NAMESPACE ?? 'normalfinance';
 const BASE_URL = 'https://api.dune.com/api/v1/uploads';
 
-export async function duneInsert(tableName: string, rows: Record<string, unknown>[]): Promise<void> {
+export async function duneInsert(tableName: string, rows: object[]): Promise<void> {
   if (!rows.length) return;
 
   const ndjson = rows.map((r) => JSON.stringify(r)).join('\n');
