@@ -9,6 +9,7 @@ import { useState, useCallback } from 'react';
 import { format, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import { grey } from '@mui/material/colors';
 import Typography from '@mui/material/Typography';
@@ -124,87 +125,104 @@ export function SplitAvatar({
 }
 
 /* ------------------------------------------------------------------ */
+/* Helpers                                                            */
+/* ------------------------------------------------------------------ */
+function fmtAmount(amount: number, symbol: string): string {
+  if (symbol === 'USDC') return `${amount.toFixed(2)} USDC`;
+  if (symbol === 'XLM') return `${amount.toFixed(4)} XLM`;
+  return `${amount.toFixed(4)} ${symbol}`;
+}
+
+/* ------------------------------------------------------------------ */
 /* Row component                                                      */
 /* ------------------------------------------------------------------ */
 export function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslate();
 
-  // `activity.timestamp` is ms (e.g. from Date.parse). `format.ago` expects Unix seconds.
   const createdAtSec = Number.isFinite(activity.timestamp)
     ? Math.floor(activity.timestamp / 1000)
     : Math.floor(Date.now() / 1000);
   const time = format.ago(createdAtSec);
 
-  /* ---------- derive icon + sentence ---------------------------- */
-  let icon: React.ReactNode;
-  let sentence = '';
+  type ChipConfig = { label: string; color: string; bg: string };
+  const CHIP: Record<string, ChipConfig> = {
+    'Buy':              { label: 'On-Ramp',         color: '#0a6640', bg: '#d3f9d8' },
+    'Sell':             { label: 'Off-Ramp',         color: '#7d4a00', bg: '#ffe8cc' },
+    'Receive':          { label: 'Received',         color: '#0c4a6e', bg: '#e0f2fe' },
+    'Sent':             { label: 'Sent',             color: '#374151', bg: '#f3f4f6' },
+    'Swap':             { label: 'Swap',             color: '#1e3a8a', bg: '#dbeafe' },
+    'Savings Deposit':  { label: 'Savings Deposit',  color: '#4a1d96', bg: '#f3e8ff' },
+    'Savings Withdraw': { label: 'Savings Withdraw', color: '#7d1d1d', bg: '#fee2e2' },
+    'Mint':             { label: 'Mint',             color: '#065f46', bg: '#d1fae5' },
+    'Redeem':           { label: 'Redeem',           color: '#7d4a00', bg: '#fef3c7' },
+    'Add Liquidity':    { label: 'Add Liquidity',    color: '#065f46', bg: '#d1fae5' },
+    'Remove Liquidity': { label: 'Remove Liquidity', color: '#7d1d1d', bg: '#fee2e2' },
+  };
+  const chip = CHIP[activity.type] ?? { label: activity.type, color: '#374151', bg: '#f3f4f6' };
+
+  let icon: React.ReactNode = null;
+  let amountStr = '';
+  let subtitle = '';
+  let isPositive: boolean | null = null;
+  let usdStr: string | null = null;
 
   switch (activity.type) {
-    case 'Sent':
     case 'Receive': {
-      const {
-        token: { symbol, amount, iconUrl },
-        address: otherAddress,
-        type,
-      } = activity;
-
-      icon = (
-        <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />
-      );
-
-      const preposition = type === 'Sent' ? 'to' : 'from';
-
-      sentence = `${amount} ${symbol} ${preposition} ${format.shortenAddress(otherAddress)}`;
-
+      const { token: { symbol, amount, iconUrl }, address } = activity;
+      icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
+      amountStr = fmtAmount(amount, symbol);
+      subtitle = `From ${format.shortenAddress(address)}`;
+      isPositive = true;
+      if (symbol === 'USDC') usdStr = `$${amount.toFixed(2)}`;
       break;
     }
-    case 'Add Liquidity':
-    case 'Remove Liquidity': {
-      const { iconUrl, amount, symbol } = activity;
+    case 'Sent': {
+      const { token: { symbol, amount, iconUrl }, address } = activity;
       icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
-      sentence = `${amount} ${symbol} pairs`;
-      break;
-    }
-    case 'Mint': {
-      const { iconUrl, amount, symbol } = activity;
-
-      icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
-      sentence = `${amount} ${symbol} pairs`;
-      break;
-    }
-    case 'Redeem': {
-      const { iconUrl, amount, symbol } = activity;
-
-      icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
-      sentence = `${amount} ${symbol} pairs`;
+      amountStr = fmtAmount(amount, symbol);
+      subtitle = `To ${format.shortenAddress(address)}`;
+      isPositive = false;
+      if (symbol === 'USDC') usdStr = `$${amount.toFixed(2)}`;
       break;
     }
     case 'Buy': {
-      const { iconUrl, amount, symbol } = activity;
-
+      const { iconUrl, amount, symbol, provider } = activity;
       icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
-      sentence = `${amount} ${symbol}`;
+      amountStr = fmtAmount(amount, symbol);
+      subtitle = provider ?? '';
+      isPositive = true;
+      usdStr = `$${amount.toFixed(2)}`;
       break;
     }
     case 'Sell': {
-      const { iconUrl, amount, symbol } = activity;
-
+      const { iconUrl, amount, symbol, provider } = activity;
       icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
-      sentence = `${amount} ${symbol}`;
+      amountStr = fmtAmount(amount, symbol);
+      subtitle = provider ?? '';
+      isPositive = false;
+      usdStr = `$${amount.toFixed(2)}`;
       break;
     }
-    case 'Savings Deposit':
+    case 'Savings Deposit': {
+      const { amount } = activity;
+      icon = <ActivityTokenImage src={getCryptoIconUrl('USDC')} symbol="USDC" />;
+      amountStr = fmtAmount(parseFloat(amount), 'USDC');
+      subtitle = 'Normal Savings';
+      isPositive = true;
+      usdStr = `$${parseFloat(amount).toFixed(2)}`;
+      break;
+    }
     case 'Savings Withdraw': {
       const { amount } = activity;
       icon = <ActivityTokenImage src={getCryptoIconUrl('USDC')} symbol="USDC" />;
-      sentence = `${amount} USDC`;
+      amountStr = fmtAmount(parseFloat(amount), 'USDC');
+      subtitle = 'Normal Savings';
+      isPositive = false;
+      usdStr = `$${parseFloat(amount).toFixed(2)}`;
       break;
     }
     case 'Swap': {
-      const {
-        tokenIn: { symbol: sIn, amount: aIn, iconUrl: iIn },
-        tokenOut: { symbol: sOut, amount: aOut, iconUrl: iOut },
-      } = activity;
+      const { tokenIn: { symbol: sIn, amount: aIn, iconUrl: iIn }, tokenOut: { symbol: sOut, amount: aOut, iconUrl: iOut } } = activity;
       icon = (
         <SplitAvatar
           leftSrc={iIn || getCryptoIconUrl(sIn)}
@@ -213,31 +231,74 @@ export function ActivityRow({ activity }: { activity: Activity }) {
           rightSymbol={sOut}
         />
       );
-      sentence = `${aIn} ${sIn} → ${aOut} ${sOut}`;
+      amountStr = `${fmtAmount(aIn, sIn)} → ${fmtAmount(aOut, sOut)}`;
+      isPositive = null;
+      if (sOut === 'USDC') usdStr = `$${aOut.toFixed(2)}`;
+      else if (sIn === 'USDC') usdStr = `$${aIn.toFixed(2)}`;
+      break;
+    }
+    case 'Add Liquidity':
+    case 'Remove Liquidity':
+    case 'Mint':
+    case 'Redeem': {
+      const { iconUrl, amount, symbol } = activity;
+      icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
+      amountStr = fmtAmount(amount, symbol);
+      isPositive = null;
+      if (symbol === 'USDC') usdStr = `$${amount.toFixed(2)}`;
       break;
     }
     default:
-      icon = null;
+      break;
   }
+
+  const amountColor = isPositive === true ? 'success.main' : 'text.primary';
+  const amountPrefix = isPositive === true ? '+' : '';
 
   /* ---------- UI ------------------------------------------------ */
   return (
-    <Stack direction="row" spacing={2} alignItems="center">
+    <Stack direction="row" spacing={1.5} alignItems="center">
       {icon}
 
-      <Stack sx={{ flexGrow: 1 }}>
-        {/* first line */}
-        <Stack direction="row" justifyContent="space-between">
-          <Typography variant="subtitle2">{activity.type}</Typography>
+      <Stack direction="row" sx={{ flexGrow: 1 }} alignItems="center" justifyContent="space-between">
+        {/* left: chip + amount + subtitle */}
+        <Stack spacing={0.3} alignItems="flex-start">
+          <Chip
+            label={chip.label}
+            size="small"
+            sx={{
+              height: 20,
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              color: chip.color,
+              bgcolor: chip.bg,
+              borderRadius: '6px',
+              '& .MuiChip-label': { px: 1 },
+            }}
+          />
+          {amountStr && (
+            <Typography variant="caption" color="text.secondary" fontWeight={500}>
+              {amountStr}
+            </Typography>
+          )}
+          {subtitle && (
+            <Typography variant="caption" color="text.disabled">
+              {subtitle}
+            </Typography>
+          )}
+        </Stack>
+
+        {/* right: usd value + time */}
+        <Stack alignItems="flex-end" spacing={0.2}>
+          {usdStr && (
+            <Typography variant="subtitle2" fontWeight={600} color={amountColor}>
+              {amountPrefix}{usdStr}
+            </Typography>
+          )}
           <Typography variant="caption" color={grey[500]}>
             {time} {t('ago')}
           </Typography>
         </Stack>
-
-        {/* second line */}
-        <Typography variant="body2" color="text.secondary">
-          {sentence}
-        </Typography>
       </Stack>
     </Stack>
   );
