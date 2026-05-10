@@ -462,23 +462,25 @@ export function AccountDrawer(props: AccountDrawerProps) {
           sx: {
             width: { xs: '100%', sm: 420 },
             bgcolor: '#ffffff',
+            backgroundImage: 'none',
+            backdropFilter: 'none',
+            WebkitBackdropFilter: 'none',
+            display: 'flex',
+            flexDirection: 'column',
           },
         }}
       >
-        {/* close (X) */}
+        {/* close (X) + logout — sticky header, never scrolls */}
         <Box
           sx={{
-            position: 'absolute',
-            top: 12,
-            left: 12,
-            right: 12,
-            zIndex: 9,
+            flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            px: 1.5,
+            py: 1.5,
           }}
         >
-          {/* ← close (X) */}
           <Tooltip title="Close">
             <IconButton onClick={onClose} data-testid="close-drawer-button">
               <Iconify icon="mingcute:close-line" />
@@ -503,8 +505,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
           )}
         </Box>
         {session && (
-          <Scrollbar>
-            <Stack spacing={2} sx={{ px: 2, pt: 8 }}>
+          <Scrollbar sx={{ flexGrow: 1 }}>
+            <Stack spacing={2} sx={{ px: 2, pt: 2 }}>
               <Stack direction="row" alignItems="center" spacing={2}>
                 <Avatar src={userAvatar} alt={displayName} />
                 <Box>

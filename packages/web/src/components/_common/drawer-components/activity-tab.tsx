@@ -18,7 +18,7 @@ export default function ActivityTab({ activity = [] }: { activity?: Activity[] }
 
   if (sorted.length === 0) {
     return (
-      <Box sx={{ p: 2, pt: 0, bgcolor: 'background.paper' }}>
+      <Box sx={{ pb: 2, bgcolor: 'background.paper' }}>
         <Typography variant="body2" color="text.secondary">
           {t('No activity yet')}
         </Typography>
@@ -27,7 +27,7 @@ export default function ActivityTab({ activity = [] }: { activity?: Activity[] }
   }
 
   return (
-    <Box sx={{ p: 2, pt: 0, bgcolor: 'background.paper' }}>
+    <Box sx={{ pb: 2, bgcolor: 'background.paper' }}>
       {sorted.map((item) => (
         <Box key={item.id} py={2}>
           <ActivityRow activity={item} />

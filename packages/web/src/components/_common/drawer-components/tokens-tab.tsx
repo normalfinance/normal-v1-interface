@@ -20,7 +20,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const { t } = useTranslate('auto');
 
   return (
-    <Box sx={{ p: 2, pt: 0, bgcolor: 'background.paper' }}>
+    <Box sx={{ pb: 2, bgcolor: 'background.paper' }}>
       {tokens.length > 0 ? (
         [...tokens]
           .sort((a, b) => {
