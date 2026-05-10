@@ -74,6 +74,7 @@ const LINK_COLUMNS = [
       { label: 'Report bugs', href: paths.socials.discord, target: '_blank' },
       { label: 'Terms of Service', href: paths.legal.tos },
       { label: 'Privacy Policy', href: paths.legal.pp },
+      { label: 'Disclaimer', href: paths.legal.disclaimer },
     ],
   },
 ];
