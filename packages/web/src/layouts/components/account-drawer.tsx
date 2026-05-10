@@ -461,6 +461,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
         PaperProps={{
           sx: {
             width: { xs: '100%', sm: 420 },
+            bgcolor: '#ffffff',
           },
         }}
       >
