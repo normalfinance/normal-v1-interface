@@ -21,7 +21,7 @@ export const paths = {
     instagram: 'https://www.instagram.com/normalfinance.io',
   },
   blog: 'https://normalfi.substack.com/',
-  docs: 'https://normalfinance.gitbook.io/docs',
+  docs: 'https://normalfi.gitbook.io/normal',
   // main
   swap: '/swap',
   /** Same destination as the /invest → /swap permanent redirect */
