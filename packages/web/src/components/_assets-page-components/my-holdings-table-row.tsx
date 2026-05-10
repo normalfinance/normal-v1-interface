@@ -7,6 +7,7 @@ import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
 import { fNumber, fPercent, fCurrency } from '@/utils/format-number';
 import { isNormalToken, getCryptoIconUrl } from '@normalfinance/utils';
+import { SAVINGS_CONTRACT } from './my-balance-section';
 
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
@@ -30,9 +31,12 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
   const router = useRouter();
 
   const isNormal = isNormalToken(token);
+  const isSavings = token.contract === SAVINGS_CONTRACT;
 
   const handleRowClick = () => {
-    if (isNormal) {
+    if (isSavings) {
+      router.push(paths.savings);
+    } else if (isNormal) {
       router.push(
         paths.assets.details(isNormal ? token.symbol.replace(/^(sn|n)/, '') : token.symbol)
       );
@@ -42,7 +46,7 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
   const balanceDisplay = BigNumber(token.balance).toFixed(token.decimals > 4 ? 4 : token.decimals);
 
   return (
-    <TableRow hover onClick={handleRowClick} sx={{ cursor: 'pointer' }}>
+    <TableRow hover onClick={handleRowClick} sx={{ cursor: isSavings || isNormal ? 'pointer' : 'default' }}>
       {/* Asset name + icon */}
       <TableCell>
         <Stack direction="row" spacing={1.5} alignItems="center">
@@ -63,11 +67,6 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
       {/* Balance */}
       <TableCell align="right">
         <Typography variant="body2">{fNumber(balanceDisplay)}</Typography>
-      </TableCell>
-
-      {/* Target Price */}
-      <TableCell align="right">
-        <Typography variant="body2">{isNormal ? fCurrency(token.price) : null}</Typography>
       </TableCell>
 
       {/* Price */}

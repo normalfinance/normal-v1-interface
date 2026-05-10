@@ -5,7 +5,6 @@ import { fCurrency, fRawPercent } from '@/utils/format-number';
 
 import Card from '@mui/material/Card';
 import Divider from '@mui/material/Divider';
-import { useTheme } from '@mui/material/styles';
 import CardHeader from '@mui/material/CardHeader';
 
 import { Chart, useChart, ChartLegends } from '@/components/template/chart';
@@ -16,27 +15,27 @@ interface MyHoldingsChartProps {
   holdingsData: HoldingData[];
 }
 
+// Perceptually distinct colors that work across light/dark modes
+const CHART_COLORS = [
+  '#00aff7', // cyan blue
+  '#f8279c', // hot pink
+  '#06D6A0', // emerald
+  '#FCA311', // amber
+  '#6E4BFF', // purple
+  '#EF233C', // red
+  '#3DDC97', // mint green
+  '#FF6B35', // orange
+  '#2EC4B6', // teal
+  '#8338EC', // violet
+];
+
 export default function MyHoldingsChart({ holdingsData }: MyHoldingsChartProps) {
   const { t } = useTranslate();
-  const theme = useTheme();
 
   const labels = holdingsData.map((h) => h.token.symbol);
   const values = holdingsData.map((h) => h.percentage);
 
-  // Generate colors from theme palette
-  const paletteSwatches = [
-    theme.palette.primary.main,
-    theme.palette.info.main,
-    theme.palette.success.main,
-    theme.palette.warning.main,
-    theme.palette.error.main,
-    theme.palette.secondary.main,
-    theme.palette.primary.light,
-    theme.palette.info.light,
-    theme.palette.success.light,
-    theme.palette.warning.light,
-  ];
-  const chartColors = labels.map((_, idx) => paletteSwatches[idx % paletteSwatches.length]);
+  const chartColors = labels.map((_, idx) => CHART_COLORS[idx % CHART_COLORS.length]);
 
   const chartOptions = useChart({
     labels,
