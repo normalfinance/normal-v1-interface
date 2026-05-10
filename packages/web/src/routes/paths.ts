@@ -46,7 +46,7 @@ export const paths = {
   },
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready
-    feedbackForm: 'https://discord.gg/KUG3qhQz',
+    feedbackForm: 'https://discord.com/invite/xQMvceZjeS',
     contractTracker: 'https://normalfinance.notion.site/mainnet-v1',
   },
 };
