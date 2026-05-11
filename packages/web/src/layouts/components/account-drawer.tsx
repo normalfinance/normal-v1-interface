@@ -483,7 +483,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           },
         }}
       >
-        {/* close (X) + logout — sticky header, never scrolls */}
+        {/* close (X) + action icons + logout — sticky header, never scrolls */}
         <Box
           sx={{
             flexShrink: 0,
@@ -501,6 +501,55 @@ export function AccountDrawer(props: AccountDrawerProps) {
           </Tooltip>
 
           {session && (
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto', mr: 1 }}>
+              <Tooltip title={isNavigatingToSettings ? t('Loading...') : t('Settings')}>
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={isNavigatingToSettings}
+                    onClick={() => {
+                      startNavigatingToSettings();
+                      router.push(paths.settings);
+                      stopNavigatingToSettings();
+                      onClose();
+                    }}
+                  >
+                    {isNavigatingToSettings
+                      ? <CircularProgress size={18} color="inherit" />
+                      : <Iconify icon="solar:settings-bold" />}
+                  </IconButton>
+                </span>
+              </Tooltip>
+
+              <Tooltip title={isCheckingRateLimit ? t('Checking...') : t('Create New Account')}>
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={isCheckingRateLimit}
+                    onClick={handleCreateNewAccountClick}
+                  >
+                    {isCheckingRateLimit
+                      ? <CircularProgress size={18} color="inherit" />
+                      : <Iconify icon="mingcute:add-line" />}
+                  </IconButton>
+                </span>
+              </Tooltip>
+
+              <Tooltip title={t('Switch Wallets')}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setShowImportOptionInSelection(true);
+                    setShowWalletSelection(true);
+                  }}
+                >
+                  <Iconify icon="solar:refresh-bold" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          )}
+
+          {session && (
             <Tooltip title={isDisconnecting ? 'Logging out...' : 'Logout'}>
               <Button
                 variant="soft"
@@ -508,7 +557,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 size="small"
                 onClick={handleDisconnect}
                 disabled={isDisconnecting}
-                sx={{ ml: 'auto' }}
                 data-testid="logout-button"
                 startIcon={<Iconify icon="solar:logout-2-bold" />}
               >
@@ -542,28 +590,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   )}
                 </Box>
               </Stack>
-              <Button
-                variant="soft"
-                color="primary"
-                fullWidth
-                startIcon={
-                  isNavigatingToSettings ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <Iconify icon="solar:settings-bold" />
-                  )
-                }
-                onClick={() => {
-                  startNavigatingToSettings();
-                  router.push(paths.settings);
-                  stopNavigatingToSettings();
-                  onClose();
-                }}
-                disabled={isNavigatingToSettings}
-                sx={{ mb: 1 }}
-              >
-                {isNavigatingToSettings ? t('Loading...') : t('Settings')}
-              </Button>
               {isAutoConnecting ? (
                 <Box
                   sx={{
@@ -580,39 +606,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   </Typography>
                 </Box>
               ) : isWalletConnected && connectedAddress ? (
-                <>
-                  <Stack spacing={1}>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      fullWidth
-                      startIcon={
-                        isCheckingRateLimit ? (
-                          <CircularProgress size={16} color="inherit" />
-                        ) : (
-                          <Iconify icon="mingcute:add-line" />
-                        )
-                      }
-                      onClick={handleCreateNewAccountClick}
-                      disabled={isCheckingRateLimit}
-                    >
-                      {t('Create New Account')}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      fullWidth
-                      startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => {
-                        setShowImportOptionInSelection(true);
-                        setShowWalletSelection(true);
-                      }}
-                    >
-                      {t('Switch Wallets')}
-                    </Button>
-                  </Stack>
-                  <WalletConnected address={connectedAddress} drawerOpen={open} />
-                </>
+                <WalletConnected address={connectedAddress} drawerOpen={open} />
               ) : (
                 <Box sx={{ px: 2, py: 4 }}>
                   <Typography variant="h6" sx={{ mb: 2 }}>
@@ -621,28 +615,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                     {t('Complete your account to start investing')}
                   </Typography>
-                  <Stack spacing={1.5}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      onClick={handleConnectClick}
-                    >
-                      {t('Complete')}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      fullWidth
-                      startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => {
-                        setShowImportOptionInSelection(true);
-                        setShowWalletSelection(true);
-                      }}
-                    >
-                      {t('Switch Wallets')}
-                    </Button>
-                  </Stack>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    onClick={handleConnectClick}
+                  >
+                    {t('Complete')}
+                  </Button>
                 </Box>
               )}
             </Stack>
