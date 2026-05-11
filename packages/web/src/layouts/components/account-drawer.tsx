@@ -14,6 +14,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   getLinkedWallets,
@@ -61,11 +62,12 @@ function WalletConnected({ address }: { address: string }) {
   const network = useNetworkStore((s) => s.network);
 
   const { recentActivity } = useUserActivity(address);
+  const { userPosition } = useDefindexSavings();
 
   // Effect hook to fetch all tokens when the component mounts, address changes, or network toggles
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
-      if (!address) return; // Don't fetch tokens if no address
+      if (!address) return;
 
       setGlobalIsLoading(true);
       try {
@@ -84,11 +86,12 @@ function WalletConnected({ address }: { address: string }) {
     return () => clearTimeout(timer);
   }, [address, getAllTokens, network, setGlobalIsLoading]);
 
-  // Total balance
-  const totalBalance = tokens.reduce((acc, tkn) => {
+  const assetsBalance = tokens.reduce((acc, tkn) => {
     const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
     return acc.plus(holdings);
   }, BigNumber(0));
+
+  const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
 
   if (!address) {
     return null;
@@ -98,7 +101,7 @@ function WalletConnected({ address }: { address: string }) {
     <Box
       data-testid="wallet-connected"
       sx={{
-        p: 2,
+        pb: 2,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'start',
@@ -106,7 +109,8 @@ function WalletConnected({ address }: { address: string }) {
     >
       <ConnectedWallet
         address={address}
-        balance={totalBalance.toNumber()}
+        balance={assetsBalance.toNumber()}
+        savingsValue={savingsValue}
         percentageChange={0}
         tokens={tokens}
         activity={recentActivity}
@@ -568,7 +572,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 </Box>
               ) : isWalletConnected && connectedAddress ? (
                 <>
-                  <Stack spacing={1} sx={{ mb: 2 }}>
+                  <Stack spacing={1}>
                     <Button
                       variant="outlined"
                       color="primary"

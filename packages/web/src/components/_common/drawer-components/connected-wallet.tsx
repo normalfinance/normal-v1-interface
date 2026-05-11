@@ -97,14 +97,16 @@ function ActionChooserDialog({ open, title, actions, onClose }: ActionChooserDia
 export interface ConnectedWalletProps {
   address: string;
   balance?: number;
+  savingsValue?: number;
   percentageChange?: number;
   tokens?: Token[];
   activity?: Activity[];
 }
 
 export default function ConnectedWallet({
-  address,
-  balance,
+  address: _address,
+  balance = 0,
+  savingsValue = 0,
   percentageChange,
   tokens,
   activity,
@@ -206,65 +208,42 @@ export default function ConnectedWallet({
           gap: '6px',
         }}
       >
-        {balance !== undefined && (
-          <Typography
-            variant="caption"
-            color="text.primary"
-            sx={{ fontSize: '40px', lineHeight: '48px', fontWeight: 600 }}
-            noWrap
-          >
+        {/* Total row */}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 1, pt: 1 }}>
+          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            {t('Total balance')}
+          </Typography>
+          <Typography sx={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.2 }}>
+            {fCurrencyTwoDecimals(balance + savingsValue)}
+          </Typography>
+        </Stack>
+
+        <Box sx={{ borderBottom: `1px solid ${theme.palette.divider}`, mx: 1, my: 1 }} />
+
+        {/* Assets row */}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('Assets')}
+          </Typography>
+          <Typography variant="body1" fontWeight={600}>
             {fCurrencyTwoDecimals(balance)}
           </Typography>
-        )}
-        {percentageChange !== undefined && (
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <Box
-              component="span"
-              sx={{
-                width: 24,
-                height: 24,
-                display: 'flex',
-                borderRadius: '50%',
-                position: 'relative',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: varAlpha(theme.vars.palette.success.mainChannel, 0.16),
-                color: 'success.dark',
-                ...theme.applyStyles('dark', {
-                  color: 'success.light',
-                }),
-                ...(percentageChange &&
-                  percentageChange < 0 && {
-                    bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
-                    color: 'error.dark',
-                    ...theme.applyStyles('dark', {
-                      color: 'error.light',
-                    }),
-                  }),
-              }}
-            >
-              <Iconify
-                width={16}
-                icon={
-                  percentageChange && percentageChange < 0
-                    ? 'eva:trending-down-fill'
-                    : 'eva:trending-up-fill'
-                }
-                color={percentageChange && percentageChange < 0 ? 'error.main' : 'success.main'}
-              />
-            </Box>
-            <Typography
-              variant="caption"
-              sx={{
-                color: percentageChange && percentageChange < 0 ? 'error.main' : 'success.main',
-              }}
-            >
-              {percentageChange && percentageChange >= 0 && '+'}
-              {fPercent(percentageChange && percentageChange)}
-            </Typography>
-          </Stack>
-        )}
-        <Stack direction="row" spacing={1} width="100%" mt={2}>
+        </Stack>
+
+        <Box sx={{ borderBottom: `1px solid ${theme.palette.divider}`, mx: 1, my: 1 }} />
+
+        {/* Savings row */}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('Savings')}
+          </Typography>
+          <Typography variant="body1" fontWeight={600}>
+            {fCurrencyTwoDecimals(savingsValue)}
+          </Typography>
+        </Stack>
+
+        {/* Action buttons — vertical column, full width, centered */}
+        <Stack direction="column" spacing={1} width="100%" mt={2}>
           {actionButtons.map((btn) => (
             <Button
               key={btn.label}
@@ -273,25 +252,10 @@ export default function ConnectedWallet({
               color="success"
               size="large"
               onClick={btn.onClick}
+              startIcon={<Iconify icon={btn.icon} width={18} sx={{ color: theme.palette.primary.dark }} />}
+              sx={{ justifyContent: 'center' }}
             >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '2px',
-                }}
-              >
-                <Iconify
-                  icon={btn.icon}
-                  width={14}
-                  sx={{
-                    color: theme.palette.primary.dark,
-                    cursor: 'pointer',
-                  }}
-                />
-                {btn.label}
-              </Box>
+              {btn.label}
             </Button>
           ))}
         </Stack>
