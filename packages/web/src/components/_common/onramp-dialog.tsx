@@ -140,41 +140,51 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
   /** Coinbase */
   const handleCoinbaseClick = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      throw new Error('Authentication required');
-    }
-
     if (!walletAddress) {
       enqueueSnackbar('Please login and connect your wallet first', { variant: 'warning' });
       return;
     }
-    const headers = await buildAuthHeaders();
-    const r = await fetch('/api/coinbase/session', {
-      method: 'POST',
-      headers,
-      credentials: 'include',
-      body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
-    });
+    // Open the window synchronously so Safari treats it as user-initiated
+    const win = window.open('', '_blank', 'noopener');
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    const { token: sessionToken, error } = await r.json();
-    if (error || !sessionToken) {
+      if (!session) {
+        win?.close();
+        enqueueSnackbar('Please log in first', { variant: 'warning' });
+        return;
+      }
+      const headers = await buildAuthHeaders();
+      const r = await fetch('/api/coinbase/session', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
+      });
+
+      const { token: sessionToken, error } = await r.json();
+      if (error || !sessionToken) {
+        win?.close();
+        enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
+        return;
+      }
+      const url = createCoinbasePayOnrampURL({
+        amountUsd: amount,
+        assetSymbol: 'USDC',
+        sessionToken,
+        fiat: 'USD',
+        sandbox: isTestnet(),
+        path: 'buy/select-asset',
+        redirectUrl: `${window.location.origin}${paths.invest}`,
+      });
+      if (win) win.location.href = url;
+    } catch (err: any) {
+      win?.close();
+      logger.error('Coinbase USDC onramp error:', err);
       enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
-      return;
     }
-    const url = createCoinbasePayOnrampURL({
-      amountUsd: amount,
-      assetSymbol: 'USDC',
-      sessionToken,
-      fiat: 'USD',
-      sandbox: isTestnet(),
-      path: 'buy/select-asset',
-      redirectUrl: `${window.location.origin}${paths.invest}`,
-    });
-    openExternal(url);
   };
 
   /** MoneyGram */

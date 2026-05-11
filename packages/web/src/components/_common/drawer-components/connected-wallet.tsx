@@ -20,6 +20,7 @@ import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Dialog from '@mui/material/Dialog';
 import Button from '@mui/material/Button';
+import Skeleton from '@mui/material/Skeleton';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -98,6 +99,7 @@ export interface ConnectedWalletProps {
   address: string;
   balance?: number;
   savingsValue?: number;
+  savingsFetching?: boolean;
   percentageChange?: number;
   tokens?: Token[];
   activity?: Activity[];
@@ -107,6 +109,7 @@ export default function ConnectedWallet({
   address: _address,
   balance = 0,
   savingsValue = 0,
+  savingsFetching = false,
   percentageChange,
   tokens,
   activity,
@@ -213,9 +216,13 @@ export default function ConnectedWallet({
           <Typography variant="body2" color="text.secondary" fontWeight={500}>
             {t('Total balance')}
           </Typography>
-          <Typography sx={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.2 }}>
-            {fCurrencyTwoDecimals(balance + savingsValue)}
-          </Typography>
+          {savingsFetching ? (
+            <Skeleton variant="text" width={80} height={28} />
+          ) : (
+            <Typography sx={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.2 }}>
+              {fCurrencyTwoDecimals(balance + savingsValue)}
+            </Typography>
+          )}
         </Stack>
 
         <Box sx={{ borderBottom: `1px solid ${theme.palette.divider}`, mx: 1, my: 1 }} />
@@ -237,9 +244,13 @@ export default function ConnectedWallet({
           <Typography variant="body2" color="text.secondary">
             {t('Savings')}
           </Typography>
-          <Typography variant="body1" fontWeight={600}>
-            {fCurrencyTwoDecimals(savingsValue)}
-          </Typography>
+          {savingsFetching ? (
+            <Skeleton variant="text" width={60} height={24} />
+          ) : (
+            <Typography variant="body1" fontWeight={600}>
+              {fCurrencyTwoDecimals(savingsValue)}
+            </Typography>
+          )}
         </Stack>
 
         {/* Action buttons — vertical column, full width, centered */}

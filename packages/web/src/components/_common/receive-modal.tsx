@@ -95,10 +95,13 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
 
   const handleCoinbaseXlm = async () => {
     if (!walletAddress) return;
+    // Open the window synchronously so Safari treats it as user-initiated
+    const win = window.open('', '_blank', 'noopener');
     setIsCoinbaseLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        win?.close();
         enqueueSnackbar(t('Please log in first'), { variant: 'warning' });
         return;
       }
@@ -111,6 +114,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       });
       const { token: sessionToken, error } = await r.json();
       if (error || !sessionToken) {
+        win?.close();
         enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
         return;
       }
@@ -123,8 +127,9 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         path: 'buy/select-asset',
         redirectUrl: `${window.location.origin}${paths.savings}`,
       });
-      window.open(url, '_blank', 'noopener');
+      if (win) win.location.href = url;
     } catch (err: any) {
+      win?.close();
       logger.error('Coinbase XLM onramp error:', err);
       enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
     } finally {
