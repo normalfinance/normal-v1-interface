@@ -3,7 +3,6 @@
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
-import { useBoolean } from '@/hooks';
 import { paths } from '@/routes/paths';
 import { isTestnet } from '@normalfinance/utils';
 import { allLangs, useTranslate } from '@/locales';
@@ -13,7 +12,6 @@ import { useTheme } from '@mui/material/styles';
 import { Button, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
-import MigrationModal from '@/components/_common/migration-modal';
 import { useSettingsContext } from '@/components/template/settings';
 
 import { FooterSection } from '../core';
@@ -67,8 +65,6 @@ export function DashboardLayout({
   const handleGiveFeedback = () => {
     window.open(paths.help.feedbackForm, '_blank', 'noopener');
   };
-
-  const moreInfoOpen = useBoolean();
 
   const HEADER_H = { xs: 64, lg: 72 };
 
@@ -136,30 +132,6 @@ export function DashboardLayout({
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
     >
-      {/* Migration Alert */}
-      <Accordion defaultExpanded={false} sx={{ m: 2, bgcolor: theme.palette.info.lighter }}>
-        <AccordionSummary expandIcon={<Iconify icon="eva:chevron-down-fill" />}>
-          {t('🚨 Important Notice: Normal Protocol Evolution')}
-        </AccordionSummary>
-        <AccordionDetails>
-          {t(
-            'The Normal Protocol is evolving from synthetic tokens to real assets, while still focusing on noncustodial, diversification and custom crypto indexes coming soon.'
-          )}
-          <br />
-          {t(
-            'All synthetic positions have been closed, and any remaining USDC balances will be automatically returned to their respective wallet addresses. No action is required on your part.'
-          )}
-          <br />
-          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-            <Button variant="contained" color="inherit" sx={{ mt: 1 }} onClick={moreInfoOpen.onTrue}>
-              {t('More info')}
-            </Button>
-          </Box>
-        </AccordionDetails>
-      </Accordion>
-
-      <MigrationModal open={moreInfoOpen.value} onClose={moreInfoOpen.onFalse} />
-
       {/* Testnet Alert */}
       {isTestnet() && (
         <Accordion defaultExpanded={false} sx={{ m: 2, bgcolor: theme.palette.warning.lighter }}>
