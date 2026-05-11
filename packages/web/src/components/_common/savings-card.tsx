@@ -88,7 +88,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
   // Handle max button
   const handleMax = useCallback(() => {
     if (mode === 'deposit') {
-      setAmount(parseFloat(savingsDepositBalance).toFixed(2));
+      setAmount(truncateToTwoDecimals(parseFloat(savingsDepositBalance)));
     } else if (userPosition) {
       setAmount(truncateToTwoDecimals(parseFloat(userPosition.currentValue)));
     }
