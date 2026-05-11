@@ -4,7 +4,7 @@ import type { Token } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { fCurrency } from '@/utils/format-number';
+import { fCurrency, fNumber } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
@@ -20,7 +20,7 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const { t } = useTranslate('auto');
 
   return (
-    <Box sx={{ p: 2, pt: 0 }}>
+    <Box sx={{ pb: 2, bgcolor: 'background.paper' }}>
       {tokens.length > 0 ? (
         [...tokens]
           .sort((a, b) => {
@@ -84,6 +84,9 @@ export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
                       sx={{ fontWeight: 500, color: theme.palette.text.primary }}
                     >
                       {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                      {fNumber(token.balance)} {token.symbol.replace('sn', '')}
                     </Typography>
                     {/* <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
                       <Box

@@ -360,7 +360,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               right: 0,
               top: headerH,
               zIndex: theme.zIndex.modal,
-              background: 'linear-gradient(180deg, rgb(234, 250, 254) 0%, rgb(245, 240, 255) 100%)',
+              background: '#ffffff',
               overflow: 'hidden',
             }}
             aria-modal="true"
@@ -437,8 +437,8 @@ function DesktopDock({
         sx={{
           borderRadius: 2,
           border: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
-          background: 'linear-gradient(180deg, rgb(234, 250, 254) 0%, rgb(245, 240, 255) 100%)',
-          boxShadow: `0 16px 40px ${alpha('#000', 0.14)}`,
+          background: '#ffffff',
+          boxShadow: `0 16px 40px ${alpha('#000', 0.10)}`,
           overflow: 'hidden',
           px: 1,
         }}
@@ -473,7 +473,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
           color: 'inherit',
           borderRadius: 1,
           transition: 'background-color 0.15s ease',
-          '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.55)' },
+          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
           '&:focus-visible': (t2) => ({
             outline: `2px solid ${t2.palette.primary.main}`,
             outlineOffset: 2,
@@ -607,7 +607,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                     color: 'inherit',
                     borderRadius: 1,
                     transition: 'background-color 0.15s ease',
-                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.55)' },
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
                     '&:focus-visible': (t2) => ({
                       outline: `2px solid ${t2.palette.primary.main}`,
                       outlineOffset: 2,

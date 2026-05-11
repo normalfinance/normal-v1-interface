@@ -27,7 +27,9 @@ import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-
 interface UseDefindexSavingsReturn {
   error: string | null;
   setError: Dispatch<SetStateAction<string | null>>;
+  fetchError: string | null;
   loading: boolean;
+  fetching: boolean;
   vaultInfo: VaultInfo | null;
   userPosition: SavingsPosition | null;
   needsTrustline: boolean;
@@ -89,7 +91,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   } = useNormalWallet();
 
   const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [needsTrustline, setNeedsTrustline] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
   const [userPosition, setUserPosition] = useState<SavingsPosition | null>(null);
@@ -97,14 +101,15 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   // Fetch vault info
   const refreshVaultInfo = useCallback(async () => {
     try {
-      setError(null);
+      setFetchError(null);
+      setFetching(true);
 
       const userParam = wallet.address ? `?user=${wallet.address}` : '';
       const response = await fetch(`/api/savings/vault-info${userParam}`);
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.error || 'Failed to fetch vault info');
+        setFetchError(data.error || 'Failed to fetch vault info');
         return;
       }
 
@@ -114,7 +119,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       }
     } catch (err: any) {
       console.error('Error fetching vault info:', err);
-      setError(err.message || 'Failed to fetch vault info');
+      setFetchError(err.message || 'Failed to fetch vault info');
+    } finally {
+      setFetching(false);
     }
   }, [wallet.address]);
 
@@ -503,7 +510,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   return {
     error,
     setError,
+    fetchError,
     loading,
+    fetching,
     vaultInfo,
     userPosition,
     needsTrustline,

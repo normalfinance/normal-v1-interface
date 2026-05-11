@@ -88,7 +88,7 @@ export function DashboardLayout({
           links={NormalNavbarDefaults.links}
           buttons={NormalNavbarDefaults.buttons}
           networkToggle={NETWORK_SWITCH_ENABLED ? <NetworkToggle /> : undefined}
-          language={<LanguagePopover data={allLangs} />}
+          language={undefined /* <LanguagePopover data={allLangs} /> */}
           account={<AccountDrawer />}
         />
       </Box>

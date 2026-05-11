@@ -14,6 +14,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   getLinkedWallets,
@@ -61,11 +62,12 @@ function WalletConnected({ address }: { address: string }) {
   const network = useNetworkStore((s) => s.network);
 
   const { recentActivity } = useUserActivity(address);
+  const { userPosition } = useDefindexSavings();
 
   // Effect hook to fetch all tokens when the component mounts, address changes, or network toggles
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
-      if (!address) return; // Don't fetch tokens if no address
+      if (!address) return;
 
       setGlobalIsLoading(true);
       try {
@@ -84,11 +86,12 @@ function WalletConnected({ address }: { address: string }) {
     return () => clearTimeout(timer);
   }, [address, getAllTokens, network, setGlobalIsLoading]);
 
-  // Total balance
-  const totalBalance = tokens.reduce((acc, tkn) => {
+  const assetsBalance = tokens.reduce((acc, tkn) => {
     const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
     return acc.plus(holdings);
   }, BigNumber(0));
+
+  const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
 
   if (!address) {
     return null;
@@ -98,7 +101,7 @@ function WalletConnected({ address }: { address: string }) {
     <Box
       data-testid="wallet-connected"
       sx={{
-        p: 2,
+        pb: 2,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'start',
@@ -106,7 +109,8 @@ function WalletConnected({ address }: { address: string }) {
     >
       <ConnectedWallet
         address={address}
-        balance={totalBalance.toNumber()}
+        balance={assetsBalance.toNumber()}
+        savingsValue={savingsValue}
         percentageChange={0}
         tokens={tokens}
         activity={recentActivity}
@@ -461,23 +465,26 @@ export function AccountDrawer(props: AccountDrawerProps) {
         PaperProps={{
           sx: {
             width: { xs: '100%', sm: 420 },
+            bgcolor: '#ffffff',
+            backgroundImage: 'none',
+            backdropFilter: 'none',
+            WebkitBackdropFilter: 'none',
+            display: 'flex',
+            flexDirection: 'column',
           },
         }}
       >
-        {/* close (X) */}
+        {/* close (X) + logout — sticky header, never scrolls */}
         <Box
           sx={{
-            position: 'absolute',
-            top: 12,
-            left: 12,
-            right: 12,
-            zIndex: 9,
+            flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            px: 1.5,
+            py: 1.5,
           }}
         >
-          {/* ← close (X) */}
           <Tooltip title="Close">
             <IconButton onClick={onClose} data-testid="close-drawer-button">
               <Iconify icon="mingcute:close-line" />
@@ -502,8 +509,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
           )}
         </Box>
         {session && (
-          <Scrollbar>
-            <Stack spacing={2} sx={{ px: 2, pt: 8 }}>
+          <Scrollbar sx={{ flexGrow: 1 }}>
+            <Stack spacing={2} sx={{ px: 2, pt: 2 }}>
               <Stack direction="row" alignItems="center" spacing={2}>
                 <Avatar src={userAvatar} alt={displayName} />
                 <Box>
@@ -565,7 +572,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 </Box>
               ) : isWalletConnected && connectedAddress ? (
                 <>
-                  <Stack spacing={1} sx={{ mb: 2 }}>
+                  <Stack spacing={1}>
                     <Button
                       variant="outlined"
                       color="primary"

@@ -21,7 +21,7 @@ export const paths = {
     instagram: 'https://www.instagram.com/normalfinance.io',
   },
   blog: 'https://normalfi.substack.com/',
-  docs: 'https://normalfinance.gitbook.io/docs',
+  docs: 'https://normalfi.gitbook.io/normal',
   // main
   swap: '/swap',
   /** Same destination as the /invest → /swap permanent redirect */
@@ -46,7 +46,7 @@ export const paths = {
   },
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready
-    feedbackForm: 'https://discord.gg/KUG3qhQz',
+    feedbackForm: 'https://discord.com/invite/xQMvceZjeS',
     contractTracker: 'https://normalfinance.notion.site/mainnet-v1',
   },
 };

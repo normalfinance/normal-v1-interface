@@ -28,6 +28,7 @@ import {
   Stack,
   Button,
   Divider,
+  Skeleton,
   TextField,
   Typography,
   InputAdornment,
@@ -64,7 +65,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
     vaultInfo,
     userPosition,
     loading,
+    fetching,
     error,
+    fetchError,
     needsTrustline,
     setNeedsTrustline,
     deposit,
@@ -209,32 +212,58 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
           bgcolor: 'action.hover',
         }}
       >
-        <Stack spacing={1}>
-          <Stack direction="row" justifyContent="space-between">
-            <Typography variant="body2" color="text.secondary">
-              {t('Your Deposits')}
-            </Typography>
-            <Typography variant="body2" fontWeight="bold">
-              ${parseFloat(userPosition?.totalDeposited || '0').toLocaleString()} USDC
-            </Typography>
+        {fetching ? (
+          <Stack spacing={1}>
+            {[t('Your Deposits'), t('Current Value'), t('Earnings')].map((label) => (
+              <Stack key={label} direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">{label}</Typography>
+                <Skeleton variant="text" width={100} height={20} />
+              </Stack>
+            ))}
           </Stack>
-          <Stack direction="row" justifyContent="space-between">
-            <Typography variant="body2" color="text.secondary">
-              {t('Current Value')}
+        ) : fetchError ? (
+          <Stack spacing={1} alignItems="center" sx={{ py: 1 }}>
+            <Typography variant="body2" color="error.main" textAlign="center">
+              {fetchError}
             </Typography>
-            <Typography variant="body2" fontWeight="bold">
-              ${parseFloat(userPosition?.currentValue || '0').toLocaleString()} USDC
-            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={refreshVaultInfo}
+              startIcon={<Iconify icon="solar:refresh-bold" width={16} />}
+            >
+              {t('Retry')}
+            </Button>
           </Stack>
-          <Stack direction="row" justifyContent="space-between">
-            <Typography variant="body2" color="text.secondary">
-              {t('Earnings')}
-            </Typography>
-            <Typography variant="body2" fontWeight="bold" color="success.main">
-              +${parseFloat(userPosition?.earnings || '0').toLocaleString()} USDC
-            </Typography>
+        ) : (
+          <Stack spacing={1}>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary">
+                {t('Your Deposits')}
+              </Typography>
+              <Typography variant="body2" fontWeight="bold">
+                {parseFloat(userPosition?.totalDeposited || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDC
+              </Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary">
+                {t('Current Value')}
+              </Typography>
+              <Typography variant="body2" fontWeight="bold">
+                {parseFloat(userPosition?.currentValue || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDC
+              </Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary">
+                {t('Earnings')}
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" color="success.main">
+                +{parseFloat(userPosition?.earnings || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDC
+              </Typography>
+            </Stack>
           </Stack>
-        </Stack>
+        )}
       </Box>
 
       <Divider sx={{ mb: 3 }} />
@@ -422,7 +451,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
             {t('Total vault deposits')}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            ${parseFloat(vaultInfo?.totalDeposits || '0').toLocaleString()} USDC
+            {parseFloat(vaultInfo?.totalDeposits || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDC
           </Typography>
         </Stack>
       </Box>

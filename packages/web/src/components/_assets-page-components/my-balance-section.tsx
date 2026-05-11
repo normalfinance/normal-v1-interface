@@ -1,10 +1,12 @@
 'use client';
 
+import type { Token } from '@normalfinance/types';
 import type { CardProps } from '@mui/material/Card';
 
 import { useMemo } from 'react';
 import { BigNumber } from 'bignumber.js';
 import { usePersistStore } from '@normalfinance/state';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 
 import Card from '@mui/material/Card';
 import Grid2 from '@mui/material/Grid2';
@@ -17,7 +19,13 @@ import MyHoldingsTable from './my-holdings-table';
 
 import type { HoldingData } from './my-holdings-table-row';
 
-export function MyBalanceSection({ sx, ...other }: CardProps) {
+export const SAVINGS_CONTRACT = '__savings__';
+
+interface MyBalanceSectionProps extends CardProps {
+  savingsValue?: number;
+}
+
+export function MyBalanceSection({ sx, savingsValue = 0, ...other }: MyBalanceSectionProps) {
   const {
     tokenState: { tokens },
   } = usePersistStore();
@@ -28,17 +36,19 @@ export function MyBalanceSection({ sx, ...other }: CardProps) {
     [tokens]
   );
 
-  // Calculate total balance
+  // Calculate total balance (wallet tokens + savings USDC)
   const totalBalance = useMemo(
     () =>
-      tokens.reduce((acc, tkn) => {
-        const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
-        return acc.plus(holdings);
-      }, BigNumber(0)),
-    [tokens]
+      tokens
+        .reduce((acc, tkn) => {
+          const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
+          return acc.plus(holdings);
+        }, BigNumber(0))
+        .plus(savingsValue),
+    [tokens, savingsValue]
   );
 
-  // Calculate 24h weighted percentage change
+  // Calculate 24h weighted percentage change (savings USDC has 0% change)
   const weightedPercentageChange = useMemo(() => {
     if (totalBalance.isZero()) return 0;
 
@@ -51,28 +61,53 @@ export function MyBalanceSection({ sx, ...other }: CardProps) {
     return weightedSum.toNumber();
   }, [holdingsWithBalance, totalBalance]);
 
-  // Calculate holdings data for chart and table
-  const holdingsData: HoldingData[] = useMemo(
-    () =>
-      holdingsWithBalance
-        .map((tkn) => {
-          const value = BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber();
-          const percentage = totalBalance.gt(0)
-            ? BigNumber(tkn.balance)
-                .multipliedBy(tkn.price)
-                .dividedBy(totalBalance)
-                .multipliedBy(100)
-                .toNumber()
-            : 0;
-          return {
-            token: tkn,
-            value,
-            percentage,
-          };
-        })
-        .sort((a, b) => b.value - a.value),
-    [holdingsWithBalance, totalBalance]
-  );
+  // Synthetic token representing the savings account balance
+  const savingsToken: Token | null = useMemo(() => {
+    if (savingsValue <= 0) return null;
+    return {
+      symbol: 'Savings',
+      contract: SAVINGS_CONTRACT,
+      name: 'Normal Savings',
+      issuer: '',
+      org: '',
+      domain: '',
+      icon: getCryptoIconUrl('USDC'),
+      decimals: 4,
+      featured: false,
+      balance: String(savingsValue),
+      price: '1',
+      percentageChange: 0,
+    };
+  }, [savingsValue]);
+
+  // Calculate holdings data for chart and table (includes savings slice)
+  const holdingsData: HoldingData[] = useMemo(() => {
+    const walletEntries = holdingsWithBalance.map((tkn) => {
+      const value = BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber();
+      const percentage = totalBalance.gt(0)
+        ? BigNumber(tkn.balance)
+            .multipliedBy(tkn.price)
+            .dividedBy(totalBalance)
+            .multipliedBy(100)
+            .toNumber()
+        : 0;
+      return { token: tkn, value, percentage };
+    });
+
+    const savingsEntry: HoldingData | null = savingsToken
+      ? {
+          token: savingsToken,
+          value: savingsValue,
+          percentage: totalBalance.gt(0)
+            ? BigNumber(savingsValue).dividedBy(totalBalance).multipliedBy(100).toNumber()
+            : 0,
+        }
+      : null;
+
+    return [...walletEntries, ...(savingsEntry ? [savingsEntry] : [])].sort(
+      (a, b) => b.value - a.value
+    );
+  }, [holdingsWithBalance, totalBalance, savingsToken, savingsValue]);
 
   return (
     <Card sx={[{ p: 3 }, ...(Array.isArray(sx) ? sx : [sx])]} {...other}>

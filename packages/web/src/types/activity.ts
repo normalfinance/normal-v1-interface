@@ -47,6 +47,7 @@ export interface BuyActivity extends ActivityBase {
   symbol: string;
   iconUrl: string;
   amount: number;
+  provider?: string;
 }
 
 export interface SellActivity extends ActivityBase {
@@ -54,6 +55,7 @@ export interface SellActivity extends ActivityBase {
   symbol: string;
   iconUrl: string;
   amount: number;
+  provider?: string;
 }
 
 export interface AddLiquidityActivity extends ActivityBase {
