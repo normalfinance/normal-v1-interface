@@ -1,8 +1,11 @@
 'use client';
 
 import QRCode from 'qrcode';
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
-import { logger } from '@normalfinance/utils';
+import { buildAuthHeaders } from '@/utils/http';
+import { supabase } from '@/lib/createSupabaseClient';
+import { logger, isTestnet, createCoinbasePayOnrampURL } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -16,6 +19,7 @@ import {
   Alert,
   Dialog,
   Button,
+  Divider,
   Typography,
   DialogTitle,
   DialogContent,
@@ -42,6 +46,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
 
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [isCoinbaseLoading, setIsCoinbaseLoading] = useState(false);
 
   const walletAddress = persist.wallet.address;
   const isReceiveContext = context === 'receive';
@@ -85,6 +90,45 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
     if (walletAddress) {
       copy(walletAddress);
       enqueueSnackbar('Wallet address copied to clipboard', { variant: 'success' });
+    }
+  };
+
+  const handleCoinbaseXlm = async () => {
+    if (!walletAddress) return;
+    setIsCoinbaseLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        enqueueSnackbar(t('Please log in first'), { variant: 'warning' });
+        return;
+      }
+      const headers = await buildAuthHeaders();
+      const r = await fetch('/api/coinbase/session', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ address: walletAddress, asset: 'XLM' }),
+      });
+      const { token: sessionToken, error } = await r.json();
+      if (error || !sessionToken) {
+        enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
+        return;
+      }
+      const url = createCoinbasePayOnrampURL({
+        amountUsd: '5',
+        assetSymbol: 'XLM',
+        sessionToken,
+        fiat: 'USD',
+        sandbox: isTestnet(),
+        path: 'buy/select-asset',
+        redirectUrl: `${window.location.origin}${paths.savings}`,
+      });
+      window.open(url, '_blank', 'noopener');
+    } catch (err: any) {
+      logger.error('Coinbase XLM onramp error:', err);
+      enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
+    } finally {
+      setIsCoinbaseLoading(false);
     }
   };
 
@@ -254,6 +298,27 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
                 {t('View Explorer')}
               </Button>
             </Stack>
+
+            <Divider sx={{ width: '100%' }}>
+              <Typography variant="caption" color="text.secondary">
+                {t('or')}
+              </Typography>
+            </Divider>
+
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              disabled={isCoinbaseLoading}
+              onClick={handleCoinbaseXlm}
+              startIcon={
+                isCoinbaseLoading
+                  ? <CircularProgress size={18} color="inherit" />
+                  : <Box component="img" src="https://avatars.githubusercontent.com/u/1885080?s=200&v=4" sx={{ width: 18, height: 18, borderRadius: '50%' }} />
+              }
+            >
+              {isCoinbaseLoading ? t('Opening Coinbase…') : t('Buy XLM via Coinbase')}
+            </Button>
           </Stack>
         )}
 
@@ -342,6 +407,27 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
                   {t('View Explorer')}
                 </Button>
               </Stack>
+
+              <Divider sx={{ width: '100%' }}>
+                <Typography variant="caption" color="text.secondary">
+                  {t('or')}
+                </Typography>
+              </Divider>
+
+              <Button
+                fullWidth
+                variant="contained"
+                color="primary"
+                disabled={isCoinbaseLoading}
+                onClick={handleCoinbaseXlm}
+                startIcon={
+                  isCoinbaseLoading
+                    ? <CircularProgress size={18} color="inherit" />
+                    : <Box component="img" src="https://avatars.githubusercontent.com/u/1885080?s=200&v=4" sx={{ width: 18, height: 18, borderRadius: '50%' }} />
+                }
+              >
+                {isCoinbaseLoading ? t('Opening Coinbase…') : t('Buy XLM via Coinbase')}
+              </Button>
             </Stack>
           </Stack>
         )}
