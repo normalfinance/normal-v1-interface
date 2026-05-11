@@ -95,8 +95,10 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
 
   const handleCoinbaseXlm = async () => {
     if (!walletAddress) return;
-    // Open the window synchronously so Safari treats it as user-initiated
-    const win = window.open('', '_blank', 'noopener');
+    // Open synchronously so Safari treats it as user-initiated.
+    // Avoid 'noopener' here — it causes window.open to return null in Safari,
+    // preventing us from setting the URL later. We null opener manually instead.
+    const win = window.open('', '_blank');
     setIsCoinbaseLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -127,7 +129,10 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         path: 'buy/select-asset',
         redirectUrl: `${window.location.origin}${paths.savings}`,
       });
-      if (win) win.location.href = url;
+      if (win) {
+        win.opener = null;
+        win.location.href = url;
+      }
     } catch (err: any) {
       win?.close();
       logger.error('Coinbase XLM onramp error:', err);

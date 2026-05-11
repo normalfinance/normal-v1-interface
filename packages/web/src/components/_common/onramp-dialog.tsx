@@ -144,8 +144,10 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       enqueueSnackbar('Please login and connect your wallet first', { variant: 'warning' });
       return;
     }
-    // Open the window synchronously so Safari treats it as user-initiated
-    const win = window.open('', '_blank', 'noopener');
+    // Open synchronously so Safari treats it as user-initiated.
+    // Avoid 'noopener' here — it causes window.open to return null in Safari,
+    // preventing us from setting the URL later. We null opener manually instead.
+    const win = window.open('', '_blank');
     try {
       const {
         data: { session },
@@ -179,7 +181,10 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
         path: 'buy/select-asset',
         redirectUrl: `${window.location.origin}${paths.invest}`,
       });
-      if (win) win.location.href = url;
+      if (win) {
+        win.opener = null;
+        win.location.href = url;
+      }
     } catch (err: any) {
       win?.close();
       logger.error('Coinbase USDC onramp error:', err);
