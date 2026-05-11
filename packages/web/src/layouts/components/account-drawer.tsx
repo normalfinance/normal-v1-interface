@@ -99,6 +99,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
   }, BigNumber(0));
 
   const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
+  const savingsLoaded = userPosition !== null;
 
   if (!address) {
     return null;
@@ -118,7 +119,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
         address={address}
         balance={assetsBalance.toNumber()}
         savingsValue={savingsValue}
-        savingsFetching={savingsFetching}
+        savingsFetching={savingsFetching && !savingsLoaded}
         percentageChange={0}
         tokens={tokens}
         activity={recentActivity}
