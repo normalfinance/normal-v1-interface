@@ -64,7 +64,7 @@ const LINK_COLUMNS = [
     title: 'Protocol',
     links: [
       { label: 'Developers', href: paths.docs, target: '_blank' },
-      { label: 'Whitepaper', href: paths.help.contractTracker, target: '_blank' },
+      { label: 'Whitepaper', href: 'https://normalfi.substack.com/p/making-crypto-normal-simple-safe', target: '_blank' },
     ],
   },
   {
