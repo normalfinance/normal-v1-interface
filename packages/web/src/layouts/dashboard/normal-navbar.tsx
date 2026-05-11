@@ -360,7 +360,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               right: 0,
               top: headerH,
               zIndex: theme.zIndex.modal,
-              background: 'linear-gradient(180deg, rgb(234, 250, 254) 0%, rgb(245, 240, 255) 100%)',
+              background: '#ffffff',
               overflow: 'hidden',
             }}
             aria-modal="true"
