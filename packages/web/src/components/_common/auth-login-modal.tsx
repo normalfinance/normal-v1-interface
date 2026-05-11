@@ -67,9 +67,10 @@ const AuthLoginModal = ({
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [showTosHelper, setShowTosHelper] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
 
-  const requiresTosAcceptance = !disclaimer.accepted;
-  const isTosAcceptanceMissing = requiresTosAcceptance && !tosAccepted;
+  const requiresTosAcceptance = true;
+  const isTosAcceptanceMissing = !tosAccepted;
   const tosHelperMessage = t('Please review and accept our ToS and Disclaimer to continue');
 
   const handleDisabledButtonClick = () => {
@@ -271,6 +272,7 @@ const AuthLoginModal = ({
     setForgotPassword(false);
     setResetEmailSent(false);
     setShowTosHelper(false);
+    setMarketingConsent(false);
     onClose();
   };
 
@@ -361,6 +363,33 @@ const AuthLoginModal = ({
               sx={{ alignItems: 'flex-start', my: 1 }}
             />
           )}
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={marketingConsent}
+                onChange={(e) => setMarketingConsent(e.target.checked)}
+                color="primary"
+                inputProps={{ 'aria-label': t('Marketing email consent') }}
+                sx={{ mt: 0.25, mr: 0.5 }}
+              />
+            }
+            label={
+              <Typography variant="body2" color="text.secondary">
+                {t('Send me Normal updates, promotional offers, and company news. I can opt out at any time.')}{' '}
+                <MuiLink
+                  href={paths.legal.pp}
+                  underline="always"
+                  color="secondary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('Privacy Policy')}
+                </MuiLink>
+              </Typography>
+            }
+            sx={{ alignItems: 'flex-start', mb: 1 }}
+          />
 
           <Box
             component="span"
