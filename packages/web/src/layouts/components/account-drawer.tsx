@@ -52,7 +52,7 @@ import WalletSelectionModal, {
 
 import { AccountButton } from './account-button';
 
-function WalletConnected({ address }: { address: string }) {
+function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen: boolean }) {
   const { setGlobalIsLoading } = useAppStore();
 
   const {
@@ -62,7 +62,7 @@ function WalletConnected({ address }: { address: string }) {
   const network = useNetworkStore((s) => s.network);
 
   const { recentActivity } = useUserActivity(address);
-  const { userPosition } = useDefindexSavings();
+  const { userPosition, fetching: savingsFetching, refreshVaultInfo } = useDefindexSavings();
 
   // Effect hook to fetch all tokens when the component mounts, address changes, or network toggles
   useEffect(() => {
@@ -85,6 +85,13 @@ function WalletConnected({ address }: { address: string }) {
 
     return () => clearTimeout(timer);
   }, [address, getAllTokens, network, setGlobalIsLoading]);
+
+  // Refetch savings every time the drawer opens (skip if already in flight)
+  useEffect(() => {
+    if (drawerOpen && address && !savingsFetching) {
+      refreshVaultInfo();
+    }
+  }, [drawerOpen, address, refreshVaultInfo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const assetsBalance = tokens.reduce((acc, tkn) => {
     const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
@@ -111,6 +118,7 @@ function WalletConnected({ address }: { address: string }) {
         address={address}
         balance={assetsBalance.toNumber()}
         savingsValue={savingsValue}
+        savingsFetching={savingsFetching}
         percentageChange={0}
         tokens={tokens}
         activity={recentActivity}
@@ -602,7 +610,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       {t('Switch Wallets')}
                     </Button>
                   </Stack>
-                  <WalletConnected address={connectedAddress} />
+                  <WalletConnected address={connectedAddress} drawerOpen={open} />
                 </>
               ) : (
                 <Box sx={{ px: 2, py: 4 }}>
