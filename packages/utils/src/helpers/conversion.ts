@@ -18,7 +18,7 @@ export const getMaxAmount = (token: Token, isFiatMode: boolean, xlmReserve?: num
   const clamped = BigNumber.max(spendable, 0);
 
   if (isFiatMode) {
-    return clamped.multipliedBy(token.price).toFixed(token.decimals);
+    return clamped.multipliedBy(token.price).toFixed(token.decimals, BigNumber.ROUND_DOWN);
   }
-  return clamped.toFixed(token.decimals);
+  return clamped.toFixed(token.decimals, BigNumber.ROUND_DOWN);
 };
