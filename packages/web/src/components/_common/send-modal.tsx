@@ -2,27 +2,30 @@
 
 import type { Token } from '@normalfinance/types';
 
+import { Horizon } from '@stellar/stellar-sdk';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
+import { useStellarConfig } from '@/hooks';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import React, { useRef, useMemo, useState, useEffect } from 'react';
 import {
   getMaxAmount,
   getCryptoIconUrl,
-  convertCoinToFiat,
-  convertFiatToCoin,
   sanitizeAmountInput,
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
+  Chip,
   Stack,
   Button,
   Dialog,
+  Tooltip,
+  Divider,
   InputBase,
   Typography,
   IconButton,
@@ -37,6 +40,8 @@ import PasteIconButton from '../paste-icon-button';
 
 // ----------------------------------------------------------------------
 
+const NETWORK_FEE_XLM = 0.0002;
+
 interface SendModalProps {
   open: boolean;
   onClose: () => void;
@@ -48,6 +53,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
   const { enqueueSnackbar } = useSnackbar();
 
   const persist = usePersistStore();
+  const config = useStellarConfig();
   const tokens = persist.tokenState.tokens;
 
   const sendableTokens = useMemo(
@@ -58,110 +64,131 @@ export default function SendModal({ open, onClose }: SendModalProps) {
   const [sendToken, setSendToken] = useState<Token | null>(null);
   const [destination, setDestination] = useState<string>('');
   const [memo, setMemo] = useState<string>('');
-  const [amount, setAmount] = useState<string>('0');
-  const [isFiatMode, setIsFiatMode] = useState<boolean>(true);
-  const [showOptions, setShowOptions] = useState<boolean>(false);
+  const [amount, setAmount] = useState<string>('');
+  const [isFiatMode, setIsFiatMode] = useState<boolean>(false);
+  const [showMemo, setShowMemo] = useState<boolean>(false);
   const [pickerOpen, setPickerOpen] = useState<boolean>(false);
-
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [coinValue, setCoinValue] = useState<number>(0);
-  const [fiatValue, setFiatValue] = useState<number>(0);
+  const [xlmSubentries, setXlmSubentries] = useState<number | null>(null);
 
-  const [inputWidth, setInputWidth] = useState<number>(50);
-  const spanRef = useRef<HTMLSpanElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Reset form each time the dialog opens and default-select the highest-balance token
+  // Reset form each time the dialog opens
   useEffect(() => {
     if (!open) return;
     setDestination('');
     setMemo('');
-    setAmount('0');
-    setIsFiatMode(true);
-    setShowOptions(false);
+    setAmount('');
+    setIsFiatMode(false);
+    setShowMemo(false);
+    setXlmSubentries(null);
     const best = [...sendableTokens].sort((a, b) =>
       BigNumber(b.balance).multipliedBy(b.price).comparedTo(BigNumber(a.balance).multipliedBy(a.price)) ?? 0
     )[0];
     setSendToken(best ?? sendableTokens[0] ?? null);
-  }, [open, sendableTokens]);
+  }, [open]);
 
+  // Fetch XLM subentry count for accurate reserve calculation
   useEffect(() => {
-    if (sendToken) {
-      const amt = BigNumber(amount) || BigNumber(0);
-      const _coinValue = isFiatMode ? amt.dividedBy(sendToken.price) : amt;
-      const _fiatValue = _coinValue.multipliedBy(sendToken.price);
-      setCoinValue(_coinValue.toNumber());
-      setFiatValue(_fiatValue.toNumber());
-    } else {
-      setCoinValue(0);
-      setFiatValue(0);
-    }
-  }, [amount, sendToken, isFiatMode]);
+    if (!open || sendToken?.symbol !== 'XLM' || !persist.wallet.address) return;
+    setXlmSubentries(null);
+    const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+      allowHttp: config.HORIZON_URL.startsWith('http://'),
+    });
+    horizonServer
+      .loadAccount(persist.wallet.address)
+      .then((acc) => setXlmSubentries(acc.subentry_count))
+      .catch(() => setXlmSubentries(null));
+  }, [open, sendToken?.symbol, persist.wallet.address, config.HORIZON_URL]);
 
-  useEffect(() => {
-    if (spanRef.current) {
-      setInputWidth(spanRef.current.offsetWidth + 8);
-    }
-  }, [amount]);
+  const xlmReserve = useMemo(
+    () =>
+      sendToken?.symbol === 'XLM' && xlmSubentries !== null
+        ? (2 + xlmSubentries) * 0.5
+        : undefined,
+    [sendToken?.symbol, xlmSubentries]
+  );
 
-  const coinAmount = useMemo(() => {
+  // Spendable balance: total minus reserve and fee for XLM, full balance for other tokens
+  const spendableBalance = useMemo(() => {
     if (!sendToken) return BigNumber(0);
-    const amt = BigNumber(amount) || BigNumber(0);
-    return isFiatMode ? amt.dividedBy(sendToken.price) : amt;
+    if (sendToken.symbol === 'XLM' && xlmReserve !== undefined) {
+      return BigNumber.max(
+        BigNumber(sendToken.balance).minus(xlmReserve).minus(NETWORK_FEE_XLM),
+        0
+      );
+    }
+    return BigNumber(sendToken.balance);
+  }, [sendToken, xlmReserve]);
+
+  // Parse the entered amount into coin units
+  const coinAmount = useMemo(() => {
+    if (!sendToken || !amount) return BigNumber(0);
+    const n = BigNumber(amount);
+    if (n.isNaN()) return BigNumber(0);
+    return isFiatMode ? n.dividedBy(sendToken.price) : n;
   }, [amount, sendToken, isFiatMode]);
 
-  const insufficientBalance = sendToken ? BigNumber(sendToken.balance).lt(coinAmount) : false;
+  const fiatAmount = useMemo(() => {
+    if (!sendToken) return BigNumber(0);
+    return coinAmount.multipliedBy(sendToken.price);
+  }, [coinAmount, sendToken]);
+
+  const feeFiat = useMemo(
+    () => (sendToken ? BigNumber(NETWORK_FEE_XLM).multipliedBy(
+      sendToken.symbol === 'XLM' ? sendToken.price : 1
+    ) : BigNumber(0)),
+    [sendToken]
+  );
+
+  const insufficientBalance = coinAmount.gt(0) && spendableBalance.lt(coinAmount);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(sanitizeAmountInput(e.target.value));
   };
 
-  const handleAmountFocus = () => {
-    if (amount === '0') setAmount('');
+  const handleMaxClick = () => {
+    if (!sendToken) return;
+    if (isFiatMode) {
+      setAmount(spendableBalance.multipliedBy(sendToken.price).toFixed(2));
+    } else {
+      setAmount(getMaxAmount(sendToken, false, xlmReserve));
+    }
   };
 
-  const handleAmountBlur = () => {
-    if (amount.trim() === '') setAmount('0');
-  };
-
-  const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === '-') e.preventDefault();
-  };
-
-  const toggleAmountMode = () => {
-    if (sendToken) {
-      const amt = parseFloat(amount) || 0;
-      if (amt === 0) {
-        setAmount('0');
-      } else if (isFiatMode) {
-        const coinVal = convertFiatToCoin(amt, BigNumber(sendToken.price));
-        setAmount(coinVal.toFixed(sendToken.decimals));
-      } else {
-        const fiatVal = convertCoinToFiat(BigNumber(amt), BigNumber(sendToken.price));
-        setAmount(fiatVal);
-      }
+  const toggleMode = () => {
+    if (!sendToken || !amount) {
+      setIsFiatMode((prev) => !prev);
+      return;
+    }
+    const n = BigNumber(amount);
+    if (n.isNaN() || n.isZero()) {
+      setIsFiatMode((prev) => !prev);
+      return;
+    }
+    if (isFiatMode) {
+      setAmount(coinAmount.toFixed(sendToken.decimals));
+    } else {
+      setAmount(fiatAmount.toFixed(2));
     }
     setIsFiatMode((prev) => !prev);
   };
 
   const getButtonLabel = (): string => {
     if (!sendToken) return 'Select an asset';
-    if (destination === '') return 'Enter account';
-    const amt = parseFloat(amount) || 0;
-    if (amt <= 0) return 'Enter an amount';
-    if (insufficientBalance) return `Insufficient ${sendToken.symbol}`;
-    return 'Review';
+    if (!destination) return 'Enter destination address';
+    if (!isValidStellarAddress(destination)) return 'Invalid destination address';
+    if (!amount || coinAmount.isZero()) return 'Enter an amount';
+    if (insufficientBalance) return `Insufficient ${sendToken.symbol} balance`;
+    return 'Review transaction';
   };
 
-  const isReviewReady = getButtonLabel() === 'Review';
+  const isReviewReady = getButtonLabel() === 'Review transaction';
 
   const handleReviewClick = () => {
     if (!sendToken) return;
-    if (!isValidStellarAddress(destination)) {
-      enqueueSnackbar(t('Invalid destination'), { variant: 'error' });
-      return;
-    }
     if (destination === persist.wallet.address) {
-      enqueueSnackbar(t('Cannot send assets to yourself'), { variant: 'error' });
+      enqueueSnackbar(t('Cannot send to your own address'), { variant: 'error' });
       return;
     }
     setReviewOpen(true);
@@ -169,23 +196,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
 
   const handleReviewClose = () => {
     setReviewOpen(false);
-    // Also close the outer Send dialog when a transaction completes successfully.
-    // SendReview closes itself after a successful send, so when reviewOpen goes false,
-    // if there was a successful outcome the snackbar is already showing. We clear form
-    // state and dismiss the outer dialog.
     onClose();
-  };
-
-  const handlePasteDestination = (value: string): boolean => {
-    if (!value) return false;
-    setDestination(value);
-    return true;
-  };
-
-  const handlePasteMemo = (value: string): boolean => {
-    if (!value) return false;
-    setMemo(value);
-    return true;
   };
 
   return (
@@ -193,361 +204,280 @@ export default function SendModal({ open, onClose }: SendModalProps) {
       <Dialog
         open={open}
         onClose={onClose}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            p: 1,
-          },
-        }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
-        <DialogTitle sx={{ p: 2, pb: 1 }}>
+        <DialogTitle sx={{ px: 3, pt: 3, pb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6" component="div">
-              {t('Send crypto')}
-            </Typography>
-            <IconButton onClick={onClose}>
-              <Iconify icon="mingcute:close-line" width={24} />
+            <Typography variant="h6">{t('Send')}</Typography>
+            <IconButton onClick={onClose} size="small">
+              <Iconify icon="mingcute:close-line" width={20} />
             </IconButton>
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 2, pt: 1 }}>
-          <Stack spacing="2px">
-            {/* Amount input */}
+        <DialogContent sx={{ px: 3, pt: 2, pb: 3 }}>
+          <Stack spacing={2}>
+            {/* Asset + available balance */}
             <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '130px',
-                padding: theme.spacing(2),
-                alignItems: 'flex-start',
-                borderRadius: '20px 20px 0 0',
-                border: `1px solid ${theme.palette.divider}`,
-                backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                overflow: 'hidden',
-              }}
-            >
-              <Typography variant="body2" sx={{ color: theme.palette.text.primary, mb: 0.5 }}>
-                {t('Amount')}
-              </Typography>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  position: 'relative',
-                }}
-              >
-                {isFiatMode && (
-                  <Typography sx={{ color: theme.palette.text.secondary, fontSize: '40px' }}>
-                    {t('$')}
-                  </Typography>
-                )}
-                <InputBase
-                  type="number"
-                  value={amount}
-                  onChange={handleInputChange}
-                  onFocus={handleAmountFocus}
-                  onBlur={handleAmountBlur}
-                  onKeyDown={handleAmountKeyDown}
-                  sx={{
-                    display: 'inline-flex',
-                    maxWidth: '100%',
-                    minWidth: '50px',
-                    width: `${inputWidth}px`,
-                    border: 'none',
-                    padding: 0,
-                    overflow: 'hidden',
-                    whiteSpace: 'nowrap',
-                    color: insufficientBalance
-                      ? theme.palette.error.main
-                      : amount === '0' || amount === ''
-                        ? theme.palette.text.secondary
-                        : theme.palette.text.primary,
-                    '& input': {
-                      textAlign: 'center',
-                      padding: 0,
-                      fontSize: '40px',
-                      fontWeight: 400,
-                      lineHeight: '40px',
-                    },
-                  }}
-                  inputProps={{ min: 0 }}
-                />
-                <span
-                  ref={spanRef}
-                  style={{
-                    fontSize: '40px',
-                    fontWeight: 400,
-                    lineHeight: '40px',
-                    letterSpacing: '0px',
-                    visibility: 'hidden',
-                    whiteSpace: 'pre',
-                    position: 'absolute',
-                  }}
-                >
-                  {amount || '0'}
-                </span>
-              </Box>
-              <Box
-                sx={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                }}
-              >
-                {sendToken && isFiatMode ? (
-                  <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
-                    {coinAmount.toFixed(6)} {sendToken.symbol}
-                  </Typography>
-                ) : sendToken ? (
-                  <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
-                    {fCurrency(BigNumber(sendToken.price).multipliedBy(coinAmount))}
-                  </Typography>
-                ) : null}
-                <Iconify
-                  icon="solar:transfer-horizontal-bold-duotone"
-                  width={14}
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    cursor: 'pointer',
-                    rotate: '-90deg',
-                  }}
-                  onClick={toggleAmountMode}
-                />
-              </Box>
-            </Box>
-
-            {/* Token selector */}
-            <Button
               onClick={() => setPickerOpen(true)}
               sx={{
                 display: 'flex',
-                flexDirection: 'row',
-                gap: 2,
-                padding: theme.spacing(2),
-                justifyContent: 'space-between',
                 alignItems: 'center',
-                borderRadius: '0 0 20px 20px',
+                justifyContent: 'space-between',
+                px: 2,
+                py: 1.5,
+                borderRadius: 2,
                 border: `1px solid ${theme.palette.divider}`,
-                backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                overflow: 'hidden',
+                cursor: 'pointer',
+                '&:hover': { bgcolor: alpha(theme.palette.grey[500], 0.06) },
               }}
             >
               {sendToken ? (
                 <>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <Box
                       component="img"
                       src={sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)}
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                      }}
+                      sx={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
                     />
-                    <Box
-                      sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.primary,
-                          textAlign: 'start',
-                        }}
-                      >
-                        {sendToken.symbol}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: theme.palette.text.primary,
-                          fontSize: '12px',
-                          textAlign: 'start',
-                        }}
-                      >
-                        {t('Balance:')}
-                        <Box component="span">
-                          {' '}
-                          {BigNumber(sendToken.balance).toFixed(sendToken.decimals)}
-                        </Box>{' '}
-                        <Box component="span" sx={{ color: theme.palette.text.secondary }}>
-                          {t('(')}
-                          {fCurrency(BigNumber(sendToken.balance).multipliedBy(sendToken.price))}
-                          {t(')')}
+                    <Box>
+                      <Typography variant="subtitle2">{sendToken.symbol}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t('Available:')}{' '}
+                        <Box component="span" fontWeight={600} color="text.primary">
+                          {spendableBalance.toFixed(Math.min(sendToken.decimals, 4))} {sendToken.symbol}
+                        </Box>
+                        {' '}
+                        <Box component="span" color="text.disabled">
+                          ({fCurrency(spendableBalance.multipliedBy(sendToken.price))})
                         </Box>
                       </Typography>
                     </Box>
                   </Box>
-                  <Box
-                    sx={{
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'flex-end',
-                      gap: '6px',
-                    }}
-                  >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Button
                       variant="soft"
-                      color="secondary"
+                      color="primary"
                       size="small"
-                      sx={{
-                        fontWeight: 500,
-                        fontSize: '12px',
-                        p: 0,
-                        height: '24px',
-                        minWidth: '36px',
-                      }}
+                      sx={{ minWidth: 44, height: 26, fontSize: 11, fontWeight: 700, px: 1 }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (sendToken) {
-                          setAmount(getMaxAmount(sendToken, isFiatMode));
-                        }
+                        handleMaxClick();
                       }}
                     >
-                      {t('Max')}
+                      {t('MAX')}
                     </Button>
-                    <Iconify
-                      width={24}
-                      icon="eva:arrow-ios-downward-fill"
-                      sx={{ color: theme.palette.text.primary }}
-                    />
+                    <Iconify icon="eva:chevron-down-fill" width={18} color="text.secondary" />
                   </Box>
                 </>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  {t('Select a token')}
+                  {t('Select asset')}
                 </Typography>
               )}
-            </Button>
+            </Box>
+
+            {/* Amount input */}
+            <Box
+              sx={{
+                px: 2,
+                py: 2,
+                borderRadius: 2,
+                border: `1px solid ${insufficientBalance ? theme.palette.error.main : theme.palette.divider}`,
+                bgcolor: alpha(theme.palette.grey[500], 0.04),
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                {t('Amount')}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {isFiatMode && (
+                  <Typography variant="h5" color="text.secondary" sx={{ lineHeight: 1 }}>
+                    $
+                  </Typography>
+                )}
+                <InputBase
+                  inputRef={inputRef}
+                  type="number"
+                  value={amount}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  onKeyDown={(e) => e.key === '-' && e.preventDefault()}
+                  sx={{
+                    flex: 1,
+                    '& input': {
+                      fontSize: '28px',
+                      fontWeight: 600,
+                      lineHeight: 1.2,
+                      color: insufficientBalance ? theme.palette.error.main : theme.palette.text.primary,
+                      p: 0,
+                    },
+                  }}
+                  inputProps={{ min: 0 }}
+                />
+                {!isFiatMode && sendToken && (
+                  <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600, flexShrink: 0 }}>
+                    {sendToken.symbol}
+                  </Typography>
+                )}
+                <Tooltip title={t('Toggle USD / crypto')}>
+                  <IconButton size="small" onClick={toggleMode} sx={{ ml: 0.5 }}>
+                    <Iconify icon="solar:transfer-vertical-bold-duotone" width={18} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
+              {/* Converted value */}
+              <Typography variant="caption" color={insufficientBalance ? 'error' : 'text.secondary'} sx={{ mt: 0.5, display: 'block' }}>
+                {insufficientBalance
+                  ? t('Exceeds available balance')
+                  : sendToken && coinAmount.gt(0)
+                  ? isFiatMode
+                    ? `≈ ${coinAmount.toFixed(4)} ${sendToken.symbol}`
+                    : `≈ ${fCurrency(fiatAmount)}`
+                  : t('Enter amount above')}
+              </Typography>
+            </Box>
 
             {/* Destination */}
             <Box
               sx={{
-                mt: '2px',
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '12px',
-                px: '16px',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                borderRadius: '20px',
-                border: `1px solid ${theme.palette.divider}`,
-                backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                overflow: 'hidden',
+                px: 2,
+                py: 1.5,
+                borderRadius: 2,
+                border: `1px solid ${
+                  destination && !isValidStellarAddress(destination)
+                    ? theme.palette.error.main
+                    : theme.palette.divider
+                }`,
+                bgcolor: alpha(theme.palette.grey[500], 0.04),
               }}
             >
-              <Typography variant="caption" sx={{ color: theme.palette.text.primary }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
                 {t('To')}
               </Typography>
-              <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <InputBase
                   type="text"
                   value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  placeholder="GAD...123"
+                  onChange={(e) => setDestination(e.target.value.trim())}
+                  placeholder="G…"
                   sx={{
                     flex: 1,
-                    border: 'none',
-                    padding: 0,
-                    color:
-                      destination === ''
-                        ? theme.palette.text.secondary
-                        : theme.palette.text.primary,
-                  }}
-                  inputProps={{
-                    style: {
-                      fontSize: '14px',
-                      fontWeight: 400,
-                      lineHeight: '22px',
-                    },
+                    '& input': { fontSize: '14px', p: 0, fontFamily: 'monospace' },
                   }}
                 />
                 <PasteIconButton
-                  alert="Successfully pasted destination"
-                  onSubmit={handlePasteDestination}
+                  alert="Destination pasted"
+                  onSubmit={(v) => { setDestination(v.trim()); return true; }}
                 />
               </Box>
+              {destination && !isValidStellarAddress(destination) && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                  {t('Not a valid Stellar address')}
+                </Typography>
+              )}
             </Box>
 
             {/* Memo toggle */}
-            <Box sx={{ mt: 1 }}>
+            <Box>
               <Button
                 size="small"
                 color="inherit"
-                onClick={() => setShowOptions((prev) => !prev)}
-                endIcon={
-                  <Iconify
-                    icon={
-                      showOptions ? 'eva:arrow-ios-upward-fill' : 'eva:arrow-ios-downward-fill'
-                    }
-                    width={14}
-                  />
-                }
-                sx={{
-                  color: theme.palette.text.secondary,
-                  fontSize: '12px',
-                  fontWeight: 500,
-                }}
+                startIcon={<Iconify icon={showMemo ? 'eva:minus-circle-outline' : 'eva:plus-circle-outline'} width={16} />}
+                onClick={() => setShowMemo((p) => !p)}
+                sx={{ color: 'text.secondary', fontSize: 12 }}
               >
-                {t('Options')}
+                {showMemo ? t('Remove memo') : t('Add memo (optional)')}
               </Button>
+              {showMemo && (
+                <Box
+                  sx={{
+                    mt: 1,
+                    px: 2,
+                    py: 1.5,
+                    borderRadius: 2,
+                    border: `1px solid ${theme.palette.divider}`,
+                    bgcolor: alpha(theme.palette.grey[500], 0.04),
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                    {t('Memo')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <InputBase
+                      type="text"
+                      value={memo}
+                      onChange={(e) => setMemo(e.target.value)}
+                      placeholder={t('Exchange ID, note…')}
+                      sx={{ flex: 1, '& input': { fontSize: '14px', p: 0 } }}
+                    />
+                    <PasteIconButton alert="Memo pasted" onSubmit={(v) => { setMemo(v); return true; }} />
+                  </Box>
+                </Box>
+              )}
             </Box>
 
-            {showOptions && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  padding: '12px',
-                  px: '16px',
-                  alignItems: 'flex-start',
-                  borderRadius: '20px',
-                  border: `1px solid ${theme.palette.divider}`,
-                  backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                  overflow: 'hidden',
-                }}
-              >
-                <Typography variant="caption" sx={{ color: theme.palette.text.primary }}>
-                  {t('Memo (optional)')}
-                </Typography>
-                <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', gap: 1 }}>
-                  <InputBase
-                    type="text"
-                    value={memo}
-                    onChange={(e) => setMemo(e.target.value)}
-                    placeholder="abc123"
-                    sx={{ flex: 1, border: 'none', padding: 0 }}
-                    inputProps={{
-                      style: {
-                        fontSize: '14px',
-                        fontWeight: 400,
-                        lineHeight: '22px',
-                      },
-                    }}
-                  />
-                  <PasteIconButton alert="Successfully pasted memo" onSubmit={handlePasteMemo} />
+            {/* Fee + reserve info */}
+            <Box
+              sx={{
+                px: 2,
+                py: 1.5,
+                borderRadius: 2,
+                bgcolor: alpha(theme.palette.grey[500], 0.04),
+                border: `1px solid ${theme.palette.divider}`,
+              }}
+            >
+              <Stack spacing={0.75}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {t('Network fee')}
+                    </Typography>
+                    <Tooltip title={t('Stellar network fee paid to validators. Cannot be changed.')}>
+                      <Iconify icon="eva:info-outline" width={14} sx={{ color: 'text.disabled', cursor: 'help' }} />
+                    </Tooltip>
+                  </Box>
+                  <Typography variant="caption" color="text.primary" fontWeight={600}>
+                    {NETWORK_FEE_XLM} XLM{' '}
+                    <Box component="span" color="text.secondary" fontWeight={400}>
+                      ({fCurrency(feeFiat)})
+                    </Box>
+                  </Typography>
                 </Box>
-              </Box>
-            )}
 
-            {/* Main action */}
+                {sendToken?.symbol === 'XLM' && xlmReserve !== undefined && (
+                  <>
+                    <Divider sx={{ my: 0.5 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('Minimum reserve')}
+                        </Typography>
+                        <Tooltip title={t('Stellar requires every account to keep a minimum XLM balance (2 XLM base + 0.5 XLM per trustline/offer). This amount stays in your account and is not sent.')}>
+                          <Iconify icon="eva:info-outline" width={14} sx={{ color: 'text.disabled', cursor: 'help' }} />
+                        </Tooltip>
+                      </Box>
+                      <Typography variant="caption" color="text.primary" fontWeight={600}>
+                        {xlmReserve.toFixed(1)} XLM
+                      </Typography>
+                    </Box>
+                  </>
+                )}
+              </Stack>
+            </Box>
+
+            {/* CTA */}
             <Button
               fullWidth
-              variant="soft"
-              color="success"
+              variant="contained"
+              color="primary"
               size="large"
               disabled={!isReviewReady}
               onClick={handleReviewClick}
-              sx={{ borderRadius: 2.5, mt: 2 }}
+              sx={{ borderRadius: 2, fontWeight: 700 }}
             >
               {t(getButtonLabel())}
             </Button>
@@ -555,7 +485,6 @@ export default function SendModal({ open, onClose }: SendModalProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Token picker */}
       <PickToken
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
@@ -567,14 +496,13 @@ export default function SendModal({ open, onClose }: SendModalProps) {
         }}
       />
 
-      {/* Review + submit */}
       {reviewOpen && sendToken && (
         <SendReview
           open={reviewOpen}
           onClose={handleReviewClose}
           sendToken={sendToken}
-          tokenValue={coinValue}
-          fiatValue={fiatValue}
+          tokenValue={coinAmount.toNumber()}
+          fiatValue={fiatAmount.toNumber()}
           address={destination}
           memo={memo}
         />

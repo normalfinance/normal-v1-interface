@@ -77,13 +77,28 @@ export function useSendToken(): ReturnType {
 
       const account = await horizonServer.loadAccount(walletAddress);
 
+      if (args.token.symbol === 'XLM') {
+        const xlmBalance = account.balances.find((b) => b.asset_type === 'native');
+        const rawBalance = parseFloat(xlmBalance?.balance ?? '0');
+        const minReserve = (2 + account.subentry_count) * 0.5;
+        const fee = 0.0002;
+        const spendable = rawBalance - minReserve - fee;
+        if (parseFloat(args.amount) > spendable) {
+          throw new Error(
+            t('Insufficient balance. You can send at most {{max}} XLM (minimum reserve: {{reserve}} XLM)', {
+              max: Math.max(0, spendable).toFixed(7),
+              reserve: minReserve.toFixed(1),
+            })
+          );
+        }
+      }
+
       const tx = new TransactionBuilder(account, {
         fee: '2000',
-        timebounds: { minTime: 0, maxTime: Math.floor(Date.now() / 1000) + 2 * 60 * 1000 },
+        timebounds: { minTime: 0, maxTime: Math.floor(Date.now() / 1000) + 2 * 60 },
         networkPassphrase: config.NETWORK_PASSPHRASE,
       });
 
-      // BigInt((tokenValue * 10 ** (sendToken?.decimals || 7)).toFixed(0)),
       if (args.token.symbol === 'XLM') {
         tx.addOperation(
           Operation.payment({
@@ -139,8 +154,14 @@ export function useSendToken(): ReturnType {
       const result = await horizonServer.submitTransaction(transaction);
       return result.hash;
     } catch (err: any) {
-      console.error('[SEND TOKEN] Transaction failed:', err);
-      setError(err?.message || 'Transaction failed');
+      const resultCodes = err?.response?.data?.extras?.result_codes;
+      const stellarError = resultCodes
+        ? `${resultCodes.transaction ?? ''} ${(resultCodes.operations ?? []).join(' ')}`.trim()
+        : null;
+      const message = stellarError || err?.message || 'Transaction failed';
+      console.error('[SEND TOKEN] Transaction failed:', err, resultCodes ?? '');
+      enqueueSnackbar(t(message), { variant: 'error' });
+      setError(message);
       return '';
     } finally {
       setLoading(false);
