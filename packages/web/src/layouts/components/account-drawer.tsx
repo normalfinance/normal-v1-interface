@@ -42,7 +42,7 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
-import AuthLoginModal from '@/components/_common/auth-login-modal';
+import OnboardingWizard from '@/components/_common/onboarding-wizard';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
@@ -404,6 +404,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
   };
 
   const hasHandledAuthRef = useRef(false);
+  // Tracks showLoginModal without adding it as an effect dependency (avoids
+  // the effect re-firing and immediately closing the modal on open).
+  const showLoginModalRef = useRef(showLoginModal);
+  useEffect(() => { showLoginModalRef.current = showLoginModal; }, [showLoginModal]);
 
   useEffect(() => {
     const passwordResetParam = searchParams.get('passwordResetSuccess');
@@ -427,7 +431,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
         hasHandledAuthRef.current = false;
       }
       setIsAutoConnecting(false);
-      if (!passwordResetSuccess) {
+      // Don't close the wizard if it's currently open handling its own flow
+      if (!passwordResetSuccess && !showLoginModalRef.current) {
         setShowLoginModal(false);
       }
       return;
@@ -441,10 +446,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
     const hadIntent = consumeLoginIntent();
     if (hadIntent && !hasHandledAuthRef.current) {
       hasHandledAuthRef.current = true;
-      setShowLoginModal(false);
-      void handlePostAuthFlow();
+      // Always use the wizard for post-auth wallet setup (covers OAuth redirects
+      // where the wizard was closed by the page reload).
+      // If it's already open it handles itself; if not, open it now.
+      if (!showLoginModalRef.current) {
+        setShowLoginModal(true);
+      }
     }
-  }, [authLoading, session, handlePostAuthFlow, passwordResetSuccess, isWalletConnected]);
+  }, [authLoading, session, passwordResetSuccess, isWalletConnected]);
 
   return (
     <>
@@ -629,7 +638,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           </Scrollbar>
         )}
       </Drawer>
-      <AuthLoginModal
+      <OnboardingWizard
         open={showLoginModal}
         onClose={() => {
           setShowLoginModal(false);
