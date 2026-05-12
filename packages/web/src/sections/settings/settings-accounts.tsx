@@ -38,6 +38,7 @@ export function SettingsAccounts() {
   const [loading, setLoading] = useState(false);
   const [editingWallet, setEditingWallet] = useState<string | null>(null);
   const [walletName, setWalletName] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
   const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
   const [walletToUnlink, setWalletToUnlink] = useState<string | null>(null);
   const [isUnlinking, setIsUnlinking] = useState(false);
@@ -66,6 +67,7 @@ export function SettingsAccounts() {
   };
 
   const handleSaveName = async (walletAddress: string) => {
+    setIsSavingName(true);
     try {
       await updateWalletName(walletAddress, walletName);
       enqueueSnackbar(t('Account name updated'), { variant: 'success' });
@@ -73,6 +75,8 @@ export function SettingsAccounts() {
       await loadWallets();
     } catch (error: any) {
       enqueueSnackbar(error.message || t('Failed to update account name'), { variant: 'error' });
+    } finally {
+      setIsSavingName(false);
     }
   };
 
@@ -203,10 +207,13 @@ export function SettingsAccounts() {
                       size="small"
                       color="primary"
                       onClick={() => handleSaveName(wallet.walletAddress)}
+                      disabled={isSavingName}
                     >
-                      <Iconify icon="solar:check-circle-bold" />
+                      {isSavingName
+                        ? <CircularProgress size={16} color="inherit" />
+                        : <Iconify icon="solar:check-circle-bold" />}
                     </IconButton>
-                    <IconButton size="small" onClick={handleCancelEdit}>
+                    <IconButton size="small" onClick={handleCancelEdit} disabled={isSavingName}>
                       <Iconify icon="solar:close-circle-bold" />
                     </IconButton>
                   </Stack>

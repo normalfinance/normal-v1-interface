@@ -15,6 +15,7 @@ import { useNormalWallet, hasStoredNormalWalletKey } from '@/hooks/stellar/use-n
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
+import type { LinkedWallet } from '@/services/linked-wallets';
 import { getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 import { signInWithGoogle, signInWithOtp, verifyOtp, signInWithPassword, signUpWithPassword, resetPassword } from '@/services/auth';
 import {
@@ -68,7 +69,8 @@ type WizardStep =
   | 'import-wallet'
   | 'fund-xlm'
   | 'add-trustline'
-  | 'all-set';
+  | 'all-set'
+  | 'linked-accounts';
 
 type AuthMode = 'magic-link' | 'password';
 type NewWalletStage = 'creating' | 'ready';
@@ -95,6 +97,7 @@ const STEP_DOT: Record<WizardStep, number> = {
   'fund-xlm': 5,
   'add-trustline': 6,
   'all-set': 7,
+  'linked-accounts': 7,
 };
 
 const STEP_NUMBER: Record<WizardStep, number> = {
@@ -107,6 +110,7 @@ const STEP_NUMBER: Record<WizardStep, number> = {
   'fund-xlm': 6,
   'add-trustline': 7,
   'all-set': 8,
+  'linked-accounts': 8,
 };
 
 const STEP_LABEL: Record<WizardStep, string> = {
@@ -119,6 +123,7 @@ const STEP_LABEL: Record<WizardStep, string> = {
   'fund-xlm': 'FUND WITH XLM',
   'add-trustline': 'ADD TRUSTLINE',
   'all-set': 'ALL SET',
+  'linked-accounts': 'LINKED ACCOUNTS',
 };
 
 // Steps that allow navigating back
@@ -221,6 +226,13 @@ export default function OnboardingWizard({
   // ── Trustline state ───────────────────────────────────────────────────────
   const [trustlineError, setTrustlineError] = useState<string | null>(null);
 
+  // ── Linked-accounts step state ────────────────────────────────────────────
+  const [linkedWalletsForStep, setLinkedWalletsForStep] = useState<LinkedWallet[]>([]);
+  const [isLoadingLinkedWallets, setIsLoadingLinkedWallets] = useState(false);
+  const [linkedWalletEditingAddr, setLinkedWalletEditingAddr] = useState<string | null>(null);
+  const [linkedWalletEditName, setLinkedWalletEditName] = useState('');
+  const [isSavingLinkedWalletName, setIsSavingLinkedWalletName] = useState(false);
+
   // ── Returning-user flag ───────────────────────────────────────────────────
   // True when the user already has a linked wallet — we skip showing the
   // fund-xlm / add-trustline / all-set screens if everything is already set up.
@@ -269,8 +281,8 @@ export default function OnboardingWizard({
         setWizardWalletAddress(most.walletAddress);
         setStep('fund-xlm'); // auto-advance effects will close wizard if already fully set up
       } else {
-        // Key was cleared (e.g. after logout) — need to re-import
-        setStep('import-wallet');
+        // Key was cleared — show linked accounts so user can choose which to reconnect
+        setStep('linked-accounts');
       }
     } catch (err) {
       logger.error('[OnboardingWizard] handleAfterAuth error:', err);
@@ -332,12 +344,8 @@ export default function OnboardingWizard({
       stopPolling();
       if (savingsUsdcIssuer && !hasUsdcTrustline) {
         setStep('add-trustline');
-      } else if (isReturningUser) {
-        // Already fully set up — close without showing any more steps
-        fullReset();
-        onClose();
       } else {
-        setStep('all-set');
+        setStep('linked-accounts');
       }
     }
   }, [step, isCheckingAccount, accountExists, hasUsdcTrustline, savingsUsdcIssuer, isReturningUser]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -354,15 +362,29 @@ export default function OnboardingWizard({
   // Auto-advance from add-trustline when trustline added
   useEffect(() => {
     if (step !== 'add-trustline' || !hasUsdcTrustline) return;
-    if (isReturningUser) {
-      fullReset();
-      onClose();
-    } else {
-      setStep('all-set');
-    }
-  }, [step, hasUsdcTrustline, isReturningUser]); // eslint-disable-line react-hooks/exhaustive-deps
+    setStep('linked-accounts');
+  }, [step, hasUsdcTrustline]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (!open) stopPolling(); }, [open]);
+
+  // Load wallets when entering linked-accounts step
+  useEffect(() => {
+    if (step !== 'linked-accounts') return;
+    let cancelled = false;
+    const load = async () => {
+      setIsLoadingLinkedWallets(true);
+      try {
+        const list = await getLinkedWallets();
+        if (!cancelled) setLinkedWalletsForStep(list);
+      } catch (err) {
+        logger.error('[OnboardingWizard] Failed to load linked wallets:', err);
+      } finally {
+        if (!cancelled) setIsLoadingLinkedWallets(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [step]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -408,6 +430,8 @@ export default function OnboardingWizard({
     setWalletCreateError(null);
     setImportMnemonic(''); setImportPrivateKey(''); setImportError(null);
     setQrCodeUrl(''); setTrustlineError(null); setIsReturningUser(false);
+    setLinkedWalletsForStep([]); setIsLoadingLinkedWallets(false);
+    setLinkedWalletEditingAddr(null); setLinkedWalletEditName(''); setIsSavingLinkedWalletName(false);
     hasHandledAuthRef.current = false;
   };
 
@@ -487,7 +511,10 @@ export default function OnboardingWizard({
   const handleShowRecoveryPhrase = async () => {
     if (walletName.trim() && createdPublicKey) {
       try { await updateWalletName(createdPublicKey, walletName.trim()); }
-      catch (err) { logger.warn('[OnboardingWizard] Failed to update wallet name:', err); }
+      catch (err: any) {
+        logger.warn('[OnboardingWizard] Failed to update wallet name:', err);
+        enqueueSnackbar(err?.message || t('Failed to save wallet name'), { variant: 'warning' });
+      }
     }
     setStep('backup-phrase');
   };
@@ -1281,6 +1308,201 @@ export default function OnboardingWizard({
     </Stack>
   );
 
+  const handleSaveLinkedWalletName = async (walletAddress: string) => {
+    setIsSavingLinkedWalletName(true);
+    try {
+      await updateWalletName(walletAddress, linkedWalletEditName);
+      setLinkedWalletsForStep((prev) =>
+        prev.map((w) => w.walletAddress === walletAddress ? { ...w, walletName: linkedWalletEditName || null } : w)
+      );
+      setLinkedWalletEditingAddr(null);
+      setLinkedWalletEditName('');
+      enqueueSnackbar(t('Account name saved'), { variant: 'success' });
+    } catch (err: any) {
+      enqueueSnackbar(err?.message || t('Failed to save account name'), { variant: 'error' });
+    } finally {
+      setIsSavingLinkedWalletName(false);
+    }
+  };
+
+  const renderLinkedAccounts = () => {
+    const noKeyReturning = isReturningUser && !hasStoredNormalWalletKey();
+
+    return (
+      <Stack spacing={2.5}>
+        {!isReturningUser ? (
+          <Stack spacing={2} alignItems="center" sx={{ py: 1 }}>
+            <Box
+              sx={{
+                width: 72, height: 72, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(129, 140, 248, 0.4)',
+              }}
+            >
+              <Iconify icon="solar:check-circle-bold" width={36} sx={{ color: '#fff' }} />
+            </Box>
+            <Box textAlign="center">
+              <Typography variant="h4" fontWeight={700} gutterBottom>{t("You're all set!")}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('Your wallet is live and ready to earn. Your linked account is shown below.')}
+              </Typography>
+            </Box>
+          </Stack>
+        ) : (
+          <Box>
+            <Typography variant="h4" fontWeight={700} gutterBottom>{t('Linked accounts')}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {noKeyReturning
+                ? t('Select an account to reconnect your wallet key.')
+                : t('Your wallet accounts linked to this profile.')}
+            </Typography>
+          </Box>
+        )}
+
+        {isLoadingLinkedWallets ? (
+          <Stack alignItems="center" sx={{ py: 3 }}>
+            <CircularProgress size={28} />
+          </Stack>
+        ) : (
+          <Stack spacing={1.5}>
+            {linkedWalletsForStep.map((wallet) => (
+              <Box
+                key={wallet.id}
+                sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2, p: 2 }}
+              >
+                {linkedWalletEditingAddr === wallet.walletAddress ? (
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                    <TextField
+                      size="small" fullWidth
+                      value={linkedWalletEditName}
+                      onChange={(e) => setLinkedWalletEditName(e.target.value)}
+                      placeholder={t('Account name')}
+                      slotProps={{ htmlInput: { maxLength: 50 } }}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveLinkedWalletName(wallet.walletAddress);
+                        if (e.key === 'Escape') { setLinkedWalletEditingAddr(null); setLinkedWalletEditName(''); }
+                      }}
+                    />
+                    <IconButton
+                      size="small" color="primary"
+                      onClick={() => handleSaveLinkedWalletName(wallet.walletAddress)}
+                      disabled={isSavingLinkedWalletName}
+                    >
+                      {isSavingLinkedWalletName
+                        ? <CircularProgress size={16} color="inherit" />
+                        : <Iconify icon="solar:check-circle-bold" width={20} />}
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => { setLinkedWalletEditingAddr(null); setLinkedWalletEditName(''); }}
+                      disabled={isSavingLinkedWalletName}
+                    >
+                      <Iconify icon="solar:close-circle-bold" width={20} />
+                    </IconButton>
+                  </Stack>
+                ) : (
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ flex: 1 }}>
+                      {wallet.walletName || t('Unnamed account')}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => { setLinkedWalletEditingAddr(wallet.walletAddress); setLinkedWalletEditName(wallet.walletName || ''); }}
+                    >
+                      <Iconify icon="solar:pen-bold" width={16} />
+                    </IconButton>
+                  </Stack>
+                )}
+
+                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                  {format.fTruncate(wallet.walletAddress, 28)}
+                </Typography>
+
+                {noKeyReturning && (
+                  <Box sx={{ mt: 1.5 }}>
+                    <Button
+                      size="small" variant="outlined"
+                      onClick={() => { setWizardWalletAddress(wallet.walletAddress); setStep('import-wallet'); }}
+                      sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}
+                    >
+                      {t('Reconnect')}
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            ))}
+          </Stack>
+        )}
+
+        <Divider>
+          <Typography variant="caption" color="text.disabled" sx={{ px: 1 }}>{t('Add another wallet')}</Typography>
+        </Divider>
+
+        <Stack spacing={1}>
+          <Box
+            onClick={() => setStep('import-wallet')}
+            sx={{
+              p: 1.5, borderRadius: 2, cursor: 'pointer',
+              border: `1px solid ${theme.palette.divider}`,
+              '&:hover': { borderColor: theme.palette.text.primary, bgcolor: alpha(theme.palette.text.primary, 0.02) },
+              transition: 'all 0.15s',
+            }}
+          >
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <Box sx={{ width: 34, height: 34, borderRadius: '8px', bgcolor: alpha(theme.palette.text.primary, 0.06), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Iconify icon="solar:key-bold" width={18} sx={{ color: 'text.primary' }} />
+              </Box>
+              <Box flex={1} minWidth={0}>
+                <Typography variant="body2" fontWeight={600}>{t('Import a Normal wallet')}</Typography>
+                <Typography variant="caption" color="text.secondary">{t('24-word phrase or private key')}</Typography>
+              </Box>
+              <Iconify icon="mingcute:right-line" sx={{ color: 'text.disabled', flexShrink: 0 }} />
+            </Stack>
+          </Box>
+
+          <Box
+            onClick={handleConnectStellarWallet}
+            sx={{
+              p: 1.5, borderRadius: 2, cursor: 'pointer',
+              border: `1.5px solid ${alpha(theme.palette.warning.main, 0.5)}`,
+              bgcolor: alpha(theme.palette.warning.main, 0.02),
+              '&:hover': { bgcolor: alpha(theme.palette.warning.main, 0.06) },
+              transition: 'background 0.15s',
+            }}
+          >
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <Box sx={{ width: 34, height: 34, borderRadius: '8px', bgcolor: alpha(theme.palette.warning.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Iconify icon="solar:card-bold" width={18} sx={{ color: 'warning.dark' }} />
+              </Box>
+              <Box flex={1} minWidth={0}>
+                <Typography variant="body2" fontWeight={600}>{t('Connect a crypto wallet')}</Typography>
+                <Typography variant="caption" color="text.secondary">{t('Freighter, Ledger, xBull, Lobstr, and more')}</Typography>
+              </Box>
+              <Iconify icon="mingcute:right-line" sx={{ color: 'text.disabled', flexShrink: 0 }} />
+            </Stack>
+          </Box>
+        </Stack>
+
+        <Stack spacing={1.5}>
+          {!isReturningUser && (
+            <Button
+              fullWidth variant="contained" size="large"
+              onClick={() => { handleClose(); window.location.href = paths.savings; }}
+              sx={btnPrimary}
+            >
+              {t('Deposit USDC →')}
+            </Button>
+          )}
+          <Button fullWidth variant="outlined" size="large" onClick={handleClose} sx={btnOutlined}>
+            {!isReturningUser ? t('Explore my wallet') : t('Done')}
+          </Button>
+        </Stack>
+      </Stack>
+    );
+  };
+
   const renderContent = () => {
     switch (step) {
       case 'sign-in': return renderSignIn();
@@ -1292,6 +1514,7 @@ export default function OnboardingWizard({
       case 'fund-xlm': return renderFundXlm();
       case 'add-trustline': return renderAddTrustline();
       case 'all-set': return renderAllSet();
+      case 'linked-accounts': return renderLinkedAccounts();
       default: return null;
     }
   };
