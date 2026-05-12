@@ -215,7 +215,7 @@ export default function OnboardingWizard({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // ── Import-wallet state ───────────────────────────────────────────────────
-  const [importType, setImportType] = useState<ImportType>('private-key');
+  const [importType, setImportType] = useState<ImportType>('mnemonic');
   const [importMnemonic, setImportMnemonic] = useState('');
   const [importPrivateKey, setImportPrivateKey] = useState('');
   const [importMnemonicError, setImportMnemonicError] = useState('');

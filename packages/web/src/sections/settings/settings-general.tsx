@@ -1,37 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 import { supabase } from '@/lib/createSupabaseClient';
 import { buildAuthHeaders } from '@/utils/http';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useSnackbar } from '@/components/template/snackbar';
+import { alpha, useTheme } from '@mui/material/styles';
 
+import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import Switch from '@mui/material/Switch';
 import Divider from '@mui/material/Divider';
+import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import CardContent from '@mui/material/CardContent';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import CircularProgress from '@mui/material/CircularProgress';
+
+import { Iconify } from '@/components/template/iconify';
 
 export function SettingsGeneral() {
   const { t } = useTranslate();
+  const theme = useTheme();
   const { session } = useSupabaseAuth();
   const { enqueueSnackbar } = useSnackbar();
 
   const user = session?.user;
   const userMetadata = user?.user_metadata as
-    | { picture?: string; avatar_url?: string; name?: string; marketing_opt_in?: boolean }
+    | { picture?: string; avatar_url?: string; name?: string }
     | undefined;
 
-  const [marketingOptIn, setMarketingOptIn] = useState<boolean>(
-    userMetadata?.marketing_opt_in ?? false
-  );
+  const [marketingOptIn, setMarketingOptIn] = useState<boolean>(false);
+  const [isFetchingOptIn, setIsFetchingOptIn] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch live opt-in status on mount — session.user.user_metadata can be stale
+  useEffect(() => {
+    const fetchOptIn = async () => {
+      try {
+        const headers = await buildAuthHeaders();
+        const res = await fetch('/api/marketing/opt-in', { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setMarketingOptIn(Boolean(data.optIn));
+        }
+      } catch {
+        // leave as false
+      } finally {
+        setIsFetchingOptIn(false);
+      }
+    };
+    fetchOptIn();
+  }, []);
 
   if (!user) return null;
 
@@ -66,79 +88,115 @@ export function SettingsGeneral() {
   };
 
   return (
-    <Card>
-      <CardContent>
-        <Stack spacing={3}>
-          <Stack direction="row" spacing={3} alignItems="center">
-            <Avatar src={userAvatar} alt={displayName} sx={{ width: 80, height: 80 }} />
-            <Stack spacing={1}>
-              <Typography variant="h6">{displayName}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {userEmail}
-              </Typography>
-            </Stack>
-          </Stack>
-
-          <Stack spacing={2}>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color="text.secondary">
-                {t('Display Name')}
-              </Typography>
-              <Typography variant="body2">{displayName}</Typography>
+    <Stack spacing={3}>
+      {/* Profile card */}
+      <Card>
+        <CardContent>
+          <Stack spacing={3}>
+            <Stack direction="row" spacing={2.5} alignItems="center">
+              <Avatar src={userAvatar} alt={displayName} sx={{ width: 72, height: 72 }} />
+              <Stack spacing={0.5}>
+                <Typography variant="h6">{displayName}</Typography>
+                <Typography variant="body2" color="text.secondary">{userEmail}</Typography>
+              </Stack>
             </Stack>
 
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color="text.secondary">
-                {t('Email')}
-              </Typography>
-              <Typography variant="body2">{userEmail}</Typography>
-            </Stack>
+            <Divider />
 
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color="text.secondary">
-                {t('Account Created')}
-              </Typography>
-              <Typography variant="body2">{createdAt}</Typography>
-            </Stack>
-
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color="text.secondary">
-                {t('Auth Provider')}
-              </Typography>
-              <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                {authProvider}
-              </Typography>
-            </Stack>
-          </Stack>
-
-          <Divider />
-
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Stack spacing={0.5}>
-              <Typography variant="body2" fontWeight={500}>
-                {t('Product updates')}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t('Receive emails about new features and improvements.')}
-              </Typography>
-            </Stack>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              {isSaving && <CircularProgress size={16} />}
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={marketingOptIn}
-                    onChange={(e) => handleMarketingToggle(e.target.checked)}
-                    disabled={isSaving}
-                  />
-                }
-                label=""
-                sx={{ mr: 0 }}
+            <Stack spacing={1.5}>
+              <Row label={t('Display name')} value={displayName} />
+              <Row label={t('Email')} value={userEmail} />
+              <Row label={t('Account created')} value={createdAt} />
+              <Row
+                label={t('Auth provider')}
+                value={authProvider.charAt(0).toUpperCase() + authProvider.slice(1)}
               />
             </Stack>
           </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Notifications card */}
+      <Card>
+        <CardContent>
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" fontWeight={600}>{t('Notifications')}</Typography>
+
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.divider}`,
+                bgcolor: marketingOptIn
+                  ? alpha(theme.palette.primary.main, 0.04)
+                  : 'transparent',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 1.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: marketingOptIn
+                      ? alpha(theme.palette.primary.main, 0.12)
+                      : alpha(theme.palette.text.primary, 0.06),
+                    transition: 'background-color 0.2s',
+                  }}
+                >
+                  <Iconify
+                    icon="solar:mailbox-bold"
+                    width={22}
+                    sx={{
+                      color: marketingOptIn ? 'primary.main' : 'text.secondary',
+                      transition: 'color 0.2s',
+                    }}
+                  />
+                </Box>
+
+                <Stack spacing={0.25}>
+                  <Typography variant="body2" fontWeight={500}>
+                    {t('Product updates')}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {t('New features, improvements, and announcements sent to')}{' '}
+                    <Typography component="span" variant="caption" fontWeight={500} color="text.primary">
+                      {userEmail}
+                    </Typography>
+                  </Typography>
+                </Stack>
+              </Stack>
+
+              {isFetchingOptIn ? (
+                <Skeleton variant="rounded" width={44} height={24} sx={{ borderRadius: 3, flexShrink: 0 }} />
+              ) : (
+                <Switch
+                  checked={marketingOptIn}
+                  onChange={(e) => handleMarketingToggle(e.target.checked)}
+                  disabled={isSaving}
+                  sx={{ flexShrink: 0 }}
+                />
+              )}
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Stack>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Typography variant="body2" color="text.secondary">{label}</Typography>
+      <Typography variant="body2">{value}</Typography>
+    </Stack>
   );
 }
