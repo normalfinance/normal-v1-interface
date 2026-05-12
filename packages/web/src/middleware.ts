@@ -3,8 +3,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 // import { logger } from '@normalfinance/utils';
 
-// const isDev = process.env.NODE_ENV === 'development';
-const isDev = true;
+const isDev = process.env.NODE_ENV === 'development';
 
 export const logger = {
   log: isDev ? console.log : () => {},
@@ -197,7 +196,6 @@ function setCacheResponse(response: NextResponse, geoData: any): void {
 export async function middleware(req: NextRequest) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
-  console.log('request', req);
   logger.log(`\n[${requestId}] MIDDLEWARE START - Path: ${req.nextUrl.pathname}`);
   logger.log(`⏱[${requestId}] Start time: ${new Date().toISOString()}`);
 

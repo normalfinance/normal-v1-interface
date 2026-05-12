@@ -344,6 +344,9 @@ export default function OnboardingWizard({
       stopPolling();
       if (savingsUsdcIssuer && !hasUsdcTrustline) {
         setStep('add-trustline');
+      } else if (isReturningUser) {
+        fullReset();
+        onClose();
       } else {
         setStep('linked-accounts');
       }
@@ -362,8 +365,13 @@ export default function OnboardingWizard({
   // Auto-advance from add-trustline when trustline added
   useEffect(() => {
     if (step !== 'add-trustline' || !hasUsdcTrustline) return;
-    setStep('linked-accounts');
-  }, [step, hasUsdcTrustline]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isReturningUser) {
+      fullReset();
+      onClose();
+    } else {
+      setStep('linked-accounts');
+    }
+  }, [step, hasUsdcTrustline, isReturningUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (!open) stopPolling(); }, [open]);
 
@@ -600,7 +608,12 @@ export default function OnboardingWizard({
       await connectStellarWallet();
       const addr = persist.wallet.address || stellarPublicKey;
       if (addr) setWizardWalletAddress(addr);
-      setStep('fund-xlm');
+      if (step === 'linked-accounts') {
+        enqueueSnackbar(t('Wallet connected!'), { variant: 'success' });
+        handleClose();
+      } else {
+        setStep('fund-xlm');
+      }
     } catch (err: any) {
       logger.error('[OnboardingWizard] Stellar connect failed:', err);
       enqueueSnackbar(err.message || t('Failed to connect wallet'), { variant: 'error' });
