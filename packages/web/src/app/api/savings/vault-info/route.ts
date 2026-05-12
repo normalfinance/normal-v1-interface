@@ -41,8 +41,6 @@ export async function GET(request: NextRequest) {
       sdk.getVaultAPY(VAULT_ADDRESS),
     ]);
 
-    console.log('vaultInfo', vaultInfo);
-
     // Derive total deposits from totalManagedFunds (values are in stroops, 7 decimals)
     const DECIMALS = 1e7;
     const totalDeposits = Array.isArray(vaultInfo.totalManagedFunds)
@@ -100,8 +98,6 @@ export async function GET(request: NextRequest) {
           earnings: earnings.toString(),
         };
       } catch (err) {
-        // User may not have a position yet — that's fine
-        console.warn('Could not fetch user vault balance:', err);
         userPosition = {
           shares: '0',
           currentValue: '0',

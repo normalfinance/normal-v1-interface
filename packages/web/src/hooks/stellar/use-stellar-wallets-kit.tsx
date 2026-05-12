@@ -84,15 +84,22 @@ export const useStellarWalletsKit = () => {
           walletKitStore.kit.setWallet(walletId);
           walletKitStore.setSelectedWallet(walletId);
 
-          await new Promise((resolve) => setTimeout(resolve, 500));
-
-          const address = await walletKitStore.kit.getAddress();
-          if (address?.address) {
-            walletKitStore.setPublicKey(address.address);
+          // Use the persisted address directly to avoid triggering a wallet
+          // extension popup on every page navigation. Wallets like Lobstr show
+          // a signature/auth request for every getAddress() call, which would
+          // fire on each tab switch. We only call getAddress() when there is
+          // no stored address (e.g. first-time connect or after disconnect).
+          const storedAddress = persistStore.wallet.address;
+          if (storedAddress) {
+            walletKitStore.setPublicKey(storedAddress);
             walletKitStore.setConnected(true);
-
-            if (address.address !== persistStore.wallet.address) {
-              await persistStore.connectWallet(address.address, storedWalletType);
+          } else {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            const result = await walletKitStore.kit.getAddress();
+            if (result?.address) {
+              walletKitStore.setPublicKey(result.address);
+              walletKitStore.setConnected(true);
+              await persistStore.connectWallet(result.address, storedWalletType);
             }
           }
         } catch (restoreError) {
@@ -124,8 +131,6 @@ export const useStellarWalletsKit = () => {
     walletKitStore.publicKey,
     walletKitStore.selectedWallet,
     walletKitStore.kit,
-    persistStore,
-    walletKitStore,
   ]);
 
   const connectWallet = useCallback(async () => {

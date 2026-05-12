@@ -152,7 +152,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
   const handleMaxClick = () => {
     if (!sendToken) return;
     if (isFiatMode) {
-      setAmount(spendableBalance.multipliedBy(sendToken.price).toFixed(2));
+      setAmount(spendableBalance.multipliedBy(sendToken.price).toFixed(2, BigNumber.ROUND_DOWN));
     } else {
       setAmount(getMaxAmount(sendToken, false, xlmReserve));
     }
@@ -249,7 +249,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
                       <Typography variant="caption" color="text.secondary">
                         {t('Available:')}{' '}
                         <Box component="span" fontWeight={600} color="text.primary">
-                          {spendableBalance.toFixed(Math.min(sendToken.decimals, 4))} {sendToken.symbol}
+                          {spendableBalance.toFixed(Math.min(sendToken.decimals, 4), BigNumber.ROUND_DOWN)} {sendToken.symbol}
                         </Box>
                         {' '}
                         <Box component="span" color="text.disabled">

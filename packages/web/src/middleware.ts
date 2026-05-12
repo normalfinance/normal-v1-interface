@@ -3,8 +3,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 // import { logger } from '@normalfinance/utils';
 
-// const isDev = process.env.NODE_ENV === 'development';
-const isDev = true;
+const isDev = process.env.NODE_ENV === 'development';
 
 export const logger = {
   log: isDev ? console.log : () => {},
@@ -195,46 +194,21 @@ function setCacheResponse(response: NextResponse, geoData: any): void {
 }
 
 export async function middleware(req: NextRequest) {
-  const startTime = Date.now();
-  const requestId = Math.random().toString(36).substring(7);
-  console.log('request', req);
-  logger.log(`\n[${requestId}] MIDDLEWARE START - Path: ${req.nextUrl.pathname}`);
-  logger.log(`⏱[${requestId}] Start time: ${new Date().toISOString()}`);
-
   // Skip geo-blocking for mobile app requests
   if (req.headers.get('x-mobile-app') === 'true') {
-    logger.log(`[${requestId}] Mobile app request, skipping geo-blocking`);
     return NextResponse.next();
   }
 
-  // Handle referral tracking first
-  logger.log(`[${requestId}] Handling referral tracking...`);
-  // const referralResponse = handleReferralTracking(req);
-  // if (referralResponse) {
-  //   logger.log(`[${requestId}] Referral response created`);
-  // }
-
   let ip =
-    req.headers.get('x-real-ip') || // many reverse proxies
+    req.headers.get('x-real-ip') ||
     req.headers.get('X-Forwarded-For')?.split(',')[0] ||
     req.ip;
 
-  logger.log(`[${requestId}] Incoming IP: ${ip}`);
-  logger.log(`[${requestId}] Active requests count: ${activeRequests.size}`);
-
-  // Log active requests for debugging
-  if (activeRequests.size > 0) {
-    logger.log(`🔄 [${requestId}] Active IPs:`, Array.from(activeRequests.keys()));
-  }
-
   if (process.env.NODE_ENV === 'development' && (ip === '::1' || ip === '127.0.0.1')) {
     ip = '8.8.8.8';
-    logger.log(`[${requestId}] DEV MODE: Using test IP: ${ip}`);
   }
 
   if (!ip) {
-    const duration = Date.now() - startTime;
-    logger.log(`[${requestId}] No IP detected, skipping geo lookup (${duration}ms)`);
     return NextResponse.next();
   }
 
@@ -383,8 +357,6 @@ export async function middleware(req: NextRequest) {
   //   logger.log(`[${requestId}] Cleaned up request. Remaining active: ${remainingActive}`);
   // }
 
-  const totalDuration = Date.now() - startTime;
-  logger.log(`[${requestId}] MIDDLEWARE END - Total duration: ${totalDuration}ms\n`);
   return NextResponse.next();
 }
 

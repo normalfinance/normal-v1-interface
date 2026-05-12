@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     // Check if admin bypass (admin_secret as auth token)
     const isAdminRequest = accessToken === process.env.ADMIN_SECRET;
     const isDev = process.env.NODE_ENV === 'development';
+    const isTestnet = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() !== 'mainnet';
     const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
 
     // Parse and validate request body first (needed for admin userId)
@@ -81,8 +82,8 @@ export async function POST(request: NextRequest) {
       // Normal request: authenticate user
       userId = user.id;
 
-      // Check rate limit for non-admin requests
-      if (!isDev || forceRateLimit) {
+      // Check rate limit for non-admin requests (skipped on dev/testnet unless FORCE_RATE_LIMIT=true)
+      if ((!isDev && !isTestnet) || forceRateLimit) {
         const rateLimitResult = await faucetRateLimiter.reserve(userId);
         if (rateLimitResult.degraded) {
           logger.warn('[API /wallets/link] Rate limiter unavailable, allowing wallet creation:', {
@@ -96,14 +97,14 @@ export async function POST(request: NextRequest) {
           });
           return NextResponse.json(
             {
-              error: 'You can only create 2 wallets per week. Try again next week.',
+              error: 'You can only create 3 wallets per day. Try again tomorrow.',
               reset: rateLimitResult.reset,
             },
             { status: 429 }
           );
         }
-      } else if (isDev) {
-        logger.log('[API /wallets/link] Dev mode: skipping rate limit', {
+      } else {
+        logger.log('[API /wallets/link] Dev/testnet mode: skipping rate limit', {
           userId: userId.substring(0, 8) + '...',
         });
       }

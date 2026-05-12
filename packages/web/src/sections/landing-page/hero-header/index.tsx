@@ -220,6 +220,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
             </Box>
 
             <Typography
+              component="div"
               variant="body1"
               color="text.secondary"
               sx={{ maxWidth: 340, mx: 'auto', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}

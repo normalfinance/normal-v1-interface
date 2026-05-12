@@ -80,6 +80,28 @@ export function createStellarWalletKitActions(
         ],
       });
 
+      // WalletConnectModal.initUi() asynchronously creates <wcm-modal> and
+      // appends it to document.body. Its internal overlay uses the CSS custom
+      // property --wcm-z-index (default: 89) for its z-index, which puts it
+      // behind MUI dialogs (1300). CSS custom properties propagate into shadow
+      // DOM, so setting --wcm-z-index on the host element fixes the stacking.
+      // We watch once at init time because the element is added here, not
+      // when the user later clicks "Connect a crypto wallet".
+      if (typeof document !== 'undefined') {
+        const wcmObserver = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            for (const node of Array.from(mutation.addedNodes)) {
+              if ((node as HTMLElement).tagName?.toLowerCase() === 'wcm-modal') {
+                (node as HTMLElement).style.setProperty('--wcm-z-index', '1400');
+                wcmObserver.disconnect();
+                return;
+              }
+            }
+          }
+        });
+        wcmObserver.observe(document.body, { childList: true });
+      }
+
       set({ kit, isInitialized: true });
     } catch (error) {
       logger.error('Failed to initialize wallet kit:', error);
@@ -88,17 +110,17 @@ export function createStellarWalletKitActions(
   };
 
   const connectWallet = async (persistStore?: any) => {
-    const { isConnecting, isModalOpen, connectionPromise, kit } = get();
+    const { isConnecting, isModalOpen, kit } = get();
 
     if (typeof window === 'undefined') {
       throw new Error('Wallet connection not available on server-side');
     }
 
     if (isConnecting || isModalOpen) {
-      if (connectionPromise) {
-        await connectionPromise;
-      }
-      return;
+      // WalletConnect's getAddress() never rejects when the QR modal is closed
+      // by the user, leaving isConnecting/isModalOpen stuck as true. When the
+      // user clicks "Connect" again we treat it as a reset of the stale attempt.
+      set({ isConnecting: false, isModalOpen: false, connectionPromise: null });
     }
 
     if (!kit) {
@@ -106,6 +128,23 @@ export function createStellarWalletKitActions(
     }
 
     set({ isConnecting: true, isModalOpen: true });
+
+    // Lift the kit's wallet-picker modal above MUI dialogs (z-index 1300).
+    // stellar-wallets-modal hardcodes z-index: 990 in its shadow DOM styles;
+    // setting z-index on the host element overrides the :host stacking context.
+    // (wcm-modal is handled separately at init time via --wcm-z-index CSS var.)
+    const modalObserver = typeof document !== 'undefined'
+      ? new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            for (const node of Array.from(mutation.addedNodes)) {
+              if ((node as HTMLElement).tagName?.toLowerCase() === 'stellar-wallets-modal') {
+                (node as HTMLElement).style.zIndex = '1400';
+              }
+            }
+          }
+        })
+      : null;
+    modalObserver?.observe(document.body, { childList: true });
 
     const newConnectionPromise = new Promise<void>((resolve, reject) => {
       setTimeout(() => {
@@ -187,8 +226,20 @@ export function createStellarWalletKitActions(
               }
 
               resolve();
-            } catch (error) {
-              reject(error);
+            } catch (error: any) {
+              // xBull (and potentially others) throw a specific error when the
+              // browser extension is not installed. Normalise it to a clear message.
+              const msg: string = error?.message ?? '';
+              if (
+                msg.includes("hasn't been set upp") ||
+                msg.includes("hasn't been set up") ||
+                msg.includes('not installed') ||
+                msg.includes('extension not found')
+              ) {
+                reject(new Error(`${wallet.name} extension is not installed. Please install it and try again.`));
+              } else {
+                reject(error);
+              }
             }
           },
           onClosed: (error) => {
@@ -209,6 +260,7 @@ export function createStellarWalletKitActions(
     } catch (error) {
       throw error;
     } finally {
+      modalObserver?.disconnect();
       set({
         isConnecting: false,
         isModalOpen: false,

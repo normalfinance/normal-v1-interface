@@ -6,20 +6,21 @@ import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useUserActivity } from '@/hooks';
+import { useUserActivity, useStellarConfig } from '@/hooks';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, format, logger } from '@normalfinance/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
+import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   getLinkedWallets,
   type LinkedWallet,
-  checkWalletCreationLimit,
 } from '@/services/linked-wallets';
 import {
   useNormalWallet,
@@ -27,6 +28,7 @@ import {
   NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,
 } from '@/hooks/stellar/use-normal-wallet';
 
+import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
   Stack,
@@ -42,7 +44,7 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
-import AuthLoginModal from '@/components/_common/auth-login-modal';
+import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
@@ -136,9 +138,12 @@ export type AccountDrawerProps = IconButtonProps;
 export function AccountDrawer(props: AccountDrawerProps) {
   /*  stores ------------------------------------------------------ */
   const persist = usePersistStore();
+  const theme = useTheme();
   const { t } = useTranslate();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const config = useStellarConfig();
+  const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
@@ -171,7 +176,18 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const connectedAddress = persist.wallet.address || publicKey || normalPublicKey;
   const isWalletConnected = !!connectedAddress || isConnected || isNormalConnected;
 
+  // Only fetch account status while the drawer is open and a wallet is connected
+  const { isLoading: isCheckingSetup, accountExists, hasUsdcTrustline } = useAccountStatus(
+    open && connectedAddress ? connectedAddress : '',
+    { assetIssuer: savingsUsdcIssuer }
+  );
+  const isSetupIncomplete =
+    !!connectedAddress &&
+    !isCheckingSetup &&
+    (!accountExists || !!(savingsUsdcIssuer && !hasUsdcTrustline));
+
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [wizardInitialStep, setWizardInitialStep] = useState<WizardStep | undefined>(undefined);
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
@@ -179,7 +195,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const [showImportOptionInSelection, setShowImportOptionInSelection] = useState(false);
   const [resetEmail, setResetEmail] = useState<string | null>(null);
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
-  const [isCheckingRateLimit, setIsCheckingRateLimit] = useState(false);
 
   const handleDisconnect = async () => {
     if (isDisconnecting) {
@@ -346,45 +361,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     onClose();
   };
 
-  /** Format remaining time until rate limit reset */
-  const formatRateLimitReset = (resetTimestamp: number): string => {
-    const diffMs = resetTimestamp - Date.now();
-    if (diffMs <= 0) return 'now';
-
-    const days = Math.floor(diffMs / 86400000);
-    const hours = Math.floor((diffMs % 86400000) / 3600000);
-
-    const parts: string[] = [];
-    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
-    if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
-
-    return parts.length > 0 ? parts.join(', ') : 'less than an hour';
-  };
-
-  /** Handle Create New Account button click with rate limit check */
-  const handleCreateNewAccountClick = useCallback(async () => {
-    if (isCheckingRateLimit) return;
-    setIsCheckingRateLimit(true);
-
-    try {
-      const status = await checkWalletCreationLimit();
-      if (!status.allowed) {
-        const remaining = formatRateLimitReset(status.reset);
-        enqueueSnackbar(t(`You can only create 2 wallets per week. Try again in ${remaining}.`), {
-          variant: 'warning',
-        });
-        return;
-      }
-      setShowCreateNormalWallet(true);
-    } catch (error) {
-      logger.error('[AccountDrawer] Error checking rate limit:', error);
-      // On error, allow opening modal - actual rate limit enforced on submit
-      setShowCreateNormalWallet(true);
-    } finally {
-      setIsCheckingRateLimit(false);
-    }
-  }, [isCheckingRateLimit, enqueueSnackbar, t]);
-
   const handleMainButtonClick = () => {
     if (session) {
       onOpen(); // Open drawer to show account info
@@ -404,6 +380,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
   };
 
   const hasHandledAuthRef = useRef(false);
+  // Tracks showLoginModal without adding it as an effect dependency (avoids
+  // the effect re-firing and immediately closing the modal on open).
+  const showLoginModalRef = useRef(showLoginModal);
+  useEffect(() => { showLoginModalRef.current = showLoginModal; }, [showLoginModal]);
 
   useEffect(() => {
     const passwordResetParam = searchParams.get('passwordResetSuccess');
@@ -427,7 +407,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
         hasHandledAuthRef.current = false;
       }
       setIsAutoConnecting(false);
-      if (!passwordResetSuccess) {
+      // Don't close the wizard if it's currently open handling its own flow
+      if (!passwordResetSuccess && !showLoginModalRef.current) {
         setShowLoginModal(false);
       }
       return;
@@ -441,10 +422,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
     const hadIntent = consumeLoginIntent();
     if (hadIntent && !hasHandledAuthRef.current) {
       hasHandledAuthRef.current = true;
-      setShowLoginModal(false);
-      void handlePostAuthFlow();
+      // Always use the wizard for post-auth wallet setup (covers OAuth redirects
+      // where the wizard was closed by the page reload).
+      // If it's already open it handles itself; if not, open it now.
+      if (!showLoginModalRef.current) {
+        setShowLoginModal(true);
+      }
     }
-  }, [authLoading, session, handlePostAuthFlow, passwordResetSuccess, isWalletConnected]);
+  }, [authLoading, session, passwordResetSuccess, isWalletConnected]);
 
   return (
     <>
@@ -483,7 +468,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           },
         }}
       >
-        {/* close (X) + logout — sticky header, never scrolls */}
+        {/* close (X) + action icons + logout — sticky header, never scrolls */}
         <Box
           sx={{
             flexShrink: 0,
@@ -501,6 +486,55 @@ export function AccountDrawer(props: AccountDrawerProps) {
           </Tooltip>
 
           {session && (
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto', mr: 1 }}>
+              <Tooltip title={isNavigatingToSettings ? t('Loading...') : t('Settings')}>
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={isNavigatingToSettings}
+                    onClick={() => {
+                      startNavigatingToSettings();
+                      router.push(paths.settings);
+                      stopNavigatingToSettings();
+                      onClose();
+                    }}
+                  >
+                    {isNavigatingToSettings
+                      ? <CircularProgress size={18} color="inherit" />
+                      : <Iconify icon="solar:settings-bold" />}
+                  </IconButton>
+                </span>
+              </Tooltip>
+
+              <Tooltip title={t('Create New Account')}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setWizardInitialStep('choose-wallet');
+                    setShowLoginModal(true);
+                    onClose();
+                  }}
+                >
+                  <Iconify icon="mingcute:add-line" />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title={t('Switch Wallets')}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setWizardInitialStep('linked-accounts');
+                    setShowLoginModal(true);
+                    onClose();
+                  }}
+                >
+                  <Iconify icon="solar:refresh-bold" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          )}
+
+          {session && (
             <Tooltip title={isDisconnecting ? 'Logging out...' : 'Logout'}>
               <Button
                 variant="soft"
@@ -508,7 +542,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 size="small"
                 onClick={handleDisconnect}
                 disabled={isDisconnecting}
-                sx={{ ml: 'auto' }}
                 data-testid="logout-button"
                 startIcon={<Iconify icon="solar:logout-2-bold" />}
               >
@@ -542,28 +575,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   )}
                 </Box>
               </Stack>
-              <Button
-                variant="soft"
-                color="primary"
-                fullWidth
-                startIcon={
-                  isNavigatingToSettings ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <Iconify icon="solar:settings-bold" />
-                  )
-                }
-                onClick={() => {
-                  startNavigatingToSettings();
-                  router.push(paths.settings);
-                  stopNavigatingToSettings();
-                  onClose();
-                }}
-                disabled={isNavigatingToSettings}
-                sx={{ mb: 1 }}
-              >
-                {isNavigatingToSettings ? t('Loading...') : t('Settings')}
-              </Button>
               {isAutoConnecting ? (
                 <Box
                   sx={{
@@ -581,78 +592,129 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 </Box>
               ) : isWalletConnected && connectedAddress ? (
                 <>
-                  <Stack spacing={1}>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      fullWidth
-                      startIcon={
-                        isCheckingRateLimit ? (
-                          <CircularProgress size={16} color="inherit" />
-                        ) : (
-                          <Iconify icon="mingcute:add-line" />
-                        )
-                      }
-                      onClick={handleCreateNewAccountClick}
-                      disabled={isCheckingRateLimit}
-                    >
-                      {t('Create New Account')}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      fullWidth
-                      startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => {
-                        setShowImportOptionInSelection(true);
-                        setShowWalletSelection(true);
+                  {isSetupIncomplete && (
+                    <Box
+                      sx={{
+                        mx: 1,
+                        mb: 0.5,
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: alpha(theme.palette.warning.main, 0.08),
+                        border: `1px solid ${alpha(theme.palette.warning.main, 0.25)}`,
                       }}
                     >
-                      {t('Switch Wallets')}
-                    </Button>
-                  </Stack>
+                      <Stack spacing={1.5}>
+                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                          <Iconify
+                            icon="solar:info-circle-bold"
+                            width={18}
+                            sx={{ color: 'warning.main', flexShrink: 0, mt: 0.15 }}
+                          />
+                          <Box>
+                            <Typography variant="subtitle2" sx={{ mb: 0.25 }}>
+                              {!accountExists ? t('Activate your wallet') : t('Add USDC trustline')}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {!accountExists
+                                ? t('Send 1+ XLM to activate your wallet on Stellar.')
+                                : t('One quick step to hold and earn USDC.')}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={() => { setShowLoginModal(true); onClose(); }}
+                          sx={{
+                            borderRadius: 1.5,
+                            bgcolor: 'warning.main',
+                            color: 'warning.contrastText',
+                            '&:hover': { bgcolor: 'warning.dark' },
+                            alignSelf: 'flex-start',
+                            fontSize: '0.8rem',
+                            px: 1.75,
+                          }}
+                        >
+                          {t('Continue setup')}
+                        </Button>
+                      </Stack>
+                    </Box>
+                  )}
                   <WalletConnected address={connectedAddress} drawerOpen={open} />
                 </>
               ) : (
-                <Box sx={{ px: 2, py: 4 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    {t('Account Setup')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    {t('Complete your account to start investing')}
-                  </Typography>
-                  <Stack spacing={1.5}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      onClick={handleConnectClick}
-                    >
-                      {t('Complete')}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      fullWidth
-                      startIcon={<Iconify icon="solar:refresh-bold" />}
-                      onClick={() => {
-                        setShowImportOptionInSelection(true);
-                        setShowWalletSelection(true);
-                      }}
-                    >
-                      {t('Switch Wallets')}
-                    </Button>
-                  </Stack>
+                <Box sx={{ px: 1, py: 3 }}>
+                  <Box
+                    sx={{
+                      border: 1,
+                      borderColor: 'warning.light',
+                      borderRadius: 2,
+                      p: 2.5,
+                      bgcolor: alpha(theme.palette.warning.main, 0.04),
+                    }}
+                  >
+                    <Stack spacing={2}>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 1.5,
+                            bgcolor: alpha(theme.palette.warning.main, 0.12),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Iconify
+                            icon="solar:rocket-bold"
+                            width={22}
+                            sx={{ color: 'warning.dark' }}
+                          />
+                        </Box>
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight={600}>
+                            {t('Account Setup')}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('Complete your setup to start investing')}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={() => {
+                          if (session) {
+                            setShowLoginModal(true);
+                          } else {
+                            handleConnectClick();
+                          }
+                        }}
+                        sx={{
+                          bgcolor: 'warning.main',
+                          color: 'warning.contrastText',
+                          '&:hover': { bgcolor: 'warning.dark' },
+                          borderRadius: 1.5,
+                        }}
+                      >
+                        {t('Continue setup')}
+                      </Button>
+                    </Stack>
+                  </Box>
                 </Box>
               )}
             </Stack>
           </Scrollbar>
         )}
       </Drawer>
-      <AuthLoginModal
+      <OnboardingWizard
         open={showLoginModal}
+        initialStep={wizardInitialStep}
         onClose={() => {
           setShowLoginModal(false);
+          setWizardInitialStep(undefined);
           setPasswordResetSuccess(false);
           setResetEmail(null);
         }}

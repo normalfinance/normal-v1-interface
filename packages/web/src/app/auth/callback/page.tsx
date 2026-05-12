@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { exchangeCodeForSession } from '@/services/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Box, Stack, Typography, CircularProgress } from '@mui/material';
+import { Box, Button, Stack, Typography, CircularProgress, Alert } from '@mui/material';
 
 type Status = 'pending' | 'success' | 'error';
 
@@ -13,6 +13,7 @@ const AuthCallbackPage = () => {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>('pending');
   const [message, setMessage] = useState('Completing sign-in...');
+  const [isPkceError, setIsPkceError] = useState(false);
 
   useEffect(() => {
     const code = searchParams.get('code');
@@ -32,8 +33,16 @@ const AuthCallbackPage = () => {
         router.replace(next);
       } catch (error) {
         setStatus('error');
-        const messageText = error instanceof Error ? error.message : 'Unable to complete sign-in.';
-        setMessage(messageText);
+        const errorMessage = error instanceof Error ? error.message : 'Unable to complete sign-in.';
+        const lc = errorMessage.toLowerCase();
+        if (lc.includes('pkce') || lc.includes('code verifier') || lc.includes('code_verifier')) {
+          setIsPkceError(true);
+          setMessage(
+            'This confirmation link was opened in a different browser than where you signed up. Please open the link in the original browser, or request a new confirmation email.'
+          );
+        } else {
+          setMessage(errorMessage);
+        }
       }
     };
 
@@ -50,9 +59,26 @@ const AuthCallbackPage = () => {
         px: 2,
       }}
     >
-      <Stack spacing={2} alignItems="center">
+      <Stack spacing={2} alignItems="center" sx={{ maxWidth: 440, width: '100%' }}>
         {status === 'pending' && <CircularProgress />}
-        <Typography variant="h6">{message}</Typography>
+        {status === 'error' ? (
+          <>
+            <Alert severity={isPkceError ? 'warning' : 'error'} sx={{ borderRadius: 2, width: '100%' }}>
+              {message}
+            </Alert>
+            {isPkceError && (
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                Tip: open this link in the browser where you created your account, or go back and
+                request a new confirmation email.
+              </Typography>
+            )}
+            <Button variant="outlined" onClick={() => router.replace('/')} sx={{ borderRadius: 2, mt: 1 }}>
+              Back to sign in
+            </Button>
+          </>
+        ) : (
+          <Typography variant="h6">{message}</Typography>
+        )}
       </Stack>
     </Box>
   );

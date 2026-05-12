@@ -131,7 +131,7 @@ const SendReview: React.FC<SendReviewProps> = ({
               sx={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }}
             />
             <Typography variant="h4" fontWeight={700}>
-              {tokenValue.toFixed(4)} {sendToken.symbol}
+              {BigNumber(tokenValue).toFixed(4, BigNumber.ROUND_DOWN)} {sendToken.symbol}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               ≈ {fCurrency(fiatValue)}
@@ -220,12 +220,12 @@ const SendReview: React.FC<SendReviewProps> = ({
               <Box sx={{ textAlign: 'right' }}>
                 {sendToken.symbol === 'XLM' ? (
                   <Typography variant="body2" fontWeight={700}>
-                    {(tokenValue + NETWORK_FEE_XLM).toFixed(4)} XLM
+                    {BigNumber(tokenValue).plus(NETWORK_FEE_XLM).toFixed(4, BigNumber.ROUND_DOWN)} XLM
                   </Typography>
                 ) : (
                   <>
                     <Typography variant="body2" fontWeight={700}>
-                      {tokenValue.toFixed(4)} {sendToken.symbol}
+                      {BigNumber(tokenValue).toFixed(4, BigNumber.ROUND_DOWN)} {sendToken.symbol}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       + {NETWORK_FEE_XLM} XLM {t('fee')}
@@ -283,7 +283,7 @@ const SendReview: React.FC<SendReviewProps> = ({
           disabled={!confirmed}
           sx={{ borderRadius: 2, fontWeight: 700 }}
         >
-          {t('Send')} {tokenValue.toFixed(4)} {sendToken.symbol}
+          {t('Send')} {BigNumber(tokenValue).toFixed(4, BigNumber.ROUND_DOWN)} {sendToken.symbol}
         </LoadingButton>
       </DialogActions>
     </Dialog>

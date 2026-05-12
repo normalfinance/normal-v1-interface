@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
 
     const rawIp = getClientIP(req);
     const isPrivateIp = !rawIp || rawIp === 'unknown' || /^(::1|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(rawIp);
+    // Only forward clientIp when it's a real public IP — Coinbase rejects private addresses.
     const clientIp = isPrivateIp ? undefined : rawIp;
 
     const body: Record<string, unknown> = {
@@ -44,10 +45,12 @@ export async function POST(req: NextRequest) {
 
     const text = await resp.text();
     if (!resp.ok) {
-      // Surface error body for debugging in your logs
-      logger.error('Coinbase session error:', resp.status, text);
+      logger.error('[coinbase/session] Coinbase API error:', resp.status, text);
+      // Try to parse Coinbase JSON error body, fall back to raw text
+      let errorPayload: unknown = text;
+      try { errorPayload = JSON.parse(text); } catch { /* keep raw string */ }
       return NextResponse.json(
-        { error: text || 'Session creation failed' },
+        { error: errorPayload || 'Session creation failed' },
         { status: resp.status }
       );
     }

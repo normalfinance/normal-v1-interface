@@ -22,21 +22,23 @@ export async function GET(request: NextRequest) {
     }
 
     const isDev = process.env.NODE_ENV === 'development';
+    const isTestnet = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() !== 'mainnet';
     const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
 
     logger.log('[API /wallets/check-limit] Rate limit config:', {
       isDev,
+      isTestnet,
       forceRateLimit,
       envValue: process.env.FORCE_RATE_LIMIT,
     });
 
-    if (isDev && !forceRateLimit) {
-      logger.log('[API /wallets/check-limit] Dev mode: skipping rate limit', {
+    if ((isDev || isTestnet) && !forceRateLimit) {
+      logger.log('[API /wallets/check-limit] Dev/testnet mode: skipping rate limit', {
         userId: user.id.substring(0, 8) + '...',
       });
       return NextResponse.json({
         allowed: true,
-        remaining: 2,
+        remaining: 3,
         reset: 0,
       });
     }

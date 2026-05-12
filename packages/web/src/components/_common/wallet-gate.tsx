@@ -8,7 +8,7 @@ import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import { Button } from '@mui/material';
 
-import AuthLoginModal from '@/components/_common/auth-login-modal';
+import OnboardingWizard from '@/components/_common/onboarding-wizard';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import WalletSelectionModal, {
   hasSeenWalletSelectionModal,
@@ -122,7 +122,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
           />
         </>
       )}
-      <AuthLoginModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <OnboardingWizard open={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </>
   );
 };
