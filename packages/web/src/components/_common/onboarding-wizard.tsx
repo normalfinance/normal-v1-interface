@@ -277,10 +277,25 @@ export default function OnboardingWizard({
   }, [passwordResetSuccess, open, resetEmail]);
 
   const hasHandledAuthRef = useRef(false);
+  const syncMarketingOptIn = useCallback(async (optIn: boolean) => {
+    try {
+      const headers = await buildAuthHeaders();
+      await fetch('/api/marketing/opt-in', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ optIn }),
+      });
+      await supabase.auth.updateUser({ data: { marketing_opt_in: optIn } });
+    } catch {
+      // best-effort — never block the wizard
+    }
+  }, []);
+
   const handleAfterAuth = useCallback(async () => {
     try {
       const wallets = await getLinkedWallets();
       if (wallets.length === 0) {
+        if (marketingConsent) syncMarketingOptIn(true);
         setStep('choose-wallet');
         return;
       }
@@ -299,7 +314,7 @@ export default function OnboardingWizard({
       logger.error('[OnboardingWizard] handleAfterAuth error:', err);
       setStep('choose-wallet');
     }
-  }, [connectWalletWithoutKeypair]);
+  }, [connectWalletWithoutKeypair, marketingConsent, syncMarketingOptIn]);
 
   useEffect(() => {
     if (!open) return;
