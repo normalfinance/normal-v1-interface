@@ -27,6 +27,7 @@ import { WalletPasswordProvider } from '@/providers/WalletPasswordProvider';
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
+import { Analytics } from '@vercel/analytics/next';
 import { ProgressBar } from '@/components/template/progress-bar';
 import { SnackbarProvider } from '@/components/template/snackbar';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
@@ -129,6 +130,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                         <ReferralProvider>
                           <MotionLazy>
                             <SnackbarProvider>
+                              <Analytics />
                               <ProgressBar />
                               <SettingsDrawer defaultSettings={defaultSettings} />
                               <AnnouncementProvider>
