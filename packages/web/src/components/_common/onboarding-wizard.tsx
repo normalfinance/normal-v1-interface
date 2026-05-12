@@ -1607,6 +1607,17 @@ export default function OnboardingWizard({
   };
 
   const renderContent = () => {
+    // Already have a session — handleAfterAuth is running. Show a spinner
+    // instead of flashing the sign-in form while we wait for the redirect.
+    if (step === 'sign-in' && (session || authHookLoading)) {
+      return (
+        <Stack alignItems="center" spacing={2} sx={{ py: 6 }}>
+          <CircularProgress size={36} />
+          <Typography variant="body2" color="text.secondary">{t('Loading your account…')}</Typography>
+        </Stack>
+      );
+    }
+
     switch (step) {
       case 'sign-in': return renderSignIn();
       case 'verify-email': return renderVerifyEmail();
