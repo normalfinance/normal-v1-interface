@@ -83,11 +83,8 @@ export function getStellarConfigForNetwork(network: NetworkType): NetworkConfig 
  */
 function getStellarConfig(): NetworkConfig {
   const network = getCurrentNetwork();
-  logger.log('[getStellarConfig] network', network);
   return getStellarConfigForNetwork(network);
 }
 
 // Export the current stellar configuration
 export const StellarConfig: NetworkConfig = getStellarConfig();
-
-logger.log('[StellarConfig] StellarConfig', StellarConfig);

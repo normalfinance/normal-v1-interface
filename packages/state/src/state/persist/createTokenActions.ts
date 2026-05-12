@@ -105,12 +105,6 @@ export const createTokenActions = (): TokenActions => {
         const network = useNetworkStore.getState().network;
         const networkConfig = getStellarConfigForNetwork(network);
 
-        logger.log(
-          '[WALLET ACTIONS] Fetching API token for address:',
-          walletAddress,
-          'token:',
-          token.contract
-        );
 
         // TODO: add rate limiter
 
