@@ -20,6 +20,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    // Coinbase CDP rejects requests from private/localhost IPs.
+    // In local dev the Next.js server has no public IP, so skip the call
+    // and return a friendly signal the wizard can detect.
+    const isDev = process.env.NODE_ENV === 'development';
+    if (isDev) {
+      return NextResponse.json(
+        { error: 'DEV_PRIVATE_IP', message: 'Coinbase onramp is not available on localhost — use ngrok or deploy to test.' },
+        { status: 503 }
+      );
+    }
+
     const { jwt, host, path } = await getCdpBearerToken();
 
     const rawIp = getClientIP(req);
@@ -44,10 +55,12 @@ export async function POST(req: NextRequest) {
 
     const text = await resp.text();
     if (!resp.ok) {
-      // Surface error body for debugging in your logs
-      logger.error('Coinbase session error:', resp.status, text);
+      logger.error('[coinbase/session] Coinbase API error:', resp.status, text);
+      // Try to parse Coinbase JSON error body, fall back to raw text
+      let errorPayload: unknown = text;
+      try { errorPayload = JSON.parse(text); } catch { /* keep raw string */ }
       return NextResponse.json(
-        { error: text || 'Session creation failed' },
+        { error: errorPayload || 'Session creation failed' },
         { status: resp.status }
       );
     }

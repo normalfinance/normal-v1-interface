@@ -45,13 +45,31 @@ export const signInWithPassword = async (email: string, password: string, captch
 };
 
 export const signUpWithPassword = async (email: string, password: string, captchaToken: string) => {
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { captchaToken },
+    options: {
+      captchaToken,
+      emailRedirectTo: redirectTo,
+    },
   });
   if (error) throw error;
   return data;
+};
+
+export const resendConfirmationEmail = async (email: string) => {
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: redirectTo },
+  });
+  if (error) throw error;
 };
 
 export const signInWithOtp = async (email: string, captchaToken: string) => {

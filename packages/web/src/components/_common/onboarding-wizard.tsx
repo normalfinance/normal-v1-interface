@@ -17,7 +17,7 @@ import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import type { LinkedWallet } from '@/services/linked-wallets';
 import { getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
-import { signInWithGoogle, signInWithOtp, verifyOtp, signInWithPassword, signUpWithPassword, resetPassword } from '@/services/auth';
+import { signInWithGoogle, signInWithOtp, verifyOtp, signInWithPassword, signUpWithPassword, resetPassword, resendConfirmationEmail } from '@/services/auth';
 import {
   logger,
   format,
@@ -62,6 +62,7 @@ import { useSnackbar } from '@/components/template/snackbar';
 
 type WizardStep =
   | 'sign-in'
+  | 'verify-email'
   | 'choose-wallet'
   | 'new-wallet'
   | 'backup-phrase'
@@ -89,6 +90,7 @@ const TOTAL_DOTS = 8;
 // Maps each step to its dot position (0-indexed, 0–7)
 const STEP_DOT: Record<WizardStep, number> = {
   'sign-in': 0,
+  'verify-email': 0,
   'choose-wallet': 1,
   'new-wallet': 2,
   'backup-phrase': 3,
@@ -102,6 +104,7 @@ const STEP_DOT: Record<WizardStep, number> = {
 
 const STEP_NUMBER: Record<WizardStep, number> = {
   'sign-in': 1,
+  'verify-email': 1,
   'choose-wallet': 2,
   'new-wallet': 3,
   'backup-phrase': 4,
@@ -115,6 +118,7 @@ const STEP_NUMBER: Record<WizardStep, number> = {
 
 const STEP_LABEL: Record<WizardStep, string> = {
   'sign-in': 'SIGN IN',
+  'verify-email': 'VERIFY EMAIL',
   'choose-wallet': 'CHOOSE WALLET',
   'new-wallet': 'NEW WALLET',
   'backup-phrase': 'BACKUP PHRASE',
@@ -194,6 +198,8 @@ export default function OnboardingWizard({
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
+  const [isResendingConfirmation, setIsResendingConfirmation] = useState(false);
 
   // ── New-wallet state ──────────────────────────────────────────────────────
   const [newWalletStage, setNewWalletStage] = useState<NewWalletStage>('creating');
@@ -291,12 +297,13 @@ export default function OnboardingWizard({
   }, [connectWalletWithoutKeypair]);
 
   useEffect(() => {
-    if (session && step === 'sign-in' && !authHookLoading && !hasHandledAuthRef.current) {
+    if (!open) return;
+    if (session && (step === 'sign-in' || step === 'verify-email') && !authHookLoading && !hasHandledAuthRef.current) {
       hasHandledAuthRef.current = true;
       handleAfterAuth();
     }
     if (!session) hasHandledAuthRef.current = false;
-  }, [session, step, authHookLoading, handleAfterAuth]);
+  }, [open, session, step, authHookLoading, handleAfterAuth]);
 
   // Create wallet when entering new-wallet step
   useEffect(() => {
@@ -345,7 +352,6 @@ export default function OnboardingWizard({
       if (savingsUsdcIssuer && !hasUsdcTrustline) {
         setStep('add-trustline');
       } else if (isReturningUser) {
-        fullReset();
         onClose();
       } else {
         setStep('linked-accounts');
@@ -366,14 +372,13 @@ export default function OnboardingWizard({
   useEffect(() => {
     if (step !== 'add-trustline' || !hasUsdcTrustline) return;
     if (isReturningUser) {
-      fullReset();
       onClose();
     } else {
       setStep('linked-accounts');
     }
   }, [step, hasUsdcTrustline, isReturningUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { if (!open) stopPolling(); }, [open]);
+  useEffect(() => { if (!open) fullReset(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load wallets when entering linked-accounts step
   useEffect(() => {
@@ -432,6 +437,7 @@ export default function OnboardingWizard({
     setEmail(''); setPassword(''); setOtpToken(''); setOtpSent(false);
     setAuthError(null); setAuthMode('password'); setIsSignUp(false);
     setForgotPassword(false); setResetEmailSent(false); setCaptchaToken(null);
+    setVerifyEmailAddress(''); setIsResendingConfirmation(false);
     setMnemonic(null); setCreatedPublicKey(null); setWalletName('');
     setNewWalletStage('creating'); setBackupAcknowledged(false);
     setVerificationQuestions([]); setSelectedAnswers({}); setCurrentQuestionIndex(0);
@@ -445,7 +451,6 @@ export default function OnboardingWizard({
 
   const handleClose = () => {
     if (isLocked) return;
-    fullReset();
     onClose();
   };
 
@@ -473,9 +478,14 @@ export default function OnboardingWizard({
       await persistTos();
       if (authMode === 'password') {
         if (isSignUp) {
-          await signUpWithPassword(email.trim(), password, captchaToken);
-          setAuthError(t('Account created! Please check your email to verify your account.'));
+          const data = await signUpWithPassword(email.trim(), password, captchaToken);
           setIsAuthLoading(false);
+          if (!data.session) {
+            // Email confirmation required — show verify-email step
+            setVerifyEmailAddress(email.trim());
+            setStep('verify-email');
+          }
+          // If session exists (auto-confirm), the auth effect handles navigation
         } else {
           await signInWithPassword(email.trim(), password, captchaToken);
         }
@@ -512,6 +522,19 @@ export default function OnboardingWizard({
     try { await resetPassword(email.trim(), captchaToken); setResetEmailSent(true); }
     catch (err: any) { setAuthError(err.message || t('Unable to send password reset email.')); resetCaptcha(); }
     finally { setIsAuthLoading(false); }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!verifyEmailAddress) return;
+    setIsResendingConfirmation(true);
+    try {
+      await resendConfirmationEmail(verifyEmailAddress);
+      enqueueSnackbar(t('Confirmation email resent!'), { variant: 'success' });
+    } catch (err: any) {
+      enqueueSnackbar(err?.message || t('Failed to resend confirmation email'), { variant: 'error' });
+    } finally {
+      setIsResendingConfirmation(false);
+    }
   };
 
   // ── Wallet creation handlers ───────────────────────────────────────────────
@@ -636,13 +659,31 @@ export default function OnboardingWizard({
       if (!authSession) { win?.close(); return; }
       const headers = await buildAuthHeaders();
       const r = await fetch('/api/coinbase/session', { method: 'POST', headers, credentials: 'include', body: JSON.stringify({ address: wizardWalletAddress, asset: 'XLM' }) });
-      const { token: sessionToken, error } = await r.json();
-      if (error || !sessionToken) { win?.close(); return; }
+      const json = await r.json();
+      const { token: sessionToken, error, message: errorMessage } = json;
+      if (error || !sessionToken) {
+        win?.close();
+        logger.error('[OnboardingWizard] Coinbase session error:', error);
+        // Dev-mode: server has no public IP
+        if (error === 'DEV_PRIVATE_IP') {
+          enqueueSnackbar(t('Coinbase onramp is not available on localhost. Use ngrok or deploy to test.'), { variant: 'info', autoHideDuration: 8000 });
+          return;
+        }
+        // Parse Coinbase error — it may be a JSON string or plain string
+        let errorMsg = errorMessage || t('Failed to start Coinbase session');
+        try {
+          const inner = typeof error === 'string' ? JSON.parse(error) : error;
+          errorMsg = inner?.message || inner?.error_description || inner?.error || String(error);
+        } catch { errorMsg = String(errorMessage || error || errorMsg); }
+        enqueueSnackbar(errorMsg, { variant: 'error' });
+        return;
+      }
       const url = createCoinbasePayOnrampURL({ amountUsd: '5', assetSymbol: 'XLM', sessionToken, fiat: 'USD', sandbox: isTestnet(), path: 'buy/select-asset', redirectUrl: `${window.location.origin}${paths.savings}` });
       if (win) { win.opener = null; win.location.href = url; }
     } catch (err: any) {
       win?.close();
       logger.error('[OnboardingWizard] Coinbase error:', err);
+      enqueueSnackbar(err?.message || t('Failed to open Coinbase'), { variant: 'error' });
     } finally { setIsCoinbaseLoading(false); }
   };
 
@@ -864,6 +905,55 @@ export default function OnboardingWizard({
       <Typography variant="caption" color="text.disabled" align="center" display="block">
         Protected by Cloudflare Turnstile.
       </Typography>
+    </Stack>
+  );
+
+  const renderVerifyEmail = () => (
+    <Stack spacing={2.5}>
+      <Stack spacing={2} alignItems="center" sx={{ py: 1 }}>
+        <Box
+          sx={{
+            width: 72, height: 72, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #60a5fa 0%, #818cf8 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.35)',
+          }}
+        >
+          <Iconify icon="solar:letter-bold" width={36} sx={{ color: '#fff' }} />
+        </Box>
+        <Box textAlign="center">
+          <Typography variant="h4" fontWeight={700} gutterBottom>{t('Check your email')}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('We sent a confirmation link to')} <strong>{verifyEmailAddress}</strong>.
+            {' '}{t('Click the link to activate your account.')}
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" width={20} />} sx={{ borderRadius: 2 }}>
+        <Typography variant="body2">
+          {t('Open the link in')} <strong>{t('this browser')}</strong>{t(' so you\'re signed in automatically.')}
+        </Typography>
+      </Alert>
+
+      <Stack spacing={1.5}>
+        <Button
+          fullWidth variant="outlined" size="large"
+          onClick={handleResendConfirmation}
+          disabled={isResendingConfirmation}
+          startIcon={isResendingConfirmation ? <CircularProgress size={16} color="inherit" /> : <Iconify icon="solar:restart-bold" width={18} />}
+          sx={btnOutlined}
+        >
+          {isResendingConfirmation ? t('Resending…') : t('Resend confirmation email')}
+        </Button>
+        <Button
+          fullWidth variant="text" size="small"
+          onClick={() => { setStep('sign-in'); setVerifyEmailAddress(''); setAuthError(null); }}
+          sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
+        >
+          ← {t('Back to sign in')}
+        </Button>
+      </Stack>
     </Stack>
   );
 
@@ -1519,6 +1609,7 @@ export default function OnboardingWizard({
   const renderContent = () => {
     switch (step) {
       case 'sign-in': return renderSignIn();
+      case 'verify-email': return renderVerifyEmail();
       case 'choose-wallet': return renderChooseWallet();
       case 'new-wallet': return renderNewWallet();
       case 'backup-phrase': return renderBackupPhrase();

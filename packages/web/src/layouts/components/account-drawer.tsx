@@ -6,15 +6,17 @@ import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useUserActivity } from '@/hooks';
+import { useUserActivity, useStellarConfig } from '@/hooks';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, format, logger } from '@normalfinance/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
+import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   getLinkedWallets,
@@ -27,6 +29,7 @@ import {
   NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,
 } from '@/hooks/stellar/use-normal-wallet';
 
+import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
   Stack,
@@ -136,9 +139,12 @@ export type AccountDrawerProps = IconButtonProps;
 export function AccountDrawer(props: AccountDrawerProps) {
   /*  stores ------------------------------------------------------ */
   const persist = usePersistStore();
+  const theme = useTheme();
   const { t } = useTranslate();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const config = useStellarConfig();
+  const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
@@ -170,6 +176,16 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address || publicKey || normalPublicKey;
   const isWalletConnected = !!connectedAddress || isConnected || isNormalConnected;
+
+  // Only fetch account status while the drawer is open and a wallet is connected
+  const { isLoading: isCheckingSetup, accountExists, hasUsdcTrustline } = useAccountStatus(
+    open && connectedAddress ? connectedAddress : '',
+    { assetIssuer: savingsUsdcIssuer }
+  );
+  const isSetupIncomplete =
+    !!connectedAddress &&
+    !isCheckingSetup &&
+    (!accountExists || !!(savingsUsdcIssuer && !hasUsdcTrustline));
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
@@ -615,7 +631,57 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   </Typography>
                 </Box>
               ) : isWalletConnected && connectedAddress ? (
-                <WalletConnected address={connectedAddress} drawerOpen={open} />
+                <>
+                  {isSetupIncomplete && (
+                    <Box
+                      sx={{
+                        mx: 1,
+                        mb: 0.5,
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: alpha(theme.palette.warning.main, 0.08),
+                        border: `1px solid ${alpha(theme.palette.warning.main, 0.25)}`,
+                      }}
+                    >
+                      <Stack spacing={1.5}>
+                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                          <Iconify
+                            icon="solar:info-circle-bold"
+                            width={18}
+                            sx={{ color: 'warning.main', flexShrink: 0, mt: 0.15 }}
+                          />
+                          <Box>
+                            <Typography variant="subtitle2" sx={{ mb: 0.25 }}>
+                              {!accountExists ? t('Activate your wallet') : t('Add USDC trustline')}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {!accountExists
+                                ? t('Send 1+ XLM to activate your wallet on Stellar.')
+                                : t('One quick step to hold and earn USDC.')}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={() => { setShowLoginModal(true); onClose(); }}
+                          sx={{
+                            borderRadius: 1.5,
+                            bgcolor: 'warning.main',
+                            color: 'warning.contrastText',
+                            '&:hover': { bgcolor: 'warning.dark' },
+                            alignSelf: 'flex-start',
+                            fontSize: '0.8rem',
+                            px: 1.75,
+                          }}
+                        >
+                          {t('Continue setup')}
+                        </Button>
+                      </Stack>
+                    </Box>
+                  )}
+                  <WalletConnected address={connectedAddress} drawerOpen={open} />
+                </>
               ) : (
                 <Box sx={{ px: 2, py: 4 }}>
                   <Typography variant="h6" sx={{ mb: 2 }}>
