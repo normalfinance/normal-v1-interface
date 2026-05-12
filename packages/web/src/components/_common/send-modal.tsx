@@ -20,7 +20,6 @@ import {
 import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
-  Chip,
   Stack,
   Button,
   Dialog,
@@ -134,11 +133,14 @@ export default function SendModal({ open, onClose }: SendModalProps) {
     return coinAmount.multipliedBy(sendToken.price);
   }, [coinAmount, sendToken]);
 
+  const xlmPrice = useMemo(
+    () => BigNumber(tokens.find((t) => t.symbol === 'XLM')?.price ?? 0),
+    [tokens]
+  );
+
   const feeFiat = useMemo(
-    () => (sendToken ? BigNumber(NETWORK_FEE_XLM).multipliedBy(
-      sendToken.symbol === 'XLM' ? sendToken.price : 1
-    ) : BigNumber(0)),
-    [sendToken]
+    () => BigNumber(NETWORK_FEE_XLM).multipliedBy(xlmPrice),
+    [xlmPrice]
   );
 
   const insufficientBalance = coinAmount.gt(0) && spendableBalance.lt(coinAmount);

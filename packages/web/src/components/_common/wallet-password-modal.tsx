@@ -40,7 +40,7 @@ const TITLES: Record<WalletPasswordMode, string> = {
 
 const DESCRIPTIONS: Record<WalletPasswordMode, string> = {
   set: 'This password encrypts your wallet key locally. It is never sent to any server.',
-  enter: 'Enter your password to unlock your wallet.',
+  enter: 'Enter your encryption password to unlock your wallet. This is the password you set when you first created or imported your wallet.',
   migrate:
     'We have upgraded wallet security. Set a password to encrypt your wallet key locally. This password is never sent to any server.',
 };

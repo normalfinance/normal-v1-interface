@@ -8,6 +8,8 @@ import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
+import { BigNumber } from 'bignumber.js';
 
 import { LoadingButton } from '@mui/lab';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -64,7 +66,9 @@ const SendReview: React.FC<SendReviewProps> = ({
   const [confirmed, setConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const feeFiat = NETWORK_FEE_XLM * (sendToken.symbol === 'XLM' ? sendToken.price : 0);
+  const tokens = usePersistStore((s) => s.tokenState.tokens);
+  const xlmPrice = BigNumber(tokens.find((t) => t.symbol === 'XLM')?.price ?? 0);
+  const feeFiat = BigNumber(NETWORK_FEE_XLM).multipliedBy(xlmPrice);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(address).then(() => {
