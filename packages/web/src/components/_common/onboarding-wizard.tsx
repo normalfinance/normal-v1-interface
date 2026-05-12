@@ -60,7 +60,7 @@ import { useSnackbar } from '@/components/template/snackbar';
 // Types & Constants
 // ---------------------------------------------------------------------------
 
-type WizardStep =
+export type WizardStep =
   | 'sign-in'
   | 'verify-email'
   | 'choose-wallet'
@@ -144,6 +144,7 @@ export type OnboardingWizardProps = {
   onClose: () => void;
   passwordResetSuccess?: boolean;
   resetEmail?: string | null;
+  initialStep?: WizardStep;
 };
 
 export default function OnboardingWizard({
@@ -151,6 +152,7 @@ export default function OnboardingWizard({
   onClose,
   passwordResetSuccess = false,
   resetEmail = null,
+  initialStep,
 }: OnboardingWizardProps) {
   const theme = useTheme();
   const { t } = useTranslate();
@@ -239,6 +241,7 @@ export default function OnboardingWizard({
   const [linkedWalletEditingAddr, setLinkedWalletEditingAddr] = useState<string | null>(null);
   const [linkedWalletEditName, setLinkedWalletEditName] = useState('');
   const [isSavingLinkedWalletName, setIsSavingLinkedWalletName] = useState(false);
+  const [connectingWalletAddr, setConnectingWalletAddr] = useState<string | null>(null);
 
   // ── Returning-user flag ───────────────────────────────────────────────────
   // True when the user already has a linked wallet — we skip showing the
@@ -262,8 +265,9 @@ export default function OnboardingWizard({
     if (open) {
       setTosAccepted(disclaimer.accepted);
       setShowTosHelper(false);
+      if (initialStep) setStep(initialStep);
     }
-  }, [open, disclaimer.accepted]);
+  }, [open, disclaimer.accepted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (passwordResetSuccess && open) {
@@ -299,12 +303,14 @@ export default function OnboardingWizard({
 
   useEffect(() => {
     if (!open) return;
-    if (session && (step === 'sign-in' || step === 'verify-email') && !authHookLoading && !hasHandledAuthRef.current) {
+    // Skip auto-routing when the caller explicitly set an initialStep — they
+    // already know which step to show and handleAfterAuth would override it.
+    if (!initialStep && session && (step === 'sign-in' || step === 'verify-email') && !authHookLoading && !hasHandledAuthRef.current) {
       hasHandledAuthRef.current = true;
       handleAfterAuth();
     }
     if (!session) hasHandledAuthRef.current = false;
-  }, [open, session, step, authHookLoading, handleAfterAuth]);
+  }, [open, session, step, authHookLoading, handleAfterAuth, initialStep]);
 
   // Create wallet when entering new-wallet step
   useEffect(() => {
@@ -1406,6 +1412,24 @@ export default function OnboardingWizard({
     </Stack>
   );
 
+  const handleUseWallet = async (walletAddress: string) => {
+    if (!hasStoredNormalWalletKey()) {
+      setWizardWalletAddress(walletAddress);
+      setStep('import-wallet');
+      return;
+    }
+    setConnectingWalletAddr(walletAddress);
+    try {
+      await connectWalletWithoutKeypair(walletAddress);
+      enqueueSnackbar(t('Wallet switched'), { variant: 'success' });
+      onClose();
+    } catch (err: any) {
+      enqueueSnackbar(err?.message || t('Failed to switch wallet'), { variant: 'error' });
+    } finally {
+      setConnectingWalletAddr(null);
+    }
+  };
+
   const handleSaveLinkedWalletName = async (walletAddress: string) => {
     setIsSavingLinkedWalletName(true);
     try {
@@ -1518,17 +1542,33 @@ export default function OnboardingWizard({
                   {format.fTruncate(wallet.walletAddress, 28)}
                 </Typography>
 
-                {noKeyReturning && (
-                  <Box sx={{ mt: 1.5 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
+                  {wallet.walletAddress === persist.wallet.address ? (
+                    <Box
+                      sx={{
+                        px: 1, py: 0.25, borderRadius: 1,
+                        bgcolor: alpha(theme.palette.success.main, 0.12),
+                        border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                      }}
+                    >
+                      <Typography variant="caption" color="success.main" fontWeight={600}>
+                        {t('Active')}
+                      </Typography>
+                    </Box>
+                  ) : (
                     <Button
                       size="small" variant="outlined"
-                      onClick={() => { setWizardWalletAddress(wallet.walletAddress); setStep('import-wallet'); }}
+                      disabled={connectingWalletAddr === wallet.walletAddress}
+                      onClick={() => handleUseWallet(wallet.walletAddress)}
                       sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}
                     >
-                      {t('Reconnect')}
+                      {connectingWalletAddr === wallet.walletAddress ? (
+                        <CircularProgress size={14} color="inherit" sx={{ mr: 0.5 }} />
+                      ) : null}
+                      {noKeyReturning ? t('Reconnect') : t('Use wallet')}
                     </Button>
-                  </Box>
-                )}
+                  )}
+                </Stack>
               </Box>
             ))}
           </Stack>

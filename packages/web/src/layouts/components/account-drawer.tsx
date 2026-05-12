@@ -21,7 +21,6 @@ import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib
 import {
   getLinkedWallets,
   type LinkedWallet,
-  checkWalletCreationLimit,
 } from '@/services/linked-wallets';
 import {
   useNormalWallet,
@@ -45,7 +44,7 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
-import OnboardingWizard from '@/components/_common/onboarding-wizard';
+import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
@@ -188,6 +187,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     (!accountExists || !!(savingsUsdcIssuer && !hasUsdcTrustline));
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [wizardInitialStep, setWizardInitialStep] = useState<WizardStep | undefined>(undefined);
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
@@ -195,7 +195,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const [showImportOptionInSelection, setShowImportOptionInSelection] = useState(false);
   const [resetEmail, setResetEmail] = useState<string | null>(null);
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
-  const [isCheckingRateLimit, setIsCheckingRateLimit] = useState(false);
 
   const handleDisconnect = async () => {
     if (isDisconnecting) {
@@ -362,45 +361,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     onClose();
   };
 
-  /** Format remaining time until rate limit reset */
-  const formatRateLimitReset = (resetTimestamp: number): string => {
-    const diffMs = resetTimestamp - Date.now();
-    if (diffMs <= 0) return 'now';
-
-    const days = Math.floor(diffMs / 86400000);
-    const hours = Math.floor((diffMs % 86400000) / 3600000);
-
-    const parts: string[] = [];
-    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
-    if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
-
-    return parts.length > 0 ? parts.join(', ') : 'less than an hour';
-  };
-
-  /** Handle Create New Account button click with rate limit check */
-  const handleCreateNewAccountClick = useCallback(async () => {
-    if (isCheckingRateLimit) return;
-    setIsCheckingRateLimit(true);
-
-    try {
-      const status = await checkWalletCreationLimit();
-      if (!status.allowed) {
-        const remaining = formatRateLimitReset(status.reset);
-        enqueueSnackbar(t(`You can only create 2 wallets per week. Try again in ${remaining}.`), {
-          variant: 'warning',
-        });
-        return;
-      }
-      setShowCreateNormalWallet(true);
-    } catch (error) {
-      logger.error('[AccountDrawer] Error checking rate limit:', error);
-      // On error, allow opening modal - actual rate limit enforced on submit
-      setShowCreateNormalWallet(true);
-    } finally {
-      setIsCheckingRateLimit(false);
-    }
-  }, [isCheckingRateLimit, enqueueSnackbar, t]);
-
   const handleMainButtonClick = () => {
     if (session) {
       onOpen(); // Open drawer to show account info
@@ -546,26 +506,26 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 </span>
               </Tooltip>
 
-              <Tooltip title={isCheckingRateLimit ? t('Checking...') : t('Create New Account')}>
-                <span>
-                  <IconButton
-                    size="small"
-                    disabled={isCheckingRateLimit}
-                    onClick={handleCreateNewAccountClick}
-                  >
-                    {isCheckingRateLimit
-                      ? <CircularProgress size={18} color="inherit" />
-                      : <Iconify icon="mingcute:add-line" />}
-                  </IconButton>
-                </span>
+              <Tooltip title={t('Create New Account')}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setWizardInitialStep('choose-wallet');
+                    setShowLoginModal(true);
+                    onClose();
+                  }}
+                >
+                  <Iconify icon="mingcute:add-line" />
+                </IconButton>
               </Tooltip>
 
               <Tooltip title={t('Switch Wallets')}>
                 <IconButton
                   size="small"
                   onClick={() => {
-                    setShowImportOptionInSelection(true);
-                    setShowWalletSelection(true);
+                    setWizardInitialStep('linked-accounts');
+                    setShowLoginModal(true);
+                    onClose();
                   }}
                 >
                   <Iconify icon="solar:refresh-bold" />
@@ -751,8 +711,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
       </Drawer>
       <OnboardingWizard
         open={showLoginModal}
+        initialStep={wizardInitialStep}
         onClose={() => {
           setShowLoginModal(false);
+          setWizardInitialStep(undefined);
           setPasswordResetSuccess(false);
           setResetEmail(null);
         }}
