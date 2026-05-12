@@ -683,21 +683,66 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   <WalletConnected address={connectedAddress} drawerOpen={open} />
                 </>
               ) : (
-                <Box sx={{ px: 2, py: 4 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    {t('Account Setup')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    {t('Complete your account to start investing')}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    onClick={handleConnectClick}
+                <Box sx={{ px: 1, py: 3 }}>
+                  <Box
+                    sx={{
+                      border: 1,
+                      borderColor: 'warning.light',
+                      borderRadius: 2,
+                      p: 2.5,
+                      bgcolor: alpha(theme.palette.warning.main, 0.04),
+                    }}
                   >
-                    {t('Complete')}
-                  </Button>
+                    <Stack spacing={2}>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 1.5,
+                            bgcolor: alpha(theme.palette.warning.main, 0.12),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Iconify
+                            icon="solar:rocket-bold"
+                            width={22}
+                            sx={{ color: 'warning.dark' }}
+                          />
+                        </Box>
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight={600}>
+                            {t('Account Setup')}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('Complete your setup to start investing')}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={() => {
+                          if (session) {
+                            setShowLoginModal(true);
+                          } else {
+                            handleConnectClick();
+                          }
+                        }}
+                        sx={{
+                          bgcolor: 'warning.main',
+                          color: 'warning.contrastText',
+                          '&:hover': { bgcolor: 'warning.dark' },
+                          borderRadius: 1.5,
+                        }}
+                      >
+                        {t('Continue setup')}
+                      </Button>
+                    </Stack>
+                  </Box>
                 </Box>
               )}
             </Stack>

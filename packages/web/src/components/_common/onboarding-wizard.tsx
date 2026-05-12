@@ -232,6 +232,7 @@ export default function OnboardingWizard({
   // ── Trustline state ───────────────────────────────────────────────────────
   const [trustlineError, setTrustlineError] = useState<string | null>(null);
 
+
   // ── Linked-accounts step state ────────────────────────────────────────────
   const [linkedWalletsForStep, setLinkedWalletsForStep] = useState<LinkedWallet[]>([]);
   const [isLoadingLinkedWallets, setIsLoadingLinkedWallets] = useState(false);
