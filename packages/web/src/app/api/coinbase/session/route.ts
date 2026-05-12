@@ -20,21 +20,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Coinbase CDP rejects requests from private/localhost IPs.
-    // In local dev the Next.js server has no public IP, so skip the call
-    // and return a friendly signal the wizard can detect.
-    const isDev = process.env.NODE_ENV === 'development';
-    if (isDev) {
-      return NextResponse.json(
-        { error: 'DEV_PRIVATE_IP', message: 'Coinbase onramp is not available on localhost — use ngrok or deploy to test.' },
-        { status: 503 }
-      );
-    }
-
     const { jwt, host, path } = await getCdpBearerToken();
 
     const rawIp = getClientIP(req);
     const isPrivateIp = !rawIp || rawIp === 'unknown' || /^(::1|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(rawIp);
+    // Only forward clientIp when it's a real public IP — Coinbase rejects private addresses.
     const clientIp = isPrivateIp ? undefined : rawIp;
 
     const body: Record<string, unknown> = {

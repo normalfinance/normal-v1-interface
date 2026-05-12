@@ -664,12 +664,6 @@ export default function OnboardingWizard({
       if (error || !sessionToken) {
         win?.close();
         logger.error('[OnboardingWizard] Coinbase session error:', error);
-        // Dev-mode: server has no public IP
-        if (error === 'DEV_PRIVATE_IP') {
-          enqueueSnackbar(t('Coinbase onramp is not available on localhost. Use ngrok or deploy to test.'), { variant: 'info', autoHideDuration: 8000 });
-          return;
-        }
-        // Parse Coinbase error — it may be a JSON string or plain string
         let errorMsg = errorMessage || t('Failed to start Coinbase session');
         try {
           const inner = typeof error === 'string' ? JSON.parse(error) : error;

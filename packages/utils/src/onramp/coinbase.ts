@@ -42,7 +42,7 @@ export function createCoinbasePayOnrampURL(opts: CreateCoinbaseOnrampUrlOpts): s
   const params = new URLSearchParams({
     presetFiatAmount: String(amountUsd),
     fiatCurrency: fiat,
-    defaultAsset: assetSymbol, // e.g., 'USDC'
+    defaultAsset: assetSymbol,
     sessionToken,
   });
 
