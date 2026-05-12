@@ -2,10 +2,10 @@ import { logger } from '@normalfinance/utils';
 import { Ratelimit } from '@upstash/ratelimit';
 import { redis, getUpstashConfigDiagnostics } from '@/server/rateLimiter';
 
-/** 2 wallet links per rolling 7-day window per user (matches product copy). */
+/** 3 wallet links per rolling 24-hour window per user. */
 const walletCreationRatelimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(2, '7 d'),
+  limiter: Ratelimit.slidingWindow(3, '1 d'),
   prefix: 'faucet-wallet',
 });
 
