@@ -14,6 +14,17 @@ import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
 import { parseHorizonError, createStellarExpertUrl } from '@/utils/transactions.utils';
 
+const WALLET_RECONNECT_REQUIRED_MESSAGE =
+  'Your wallet session has expired. Please disconnect and reconnect your wallet, then try again.';
+
+function parseSigningError(err: any): string {
+  const msg: string = err?.message ?? '';
+  if (msg.toLowerCase().includes('connection key') || msg.toLowerCase().includes('walletconnect')) {
+    return WALLET_RECONNECT_REQUIRED_MESSAGE;
+  }
+  return parseHorizonError(err);
+}
+
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 
@@ -21,6 +32,7 @@ import { useSnackbar } from '@/components/template/snackbar';
 
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
 import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
+import { useWalletReconnect, WalletSessionExpiredError } from './use-wallet-reconnect';
 
 // ----------------------------------------------------------------------
 
@@ -82,8 +94,8 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   const { wallet } = usePersistStore();
   const config = useStellarConfig();
 
-  const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
-    useStellarWalletsKit();
+  const { publicKey: stellarPublicKey } = useStellarWalletsKit();
+  const { signOrReconnect } = useWalletReconnect();
   const {
     signTransaction: signNormalWallet,
     publicKey: normalPublicKey,
@@ -167,7 +179,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const walletAddress = isNormalWallet
           ? normalPublicKey || wallet.address
           : stellarPublicKey || wallet.address;
-        const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
+        const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
         const horizonServer = new Horizon.Server(config.HORIZON_URL, {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
@@ -313,6 +325,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         return depositResult.hash;
       } catch (err: any) {
+        if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error depositing:', err);
         const errorMessage = err.message || 'Deposit failed';
         if (errorMessage.toLowerCase().includes('trustline')) {
@@ -334,7 +347,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       normalPublicKey,
       stellarPublicKey,
       signNormalWallet,
-      signStellarWalletKit,
+      signOrReconnect,
       enqueueSnackbar,
       t,
       refreshVaultInfo,
@@ -383,7 +396,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const walletAddress = isNormalWallet
           ? normalPublicKey || wallet.address
           : stellarPublicKey || wallet.address;
-        const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
+        const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
         const horizonServer = new Horizon.Server(config.HORIZON_URL, {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
@@ -420,7 +433,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           try {
             commissionResult = await signAndSubmit(commissionData.xdr);
           } catch (commissionErr: any) {
-            throw new Error(`Yield commission payment failed: ${parseHorizonError(commissionErr)}`);
+            throw new Error(`Yield commission payment failed: ${parseSigningError(commissionErr)}`);
           }
           commissionTxHash = commissionResult.hash;
         }
@@ -448,7 +461,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           withdrawResult = await signAndSubmit(withdrawData.xdr);
         } catch (withdrawErr: any) {
           throw new Error(
-            `${parseHorizonError(withdrawErr)}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
+            `${parseSigningError(withdrawErr)}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
           );
         }
 
@@ -478,6 +491,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         return withdrawResult.hash;
       } catch (err: any) {
+        if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error withdrawing:', err);
         const errorMessage = err.message || 'Withdraw failed';
         if (errorMessage.toLowerCase().includes('trustline')) {
@@ -500,7 +514,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       normalPublicKey,
       stellarPublicKey,
       signNormalWallet,
-      signStellarWalletKit,
+      signOrReconnect,
       enqueueSnackbar,
       t,
       refreshVaultInfo,

@@ -18,6 +18,7 @@ import {
   useNormalWallet,
   NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,
 } from '@/hooks/stellar/use-normal-wallet';
+import { useWalletReconnect, WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import {
   TreasuryContract,
   IndexFundContract,
@@ -89,13 +90,13 @@ const getContractClient = <T extends ContractType>(
 export const useContractTransaction = () => {
   const storePersist = usePersistStore();
   const config = useStellarConfig();
-  const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
-    useStellarWalletsKit();
+  const { publicKey: stellarPublicKey } = useStellarWalletsKit();
   const {
     signTransaction: signNormalWallet,
     publicKey: normalPublicKey,
     canSign: normalCanSign,
   } = useNormalWallet();
+  const { signOrReconnect } = useWalletReconnect();
   const { t } = useTranslate();
   const router = useRouter();
 
@@ -118,7 +119,7 @@ export const useContractTransaction = () => {
       const walletAddress = isNormalWallet
         ? normalPublicKey || storePersist.wallet.address
         : stellarPublicKey || storePersist.wallet.address;
-      const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
+      const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
       if (!walletAddress) {
         throw new Error('No wallet connected');
@@ -281,6 +282,10 @@ export const useContractTransaction = () => {
           return result;
         })
         .catch((error) => {
+          if (error instanceof WalletSessionExpiredError) {
+            if (loadingKey) closeSnackbar(loadingKey);
+            throw error;
+          }
           logger.error('Error during contract transaction: ', error);
           if (loadingKey) closeSnackbar(loadingKey);
 
@@ -296,7 +301,7 @@ export const useContractTransaction = () => {
     [
       storePersist,
       config,
-      signStellarWalletKit,
+      signOrReconnect,
       signNormalWallet,
       stellarPublicKey,
       normalPublicKey,

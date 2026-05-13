@@ -7,6 +7,7 @@ import { logger, createTrustline } from '@normalfinance/utils';
 
 import { useStellarWalletsKit } from '../use-stellar-wallets-kit';
 import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from '../use-normal-wallet';
+import { useWalletReconnect, WalletSessionExpiredError } from '../use-wallet-reconnect';
 
 // ----------------------------------------------------------------------
 
@@ -23,17 +24,17 @@ interface ReturnType {
 export function useTrustLine(): ReturnType {
   const config = useStellarConfig();
   const storePersist = usePersistStore();
-  const { signTransaction: signWithStellarKit, publicKey: stellarKitPublicKey } =
-    useStellarWalletsKit();
+  const { publicKey: stellarKitPublicKey } = useStellarWalletsKit();
   const {
     signTransaction: signWithNormalWallet,
     publicKey: normalWalletPublicKey,
     canSign: normalWalletCanSign,
   } = useNormalWallet();
+  const { signOrReconnect } = useWalletReconnect();
 
   // Determine which signer to use based on wallet type
   const isNormalWallet = storePersist.wallet.walletType === 'normal-wallet';
-  const signTransaction = isNormalWallet ? signWithNormalWallet : signWithStellarKit;
+  const signTransaction = isNormalWallet ? signWithNormalWallet : signOrReconnect;
   const publicKey = isNormalWallet ? normalWalletPublicKey : stellarKitPublicKey;
 
   const [error, setError] = useState(null);
@@ -79,6 +80,7 @@ export function useTrustLine(): ReturnType {
         logger.log('[TRUSTLINE] Trustline created successfully');
         setTrustlineButtonActive(false);
       } catch (e: any) {
+        if (e instanceof WalletSessionExpiredError) return;
         logger.error('[TRUSTLINE] Error creating trustline:', e);
         setError(e);
         setTxBroadcasting(false);
@@ -94,6 +96,7 @@ export function useTrustLine(): ReturnType {
       storePersist.wallet.walletType,
       publicKey,
       signTransaction,
+      signOrReconnect,
       config,
       isNormalWallet,
       normalWalletCanSign,

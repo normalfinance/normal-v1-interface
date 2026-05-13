@@ -399,6 +399,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [searchParams, router]);
 
   useEffect(() => {
+    if (searchParams.get('setup') === 'continue') {
+      setWizardInitialStep('fund-xlm');
+      setShowLoginModal(true);
+      router.replace(paths.savings, { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
     if (authLoading) return;
 
     if (!session) {
@@ -624,7 +632,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         <Button
                           variant="contained"
                           size="small"
-                          onClick={() => { setShowLoginModal(true); onClose(); }}
+                          onClick={() => {
+                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
+                            setShowLoginModal(true);
+                            onClose();
+                          }}
                           sx={{
                             borderRadius: 1.5,
                             bgcolor: 'warning.main',
@@ -687,6 +699,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         fullWidth
                         onClick={() => {
                           if (session) {
+                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
                             setShowLoginModal(true);
                           } else {
                             handleConnectClick();
