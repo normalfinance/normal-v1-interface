@@ -702,7 +702,7 @@ export default function OnboardingWizard({
         enqueueSnackbar(errorMsg, { variant: 'error' });
         return;
       }
-      const url = createCoinbasePayOnrampURL({ amountUsd: '5', assetSymbol: 'XLM', sessionToken, fiat: 'USD', sandbox: isTestnet(), path: 'buy/select-asset', redirectUrl: `${window.location.origin}${paths.savings}` });
+      const url = createCoinbasePayOnrampURL({ amountUsd: '5', assetSymbol: 'XLM', sessionToken, fiat: 'USD', sandbox: isTestnet(), path: 'buy/select-asset', redirectUrl: `${window.location.origin}${paths.savings}?setup=continue` });
       if (win) { win.opener = null; win.location.href = url; }
     } catch (err: any) {
       win?.close();

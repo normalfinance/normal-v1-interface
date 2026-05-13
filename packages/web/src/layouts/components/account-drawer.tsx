@@ -399,6 +399,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [searchParams, router]);
 
   useEffect(() => {
+    if (searchParams.get('setup') === 'continue') {
+      setWizardInitialStep('fund-xlm');
+      setShowLoginModal(true);
+      router.replace(paths.savings, { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
     if (authLoading) return;
 
     if (!session) {
