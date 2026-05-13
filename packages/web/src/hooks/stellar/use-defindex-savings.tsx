@@ -14,6 +14,17 @@ import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
 import { parseHorizonError, createStellarExpertUrl } from '@/utils/transactions.utils';
 
+const WALLET_RECONNECT_REQUIRED_MESSAGE =
+  'Your wallet session has expired. Please disconnect and reconnect your wallet, then try again.';
+
+function parseSigningError(err: any): string {
+  const msg: string = err?.message ?? '';
+  if (msg.toLowerCase().includes('connection key') || msg.toLowerCase().includes('walletconnect')) {
+    return WALLET_RECONNECT_REQUIRED_MESSAGE;
+  }
+  return parseHorizonError(err);
+}
+
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 
@@ -420,7 +431,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           try {
             commissionResult = await signAndSubmit(commissionData.xdr);
           } catch (commissionErr: any) {
-            throw new Error(`Yield commission payment failed: ${parseHorizonError(commissionErr)}`);
+            throw new Error(`Yield commission payment failed: ${parseSigningError(commissionErr)}`);
           }
           commissionTxHash = commissionResult.hash;
         }
@@ -448,7 +459,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           withdrawResult = await signAndSubmit(withdrawData.xdr);
         } catch (withdrawErr: any) {
           throw new Error(
-            `${parseHorizonError(withdrawErr)}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
+            `${parseSigningError(withdrawErr)}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
           );
         }
 

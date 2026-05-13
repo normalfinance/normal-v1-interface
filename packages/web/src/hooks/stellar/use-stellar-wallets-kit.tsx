@@ -5,6 +5,11 @@ import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module
 import { HANA_ID, XBULL_ID, LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
 
+// These wallets use WalletConnect sessions that do not survive page reloads.
+// We never try to silently restore them — we clear state so the user knows
+// they need to reconnect and sign fresh.
+const SESSION_BASED_WALLET_TYPES = new Set(['lobstr', 'wallet-connect']);
+
 const getWalletIdFromType = (walletType?: string): string | null => {
   switch (walletType) {
     case 'hana':
@@ -66,6 +71,19 @@ export const useStellarWalletsKit = () => {
           return;
         }
 
+        // Session-based wallets (Lobstr, WalletConnect) use a live WebSocket
+        // session that does not survive page reloads. Pretending they are
+        // still connected causes silent signing failures, so we disconnect
+        // immediately and let the user reconnect explicitly.
+        if (SESSION_BASED_WALLET_TYPES.has(storedWalletType)) {
+          walletKitStore.setPublicKey(null);
+          walletKitStore.setConnected(false);
+          walletKitStore.setSelectedWallet(null);
+          persistStore.disconnectWallet();
+          logger.log('[WALLET KIT] Session-based wallet cleared on page load:', storedWalletType);
+          return;
+        }
+
         if (!walletKitStore.kit) return;
 
         const walletId = getWalletIdFromType(storedWalletType);
@@ -84,11 +102,9 @@ export const useStellarWalletsKit = () => {
           walletKitStore.kit.setWallet(walletId);
           walletKitStore.setSelectedWallet(walletId);
 
-          // Use the persisted address directly to avoid triggering a wallet
-          // extension popup on every page navigation. Wallets like Lobstr show
-          // a signature/auth request for every getAddress() call, which would
-          // fire on each tab switch. We only call getAddress() when there is
-          // no stored address (e.g. first-time connect or after disconnect).
+          // Use the persisted address directly to avoid triggering extension
+          // popups on every page navigation. We only call getAddress() when
+          // there is no stored address (e.g. first-time connect or after disconnect).
           const storedAddress = persistStore.wallet.address;
           if (storedAddress) {
             walletKitStore.setPublicKey(storedAddress);
