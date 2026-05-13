@@ -32,6 +32,7 @@ import { useSnackbar } from '@/components/template/snackbar';
 
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
 import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
+import { useWalletReconnect, WalletSessionExpiredError } from './use-wallet-reconnect';
 
 // ----------------------------------------------------------------------
 
@@ -93,8 +94,8 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   const { wallet } = usePersistStore();
   const config = useStellarConfig();
 
-  const { signTransaction: signStellarWalletKit, publicKey: stellarPublicKey } =
-    useStellarWalletsKit();
+  const { publicKey: stellarPublicKey } = useStellarWalletsKit();
+  const { signOrReconnect } = useWalletReconnect();
   const {
     signTransaction: signNormalWallet,
     publicKey: normalPublicKey,
@@ -178,7 +179,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const walletAddress = isNormalWallet
           ? normalPublicKey || wallet.address
           : stellarPublicKey || wallet.address;
-        const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
+        const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
         const horizonServer = new Horizon.Server(config.HORIZON_URL, {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
@@ -324,6 +325,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         return depositResult.hash;
       } catch (err: any) {
+        if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error depositing:', err);
         const errorMessage = err.message || 'Deposit failed';
         if (errorMessage.toLowerCase().includes('trustline')) {
@@ -345,7 +347,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       normalPublicKey,
       stellarPublicKey,
       signNormalWallet,
-      signStellarWalletKit,
+      signOrReconnect,
       enqueueSnackbar,
       t,
       refreshVaultInfo,
@@ -394,7 +396,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const walletAddress = isNormalWallet
           ? normalPublicKey || wallet.address
           : stellarPublicKey || wallet.address;
-        const signTransaction = isNormalWallet ? signNormalWallet : signStellarWalletKit;
+        const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
         const horizonServer = new Horizon.Server(config.HORIZON_URL, {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
@@ -489,6 +491,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         return withdrawResult.hash;
       } catch (err: any) {
+        if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error withdrawing:', err);
         const errorMessage = err.message || 'Withdraw failed';
         if (errorMessage.toLowerCase().includes('trustline')) {
@@ -511,7 +514,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       normalPublicKey,
       stellarPublicKey,
       signNormalWallet,
-      signStellarWalletKit,
+      signOrReconnect,
       enqueueSnackbar,
       t,
       refreshVaultInfo,
