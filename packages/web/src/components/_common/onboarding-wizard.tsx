@@ -300,6 +300,7 @@ export default function OnboardingWizard({
         return;
       }
       // Returning user — they have at least one linked wallet
+      if (marketingConsent) syncMarketingOptIn(true);
       const most = wallets[0];
       setIsReturningUser(true);
       if (hasStoredNormalWalletKey()) {
@@ -824,13 +825,11 @@ export default function OnboardingWizard({
                   }
                   sx={{ alignItems: 'flex-start', mr: 0 }}
                 />
-                {isSignUp && (
-                  <FormControlLabel
-                    control={<Checkbox checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} sx={{ p: 0.5, mr: 0.5 }} />}
-                    label={<Typography variant="body2" color="text.secondary">{t('Send me product updates (optional).')}</Typography>}
-                    sx={{ alignItems: 'flex-start', mr: 0 }}
-                  />
-                )}
+                <FormControlLabel
+                  control={<Checkbox checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} sx={{ p: 0.5, mr: 0.5 }} />}
+                  label={<Typography variant="body2" color="text.secondary">{t('Send me product updates (optional).')}</Typography>}
+                  sx={{ alignItems: 'flex-start', mr: 0 }}
+                />
               </Stack>
               <Button
                 fullWidth variant="contained" size="large"
