@@ -624,7 +624,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         <Button
                           variant="contained"
                           size="small"
-                          onClick={() => { setShowLoginModal(true); onClose(); }}
+                          onClick={() => {
+                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
+                            setShowLoginModal(true);
+                            onClose();
+                          }}
                           sx={{
                             borderRadius: 1.5,
                             bgcolor: 'warning.main',
@@ -687,6 +691,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         fullWidth
                         onClick={() => {
                           if (session) {
+                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
                             setShowLoginModal(true);
                           } else {
                             handleConnectClick();

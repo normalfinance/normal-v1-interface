@@ -265,7 +265,14 @@ export default function OnboardingWizard({
     if (open) {
       setTosAccepted(disclaimer.accepted);
       setShowTosHelper(false);
-      if (initialStep) setStep(initialStep);
+      if (initialStep) {
+        setStep(initialStep);
+        // Seed the wallet address so fund-xlm / add-trustline screens work
+        // without going through handleAfterAuth.
+        if (!wizardWalletAddress && persist.wallet.address) {
+          setWizardWalletAddress(persist.wallet.address);
+        }
+      }
     }
   }, [open, disclaimer.accepted]); // eslint-disable-line react-hooks/exhaustive-deps
 
