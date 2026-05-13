@@ -774,23 +774,16 @@ export default function OnboardingWizard({
 
           {authMode === 'magic-link' ? (
             <>
-              <Stack spacing={0.5}>
-                <FormControlLabel
-                  control={<Checkbox checked={tosAccepted} onChange={(e) => { setShowTosHelper(!e.target.checked); setTosAccepted(e.target.checked); }} sx={{ p: 0.5, mr: 0.5 }} />}
-                  label={
-                    <Typography variant="body2" color="text.secondary">
-                      {t('I agree to the ')}<MuiLink href={paths.legal.tos} target="_blank" rel="noopener noreferrer" color="inherit" underline="always">{t('Terms of Service')}</MuiLink>
-                      {t(' and ')}<MuiLink href={paths.legal.pp} target="_blank" rel="noopener noreferrer" color="inherit" underline="always">{t('Privacy Policy')}</MuiLink>{t('.')}
-                    </Typography>
-                  }
-                  sx={{ alignItems: 'flex-start', mr: 0 }}
-                />
-                <FormControlLabel
-                  control={<Checkbox checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} sx={{ p: 0.5, mr: 0.5 }} />}
-                  label={<Typography variant="body2" color="text.secondary">{t('Send me product updates (optional).')}</Typography>}
-                  sx={{ alignItems: 'flex-start', mr: 0 }}
-                />
-              </Stack>
+              <FormControlLabel
+                control={<Checkbox checked={tosAccepted} onChange={(e) => { setShowTosHelper(!e.target.checked); setTosAccepted(e.target.checked); }} sx={{ p: 0.5, mr: 0.5 }} />}
+                label={
+                  <Typography variant="body2" color="text.secondary">
+                    {t('I agree to the ')}<MuiLink href={paths.legal.tos} target="_blank" rel="noopener noreferrer" color="inherit" underline="always">{t('Terms of Service')}</MuiLink>
+                    {t(' and ')}<MuiLink href={paths.legal.pp} target="_blank" rel="noopener noreferrer" color="inherit" underline="always">{t('Privacy Policy')}</MuiLink>{t('.')}
+                  </Typography>
+                }
+                sx={{ alignItems: 'flex-start', mr: 0 }}
+              />
               <Button
                 fullWidth variant="contained" size="large"
                 onClick={handleEmailAuth}
@@ -831,11 +824,13 @@ export default function OnboardingWizard({
                   }
                   sx={{ alignItems: 'flex-start', mr: 0 }}
                 />
-                <FormControlLabel
-                  control={<Checkbox checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} sx={{ p: 0.5, mr: 0.5 }} />}
-                  label={<Typography variant="body2" color="text.secondary">{t('Send me product updates (optional).')}</Typography>}
-                  sx={{ alignItems: 'flex-start', mr: 0 }}
-                />
+                {isSignUp && (
+                  <FormControlLabel
+                    control={<Checkbox checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} sx={{ p: 0.5, mr: 0.5 }} />}
+                    label={<Typography variant="body2" color="text.secondary">{t('Send me product updates (optional).')}</Typography>}
+                    sx={{ alignItems: 'flex-start', mr: 0 }}
+                  />
+                )}
               </Stack>
               <Button
                 fullWidth variant="contained" size="large"
