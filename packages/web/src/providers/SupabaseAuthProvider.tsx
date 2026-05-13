@@ -4,7 +4,6 @@ import type { User, Session } from '@supabase/supabase-js';
 
 import { clearLoginIntent } from '@/lib/loginIntent';
 import { supabase } from '@/lib/createSupabaseClient';
-import { Crisp, ChatboxPosition } from 'crisp-sdk-web';
 import {
   useMemo,
   useState,
@@ -33,14 +32,6 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Crisp
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID) {
-      Crisp.configure(process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID);
-      Crisp.setPosition(ChatboxPosition.Left);
-    }
-  }, []);
-
   useEffect(() => {
     let active = true;
 
@@ -53,25 +44,6 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
 
       setSession(initialSession ?? null);
       setIsLoading(false);
-
-      if (initialSession) {
-        // @dev A Crisp paid plan is required for user verification
-        // const headers = await buildAuthHeaders();
-        // const crispSignatureResponse = await fetch('/api/crisp', {
-        //   method: 'POST',
-        //   headers,
-        //   credentials: 'include',
-        // });
-        // if (crispSignatureResponse.ok) {
-        //   const crispSignature = await crispSignatureResponse.json();
-        //   if (crispSignature.signature) Crisp.setTokenId(crispSignature.signature);
-        // }
-
-        if (initialSession.user.email) Crisp.user.setEmail(initialSession.user.email);
-
-        if (initialSession.user.user_metadata.name)
-          Crisp.user.setNickname(initialSession.user.user_metadata.name);
-      }
     };
 
     void syncSession();
@@ -95,8 +67,6 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
     setSession(null);
     await supabase.auth.signOut();
     clearLoginIntent();
-    Crisp.setTokenId();
-    Crisp.session.reset();
   }, []);
 
   const value = useMemo(
