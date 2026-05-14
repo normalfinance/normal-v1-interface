@@ -17,7 +17,7 @@ export default function PortfolioView() {
   const { setGlobalIsLoading } = useAppStore();
   const { wallet, getAllTokens } = usePersistStore();
 
-  const { vaultInfo, userPosition, fetching, fetchError, refreshVaultInfo } = useDefindexSavings();
+  const { vaultInfo, userPosition, fetching, positionFetching } = useDefindexSavings();
 
   const savingsValue = useMemo(() => {
     const v = parseFloat(userPosition?.currentValue || '0');
@@ -59,8 +59,7 @@ export default function PortfolioView() {
             vaultInfo={vaultInfo}
             userPosition={userPosition}
             fetching={fetching}
-            fetchError={fetchError}
-            onRetry={refreshVaultInfo}
+            positionFetching={positionFetching}
           />
         </Grid2>
       </Grid2>
