@@ -4,8 +4,8 @@ import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
 import { isTestnet } from '@normalfinance/utils';
-import { allLangs, useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -21,7 +21,6 @@ import { MainSection } from '../core/main-section';
 import { NormalNavbarDefaults } from './navbar-props';
 import { LayoutSection } from '../core/layout-section';
 import { AccountDrawer } from '../components/account-drawer';
-import { LanguagePopover } from '../components/language-popover';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import { NetworkToggle, NETWORK_SWITCH_ENABLED } from '../components/network-toggle';
 

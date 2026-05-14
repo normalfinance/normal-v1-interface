@@ -3,11 +3,7 @@ import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit';
 import type { ISupportedWallet } from '@creit.tech/stellar-wallets-kit';
 import { logger } from '@normalfinance/utils';
 import {
-  HANA_ID,
-  XBULL_ID,
   LOBSTR_ID,
-  HanaModule,
-  xBullModule,
   LobstrModule,
   FREIGHTER_ID,
   WalletNetwork,
@@ -63,8 +59,6 @@ export function createStellarWalletKitActions(
       const kit = new StellarWalletsKit({
         network: isMainnet ? WalletNetwork.PUBLIC : WalletNetwork.TESTNET,
         modules: [
-          new HanaModule(),
-          new xBullModule(),
           new FreighterModule(),
           new LobstrModule(),
           new WalletConnectModule({
@@ -163,12 +157,6 @@ export function createStellarWalletKitActions(
 
               let walletType: string = 'stellar-wallets-kit';
               switch (wallet.id) {
-                case HANA_ID:
-                  walletType = 'hana';
-                  break;
-                case XBULL_ID:
-                  walletType = 'xbull';
-                  break;
                 case FREIGHTER_ID:
                   walletType = 'freighter';
                   break;

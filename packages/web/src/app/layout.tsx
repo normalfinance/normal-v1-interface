@@ -14,6 +14,7 @@ import { CONFIG } from '@/global-config';
 import { primary } from '@/theme/core/palette';
 import { LocalizationProvider } from '@/locales';
 import { detectLanguage } from '@/locales/server';
+import { Analytics } from '@vercel/analytics/next';
 import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
@@ -27,7 +28,6 @@ import { WalletPasswordProvider } from '@/providers/WalletPasswordProvider';
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
-import { Analytics } from '@vercel/analytics/next';
 import { ProgressBar } from '@/components/template/progress-bar';
 import { SnackbarProvider } from '@/components/template/snackbar';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';

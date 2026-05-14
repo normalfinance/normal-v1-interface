@@ -7,13 +7,14 @@ import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
 import { fNumber, fPercent, fCurrency } from '@/utils/format-number';
 import { isNormalToken, getCryptoIconUrl } from '@normalfinance/utils';
-import { SAVINGS_CONTRACT } from './my-balance-section';
 
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
 import Typography from '@mui/material/Typography';
+
+import { SAVINGS_CONTRACT } from './my-balance-section';
 
 export interface HoldingData {
   token: Token;

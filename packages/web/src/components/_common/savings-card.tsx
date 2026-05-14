@@ -104,8 +104,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
       await withdraw(amount);
     }
     setAmount('');
-    await refreshVaultInfo();
-  }, [mode, amount, deposit, withdraw, refreshVaultInfo]);
+  }, [mode, amount, deposit, withdraw]);
 
   const availableBalance =
     mode === 'deposit' ? savingsDepositBalance : userPosition?.currentValue || '0';
@@ -232,7 +231,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
                 <Typography variant="body2" color="text.secondary">
                   {label}
                 </Typography>
-                {positionFetching && !userPosition ? (
+                {positionFetching ? (
                   <Skeleton variant="text" width={100} height={20} />
                 ) : (
                   <Typography

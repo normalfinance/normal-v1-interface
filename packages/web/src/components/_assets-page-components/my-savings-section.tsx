@@ -2,8 +2,9 @@
 
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
-import { useTranslate } from '@/locales';
 import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
+import { RouterLink } from '@/routes/components';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -16,7 +17,6 @@ import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 
 import { Iconify } from '@/components/template/iconify';
-import { RouterLink } from '@/routes/components';
 
 // ----------------------------------------------------------------------
 
@@ -24,20 +24,24 @@ interface MySavingsSectionProps {
   vaultInfo: VaultInfo | null;
   userPosition: SavingsPosition | null;
   fetching: boolean;
-  fetchError: string | null;
-  onRetry: () => void;
+  positionFetching: boolean;
 }
 
 export function MySavingsSection({
   vaultInfo,
   userPosition,
   fetching,
-  fetchError,
-  onRetry,
+  positionFetching,
 }: MySavingsSectionProps) {
   const { t } = useTranslate();
 
   const hasPosition = userPosition && parseFloat(userPosition.currentValue) > 0;
+
+  const rows = [
+    { label: t('Current Value'), value: userPosition?.currentValue, prefix: '', color: 'text.primary' as const },
+    { label: t('Total Deposited'), value: userPosition?.totalDeposited, prefix: '', color: 'text.primary' as const },
+    { label: t('Earnings'), value: userPosition?.earnings, prefix: '+', color: 'success.main' as const },
+  ];
 
   return (
     <Card sx={{ p: 3, borderRadius: 2 }}>
@@ -67,12 +71,13 @@ export function MySavingsSection({
       <Divider sx={{ mb: 2.5 }} />
 
       {fetching ? (
+        // Phase 1: vault info loading — skeleton for all three rows
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={3}
           divider={<Divider orientation="vertical" flexItem />}
         >
-          {[t('Current Value'), t('Total Deposited'), t('Earnings')].map((label) => (
+          {rows.map(({ label }) => (
             <Box key={label} sx={{ flex: 1 }}>
               <Typography variant="caption" color="text.secondary">
                 {label}
@@ -81,22 +86,8 @@ export function MySavingsSection({
             </Box>
           ))}
         </Stack>
-      ) : fetchError ? (
-        <Stack spacing={1} alignItems="center" sx={{ py: 2 }}>
-          <Typography variant="body2" color="error.main" textAlign="center">
-            {fetchError}
-          </Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            color="error"
-            onClick={onRetry}
-            startIcon={<Iconify icon="solar:refresh-bold" width={16} />}
-          >
-            {t('Retry')}
-          </Button>
-        </Stack>
-      ) : !hasPosition ? (
+      ) : !hasPosition && !positionFetching ? (
+        // No active position and not loading
         <Stack alignItems="center" spacing={1} sx={{ py: 2 }}>
           <Typography variant="body2" color="text.secondary">
             {t('No savings yet. Deposit USDC to start earning yield.')}
@@ -112,56 +103,33 @@ export function MySavingsSection({
           </Button>
         </Stack>
       ) : (
+        // Phase 2: show rows — per-row skeleton while position is loading
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={3}
           divider={<Divider orientation="vertical" flexItem />}
         >
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('Current Value')}
-            </Typography>
-            <Typography variant="h5" sx={{ mt: 0.5 }}>
-              {parseFloat(userPosition!.currentValue).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 4,
-              })}{' '}
-              <Typography component="span" variant="body2" color="text.secondary">
-                USDC
+          {rows.map(({ label, value, prefix, color }) => (
+            <Box key={label} sx={{ flex: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                {label}
               </Typography>
-            </Typography>
-          </Box>
-
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('Total Deposited')}
-            </Typography>
-            <Typography variant="h5" sx={{ mt: 0.5 }}>
-              {parseFloat(userPosition!.totalDeposited).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 4,
-              })}{' '}
-              <Typography component="span" variant="body2" color="text.secondary">
-                USDC
-              </Typography>
-            </Typography>
-          </Box>
-
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('Earnings')}
-            </Typography>
-            <Typography variant="h5" color="success.main" sx={{ mt: 0.5 }}>
-              +
-              {parseFloat(userPosition!.earnings).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 4,
-              })}{' '}
-              <Typography component="span" variant="body2" color="text.secondary">
-                USDC
-              </Typography>
-            </Typography>
-          </Box>
+              {positionFetching ? (
+                <Skeleton variant="text" width={120} height={32} sx={{ mt: 0.5 }} />
+              ) : (
+                <Typography variant="h5" color={color} sx={{ mt: 0.5 }}>
+                  {prefix}
+                  {parseFloat(value || '0').toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 4,
+                  })}{' '}
+                  <Typography component="span" variant="body2" color="text.secondary">
+                    USDC
+                  </Typography>
+                </Typography>
+              )}
+            </Box>
+          ))}
         </Stack>
       )}
     </Card>

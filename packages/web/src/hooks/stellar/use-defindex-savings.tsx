@@ -32,8 +32,8 @@ function setCachedPosition(address: string | undefined, position: SavingsPositio
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
@@ -56,8 +56,8 @@ import Button from '@mui/material/Button';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
-import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 import { useWalletReconnect, WalletSessionExpiredError } from './use-wallet-reconnect';
+import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 
 // ----------------------------------------------------------------------
 
@@ -443,9 +443,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           depositResult.hash
         );
 
-        // 4. Refresh vault info and user position to show updated balance
+        // 4. Refresh vault info, then position after a short delay so the DB
+        // write and Soroban RPC propagation have time to settle before we query.
         await refreshVaultInfo();
-        refreshUserPosition();
+        setTimeout(() => refreshUserPosition(), 3000);
 
         return depositResult.hash;
       } catch (err: any) {
@@ -613,7 +614,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         );
 
         await refreshVaultInfo();
-        refreshUserPosition();
+        setTimeout(() => refreshUserPosition(), 3000);
 
         return withdrawResult.hash;
       } catch (err: any) {

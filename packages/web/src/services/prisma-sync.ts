@@ -1,4 +1,4 @@
-import type { ReferralRow, VolumeDailyRow, WalletActivityRow, LinkedWalletRow } from '@/lib/dune/tables';
+import type { ReferralRow, VolumeDailyRow, LinkedWalletRow, WalletActivityRow } from '@/lib/dune/tables';
 
 import { prisma } from '@/lib/prisma';
 

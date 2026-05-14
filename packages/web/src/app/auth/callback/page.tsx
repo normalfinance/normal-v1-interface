@@ -1,14 +1,16 @@
 'use client';
 
+import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { exchangeCodeForSession } from '@/services/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Box, Button, Stack, Typography, CircularProgress, Alert } from '@mui/material';
+import { Box, Stack, Alert, Button, Typography, CircularProgress } from '@mui/material';
 
 type Status = 'pending' | 'success' | 'error';
 
 const AuthCallbackPage = () => {
+  const { t } = useTranslate();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>('pending');
@@ -68,12 +70,11 @@ const AuthCallbackPage = () => {
             </Alert>
             {isPkceError && (
               <Typography variant="body2" color="text.secondary" textAlign="center">
-                Tip: open this link in the browser where you created your account, or go back and
-                request a new confirmation email.
+                {t('Tip: open this link in the browser where you created your account, or go back and request a new confirmation email.')}
               </Typography>
             )}
             <Button variant="outlined" onClick={() => router.replace('/')} sx={{ borderRadius: 2, mt: 1 }}>
-              Back to sign in
+              {t('Back to sign in')}
             </Button>
           </>
         ) : (

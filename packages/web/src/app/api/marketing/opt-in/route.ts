@@ -2,8 +2,8 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/utils/http';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { cioSetMarketingOptIn } from '@/lib/customerio';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export const dynamic = 'force-dynamic';
 
