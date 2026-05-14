@@ -4,8 +4,8 @@ import type { Token } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { fCurrency, fNumber } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fNumber, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';

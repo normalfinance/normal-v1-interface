@@ -32,8 +32,8 @@ function setCachedPosition(address: string | undefined, position: SavingsPositio
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
@@ -56,8 +56,8 @@ import Button from '@mui/material/Button';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
-import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 import { useWalletReconnect, WalletSessionExpiredError } from './use-wallet-reconnect';
+import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 
 // ----------------------------------------------------------------------
 

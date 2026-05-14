@@ -5,12 +5,12 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
-import { logger, isTestnet, createCoinbasePayOnrampURL } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { logger, isTestnet, createCoinbasePayOnrampURL } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {

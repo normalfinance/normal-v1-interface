@@ -2,8 +2,9 @@
 
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
-import { useTranslate } from '@/locales';
 import { paths } from '@/routes/paths';
+import { useTranslate } from '@/locales';
+import { RouterLink } from '@/routes/components';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -16,7 +17,6 @@ import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 
 import { Iconify } from '@/components/template/iconify';
-import { RouterLink } from '@/routes/components';
 
 // ----------------------------------------------------------------------
 

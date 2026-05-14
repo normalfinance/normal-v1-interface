@@ -1,8 +1,8 @@
 import { logger } from '@normalfinance/utils';
 import { useRef, useEffect, useCallback } from 'react';
+import { LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
-import { LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
 
 // Wallets that use WalletConnect sessions — sessions do not survive page reloads.

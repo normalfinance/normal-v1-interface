@@ -2,13 +2,13 @@
 
 import type { Token } from '@normalfinance/types';
 
-import { Horizon } from '@stellar/stellar-sdk';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
+import { Horizon } from '@stellar/stellar-sdk';
 import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
-import { useStellarConfig } from '@/hooks';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import React, { useRef, useMemo, useState, useEffect } from 'react';
 import {
