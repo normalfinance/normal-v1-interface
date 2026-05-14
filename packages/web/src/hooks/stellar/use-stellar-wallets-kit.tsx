@@ -2,7 +2,7 @@ import { logger } from '@normalfinance/utils';
 import { useRef, useEffect, useCallback } from 'react';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
-import { HANA_ID, XBULL_ID, LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
+import { LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
 
 // Wallets that use WalletConnect sessions — sessions do not survive page reloads.
@@ -11,10 +11,6 @@ export const SESSION_BASED_WALLET_TYPES = new Set(['lobstr', 'wallet-connect']);
 
 const getWalletIdFromType = (walletType?: string): string | null => {
   switch (walletType) {
-    case 'hana':
-      return HANA_ID;
-    case 'xbull':
-      return XBULL_ID;
     case 'freighter':
       return FREIGHTER_ID;
     case 'lobstr':
