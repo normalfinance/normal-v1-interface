@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useTranslate } from '@/locales';
+import { useState, useEffect } from 'react';
 import { exchangeCodeForSession } from '@/services/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 

@@ -85,7 +85,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
       BigNumber(b.balance).multipliedBy(b.price).comparedTo(BigNumber(a.balance).multipliedBy(a.price)) ?? 0
     )[0];
     setSendToken(best ?? sendableTokens[0] ?? null);
-  }, [open]);
+  }, [open, sendableTokens]);
 
   // Fetch XLM subentry count for accurate reserve calculation
   useEffect(() => {
@@ -134,7 +134,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
   }, [coinAmount, sendToken]);
 
   const xlmPrice = useMemo(
-    () => BigNumber(tokens.find((t) => t.symbol === 'XLM')?.price ?? 0),
+    () => BigNumber(tokens.find((tok) => tok.symbol === 'XLM')?.price ?? 0),
     [tokens]
   );
 
