@@ -265,7 +265,14 @@ export default function OnboardingWizard({
     if (open) {
       setTosAccepted(disclaimer.accepted);
       setShowTosHelper(false);
-      if (initialStep) setStep(initialStep);
+      if (initialStep) {
+        setStep(initialStep);
+        // Seed the wallet address so fund-xlm / add-trustline screens work
+        // without going through handleAfterAuth.
+        if (!wizardWalletAddress && persist.wallet.address) {
+          setWizardWalletAddress(persist.wallet.address);
+        }
+      }
     }
   }, [open, disclaimer.accepted]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -300,6 +307,7 @@ export default function OnboardingWizard({
         return;
       }
       // Returning user — they have at least one linked wallet
+      if (marketingConsent) syncMarketingOptIn(true);
       const most = wallets[0];
       setIsReturningUser(true);
       if (hasStoredNormalWalletKey()) {
@@ -694,7 +702,7 @@ export default function OnboardingWizard({
         enqueueSnackbar(errorMsg, { variant: 'error' });
         return;
       }
-      const url = createCoinbasePayOnrampURL({ amountUsd: '5', assetSymbol: 'XLM', sessionToken, fiat: 'USD', sandbox: isTestnet(), path: 'buy/select-asset', redirectUrl: `${window.location.origin}${paths.savings}` });
+      const url = createCoinbasePayOnrampURL({ amountUsd: '5', assetSymbol: 'XLM', sessionToken, fiat: 'USD', sandbox: isTestnet(), path: 'buy/select-asset', redirectUrl: `${window.location.origin}${paths.savings}?setup=continue` });
       if (win) { win.opener = null; win.location.href = url; }
     } catch (err: any) {
       win?.close();
@@ -774,23 +782,16 @@ export default function OnboardingWizard({
 
           {authMode === 'magic-link' ? (
             <>
-              <Stack spacing={0.5}>
-                <FormControlLabel
-                  control={<Checkbox checked={tosAccepted} onChange={(e) => { setShowTosHelper(!e.target.checked); setTosAccepted(e.target.checked); }} sx={{ p: 0.5, mr: 0.5 }} />}
-                  label={
-                    <Typography variant="body2" color="text.secondary">
-                      {t('I agree to the ')}<MuiLink href={paths.legal.tos} target="_blank" rel="noopener noreferrer" color="inherit" underline="always">{t('Terms of Service')}</MuiLink>
-                      {t(' and ')}<MuiLink href={paths.legal.pp} target="_blank" rel="noopener noreferrer" color="inherit" underline="always">{t('Privacy Policy')}</MuiLink>{t('.')}
-                    </Typography>
-                  }
-                  sx={{ alignItems: 'flex-start', mr: 0 }}
-                />
-                <FormControlLabel
-                  control={<Checkbox checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} sx={{ p: 0.5, mr: 0.5 }} />}
-                  label={<Typography variant="body2" color="text.secondary">{t('Send me product updates (optional).')}</Typography>}
-                  sx={{ alignItems: 'flex-start', mr: 0 }}
-                />
-              </Stack>
+              <FormControlLabel
+                control={<Checkbox checked={tosAccepted} onChange={(e) => { setShowTosHelper(!e.target.checked); setTosAccepted(e.target.checked); }} sx={{ p: 0.5, mr: 0.5 }} />}
+                label={
+                  <Typography variant="body2" color="text.secondary">
+                    {t('I agree to the ')}<MuiLink href={paths.legal.tos} target="_blank" rel="noopener noreferrer" color="inherit" underline="always">{t('Terms of Service')}</MuiLink>
+                    {t(' and ')}<MuiLink href={paths.legal.pp} target="_blank" rel="noopener noreferrer" color="inherit" underline="always">{t('Privacy Policy')}</MuiLink>{t('.')}
+                  </Typography>
+                }
+                sx={{ alignItems: 'flex-start', mr: 0 }}
+              />
               <Button
                 fullWidth variant="contained" size="large"
                 onClick={handleEmailAuth}

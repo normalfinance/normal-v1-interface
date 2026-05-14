@@ -64,7 +64,12 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
   const network = useNetworkStore((s) => s.network);
 
   const { recentActivity } = useUserActivity(address);
-  const { userPosition, fetching: savingsFetching, refreshVaultInfo } = useDefindexSavings();
+  const {
+    userPosition,
+    fetching: savingsFetching,
+    refreshVaultInfo,
+    refreshUserPosition,
+  } = useDefindexSavings();
 
   // Effect hook to fetch all tokens when the component mounts, address changes, or network toggles
   useEffect(() => {
@@ -88,12 +93,13 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
     return () => clearTimeout(timer);
   }, [address, getAllTokens, network, setGlobalIsLoading]);
 
-  // Refetch savings every time the drawer opens (skip if already in flight)
+  // Refresh both vault info and user position every time the drawer opens
   useEffect(() => {
-    if (drawerOpen && address && !savingsFetching) {
+    if (drawerOpen && address) {
       refreshVaultInfo();
+      refreshUserPosition();
     }
-  }, [drawerOpen, address, refreshVaultInfo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [drawerOpen, address, refreshVaultInfo, refreshUserPosition]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const assetsBalance = tokens.reduce((acc, tkn) => {
     const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
@@ -399,6 +405,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [searchParams, router]);
 
   useEffect(() => {
+    if (searchParams.get('setup') === 'continue') {
+      setWizardInitialStep('fund-xlm');
+      setShowLoginModal(true);
+      router.replace(paths.savings, { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
     if (authLoading) return;
 
     if (!session) {
@@ -624,7 +638,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         <Button
                           variant="contained"
                           size="small"
-                          onClick={() => { setShowLoginModal(true); onClose(); }}
+                          onClick={() => {
+                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
+                            setShowLoginModal(true);
+                            onClose();
+                          }}
                           sx={{
                             borderRadius: 1.5,
                             bgcolor: 'warning.main',
@@ -687,6 +705,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         fullWidth
                         onClick={() => {
                           if (session) {
+                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
                             setShowLoginModal(true);
                           } else {
                             handleConnectClick();

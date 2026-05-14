@@ -5,6 +5,10 @@ import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module
 import { HANA_ID, XBULL_ID, LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
 
+// Wallets that use WalletConnect sessions — sessions do not survive page reloads.
+// Signing after a page reload will fail until the user reconnects.
+export const SESSION_BASED_WALLET_TYPES = new Set(['lobstr', 'wallet-connect']);
+
 const getWalletIdFromType = (walletType?: string): string | null => {
   switch (walletType) {
     case 'hana':
@@ -84,11 +88,9 @@ export const useStellarWalletsKit = () => {
           walletKitStore.kit.setWallet(walletId);
           walletKitStore.setSelectedWallet(walletId);
 
-          // Use the persisted address directly to avoid triggering a wallet
-          // extension popup on every page navigation. Wallets like Lobstr show
-          // a signature/auth request for every getAddress() call, which would
-          // fire on each tab switch. We only call getAddress() when there is
-          // no stored address (e.g. first-time connect or after disconnect).
+          // Use the persisted address directly to avoid triggering wallet
+          // extension popups on every page navigation. We only call getAddress()
+          // when there is no stored address (e.g. first-time connect or after disconnect).
           const storedAddress = persistStore.wallet.address;
           if (storedAddress) {
             walletKitStore.setPublicKey(storedAddress);

@@ -66,8 +66,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
     userPosition,
     loading,
     fetching,
+    positionFetching,
     error,
-    fetchError,
     needsTrustline,
     setNeedsTrustline,
     deposit,
@@ -221,47 +221,30 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
               </Stack>
             ))}
           </Stack>
-        ) : fetchError ? (
-          <Stack spacing={1} alignItems="center" sx={{ py: 1 }}>
-            <Typography variant="body2" color="error.main" textAlign="center">
-              {fetchError}
-            </Typography>
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              onClick={refreshVaultInfo}
-              startIcon={<Iconify icon="solar:refresh-bold" width={16} />}
-            >
-              {t('Retry')}
-            </Button>
-          </Stack>
         ) : (
           <Stack spacing={1}>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color="text.secondary">
-                {t('Your Deposits')}
-              </Typography>
-              <Typography variant="body2" fontWeight="bold">
-                {parseFloat(userPosition?.totalDeposited || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDC
-              </Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color="text.secondary">
-                {t('Current Value')}
-              </Typography>
-              <Typography variant="body2" fontWeight="bold">
-                {parseFloat(userPosition?.currentValue || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDC
-              </Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color="text.secondary">
-                {t('Earnings')}
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" color="success.main">
-                +{parseFloat(userPosition?.earnings || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDC
-              </Typography>
-            </Stack>
+            {[
+              { label: t('Your Deposits'), value: userPosition?.totalDeposited, prefix: '' },
+              { label: t('Current Value'), value: userPosition?.currentValue, prefix: '' },
+              { label: t('Earnings'), value: userPosition?.earnings, prefix: '+' },
+            ].map(({ label, value, prefix }) => (
+              <Stack key={label} direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">
+                  {label}
+                </Typography>
+                {positionFetching && !userPosition ? (
+                  <Skeleton variant="text" width={100} height={20} />
+                ) : (
+                  <Typography
+                    variant="body2"
+                    fontWeight="bold"
+                    color={prefix === '+' ? 'success.main' : 'text.primary'}
+                  >
+                    {`${prefix}${parseFloat(value || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDC`}
+                  </Typography>
+                )}
+              </Stack>
+            ))}
           </Stack>
         )}
       </Box>
