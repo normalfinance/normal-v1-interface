@@ -110,8 +110,8 @@ export async function GET(request: NextRequest) {
     // Soroban is reporting, a recent deposit hasn't propagated to all RPC nodes yet.
     // Return null so the client keeps its (correct) cached position rather than
     // reverting to the pre-deposit balance.
-    if (records.length > 0 && underlyingValue > 0 && underlyingValue < totalDeposited * 0.95) {
-      console.warn('[user-position] Stale Soroban data detected (underlyingValue < 95% of totalDeposited), preserving cache for', userAddress);
+    if (records.length > 0 && underlyingValue > 0 && underlyingValue < totalDeposited) {
+      console.warn('[user-position] Stale Soroban data detected (underlyingValue < totalDeposited), preserving cache for', userAddress);
       return NextResponse.json({ success: true, userPosition: null });
     }
 
