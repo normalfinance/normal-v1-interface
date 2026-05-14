@@ -104,8 +104,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
       await withdraw(amount);
     }
     setAmount('');
-    await refreshVaultInfo();
-  }, [mode, amount, deposit, withdraw, refreshVaultInfo]);
+  }, [mode, amount, deposit, withdraw]);
 
   const availableBalance =
     mode === 'deposit' ? savingsDepositBalance : userPosition?.currentValue || '0';

@@ -443,9 +443,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           depositResult.hash
         );
 
-        // 4. Refresh vault info and user position to show updated balance
+        // 4. Refresh vault info, then position after a short delay so the DB
+        // write and Soroban RPC propagation have time to settle before we query.
         await refreshVaultInfo();
-        refreshUserPosition();
+        setTimeout(() => refreshUserPosition(), 3000);
 
         return depositResult.hash;
       } catch (err: any) {
@@ -613,7 +614,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         );
 
         await refreshVaultInfo();
-        refreshUserPosition();
+        setTimeout(() => refreshUserPosition(), 3000);
 
         return withdrawResult.hash;
       } catch (err: any) {

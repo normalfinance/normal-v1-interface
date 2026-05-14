@@ -106,6 +106,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, userPosition: null });
     }
 
+    // Stale Soroban guard: if DB records show significantly more deposited than
+    // Soroban is reporting, a recent deposit hasn't propagated to all RPC nodes yet.
+    // Return null so the client keeps its (correct) cached position rather than
+    // reverting to the pre-deposit balance.
+    if (records.length > 0 && underlyingValue > 0 && underlyingValue < totalDeposited * 0.95) {
+      console.warn('[user-position] Stale Soroban data detected (underlyingValue < 95% of totalDeposited), preserving cache for', userAddress);
+      return NextResponse.json({ success: true, userPosition: null });
+    }
+
     const effectiveCurrentValue = underlyingValue > 0 ? underlyingValue : totalDeposited;
     const earnings = Math.max(effectiveCurrentValue - totalDeposited, 0);
 
