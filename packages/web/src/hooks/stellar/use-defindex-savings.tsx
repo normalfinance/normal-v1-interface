@@ -4,10 +4,35 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { OptionsObject, SnackbarMessage } from 'notistack';
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
+// ---------------------------------------------------------------------------
+// Module-level position cache — survives React remounts and page refreshes.
+// Keyed by wallet address so multiple accounts never bleed data into each other.
+// ---------------------------------------------------------------------------
+const CACHE_KEY = 'nf_savings_position_cache';
+
+function readCache(): Record<string, SavingsPosition> {
+  if (typeof window === 'undefined') return {};
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { return {}; }
+}
+
+function getCachedPosition(address: string | undefined): SavingsPosition | null {
+  if (!address) return null;
+  return readCache()[address] ?? null;
+}
+
+function setCachedPosition(address: string | undefined, position: SavingsPosition): void {
+  if (!address || typeof window === 'undefined') return;
+  try {
+    const cache = readCache();
+    cache[address] = position;
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch { /* storage full — ignore */ }
+}
+
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
@@ -42,6 +67,7 @@ interface UseDefindexSavingsReturn {
   fetchError: string | null;
   loading: boolean;
   fetching: boolean;
+  positionFetching: boolean;
   vaultInfo: VaultInfo | null;
   userPosition: SavingsPosition | null;
   needsTrustline: boolean;
@@ -49,6 +75,7 @@ interface UseDefindexSavingsReturn {
   deposit: (amount: string) => Promise<string>;
   withdraw: (amount: string) => Promise<string>;
   refreshVaultInfo: () => Promise<void>;
+  refreshUserPosition: () => Promise<void>;
 }
 
 function enqueueSuccessWithStellarExpert(
@@ -106,41 +133,137 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [positionFetching, setPositionFetching] = useState(false);
   const [needsTrustline, setNeedsTrustline] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
-  const [userPosition, setUserPosition] = useState<SavingsPosition | null>(null);
+  // Initialise from localStorage cache so the drawer never flashes 0 on remount
+  const [userPosition, setUserPosition] = useState<SavingsPosition | null>(
+    () => getCachedPosition(wallet.address)
+  );
 
-  // Fetch vault info
+  // Separate tokens for vault-info and user-position fetches so they can run
+  // concurrently without cancelling each other.
+  const vaultTokenRef = useRef(0);
+  const positionTokenRef = useRef(0);
+
+  // ── Phase 1: vault metadata (fast, ~3-5 s, no user address needed) ──────
   const refreshVaultInfo = useCallback(async () => {
-    try {
-      setFetchError(null);
-      setFetching(true);
+    const myToken = ++vaultTokenRef.current;
+    setFetchError(null);
+    setFetching(true);
 
-      const userParam = wallet.address ? `?user=${wallet.address}` : '';
-      const response = await fetch(`/api/savings/vault-info${userParam}`);
-      const data = await response.json();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, 600 * 2 ** (attempt - 1)));
+          if (myToken !== vaultTokenRef.current) return;
+        }
 
-      if (!data.success) {
-        setFetchError(data.error || 'Failed to fetch vault info');
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 12_000);
+        let response: Response;
+        try {
+          response = await fetch('/api/savings/vault-info', { signal: controller.signal });
+        } finally {
+          clearTimeout(tid);
+        }
+
+        if (myToken !== vaultTokenRef.current) return;
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body?.error || `Request failed (${response.status})`);
+        }
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Failed to fetch vault info');
+
+        if (myToken !== vaultTokenRef.current) return;
+
+        setVaultInfo(data.vault);
+        setFetchError(null);
+        setFetching(false);
+        return;
+      } catch (err: any) {
+        if (myToken !== vaultTokenRef.current) return;
+        // Always retry — set error only after the final attempt
+        if (attempt < 2) continue;
+        console.error('[useDefindexSavings] vault-info fetch failed:', err);
+        setFetchError(err.message || 'Failed to fetch vault info');
+        setFetching(false);
         return;
       }
+    }
 
-      setVaultInfo(data.vault);
-      if (data.userPosition) {
-        setUserPosition(data.userPosition);
+    if (myToken !== vaultTokenRef.current) return;
+    setFetchError('Failed to fetch vault info');
+    setFetching(false);
+  }, []);
+
+  // ── Phase 2: user position (slow, up to 30 s for Soroban RPC on mainnet) ─
+  const refreshUserPosition = useCallback(async () => {
+    if (!wallet.address) return;
+
+    const myToken = ++positionTokenRef.current;
+    setPositionFetching(true);
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, 2_000 * attempt));
+          if (myToken !== positionTokenRef.current) return;
+        }
+
+        const controller = new AbortController();
+        // 30 s — Soroban RPC calls on mainnet can take 15-25 s
+        const tid = setTimeout(() => controller.abort(), 30_000);
+        let response: Response;
+        try {
+          response = await fetch(`/api/savings/user-position?user=${wallet.address}`, {
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(tid);
+        }
+
+        if (myToken !== positionTokenRef.current) return;
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body?.error || `Request failed (${response.status})`);
+        }
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Failed to fetch user position');
+
+        if (myToken !== positionTokenRef.current) return;
+
+        if (data.userPosition) {
+          setCachedPosition(wallet.address, data.userPosition);
+          setUserPosition(data.userPosition);
+        }
+        setPositionFetching(false);
+        return;
+      } catch (err: any) {
+        if (myToken !== positionTokenRef.current) return;
+        // Retry on all errors (AbortError = timeout; others = network/API issues)
+        if (attempt < 2) continue;
+        console.error('[useDefindexSavings] user-position fetch failed after retries:', err);
+        setPositionFetching(false);
+        return;
       }
-    } catch (err: any) {
-      console.error('Error fetching vault info:', err);
-      setFetchError(err.message || 'Failed to fetch vault info');
-    } finally {
-      setFetching(false);
     }
   }, [wallet.address]);
 
-  // Fetch vault info on mount and when wallet changes
+  // Phase 1: vault metadata on mount (no dependency on wallet address)
   useEffect(() => {
     refreshVaultInfo();
   }, [refreshVaultInfo]);
+
+  // Phase 2: user position when wallet address is available
+  useEffect(() => {
+    refreshUserPosition();
+  }, [refreshUserPosition]);
 
   // Deposit to vault — two transactions: (1) classic USDC fee payment,
   // (2) DeFindex deposit for the net amount. Fee goes first so if the
@@ -320,8 +443,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           depositResult.hash
         );
 
-        // 4. Refresh vault info to show updated balance
+        // 4. Refresh vault info and user position to show updated balance
         await refreshVaultInfo();
+        refreshUserPosition();
 
         return depositResult.hash;
       } catch (err: any) {
@@ -351,6 +475,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       enqueueSnackbar,
       t,
       refreshVaultInfo,
+      refreshUserPosition,
     ]
   );
 
@@ -488,6 +613,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         );
 
         await refreshVaultInfo();
+        refreshUserPosition();
 
         return withdrawResult.hash;
       } catch (err: any) {
@@ -518,6 +644,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       enqueueSnackbar,
       t,
       refreshVaultInfo,
+      refreshUserPosition,
     ]
   );
 
@@ -527,6 +654,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
     fetchError,
     loading,
     fetching,
+    positionFetching,
     vaultInfo,
     userPosition,
     needsTrustline,
@@ -534,5 +662,6 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
     deposit,
     withdraw,
     refreshVaultInfo,
+    refreshUserPosition,
   };
 }
