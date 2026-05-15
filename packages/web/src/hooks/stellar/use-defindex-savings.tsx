@@ -9,24 +9,32 @@ import type { VaultInfo, SavingsPosition } from '@/types/savings';
 // Keyed by wallet address so multiple accounts never bleed data into each other.
 // ---------------------------------------------------------------------------
 const CACHE_KEY = 'nf_savings_position_cache';
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-function readCache(): Record<string, SavingsPosition> {
+interface CacheEntry {
+  position: SavingsPosition;
+  cachedAt: number;
+}
+
+function readCache(): Record<string, CacheEntry> {
   if (typeof window === 'undefined') return {};
   try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { return {}; }
 }
 
 function getCachedPosition(address: string | undefined): SavingsPosition | null {
   if (!address) return null;
-  return readCache()[address] ?? null;
+  const entry = readCache()[address];
+  if (!entry?.cachedAt || Date.now() - entry.cachedAt > CACHE_TTL_MS) return null;
+  return entry.position;
 }
 
 function setCachedPosition(address: string | undefined, position: SavingsPosition): void {
   if (!address || typeof window === 'undefined') return;
   try {
     const cache = readCache();
-    cache[address] = position;
+    cache[address] = { position, cachedAt: Date.now() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-  } catch { /* storage full — ignore */ }
+  } catch { /* storage full */ }
 }
 
 import { useTranslate } from '@/locales';

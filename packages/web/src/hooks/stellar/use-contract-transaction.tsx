@@ -19,7 +19,6 @@ import {
   useNormalWallet,
   NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,
 } from '@/hooks/stellar/use-normal-wallet';
-import { useWalletReconnect, WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import {
   TreasuryContract,
   IndexFundContract,
