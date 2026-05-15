@@ -8,7 +8,11 @@ import type { VaultInfo, SavingsPosition } from '@/types/savings';
 // Module-level position cache — survives React remounts and page refreshes.
 // Keyed by wallet address so multiple accounts never bleed data into each other.
 // ---------------------------------------------------------------------------
-const CACHE_KEY = 'nf_savings_position_cache';
+// ---------------------------------------------------------------------------
+// Position cache
+// ---------------------------------------------------------------------------
+const POSITION_CACHE_KEY = 'nf_savings_position_cache';
+const CACHE_KEY = POSITION_CACHE_KEY; // alias used below
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 interface CacheEntry {
@@ -34,6 +38,32 @@ function setCachedPosition(address: string | undefined, position: SavingsPositio
     const cache = readCache();
     cache[address] = { position, cachedAt: Date.now() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch { /* storage full */ }
+}
+
+// ---------------------------------------------------------------------------
+// Vault info cache — keyed by network so mainnet/testnet never bleed.
+// TTL is 5 minutes; address never changes but APY/deposits update.
+// ---------------------------------------------------------------------------
+const VAULT_CACHE_KEY = 'nf_vault_info_cache';
+const VAULT_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function getCachedVaultInfo(network: string): VaultInfo | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(VAULT_CACHE_KEY);
+    if (!raw) return null;
+    const entry: { vault: VaultInfo; network: string; cachedAt: number } = JSON.parse(raw);
+    if (entry.network !== network) return null;
+    if (!entry.cachedAt || Date.now() - entry.cachedAt > VAULT_CACHE_TTL_MS) return null;
+    return entry.vault;
+  } catch { return null; }
+}
+
+function setCachedVaultInfo(network: string, vault: VaultInfo): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(VAULT_CACHE_KEY, JSON.stringify({ vault, network, cachedAt: Date.now() }));
   } catch { /* storage full */ }
 }
 
@@ -141,18 +171,29 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
-  const [positionFetching, setPositionFetching] = useState(false);
   const [needsTrustline, setNeedsTrustline] = useState(false);
-  const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
-  // Initialise from localStorage cache so the drawer never flashes 0 on remount
+  const networkKey = config.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet';
+  const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(
+    () => getCachedVaultInfo(config.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet')
+  );
+  // Read cache once so positionFetching and userPosition are consistent on the first render.
+  // If there is no cached position, positionFetching starts true so the skeleton shows
+  // immediately instead of briefly flashing 0.00 before the fetch effect fires.
   const [userPosition, setUserPosition] = useState<SavingsPosition | null>(
     () => getCachedPosition(wallet.address)
+  );
+  const [positionFetching, setPositionFetching] = useState(
+    () => !getCachedPosition(wallet.address)
   );
 
   // Separate tokens for vault-info and user-position fetches so they can run
   // concurrently without cancelling each other.
   const vaultTokenRef = useRef(0);
   const positionTokenRef = useRef(0);
+  // Mirror of userPosition so callbacks can read the latest value without
+  // needing it as a dependency.
+  const userPositionRef = useRef(userPosition);
+  useEffect(() => { userPositionRef.current = userPosition; }, [userPosition]);
 
   // ── Phase 1: vault metadata (fast, ~3-5 s, no user address needed) ──────
   const refreshVaultInfo = useCallback(async () => {
@@ -188,6 +229,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         if (myToken !== vaultTokenRef.current) return;
 
+        setCachedVaultInfo(networkKey, data.vault);
         setVaultInfo(data.vault);
         setFetchError(null);
         setFetching(false);
@@ -247,8 +289,37 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         if (myToken !== positionTokenRef.current) return;
 
         if (data.userPosition) {
-          setCachedPosition(wallet.address, data.userPosition);
-          setUserPosition(data.userPosition);
+          const apiPos = data.userPosition;
+          const prev = userPositionRef.current;
+          if (prev) {
+            const apiTD = parseFloat(apiPos.totalDeposited);
+            const prevTD = parseFloat(prev.totalDeposited);
+            const currentValue = parseFloat(apiPos.currentValue);
+            // The DeFindex events indexer lags 30-120 s behind on-chain state.
+            // Two stale-events signals:
+            //   1. apiTD > currentValue — impossible for a yield vault (deposited > held)
+            //   2. apiTD < prevTD — indexer hasn't caught up to a recent deposit
+            // In either case keep prevTD (our best known value) and only accept
+            // Soroban's up-to-date currentValue.
+            const stale =
+              apiTD > currentValue + 0.001 ||
+              apiTD < prevTD - 0.001;
+            if (stale) {
+              const merged = {
+                ...apiPos,
+                totalDeposited: prev.totalDeposited,
+                earnings: Math.max(currentValue - prevTD, 0).toFixed(7),
+              };
+              setCachedPosition(wallet.address, merged);
+              setUserPosition(merged);
+            } else {
+              setCachedPosition(wallet.address, apiPos);
+              setUserPosition(apiPos);
+            }
+          } else {
+            setCachedPosition(wallet.address, apiPos);
+            setUserPosition(apiPos);
+          }
         }
         setPositionFetching(false);
         return;
@@ -451,11 +522,13 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           depositResult.hash
         );
 
-        // Optimistic position update — show correct value immediately without
-        // waiting for DeFindex's API cache to update (can take minutes).
+        // Optimistic position update — show correct value immediately and persist to
+        // cache so a refresh before the events indexer catches up still shows the right values.
+        // refreshUserPosition's stale-detection heuristic will protect this cached value
+        // from being overwritten by stale API data.
         setUserPosition((prev) => {
           const base = prev ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
-          const updated: SavingsPosition = {
+          const updated = {
             ...base,
             currentValue: (parseFloat(base.currentValue) + netAmount).toFixed(7),
             totalDeposited: (parseFloat(base.totalDeposited) + netAmount).toFixed(7),
@@ -464,10 +537,12 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           return updated;
         });
 
-        // 4. Refresh vault info, then position after a short delay so the DB
-        // write and Soroban RPC propagation have time to settle before we query.
+        // Refresh vault info, then position. Retry at 3 s, 15 s, 45 s so that
+        // totalDeposited settles once the events indexer catches up.
         await refreshVaultInfo();
-        setTimeout(() => refreshUserPosition(), 3000);
+        setTimeout(() => refreshUserPosition(), 3_000);
+        setTimeout(() => refreshUserPosition(), 15_000);
+        setTimeout(() => refreshUserPosition(), 45_000);
 
         return depositResult.hash;
       } catch (err: any) {
@@ -634,12 +709,13 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           withdrawResult.hash
         );
 
-        // Optimistic position update — reflect withdrawal immediately.
+        // Optimistic position update — reflect withdrawal immediately and persist to
+        // cache so a refresh before the events indexer catches up still shows the right values.
         setUserPosition((prev) => {
           if (!prev) return prev;
           const newCurrentValue = Math.max(parseFloat(prev.currentValue) - parsedAmount, 0);
           const newTotalDeposited = Math.max(parseFloat(prev.totalDeposited) - parsedAmount, 0);
-          const updated: SavingsPosition = {
+          const updated = {
             ...prev,
             currentValue: newCurrentValue.toFixed(7),
             totalDeposited: newTotalDeposited.toFixed(7),
@@ -650,7 +726,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         });
 
         await refreshVaultInfo();
-        setTimeout(() => refreshUserPosition(), 3000);
+        setTimeout(() => refreshUserPosition(), 3_000);
+        setTimeout(() => refreshUserPosition(), 15_000);
+        setTimeout(() => refreshUserPosition(), 45_000);
 
         return withdrawResult.hash;
       } catch (err: any) {
