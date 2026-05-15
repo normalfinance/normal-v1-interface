@@ -127,39 +127,86 @@ export async function fetchSavingsVolume(): Promise<VolumeDailyRow[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Discover all wallets that ever interacted with the vault via Stellar Horizon.
+// This is the authoritative source — it catches wallets that deposited directly
+// on-chain without going through Normal's app (and thus missing from the DB).
+// ---------------------------------------------------------------------------
+
+const HORIZON_URL = 'https://horizon.stellar.org';
+
+export async function fetchVaultWalletsFromHorizon(): Promise<string[]> {
+  const wallets = new Set<string>();
+  let url: string | null =
+    `${HORIZON_URL}/operations?account=${VAULT_ADDRESS}&limit=200&order=desc`;
+
+  // Paginate until we have all historical interactions (max 5 pages = 1 000 ops)
+  for (let page = 0; page < 5 && url; page++) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) break;
+      const json = await res.json();
+      const records: any[] = json._embedded?.records ?? [];
+      for (const op of records) {
+        if (op.source_account) wallets.add(op.source_account);
+      }
+      url = json._links?.next?.href ?? null;
+      if (records.length < 200) break;
+    } catch {
+      break;
+    }
+  }
+
+  return Array.from(wallets);
+}
+
+// ---------------------------------------------------------------------------
 // Per-wallet yield — fetches all wallets that ever deposited
 // ---------------------------------------------------------------------------
 
 export async function fetchYieldSnapshots(walletAddresses: string[]): Promise<YieldSnapshotRow[]> {
   const snapshotDate = new Date().toISOString();
   const rows: YieldSnapshotRow[] = [];
+  const BATCH_SIZE = 5;
+  const BATCH_DELAY_MS = 500;
 
-  await Promise.allSettled(
-    walletAddresses.map(async (wallet) => {
-      try {
-        const url = `${DEFINDEX_API}/account/${wallet}/vault/${VAULT_ADDRESS}?network=${NETWORK}`;
-        const res = await fetch(url, { headers: defindexHeaders(), cache: 'no-store' });
-        if (!res.ok) return; // wallet may have no position — skip
+  for (let i = 0; i < walletAddresses.length; i += BATCH_SIZE) {
+    const batch = walletAddresses.slice(i, i + BATCH_SIZE);
 
-        const json = await res.json();
-        const perf = json.performance ?? {};
-        const pos = json.currentPosition ?? {};
+    await Promise.allSettled(
+      batch.map(async (wallet) => {
+        try {
+          const url = `${DEFINDEX_API}/account/${wallet}/vault/${VAULT_ADDRESS}?network=${NETWORK}`;
+          const res = await fetch(url, { headers: defindexHeaders(), cache: 'no-store' });
+          if (!res.ok) return; // wallet has no position — skip
 
-        rows.push({
-          snapshot_date: snapshotDate,
-          wallet_address: wallet,
-          vault_address: VAULT_ADDRESS,
-          network: NETWORK,
-          total_interest_earned: Number(perf.totalInterestEarned ?? 0) / 1e7,
-          total_deposited: Number(perf.totalDeposited ?? 0) / 1e7,
-          current_position: Number(pos.estimatedValue ?? 0) / 1e7,
-          roi: Number(perf.roi ?? 0),
-        });
-      } catch {
-        // skip wallets with no vault history
-      }
-    })
-  );
+          const json = await res.json();
+          const perf = json.performance ?? {};
+          const pos = json.currentPosition ?? {};
+
+          // Only record wallets with an actual position
+          const currentPosition = Number(pos.estimatedValue ?? 0) / 1e7;
+          if (currentPosition <= 0) return;
+
+          rows.push({
+            snapshot_date: snapshotDate,
+            wallet_address: wallet,
+            vault_address: VAULT_ADDRESS,
+            network: NETWORK,
+            total_interest_earned: Number(perf.totalInterestEarned ?? 0) / 1e7,
+            total_deposited: Number(perf.totalDeposited ?? 0) / 1e7,
+            current_position: currentPosition,
+            roi: Number(perf.roi ?? 0),
+          });
+        } catch {
+          // skip wallets with no vault history
+        }
+      })
+    );
+
+    if (i + BATCH_SIZE < walletAddresses.length) {
+      await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+    }
+  }
 
   return rows;
 }

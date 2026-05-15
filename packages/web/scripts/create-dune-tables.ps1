@@ -92,6 +92,21 @@ $Tables = @(
             @{ name = "last_used_at";   type = "timestamp" }
             @{ name = "network";        type = "varchar"   }
         )
+    },
+    @{
+        table_name  = "normal_transaction_log"
+        description = "Every on-chain action performed through Normal Finance, one row per transaction"
+        schema      = @(
+            @{ name = "date";           type = "timestamp" }
+            @{ name = "wallet_address"; type = "varchar"   }
+            @{ name = "action_type";    type = "varchar"   }
+            @{ name = "asset_in";       type = "varchar"   }
+            @{ name = "asset_out";      type = "varchar"   }
+            @{ name = "amount";         type = "double"    }
+            @{ name = "fee_usd";        type = "double"    }
+            @{ name = "tx_hash";        type = "varchar"   }
+            @{ name = "network";        type = "varchar"   }
+        )
     }
 )
 
