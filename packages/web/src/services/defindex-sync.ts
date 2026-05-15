@@ -142,7 +142,7 @@ export async function fetchVaultWalletsFromHorizon(): Promise<string[]> {
   // Paginate until we have all historical interactions (max 5 pages = 1 000 ops)
   for (let page = 0; page < 5 && url; page++) {
     try {
-      const res = await fetch(url, { cache: 'no-store' });
+      const res: Response = await fetch(url, { cache: 'no-store' });
       if (!res.ok) break;
       const json = await res.json();
       const records: any[] = json._embedded?.records ?? [];
