@@ -5,6 +5,7 @@ import {
   fetchSavingsVolume,
   fetchVaultSnapshots,
   fetchYieldSnapshots,
+  fetchVaultWalletsFromHorizon,
 } from '@/services/defindex-sync';
 import {
   fetchReferrals,
@@ -12,6 +13,7 @@ import {
   fetchLinkedWallets,
   fetchWalletActivity,
   fetchAllDepositWallets,
+  fetchTransactionLog,
 } from '@/services/prisma-sync';
 
 export const dynamic = 'force-dynamic';
@@ -67,7 +69,13 @@ export async function GET(req: Request) {
 
   try {
     // 5. Yield snapshots (per-wallet, from DeFindex account API)
-    const wallets = await fetchAllDepositWallets();
+    // Merge DB wallets with Horizon-discovered wallets so we never miss a depositor
+    // that bypassed Normal's app (or whose log-transaction call failed silently).
+    const [dbWallets, horizonWallets] = await Promise.all([
+      fetchAllDepositWallets(),
+      fetchVaultWalletsFromHorizon(),
+    ]);
+    const wallets = Array.from(new Set([...dbWallets, ...horizonWallets]));
     const yieldSnapshots = await fetchYieldSnapshots(wallets);
     // Don't clear — append each day's snapshot to preserve history
     await duneInsert('normal_yield_snapshots', yieldSnapshots);
@@ -104,6 +112,16 @@ export async function GET(req: Request) {
     results.linked_wallets = `${linkedWallets.length} rows`;
   } catch (e: any) {
     results.linked_wallets = `ERROR: ${e.message}`;
+  }
+
+  try {
+    // 9. Transaction log (every on-chain action through Normal, per wallet)
+    const txLog = await fetchTransactionLog();
+    await duneClear('normal_transaction_log');
+    await duneInsert('normal_transaction_log', txLog);
+    results.transaction_log = `${txLog.length} rows`;
+  } catch (e: any) {
+    results.transaction_log = `ERROR: ${e.message}`;
   }
 
   return NextResponse.json({ ok: true, results });

@@ -1,4 +1,4 @@
-import type { ReferralRow, VolumeDailyRow, LinkedWalletRow, WalletActivityRow } from '@/lib/dune/tables';
+import type { ReferralRow, VolumeDailyRow, LinkedWalletRow, WalletActivityRow, TransactionLogRow } from '@/lib/dune/tables';
 
 import { prisma } from '@/lib/prisma';
 
@@ -96,6 +96,72 @@ export async function fetchLinkedWallets(): Promise<LinkedWalletRow[]> {
     last_used_at: w.lastUsedAt.toISOString(),
     network: NETWORK,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Unified per-transaction log — one row per on-chain action through Normal
+// ---------------------------------------------------------------------------
+
+export async function fetchTransactionLog(): Promise<TransactionLogRow[]> {
+  const [swaps, deposits] = await Promise.all([
+    prisma.swapLog.findMany({
+      select: {
+        createdAt: true,
+        walletAddress: true,
+        tokenInSymbol: true,
+        tokenOutSymbol: true,
+        amountIn: true,
+        amountOut: true,
+        feeAmount: true,
+        txHash: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.vaultDeposit.findMany({
+      select: {
+        createdAt: true,
+        walletAddress: true,
+        type: true,
+        amount: true,
+        feeAmount: true,
+        txHash: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
+
+  const rows: TransactionLogRow[] = [];
+
+  for (const s of swaps) {
+    rows.push({
+      date: s.createdAt.toISOString(),
+      wallet_address: s.walletAddress,
+      action_type: 'swap',
+      asset_in: s.tokenInSymbol ?? 'UNKNOWN',
+      asset_out: s.tokenOutSymbol ?? 'UNKNOWN',
+      amount: Number(s.amountIn ?? 0),
+      fee_usd: Number(s.feeAmount ?? 0),
+      tx_hash: s.txHash ?? '',
+      network: NETWORK,
+    });
+  }
+
+  for (const d of deposits) {
+    const isDeposit = d.type === 'deposit';
+    rows.push({
+      date: d.createdAt.toISOString(),
+      wallet_address: d.walletAddress,
+      action_type: isDeposit ? 'savings_deposit' : 'savings_withdraw',
+      asset_in: isDeposit ? 'USDC' : 'nUSDC',
+      asset_out: isDeposit ? 'nUSDC' : 'USDC',
+      amount: Number(d.amount ?? 0),
+      fee_usd: Number(d.feeAmount ?? 0),
+      tx_hash: d.txHash ?? '',
+      network: NETWORK,
+    });
+  }
+
+  return rows;
 }
 
 // ---------------------------------------------------------------------------

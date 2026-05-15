@@ -56,3 +56,15 @@ export interface LinkedWalletRow {
   last_used_at: string;
   network: string;
 }
+
+export interface TransactionLogRow {
+  date: string;           // ISO timestamp
+  wallet_address: string;
+  action_type: string;    // 'swap' | 'savings_deposit' | 'savings_withdraw'
+  asset_in: string;       // token the user sent (XLM, USDC, nUSDC)
+  asset_out: string;      // token the user received
+  amount: number;         // amount of asset_in
+  fee_usd: number;        // Normal fee charged
+  tx_hash: string;
+  network: string;
+}
