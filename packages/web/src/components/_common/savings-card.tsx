@@ -114,7 +114,15 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
     100
   ).toFixed(2)} ${availableAssetLabel}`;
 
-  const isInsufficientBalance = parseFloat(amount) > parseFloat(availableBalance);
+  // Only flag insufficient balance when we have a confirmed non-zero balance.
+  // Both deposit (tokenState) and withdraw (userPosition) start at '0' before data loads —
+  // checking against '0' would permanently disable the button for any amount typed.
+  // The deposit function does its own Horizon pre-flight check as the real guard.
+  const parsedAvailable = parseFloat(availableBalance);
+  const isInsufficientBalance =
+    mode === 'withdraw'
+      ? !!userPosition && parseFloat(amount) > parsedAvailable
+      : parsedAvailable > 0 && parseFloat(amount) > parsedAvailable;
 
   // Normal Finance fee preview
   const parsedAmount = parseFloat(amount || '0');
@@ -167,19 +175,24 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
     await refetchAccountStatus();
   }, [setNeedsTrustline, refetchAccountStatus]);
 
+  const isWithdrawPositionLoading = mode === 'withdraw' && positionFetching && !userPosition;
   const isActionDisabled =
-    isCheckingAccount || loading || isInsufficientBalance || isAmountMissing;
+    loading || !vaultInfo || isWithdrawPositionLoading || isInsufficientBalance || isAmountMissing;
   const actionButtonText = loading
     ? mode === 'deposit'
       ? t('Depositing...')
       : t('Withdrawing...')
-    : isInsufficientBalance
-      ? t('Insufficient balance')
-      : isAmountMissing
-        ? t('Enter amount')
-        : mode === 'deposit'
-          ? t('Deposit')
-          : t('Withdraw');
+    : !vaultInfo
+      ? t('Loading...')
+      : isWithdrawPositionLoading
+        ? t('Loading balance...')
+        : isInsufficientBalance
+          ? t('Insufficient balance')
+          : isAmountMissing
+            ? t('Enter amount')
+            : mode === 'deposit'
+              ? t('Deposit')
+              : t('Withdraw');
 
   return (
     <Card

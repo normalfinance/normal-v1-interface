@@ -8,7 +8,11 @@ import type { VaultInfo, SavingsPosition } from '@/types/savings';
 // Module-level position cache — survives React remounts and page refreshes.
 // Keyed by wallet address so multiple accounts never bleed data into each other.
 // ---------------------------------------------------------------------------
-const CACHE_KEY = 'nf_savings_position_cache';
+// ---------------------------------------------------------------------------
+// Position cache
+// ---------------------------------------------------------------------------
+const POSITION_CACHE_KEY = 'nf_savings_position_cache';
+const CACHE_KEY = POSITION_CACHE_KEY; // alias used below
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 interface CacheEntry {
@@ -34,6 +38,32 @@ function setCachedPosition(address: string | undefined, position: SavingsPositio
     const cache = readCache();
     cache[address] = { position, cachedAt: Date.now() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch { /* storage full */ }
+}
+
+// ---------------------------------------------------------------------------
+// Vault info cache — keyed by network so mainnet/testnet never bleed.
+// TTL is 5 minutes; address never changes but APY/deposits update.
+// ---------------------------------------------------------------------------
+const VAULT_CACHE_KEY = 'nf_vault_info_cache';
+const VAULT_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function getCachedVaultInfo(network: string): VaultInfo | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(VAULT_CACHE_KEY);
+    if (!raw) return null;
+    const entry: { vault: VaultInfo; network: string; cachedAt: number } = JSON.parse(raw);
+    if (entry.network !== network) return null;
+    if (!entry.cachedAt || Date.now() - entry.cachedAt > VAULT_CACHE_TTL_MS) return null;
+    return entry.vault;
+  } catch { return null; }
+}
+
+function setCachedVaultInfo(network: string, vault: VaultInfo): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(VAULT_CACHE_KEY, JSON.stringify({ vault, network, cachedAt: Date.now() }));
   } catch { /* storage full */ }
 }
 
@@ -141,12 +171,19 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
-  const [positionFetching, setPositionFetching] = useState(false);
   const [needsTrustline, setNeedsTrustline] = useState(false);
-  const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
-  // Initialise from localStorage cache so the drawer never flashes 0 on remount
+  const networkKey = config.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet';
+  const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(
+    () => getCachedVaultInfo(config.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet')
+  );
+  // Read cache once so positionFetching and userPosition are consistent on the first render.
+  // If there is no cached position, positionFetching starts true so the skeleton shows
+  // immediately instead of briefly flashing 0.00 before the fetch effect fires.
   const [userPosition, setUserPosition] = useState<SavingsPosition | null>(
     () => getCachedPosition(wallet.address)
+  );
+  const [positionFetching, setPositionFetching] = useState(
+    () => !getCachedPosition(wallet.address)
   );
 
   // Separate tokens for vault-info and user-position fetches so they can run
@@ -188,6 +225,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         if (myToken !== vaultTokenRef.current) return;
 
+        setCachedVaultInfo(networkKey, data.vault);
         setVaultInfo(data.vault);
         setFetchError(null);
         setFetching(false);
@@ -453,15 +491,14 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         // Optimistic position update — show correct value immediately without
         // waiting for DeFindex's API cache to update (can take minutes).
+        // Note: only update in-memory state; cache is only written from confirmed API data.
         setUserPosition((prev) => {
           const base = prev ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
-          const updated: SavingsPosition = {
+          return {
             ...base,
             currentValue: (parseFloat(base.currentValue) + netAmount).toFixed(7),
             totalDeposited: (parseFloat(base.totalDeposited) + netAmount).toFixed(7),
           };
-          setCachedPosition(wallet.address, updated);
-          return updated;
         });
 
         // 4. Refresh vault info, then position after a short delay so the DB
@@ -635,18 +672,17 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         );
 
         // Optimistic position update — reflect withdrawal immediately.
+        // Note: only update in-memory state; cache is only written from confirmed API data.
         setUserPosition((prev) => {
           if (!prev) return prev;
           const newCurrentValue = Math.max(parseFloat(prev.currentValue) - parsedAmount, 0);
           const newTotalDeposited = Math.max(parseFloat(prev.totalDeposited) - parsedAmount, 0);
-          const updated: SavingsPosition = {
+          return {
             ...prev,
             currentValue: newCurrentValue.toFixed(7),
             totalDeposited: newTotalDeposited.toFixed(7),
             earnings: Math.max(newCurrentValue - newTotalDeposited, 0).toFixed(7),
           };
-          setCachedPosition(wallet.address, updated);
-          return updated;
         });
 
         await refreshVaultInfo();
