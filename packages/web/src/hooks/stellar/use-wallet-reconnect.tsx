@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback } from 'react';
+import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { closeSnackbar, enqueueSnackbar } from 'notistack';
+
 import Button from '@mui/material/Button';
 
 import { useStellarWalletsKit, SESSION_BASED_WALLET_TYPES } from './use-stellar-wallets-kit';
@@ -22,6 +24,7 @@ function isSessionError(err: any): boolean {
 }
 
 export function useWalletReconnect() {
+  const { t } = useTranslate();
   const { wallet } = usePersistStore();
   const { signTransaction: kitSign, connectWallet } = useStellarWalletsKit();
 
@@ -34,7 +37,7 @@ export function useWalletReconnect() {
       } catch (err: any) {
         if (isSessionBased && isSessionError(err)) {
           const key = enqueueSnackbar(
-            'Your wallet session has expired.',
+            t('Your wallet session has expired.'),
             {
               variant: 'warning',
               persist: true,
@@ -49,7 +52,7 @@ export function useWalletReconnect() {
                   }}
                   sx={{ ml: 1, fontWeight: 600 }}
                 >
-                  Reconnect
+                  {t('Reconnect')}
                 </Button>
               ),
             }
@@ -59,7 +62,7 @@ export function useWalletReconnect() {
         throw err;
       }
     },
-    [kitSign, connectWallet, isSessionBased]
+    [kitSign, connectWallet, isSessionBased, t]
   );
 
   return { signOrReconnect };

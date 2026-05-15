@@ -3,8 +3,8 @@ import type { WalletActivityItem, WalletActivityResponse } from '@/types/wallet-
 
 import useSWR from 'swr';
 import { Horizon } from '@stellar/stellar-sdk';
-import { getCryptoIconUrl, constants } from '@normalfinance/utils';
 import { listTransactions } from '@/lib/mgi/history';
+import { constants, getCryptoIconUrl } from '@normalfinance/utils';
 
 function fallbackSymbol(address: string, stored: string | null): string {
   if (stored) return stored;

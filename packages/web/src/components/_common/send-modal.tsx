@@ -2,13 +2,13 @@
 
 import type { Token } from '@normalfinance/types';
 
-import { Horizon } from '@stellar/stellar-sdk';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
+import { Horizon } from '@stellar/stellar-sdk';
 import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
-import { useStellarConfig } from '@/hooks';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import React, { useRef, useMemo, useState, useEffect } from 'react';
 import {
@@ -85,7 +85,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
       BigNumber(b.balance).multipliedBy(b.price).comparedTo(BigNumber(a.balance).multipliedBy(a.price)) ?? 0
     )[0];
     setSendToken(best ?? sendableTokens[0] ?? null);
-  }, [open]);
+  }, [open, sendableTokens]);
 
   // Fetch XLM subentry count for accurate reserve calculation
   useEffect(() => {
@@ -134,7 +134,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
   }, [coinAmount, sendToken]);
 
   const xlmPrice = useMemo(
-    () => BigNumber(tokens.find((t) => t.symbol === 'XLM')?.price ?? 0),
+    () => BigNumber(tokens.find((tok) => tok.symbol === 'XLM')?.price ?? 0),
     [tokens]
   );
 

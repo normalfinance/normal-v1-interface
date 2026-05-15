@@ -6,6 +6,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { logger, createTrustline } from '@normalfinance/utils';
 
 import { useStellarWalletsKit } from '../use-stellar-wallets-kit';
+import { useWalletReconnect, WalletSessionExpiredError } from '../use-wallet-reconnect';
 import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from '../use-normal-wallet';
 import { useWalletReconnect, WalletSessionExpiredError } from '../use-wallet-reconnect';
 

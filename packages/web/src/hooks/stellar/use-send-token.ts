@@ -5,15 +5,16 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { BigNumber } from 'bignumber.js';
 import { useStellarConfig } from '@/hooks';
 import { detectMemoType } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
-import { BigNumber } from 'bignumber.js';
 import { Memo, Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
 
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
+import { useWalletReconnect, WalletSessionExpiredError } from './use-wallet-reconnect';
 import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 import { useWalletReconnect, WalletSessionExpiredError } from './use-wallet-reconnect';
 

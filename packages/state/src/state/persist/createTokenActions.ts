@@ -28,11 +28,11 @@ const fetchTokenBalance = async (token: ApiToken, address: string, config: Netwo
   return balance;
 };
 
-const fetchTokenPrice = async (token: ApiToken): Promise<BigNumber> => {
+const fetchTokenPrice = async (token: ApiToken, config: NetworkConfig): Promise<BigNumber> => {
   let oraclePrice = BigNumber(0);
 
   try {
-    const { price } = await getReflectorExternalPrice(token.symbol);
+    const { price } = await getReflectorExternalPrice(token.symbol, config);
     oraclePrice = BigNumber(format.fTokenAmount(price, 14));
   } catch (error) {
     logger.error('Failed getting oracle price: ', error);
@@ -112,7 +112,7 @@ export const createTokenActions = (): TokenActions => {
 
         if (walletAddress) balance = await fetchTokenBalance(token, walletAddress, networkConfig);
 
-        const price = await fetchTokenPrice(token);
+        const price = await fetchTokenPrice(token, networkConfig);
 
         // Update state
         usePersistStore.setState((state: AppStorePersist) => {

@@ -9,10 +9,9 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
-import { varAlpha } from 'minimal-shared/utils';
 import { ModalType } from '@normalfinance/types';
 import { useAppStore } from '@normalfinance/state';
-import { fPercent, fCurrencyTwoDecimals } from '@/utils/format-number';
+import { fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';

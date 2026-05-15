@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { duneClear, duneInsert } from '@/lib/dune/client';
+import { fetchSupabaseUsers } from '@/services/supabase-sync';
 import {
   fetchSavingsVolume,
   fetchVaultSnapshots,
@@ -8,11 +9,10 @@ import {
 import {
   fetchReferrals,
   fetchSwapVolume,
+  fetchLinkedWallets,
   fetchWalletActivity,
   fetchAllDepositWallets,
-  fetchLinkedWallets,
 } from '@/services/prisma-sync';
-import { fetchSupabaseUsers } from '@/services/supabase-sync';
 
 export const dynamic = 'force-dynamic';
 

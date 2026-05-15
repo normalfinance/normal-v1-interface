@@ -6,22 +6,22 @@ import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useUserActivity, useStellarConfig } from '@/hooks';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, format, logger } from '@normalfinance/utils';
+import { useUserActivity, useStellarConfig } from '@/hooks';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
-import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
-import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import {
   getLinkedWallets,
   type LinkedWallet,
 } from '@/services/linked-wallets';
+import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   useNormalWallet,
   hasStoredNormalWalletKey,
@@ -44,10 +44,10 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
-import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
+import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
 import WalletSelectionModal, {
   hasSeenWalletSelectionModal,
 } from '@/components/_common/wallet-selection-modal';
@@ -99,7 +99,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
       refreshVaultInfo();
       refreshUserPosition();
     }
-  }, [drawerOpen, address, refreshVaultInfo, refreshUserPosition]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [drawerOpen, address, refreshVaultInfo, refreshUserPosition]);  
 
   const assetsBalance = tokens.reduce((acc, tkn) => {
     const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);

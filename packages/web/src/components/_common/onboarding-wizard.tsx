@@ -1,56 +1,57 @@
 'use client';
 
+import type { LinkedWallet } from '@/services/linked-wallets';
+
 import QRCode from 'qrcode';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
-import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { usePersistStore } from '@normalfinance/state';
-import { useStellarConfig } from '@/hooks';
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
-import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import { useNormalWallet, hasStoredNormalWalletKey } from '@/hooks/stellar/use-normal-wallet';
-import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
-import type { LinkedWallet } from '@/services/linked-wallets';
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
-import { signInWithGoogle, signInWithOtp, verifyOtp, signInWithPassword, signUpWithPassword, resetPassword, resendConfirmationEmail } from '@/services/auth';
+import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { useNormalWallet, hasStoredNormalWalletKey } from '@/hooks/stellar/use-normal-wallet';
+import { verifyOtp, signInWithOtp, resetPassword, signInWithGoogle, signInWithPassword, signUpWithPassword, resendConfirmationEmail } from '@/services/auth';
 import {
   logger,
   format,
   isTestnet,
-  createCoinbasePayOnrampURL,
   validateMnemonic,
   normalizeMnemonic,
   validatePrivateKey,
-  formatMnemonicForDisplay,
   splitMnemonicToWords,
+  formatMnemonicForDisplay,
+  createCoinbasePayOnrampURL,
   getRandomVerificationWords,
 } from '@normalfinance/utils';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
+  Tab,
+  Tabs,
   Stack,
   Alert,
   Button,
-  Checkbox,
-  CircularProgress,
   Dialog,
   Divider,
-  FormControlLabel,
-  IconButton,
-  Link as MuiLink,
-  Tab,
-  Tabs,
-  TextField,
   Tooltip,
+  Checkbox,
+  TextField,
+  IconButton,
   Typography,
   DialogContent,
+  Link as MuiLink,
+  CircularProgress,
+  FormControlLabel,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -337,7 +338,7 @@ export default function OnboardingWizard({
 
   // Create wallet when entering new-wallet step
   useEffect(() => {
-    if (step !== 'new-wallet' || newWalletStage !== 'creating' || !open) return;
+    if (step !== 'new-wallet' || newWalletStage !== 'creating' || !open) return undefined;
     let cancelled = false;
     const doCreate = async () => {
       try {
@@ -391,7 +392,7 @@ export default function OnboardingWizard({
 
   // Poll every 5s on fund-xlm
   useEffect(() => {
-    if (step !== 'fund-xlm' || isCheckingAccount || accountExists) { stopPolling(); return; }
+    if (step !== 'fund-xlm' || isCheckingAccount || accountExists) { stopPolling(); return undefined; }
     if (!pollIntervalRef.current) {
       pollIntervalRef.current = setInterval(() => refetchAccountStatus(), 5000);
     }
@@ -412,7 +413,7 @@ export default function OnboardingWizard({
 
   // Load wallets when entering linked-accounts step
   useEffect(() => {
-    if (step !== 'linked-accounts') return;
+    if (step !== 'linked-accounts') return undefined;
     let cancelled = false;
     const load = async () => {
       setIsLoadingLinkedWallets(true);
@@ -920,7 +921,7 @@ export default function OnboardingWizard({
       <Turnstile ref={turnstileRef} siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''} onSuccess={(tk) => setCaptchaToken(tk)} />
 
       <Typography variant="caption" color="text.disabled" align="center" display="block">
-        Protected by Cloudflare Turnstile.
+        {t('Protected by Cloudflare Turnstile.')}
       </Typography>
     </Stack>
   );
@@ -1742,7 +1743,7 @@ export default function OnboardingWizard({
           variant="caption"
           sx={{ flex: 1, fontWeight: 600, letterSpacing: 0.3, color: 'text.secondary', fontSize: '0.7rem' }}
         >
-          {stepNumber}/8 — {STEP_LABEL[step]}
+          {t('{{step}}/8 — {{label}}', { step: stepNumber, label: STEP_LABEL[step] })}
         </Typography>
 
         {/* Back arrow */}

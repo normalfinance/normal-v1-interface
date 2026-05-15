@@ -94,17 +94,29 @@ export async function GET(request: NextRequest) {
       if (totalDeposited < 0) totalDeposited = 0;
     }
 
-    // Use on-chain balance if available; otherwise fall back to DB-tracked amount
-    // so the UI never shows phantom zeros when the RPC is lagging.
-    const effectiveCurrentValue = underlyingValue > 0 ? underlyingValue : totalDeposited;
-    const earnings = Math.max(effectiveCurrentValue - totalDeposited, 0);
-
-    // If we have no data at all from either source, return null so the client
-    // preserves its cached position rather than overwriting with zeros.
-    if (effectiveCurrentValue === 0 && dfTokens === 0 && records.length === 0) {
-      console.warn('[user-position] No data available for', userAddress);
+    // If on-chain balance is unavailable (RPC failed or returned 0 with no dfTokens),
+    // return null so the client preserves its cached position — including real earnings —
+    // rather than overwriting them with computed zeros.
+    if (underlyingValue === 0 && dfTokens === 0) {
+      if (records.length === 0) {
+        console.warn('[user-position] No data available for', userAddress);
+      } else {
+        console.warn('[user-position] On-chain balance unavailable, preserving client cache for', userAddress);
+      }
       return NextResponse.json({ success: true, userPosition: null });
     }
+
+    // Stale Soroban guard: if DB records show significantly more deposited than
+    // Soroban is reporting, a recent deposit hasn't propagated to all RPC nodes yet.
+    // Return null so the client keeps its (correct) cached position rather than
+    // reverting to the pre-deposit balance.
+    if (records.length > 0 && underlyingValue > 0 && underlyingValue < totalDeposited) {
+      console.warn('[user-position] Stale Soroban data detected (underlyingValue < totalDeposited), preserving cache for', userAddress);
+      return NextResponse.json({ success: true, userPosition: null });
+    }
+
+    const effectiveCurrentValue = underlyingValue > 0 ? underlyingValue : totalDeposited;
+    const earnings = Math.max(effectiveCurrentValue - totalDeposited, 0);
 
     const userPosition = {
       shares: (dfTokens / DECIMALS).toString(),

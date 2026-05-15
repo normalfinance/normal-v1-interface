@@ -14,6 +14,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { type TransactionDetails } from '@/types/transaction';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
+import { useWalletReconnect, WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import {
   useNormalWallet,
   NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,

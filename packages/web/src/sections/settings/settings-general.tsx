@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
-import { supabase } from '@/lib/createSupabaseClient';
+import { useState, useEffect } from 'react';
 import { buildAuthHeaders } from '@/utils/http';
+import { supabase } from '@/lib/createSupabaseClient';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useSnackbar } from '@/components/template/snackbar';
-import { alpha, useTheme } from '@mui/material/styles';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -18,8 +16,10 @@ import Divider from '@mui/material/Divider';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import CardContent from '@mui/material/CardContent';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
+import { useSnackbar } from '@/components/template/snackbar';
 
 export function SettingsGeneral() {
   const { t } = useTranslate();

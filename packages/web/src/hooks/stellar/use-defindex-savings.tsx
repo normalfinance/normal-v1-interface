@@ -32,8 +32,8 @@ function setCachedPosition(address: string | undefined, position: SavingsPositio
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
@@ -56,8 +56,8 @@ import Button from '@mui/material/Button';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
-import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 import { useWalletReconnect, WalletSessionExpiredError } from './use-wallet-reconnect';
+import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 
 // ----------------------------------------------------------------------
 
@@ -443,9 +443,23 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           depositResult.hash
         );
 
-        // 4. Refresh vault info and user position to show updated balance
+        // Optimistic position update — show correct value immediately without
+        // waiting for DeFindex's API cache to update (can take minutes).
+        setUserPosition((prev) => {
+          const base = prev ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
+          const updated: SavingsPosition = {
+            ...base,
+            currentValue: (parseFloat(base.currentValue) + netAmount).toFixed(7),
+            totalDeposited: (parseFloat(base.totalDeposited) + netAmount).toFixed(7),
+          };
+          setCachedPosition(wallet.address, updated);
+          return updated;
+        });
+
+        // 4. Refresh vault info, then position after a short delay so the DB
+        // write and Soroban RPC propagation have time to settle before we query.
         await refreshVaultInfo();
-        refreshUserPosition();
+        setTimeout(() => refreshUserPosition(), 3000);
 
         return depositResult.hash;
       } catch (err: any) {
@@ -612,8 +626,23 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           withdrawResult.hash
         );
 
+        // Optimistic position update — reflect withdrawal immediately.
+        setUserPosition((prev) => {
+          if (!prev) return prev;
+          const newCurrentValue = Math.max(parseFloat(prev.currentValue) - parsedAmount, 0);
+          const newTotalDeposited = Math.max(parseFloat(prev.totalDeposited) - parsedAmount, 0);
+          const updated: SavingsPosition = {
+            ...prev,
+            currentValue: newCurrentValue.toFixed(7),
+            totalDeposited: newTotalDeposited.toFixed(7),
+            earnings: Math.max(newCurrentValue - newTotalDeposited, 0).toFixed(7),
+          };
+          setCachedPosition(wallet.address, updated);
+          return updated;
+        });
+
         await refreshVaultInfo();
-        refreshUserPosition();
+        setTimeout(() => refreshUserPosition(), 3000);
 
         return withdrawResult.hash;
       } catch (err: any) {
