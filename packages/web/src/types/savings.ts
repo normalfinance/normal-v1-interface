@@ -4,7 +4,8 @@ export interface VaultInfo {
   address: string;
   name: string;
   symbol?: string;
-  totalDeposits: string; // from totalManagedFunds
+  totalDeposits: string; // current TVL from totalManagedFunds
+  totalDeposited: string; // cumulative deposits through Normal from DeFindex history metrics
   apy: number;
   asset: string; // USDC
   fees?: { vaultFee: number; defindexFee: number };

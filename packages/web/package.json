@@ -55,6 +55,7 @@
     "@fontsource-variable/nunito-sans": "^5.1.1",
     "@fontsource-variable/public-sans": "^5.1.2",
     "@fontsource/barlow": "^5.1.1",
+    "@fontsource/geist-mono": "^5.2.8",
     "@hookform/resolvers": "^3.9.1",
     "@iconify/react": "^5.1.0",
     "@marsidev/react-turnstile": "^1.4.1",

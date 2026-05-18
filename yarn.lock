@@ -2417,6 +2417,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fontsource/geist-mono@npm:^5.2.8":
+  version: 5.2.8
+  resolution: "@fontsource/geist-mono@npm:5.2.8"
+  checksum: fbb2808b5784be8da664880489f3568b7b87e0fe9a798e3b1b0c2f41036b6985c07e504d02693798adfd6adb5527cfb1e75b82c15d6581f50d6a4130c072e51e
+  languageName: node
+  linkType: hard
+
 "@formatjs/cli-lib@npm:^6.6.6":
   version: 6.6.6
   resolution: "@formatjs/cli-lib@npm:6.6.6"
@@ -4574,6 +4581,7 @@ __metadata:
     "@fontsource-variable/nunito-sans": ^5.1.1
     "@fontsource-variable/public-sans": ^5.1.2
     "@fontsource/barlow": ^5.1.1
+    "@fontsource/geist-mono": ^5.2.8
     "@hookform/resolvers": ^3.9.1
     "@iconify/react": ^5.1.0
     "@lingual/i18n-check": ^0.8.4

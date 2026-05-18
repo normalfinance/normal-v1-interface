@@ -37,8 +37,8 @@ export const themeConfig: ThemeConfig = {
    *************************************** */
   //Add Figtree as secondary
   fontFamily: {
-    primary: 'Instrument Sans',
-    secondary: 'Instrument Sans',
+    primary: 'Satoshi',
+    secondary: 'Satoshi',
   },
   /** **************************************
    * Palette

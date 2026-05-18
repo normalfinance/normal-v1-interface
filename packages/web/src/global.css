@@ -1,6 +1,10 @@
 /** **************************************
 * Fonts: app
 *************************************** */
+@import '@fontsource/geist-mono/400.css';
+@import '@fontsource/geist-mono/500.css';
+@import '@fontsource/geist-mono/700.css';
+
 @import '@fontsource-variable/public-sans';
 
 @import '@fontsource/barlow/400.css';

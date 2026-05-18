@@ -210,10 +210,6 @@ export const HeroHeader: React.FC<HeroHeaderProps> = (incomingProps) => {
                 width: '100%',
                 mx: 'auto',
                 my: { xs: 4, md: 5 },
-                p: 1,
-                borderRadius: 3,
-                bgcolor: 'background.paper',
-                boxShadow: (thm) => `0px 9px 50px 0px ${alpha(thm.palette.common.black, 0.25)}`,
               }}
             >
               <SavingsCard />

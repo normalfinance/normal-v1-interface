@@ -84,7 +84,7 @@ export default function BrandMarquee() {
               <Box
                 component="span"
                 sx={{
-                  fontFamily: 'Instrument Sans, sans-serif',
+                  fontFamily: 'Satoshi, sans-serif',
                   fontWeight: 700,
                   fontSize: '0.9375rem',
                   letterSpacing: '-0.01em',

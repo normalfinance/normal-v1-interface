@@ -174,7 +174,7 @@ export function FooterSection({ sx }: FooterProps = {}) {
               <Typography
                 component="h4"
                 sx={{
-                  fontFamily: 'Instrument Sans, sans-serif',
+                  fontFamily: 'Satoshi, sans-serif',
                   fontSize: 11,
                   fontWeight: 500,
                   textTransform: 'uppercase',
