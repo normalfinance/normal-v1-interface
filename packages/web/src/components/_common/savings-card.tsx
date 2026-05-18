@@ -416,6 +416,56 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
           </Box>
         )}
 
+        {/* Error Display */}
+        {error && (
+          <Typography variant="caption" color="error.main">
+            {error}
+          </Typography>
+        )}
+
+        {/* Action Button */}
+        <WalletGate buttonText={t('Connect wallet to save')} fullWidth variant="contained">
+          {showAddTrustlineAction ? (
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              size="large"
+              disabled={isAddingTrustline}
+              onClick={handleAddTrustline}
+              startIcon={
+                isAddingTrustline ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <Iconify icon="solar:add-circle-bold" />
+                )
+              }
+            >
+              {isAddingTrustline ? t('Adding trustline...') : t('Add USDC trustline')}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              color={mode === 'deposit' ? 'success' : 'primary'}
+              fullWidth
+              size="large"
+              disabled={isActionDisabled}
+              onClick={handleAction}
+              startIcon={
+                loading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : mode === 'deposit' ? (
+                  <Iconify icon="solar:add-circle-bold" />
+                ) : (
+                  <Iconify icon="solar:minus-circle-bold" />
+                )
+              }
+            >
+              {actionButtonText}
+            </Button>
+          )}
+        </WalletGate>
+
         {/* Transaction steps */}
         <Box sx={{ px: 1 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
@@ -487,56 +537,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
             })}
           </Stack>
         </Box>
-
-        {/* Error Display */}
-        {error && (
-          <Typography variant="caption" color="error.main">
-            {error}
-          </Typography>
-        )}
-
-        {/* Action Button */}
-        <WalletGate buttonText={t('Connect wallet to save')} fullWidth variant="contained">
-          {showAddTrustlineAction ? (
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              size="large"
-              disabled={isAddingTrustline}
-              onClick={handleAddTrustline}
-              startIcon={
-                isAddingTrustline ? (
-                  <CircularProgress size={20} color="inherit" />
-                ) : (
-                  <Iconify icon="solar:add-circle-bold" />
-                )
-              }
-            >
-              {isAddingTrustline ? t('Adding trustline...') : t('Add USDC trustline')}
-            </Button>
-          ) : (
-            <Button
-              variant="contained"
-              color={mode === 'deposit' ? 'success' : 'primary'}
-              fullWidth
-              size="large"
-              disabled={isActionDisabled}
-              onClick={handleAction}
-              startIcon={
-                loading ? (
-                  <CircularProgress size={20} color="inherit" />
-                ) : mode === 'deposit' ? (
-                  <Iconify icon="solar:add-circle-bold" />
-                ) : (
-                  <Iconify icon="solar:minus-circle-bold" />
-                )
-              }
-            >
-              {actionButtonText}
-            </Button>
-          )}
-        </WalletGate>
       </Stack>
 
       {/* Vault Info Footer */}
