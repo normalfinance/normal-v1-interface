@@ -70,6 +70,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
     error,
     needsTrustline,
     setNeedsTrustline,
+    txStep,
     deposit,
     withdraw,
     refreshVaultInfo,
@@ -156,6 +157,30 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
       : 0;
   const isAmountMissing = !amount || parsedAmount <= 0;
   const showAddTrustlineAction = accountExists && !hasUsdcTrustline && !!savingsUsdcIssuer;
+
+  const depositSteps = [
+    { id: 'checking', label: t('Checking balance'), sub: t('Verifying USDC on Stellar') },
+    { id: 'fee_sign', label: t('Signing fee payment'), sub: t('Approve in your wallet · 1 of 2') },
+    { id: 'fee_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
+    { id: 'deposit_sign', label: t('Signing deposit'), sub: t('Approve in your wallet · 2 of 2') },
+    { id: 'deposit_broadcast', label: t('Crediting savings vault'), sub: `Blend USDC pool · ${vaultInfo?.apy || 0}% APY` },
+  ];
+  const hasWithdrawCommission =
+    parsedAmount > 0 ? yieldCommission > 0 : parseFloat(userPosition?.earnings || '0') > 0;
+  const withdrawSteps = hasWithdrawCommission
+    ? [
+        { id: 'commission_sign', label: t('Signing yield commission'), sub: t('Approve in your wallet · 1 of 2') },
+        { id: 'commission_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
+        { id: 'withdraw_sign', label: t('Signing withdrawal'), sub: t('Approve in your wallet · 2 of 2') },
+        { id: 'withdraw_broadcast', label: t('Processing withdrawal'), sub: 'horizon.stellar.org' },
+      ]
+    : [
+        { id: 'withdraw_sign', label: t('Signing withdrawal'), sub: t('Approve in your wallet') },
+        { id: 'withdraw_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
+      ];
+  const txSteps = mode === 'deposit' ? depositSteps : withdrawSteps;
+  const activeStepIdx = txStep ? txSteps.findIndex((s) => s.id === txStep) : -1;
+  const stepsTiming = mode === 'deposit' ? '~30s total' : hasWithdrawCommission ? '~20s total' : '~10s total';
 
   const handleAddTrustline = useCallback(async () => {
     if (!savingsUsdcIssuer) {
@@ -391,14 +416,77 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ ...other }) => {
           </Box>
         )}
 
-        {/* Two-signature notice */}
-        {parsedAmount > 0 && (mode === 'deposit' || yieldCommission > 0) && (
-          <Typography variant="caption" color="text.secondary" sx={{ px: 1 }}>
-            {t("You'll sign two transactions: the Normal fee and your {{action}}.", {
-              action: mode === 'deposit' ? t('deposit') : t('withdrawal'),
+        {/* Transaction steps */}
+        <Box sx={{ px: 1 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+            <Typography
+              sx={{
+                fontSize: '0.6rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: 0.8,
+                color: 'text.disabled',
+              }}
+            >
+              {mode === 'deposit' ? t('What happens when you deposit') : t('What happens when you withdraw')}
+            </Typography>
+            <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>
+              {stepsTiming}
+            </Typography>
+          </Stack>
+          <Stack spacing={1.5}>
+            {txSteps.map((step, idx) => {
+              const isDone = activeStepIdx >= 0 && idx < activeStepIdx;
+              const isActive = idx === activeStepIdx;
+              return (
+                <Stack key={step.id} direction="row" spacing={1.5} alignItems="center">
+                  <Box
+                    sx={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      bgcolor: isDone
+                        ? 'success.main'
+                        : isActive
+                          ? 'primary.main'
+                          : 'action.selected',
+                      transition: 'background-color 0.4s ease',
+                    }}
+                  >
+                    {isDone ? (
+                      <Iconify icon="eva:checkmark-fill" width={10} sx={{ color: 'white' }} />
+                    ) : isActive ? (
+                      <CircularProgress size={9} sx={{ color: 'white' }} />
+                    ) : null}
+                  </Box>
+                  <Box sx={{ textAlign: 'left' }}>
+                    <Typography
+                      variant="caption"
+                      fontWeight={isActive ? 600 : 500}
+                      color={isDone ? 'success.main' : isActive ? 'text.primary' : 'text.secondary'}
+                      sx={{ transition: 'color 0.3s ease', display: 'block' }}
+                    >
+                      {step.label}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '0.65rem',
+                        color: isActive ? 'text.secondary' : 'text.disabled',
+                        transition: 'color 0.3s ease',
+                      }}
+                    >
+                      {step.sub}
+                    </Typography>
+                  </Box>
+                </Stack>
+              );
             })}
-          </Typography>
-        )}
+          </Stack>
+        </Box>
 
         {/* Error Display */}
         {error && (
