@@ -373,13 +373,13 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                 '&:hover': { background: alpha(theme.palette.text.primary, 0.06) },
               }}
             >
-              <Iconify icon="tabler:brand-discord" width={16} sx={{ opacity: 0.7, flexShrink: 0 }} />
+              <Iconify icon="bxl:discord-alt" width={16} sx={{ opacity: 0.7, flexShrink: 0 }} />
               {t(item.label)}
             </Button>
           ))}
           {networkToggle}
           {language}
-          {account}
+          <Box sx={{ ml: 1 }}>{account}</Box>
         </Box>
       </Box>
 
