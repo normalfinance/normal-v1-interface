@@ -458,9 +458,21 @@ export function AccountDrawer(props: AccountDrawerProps) {
       ) : (
         <Button
           variant="contained"
-          color="info"
           onClick={handleMainButtonClick}
           data-testid="connect-wallet-button"
+          sx={{
+            bgcolor: '#0A0A0F',
+            color: '#fff',
+            borderRadius: '999px',
+            textTransform: 'none',
+            fontWeight: 500,
+            px: '12px',
+            py: '6px',
+            fontSize: '14px',
+            minWidth: 'unset',
+            boxShadow: 'none',
+            '&:hover': { bgcolor: '#1a1a2e', boxShadow: 'none' },
+          }}
         >
           {t('Login')}
         </Button>

@@ -98,12 +98,20 @@ export const WalletGate: React.FC<WalletGateProps> = ({
     <>
       <Button
         fullWidth={fullWidth}
-        variant={variant}
-        color={color}
+        variant="contained"
         onClick={handleConnectClick}
         data-testid="wallet-gate-connect-btn"
         size="large"
-        sx={{ mt: 2 }}
+        sx={{
+          mt: 2,
+          bgcolor: '#0A0A0F',
+          color: '#fff',
+          borderRadius: '999px',
+          textTransform: 'none',
+          fontWeight: 500,
+          boxShadow: 'none',
+          '&:hover': { bgcolor: '#1a1a2e', boxShadow: 'none' },
+        }}
       >
         {t(buttonText)}
       </Button>
