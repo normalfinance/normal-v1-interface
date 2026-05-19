@@ -13,11 +13,12 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/material';
 
 import { cdn } from '@normalfinance/utils';
+import { Iconify } from '@/components/template/iconify';
 
 
 
 const NAV_ITEMS: { url: string; label: string }[] = [
-  { url: paths.socials.discord, label: 'Contact' },
+  { url: paths.socials.discord, label: 'Discord' },
 ];
 
 const linkAttrs = (url: string, target?: React.HTMLAttributeAnchorTarget, rel?: string) => {
@@ -250,7 +251,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
             gap: 0.5,
           }}
         >
-          {NAV_ITEMS.filter((item) => item.label !== 'Contact').map((item) => (
+          {NAV_ITEMS.filter((item) => item.label !== 'Discord').map((item) => (
             <div key={item.url}>
               <Button
                 component="a"
@@ -350,7 +351,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
 
         {/* Column 3: Account controls */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
-          {NAV_ITEMS.filter((item) => item.label === 'Contact').map((item) => (
+          {NAV_ITEMS.filter((item) => item.label === 'Discord').map((item) => (
             <Button
               key={item.url}
               component="a"
@@ -366,9 +367,13 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                 py: '6px',
                 borderRadius: '999px',
                 minWidth: 'unset',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 '&:hover': { background: alpha(theme.palette.text.primary, 0.06) },
               }}
             >
+              <Iconify icon="tabler:brand-discord" width={16} sx={{ opacity: 0.7, flexShrink: 0 }} />
               {t(item.label)}
             </Button>
           ))}
@@ -407,27 +412,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                 .map((link, i) => (
                   <MobileMega key={i} megaMenu={link.megaMenu!} />
                 ))}
-              <Box sx={{ mt: 'auto', pt: 2 }}>
-                <Button
-                  component="a"
-                  fullWidth
-                  href={paths.socials.discord}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    textTransform: 'none',
-                    py: 1.5,
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    bgcolor: '#0A0A0F',
-                    borderRadius: '10px',
-                    '&:hover': { bgcolor: '#1a1a2e' },
-                  }}
-                >
-                  {t('Contact')}
-                </Button>
-              </Box>
             </Box>
           </m.div>
         )}
