@@ -3,6 +3,16 @@
 import { paths } from '@/routes/paths';
 import { cdn } from '@normalfinance/utils';
 
+import FlagOutlined from '@mui/icons-material/FlagOutlined';
+import FeedOutlined from '@mui/icons-material/FeedOutlined';
+import MailOutlined from '@mui/icons-material/MailOutlined';
+import HelpOutlined from '@mui/icons-material/HelpOutlined';
+import BarChartOutlined from '@mui/icons-material/BarChartOutlined';
+import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
+import ArticleOutlined from '@mui/icons-material/ArticleOutlined';
+import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
+
 import type { Props } from './normal-navbar';
 
 export const NormalNavbarDefaults: Props = {
@@ -29,7 +39,7 @@ export const NormalNavbarDefaults: Props = {
             links: [
               {
                 url: paths.savings,
-                image: { src: cdn('nav/provide-liquidity.svg'), alt: 'Savings' },
+                icon: <SavingsOutlined sx={{ fontSize: 20 }} />,
                 title: 'Savings',
                 description: 'Earn 8%+ APY on USDC.',
               },
@@ -40,13 +50,13 @@ export const NormalNavbarDefaults: Props = {
             links: [
               {
                 url: paths.swap,
-                image: { src: cdn('nav/swap.svg'), alt: 'Swap' },
+                icon: <SwapVertOutlined sx={{ fontSize: 20 }} />,
                 title: 'Swap',
                 description: 'Exchange XLM, USDC and more.',
               },
               {
                 url: paths.portfolio,
-                image: { src: cdn('nav/portfolio.svg'), alt: 'Portfolio' },
+                icon: <BarChartOutlined sx={{ fontSize: 20 }} />,
                 title: 'Portfolio',
                 description: 'Track your holdings.',
               },
@@ -74,7 +84,7 @@ export const NormalNavbarDefaults: Props = {
             links: [
               {
                 url: paths.docs,
-                image: { src: cdn('nav/docs.svg'), alt: 'Docs' },
+                icon: <ArticleOutlined sx={{ fontSize: 20 }} />,
                 title: 'Docs',
                 description: 'Developer + integration guides.',
                 target: '_blank',
@@ -82,7 +92,7 @@ export const NormalNavbarDefaults: Props = {
               },
               {
                 url: paths.help.feedbackForm,
-                image: { src: cdn('nav/help.svg'), alt: 'Help' },
+                icon: <HelpOutlined sx={{ fontSize: 20 }} />,
                 title: 'Help & feedback',
                 description: 'Report bugs, request features.',
               },
@@ -93,19 +103,19 @@ export const NormalNavbarDefaults: Props = {
             links: [
               {
                 url: paths.core.about,
-                image: { src: cdn('nav/about.svg'), alt: 'About' },
+                icon: <PeopleOutlined sx={{ fontSize: 20 }} />,
                 title: 'About',
                 description: 'Our mission and team.',
               },
               {
                 url: paths.core.roadmap,
-                image: { src: cdn('nav/positions.svg'), alt: 'Roadmap' },
+                icon: <FlagOutlined sx={{ fontSize: 20 }} />,
                 title: 'Roadmap',
                 description: 'Where Normal is going.',
               },
               {
                 url: 'https://normalfi.substack.com/',
-                image: { src: cdn('nav/blog.svg'), alt: 'Blog' },
+                icon: <FeedOutlined sx={{ fontSize: 20 }} />,
                 title: 'Blog',
                 description: 'Product updates and stories.',
                 target: '_blank',
@@ -113,7 +123,7 @@ export const NormalNavbarDefaults: Props = {
               },
               {
                 url: paths.core.contact,
-                image: { src: cdn('nav/contact.svg'), alt: 'Contact' },
+                icon: <MailOutlined sx={{ fontSize: 20 }} />,
                 title: 'Contact',
                 description: 'Get in touch with the team.',
               },

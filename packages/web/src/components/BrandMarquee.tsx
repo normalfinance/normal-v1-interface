@@ -32,11 +32,11 @@ const MarqueeWrapper = styled('div')({
   },
   '&::before': {
     left: 0,
-    background: 'linear-gradient(90deg, rgb(234,250,254), transparent)',
+    background: 'linear-gradient(90deg, rgb(255,255,255), transparent)',
   },
   '&::after': {
     right: 0,
-    background: 'linear-gradient(-90deg, rgb(245,240,255), transparent)',
+    background: 'linear-gradient(-90deg, rgb(255,255,255), transparent)',
   },
   '&:hover .marquee-row': {
     animationPlayState: 'paused',
@@ -71,7 +71,7 @@ export default function BrandMarquee() {
       component="section"
       aria-label="Backed by and partnered with"
       sx={(theme) => ({
-        background: 'linear-gradient(180deg, rgb(234,250,254) 0%, rgb(245,240,255) 100%)',
+        background: '#ffffff',
         borderTop: `1px solid ${theme.palette.divider}`,
         borderBottom: `1px solid ${theme.palette.divider}`,
         py: 3,

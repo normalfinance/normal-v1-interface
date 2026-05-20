@@ -39,7 +39,8 @@ type ImageProps = { url?: string; src: string; alt?: string };
 
 type MegaMenuLink = {
   url: string;
-  image: ImageProps;
+  image?: ImageProps;
+  icon?: React.ReactNode;
   title: string;
   description: string;
   button?: NavButton;
@@ -524,12 +525,14 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             p: '7px',
           }}
         >
-          <Box
-            component="img"
-            src={l.image.src}
-            alt={tDock(l.image.alt || '')}
-            sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
+          {l.icon ?? (l.image && (
+            <Box
+              component="img"
+              src={l.image.src}
+              alt={tDock(l.image.alt || '')}
+              sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          ))}
         </Box>
         <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontSize: '13.5px', fontWeight: 500, lineHeight: 1.3, color: isDark ? '#fff' : '#0A0A0F' }}>
@@ -721,12 +724,14 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
             p: '7px',
           }}
         >
-          <Box
-            component="img"
-            src={l.image.src}
-            alt={tMobile(l.image.alt || '')}
-            sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
+          {l.icon ?? (l.image && (
+            <Box
+              component="img"
+              src={l.image.src}
+              alt={tMobile(l.image.alt || '')}
+              sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          ))}
         </Box>
         <Box>
           <Typography sx={{ fontSize: '14px', fontWeight: 500, lineHeight: 1.3, color: isDark ? '#fff' : '#0A0A0F' }}>

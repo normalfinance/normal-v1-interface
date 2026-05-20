@@ -3,7 +3,7 @@
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -25,7 +25,15 @@ import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 
-import { Iconify } from '@/components/template/iconify';
+import AddOutlined from '@mui/icons-material/AddOutlined';
+import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
+import CloseOutlined from '@mui/icons-material/CloseOutlined';
+import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
+import CallMadeOutlined from '@mui/icons-material/CallMadeOutlined';
+import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
+import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
+import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 import ReceiveModal from '@/components/_common/receive-modal';
 
 import TokensTab from './tokens-tab';
@@ -34,7 +42,7 @@ import ActivityTab from './activity-tab';
 // ----------------------------------------------------------------------
 type ActionChooserOption = {
   label: string;
-  icon: string;
+  icon: ReactNode;
   onClick: () => void;
 };
 
@@ -67,7 +75,7 @@ function ActionChooserDialog({ open, title, actions, onClose }: ActionChooserDia
         >
           <Typography variant="h6">{title}</Typography>
           <IconButton onClick={onClose} aria-label="close dialog">
-            <Iconify icon="mingcute:close-line" width={20} />
+            <CloseOutlined sx={{ fontSize: 20 }} />
           </IconButton>
         </Box>
       </DialogTitle>
@@ -81,7 +89,7 @@ function ActionChooserDialog({ open, title, actions, onClose }: ActionChooserDia
               variant="outlined"
               color="inherit"
               onClick={action.onClick}
-              startIcon={<Iconify icon={action.icon} width={20} />}
+              startIcon={action.icon}
               sx={{ justifyContent: 'flex-start', py: 1.5, px: 2, textTransform: 'none' }}
             >
               {action.label}
@@ -98,6 +106,7 @@ export interface ConnectedWalletProps {
   balance?: number;
   savingsValue?: number;
   savingsFetching?: boolean;
+  tokensFetching?: boolean;
   percentageChange?: number;
   tokens?: Token[];
   activity?: Activity[];
@@ -108,6 +117,7 @@ export default function ConnectedWallet({
   balance = 0,
   savingsValue = 0,
   savingsFetching = false,
+  tokensFetching = false,
   percentageChange,
   tokens,
   activity,
@@ -138,24 +148,24 @@ export default function ConnectedWallet({
   const actionButtons = [
     {
       label: t('Transfer'),
-      icon: 'solar:transfer-horizontal-bold-duotone',
+      icon: <SyncAltOutlined sx={{ fontSize: 14 }} />,
       onClick: () => setTransferDialogOpen(true),
     },
     {
       label: t('Deposit'),
-      icon: 'solar:wad-of-money-bold',
+      icon: <AddOutlined sx={{ fontSize: 14 }} />,
       onClick: () => setDepositDialogOpen(true),
     },
     {
       label: t('Savings'),
-      icon: 'mingcute:safe-box-line',
+      icon: <SavingsOutlined sx={{ fontSize: 14 }} />,
       onClick: () => {
         router.push(paths.savings);
       },
     },
     {
       label: t('Swap'),
-      icon: 'solar:transfer-vertical-bold',
+      icon: <SwapVertOutlined sx={{ fontSize: 14 }} />,
       onClick: () => {
         router.push(paths.swap);
       },
@@ -165,12 +175,12 @@ export default function ConnectedWallet({
   const transferActions: ActionChooserOption[] = [
     {
       label: t('Send'),
-      icon: 'solar:upload-bold-duotone',
+      icon: <CallMadeOutlined sx={{ fontSize: 20 }} />,
       onClick: openSendModal,
     },
     {
       label: t('Receive'),
-      icon: 'solar:download-bold-duotone',
+      icon: <CallReceivedOutlined sx={{ fontSize: 20 }} />,
       onClick: () => openReceiveModal('receive'),
     },
   ];
@@ -178,12 +188,12 @@ export default function ConnectedWallet({
   const depositActions: ActionChooserOption[] = [
     {
       label: t('Deposit cash'),
-      icon: 'solar:wad-of-money-bold',
+      icon: <AttachMoneyOutlined sx={{ fontSize: 20 }} />,
       onClick: openDepositCashModal,
     },
     {
       label: t('Deposit crypto'),
-      icon: 'solar:wallet-bold',
+      icon: <AccountBalanceWalletOutlined sx={{ fontSize: 20 }} />,
       onClick: () => openReceiveModal('deposit'),
     },
   ];
@@ -211,8 +221,8 @@ export default function ConnectedWallet({
           <Typography sx={{ fontSize: '14px', color: '#2A2A33', fontWeight: 500 }}>
             {t('Total balance')}
           </Typography>
-          {savingsFetching ? (
-            <Skeleton variant="text" width={80} height={28} />
+          {savingsFetching || tokensFetching ? (
+            <Skeleton variant="text" width={90} height={28} />
           ) : (
             <Typography sx={{ fontSize: '22px', fontWeight: 400, lineHeight: 1.2, letterSpacing: '-0.02em', fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums' }}>
               {fCurrencyTwoDecimals(balance + savingsValue)}
@@ -227,9 +237,13 @@ export default function ConnectedWallet({
           <Typography sx={{ fontSize: '13.5px', color: '#6B6B76' }}>
             {t('Assets')}
           </Typography>
-          <Typography sx={{ fontSize: '15px', fontWeight: 400, fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
-            {fCurrencyTwoDecimals(balance)}
-          </Typography>
+          {tokensFetching ? (
+            <Skeleton variant="text" width={60} height={22} />
+          ) : (
+            <Typography sx={{ fontSize: '15px', fontWeight: 400, fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
+              {fCurrencyTwoDecimals(balance)}
+            </Typography>
+          )}
         </Stack>
 
         <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mx: '14px' }} />
@@ -279,7 +293,7 @@ export default function ConnectedWallet({
                 className="action-icon-box"
                 sx={{ width: 28, height: 28, borderRadius: '8px', bgcolor: '#F4F4F7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0A0A0F', transition: 'all .15s ease' }}
               >
-                <Iconify icon={btn.icon} width={14} />
+                {btn.icon}
               </Box>
               {btn.label}
             </Box>
