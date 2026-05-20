@@ -765,22 +765,26 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         <Typography sx={{ fontSize: '12px', color: 'text.disabled' }}>
           {t('Total Normal vault deposits')}
         </Typography>
-        <Typography
-          sx={{
-            fontSize: '12px',
-            color: 'text.secondary',
-            fontFamily: '"Geist Mono", "Courier New", monospace',
-            fontFeatureSettings: '"ss01","ss02","zero"',
-            fontVariantNumeric: 'tabular-nums',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {parseFloat(vaultInfo?.totalDeposited || '0').toLocaleString('en-US', {
-            minimumFractionDigits: 7,
-            maximumFractionDigits: 7,
-          })}{' '}
-          USDC
-        </Typography>
+        {fetching && !vaultInfo ? (
+          <Skeleton variant="text" width={110} height={16} />
+        ) : (
+          <Typography
+            sx={{
+              fontSize: '12px',
+              color: 'text.secondary',
+              fontFamily: '"Geist Mono", "Courier New", monospace',
+              fontFeatureSettings: '"ss01","ss02","zero"',
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {parseFloat(vaultInfo?.totalDeposited || '0').toLocaleString('en-US', {
+              minimumFractionDigits: 7,
+              maximumFractionDigits: 7,
+            })}{' '}
+            USDC
+          </Typography>
+        )}
       </Box>
 
       {/* TX Log — after savings-foot */}
