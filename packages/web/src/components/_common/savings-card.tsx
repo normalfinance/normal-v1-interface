@@ -356,7 +356,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 >
                   {label}
                 </Typography>
-                {positionFetching && !userPosition ? (
+                {!userPosition ? (
                   <Skeleton variant="text" width={80} height={18} />
                 ) : (
                   <Typography
