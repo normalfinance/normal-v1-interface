@@ -23,6 +23,33 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
     ),
   ]);
 
+// Recursively extracts a numeric value from any Soroban i128 / SDK shape.
+function extractNumber(val: any): number {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === 'bigint') return Number(val);
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') return Number(val) || 0;
+  if (Array.isArray(val)) return val.reduce((s: number, v: any) => s + extractNumber(v), 0);
+  // Object: try every common field DeFindex has used
+  const candidate =
+    val.totalAmount ??
+    val.total ??
+    val.amount ??
+    val.balance ??
+    val.underlyingBalance ??
+    val.idle ??
+    val.invested;
+  if (candidate !== undefined) return extractNumber(candidate);
+  return 0;
+}
+
+function parseTotalManagedFunds(funds: any): number {
+  if (Array.isArray(funds)) {
+    return funds.reduce((sum: number, val: any) => sum + extractNumber(val), 0);
+  }
+  return extractNumber(funds);
+}
+
 // ----------------------------------------------------------------------
 
 export async function GET(_request: NextRequest) {
@@ -62,24 +89,44 @@ export async function GET(_request: NextRequest) {
       ),
     ]);
 
-    const totalDeposits = Array.isArray(vaultInfoResult.totalManagedFunds)
-      ? (
-          vaultInfoResult.totalManagedFunds.reduce(
-            (sum: number, val: any) => sum + (Number(val) || 0),
-            0
-          ) / DECIMALS
-        ).toString()
-      : '0';
+    // Log raw structure once so we can see what the SDK actually returns.
+    console.log('[vault-info] raw totalManagedFunds:', JSON.stringify(vaultInfoResult.totalManagedFunds));
 
-    // Cumulative total deposits through Normal from DeFindex history metrics.
-    // Falls back to current TVL if the history API is unavailable or returns 0.
+    const rawFunds = parseTotalManagedFunds(vaultInfoResult.totalManagedFunds);
+    const totalDeposits = (rawFunds / DECIMALS).toString();
+
+    // Prefer history API cumulative deposits; fall back to current TVL.
     let totalDeposited = totalDeposits;
     if (historyRes.ok) {
-      const historyJson = await historyRes.json();
-      const m = historyJson.metrics ?? historyJson.currentState ?? {};
-      const raw = Number(m.totalDeposits ?? m.cumulativeDeposits ?? m.total_deposits ?? 0);
-      if (raw > 0) totalDeposited = (raw / DECIMALS).toString();
+      try {
+        const historyJson = await historyRes.json();
+        console.log('[vault-info] history keys:', Object.keys(historyJson));
+
+        // Try every known field path the DeFindex API has ever used.
+        const m =
+          historyJson.metrics ??
+          historyJson.currentState ??
+          historyJson.summary ??
+          historyJson.data ??
+          historyJson ??
+          {};
+
+        const raw = Number(
+          m.totalDeposits ??
+          m.cumulativeDeposits ??
+          m.total_deposits ??
+          m.cumulative_deposits ??
+          m.deposited ??
+          0
+        );
+
+        if (raw > 0) totalDeposited = (raw / DECIMALS).toString();
+      } catch (e) {
+        console.warn('[vault-info] history parse error:', e);
+      }
     }
+
+    console.log('[vault-info] totalDeposits (TVL):', totalDeposits, '| totalDeposited (cumulative):', totalDeposited);
 
     return NextResponse.json({
       success: true,

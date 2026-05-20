@@ -95,27 +95,36 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
 
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [dockOpen, setDockOpen] = useState(false);
-  const hoverTimerRef = useRef<number | null>(null);
+  const dropdownRefs = useRef<Array<HTMLDivElement | null>>([]);
 
+  const toggleDock = useCallback((idx: number) => {
+    setDockOpen((prev) => {
+      if (prev && activeIdx === idx) {
+        setActiveIdx(null);
+        return false;
+      }
+      setActiveIdx(idx);
+      return true;
+    });
+  }, [activeIdx]);
 
-  const clearTimer = () => {
-    if (hoverTimerRef.current) {
-      window.clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-  };
-  const scheduleClose = useCallback((delay = 120) => {
-    clearTimer();
-    hoverTimerRef.current = window.setTimeout(() => {
-      setDockOpen(false);
-      setActiveIdx(null);
-    }, delay);
+  const closeDock = useCallback(() => {
+    setDockOpen(false);
+    setActiveIdx(null);
   }, []);
-  const openDock = useCallback((idx: number) => {
-    clearTimer();
-    setActiveIdx(idx);
-    setDockOpen(true);
-  }, []);
+
+  // Close when clicking outside the active dropdown wrapper (trigger + panel)
+  useEffect(() => {
+    if (!dockOpen || activeIdx === null) return undefined;
+    const handler = (e: MouseEvent) => {
+      const wrapper = dropdownRefs.current[activeIdx];
+      if (!wrapper || !wrapper.contains(e.target as Node)) {
+        closeDock();
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dockOpen, activeIdx, closeDock]);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const toggleMobile = () => setMobileOpen((p) => !p);
@@ -276,14 +285,13 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               return (
                 <Box
                   key={i}
+                  ref={(el) => { dropdownRefs.current[i] = el as HTMLDivElement | null; }}
                   sx={{ position: 'relative' }}
-                  onMouseEnter={() => openDock(i)}
-                  onMouseLeave={() => scheduleClose()}
                 >
                   <Button
                     onClick={(e) => {
                       e.preventDefault();
-                      openDock(i);
+                      toggleDock(i);
                     }}
                     aria-expanded={dockOpen && activeIdx === i ? true : undefined}
                     sx={{
@@ -312,11 +320,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                     </m.span>
                   </Button>
                   {isDesktop && (
-                    <DesktopDock
-                      open={dockOpen && activeIdx === i}
-                      onMouseEnter={() => clearTimer()}
-                      onMouseLeave={() => scheduleClose()}
-                    >
+                    <DesktopDock open={dockOpen && activeIdx === i}>
                       <DockContent mega={link.megaMenu!} />
                     </DesktopDock>
                   )}
@@ -423,18 +427,12 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
 function DesktopDock({
   open,
   children,
-  onMouseEnter,
-  onMouseLeave,
 }: React.PropsWithChildren<{
   open: boolean;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
 }>) {
   const theme = useTheme();
   return (
     <m.div
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
       initial={false}
       animate={open ? 'open' : 'closed'}
       variants={{
