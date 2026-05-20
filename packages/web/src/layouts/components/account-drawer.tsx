@@ -563,13 +563,25 @@ export function AccountDrawer(props: AccountDrawerProps) {
           {session && (
             <Tooltip title={isDisconnecting ? 'Logging out...' : 'Logout'}>
               <Button
-                variant="soft"
-                color="error"
                 size="small"
                 onClick={handleDisconnect}
                 disabled={isDisconnecting}
                 data-testid="logout-button"
                 startIcon={<Iconify icon="solar:logout-2-bold" />}
+                sx={{
+                  bgcolor: '#0A0A0F',
+                  color: '#fff',
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  fontSize: '13px',
+                  px: '12px',
+                  py: '6px',
+                  minWidth: 'unset',
+                  boxShadow: 'none',
+                  '&:hover': { bgcolor: '#1a1a22', boxShadow: 'none' },
+                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.4)', color: 'rgba(255,255,255,0.6)' },
+                }}
               >
                 {t('Logout')}
               </Button>
@@ -579,23 +591,39 @@ export function AccountDrawer(props: AccountDrawerProps) {
         {session && (
           <Scrollbar sx={{ flexGrow: 1 }}>
             <Stack spacing={2} sx={{ px: 2, pt: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar src={userAvatar} alt={displayName} />
-                <Box>
-                  <Typography variant="subtitle1">{displayName}</Typography>
-                  <Typography variant="body2" color="text.secondary">
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ pb: '2px' }}>
+                <Avatar
+                  src={userAvatar}
+                  alt={displayName}
+                  sx={{ width: 44, height: 44, flexShrink: 0 }}
+                />
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography sx={{ fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: '#0A0A0F' }}>
+                    {displayName}
+                  </Typography>
+                  <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
                     {userEmail}
                   </Typography>
                   {connectedAddress && (
-                    <Stack
-                      direction="row"
-                      width={1}
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography variant="subtitle2">
-                        {format.fTruncate(connectedAddress, 25)}
-                      </Typography>
+                    <Stack direction="row" alignItems="center" spacing={0} sx={{ mt: '6px' }}>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          px: '10px',
+                          py: '4px',
+                          bgcolor: 'rgba(10,10,15,0.04)',
+                          border: '1px solid rgba(10,10,15,0.06)',
+                          borderRadius: '999px',
+                          fontSize: '11.5px',
+                          color: '#2A2A33',
+                          fontFamily: '"Geist Mono", ui-monospace, monospace',
+                          letterSpacing: '-0.01em',
+                        }}
+                      >
+                        {format.fTruncate(connectedAddress, 22)}
+                      </Box>
                       <CopyIconButton value={connectedAddress} alert="Account ID copied" />
                     </Stack>
                   )}

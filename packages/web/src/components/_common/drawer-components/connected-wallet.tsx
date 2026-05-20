@@ -23,7 +23,6 @@ import Skeleton from '@mui/material/Skeleton';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
-import { alpha, useTheme } from '@mui/material/styles';
 import DialogContent from '@mui/material/DialogContent';
 
 import { Iconify } from '@/components/template/iconify';
@@ -114,7 +113,6 @@ export default function ConnectedWallet({
   activity,
 }: ConnectedWalletProps) {
   const { t } = useTranslate();
-  const theme = useTheme();
   const router = useRouter();
   const { setModalView } = useAppStore();
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -199,77 +197,95 @@ export default function ConnectedWallet({
 
   return (
     <Stack spacing={2} sx={{ width: 1 }} mt={2}>
-      <Stack
+      <Box
         sx={{
           width: 1,
           borderRadius: '16px',
-          border: `1px solid ${theme.palette.divider}`,
-          backgroundColor: alpha(theme.palette.grey[500], 0.08),
-          p: 1,
-          pt: 2,
-          gap: '6px',
+          border: '1px solid rgba(10,10,15,0.08)',
+          bgcolor: '#fff',
+          p: '4px 4px 12px',
         }}
       >
         {/* Total row */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 1, pt: 1 }}>
-          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: '14px', pt: '12px', pb: '12px' }}>
+          <Typography sx={{ fontSize: '14px', color: '#2A2A33', fontWeight: 500 }}>
             {t('Total balance')}
           </Typography>
           {savingsFetching ? (
             <Skeleton variant="text" width={80} height={28} />
           ) : (
-            <Typography sx={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.2 }}>
+            <Typography sx={{ fontSize: '22px', fontWeight: 400, lineHeight: 1.2, letterSpacing: '-0.02em', fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums' }}>
               {fCurrencyTwoDecimals(balance + savingsValue)}
             </Typography>
           )}
         </Stack>
 
-        <Box sx={{ borderBottom: `1px solid ${theme.palette.divider}`, mx: 1, my: 1 }} />
+        <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mx: '14px' }} />
 
         {/* Assets row */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: '14px', py: '12px' }}>
+          <Typography sx={{ fontSize: '13.5px', color: '#6B6B76' }}>
             {t('Assets')}
           </Typography>
-          <Typography variant="body1" fontWeight={600}>
+          <Typography sx={{ fontSize: '15px', fontWeight: 400, fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
             {fCurrencyTwoDecimals(balance)}
           </Typography>
         </Stack>
 
-        <Box sx={{ borderBottom: `1px solid ${theme.palette.divider}`, mx: 1, my: 1 }} />
+        <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mx: '14px' }} />
 
         {/* Savings row */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: '14px', py: '12px' }}>
+          <Typography sx={{ fontSize: '13.5px', color: '#6B6B76' }}>
             {t('Savings')}
           </Typography>
           {savingsFetching ? (
             <Skeleton variant="text" width={60} height={24} />
           ) : (
-            <Typography variant="body1" fontWeight={600}>
+            <Typography sx={{ fontSize: '15px', fontWeight: 400, fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
               {fCurrencyTwoDecimals(savingsValue)}
             </Typography>
           )}
         </Stack>
 
-        {/* Action buttons — vertical column, full width, centered */}
-        <Stack direction="column" spacing={1} width="100%" mt={2}>
+        {/* Action buttons — 4-column grid */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', mt: '12px', mx: '8px' }}>
           {actionButtons.map((btn) => (
-            <Button
+            <Box
               key={btn.label}
-              fullWidth
-              variant="soft"
-              color="success"
-              size="large"
+              component="button"
               onClick={btn.onClick}
-              startIcon={<Iconify icon={btn.icon} width={18} sx={{ color: theme.palette.primary.dark }} />}
-              sx={{ justifyContent: 'center' }}
+              sx={{
+                appearance: 'none',
+                border: '1px solid rgba(10,10,15,0.08)',
+                borderRadius: '12px',
+                padding: '12px 6px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#6B6B76',
+                background: 'transparent',
+                transition: 'all .15s ease',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.03)', color: '#0A0A0F', borderColor: 'rgba(10,10,15,0.14)' },
+                '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
+              }}
             >
+              <Box
+                className="action-icon-box"
+                sx={{ width: 28, height: 28, borderRadius: '8px', bgcolor: '#F4F4F7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0A0A0F', transition: 'all .15s ease' }}
+              >
+                <Iconify icon={btn.icon} width={14} />
+              </Box>
               {btn.label}
-            </Button>
+            </Box>
           ))}
-        </Stack>
-      </Stack>
+        </Box>
+      </Box>
 
       <ActionChooserDialog
         open={transferDialogOpen}
@@ -296,38 +312,24 @@ export default function ConnectedWallet({
         onChange={tabs.onChange}
         variant="standard"
         sx={{
-          bgcolor: 'background.paper',
-          padding: 0,
-          mt: 1,
-          minHeight: 34,
-          '& .MuiTabs-flexContainer': {
-            gap: '8px',
-            padding: 0,
-            minHeight: 34,
-            alignItems: 'center',
-          },
+          mt: 2,
+          minHeight: 0,
+          borderBottom: '1px solid rgba(10,10,15,0.08)',
+          '& .MuiTabs-flexContainer': { gap: '4px', padding: 0 },
           '& .MuiTab-root': {
-            borderRadius: '8px',
-            px: '12px',
-            py: 0,
-            height: 34,
-            minHeight: 34,
-            color: theme.palette.text.primary,
-            lineHeight: 1,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            fontSize: '13.5px',
+            fontWeight: 500,
+            color: '#6B6B76',
+            padding: '10px 14px',
+            minHeight: 0,
+            textTransform: 'none',
+            transition: 'color .15s ease',
           },
+          '& .MuiTab-root.Mui-selected': { color: '#0A0A0F' },
           '& .MuiTabs-indicator': {
+            height: '2px',
+            backgroundColor: '#0A0A0F',
             boxShadow: 'none !important',
-            backgroundColor: alpha(theme.palette.grey[500], 0.08),
-            border: `1px solid ${theme.palette.divider}`,
-            borderRadius: '8px',
-            height: '100%',
-            zIndex: 0,
-          },
-          '& .Mui-selected': {
-            zIndex: 1,
           },
         }}
       >
