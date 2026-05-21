@@ -750,44 +750,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         )}
       </WalletGate>
 
-      {/* Footer (savings-foot) — between submit and tx-log */}
-      <Box
-        sx={(theme) => ({
-          mt: '14px',
-          pt: '12px',
-          borderTop: '1px solid rgba(10,10,15,0.08)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          ...theme.applyStyles('dark', { borderTop: '1px solid rgba(255,255,255,0.07)' }),
-        })}
-      >
-        <Typography sx={{ fontSize: '12px', color: 'text.disabled' }}>
-          {t('Total Normal vault deposits')}
-        </Typography>
-        {fetching && !vaultInfo ? (
-          <Skeleton variant="text" width={110} height={16} />
-        ) : (
-          <Typography
-            sx={{
-              fontSize: '12px',
-              color: 'text.secondary',
-              fontFamily: '"Geist Mono", "Courier New", monospace',
-              fontFeatureSettings: '"ss01","ss02","zero"',
-              fontVariantNumeric: 'tabular-nums',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {parseFloat(vaultInfo?.totalDeposited || '0').toLocaleString('en-US', {
-              minimumFractionDigits: 7,
-              maximumFractionDigits: 7,
-            })}{' '}
-            USDC
-          </Typography>
-        )}
-      </Box>
-
-      {/* TX Log — after savings-foot */}
+      {/* TX Log */}
       <Box
         sx={(theme) => ({
           mt: '14px',

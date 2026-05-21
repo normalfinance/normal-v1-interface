@@ -3,8 +3,7 @@
 import { useTranslate } from '@/locales';
 import React, { useRef, useState, useEffect } from 'react';
 
-import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Chip, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 
 // ----------------------------------------------------------------------
 
@@ -17,7 +16,8 @@ const MONTHS = YEARS * 12 + 1;
 const svgW = 400;
 const svgH = 100;
 
-// Pre-computed at module level (stable across renders)
+const BRAND_COLOR = '#818cf8';
+
 const POINTS = (() => {
   const vals = Array.from({ length: MONTHS }, (_, i) =>
     INITIAL * Math.pow(1 + APY / 100, i / 12)
@@ -38,30 +38,52 @@ const MAX_BALANCE = INITIAL * Math.pow(1 + APY / 100, YEARS);
 // ----------------------------------------------------------------------
 
 const EarnAnimation: React.FC = () => {
-  const theme = useTheme();
   const { t } = useTranslate();
   const [progress, setProgress] = useState(0);
-  const startRef = useRef(Date.now());
+  const [hasStarted, setHasStarted] = useState(false);
+  const startRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
-  const [pathLen, setPathLen] = useState(460); // fallback approximation
+  const [pathLen, setPathLen] = useState(460);
 
   useEffect(() => {
     if (pathRef.current) setPathLen(pathRef.current.getTotalLength());
   }, []);
 
+  // Trigger animation once when scrolled into view
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasStarted(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Run animation once after scroll trigger
+  useEffect(() => {
+    if (!hasStarted) return;
+    startRef.current = Date.now();
     const id = setInterval(() => {
       const elapsed = Date.now() - startRef.current;
-      setProgress((elapsed % CYCLE_MS) / CYCLE_MS);
+      const p = Math.min(elapsed / CYCLE_MS, 1);
+      setProgress(p);
+      if (p >= 1) clearInterval(id);
     }, 40);
     return () => clearInterval(id);
-  }, []);
+  }, [hasStarted]);
 
   const balance = INITIAL * Math.pow(1 + APY / 100, progress * YEARS);
   const earned = balance - INITIAL;
   const normalizedBalance = earned / (MAX_BALANCE - INITIAL);
 
-  // Dot position as CSS percentages (avoids SVG scale distortion)
   const dotLeft = progress * 100;
   const dotTop = (1 - (normalizedBalance * 0.88 + 0.06)) * 100;
 
@@ -69,62 +91,128 @@ const EarnAnimation: React.FC = () => {
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const gradId = 'earn-area-grad';
+  const lineGradId = 'earn-line-grad';
   const clipId = 'earn-progress-clip';
 
   return (
-    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', p: 2.5 }}>
-      {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+    <Box
+      ref={containerRef}
+      sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', p: '28px' }}
+    >
+
+      {/* Eyebrow + APY chip */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
         <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 11 }}
+          sx={{
+            fontSize: '11px',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.16em',
+            color: '#6B6B76',
+          }}
         >
           {t('Normal Savings')}
         </Typography>
-        <Chip
-          label={`${APY}% APY`}
-          size="small"
+        <Box
           sx={{
-            bgcolor: alpha(theme.palette.success.main, 0.12),
-            color: 'success.main',
-            fontWeight: 700,
-            fontSize: 11,
-            height: 22,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            background: '#0A0A0F',
+            borderRadius: '999px',
+            px: '10px',
+            py: '5px',
           }}
-        />
+        >
+          <Box
+            sx={{
+              width: 13,
+              height: 13,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #5BCFFF 0%, #B17BFF 100%)',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '8px',
+              color: '#fff',
+              lineHeight: 1,
+            }}
+          >
+            ↗
+          </Box>
+          <Typography
+            sx={{
+              fontSize: '11px',
+              fontWeight: 400,
+              color: '#fff',
+              fontFamily: '"Geist Mono", ui-monospace, monospace',
+              lineHeight: 1,
+            }}
+          >
+            {APY}% APY
+          </Typography>
+        </Box>
       </Stack>
 
-      {/* Balance */}
+      {/* Headline + subtitle */}
+      <Typography
+        sx={{
+          fontSize: '26px',
+          fontWeight: 500,
+          letterSpacing: '-0.02em',
+          color: '#0A0A0F',
+          lineHeight: 1.2,
+          mb: 1,
+        }}
+      >
+        Deposit. Earn. Compound.
+      </Typography>
+      <Typography
+        sx={{
+          fontSize: '13.5px',
+          color: '#6B6B76',
+          lineHeight: 1.6,
+          mb: 3,
+          maxWidth: 420,
+        }}
+      >
+        Your USDC earns {APY}% APY in audited lending pools on Stellar. Yield compounds daily — withdraw anytime, no lock-ups.
+      </Typography>
+
+      {/* Live balance */}
       <Box>
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+        <Typography sx={{ fontSize: '11px', color: '#9A9AA3' }}>
           {t('Balance')}
         </Typography>
         <Typography
           sx={{
-            fontSize: { xs: '1.9rem', md: '2.1rem' },
-            fontWeight: 600,
+            fontSize: { xs: '2rem', md: '2.4rem' },
+            fontWeight: 400,
             fontVariantNumeric: 'tabular-nums',
-            letterSpacing: '-0.02em',
+            fontFamily: '"Geist Mono", ui-monospace, monospace',
+            fontFeatureSettings: '"ss01","ss02","zero"',
+            letterSpacing: '-0.03em',
             lineHeight: 1.1,
+            color: '#0A0A0F',
             mt: 0.25,
           }}
         >
           ${fmt(balance)}
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+        <Typography sx={{ fontSize: '11px', color: '#9A9AA3' }}>
           USDC
         </Typography>
       </Box>
 
-      {/* Earnings */}
-      <Stack direction="row" alignItems="center" spacing={0.75} mt={1.5}>
+      {/* Live earnings row */}
+      <Stack direction="row" alignItems="center" spacing={0.75} mt={1.5} mb={2}>
         <Box
           sx={{
             width: 7,
             height: 7,
             borderRadius: '50%',
-            bgcolor: 'success.main',
+            bgcolor: '#1AB37D',
             flexShrink: 0,
             animation: 'earnPulse 1.6s ease-in-out infinite',
             '@keyframes earnPulse': {
@@ -133,13 +221,13 @@ const EarnAnimation: React.FC = () => {
             },
           }}
         />
-        <Typography variant="caption" color="success.main" fontWeight={600} sx={{ fontSize: 12 }}>
+        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#1AB37D' }}>
           +${fmt(earned)}&nbsp;{t('earned')}
         </Typography>
       </Stack>
 
-      {/* Sparkline */}
-      <Box sx={{ position: 'relative', mt: 'auto', mx: -2.5, mb: -2.5, height: svgH }}>
+      {/* Sparkline — grows to fill remaining card height */}
+      <Box sx={{ position: 'relative', flexGrow: 1, minHeight: 120 }}>
         <svg
           viewBox={`0 0 ${svgW} ${svgH}`}
           preserveAspectRatio="none"
@@ -147,34 +235,34 @@ const EarnAnimation: React.FC = () => {
         >
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={theme.palette.success.main} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={theme.palette.success.main} stopOpacity={0} />
+              <stop offset="0%" stopColor={BRAND_COLOR} stopOpacity={0.2} />
+              <stop offset="100%" stopColor={BRAND_COLOR} stopOpacity={0} />
             </linearGradient>
-            {/* Clip rect that expands with progress */}
+            <linearGradient id={lineGradId} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#5BCFFF" />
+              <stop offset="28%" stopColor="#6E8BFF" />
+              <stop offset="55%" stopColor="#B17BFF" />
+              <stop offset="78%" stopColor="#FF7BC5" />
+              <stop offset="100%" stopColor="#FFB060" />
+            </linearGradient>
             <clipPath id={clipId}>
               <rect x={0} y={0} width={progress * svgW} height={svgH} />
             </clipPath>
           </defs>
 
-          {/* Faint ghost curve showing where the line will go */}
-          <path
-            d={LINE_D}
-            fill="none"
-            stroke={theme.palette.success.main}
-            strokeWidth={1.5}
-            opacity={0.12}
-          />
+          {/* Ghost curve */}
+          <path d={LINE_D} fill="none" stroke={BRAND_COLOR} strokeWidth={1} opacity={0.1} />
 
-          {/* Area fill — revealed by clip */}
+          {/* Area fill revealed by clip */}
           <path d={AREA_D} fill={`url(#${gradId})`} clipPath={`url(#${clipId})`} />
 
-          {/* Animated line drawing itself via stroke-dashoffset */}
+          {/* Animated line */}
           <path
             ref={pathRef}
             d={LINE_D}
             fill="none"
-            stroke={theme.palette.success.main}
-            strokeWidth={2}
+            stroke={`url(#${lineGradId})`}
+            strokeWidth={1.5}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={pathLen}
@@ -182,33 +270,26 @@ const EarnAnimation: React.FC = () => {
           />
         </svg>
 
-        {/* Moving dot — absolutely positioned to avoid SVG aspect-ratio distortion */}
-        <Box
-          sx={{
-            position: 'absolute',
-            left: `${dotLeft}%`,
-            top: `${dotTop}%`,
-            pointerEvents: 'none',
-          }}
-        >
+        {/* Moving dot — absolutely positioned to avoid SVG distortion */}
+        <Box sx={{ position: 'absolute', left: `${dotLeft}%`, top: `${dotTop}%`, pointerEvents: 'none' }}>
           <Box
             sx={{
               position: 'absolute',
               width: 20,
               height: 20,
               borderRadius: '50%',
-              bgcolor: alpha(theme.palette.success.main, 0.22),
+              bgcolor: 'rgba(129,140,248,0.22)',
               transform: 'translate(-50%, -50%)',
             }}
           />
           <Box
             sx={{
               position: 'absolute',
-              width: 9,
-              height: 9,
+              width: 8,
+              height: 8,
               borderRadius: '50%',
-              bgcolor: 'success.main',
-              boxShadow: `0 0 8px ${theme.palette.success.main}`,
+              background: 'linear-gradient(135deg, #6E8BFF 0%, #B17BFF 100%)',
+              boxShadow: '0 0 8px rgba(177,123,255,0.7)',
               transform: 'translate(-50%, -50%)',
             }}
           />
