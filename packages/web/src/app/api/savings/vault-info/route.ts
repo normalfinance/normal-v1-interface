@@ -76,8 +76,9 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    // Vault info, APY, and DeFindex history run in parallel.
-    const [vaultInfoResult, apyResult, historyRes] = await Promise.all([
+    // Vault info and APY are critical. History is optional (only used for totalDeposited).
+    // Using allSettled so a flaky history endpoint never kills the whole response.
+    const [vaultInfoSettled, apySettled, historySettled] = await Promise.allSettled([
       withTimeout(sdk.getVaultInfo(VAULT_ADDRESS), 10_000, 'getVaultInfo'),
       withTimeout(sdk.getVaultAPY(VAULT_ADDRESS), 10_000, 'getVaultAPY'),
       withTimeout(
@@ -90,6 +91,13 @@ export async function GET(_request: NextRequest) {
       ),
     ]);
 
+    if (vaultInfoSettled.status === 'rejected') throw vaultInfoSettled.reason;
+    if (apySettled.status === 'rejected') throw apySettled.reason;
+
+    const vaultInfoResult = vaultInfoSettled.value;
+    const apyResult = apySettled.value;
+    const historyRes = historySettled.status === 'fulfilled' ? historySettled.value : null;
+
     // Log raw structure once so we can see what the SDK actually returns.
     console.log('[vault-info] raw totalManagedFunds:', JSON.stringify(vaultInfoResult.totalManagedFunds));
 
@@ -98,7 +106,7 @@ export async function GET(_request: NextRequest) {
 
     // Prefer history API cumulative deposits; fall back to current TVL.
     let totalDeposited = totalDeposits;
-    if (historyRes.ok) {
+    if (historyRes?.ok) {
       try {
         const historyJson = await historyRes.json();
         console.log('[vault-info] history keys:', Object.keys(historyJson));

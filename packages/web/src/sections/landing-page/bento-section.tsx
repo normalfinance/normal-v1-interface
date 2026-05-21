@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from 'react';
 
-import { cdn } from '@normalfinance/utils';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 
-import WorldMap from '@/components/ui/world-map';
 import EarnAnimation from '@/components/ui/earn-animation';
 
 /* ------------------------------------------------------------------ */
@@ -55,16 +53,8 @@ const CARD_H3_SX = {
 /* ------------------------------------------------------------------ */
 /* SavingsBigCard — uses EarnAnimation                                */
 /* ------------------------------------------------------------------ */
-const MAP_DOTS = [
-  { start: { lat: 64.2008, lng: -149.4937 }, end: { lat: 34.0522, lng: -118.2437 } },
-  { start: { lat: 64.2008, lng: -149.4937 }, end: { lat: -15.7975, lng: -47.8919 } },
-  { start: { lat: -15.7975, lng: -47.8919 }, end: { lat: 38.7223, lng: -9.1393 } },
-  { start: { lat: 51.5074, lng: -0.1278 },   end: { lat: 28.6139, lng: 77.209 } },
-  { start: { lat: 28.6139, lng: 77.209 },    end: { lat: 43.1332, lng: 131.9113 } },
-  { start: { lat: 28.6139, lng: 77.209 },    end: { lat: -1.2921, lng: 36.8219 } },
-];
 
-function SavingsBigCard() {
+function SavingsBigCard({ liveApy }: { liveApy: number | null }) {
   return (
     <Box
       sx={{
@@ -76,7 +66,7 @@ function SavingsBigCard() {
         overflow: 'hidden',
       }}
     >
-      <EarnAnimation />
+      <EarnAnimation liveApy={liveApy} />
     </Box>
   );
 }
@@ -84,33 +74,112 @@ function SavingsBigCard() {
 /* ------------------------------------------------------------------ */
 /* BorderlessCard — uses WorldMap                                     */
 /* ------------------------------------------------------------------ */
-function BorderlessCard() {
+/* RealYieldCard                                                       */
+/* ------------------------------------------------------------------ */
+const FLOW_NODES = [
+  { label: 'Your USDC', sub: 'deposited' },
+  { label: 'Blend Pool', sub: 'Stellar · Soroban' },
+  { label: 'Borrowers', sub: 'over-collateralised' },
+];
+
+function RealYieldCard({ liveApy }: { liveApy: number | null }) {
+  const apy = liveApy;
+
   return (
     <Box
       sx={{
         ...CARD_BASE,
-        gridColumn: { xs: '1 / -1', sm: 'span 1', md: 'span 2' },
-        minHeight: { xs: 320, sm: 'auto' },
-        padding: 0,
-        overflow: 'hidden',
+        gridColumn: { xs: '1 / -1', md: 'span 3' },
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
       }}
     >
-      <Box sx={{ px: '36px', pt: '36px', pb: '16px' }}>
-        <Typography sx={EYEBROW_SX}>Global Access</Typography>
-        <Typography sx={CARD_H3_SX}>Borderless by design</Typography>
+      <Box>
+        <Typography sx={EYEBROW_SX}>Yield source</Typography>
+        <Typography sx={CARD_H3_SX}>Real yield. Real borrowers.</Typography>
         <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: 0.75, lineHeight: 1.55 }}>
-          Your zip code shouldn't determine your returns.
+          Your interest comes from over-collateralised USDC borrowers on Blend Protocol — not algorithmic promises.
         </Typography>
       </Box>
-      <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-        <WorldMap
-          backgroundSrc={cdn('about-page/world-map.webp')}
-          dots={MAP_DOTS}
-          lineColor="#B17BFF"
-        />
+
+      {/* Live APY hero */}
+      <Box sx={{ my: 'auto', py: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+          <Typography
+            sx={{
+              ...MONO,
+              fontSize: '64px',
+              fontWeight: 500,
+              letterSpacing: '-0.03em',
+              lineHeight: 1,
+              color: '#0A0A0F',
+              transition: 'all 0.4s ease',
+            }}
+          >
+            {apy != null ? Number(apy).toFixed(1) : '~8'}
+          </Typography>
+          <Typography sx={{ ...MONO, fontSize: '26px', color: '#9A9AA3', fontWeight: 400, mb: '4px' }}>
+            % APY
+          </Typography>
+        </Box>
+        <Typography sx={{ fontSize: '12px', color: '#9A9AA3', mt: 0.75 }}>
+          live rate · Blend Protocol · Stellar
+        </Typography>
       </Box>
+
+      {/* Flow diagram */}
+      <Box sx={{ mt: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {FLOW_NODES.map((node, i) => (
+            <>
+              {/* Node */}
+              <Box
+                key={node.label}
+                sx={{
+                  flex: 1,
+                  background: i === 1 ? '#0A0A0F' : '#F7F7F9',
+                  border: `1px solid ${i === 1 ? 'transparent' : 'rgba(10,10,15,0.07)'}`,
+                  borderRadius: '12px',
+                  px: '10px',
+                  py: '10px',
+                  textAlign: 'center',
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    color: i === 1 ? '#fff' : '#0A0A0F',
+                    lineHeight: 1.2,
+                    mb: 0.3,
+                  }}
+                >
+                  {node.label}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '9.5px',
+                    color: i === 1 ? 'rgba(255,255,255,0.45)' : '#9A9AA3',
+                    lineHeight: 1,
+                    ...MONO,
+                  }}
+                >
+                  {node.sub}
+                </Typography>
+              </Box>
+              {/* Arrow */}
+              {i < FLOW_NODES.length - 1 && (
+                <Typography key={`arrow-${i}`} sx={{ fontSize: '14px', color: '#C8C8D0', flexShrink: 0 }}>
+                  →
+                </Typography>
+              )}
+            </>
+          ))}
+        </Box>
+
+      </Box>
+
     </Box>
   );
 }
@@ -198,59 +267,87 @@ function StellarSpeedCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/* HowItWorksCard                                                      */
+/* BackedByCard                                                        */
 /* ------------------------------------------------------------------ */
-const STEPS = [
-  { label: 'Connect your wallet', desc: 'Use Freighter, Lobstr, or create a new Normal wallet in seconds.' },
-  { label: 'Deposit USDC', desc: 'Transfer USDC or buy directly with fiat through our on-ramp partners.' },
-  { label: 'Earn automatically', desc: 'Your funds are deployed to Blend Protocol and yield starts accruing immediately.' },
+const BACKERS = [
+  {
+    initials: 'SDF',
+    name: 'Stellar Development Foundation',
+    role: 'Lead investor & advisor',
+    color: '#1B9FFF',
+  },
+  {
+    initials: 'TD',
+    name: 'DraperU Ventures',
+    role: 'Tim Draper · Lead investor',
+    color: '#7C5CFC',
+  },
 ];
 
-function HowItWorksCard() {
+function BackedByCard() {
   return (
-    <Box sx={{ ...CARD_BASE, gridColumn: { xs: '1 / -1', md: 'span 3' } }}>
-      <Typography sx={EYEBROW_SX}>How it works</Typography>
-      <Typography sx={{ ...CARD_H3_SX, mb: 3 }}>
-        Three steps to earning
-      </Typography>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-        {STEPS.map((step, i) => (
-          <Box key={step.label} sx={{ display: 'flex', gap: 2, position: 'relative' }}>
-            {/* Line + circle column */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, width: 25 }}>
-              <Box
-                sx={{
-                  width: 25,
-                  height: 25,
-                  borderRadius: '50%',
-                  background: i === STEPS.length - 1 ? GRAD : '#0A0A0F',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#fff',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  flexShrink: 0,
-                  zIndex: 1,
-                }}
-              >
-                {i + 1}
-              </Box>
-              {i < STEPS.length - 1 && (
-                <Box sx={{ width: '1px', flexGrow: 1, background: 'rgba(10,10,15,0.08)', minHeight: 24, my: 0.5 }} />
-              )}
-            </Box>
-            {/* Content */}
-            <Box sx={{ pb: i < STEPS.length - 1 ? 2.5 : 0, pt: '2px' }}>
-              <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F', mb: 0.4 }}>
-                {step.label}
+    <Box sx={{ ...CARD_BASE, gridColumn: { xs: '1 / -1', md: 'span 3' }, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Box>
+        <Typography sx={EYEBROW_SX}>Backed by</Typography>
+        <Typography sx={{ ...CARD_H3_SX, mb: 1 }}>
+          Trusted by leaders.
+        </Typography>
+        <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.55, mb: 3 }}>
+          Normal is backed by the most credible names in crypto and venture — giving you confidence your funds are in safe hands.
+        </Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {BACKERS.map((b) => (
+          <Box
+            key={b.name}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              background: '#F7F7F9',
+              border: '1px solid rgba(10,10,15,0.07)',
+              borderRadius: '14px',
+              px: '16px',
+              py: '13px',
+            }}
+          >
+            {/* Initials badge */}
+            <Box
+              sx={{
+                width: 38,
+                height: 38,
+                borderRadius: '10px',
+                background: `${b.color}18`,
+                border: `1px solid ${b.color}30`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Typography sx={{ fontSize: '11px', fontWeight: 700, color: b.color, ...MONO, letterSpacing: '0.02em' }}>
+                {b.initials}
               </Typography>
-              <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.55 }}>
-                {step.desc}
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.2 }}>
+                {b.name}
+              </Typography>
+              <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: 0.25 }}>
+                {b.role}
               </Typography>
             </Box>
           </Box>
         ))}
+
+        {/* Valuation tag */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0 }} />
+          <Typography sx={{ fontSize: '11.5px', color: '#6B6B76' }}>
+            $4M valuation round · bridge funding
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );
@@ -283,7 +380,7 @@ function NonCustodialCard() {
   }, []);
 
   return (
-    <Box sx={{ ...CARD_BASE, gridColumn: { xs: '1 / -1', md: 'span 3' } }}>
+    <Box sx={{ ...CARD_BASE, gridColumn: { xs: '1 / -1', sm: 'span 1', md: 'span 2' } }}>
       <Typography sx={EYEBROW_SX}>Security</Typography>
       <Typography sx={{ ...CARD_H3_SX, mb: 1 }}>
         Non-custodial by design
@@ -332,6 +429,17 @@ function NonCustodialCard() {
 /* BentoSection                                                        */
 /* ------------------------------------------------------------------ */
 export function BentoSection() {
+  const [liveApy, setLiveApy] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/api/savings/vault-info?network=mainnet')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.vault?.apy != null) setLiveApy(Number(data.vault.apy));
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <Box component="section" sx={{ py: { xs: '64px', md: '110px' }, background: '#FAFAFB' }}>
       <Container maxWidth={false} sx={{ maxWidth: '1240px', px: { xs: 2, sm: 3 } }}>
@@ -373,11 +481,11 @@ export function BentoSection() {
             gap: { xs: '10px', md: '14px' },
           }}
         >
-          <SavingsBigCard />
-          <BorderlessCard />
-          <StellarSpeedCard />
-          <HowItWorksCard />
+          <SavingsBigCard liveApy={liveApy} />
           <NonCustodialCard />
+          <StellarSpeedCard />
+          <BackedByCard />
+          <RealYieldCard liveApy={liveApy} />
         </Box>
       </Container>
     </Box>

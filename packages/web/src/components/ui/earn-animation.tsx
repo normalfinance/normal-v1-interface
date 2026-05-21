@@ -46,24 +46,14 @@ const GRID = (() => {
 
 // ----------------------------------------------------------------------
 
-const EarnAnimation: React.FC = () => {
+const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
   const { t } = useTranslate();
   const [progress, setProgress] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
-  const [liveApy, setLiveApy] = useState<number | null>(null);
   const startRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLen, setPathLen] = useState(460);
-
-  useEffect(() => {
-    fetch('/api/savings/vault-info?network=mainnet')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.vault?.apy != null) setLiveApy(Number(data.vault.apy));
-      })
-      .catch(() => {});
-  }, []);
 
   const displayApy = liveApy != null ? Number(liveApy).toFixed(1) : null;
 
