@@ -119,19 +119,41 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
       }}
     >
 
-      {/* Eyebrow */}
-      <Typography
+      {/* Live chip */}
+      <Box
         sx={{
-          fontSize: '11px',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '0.16em',
-          color: 'rgba(255,255,255,0.4)',
-          mb: 1,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          px: '12px',
+          py: '5px',
+          background: 'rgba(255,255,255,0.08)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: '999px',
+          fontSize: '12px',
+          fontWeight: 500,
+          color: 'rgba(255,255,255,0.85)',
+          mb: 1.5,
+          alignSelf: 'flex-start',
         }}
       >
+        <Box
+          sx={{
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            bgcolor: '#1AB37D',
+            flexShrink: 0,
+            boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
+            animation: 'earnChipPulse 2.4s ease-in-out infinite',
+            '@keyframes earnChipPulse': {
+              '0%,100%': { boxShadow: '0 0 0 3px rgba(26,179,125,0.18)' },
+              '50%': { boxShadow: '0 0 0 6px rgba(26,179,125,0.08)' },
+            },
+          }}
+        />
         {t('Normal Savings')}
-      </Typography>
+      </Box>
 
       {/* Headline */}
       <Typography

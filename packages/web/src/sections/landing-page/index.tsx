@@ -78,8 +78,8 @@ export default function LandingPage() {
       <BentoSection />
       <StatsGrid />
       <RoadmapSection />
-      <TestimonialGrid />
       <FaqAccordion />
+      <TestimonialGrid />
       <CtaImage />
     </>
   );

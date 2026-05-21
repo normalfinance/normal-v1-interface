@@ -68,12 +68,17 @@ const statusStyles: Record<Status, { bg: string; color: string; border: string; 
 
 const PhaseCard = styled('article')({
   backgroundColor: '#fff',
-  border: '1px solid #e8e8ec',
+  border: '1px solid rgba(10,10,15,0.08)',
   borderRadius: 22,
   padding: 28,
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
+  transition: 'border-color 200ms, background 200ms',
+  '&:hover': {
+    borderColor: 'rgba(10,10,15,0.12)',
+    background: '#fdfdfd',
+  },
 });
 
 // ----------------------------------------------------------------------
@@ -85,12 +90,11 @@ export default function RoadmapSection() {
     <Box
       component="section"
       aria-labelledby="roadmap-heading"
-      sx={(theme) => ({
-        bgcolor: theme.palette.grey[50],
-        borderTop: `1px solid ${theme.palette.divider}`,
-        borderBottom: `1px solid ${theme.palette.divider}`,
-        py: 12,
-      })}
+      sx={{
+        bgcolor: '#FAFAFB',
+        pt: { xs: '80px', md: '110px' },
+        pb: { xs: '64px', md: '80px' },
+      }}
     >
       <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
         {/* Header */}
@@ -100,10 +104,10 @@ export default function RoadmapSection() {
             sx={{
               m: 0,
               mb: '14px',
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 500,
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.16em',
               color: '#6b6b76',
             }}
           >
@@ -116,7 +120,7 @@ export default function RoadmapSection() {
             sx={{
               m: 0,
               fontSize: 'clamp(34px, 4.4vw, 56px)',
-              fontWeight: 600,
+              fontWeight: 500,
               letterSpacing: '-0.03em',
               lineHeight: 1.04,
               color: '#0a0a0b',
@@ -131,10 +135,10 @@ export default function RoadmapSection() {
             sx={{
               m: 0,
               mt: '14px',
-              fontSize: 17,
+              fontSize: '15px',
               color: '#6b6b76',
               maxWidth: '60ch',
-              lineHeight: 1.5,
+              lineHeight: 1.6,
             }}
           >
             {t(
@@ -146,10 +150,10 @@ export default function RoadmapSection() {
         {/* Phase grid */}
         <Box
           sx={{
-            mt: 7,
+            mt: '56px',
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-            gap: 2,
+            gap: '14px',
             alignItems: 'stretch',
           }}
         >
@@ -168,14 +172,14 @@ export default function RoadmapSection() {
                     height: 26,
                     px: '10px',
                     borderRadius: '999px',
-                    fontSize: 11.5,
+                    fontSize: '11px',
                     fontWeight: 500,
                     bgcolor: s.bg,
                     color: s.color,
                     border: `1px solid ${s.border}`,
                   }}
                 >
-                  <Box component="span" sx={{ color: s.dot, fontSize: 8, lineHeight: 1 }}>
+                  <Box component="span" sx={{ color: s.dot, fontSize: 7, lineHeight: 1 }}>
                     {BULLET}
                   </Box>
                   {t(phase.statusLabel)}
@@ -186,10 +190,10 @@ export default function RoadmapSection() {
                   component="h3"
                   sx={{
                     m: 0,
-                    mt: '18px',
+                    mt: '20px',
                     mb: '4px',
-                    fontSize: 22,
-                    fontWeight: 600,
+                    fontSize: '22px',
+                    fontWeight: 500,
                     letterSpacing: '-0.02em',
                     color: '#0a0a0b',
                   }}
@@ -201,10 +205,10 @@ export default function RoadmapSection() {
                 <Box
                   component="span"
                   sx={{
-                    fontSize: 11.5,
+                    fontSize: '11px',
                     fontWeight: 500,
                     textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
+                    letterSpacing: '0.1em',
                     color: '#9a9aa3',
                   }}
                 >
@@ -214,7 +218,7 @@ export default function RoadmapSection() {
                 {/* Bullets */}
                 <Box
                   component="ul"
-                  sx={{ m: 0, mt: '18px', p: 0, listStyle: 'none', flex: 1 }}
+                  sx={{ m: 0, mt: '20px', p: 0, listStyle: 'none', flex: 1 }}
                 >
                   {phase.bullets.map((bullet) => (
                     <Box
@@ -224,9 +228,9 @@ export default function RoadmapSection() {
                         display: 'flex',
                         gap: '10px',
                         alignItems: 'flex-start',
-                        py: '10px',
-                        borderTop: '1px solid #e8e8ec',
-                        fontSize: 14,
+                        py: '11px',
+                        borderTop: '1px solid #f0f0f3',
+                        fontSize: '13.5px',
                         color: '#3a3a44',
                         lineHeight: 1.5,
                       }}
@@ -234,7 +238,7 @@ export default function RoadmapSection() {
                       <Box
                         component="span"
                         aria-hidden="true"
-                        sx={{ color: s.dot, flexShrink: 0, fontSize: 10, mt: '4px' }}
+                        sx={{ color: s.dot, flexShrink: 0, fontSize: 9, mt: '5px' }}
                       >
                         {BULLET}
                       </Box>
