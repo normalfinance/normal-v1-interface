@@ -214,7 +214,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const tid = setTimeout(() => controller.abort(), 12_000);
         let response: Response;
         try {
-          response = await fetch('/api/savings/vault-info', { signal: controller.signal });
+          response = await fetch(`/api/savings/vault-info?network=${networkKey}`, { signal: controller.signal });
         } finally {
           clearTimeout(tid);
         }

@@ -101,9 +101,18 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
+        {/* Non-blocking font load — does not delay first paint */}
+        <link
+          rel="preload"
+          as="style"
+          href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap"
+        />
         <link
           rel="stylesheet"
           href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap"
+          media="print"
+          // @ts-ignore — onLoad on link is valid HTML but not in React types
+          onLoad="this.media='all'"
         />
       </head>
       <body>
