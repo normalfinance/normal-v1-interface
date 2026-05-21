@@ -55,7 +55,7 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLen, setPathLen] = useState(460);
 
-  const displayApy = liveApy != null ? Number(liveApy).toFixed(1) : null;
+  const displayApy = liveApy != null ? Number(liveApy).toFixed(2) : null;
 
   useEffect(() => {
     if (pathRef.current) setPathLen(pathRef.current.getTotalLength());
@@ -238,8 +238,6 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
           {/* Ghost curve */}
           <path d={LINE_D} fill="none" stroke={BRAND_COLOR} strokeWidth={1} opacity={0.1} />
 
-          {/* Area fill revealed by clip */}
-          <path d={AREA_D} fill={`url(#${gradId})`} clipPath={`url(#${clipId})`} />
 
           {/* Animated line */}
           <path

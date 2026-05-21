@@ -117,7 +117,7 @@ function RealYieldCard({ liveApy }: { liveApy: number | null }) {
               transition: 'all 0.4s ease',
             }}
           >
-            {apy != null ? Number(apy).toFixed(1) : '~8'}
+            {apy != null ? Number(apy).toFixed(2) : '~8'}
           </Typography>
           <Typography sx={{ ...MONO, fontSize: '26px', color: '#9A9AA3', fontWeight: 400, mb: '4px' }}>
             % APY
