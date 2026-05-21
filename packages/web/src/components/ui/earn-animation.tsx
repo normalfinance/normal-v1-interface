@@ -128,7 +128,7 @@ const EarnAnimation: React.FC = () => {
     >
 
       {/* Eyebrow + APY chip */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography
           sx={{
             fontSize: '11px',
@@ -182,7 +182,7 @@ const EarnAnimation: React.FC = () => {
         </Box>
       </Stack>
 
-      {/* Headline + subtitle */}
+      {/* Headline */}
       <Typography
         sx={{
           fontSize: '26px',
@@ -190,50 +190,40 @@ const EarnAnimation: React.FC = () => {
           letterSpacing: '-0.02em',
           color: '#0A0A0F',
           lineHeight: 1.2,
-          mb: 1,
+          mb: 2,
         }}
       >
         Deposit. Earn. Compound.
       </Typography>
-      <Typography
-        sx={{
-          fontSize: '13.5px',
-          color: '#6B6B76',
-          lineHeight: 1.6,
-          mb: 3,
-          maxWidth: 420,
-        }}
-      >
-        Your USDC earns {APY}% APY in audited lending pools on Stellar. Yield compounds daily — withdraw anytime, no lock-ups.
-      </Typography>
 
       {/* Live balance */}
       <Box>
-        <Typography sx={{ fontSize: '11px', color: '#9A9AA3' }}>
+        <Typography sx={{ fontSize: '11px', color: '#9A9AA3', mb: 0.25 }}>
           {t('Balance')}
         </Typography>
-        <Typography
-          sx={{
-            fontSize: { xs: '2rem', md: '2.4rem' },
-            fontWeight: 400,
-            fontVariantNumeric: 'tabular-nums',
-            fontFamily: '"Geist Mono", ui-monospace, monospace',
-            fontFeatureSettings: '"ss01","ss02","zero"',
-            letterSpacing: '-0.03em',
-            lineHeight: 1.1,
-            color: '#0A0A0F',
-            mt: 0.25,
-          }}
-        >
-          ${fmt(balance)}
-        </Typography>
-        <Typography sx={{ fontSize: '11px', color: '#9A9AA3' }}>
-          USDC
-        </Typography>
+        <Stack direction="row" alignItems="baseline" spacing={1}>
+          <Typography
+            sx={{
+              fontSize: { xs: '2rem', md: '2.2rem' },
+              fontWeight: 400,
+              fontVariantNumeric: 'tabular-nums',
+              fontFamily: '"Geist Mono", ui-monospace, monospace',
+              fontFeatureSettings: '"ss01","ss02","zero"',
+              letterSpacing: '-0.03em',
+              lineHeight: 1.1,
+              color: '#0A0A0F',
+            }}
+          >
+            ${fmt(balance)}
+          </Typography>
+          <Typography sx={{ fontSize: '12px', color: '#9A9AA3', fontFamily: '"Geist Mono", ui-monospace, monospace' }}>
+            USDC
+          </Typography>
+        </Stack>
       </Box>
 
       {/* Live earnings row */}
-      <Stack direction="row" alignItems="center" spacing={0.75} mt={1.5} mb={2}>
+      <Stack direction="row" alignItems="center" spacing={0.75} mt={1} mb={1.5}>
         <Box
           sx={{
             width: 7,
@@ -254,7 +244,7 @@ const EarnAnimation: React.FC = () => {
       </Stack>
 
       {/* Sparkline — grows to fill remaining card height */}
-      <Box sx={{ position: 'relative', flexGrow: 1, minHeight: 120 }}>
+      <Box sx={{ position: 'relative', flexGrow: 1, minHeight: 180 }}>
         <svg
           viewBox={`0 0 ${svgW} ${svgH}`}
           preserveAspectRatio="none"
@@ -300,7 +290,7 @@ const EarnAnimation: React.FC = () => {
             d={LINE_D}
             fill="none"
             stroke={`url(#${lineGradId})`}
-            strokeWidth={1.5}
+            strokeWidth={1}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={pathLen}
@@ -314,11 +304,11 @@ const EarnAnimation: React.FC = () => {
             key={label}
             sx={{
               position: 'absolute',
-              left: 4,
+              left: 0,
               top: `${yPct}%`,
               transform: 'translateY(-50%)',
               fontSize: '9px',
-              color: 'rgba(10,10,15,0.22)',
+              color: 'rgba(10,10,15,0.28)',
               fontFamily: '"Geist Mono", ui-monospace, monospace',
               lineHeight: 1,
               pointerEvents: 'none',
