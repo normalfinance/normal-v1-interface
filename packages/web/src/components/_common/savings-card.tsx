@@ -261,47 +261,55 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         </Typography>
 
         {/* APY chip */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: '#0A0A0F',
-            borderRadius: '20px',
-            px: '10px',
-            py: '6px',
-          }}
-        >
+        {vaultInfo ? (
           <Box
             sx={{
-              width: 14,
-              height: 14,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #5BCFFF 0%, #B17BFF 100%)',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '8px',
-              color: '#fff',
-              fontFamily: '"Geist Mono", "Courier New", monospace',
-              flexShrink: 0,
-              lineHeight: 1,
+              gap: '7px',
+              background: '#F7F7F9',
+              border: '1px solid rgba(10,10,15,0.07)',
+              borderRadius: '20px',
+              px: '10px',
+              py: '5px',
             }}
           >
-            ↗
+            <Box
+              sx={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                bgcolor: '#1AB37D',
+                flexShrink: 0,
+                boxShadow: '0 0 0 2px rgba(26,179,125,0.18)',
+              }}
+            />
+            <Typography
+              sx={{
+                fontSize: '12px',
+                fontWeight: 700,
+                lineHeight: 1,
+                fontFamily: '"Geist Mono", "Courier New", monospace',
+                color: '#0A0A0F',
+              }}
+            >
+              {Number(vaultInfo.apy).toFixed(2)}%
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '11px',
+                fontWeight: 500,
+                color: '#9A9AA3',
+                lineHeight: 1,
+                fontFamily: '"Geist Mono", "Courier New", monospace',
+              }}
+            >
+              APY
+            </Typography>
           </Box>
-          <Typography
-            sx={{
-              fontSize: '12px',
-              fontWeight: 700,
-              color: '#FFFFFF',
-              lineHeight: 1,
-              fontFamily: '"Geist Mono", "Courier New", monospace',
-            }}
-          >
-            {vaultInfo ? `${Number(vaultInfo.apy).toFixed(2)}% APY` : '—'}
-          </Typography>
-        </Box>
+        ) : (
+          <Skeleton variant="rounded" width={80} height={26} sx={{ borderRadius: '20px' }} />
+        )}
       </Stack>
 
       {/* Stats */}
