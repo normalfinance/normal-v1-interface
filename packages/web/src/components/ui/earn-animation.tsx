@@ -35,6 +35,15 @@ const LINE_D = `M ${POINTS.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).joi
 const AREA_D = `${LINE_D} L ${svgW},${svgH} L 0,${svgH} Z`;
 const MAX_BALANCE = INITIAL * Math.pow(1 + APY / 100, YEARS);
 
+const GRID = (() => {
+  const min = INITIAL;
+  const range = MAX_BALANCE - min;
+  return [20_000, 30_000, 40_000].map((value) => {
+    const y = svgH - ((value - min) / range) * (svgH * 0.88) - svgH * 0.06;
+    return { label: `$${value / 1000}k`, y, yPct: (y / svgH) * 100 };
+  });
+})();
+
 // ----------------------------------------------------------------------
 
 const EarnAnimation: React.FC = () => {
@@ -97,7 +106,25 @@ const EarnAnimation: React.FC = () => {
   return (
     <Box
       ref={containerRef}
-      sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', p: '28px' }}
+      sx={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        p: '28px',
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '60%',
+          height: '55%',
+          background: 'radial-gradient(ellipse at 80% 10%, rgba(177,123,255,0.07) 0%, rgba(91,207,255,0.04) 40%, transparent 70%)',
+          pointerEvents: 'none',
+        },
+      }}
     >
 
       {/* Eyebrow + APY chip */}
@@ -235,8 +262,8 @@ const EarnAnimation: React.FC = () => {
         >
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={BRAND_COLOR} stopOpacity={0.2} />
-              <stop offset="100%" stopColor={BRAND_COLOR} stopOpacity={0} />
+              <stop offset="0%" stopColor={BRAND_COLOR} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={BRAND_COLOR} stopOpacity={0.02} />
             </linearGradient>
             <linearGradient id={lineGradId} x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#5BCFFF" />
@@ -249,6 +276,17 @@ const EarnAnimation: React.FC = () => {
               <rect x={0} y={0} width={progress * svgW} height={svgH} />
             </clipPath>
           </defs>
+
+          {/* Grid lines */}
+          {GRID.map(({ label, y }) => (
+            <line
+              key={label}
+              x1={0} y1={y} x2={svgW} y2={y}
+              stroke="rgba(10,10,15,0.07)"
+              strokeWidth={0.5}
+              strokeDasharray="3 5"
+            />
+          ))}
 
           {/* Ghost curve */}
           <path d={LINE_D} fill="none" stroke={BRAND_COLOR} strokeWidth={1} opacity={0.1} />
@@ -269,6 +307,27 @@ const EarnAnimation: React.FC = () => {
             strokeDashoffset={pathLen * (1 - progress)}
           />
         </svg>
+
+        {/* Y-axis labels */}
+        {GRID.map(({ label, yPct }) => (
+          <Typography
+            key={label}
+            sx={{
+              position: 'absolute',
+              left: 4,
+              top: `${yPct}%`,
+              transform: 'translateY(-50%)',
+              fontSize: '9px',
+              color: 'rgba(10,10,15,0.22)',
+              fontFamily: '"Geist Mono", ui-monospace, monospace',
+              lineHeight: 1,
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          >
+            {label}
+          </Typography>
+        ))}
 
         {/* Moving dot — absolutely positioned to avoid SVG distortion */}
         <Box sx={{ position: 'absolute', left: `${dotLeft}%`, top: `${dotTop}%`, pointerEvents: 'none' }}>
