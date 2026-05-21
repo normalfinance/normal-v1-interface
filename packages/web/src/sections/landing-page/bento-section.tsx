@@ -64,9 +64,31 @@ function SavingsBigCard({ liveApy }: { liveApy: number | null }) {
         minHeight: { xs: 480, md: 'auto' },
         padding: 0,
         overflow: 'hidden',
+        background: '#0A0A0F',
+        border: '1px solid rgba(255,255,255,0.06)',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      <EarnAnimation liveApy={liveApy} />
+      {/* Radial glow */}
+      <Box sx={{
+        position: 'absolute', inset: 0,
+        background: 'radial-gradient(ellipse at 50% 0%, rgba(110,139,255,0.15) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
+      {/* Dot grid */}
+      <Box sx={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
+        backgroundSize: '20px 20px',
+        WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+        maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+        pointerEvents: 'none',
+      }} />
+      <Box sx={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <EarnAnimation liveApy={liveApy} />
+      </Box>
     </Box>
   );
 }
@@ -245,7 +267,7 @@ function StellarSpeedCard() {
             sx={{
               ...MONO,
               fontSize: '52px',
-              fontWeight: 700,
+              fontWeight: 400,
               color: '#fff',
               letterSpacing: '-0.03em',
               lineHeight: 1,

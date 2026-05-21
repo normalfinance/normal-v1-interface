@@ -46,7 +46,7 @@ const GRID = (() => {
 
 // ----------------------------------------------------------------------
 
-const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
+const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }) => {
   const { t } = useTranslate();
   const [progress, setProgress] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
@@ -110,10 +110,12 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
       ref={containerRef}
       sx={{
         width: '100%',
-        height: '100%',
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        p: '36px',
+        pt: '36px',
+        px: '36px',
+        pb: '36px',
       }}
     >
 
@@ -124,8 +126,8 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
           fontWeight: 600,
           textTransform: 'uppercase',
           letterSpacing: '0.16em',
-          color: '#6B6B76',
-          mb: 2,
+          color: 'rgba(255,255,255,0.4)',
+          mb: 1,
         }}
       >
         {t('Normal Savings')}
@@ -137,21 +139,32 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
           fontSize: '26px',
           fontWeight: 500,
           letterSpacing: '-0.02em',
-          color: '#0A0A0F',
+          color: '#fff',
           lineHeight: 1.2,
           mb: 1,
         }}
       >
-        Deposit. Earn. Compound.
+        Deposit. Earn.{' '}
+        <Box
+          component="span"
+          sx={{
+            background: 'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          Compound.
+        </Box>
       </Typography>
 
       {/* Description */}
       <Typography
         sx={{
           fontSize: '13.5px',
-          color: '#6B6B76',
+          color: 'rgba(255,255,255,0.45)',
           lineHeight: 1.6,
-          mb: 2,
+          mb: 1.5,
           maxWidth: 380,
         }}
       >
@@ -160,7 +173,7 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
 
       {/* Live balance */}
       <Box>
-        <Typography sx={{ fontSize: '11px', color: '#9A9AA3', mb: 0.25 }}>
+        <Typography sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', mb: 0.25 }}>
           {t('Balance')}
         </Typography>
         <Typography
@@ -172,7 +185,7 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
             fontFeatureSettings: '"ss01","ss02","zero"',
             letterSpacing: '-0.03em',
             lineHeight: 1.1,
-            color: '#0A0A0F',
+            color: '#fff',
           }}
         >
           ${fmt(balance)}
@@ -180,7 +193,7 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
       </Box>
 
       {/* Live earnings row */}
-      <Stack direction="row" alignItems="center" spacing={0.75} mt={1} mb={4.5}>
+      <Stack direction="row" alignItems="center" spacing={0.75} mt={0.75} mb={3.5}>
         <Box
           sx={{
             width: 7,
@@ -201,7 +214,7 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
       </Stack>
 
       {/* Sparkline — grows to fill remaining card height */}
-      <Box sx={{ position: 'relative', flexGrow: 1, minHeight: 150 }}>
+      <Box sx={{ position: 'relative', flexGrow: 1, minHeight: 200 }}>
         <svg
           viewBox={`0 0 ${svgW} ${svgH}`}
           preserveAspectRatio="none"
@@ -229,7 +242,7 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
             <line
               key={label}
               x1={0} y1={y} x2={svgW} y2={y}
-              stroke="rgba(10,10,15,0.07)"
+              stroke="rgba(255,255,255,0.08)"
               strokeWidth={0.5}
               strokeDasharray="3 5"
             />
@@ -263,7 +276,7 @@ const EarnAnimation: React.FC<{ liveApy: number | null }> = ({ liveApy }) => {
               top: `${yPct}%`,
               transform: 'translateY(-50%)',
               fontSize: '9px',
-              color: 'rgba(10,10,15,0.28)',
+              color: 'rgba(255,255,255,0.25)',
               fontFamily: '"Geist Mono", ui-monospace, monospace',
               lineHeight: 1,
               pointerEvents: 'none',
