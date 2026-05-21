@@ -32,7 +32,7 @@ const CARD_BASE = {
   background: '#fff',
   border: '1px solid rgba(10,10,15,0.08)',
   borderRadius: '22px',
-  padding: '28px',
+  padding: '36px',
   overflow: 'hidden',
 } as const;
 
@@ -69,8 +69,9 @@ function SavingsBigCard() {
     <Box
       sx={{
         ...CARD_BASE,
-        gridColumn: 'span 4',
-        gridRow: 'span 2',
+        gridColumn: { xs: '1 / -1', md: 'span 4' },
+        gridRow: { xs: 'auto', md: 'span 2' },
+        minHeight: { xs: 480, md: 'auto' },
         padding: 0,
         overflow: 'hidden',
       }}
@@ -88,14 +89,15 @@ function BorderlessCard() {
     <Box
       sx={{
         ...CARD_BASE,
-        gridColumn: 'span 2',
+        gridColumn: { xs: '1 / -1', sm: 'span 1', md: 'span 2' },
+        minHeight: { xs: 320, sm: 'auto' },
         padding: 0,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
       }}
     >
-      <Box sx={{ px: '28px', pt: '28px', pb: '16px' }}>
+      <Box sx={{ px: '36px', pt: '36px', pb: '16px' }}>
         <Typography sx={EYEBROW_SX}>Global Access</Typography>
         <Typography sx={CARD_H3_SX}>Borderless by design</Typography>
         <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: 0.75, lineHeight: 1.55 }}>
@@ -130,7 +132,7 @@ function StellarSpeedCard() {
     <Box
       sx={{
         ...CARD_BASE,
-        gridColumn: 'span 2',
+        gridColumn: { xs: '1 / -1', sm: 'span 1', md: 'span 2' },
         background: '#0A0A0F',
         border: '1px solid rgba(255,255,255,0.06)',
         position: 'relative',
@@ -206,7 +208,7 @@ const STEPS = [
 
 function HowItWorksCard() {
   return (
-    <Box sx={{ ...CARD_BASE, gridColumn: 'span 3' }}>
+    <Box sx={{ ...CARD_BASE, gridColumn: { xs: '1 / -1', md: 'span 3' } }}>
       <Typography sx={EYEBROW_SX}>How it works</Typography>
       <Typography sx={{ ...CARD_H3_SX, mb: 3 }}>
         Three steps to earning
@@ -281,7 +283,7 @@ function NonCustodialCard() {
   }, []);
 
   return (
-    <Box sx={{ ...CARD_BASE, gridColumn: 'span 3' }}>
+    <Box sx={{ ...CARD_BASE, gridColumn: { xs: '1 / -1', md: 'span 3' } }}>
       <Typography sx={EYEBROW_SX}>Security</Typography>
       <Typography sx={{ ...CARD_H3_SX, mb: 1 }}>
         Non-custodial by design
@@ -331,8 +333,8 @@ function NonCustodialCard() {
 /* ------------------------------------------------------------------ */
 export function BentoSection() {
   return (
-    <Box component="section" sx={{ py: '110px', background: '#FAFAFB' }}>
-      <Container maxWidth={false} sx={{ maxWidth: '1240px' }}>
+    <Box component="section" sx={{ py: { xs: '64px', md: '110px' }, background: '#FAFAFB' }}>
+      <Container maxWidth={false} sx={{ maxWidth: '1240px', px: { xs: 2, sm: 3 } }}>
         {/* Eyebrow */}
         <Box sx={{ textAlign: 'center', mb: 1 }}>
           <Typography
@@ -366,9 +368,9 @@ export function BentoSection() {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(6, 1fr)',
-            gridAutoRows: 'minmax(290px, auto)',
-            gap: '14px',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(6, 1fr)' },
+            gridAutoRows: { xs: 'auto', md: 'minmax(290px, auto)' },
+            gap: { xs: '10px', md: '14px' },
           }}
         >
           <SavingsBigCard />

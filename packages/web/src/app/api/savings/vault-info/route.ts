@@ -55,7 +55,8 @@ function parseTotalManagedFunds(funds: any): number {
 export async function GET(_request: NextRequest) {
   try {
     const cookieStore = cookies();
-    const network = cookieStore.get('normal-network')?.value ?? 'testnet';
+    const networkOverride = _request.nextUrl.searchParams.get('network');
+    const network = networkOverride ?? cookieStore.get('normal-network')?.value ?? 'testnet';
     const isMainnet = network === 'mainnet';
     const networkParam = isMainnet ? 'mainnet' : 'testnet';
 

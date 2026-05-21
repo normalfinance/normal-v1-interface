@@ -50,10 +50,22 @@ const EarnAnimation: React.FC = () => {
   const { t } = useTranslate();
   const [progress, setProgress] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
+  const [liveApy, setLiveApy] = useState<number | null>(null);
   const startRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLen, setPathLen] = useState(460);
+
+  useEffect(() => {
+    fetch('/api/savings/vault-info?network=mainnet')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.vault?.apy != null) setLiveApy(Number(data.vault.apy));
+      })
+      .catch(() => {});
+  }, []);
+
+  const displayApy = liveApy != null ? Number(liveApy).toFixed(1) : null;
 
   useEffect(() => {
     if (pathRef.current) setPathLen(pathRef.current.getTotalLength());
@@ -111,76 +123,23 @@ const EarnAnimation: React.FC = () => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        p: '28px',
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: '60%',
-          height: '55%',
-          background: 'radial-gradient(ellipse at 80% 10%, rgba(177,123,255,0.07) 0%, rgba(91,207,255,0.04) 40%, transparent 70%)',
-          pointerEvents: 'none',
-        },
+        p: '36px',
       }}
     >
 
-      {/* Eyebrow + APY chip */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography
-          sx={{
-            fontSize: '11px',
-            fontWeight: 600,
-            textTransform: 'uppercase',
-            letterSpacing: '0.16em',
-            color: '#6B6B76',
-          }}
-        >
-          {t('Normal Savings')}
-        </Typography>
-        <Box
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            background: '#0A0A0F',
-            borderRadius: '999px',
-            px: '10px',
-            py: '5px',
-          }}
-        >
-          <Box
-            sx={{
-              width: 13,
-              height: 13,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #5BCFFF 0%, #B17BFF 100%)',
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '8px',
-              color: '#fff',
-              lineHeight: 1,
-            }}
-          >
-            ↗
-          </Box>
-          <Typography
-            sx={{
-              fontSize: '11px',
-              fontWeight: 400,
-              color: '#fff',
-              fontFamily: '"Geist Mono", ui-monospace, monospace',
-              lineHeight: 1,
-            }}
-          >
-            {APY}% APY
-          </Typography>
-        </Box>
-      </Stack>
+      {/* Eyebrow */}
+      <Typography
+        sx={{
+          fontSize: '11px',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.16em',
+          color: '#6B6B76',
+          mb: 2,
+        }}
+      >
+        {t('Normal Savings')}
+      </Typography>
 
       {/* Headline */}
       <Typography
@@ -190,10 +149,23 @@ const EarnAnimation: React.FC = () => {
           letterSpacing: '-0.02em',
           color: '#0A0A0F',
           lineHeight: 1.2,
-          mb: 2,
+          mb: 1,
         }}
       >
         Deposit. Earn. Compound.
+      </Typography>
+
+      {/* Description */}
+      <Typography
+        sx={{
+          fontSize: '13.5px',
+          color: '#6B6B76',
+          lineHeight: 1.6,
+          mb: 2,
+          maxWidth: 380,
+        }}
+      >
+        Your USDC earns {displayApy != null ? `${displayApy}%` : '~8%'} APY in audited lending pools on Stellar. Yield compounds daily — withdraw anytime, no lock-ups.
       </Typography>
 
       {/* Live balance */}
@@ -201,29 +173,24 @@ const EarnAnimation: React.FC = () => {
         <Typography sx={{ fontSize: '11px', color: '#9A9AA3', mb: 0.25 }}>
           {t('Balance')}
         </Typography>
-        <Stack direction="row" alignItems="baseline" spacing={1}>
-          <Typography
-            sx={{
-              fontSize: { xs: '2rem', md: '2.2rem' },
-              fontWeight: 400,
-              fontVariantNumeric: 'tabular-nums',
-              fontFamily: '"Geist Mono", ui-monospace, monospace',
-              fontFeatureSettings: '"ss01","ss02","zero"',
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
-              color: '#0A0A0F',
-            }}
-          >
-            ${fmt(balance)}
-          </Typography>
-          <Typography sx={{ fontSize: '12px', color: '#9A9AA3', fontFamily: '"Geist Mono", ui-monospace, monospace' }}>
-            USDC
-          </Typography>
-        </Stack>
+        <Typography
+          sx={{
+            fontSize: { xs: '2rem', md: '2.2rem' },
+            fontWeight: 400,
+            fontVariantNumeric: 'tabular-nums',
+            fontFamily: '"Geist Mono", ui-monospace, monospace',
+            fontFeatureSettings: '"ss01","ss02","zero"',
+            letterSpacing: '-0.03em',
+            lineHeight: 1.1,
+            color: '#0A0A0F',
+          }}
+        >
+          ${fmt(balance)}
+        </Typography>
       </Box>
 
       {/* Live earnings row */}
-      <Stack direction="row" alignItems="center" spacing={0.75} mt={1} mb={1.5}>
+      <Stack direction="row" alignItems="center" spacing={0.75} mt={1} mb={4.5}>
         <Box
           sx={{
             width: 7,
@@ -244,7 +211,7 @@ const EarnAnimation: React.FC = () => {
       </Stack>
 
       {/* Sparkline — grows to fill remaining card height */}
-      <Box sx={{ position: 'relative', flexGrow: 1, minHeight: 180 }}>
+      <Box sx={{ position: 'relative', flexGrow: 1, minHeight: 150 }}>
         <svg
           viewBox={`0 0 ${svgW} ${svgH}`}
           preserveAspectRatio="none"
@@ -252,8 +219,8 @@ const EarnAnimation: React.FC = () => {
         >
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={BRAND_COLOR} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={BRAND_COLOR} stopOpacity={0.02} />
+              <stop offset="0%" stopColor="#818cf8" stopOpacity={0.12} />
+              <stop offset="100%" stopColor="#5BCFFF" stopOpacity={0.01} />
             </linearGradient>
             <linearGradient id={lineGradId} x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#5BCFFF" />
