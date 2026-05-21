@@ -155,7 +155,6 @@ function RealYieldCard({ liveApy }: { liveApy: number | null }) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {FLOW_NODES.map((node, i) => (
             <>
-              {/* Node */}
               <Box
                 key={node.label}
                 sx={{
@@ -168,38 +167,19 @@ function RealYieldCard({ liveApy }: { liveApy: number | null }) {
                   textAlign: 'center',
                 }}
               >
-                <Typography
-                  sx={{
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    color: i === 1 ? '#fff' : '#0A0A0F',
-                    lineHeight: 1.2,
-                    mb: 0.3,
-                  }}
-                >
+                <Typography sx={{ fontSize: '11.5px', fontWeight: 600, color: i === 1 ? '#fff' : '#0A0A0F', lineHeight: 1.2, mb: 0.3 }}>
                   {node.label}
                 </Typography>
-                <Typography
-                  sx={{
-                    fontSize: '9.5px',
-                    color: i === 1 ? 'rgba(255,255,255,0.45)' : '#9A9AA3',
-                    lineHeight: 1,
-                    ...MONO,
-                  }}
-                >
+                <Typography sx={{ fontSize: '9.5px', color: i === 1 ? 'rgba(255,255,255,0.45)' : '#9A9AA3', lineHeight: 1, ...MONO }}>
                   {node.sub}
                 </Typography>
               </Box>
-              {/* Arrow */}
               {i < FLOW_NODES.length - 1 && (
-                <Typography key={`arrow-${i}`} sx={{ fontSize: '14px', color: '#C8C8D0', flexShrink: 0 }}>
-                  →
-                </Typography>
+                <Typography key={`arrow-${i}`} sx={{ fontSize: '14px', color: '#C8C8D0', flexShrink: 0 }}>→</Typography>
               )}
             </>
           ))}
         </Box>
-
       </Box>
 
     </Box>
@@ -224,65 +204,26 @@ function StellarSpeedCard() {
       sx={{
         ...CARD_BASE,
         gridColumn: { xs: '1 / -1', sm: 'span 1', md: 'span 2' },
-        background: '#0A0A0F',
-        border: '1px solid rgba(255,255,255,0.06)',
-        position: 'relative',
-        overflow: 'hidden',
       }}
     >
-      {/* Radial glow */}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(110,139,255,0.18) 0%, transparent 65%)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Dot grid */}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)',
-          backgroundSize: '20px 20px',
-          WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-          maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-          pointerEvents: 'none',
-        }}
-      />
+      <Typography sx={EYEBROW_SX}>Stellar Network</Typography>
+      <Typography sx={CARD_H3_SX}>
+        Settle in <Box component="span" sx={{ color: '#9A9AA3' }}>seconds</Box>
+      </Typography>
+      <Typography sx={{ fontSize: '13.5px', color: '#6B6B76', mt: 1, mb: 3, lineHeight: 1.55 }}>
+        Stellar finalizes in under 5 seconds — no waiting, no gas wars.
+      </Typography>
 
-      <Box sx={{ position: 'relative' }}>
-        <Typography sx={{ ...EYEBROW_SX, color: 'rgba(255,255,255,0.4)' }}>Stellar Network</Typography>
-        <Typography sx={{ ...CARD_H3_SX, color: '#fff' }}>
-          Settle in <Box component="span" sx={{ ...GRAD_TEXT_SX }}>seconds</Box>
-        </Typography>
-        <Typography sx={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.45)', mt: 1, mb: 3, lineHeight: 1.55 }}>
-          Stellar finalizes in under 5 seconds — no waiting, no gas wars.
-        </Typography>
-
-        {/* Speed display */}
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-          <Typography
-            sx={{
-              ...MONO,
-              fontSize: '52px',
-              fontWeight: 400,
-              color: '#fff',
-              letterSpacing: '-0.03em',
-              lineHeight: 1,
-              transition: 'all 0.3s ease',
-            }}
-          >
-            ~{(ms / 1000).toFixed(1)}
-          </Typography>
-          <Typography sx={{ ...MONO, fontSize: '20px', color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>
-            s
-          </Typography>
+      {/* Speed chips */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Box sx={KCHIP_SX}>
+          <Box component="span" sx={{ fontSize: '15px' }}>⚡</Box>
+          <Box component="span" sx={KCHIP_TEXT_SX}>avg_settlement:&nbsp;~{(ms / 1000).toFixed(1)}s</Box>
         </Box>
-        <Typography sx={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', mt: 0.5 }}>
-          average settlement time
-        </Typography>
+        <Box sx={KCHIP_SX}>
+          <Box component="span" sx={{ fontSize: '15px' }}>💸</Box>
+          <Box component="span" sx={KCHIP_TEXT_SX}>network_fee:&nbsp;&lt;$0.001</Box>
+        </Box>
       </Box>
     </Box>
   );
@@ -379,7 +320,7 @@ function BackedByCard() {
 /* NonCustodialCard                                                    */
 /* ------------------------------------------------------------------ */
 const KCHIP_SX = {
-  display: 'inline-flex',
+  display: 'flex',
   alignItems: 'center',
   gap: '8px',
   background: '#F7F7F9',
@@ -387,10 +328,18 @@ const KCHIP_SX = {
   borderRadius: '14px',
   px: '14px',
   py: '10px',
+  overflow: 'hidden',
   ...MONO,
   fontSize: '13px',
   fontWeight: 500,
   color: '#2A2A33',
+} as const;
+
+const KCHIP_TEXT_SX = {
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  minWidth: 0,
 } as const;
 
 function NonCustodialCard() {
@@ -425,7 +374,7 @@ function NonCustodialCard() {
           >
             🔑
           </Box>
-          <span>your_private_key.stellar</span>
+          <Box component="span" sx={KCHIP_TEXT_SX}>your_private_key.stellar</Box>
         </Box>
 
         {/* Self-custody pill */}
@@ -440,7 +389,7 @@ function NonCustodialCard() {
               boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
             }}
           />
-          <span>self_custody: verified</span>
+          <Box component="span" sx={KCHIP_TEXT_SX}>self_custody: verified</Box>
         </Box>
       </Box>
     </Box>
