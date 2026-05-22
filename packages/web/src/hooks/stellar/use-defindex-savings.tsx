@@ -271,7 +271,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const tid = setTimeout(() => controller.abort(), 30_000);
         let response: Response;
         try {
-          response = await fetch(`/api/savings/user-position?user=${wallet.address}`, {
+          response = await fetch(`/api/savings/user-position?user=${wallet.address}&network=${networkKey}`, {
             signal: controller.signal,
           });
         } finally {

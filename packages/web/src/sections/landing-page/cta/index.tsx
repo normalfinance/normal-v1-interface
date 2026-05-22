@@ -5,115 +5,12 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
-import { styled } from '@mui/material/styles';
-
-/* ------------------------------------------------------------------ */
-/*  Constants                                                          */
-/* ------------------------------------------------------------------ */
-
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
 export type CtaImageProps = React.ComponentPropsWithoutRef<'section'>;
-
-/* ------------------------------------------------------------------ */
-/*  Styled                                                             */
-/* ------------------------------------------------------------------ */
-
-const SectionRoot = styled('section')({
-  position: 'relative',
-  overflow: 'hidden',
-  backgroundColor: '#eee8f7',
-  borderTop: '1px solid #e8e8ec',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    inset: 0,
-    background: 'radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.4), transparent 60%)',
-    pointerEvents: 'none',
-    zIndex: 0,
-  },
-});
-
-const BlobWrapper = styled('div')({
-  position: 'absolute',
-  inset: 0,
-  pointerEvents: 'none',
-  overflow: 'hidden',
-  zIndex: 0,
-});
-
-const Blob1 = styled('div')({
-  position: 'absolute',
-  borderRadius: '50%',
-  filter: 'blur(90px)',
-  willChange: 'transform',
-  width: 560,
-  height: 560,
-  top: '10%',
-  left: '-8%',
-  background: 'radial-gradient(closest-side, #2bd2ff, transparent 70%)',
-  opacity: 0.32,
-  '@keyframes cta-float1': {
-    '0%, 100%': { transform: 'translate(0, 0)' },
-    '50%': { transform: 'translate(40px, -30px)' },
-  },
-  animation: 'cta-float1 20s ease-in-out infinite',
-  '@media (prefers-reduced-motion: reduce)': { animationPlayState: 'paused' },
-});
-
-const Blob2 = styled('div')({
-  position: 'absolute',
-  borderRadius: '50%',
-  filter: 'blur(90px)',
-  willChange: 'transform',
-  width: 520,
-  height: 520,
-  top: '5%',
-  right: '-6%',
-  background: 'radial-gradient(closest-side, #b561ff, transparent 70%)',
-  opacity: 0.28,
-  '@keyframes cta-float2': {
-    '0%, 100%': { transform: 'translate(0, 0)' },
-    '50%': { transform: 'translate(-30px, 40px)' },
-  },
-  animation: 'cta-float2 24s ease-in-out infinite',
-  '@media (prefers-reduced-motion: reduce)': { animationPlayState: 'paused' },
-});
-
-const Blob3 = styled('div')({
-  position: 'absolute',
-  borderRadius: '50%',
-  filter: 'blur(90px)',
-  willChange: 'transform',
-  width: 460,
-  height: 460,
-  bottom: '-15%',
-  left: '30%',
-  background: 'radial-gradient(closest-side, #ff5cb1, transparent 70%)',
-  opacity: 0.26,
-  '@keyframes cta-float3': {
-    '0%, 100%': { transform: 'translate(0, 0)' },
-    '50%': { transform: 'translate(20px, -40px)' },
-  },
-  animation: 'cta-float3 26s ease-in-out infinite',
-  '@media (prefers-reduced-motion: reduce)': { animationPlayState: 'paused' },
-});
-
-const EyebrowPill = styled('div')({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 8,
-  padding: '7px 14px',
-  borderRadius: 999,
-  background: 'rgba(255,255,255,0.6)',
-  backdropFilter: 'blur(8px)',
-  border: '1px solid rgba(255,255,255,0.8)',
-  fontSize: 12.5,
-  color: '#3a3a44',
-});
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -123,101 +20,200 @@ export const CtaImage: React.FC<CtaImageProps> = (sectionProps) => {
   const { t } = useTranslate();
 
   return (
-    <SectionRoot aria-labelledby="cta-heading" {...sectionProps}>
-      {/* Animated blobs */}
-      <BlobWrapper aria-hidden="true">
-        <Blob1 />
-        <Blob2 />
-        <Blob3 />
-      </BlobWrapper>
+    <Box
+      component="section"
+      aria-labelledby="cta-heading"
+      sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        isolation: 'isolate',
+        background: '#0A0A0F',
+        pt: { xs: '80px', md: '110px' },
+        pb: { xs: '80px', md: '120px' },
+        textAlign: 'center',
+      }}
+      {...sectionProps}
+    >
+      {/* Multi-color radial glow */}
+      <Box
+        aria-hidden="true"
+        sx={{
+          position: 'absolute',
+          inset: '-10%',
+          zIndex: 0,
+          background: `
+            radial-gradient(closest-side at 18% 30%, rgba(91,207,255,0.30), transparent 60%),
+            radial-gradient(closest-side at 82% 70%, rgba(255,176,96,0.22), transparent 60%),
+            radial-gradient(closest-side at 60% 20%, rgba(255,123,197,0.22), transparent 60%),
+            radial-gradient(closest-side at 35% 80%, rgba(177,123,255,0.28), transparent 60%)
+          `,
+          filter: 'blur(40px)',
+          opacity: 0.9,
+          pointerEvents: 'none',
+        }}
+      />
 
-      {/* Padding wrapper */}
+      {/* Dot grid (same as dark bento card) */}
+      <Box
+        aria-hidden="true"
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+          WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+          maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Content */}
       <Box
         sx={{
-          pt: { xs: '100px', md: '160px' },
-          pb: { xs: '120px', md: '200px' },
-          textAlign: 'center',
           position: 'relative',
+          zIndex: 1,
+          maxWidth: 880,
+          mx: 'auto',
+          px: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
-        {/* Inner content */}
-        <Box sx={{ maxWidth: 880, mx: 'auto', px: 3, position: 'relative', zIndex: 1 }}>
-
-          {/* Heading */}
+        {/* Live pill */}
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            px: '14px',
+            py: '6px',
+            borderRadius: '999px',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.85)',
+            fontSize: '13px',
+            fontWeight: 500,
+            mb: '18px',
+          }}
+        >
           <Box
-            component="h2"
-            id="cta-heading"
+            component="span"
             sx={{
-              m: 0,
-              fontSize: 'clamp(48px, 7vw, 96px)',
-              fontWeight: 600,
-              letterSpacing: '-0.04em',
-              lineHeight: 1,
-              color: '#0a0a0b',
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#1AB37D',
+              boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
+              flexShrink: 0,
+              '@keyframes pulseDot': {
+                '0%, 100%': { boxShadow: '0 0 0 3px rgba(26,179,125,0.18)' },
+                '50%': { boxShadow: '0 0 0 5px rgba(26,179,125,0.08)' },
+              },
+              animation: 'pulseDot 2.4s ease-in-out infinite',
+            }}
+          />
+          {t('8% APY · live now')}
+        </Box>
+
+        {/* Heading */}
+        <Box
+          component="h2"
+          id="cta-heading"
+          sx={{
+            m: 0,
+            fontSize: 'clamp(44px, 6vw, 80px)',
+            fontWeight: 500,
+            letterSpacing: '-0.03em',
+            lineHeight: 1.08,
+            color: '#fff',
+          }}
+        >
+          {t('Make crypto')}{' '}
+          <Box
+            component="span"
+            sx={{
+              background: 'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
             }}
           >
-            {t('Make crypto')}{' '}
-            <Box
-              component="span"
-              sx={{
-                fontStyle: 'italic',
-                fontWeight: 400,
-                background:
-                  'linear-gradient(90deg, #2bd2ff 0%, #b561ff 40%, #ff5cb1 70%, #ffb347 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              {t('normal.')}
-            </Box>
+            {t('normal.')}
           </Box>
+        </Box>
 
-          {/* Subhead */}
+        {/* Subhead */}
+        <Box
+          component="p"
+          sx={{
+            m: 0,
+            mt: '18px',
+            fontSize: '16px',
+            color: 'rgba(255,255,255,0.65)',
+            maxWidth: 520,
+            mx: 'auto',
+            lineHeight: 1.55,
+          }}
+        >
+          {t(
+            'Join thousands earning yield, sending money globally, and keeping full custody of their funds.'
+          )}
+        </Box>
+
+        {/* Buttons */}
+        <Box sx={{ mt: '30px', display: 'inline-flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
           <Box
-            component="p"
+            component="a"
+            href={paths.savings}
             sx={{
-              m: 0,
-              mt: '28px',
-              fontSize: 19,
-              color: '#6b6b76',
-              maxWidth: '56ch',
-              mx: 'auto',
-              lineHeight: 1.55,
+              display: 'inline-flex',
+              alignItems: 'center',
+              height: 48,
+              px: '24px',
+              borderRadius: '999px',
+              bgcolor: '#fff',
+              color: '#0A0A0F',
+              fontSize: '14px',
+              fontWeight: 500,
+              textDecoration: 'none',
+              transition: 'background 150ms, transform 150ms',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.92)', transform: 'translateY(-1px)' },
             }}
           >
-            {t(
-              'Join thousands earning yield, sending money globally, and keeping full custody of their funds.'
-            )}
+            {t('Start saving →')}
           </Box>
-
-          {/* CTA button */}
-          <Box sx={{ mt: '40px' }}>
-            <Box
-              component="a"
-              href={paths.savings}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                height: 52,
-                px: '32px',
-                borderRadius: '999px',
-                bgcolor: '#0a0a0b',
-                color: '#fff',
-                fontSize: '15px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                boxShadow: '0 8px 20px -10px rgba(15,15,25,0.4)',
-                transition: 'background 150ms, transform 150ms',
-                '&:hover': { bgcolor: '#1a1a20', transform: 'translateY(-1px)' },
-              }}
-            >
-              {t('Start saving')}
-            </Box>
+          <Box
+            component="a"
+            href="https://docsend.com/view/s/ajddjyp5bzzb4nid"
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              height: 48,
+              px: '24px',
+              borderRadius: '999px',
+              bgcolor: 'rgba(255,255,255,0.08)',
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: 500,
+              textDecoration: 'none',
+              border: '1px solid rgba(255,255,255,0.16)',
+              transition: 'background 150ms, border-color 150ms, transform 150ms',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.14)',
+                borderColor: 'rgba(255,255,255,0.24)',
+                transform: 'translateY(-1px)',
+              },
+            }}
+          >
+            {t('Read whitepaper')}
           </Box>
         </Box>
       </Box>
-    </SectionRoot>
+    </Box>
   );
 };
 
