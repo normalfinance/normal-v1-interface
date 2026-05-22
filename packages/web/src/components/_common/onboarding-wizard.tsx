@@ -1307,7 +1307,11 @@ export default function OnboardingWizard({
           <Button
             size="small" variant="outlined"
             startIcon={<Iconify icon="solar:copy-outline" width={14} />}
-            onClick={() => { copy(wizardWalletAddress); enqueueSnackbar(t('Address copied'), { variant: 'success' }); }}
+            onClick={async () => {
+              const ok = await copy(wizardWalletAddress);
+              if (ok) enqueueSnackbar(t('Address copied'), { variant: 'success' });
+              else enqueueSnackbar(t('Copy failed — please copy manually'), { variant: 'error' });
+            }}
             sx={{ borderRadius: 1.5, flexShrink: 0, fontSize: '0.8rem', py: 0.5, px: 1.25, borderColor: alpha(theme.palette.text.primary, 0.2) }}
           >
             {t('Copy')}
