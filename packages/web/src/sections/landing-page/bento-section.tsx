@@ -11,15 +11,6 @@ import EarnAnimation from '@/components/ui/earn-animation';
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
 /* ------------------------------------------------------------------ */
-const GRAD = 'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)';
-
-const GRAD_TEXT_SX = {
-  background: GRAD,
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
-} as const;
-
 const MONO = {
   fontFamily: '"Geist Mono", ui-monospace, monospace',
   fontFeatureSettings: '"ss01","ss02","zero"',
@@ -412,7 +403,7 @@ export function BentoSection() {
   }, []);
 
   return (
-    <Box component="section" sx={{ py: { xs: '64px', md: '110px' }, background: '#FAFAFB' }}>
+    <Box component="section" sx={{ py: { xs: '80px', md: '110px' }, background: '#FAFAFB' }}>
       <Container maxWidth={false} sx={{ maxWidth: '1240px', px: { xs: 2, sm: 3 } }}>
         {/* Eyebrow */}
         <Box sx={{ textAlign: 'center', mb: 1 }}>
@@ -424,7 +415,7 @@ export function BentoSection() {
               color: '#6B6B76',
             }}
           >
-            ✦ Everything you need
+            — Everything you need
           </Typography>
         </Box>
 

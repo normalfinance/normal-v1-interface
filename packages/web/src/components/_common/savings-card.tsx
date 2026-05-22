@@ -208,22 +208,20 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
 
   const isWithdrawPositionLoading = mode === 'withdraw' && positionFetching && !userPosition;
   const isActionDisabled =
-    loading || !vaultInfo || isWithdrawPositionLoading || isInsufficientBalance || isAmountMissing;
+    loading || isWithdrawPositionLoading || isInsufficientBalance || isAmountMissing;
   const actionButtonText = loading
     ? mode === 'deposit'
       ? t('Depositing...')
       : t('Withdrawing...')
-    : !vaultInfo
-      ? t('Loading...')
-      : isWithdrawPositionLoading
-        ? t('Loading balance...')
-        : isInsufficientBalance
-          ? t('Insufficient balance')
-          : isAmountMissing
-            ? t('Enter amount')
-            : mode === 'deposit'
-              ? t('Deposit')
-              : t('Withdraw');
+    : isWithdrawPositionLoading
+      ? t('Loading balance...')
+      : isInsufficientBalance
+        ? t('Insufficient balance')
+        : isAmountMissing
+          ? t('Enter amount')
+          : mode === 'deposit'
+            ? t('Deposit')
+            : t('Withdraw');
 
   return (
     <Box

@@ -123,7 +123,7 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
     <Box
       component="section"
       aria-labelledby="faq-heading"
-      sx={{ bgcolor: '#FAFAFB', pt: { xs: '64px', md: '80px' }, pb: { xs: '80px', md: '110px' } }}
+      sx={{ bgcolor: '#FAFAFB', pt: { xs: '40px', md: '56px' }, pb: { xs: '80px', md: '110px' } }}
       {...sectionProps}
     >
       <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>

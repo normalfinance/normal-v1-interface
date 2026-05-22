@@ -77,9 +77,9 @@ export default function LandingPage() {
       <BrandMarquee />
       <BentoSection />
       <StatsGrid />
+      <TestimonialGrid />
       <RoadmapSection />
       <FaqAccordion />
-      <TestimonialGrid />
       <CtaImage />
     </>
   );

@@ -92,13 +92,12 @@ export default function RoadmapSection() {
       aria-labelledby="roadmap-heading"
       sx={{
         bgcolor: '#FAFAFB',
-        pt: { xs: '80px', md: '110px' },
-        pb: { xs: '64px', md: '80px' },
+        py: { xs: '40px', md: '56px' },
       }}
     >
       <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
         {/* Header */}
-        <Box>
+        <Box sx={{ textAlign: 'center' }}>
           <Box
             component="p"
             sx={{
@@ -124,7 +123,6 @@ export default function RoadmapSection() {
               letterSpacing: '-0.03em',
               lineHeight: 1.04,
               color: '#0a0a0b',
-              maxWidth: '22ch',
             }}
           >
             {t("Where we're going.")}
@@ -139,6 +137,7 @@ export default function RoadmapSection() {
               color: '#6b6b76',
               maxWidth: '60ch',
               lineHeight: 1.6,
+              mx: 'auto',
             }}
           >
             {t(
