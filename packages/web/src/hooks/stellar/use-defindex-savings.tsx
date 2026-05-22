@@ -110,6 +110,7 @@ interface UseDefindexSavingsReturn {
   userPosition: SavingsPosition | null;
   needsTrustline: boolean;
   setNeedsTrustline: Dispatch<SetStateAction<boolean>>;
+  txStep: string | null;
   deposit: (amount: string) => Promise<string>;
   withdraw: (amount: string) => Promise<string>;
   refreshVaultInfo: () => Promise<void>;
@@ -185,6 +186,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   const [positionFetching, setPositionFetching] = useState(
     () => !getCachedPosition(wallet.address)
   );
+  const [txStep, setTxStep] = useState<string | null>(null);
 
   // Separate tokens for vault-info and user-position fetches so they can run
   // concurrently without cancelling each other.
@@ -212,7 +214,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const tid = setTimeout(() => controller.abort(), 12_000);
         let response: Response;
         try {
-          response = await fetch('/api/savings/vault-info', { signal: controller.signal });
+          response = await fetch(`/api/savings/vault-info?network=${networkKey}`, { signal: controller.signal });
         } finally {
           clearTimeout(tid);
         }
@@ -269,7 +271,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         const tid = setTimeout(() => controller.abort(), 30_000);
         let response: Response;
         try {
-          response = await fetch(`/api/savings/user-position?user=${wallet.address}`, {
+          response = await fetch(`/api/savings/user-position?user=${wallet.address}&network=${networkKey}`, {
             signal: controller.signal,
           });
         } finally {
@@ -387,8 +389,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
 
-        const signAndSubmit = async (xdr: string) => {
+        const signAndSubmit = async (xdr: string, onSigned?: () => void) => {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
+          onSigned?.();
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           const signedTx = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
@@ -403,6 +406,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         }
         const usdcAsset = new Asset('USDC', usdcIssuer);
         const usdcAssetId = usdcAsset.toString(); // "USDC:G..."
+        setTxStep('checking');
         try {
           const account = await horizonServer.loadAccount(walletAddress);
           const usdcBalance = account.balances.find(
@@ -467,9 +471,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           throw new Error(feeData.error || 'Failed to build Normal fee transaction');
         }
 
+        setTxStep('fee_sign');
         let feeResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
         try {
-          feeResult = await signAndSubmit(feeData.xdr);
+          feeResult = await signAndSubmit(feeData.xdr, () => setTxStep('fee_broadcast'));
         } catch (feeErr: any) {
           throw new Error(`Fee payment failed: ${parseHorizonError(feeErr)}`);
         }
@@ -490,10 +495,11 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           throw new Error('No transaction XDR returned from DeFindex');
         }
 
+        setTxStep('deposit_sign');
         // 3. Sign + submit the deposit
         let depositResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
         try {
-          depositResult = await signAndSubmit(depositData.xdr);
+          depositResult = await signAndSubmit(depositData.xdr, () => setTxStep('deposit_broadcast'));
         } catch (depositErr: any) {
           throw new Error(
             `${parseHorizonError(depositErr)} (Normal fee already charged — tx ${feeResult.hash})`
@@ -557,6 +563,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         return '';
       } finally {
         setLoading(false);
+        setTxStep(null);
       }
     },
     [
@@ -624,8 +631,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
 
-        const signAndSubmit = async (xdr: string) => {
+        const signAndSubmit = async (xdr: string, onSigned?: () => void) => {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
+          onSigned?.();
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           const signedTx = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
@@ -651,9 +659,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             throw new Error(commissionData.error || 'Failed to build commission transaction');
           }
 
+          setTxStep('commission_sign');
           let commissionResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
           try {
-            commissionResult = await signAndSubmit(commissionData.xdr);
+            commissionResult = await signAndSubmit(commissionData.xdr, () => setTxStep('commission_broadcast'));
           } catch (commissionErr: any) {
             throw new Error(`Yield commission payment failed: ${parseSigningError(commissionErr)}`);
           }
@@ -678,9 +687,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           );
         }
 
+        setTxStep('withdraw_sign');
         let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
         try {
-          withdrawResult = await signAndSubmit(withdrawData.xdr);
+          withdrawResult = await signAndSubmit(withdrawData.xdr, () => setTxStep('withdraw_broadcast'));
         } catch (withdrawErr: any) {
           throw new Error(
             `${parseSigningError(withdrawErr)}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
@@ -743,6 +753,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         return '';
       } finally {
         setLoading(false);
+        setTxStep(null);
       }
     },
     [
@@ -774,6 +785,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
     userPosition,
     needsTrustline,
     setNeedsTrustline,
+    txStep,
     deposit,
     withdraw,
     refreshVaultInfo,

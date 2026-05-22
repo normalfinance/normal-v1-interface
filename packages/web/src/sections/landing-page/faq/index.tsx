@@ -65,6 +65,11 @@ const DEFAULT_QUESTIONS: Question[] = [
     answer:
       'Yes. Our technology has been audited by Halborn, a professional security firm. We use two-layer encryption and active monitoring systems. You retain custody of your funds at all times. As with any DeFi platform, risks exist — please read our documentation for full details.',
   },
+  {
+    title: 'Can I withdraw anytime?',
+    answer:
+      'Yes. There are no lock-up periods. You can withdraw your USDC savings to any Stellar wallet at any time. Transactions settle in under 5 seconds on the Stellar network.',
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -72,13 +77,13 @@ const DEFAULT_QUESTIONS: Question[] = [
 /* ------------------------------------------------------------------ */
 
 const Accordion = styled(MuiAccordion)({
-  background: '#FAFAFA',
+  background: '#fff',
   boxShadow: 'none !important',
   border: '1px solid #e8e8ec',
-  borderRadius: '14px !important',
+  borderRadius: '16px !important',
   overflow: 'hidden',
   '&::before': { display: 'none' },
-  '&.Mui-expanded': { margin: 0, background: '#FAFAFA' },
+  '&.Mui-expanded': { margin: 0, background: '#fff' },
 });
 
 const AccordionSummary = styled(MuiAccordionSummary)({
@@ -110,7 +115,7 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
   ...sectionProps
 }) => {
   const { t } = useTranslate();
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const list = questions?.length ? questions : DEFAULT_QUESTIONS;
 
@@ -118,21 +123,21 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
     <Box
       component="section"
       aria-labelledby="faq-heading"
-      sx={{ bgcolor: '#fff', py: 12 }}
+      sx={{ bgcolor: '#FAFAFB', pt: { xs: '40px', md: '56px' }, pb: { xs: '80px', md: '110px' } }}
       {...sectionProps}
     >
-      <Box sx={{ maxWidth: 900, mx: 'auto', px: 3 }}>
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
         {/* Header */}
-        <Box sx={{ textAlign: 'center', mb: 6 }}>
+        <Box sx={{ mb: '56px' }}>
           <Box
             component="p"
             sx={{
               m: 0,
               mb: '14px',
-              fontSize: 12,
+              fontSize: '11px',
               fontWeight: 500,
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.16em',
               color: '#6b6b76',
             }}
           >
@@ -145,10 +150,11 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
             sx={{
               m: 0,
               fontSize: 'clamp(34px, 4.4vw, 56px)',
-              fontWeight: 600,
+              fontWeight: 500,
               letterSpacing: '-0.03em',
               lineHeight: 1.04,
               color: '#0a0a0b',
+              maxWidth: '22ch',
             }}
           >
             {t(heading)}
@@ -157,74 +163,90 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
           {subhead && (
             <Box
               component="p"
-              sx={{ m: 0, mt: '14px', fontSize: 17, color: '#6b6b76', lineHeight: 1.5 }}
+              sx={{ m: 0, mt: '14px', fontSize: '15px', color: '#6b6b76', lineHeight: 1.6, maxWidth: '60ch' }}
             >
               {t(subhead)}
             </Box>
           )}
         </Box>
 
-        {/* FAQ list */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {list.map((q, i) => (
-            <Accordion
-              key={i}
-              disableGutters
-              elevation={0}
-              square={false}
-              expanded={openIndex === i}
-              onChange={(_, isOpen) => setOpenIndex(isOpen ? i : null)}
-            >
-              <AccordionSummary
-                expandIcon={
-                  <Box
-                    sx={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      bgcolor: '#0a0a0b',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Iconify
-                      icon={openIndex === i ? 'mingcute:close-line' : 'mingcute:add-line'}
-                      width={16}
-                    />
-                  </Box>
-                }
-              >
-                <Box
-                  sx={{
-                    fontSize: 17,
-                    fontWeight: 500,
-                    letterSpacing: '-0.01em',
-                    color: '#0a0a0b',
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {t(q.title)}
-                </Box>
-              </AccordionSummary>
+        {/* FAQ 2-column layout — each column is independent so expanding doesn't affect the other */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+            gap: '10px',
+            alignItems: 'start',
+          }}
+        >
+          {[list.slice(0, Math.ceil(list.length / 2)), list.slice(Math.ceil(list.length / 2))].map(
+            (col, colIdx) => (
+              <Box key={colIdx} sx={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {col.map((q, rowIdx) => {
+                  const i = colIdx === 0 ? rowIdx : Math.ceil(list.length / 2) + rowIdx;
+                  return (
+                    <Accordion
+                      key={i}
+                      disableGutters
+                      elevation={0}
+                      square={false}
+                      expanded={openIndex === i}
+                      onChange={(_, isOpen) => setOpenIndex(isOpen ? i : null)}
+                    >
+                      <AccordionSummary
+                        expandIcon={
+                          <Box
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              bgcolor: '#0a0a0b',
+                              color: '#fff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Iconify
+                              icon={openIndex === i ? 'mingcute:close-line' : 'mingcute:add-line'}
+                              width={15}
+                            />
+                          </Box>
+                        }
+                      >
+                        <Box
+                          sx={{
+                            fontSize: '15px',
+                            fontWeight: 500,
+                            letterSpacing: '-0.01em',
+                            color: '#0a0a0b',
+                            lineHeight: 1.4,
+                            pr: 1,
+                          }}
+                        >
+                          {t(q.title)}
+                        </Box>
+                      </AccordionSummary>
 
-              <AccordionDetails>
-                <Box
-                  sx={{
-                    fontSize: 15.5,
-                    lineHeight: 1.6,
-                    color: '#3a3a44',
-                    maxWidth: '70ch',
-                    whiteSpace: 'pre-line',
-                  }}
-                >
-                  {q.answer}
-                </Box>
-              </AccordionDetails>
-            </Accordion>
-          ))}
+                      <AccordionDetails>
+                        <Box
+                          sx={{
+                            fontSize: '14px',
+                            lineHeight: 1.65,
+                            color: '#6b6b76',
+                            whiteSpace: 'pre-line',
+                          }}
+                        >
+                          {q.answer}
+                        </Box>
+                      </AccordionDetails>
+                    </Accordion>
+                  );
+                })}
+              </Box>
+            )
+          )}
         </Box>
       </Box>
     </Box>

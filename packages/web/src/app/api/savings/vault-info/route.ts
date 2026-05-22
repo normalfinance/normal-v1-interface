@@ -21,7 +21,8 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
 export async function GET(_request: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const network = cookieStore.get('normal-network')?.value ?? 'testnet';
+    const networkOverride = _request.nextUrl.searchParams.get('network');
+    const network = networkOverride ?? cookieStore.get('normal-network')?.value ?? 'testnet';
     const isMainnet = network === 'mainnet';
 
     const sdk = new DefindexSDK({
@@ -40,7 +41,6 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    // Vault info and APY run in parallel — both required.
     const [vaultInfoResult, apyResult] = await Promise.all([
       withTimeout(sdk.getVaultInfo(VAULT_ADDRESS), 10_000, 'getVaultInfo'),
       withTimeout(sdk.getVaultAPY(VAULT_ADDRESS), 10_000, 'getVaultAPY'),

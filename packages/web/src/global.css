@@ -1,7 +1,9 @@
 /** **************************************
 * Fonts: app
 *************************************** */
-@import '@fontsource-variable/public-sans';
+@import '@fontsource/geist-mono/400.css';
+@import '@fontsource/geist-mono/500.css';
+@import '@fontsource/geist-mono/700.css';
 
 @import '@fontsource/barlow/400.css';
 @import '@fontsource/barlow/500.css';
@@ -31,6 +33,10 @@
 html {
   height: 100%;
   -webkit-overflow-scrolling: touch;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "ss03";
+  text-rendering: optimizeLegibility;
 }
 body,
 #root,

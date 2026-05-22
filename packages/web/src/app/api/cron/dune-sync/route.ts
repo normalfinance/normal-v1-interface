@@ -17,6 +17,7 @@ import {
 } from '@/services/prisma-sync';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 min — needed for yield snapshot batching across 200 wallets
 
 // Vercel Cron calls this with a secret to prevent unauthorized triggers
 const CRON_SECRET = process.env.CRON_SECRET;

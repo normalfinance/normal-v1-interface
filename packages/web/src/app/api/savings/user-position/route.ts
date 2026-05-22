@@ -84,10 +84,11 @@ async function fetchAllEvents(
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const network = cookieStore.get('normal-network')?.value ?? 'testnet';
+    const { searchParams } = new URL(request.url);
+    const networkOverride = searchParams.get('network');
+    const network = networkOverride ?? cookieStore.get('normal-network')?.value ?? 'testnet';
     const isMainnet = network === 'mainnet';
 
-    const { searchParams } = new URL(request.url);
     const userAddress = searchParams.get('user');
 
     if (!userAddress || !isValidStellarAddress(userAddress)) {

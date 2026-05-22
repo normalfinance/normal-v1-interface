@@ -3,6 +3,16 @@
 import { paths } from '@/routes/paths';
 import { cdn } from '@normalfinance/utils';
 
+import FlagOutlined from '@mui/icons-material/FlagOutlined';
+import FeedOutlined from '@mui/icons-material/FeedOutlined';
+import MailOutlined from '@mui/icons-material/MailOutlined';
+import HelpOutlined from '@mui/icons-material/HelpOutlined';
+import BarChartOutlined from '@mui/icons-material/BarChartOutlined';
+import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
+import ArticleOutlined from '@mui/icons-material/ArticleOutlined';
+import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
+
 import type { Props } from './normal-navbar';
 
 export const NormalNavbarDefaults: Props = {
@@ -13,107 +23,109 @@ export const NormalNavbarDefaults: Props = {
   },
   links: [
     {
-      title: 'App',
+      title: 'Product',
       url: '/',
       megaMenu: {
+        banner: {
+          badge: '~8% APY',
+          title: 'Start saving in 60 seconds',
+          subtitle: 'No fees. Withdraw anytime. Non-custodial.',
+          buttonLabel: 'Open app →',
+          buttonHref: paths.savings,
+        },
         categoryLinks: [
           {
             title: 'Earn',
             links: [
               {
                 url: paths.savings,
-                image: {
-                  src: cdn('nav/provide-liquidity.svg'),
-                  alt: 'Savings',
-                },
+                icon: <SavingsOutlined sx={{ fontSize: 20 }} />,
                 title: 'Savings',
-                description: 'Earn yield on your USDC.',
+                description: 'Earn 8%+ APY on USDC.',
               },
             ],
           },
           {
-            title: 'Trade',
+            title: 'Move',
             links: [
               {
                 url: paths.swap,
-                image: {
-                  src: cdn('nav/swap.svg'),
-                  alt: 'Swap',
-                },
+                icon: <SwapVertOutlined sx={{ fontSize: 20 }} />,
                 title: 'Swap',
-                description: 'Exchange XLM and USDC.',
+                description: 'Exchange XLM, USDC and more.',
               },
               {
                 url: paths.portfolio,
-                image: {
-                  src: cdn('nav/portfolio.svg'),
-                  alt: 'Portfolio',
-                },
+                icon: <BarChartOutlined sx={{ fontSize: 20 }} />,
                 title: 'Portfolio',
-                description: 'View your account holdings.',
+                description: 'Track your holdings.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      title: 'Resources',
+      url: '/',
+      megaMenu: {
+        banner: {
+          badge: 'New post',
+          title: 'Making crypto Normal: simple, safe, and stable',
+          meta: '5 min read',
+          image: 'https://cdn.normalapi.com/blog/6aceaec9-3a28-4c77-b830-40111bd8dc83_5824x4192.webp',
+          buttonLabel: 'Read →',
+          buttonHref: 'https://normalfi.substack.com/p/making-crypto-normal-simple-safe',
+          buttonTarget: '_blank',
+        },
+        categoryLinks: [
+          {
+            title: 'Learn',
+            links: [
+              {
+                url: paths.docs,
+                icon: <ArticleOutlined sx={{ fontSize: 20 }} />,
+                title: 'Docs',
+                description: 'Developer + integration guides.',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              },
+              {
+                url: paths.help.feedbackForm,
+                icon: <HelpOutlined sx={{ fontSize: 20 }} />,
+                title: 'Help & feedback',
+                description: 'Report bugs, request features.',
               },
             ],
           },
           {
-            title: 'Support',
+            title: 'Company',
             links: [
               {
-                url: paths.help.feedbackForm,
-                image: {
-                  src: cdn('nav/help.svg'),
-                  alt: 'Help',
-                },
-                title: 'Help & feedback',
-                description: 'Report bugs, request features.',
-              },
-              {
-                url: paths.docs,
-                image: {
-                  src: cdn('nav/docs.svg'),
-                  alt: 'Docs',
-                },
-                title: 'Docs',
-                description: 'Protocol, integration, API.',
-                target: '_blank',
-                rel: 'noopener noreferrer',
-              },
-              {
                 url: paths.core.about,
-                image: {
-                  src: cdn('nav/about.svg'),
-                  alt: 'About us',
-                },
-                title: 'About us',
-                description: 'Mission, team & roadmap.',
-              },
-              {
-                url: paths.core.contact,
-                image: {
-                  src: cdn('nav/contact.svg'),
-                  alt: 'Contact',
-                },
-                title: 'Contact',
-                description: 'Get in touch with the team.',
+                icon: <PeopleOutlined sx={{ fontSize: 20 }} />,
+                title: 'About',
+                description: 'Our mission and team.',
               },
               {
                 url: paths.core.roadmap,
-                image: {
-                  src: cdn('nav/positions.svg'),
-                  alt: 'Roadmap',
-                },
+                icon: <FlagOutlined sx={{ fontSize: 20 }} />,
                 title: 'Roadmap',
-                description: 'See where Normal is going.',
+                description: 'Where Normal is going.',
               },
               {
                 url: 'https://normalfi.substack.com/',
-                image: {
-                  src: cdn('nav/blog.svg'),
-                  alt: 'Blog',
-                },
+                icon: <FeedOutlined sx={{ fontSize: 20 }} />,
                 title: 'Blog',
-                description: 'News and updates from Normal.',
+                description: 'Product updates and stories.',
                 target: '_blank',
                 rel: 'noopener noreferrer',
+              },
+              {
+                url: paths.core.contact,
+                icon: <MailOutlined sx={{ fontSize: 20 }} />,
+                title: 'Contact',
+                description: 'Get in touch with the team.',
               },
             ],
           },
@@ -121,13 +133,8 @@ export const NormalNavbarDefaults: Props = {
       },
     },
     { title: 'Savings', url: paths.savings },
-    {
-      title: 'Docs',
-      url: paths.docs,
-      target: '_blank',
-      rel: 'noopener noreferrer',
-    },
-    { title: 'About', url: '/about' },
+    { title: 'Portfolio', url: paths.portfolio },
+    { title: 'About', url: paths.core.about },
   ],
   buttons: [
     { title: 'Button', variant: 'contained', size: 'small' },

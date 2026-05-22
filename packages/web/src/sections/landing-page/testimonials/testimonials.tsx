@@ -80,95 +80,48 @@ const ALL: Testimonial[] = [
   },
 ];
 
-// Row 1: original order. Row 2: reversed — they scroll in opposite directions.
-const row1Base = ALL;
-const row2Base = [...ALL].reverse();
+// Distribute into 2 columns
+const col1 = ALL.filter((_, i) => i % 2 === 0);
+const col2 = ALL.filter((_, i) => i % 2 === 1);
 
 // ----------------------------------------------------------------------
 
 const SectionRoot = styled('section')({
-  backgroundColor: '#fff',
+  backgroundColor: '#FAFAFB',
+  overflow: 'hidden',
 });
-
-const CarouselWrapper = styled('div')({
-  position: 'relative',
-  overflowX: 'clip',
-  '&::before, &::after': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 120,
-    pointerEvents: 'none',
-    zIndex: 2,
-  },
-  '&::before': {
-    left: 0,
-    background: 'linear-gradient(90deg, #fff, transparent)',
-  },
-  '&::after': {
-    right: 0,
-    background: 'linear-gradient(-90deg, #fff, transparent)',
-  },
-  '&:hover .testi-row': {
-    animationPlayState: 'paused',
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    '& .testi-row': {
-      animationPlayState: 'paused',
-    },
-  },
-});
-
-const Row = styled('div')<{ direction: 'left' | 'right' }>(({ direction }) => ({
-  display: 'flex',
-  gap: 16,
-  width: 'max-content',
-  willChange: 'transform',
-  ...(direction === 'left'
-    ? {
-        animation: 'testi-scroll-left 70s linear infinite',
-        '@keyframes testi-scroll-left': {
-          from: { transform: 'translateX(0)' },
-          to: { transform: 'translateX(-50%)' },
-        },
-      }
-    : {
-        animation: 'testi-scroll-right 90s linear infinite',
-        '@keyframes testi-scroll-right': {
-          from: { transform: 'translateX(-50%)' },
-          to: { transform: 'translateX(0)' },
-        },
-      }),
-}));
 
 const Card = styled('figure')({
   margin: 0,
-  width: 360,
-  flexShrink: 0,
-  backgroundColor: '#fafafa',
-  border: '1px solid #e8e8ec',
-  borderRadius: 18,
-  padding: 22,
-  minHeight: 200,
+  backgroundColor: '#fff',
+  border: '1px solid rgba(10,10,15,0.08)',
+  borderRadius: 22,
+  padding: '24px',
   display: 'flex',
   flexDirection: 'column',
+  gap: 16,
+  transition: 'border-color 200ms, background 200ms',
+  '&:hover': {
+    borderColor: 'rgba(10,10,15,0.13)',
+    backgroundColor: '#fdfdfd',
+  },
 });
 
 // ----------------------------------------------------------------------
 
-type CardProps = { testimonial: Testimonial; hidden?: boolean };
-
-const TestimonialCard: React.FC<CardProps> = ({ testimonial, hidden }) => (
+const TestimonialCard: React.FC<{ testimonial: Testimonial; hidden?: boolean }> = ({
+  testimonial,
+  hidden,
+}) => (
   <Card aria-hidden={hidden || undefined}>
     <Box
       component="blockquote"
       sx={{
         m: 0,
-        fontSize: 15,
-        lineHeight: 1.5,
-        color: '#0a0a0b',
-        letterSpacing: '-0.005em',
+        fontSize: '18px',
+        lineHeight: 1.65,
+        color: '#3a3a44',
+        letterSpacing: '-0.01em',
         flex: 1,
       }}
     >
@@ -178,28 +131,28 @@ const TestimonialCard: React.FC<CardProps> = ({ testimonial, hidden }) => (
     <Box
       component="figcaption"
       sx={{
-        mt: 'auto',
-        pt: '18px',
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
+        gap: '12px',
+        pt: '16px',
+        borderTop: '1px solid rgba(10,10,15,0.06)',
       }}
     >
       <Avatar
         src={testimonial.avatar}
         alt={testimonial.name}
-        sx={{ width: 32, height: 32 }}
+        sx={{ width: 34, height: 34, flexShrink: 0 }}
       />
       <Box>
         <Box
           component="span"
-          sx={{ display: 'block', fontSize: 13.5, fontWeight: 500, color: '#0a0a0b' }}
+          sx={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#0a0a0b', lineHeight: 1.3 }}
         >
           {testimonial.name}
         </Box>
         <Box
           component="span"
-          sx={{ display: 'block', fontSize: 12.5, color: '#6b6b76' }}
+          sx={{ display: 'block', fontSize: '12px', color: '#9a9aa3', mt: '2px', lineHeight: 1.3 }}
         >
           {testimonial.role}
         </Box>
@@ -210,6 +163,48 @@ const TestimonialCard: React.FC<CardProps> = ({ testimonial, hidden }) => (
 
 // ----------------------------------------------------------------------
 
+const MARQUEE_H = 660;
+
+interface ColumnProps {
+  items: Testimonial[];
+  duration: number;
+  direction: 'up' | 'down';
+}
+
+const Column: React.FC<ColumnProps> = ({ items, duration, direction }) => {
+  const doubled = [...items, ...items];
+  const animName = direction === 'up' ? 'vMarqueeUp' : 'vMarqueeDown';
+
+  return (
+    <Box sx={{ overflow: 'hidden', height: MARQUEE_H }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          willChange: 'transform',
+          animation: `${animName} ${duration}s linear infinite`,
+          [`@keyframes vMarqueeUp`]: {
+            from: { transform: 'translateY(0)' },
+            to: { transform: 'translateY(-50%)' },
+          },
+          [`@keyframes vMarqueeDown`]: {
+            from: { transform: 'translateY(-50%)' },
+            to: { transform: 'translateY(0)' },
+          },
+          '@media (prefers-reduced-motion: reduce)': { animationPlayState: 'paused' },
+        }}
+      >
+        {doubled.map((item, i) => (
+          <TestimonialCard key={i} testimonial={item} hidden={i >= items.length} />
+        ))}
+      </Box>
+    </Box>
+  );
+};
+
+// ----------------------------------------------------------------------
+
 export type TestimonialGridProps = React.ComponentPropsWithoutRef<'section'>;
 
 export const TestimonialGrid: React.FC<TestimonialGridProps> = (props) => {
@@ -217,18 +212,18 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = (props) => {
 
   return (
     <SectionRoot aria-labelledby="testimonials-heading" {...props}>
-      <Box sx={{ py: 12 }}>
-        {/* Header — constrained */}
-        <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
+      <Box sx={{ pt: { xs: '80px', md: '110px' }, pb: { xs: '40px', md: '56px' } }}>
+        {/* Header */}
+        <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3, mb: '56px', textAlign: 'center' }}>
           <Box
             component="p"
             sx={{
               m: 0,
               mb: '14px',
-              fontSize: 12,
+              fontSize: '11px',
               fontWeight: 500,
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.16em',
               color: '#6b6b76',
             }}
           >
@@ -241,52 +236,59 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = (props) => {
             sx={{
               m: 0,
               fontSize: 'clamp(34px, 4.4vw, 56px)',
-              fontWeight: 600,
+              fontWeight: 500,
               letterSpacing: '-0.03em',
               lineHeight: 1.04,
               color: '#0a0a0b',
             }}
           >
-            {t('Loved by')}{' '}
-            <Box
-              component="span"
-              sx={{
-                fontStyle: 'italic',
-                background: 'linear-gradient(90deg, #2bd2ff 0%, #b561ff 40%, #ff5cb1 70%, #ffb347 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              {t('Normies')}
-            </Box>
+            {t('Loved by Normies')}
           </Box>
         </Box>
 
-        {/* Carousel — full-bleed */}
-        <CarouselWrapper sx={{ mt: 7, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Row 1 — scrolls left */}
-          <Row direction="left" className="testi-row">
-            {[...row1Base, ...row1Base].map((item, i) => (
-              <TestimonialCard
-                key={`r1-${i}`}
-                testimonial={item}
-                hidden={i >= row1Base.length}
-              />
-            ))}
-          </Row>
+        {/* Vertical marquee — 3 columns */}
+        <Box sx={{ px: { xs: 2, sm: 3 }, maxWidth: 1200, mx: 'auto', position: 'relative' }}>
+          {/* Top fade */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 100,
+              background: 'linear-gradient(to bottom, #FAFAFB 0%, transparent 100%)',
+              zIndex: 2,
+              pointerEvents: 'none',
+            }}
+          />
+          {/* Bottom fade */}
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 100,
+              background: 'linear-gradient(to top, #FAFAFB 0%, transparent 100%)',
+              zIndex: 2,
+              pointerEvents: 'none',
+            }}
+          />
 
-          {/* Row 2 — scrolls right */}
-          <Row direction="right" className="testi-row">
-            {[...row2Base, ...row2Base].map((item, i) => (
-              <TestimonialCard
-                key={`r2-${i}`}
-                testimonial={item}
-                hidden={i >= row2Base.length}
-              />
-            ))}
-          </Row>
-        </CarouselWrapper>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              gap: '14px',
+              alignItems: 'start',
+            }}
+          >
+            <Column items={col1} duration={55} direction="up" />
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+              <Column items={col2} duration={72} direction="down" />
+            </Box>
+          </Box>
+        </Box>
       </Box>
     </SectionRoot>
   );

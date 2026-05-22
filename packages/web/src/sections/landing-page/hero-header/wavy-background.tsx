@@ -13,6 +13,8 @@ type WavyBackgroundProps = {
   waveWidth?: number;
   backgroundFill?: string;
   blur?: number;
+  saturate?: number;
+  canvasOpacity?: number;
   speed?: 'slow' | 'fast';
   waveOpacity?: number;
   fullScreen?: boolean;
@@ -33,6 +35,8 @@ export const WavyBackground = ({
   waveWidth = 50,
   backgroundFill = 'white',
   blur = 10,
+  saturate = 100,
+  canvasOpacity = 1,
   speed = 'fast',
   waveOpacity = 0.5,
   fullScreen = false,
@@ -184,8 +188,10 @@ export const WavyBackground = ({
       <canvas
         ref={canvasRef}
         className="absolute inset-0"
-        // CSS filter is cheaper and avoids context reconfiguration
-        style={{ filter: `blur(${blur}px)` }}
+        style={{
+          filter: `blur(${blur}px)${saturate !== 100 ? ` saturate(${saturate}%)` : ''}`,
+          opacity: canvasOpacity,
+        }}
       />
       {children && <div className={cn('relative z-10', className)}>{children}</div>}
     </div>

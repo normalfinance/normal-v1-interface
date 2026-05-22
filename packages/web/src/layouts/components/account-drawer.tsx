@@ -41,7 +41,13 @@ import {
   CircularProgress,
 } from '@mui/material';
 
-import { Iconify } from '@/components/template/iconify';
+import AddOutlined from '@mui/icons-material/AddOutlined';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import SyncOutlined from '@mui/icons-material/SyncOutlined';
+import CloseOutlined from '@mui/icons-material/CloseOutlined';
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
+import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
+
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
@@ -62,6 +68,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
     getAllTokens,
   } = usePersistStore();
   const network = useNetworkStore((s) => s.network);
+  const [tokensFetching, setTokensFetching] = useState(true);
 
   const { recentActivity } = useUserActivity(address);
   const {
@@ -76,6 +83,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
     const refreshTokens = async (): Promise<void> => {
       if (!address) return;
 
+      setTokensFetching(true);
       setGlobalIsLoading(true);
       try {
         await getAllTokens(true);
@@ -83,6 +91,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
         logger.error(e);
       } finally {
         setGlobalIsLoading(false);
+        setTokensFetching(false);
       }
     };
 
@@ -128,6 +137,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
         balance={assetsBalance.toNumber()}
         savingsValue={savingsValue}
         savingsFetching={savingsFetching && !savingsLoaded}
+        tokensFetching={tokensFetching}
         percentageChange={0}
         tokens={tokens}
         activity={recentActivity}
@@ -458,9 +468,21 @@ export function AccountDrawer(props: AccountDrawerProps) {
       ) : (
         <Button
           variant="contained"
-          color="info"
           onClick={handleMainButtonClick}
           data-testid="connect-wallet-button"
+          sx={{
+            bgcolor: '#0A0A0F',
+            color: '#fff',
+            borderRadius: '999px',
+            textTransform: 'none',
+            fontWeight: 500,
+            px: '12px',
+            py: '6px',
+            fontSize: '14px',
+            minWidth: 'unset',
+            boxShadow: 'none',
+            '&:hover': { bgcolor: '#1a1a2e', boxShadow: 'none' },
+          }}
         >
           {t('Login')}
         </Button>
@@ -494,8 +516,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
           }}
         >
           <Tooltip title="Close">
-            <IconButton onClick={onClose} data-testid="close-drawer-button">
-              <Iconify icon="mingcute:close-line" />
+            <IconButton
+              onClick={onClose}
+              data-testid="close-drawer-button"
+              sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
+            >
+              <CloseOutlined sx={{ fontSize: 20 }} />
             </IconButton>
           </Tooltip>
 
@@ -512,10 +538,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       stopNavigatingToSettings();
                       onClose();
                     }}
+                    sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
                   >
                     {isNavigatingToSettings
                       ? <CircularProgress size={18} color="inherit" />
-                      : <Iconify icon="solar:settings-bold" />}
+                      : <SettingsOutlined sx={{ fontSize: 20 }} />}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -528,8 +555,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     setShowLoginModal(true);
                     onClose();
                   }}
+                  sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
                 >
-                  <Iconify icon="mingcute:add-line" />
+                  <AddOutlined sx={{ fontSize: 20 }} />
                 </IconButton>
               </Tooltip>
 
@@ -541,8 +569,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     setShowLoginModal(true);
                     onClose();
                   }}
+                  sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
                 >
-                  <Iconify icon="solar:refresh-bold" />
+                  <SyncOutlined sx={{ fontSize: 20 }} />
                 </IconButton>
               </Tooltip>
             </Stack>
@@ -551,13 +580,24 @@ export function AccountDrawer(props: AccountDrawerProps) {
           {session && (
             <Tooltip title={isDisconnecting ? 'Logging out...' : 'Logout'}>
               <Button
-                variant="soft"
-                color="error"
                 size="small"
                 onClick={handleDisconnect}
                 disabled={isDisconnecting}
                 data-testid="logout-button"
-                startIcon={<Iconify icon="solar:logout-2-bold" />}
+                sx={{
+                  bgcolor: '#0A0A0F',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  fontSize: '13px',
+                  px: '12px',
+                  py: '7px',
+                  minWidth: 'unset',
+                  boxShadow: 'none',
+                  '&:hover': { bgcolor: '#1a1a22', boxShadow: 'none' },
+                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.4)', color: 'rgba(255,255,255,0.6)' },
+                }}
               >
                 {t('Logout')}
               </Button>
@@ -567,23 +607,39 @@ export function AccountDrawer(props: AccountDrawerProps) {
         {session && (
           <Scrollbar sx={{ flexGrow: 1 }}>
             <Stack spacing={2} sx={{ px: 2, pt: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar src={userAvatar} alt={displayName} />
-                <Box>
-                  <Typography variant="subtitle1">{displayName}</Typography>
-                  <Typography variant="body2" color="text.secondary">
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ pb: '2px' }}>
+                <Avatar
+                  src={userAvatar}
+                  alt={displayName}
+                  sx={{ width: 44, height: 44, flexShrink: 0 }}
+                />
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography sx={{ fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: '#0A0A0F' }}>
+                    {displayName}
+                  </Typography>
+                  <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
                     {userEmail}
                   </Typography>
                   {connectedAddress && (
-                    <Stack
-                      direction="row"
-                      width={1}
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography variant="subtitle2">
-                        {format.fTruncate(connectedAddress, 25)}
-                      </Typography>
+                    <Stack direction="row" alignItems="center" spacing={0} sx={{ mt: '6px' }}>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          px: '10px',
+                          py: '4px',
+                          bgcolor: 'rgba(10,10,15,0.04)',
+                          border: '1px solid rgba(10,10,15,0.06)',
+                          borderRadius: '999px',
+                          fontSize: '11.5px',
+                          color: '#2A2A33',
+                          fontFamily: '"Geist Mono", ui-monospace, monospace',
+                          letterSpacing: '-0.01em',
+                        }}
+                      >
+                        {format.fTruncate(connectedAddress, 22)}
+                      </Box>
                       <CopyIconButton value={connectedAddress} alert="Account ID copied" />
                     </Stack>
                   )}
@@ -619,11 +675,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     >
                       <Stack spacing={1.5}>
                         <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                          <Iconify
-                            icon="solar:info-circle-bold"
-                            width={18}
-                            sx={{ color: 'warning.main', flexShrink: 0, mt: 0.15 }}
-                          />
+                          <InfoOutlined sx={{ fontSize: 18, color: 'warning.main', flexShrink: 0, mt: 0.15 }} />
                           <Box>
                             <Typography variant="subtitle2" sx={{ mb: 0.25 }}>
                               {!accountExists ? t('Activate your wallet') : t('Add USDC trustline')}
@@ -685,11 +737,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                             flexShrink: 0,
                           }}
                         >
-                          <Iconify
-                            icon="solar:rocket-bold"
-                            width={22}
-                            sx={{ color: 'warning.dark' }}
-                          />
+                          <RocketLaunchOutlined sx={{ fontSize: 22, color: 'warning.dark' }} />
                         </Box>
                         <Box>
                           <Typography variant="subtitle1" fontWeight={600}>
