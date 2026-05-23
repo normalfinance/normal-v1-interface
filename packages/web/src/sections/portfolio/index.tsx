@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { logger } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
@@ -19,6 +19,9 @@ import { ActivityCard } from './portfolio-activity-card';
 import type { HoldingData } from './_shared';
 
 export default function PortfolioView() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const { setGlobalIsLoading } = useAppStore();
   const {
     wallet,
@@ -104,6 +107,8 @@ export default function PortfolioView() {
     };
     refreshTokens();
   }, [wallet.address, getAllTokens, setGlobalIsLoading]);
+
+  if (!mounted) return null;
 
   if (!wallet.address) {
     return (
