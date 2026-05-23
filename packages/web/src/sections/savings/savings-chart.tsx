@@ -7,10 +7,12 @@ import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
+import Typography from '@mui/material/Typography';
 
 type TimeFilter = '1W' | '1M' | '3M' | '6M' | '1Y' | '5Y' | 'ALL';
 type SavingsActivity = SavingsDepositActivity | SavingsWithdrawActivity;
 
+const MONO = '"Geist Mono", ui-monospace, monospace';
 const TIME_FILTERS: TimeFilter[] = ['1W', '1M', '3M', '6M', '1Y', '5Y', 'ALL'];
 const WINDOW_MS: Record<TimeFilter, number | null> = {
   '1W': 7 * 24 * 60 * 60 * 1000,
@@ -24,21 +26,49 @@ const WINDOW_MS: Record<TimeFilter, number | null> = {
 
 const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 const CHART_W = 800;
-const CHART_H = 176;
+const CHART_H = 220;
 const NUM_POINTS = 80;
+
+// ─── Formatters ────────────────────────────────────────────────────────────────
+
+function fmtY(v: number): string {
+  if (v <= 0) return '$0';
+  if (v >= 100) return `$${v.toFixed(2)}`;
+  if (v >= 1) return `$${v.toFixed(3)}`;
+  if (v >= 0.01) return `$${v.toFixed(4)}`;
+  if (v >= 0.001) return `$${v.toFixed(5)}`;
+  return `$${v.toFixed(6)}`;
+}
+
+function fmtStat(v: number): string {
+  if (v <= 0) return '$0.00000';
+  if (v >= 100) return `$${v.toFixed(2)}`;
+  if (v >= 1) return `$${v.toFixed(4)}`;
+  if (v >= 0.00001) return `$${v.toFixed(5)}`;
+  return '<$0.00001';
+}
+
+function fmtDate(t: number, now: number): string {
+  const diff = now - t;
+  if (diff < 7 * 24 * 3600 * 1000) {
+    return new Date(t).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  if (diff < 365 * 24 * 3600 * 1000) {
+    return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ─── Data helpers ──────────────────────────────────────────────────────────────
 
 interface ChartPoint {
   t: number;
   v: number;
 }
 
-/**
- * Builds a smooth earnings curve using compound interest on deposit/withdraw history.
- * The last point is scaled to match the actual API earnings value.
- */
 function buildEarningsHistory(
   activity: SavingsActivity[],
-  actualEarnings: number,
+  anchorEarnings: number,
   apy: number,
   now: number
 ): ChartPoint[] {
@@ -53,40 +83,31 @@ function buildEarningsHistory(
 
   const points: ChartPoint[] = Array.from({ length: NUM_POINTS }, (_, i) => {
     const T = firstT + i * step;
-
     let balance = 0;
     let earnings = 0;
     let prevT = firstT;
 
     for (const event of sorted) {
       if (event.timestamp > T) break;
-      // Accrue compound interest from prevT to this event
       const dt = (event.timestamp - prevT) / YEAR_MS;
       earnings += balance > 0 ? balance * (Math.exp(r * dt) - 1) : 0;
-
       const amount = parseFloat(event.amount);
       if (event.type === 'Savings Deposit') balance += amount;
       else balance = Math.max(0, balance - amount);
-
       prevT = event.timestamp;
     }
 
-    // Accrue from last event to T
     const dt = (T - prevT) / YEAR_MS;
     earnings += balance > 0 ? balance * (Math.exp(r * dt) - 1) : 0;
-
     return { t: T, v: Math.max(0, earnings) };
   });
 
-  // Scale the curve so the last point matches the actual API earnings
   const lastEstimate = points[points.length - 1].v;
-  if (lastEstimate > 0 && actualEarnings >= 0) {
-    const scale = actualEarnings / lastEstimate;
+  if (lastEstimate > 0 && anchorEarnings >= 0) {
+    const scale = anchorEarnings / lastEstimate;
     return points.map((p) => ({ t: p.t, v: p.v * scale }));
   }
-
-  // Fallback: flat until now
-  points[points.length - 1].v = actualEarnings;
+  points[points.length - 1].v = anchorEarnings;
   return points;
 }
 
@@ -96,8 +117,6 @@ function filterByWindow(points: ChartPoint[], filter: TimeFilter, now: number): 
 
   const cutoff = now - windowMs;
   const after = points.filter((p) => p.t >= cutoff);
-
-  // Find the interpolated start value at the cutoff
   const before = points.filter((p) => p.t < cutoff);
   const startV = before.length > 0 ? before[before.length - 1].v : 0;
 
@@ -105,35 +124,31 @@ function filterByWindow(points: ChartPoint[], filter: TimeFilter, now: number): 
   return [{ t: cutoff, v: startV }, ...after];
 }
 
-function buildSvgPaths(
-  points: ChartPoint[],
-  minT: number,
-  maxT: number,
-  maxV: number
-): { line: string; area: string } | null {
-  if (points.length < 2) return null;
-
-  const x = (t: number) => (maxT === minT ? CHART_W / 2 : ((t - minT) / (maxT - minT)) * CHART_W);
-  const y = (v: number) =>
-    maxV === 0 ? CHART_H * 0.75 : CHART_H - 4 - (v / maxV) * (CHART_H - 14);
-
-  const coords = points.map((p) => ({ x: x(p.t), y: y(p.v) }));
-  const lineParts = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`);
-  const line = lineParts.join(' ');
-  const last = coords[coords.length - 1];
-  const first = coords[0];
-  const area = `${line} L${last.x.toFixed(1)},${CHART_H} L${first.x.toFixed(1)},${CHART_H} Z`;
-
-  return { line, area };
+function getPeriodEarnings(points: ChartPoint[], windowMs: number, now: number): number {
+  if (points.length === 0) return 0;
+  const atNow = points[points.length - 1].v;
+  const cutoff = now - windowMs;
+  const before = points.filter((p) => p.t <= cutoff);
+  if (before.length === 0) return atNow;
+  return Math.max(0, atNow - before[before.length - 1].v);
 }
+
+// ─── Component ─────────────────────────────────────────────────────────────────
 
 interface SavingsChartProps {
   walletAddress?: string;
   currentEarnings: number;
+  lifetimeEarnings?: number;
+  currentBalance?: number;
   apy?: number | null;
 }
 
-export function SavingsChart({ walletAddress, currentEarnings, apy }: SavingsChartProps) {
+export function SavingsChart({
+  walletAddress,
+  currentEarnings,
+  lifetimeEarnings,
+  apy,
+}: SavingsChartProps) {
   const [filter, setFilter] = useState<TimeFilter>('1W');
   const { recentActivity, isLoading } = useUserActivity(walletAddress);
 
@@ -148,9 +163,13 @@ export function SavingsChart({ walletAddress, currentEarnings, apy }: SavingsCha
     [recentActivity]
   );
 
+  // lifetimeEarnings from the DeFindex API is the authoritative all-time total (survives withdrawals).
+  // Fall back to currentEarnings when the API value is not yet available.
+  const allTimeEarnings = lifetimeEarnings ?? currentEarnings;
+
   const allPoints = useMemo(
-    () => buildEarningsHistory(savingsActivity, currentEarnings, apy ?? 7, now),
-    [savingsActivity, currentEarnings, apy, now]
+    () => buildEarningsHistory(savingsActivity, allTimeEarnings, apy ?? 7, now),
+    [savingsActivity, allTimeEarnings, apy, now]
   );
 
   const chartPoints = useMemo(
@@ -158,45 +177,133 @@ export function SavingsChart({ walletAddress, currentEarnings, apy }: SavingsCha
     [allPoints, filter, now]
   );
 
-  const maxV = useMemo(() => Math.max(...chartPoints.map((p) => p.v), 0.0001), [chartPoints]);
-  const minT = chartPoints.length > 0 ? chartPoints[0].t : now;
-  const maxT = now;
+  // Period earnings from curve
+  const weekEarnings = useMemo(
+    () => getPeriodEarnings(allPoints, 7 * 24 * 3600 * 1000, now),
+    [allPoints, now]
+  );
+  const monthEarnings = useMemo(
+    () => getPeriodEarnings(allPoints, 30 * 24 * 3600 * 1000, now),
+    [allPoints, now]
+  );
+  const yearEarnings = useMemo(
+    () => getPeriodEarnings(allPoints, 365 * 24 * 3600 * 1000, now),
+    [allPoints, now]
+  );
 
-  const paths = buildSvgPaths(chartPoints, minT, maxT, maxV);
+  // Tight y-range: scale to visible data, not 0→globalMax
+  const yMinData = chartPoints.length > 0 ? Math.min(...chartPoints.map((p) => p.v)) : 0;
+  const yMaxData = Math.max(...chartPoints.map((p) => p.v), 0.0001);
+  const yRange = yMaxData - yMinData;
+  const yPad = Math.max(yRange * 0.18, 0.000001);
+  const yLow = Math.max(0, yMinData - yPad * 0.4);
+  const yHigh = yMaxData + yPad;
+  const yMid = (yLow + yHigh) / 2;
+
+  // SVG coordinate functions
+  const minT = chartPoints.length > 0 ? chartPoints[0].t : now - WINDOW_MS['1W']!;
+  const maxT = now;
+  const xFn = (t: number) =>
+    maxT === minT ? CHART_W / 2 : ((t - minT) / (maxT - minT)) * CHART_W;
+  const yFn = (v: number) =>
+    yHigh === yLow ? CHART_H / 2 : CHART_H - 4 - ((v - yLow) / (yHigh - yLow)) * (CHART_H - 10);
+
+  // Build SVG paths
+  let linePath: string | null = null;
+  let areaPath: string | null = null;
+  if (chartPoints.length >= 2) {
+    const coords = chartPoints.map((p) => ({ x: xFn(p.t), y: yFn(p.v) }));
+    const parts = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`);
+    linePath = parts.join(' ');
+    const last = coords[coords.length - 1];
+    const first = coords[0];
+    const botY = yFn(yLow).toFixed(1);
+    areaPath = `${linePath} L${last.x.toFixed(1)},${botY} L${first.x.toFixed(1)},${botY} Z`;
+  }
 
   const lastPoint = chartPoints.length > 0 ? chartPoints[chartPoints.length - 1] : null;
-  const endX =
-    lastPoint && maxT !== minT
-      ? ((lastPoint.t - minT) / (maxT - minT)) * CHART_W
-      : CHART_W / 2;
-  const endY =
-    lastPoint && maxV > 0
-      ? CHART_H - 4 - (lastPoint.v / maxV) * (CHART_H - 14)
-      : CHART_H * 0.75;
+  const endX = lastPoint ? xFn(lastPoint.t) : CHART_W;
+  const endY = lastPoint ? yFn(lastPoint.v) : CHART_H / 2;
+
+  const gridYs = [yFn(yHigh), yFn(yMid), yFn(yLow)].map((v) => v.toFixed(1));
+
+  // Stat chip helper
+  const StatChip = ({
+    label,
+    value,
+    accent = false,
+    estimated = false,
+  }: {
+    label: string;
+    value: number;
+    accent?: boolean;
+    estimated?: boolean;
+  }) => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '3px', flexShrink: 0 }}>
+      <Typography
+        sx={{
+          fontSize: '9.5px',
+          fontWeight: 600,
+          color: 'rgba(255,255,255,0.28)',
+          letterSpacing: '0.09em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        sx={{
+          fontSize: '13px',
+          fontWeight: 600,
+          fontFamily: MONO,
+          letterSpacing: '-0.01em',
+          color: accent ? '#4ADE80' : estimated ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.85)',
+        }}
+      >
+        {estimated ? '~' : ''}{fmtStat(value)}
+      </Typography>
+    </Box>
+  );
 
   return (
-    <Box sx={{ mt: '20px', pt: '18px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-      {/* Header + filter row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: '10px' }}>
+    <Box sx={{ mt: '20px', pt: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+
+      {/* Stats + filter row */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          gap: { xs: '28px', sm: 0 },
+          mb: { xs: '24px', sm: '16px' },
+        }}
+      >
+        {/* Actual earnings */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+          <StatChip label="All Time" value={allTimeEarnings} accent />
+          <StatChip label="7 Days" value={weekEarnings} />
+          <StatChip label="30 Days" value={monthEarnings} />
+          <StatChip label="1 Year" value={yearEarnings} />
+        </Box>
+
+        {/* Time filter */}
         <Box
           sx={{
-            fontSize: '11px',
-            fontWeight: 500,
-            color: 'rgba(255,255,255,0.3)',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
+            ml: { xs: 0, sm: 'auto' },
+            alignSelf: { xs: 'flex-end', sm: 'auto' },
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '2px',
+            pl: { xs: 0, sm: '16px' },
           }}
         >
-          Earnings
-        </Box>
-        <Box sx={{ display: 'flex', gap: '2px' }}>
           {TIME_FILTERS.map((f) => (
             <Box
               key={f}
               component="button"
               onClick={() => setFilter(f)}
               sx={{
-                px: '10px',
+                px: '9px',
                 py: '4px',
                 borderRadius: '6px',
                 border: 'none',
@@ -204,10 +311,10 @@ export function SavingsChart({ walletAddress, currentEarnings, apy }: SavingsCha
                 fontWeight: 500,
                 lineHeight: 1.4,
                 cursor: 'pointer',
-                fontFamily: '"Geist Mono", ui-monospace, monospace',
+                fontFamily: MONO,
                 transition: 'background 0.12s, color 0.12s',
                 bgcolor: filter === f ? 'rgba(74,222,128,0.18)' : 'transparent',
-                color: filter === f ? '#4ADE80' : 'rgba(255,255,255,0.3)',
+                color: filter === f ? '#4ADE80' : 'rgba(255,255,255,0.28)',
                 '&:hover': { color: filter === f ? '#4ADE80' : 'rgba(255,255,255,0.55)' },
               }}
             >
@@ -217,58 +324,113 @@ export function SavingsChart({ walletAddress, currentEarnings, apy }: SavingsCha
         </Box>
       </Box>
 
-      {/* Chart */}
+      {/* Chart area */}
       {isLoading && !!walletAddress ? (
         <Skeleton
           variant="rectangular"
-          height={CHART_H}
+          height={CHART_H + 24}
           sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}
         />
       ) : (
-        <Box sx={{ width: '100%', overflow: 'hidden' }}>
-          <svg
-            viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-            preserveAspectRatio="none"
-            style={{ display: 'block', width: '100%', height: `${CHART_H}px` }}
-          >
-            <defs>
-              <linearGradient id="nf-earnings-area" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="#4ADE80" stopOpacity="0.01" />
-              </linearGradient>
-            </defs>
+        <Box>
+          <Box sx={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
+            {/* Y-axis labels */}
+            <Box
+              sx={{
+                width: 52,
+                flexShrink: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                height: `${CHART_H}px`,
+                pr: '8px',
+                py: '2px',
+              }}
+            >
+              {[yHigh, yMid, yLow].map((v, i) => (
+                <Typography
+                  key={i}
+                  sx={{
+                    fontSize: '9px',
+                    color: 'rgba(255,255,255,0.25)',
+                    fontFamily: MONO,
+                    textAlign: 'right',
+                    lineHeight: 1,
+                  }}
+                >
+                  {fmtY(v)}
+                </Typography>
+              ))}
+            </Box>
 
-            {paths ? (
-              <>
-                <path d={paths.area} fill="url(#nf-earnings-area)" />
-                <path
-                  d={paths.line}
-                  fill="none"
-                  stroke="#4ADE80"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                {lastPoint && (
+            {/* SVG chart */}
+            <Box sx={{ flex: 1, overflow: 'hidden' }}>
+              <svg
+                viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+                preserveAspectRatio="none"
+                style={{ display: 'block', width: '100%', height: `${CHART_H}px` }}
+              >
+                <defs>
+                  <linearGradient id="nf-earnings-area" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.18" />
+                    <stop offset="100%" stopColor="#4ADE80" stopOpacity="0.01" />
+                  </linearGradient>
+                </defs>
+
+                {/* Subtle grid lines */}
+                {gridYs.map((gy, i) => (
+                  <line
+                    key={i}
+                    x1="0" y1={gy} x2={CHART_W} y2={gy}
+                    stroke="rgba(255,255,255,0.05)"
+                    strokeWidth="1"
+                  />
+                ))}
+
+                {linePath && areaPath ? (
                   <>
-                    <circle cx={endX} cy={endY} r="8" fill="#4ADE80" fillOpacity="0.18" />
-                    <circle cx={endX} cy={endY} r="3.5" fill="#4ADE80" />
+                    <path d={areaPath} fill="url(#nf-earnings-area)" />
+                    <path
+                      d={linePath}
+                      fill="none"
+                      stroke="#4ADE80"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    {lastPoint && (
+                      <>
+                        <circle cx={endX} cy={endY} r="8" fill="#4ADE80" fillOpacity="0.18" />
+                        <circle cx={endX} cy={endY} r="3.5" fill="#4ADE80" />
+                      </>
+                    )}
                   </>
+                ) : (
+                  <line
+                    x1="0" y1={CHART_H * 0.72} x2={CHART_W} y2={CHART_H * 0.72}
+                    stroke="#4ADE80" strokeWidth="1.5" strokeDasharray="7 5" strokeOpacity="0.2"
+                  />
                 )}
-              </>
-            ) : (
-              <line
-                x1="0"
-                y1={CHART_H * 0.72}
-                x2={CHART_W}
-                y2={CHART_H * 0.72}
-                stroke="#4ADE80"
-                strokeWidth="1.5"
-                strokeDasharray="7 5"
-                strokeOpacity="0.2"
-              />
-            )}
-          </svg>
+              </svg>
+            </Box>
+          </Box>
+
+          {/* X-axis labels */}
+          <Box
+            sx={{
+              ml: '52px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              mt: '6px',
+            }}
+          >
+            <Typography sx={{ fontSize: '9px', color: 'rgba(255,255,255,0.22)', fontFamily: MONO }}>
+              {chartPoints.length > 0 ? fmtDate(minT, now) : '—'}
+            </Typography>
+            <Typography sx={{ fontSize: '9px', color: 'rgba(255,255,255,0.22)', fontFamily: MONO }}>
+              Today
+            </Typography>
+          </Box>
         </Box>
       )}
     </Box>

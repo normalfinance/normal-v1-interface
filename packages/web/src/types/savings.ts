@@ -15,7 +15,8 @@ export interface SavingsPosition {
   shares: string; // dfTokens
   currentValue: string; // underlying asset value
   totalDeposited: string; // net deposits from DB (deposits - withdrawals)
-  earnings: string; // derived: currentValue - totalDeposited
+  earnings: string; // current earnings: currentValue - totalDeposited (resets to 0 after full withdrawal)
+  lifetimeEarnings?: string; // all-time earnings: totalInterestEarned from DeFindex API, survives withdrawals
 }
 
 export interface DepositParams {

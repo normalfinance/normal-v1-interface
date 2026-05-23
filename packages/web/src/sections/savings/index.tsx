@@ -34,6 +34,10 @@ export default function SavingsView() {
     () => parseFloat(userPosition?.earnings || '0'),
     [userPosition]
   );
+  const lifetimeEarnings = useMemo(
+    () => userPosition?.lifetimeEarnings != null ? parseFloat(userPosition.lifetimeEarnings) : undefined,
+    [userPosition]
+  );
   const apy = vaultInfo ? Number(vaultInfo.apy) : null;
   const heroLoading = fetching || positionFetching;
 
@@ -72,6 +76,7 @@ export default function SavingsView() {
         currentValue={currentValue}
         totalDeposited={totalDeposited}
         earnings={earnings}
+        lifetimeEarnings={lifetimeEarnings}
         apy={apy}
         loading={heroLoading}
         walletAddress={wallet.address || undefined}

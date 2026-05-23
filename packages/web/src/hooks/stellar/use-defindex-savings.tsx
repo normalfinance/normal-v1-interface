@@ -327,14 +327,17 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             const prevTD = parseFloat(prev.totalDeposited);
             const currentValue = parseFloat(apiPos.currentValue);
             // The DeFindex events indexer lags 30-120 s behind on-chain state.
-            // Two stale-events signals:
-            //   1. apiTD > currentValue — impossible for a yield vault (deposited > held)
-            //   2. apiTD < prevTD — indexer hasn't caught up to a recent deposit
-            // In either case keep prevTD (our best known value) and only accept
-            // Soroban's up-to-date currentValue.
+            // Stale-events signal 1: apiTD > currentValue — impossible for a yield vault.
+            // Stale-events signal 2: apiTD < prevTD by a SMALL amount — indexer hasn't
+            //   caught up to a recent deposit (cache was optimistically incremented).
+            //   Only applies when the drop is < 20% of prevTD; larger drops mean the API
+            //   is returning a legitimate correction (e.g. after a withdrawal, or fixing a
+            //   previously wrong cached value) and must be accepted.
+            const tdDrop = prevTD - apiTD;
+            const smallIndexerLag = tdDrop > 0.001 && prevTD > 0 && tdDrop / prevTD < 0.2;
             const stale =
               apiTD > currentValue + 0.001 ||
-              apiTD < prevTD - 0.001;
+              smallIndexerLag;
             if (stale) {
               const merged = {
                 ...apiPos,

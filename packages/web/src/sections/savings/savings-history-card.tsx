@@ -252,6 +252,7 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
         border: '1px solid rgba(10,10,15,0.08)',
         bgcolor: '#FFFFFF',
         overflow: 'clip',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 24px 60px rgba(10,10,15,0.08), 0 2px 8px rgba(10,10,15,0.04)',
       }}
     >
       {/* Header */}
