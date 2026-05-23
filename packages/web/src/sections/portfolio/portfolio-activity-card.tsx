@@ -40,6 +40,22 @@ function truncateTx(hash: string): string {
   return `${hash.slice(0, 4)}...${hash.slice(-4)}`;
 }
 
+function getStellarExpertUrl(a: Activity): string | null {
+  switch (a.type) {
+    case 'Savings Deposit':
+    case 'Savings Withdraw':
+      return a.txHash ? `https://stellar.expert/explorer/public/tx/${a.txHash}` : null;
+    case 'Sent':
+    case 'Receive':
+      if (a.id.startsWith('horizon:')) {
+        return `https://stellar.expert/explorer/public/op/${a.id.slice(8)}`;
+      }
+      return null;
+    default:
+      return null;
+  }
+}
+
 type TagKey = keyof typeof TAG_STYLES;
 
 function activityTagKey(a: Activity): TagKey {
@@ -272,9 +288,11 @@ export function ActivityCard({ walletAddress }: ActivityCardProps) {
             {items.map((activity) => {
               const tagKey = activityTagKey(activity);
               const row = activityToRow(activity);
+              const expertUrl = getStellarExpertUrl(activity);
               return (
                 <Box
                   key={activity.id}
+                  onClick={expertUrl ? () => window.open(expertUrl, '_blank', 'noopener,noreferrer') : undefined}
                   sx={{
                     display: 'grid',
                     gridTemplateColumns: ACTIVITY_COLS,
@@ -283,6 +301,7 @@ export function ActivityCard({ walletAddress }: ActivityCardProps) {
                     px: '8px',
                     py: '12px',
                     borderRadius: '10px',
+                    cursor: expertUrl ? 'pointer' : 'default',
                     '&:hover': { bgcolor: 'rgba(10,10,15,0.025)' },
                   }}
                 >
