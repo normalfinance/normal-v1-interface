@@ -188,6 +188,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   );
   const [txStep, setTxStep] = useState<string | null>(null);
 
+  // Cross-instance sync: when any hook instance writes an optimistic position
+  // update it dispatches this event so all other mounted instances re-read cache.
+  const POSITION_SYNC_EVENT = 'nf:savings-position-updated';
+
   // Separate tokens for vault-info and user-position fetches so they can run
   // concurrently without cancelling each other.
   const vaultTokenRef = useRef(0);
@@ -196,6 +200,16 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   // needing it as a dependency.
   const userPositionRef = useRef(userPosition);
   useEffect(() => { userPositionRef.current = userPosition; }, [userPosition]);
+
+  // Sync position from cache when another hook instance writes an optimistic update.
+  useEffect(() => {
+    const handler = () => {
+      const cached = getCachedPosition(wallet.address);
+      if (cached) setUserPosition(cached);
+    };
+    window.addEventListener(POSITION_SYNC_EVENT, handler);
+    return () => window.removeEventListener(POSITION_SYNC_EVENT, handler);
+  }, [wallet.address]);
 
   // ── Phase 1: vault metadata (fast, ~3-5 s, no user address needed) ──────
   const refreshVaultInfo = useCallback(async () => {
@@ -528,10 +542,17 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           depositResult.hash
         );
 
-        // Optimistic position update — show correct value immediately and persist to
-        // cache so a refresh before the events indexer catches up still shows the right values.
-        // refreshUserPosition's stale-detection heuristic will protect this cached value
-        // from being overwritten by stale API data.
+        // Pre-write cache synchronously so the POSITION_SYNC_EVENT handler on other
+        // hook instances reads the correct value (setState callbacks are deferred).
+        {
+          const base = userPositionRef.current ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
+          setCachedPosition(wallet.address, {
+            ...base,
+            currentValue: (parseFloat(base.currentValue) + netAmount).toFixed(7),
+            totalDeposited: (parseFloat(base.totalDeposited) + netAmount).toFixed(7),
+          });
+        }
+        // Use callback form so React's prev is always authoritative (same as master).
         setUserPosition((prev) => {
           const base = prev ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
           const updated = {
@@ -542,6 +563,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           setCachedPosition(wallet.address, updated);
           return updated;
         });
+        window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
 
         // Refresh vault info, then position. Retry at 3 s, 15 s, 45 s so that
         // totalDeposited settles once the events indexer catches up.
@@ -719,8 +741,20 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           withdrawResult.hash
         );
 
-        // Optimistic position update — reflect withdrawal immediately and persist to
-        // cache so a refresh before the events indexer catches up still shows the right values.
+        // Pre-write cache synchronously so the POSITION_SYNC_EVENT handler on other
+        // hook instances reads the correct value (setState callbacks are deferred).
+        if (userPositionRef.current) {
+          const base = userPositionRef.current;
+          const preCV = Math.max(parseFloat(base.currentValue) - parsedAmount, 0);
+          const preTD = Math.max(parseFloat(base.totalDeposited) - parsedAmount, 0);
+          setCachedPosition(wallet.address, {
+            ...base,
+            currentValue: preCV.toFixed(7),
+            totalDeposited: preTD.toFixed(7),
+            earnings: Math.max(preCV - preTD, 0).toFixed(7),
+          });
+        }
+        // Use callback form so React's prev is always authoritative (same as master).
         setUserPosition((prev) => {
           if (!prev) return prev;
           const newCurrentValue = Math.max(parseFloat(prev.currentValue) - parsedAmount, 0);
@@ -734,6 +768,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           setCachedPosition(wallet.address, updated);
           return updated;
         });
+        window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
 
         await refreshVaultInfo();
         setTimeout(() => refreshUserPosition(), 3_000);
