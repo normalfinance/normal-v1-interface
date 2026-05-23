@@ -290,9 +290,19 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
 
     if (normalPublicKey && isNormalConnected) {
-      await connectNormalWallet();
-      onClose();
-      return;
+      // Verify the wallet is still linked in the DB before auto-connecting.
+      // The user may have unlinked it via settings, which removes the DB record
+      // but leaves the key in localStorage.
+      const linkedWallets = await getLinkedWallets();
+      const isStillLinked = linkedWallets.some((w) => w.walletAddress === normalPublicKey);
+      if (isStillLinked) {
+        await connectNormalWallet();
+        onClose();
+        return;
+      }
+      // Wallet was unlinked — clear local state and fall through to normal flow.
+      await disconnectNormalWallet();
+      persist.disconnectWallet();
     }
 
     if (isAutoConnecting) {
