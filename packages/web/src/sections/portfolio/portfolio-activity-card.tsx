@@ -44,12 +44,12 @@ function getStellarExpertUrl(a: Activity): string | null {
   switch (a.type) {
     case 'Savings Deposit':
     case 'Savings Withdraw':
+    case 'Swap':
       return a.txHash ? `https://stellar.expert/explorer/public/tx/${a.txHash}` : null;
     case 'Sent':
     case 'Receive':
-      if (a.id.startsWith('horizon:')) {
-        return `https://stellar.expert/explorer/public/op/${a.id.slice(8)}`;
-      }
+      if (a.txHash) return `https://stellar.expert/explorer/public/tx/${a.txHash}`;
+      if (a.id.startsWith('horizon:')) return `https://stellar.expert/explorer/public/op/${a.id.slice(8)}`;
       return null;
     default:
       return null;
@@ -89,7 +89,7 @@ function activityToRow(a: Activity): RowData {
         asset: `${a.tokenIn.symbol} → ${a.tokenOut.symbol}`,
         amount: a.tokenIn.amount.toFixed(7),
         value: fCurrency(a.tokenOut.amount),
-        txHash: null,
+        txHash: a.txHash,
       };
     case 'Savings Deposit':
     case 'Savings Withdraw': {
@@ -103,7 +103,7 @@ function activityToRow(a: Activity): RowData {
         asset: a.token.symbol,
         amount: a.token.amount.toFixed(7),
         value: isUsdc ? fCurrency(a.token.amount) : `${a.token.amount.toFixed(7)} ${a.token.symbol}`,
-        txHash: null,
+        txHash: a.txHash,
       };
     }
     case 'Buy':

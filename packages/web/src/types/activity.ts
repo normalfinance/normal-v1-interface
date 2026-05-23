@@ -20,12 +20,14 @@ export interface SentActivity extends ActivityBase {
   type: 'Sent';
   address: string; // ⬅ where the funds went
   token: TokenAmount;
+  txHash: string | null;
 }
 
 export interface ReceiveActivity extends ActivityBase {
   type: 'Receive';
   address: string; // ⬅ where the funds came from
   token: TokenAmount;
+  txHash: string | null;
 }
 
 export interface MintActivity extends ActivityBase {
@@ -90,6 +92,7 @@ export interface SwapActivity extends ActivityBase {
   type: 'Swap';
   tokenIn: TokenAmount;
   tokenOut: TokenAmount;
+  txHash: string | null;
 }
 
 // -----------------------------------------------------------------------------
