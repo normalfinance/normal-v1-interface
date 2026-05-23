@@ -74,6 +74,7 @@ export default function SavingsView() {
         earnings={earnings}
         apy={apy}
         loading={heroLoading}
+        walletAddress={wallet.address || undefined}
       />
 
       {/* Action + Onramp */}
