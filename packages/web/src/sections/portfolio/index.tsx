@@ -8,6 +8,7 @@ import { BigNumber } from 'bignumber.js';
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Box from '@mui/material/Box';
+import Skeleton from '@mui/material/Skeleton';
 
 import SavingsCard from '@/components/_common/savings-card';
 
@@ -108,7 +109,23 @@ export default function PortfolioView() {
     refreshTokens();
   }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return (
+      <DashboardContent maxWidth="xl">
+        {/* Hero skeleton */}
+        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }} />
+
+        {/* Holdings + Savings skeleton */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px', mt: '20px' }}>
+          <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+          <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+        </Box>
+
+        {/* Activity skeleton */}
+        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }} />
+      </DashboardContent>
+    );
+  }
 
   if (!wallet.address) {
     return (
