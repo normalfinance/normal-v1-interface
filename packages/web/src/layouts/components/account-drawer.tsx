@@ -17,15 +17,11 @@ import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
-import {
-  getLinkedWallets,
-  type LinkedWallet,
-} from '@/services/linked-wallets';
+import { getLinkedWallets } from '@/services/linked-wallets';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   useNormalWallet,
   hasStoredNormalWalletKey,
-  NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,
 } from '@/hooks/stellar/use-normal-wallet';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -54,9 +50,7 @@ import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
-import WalletSelectionModal, {
-  hasSeenWalletSelectionModal,
-} from '@/components/_common/wallet-selection-modal';
+import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
 
 import { AccountButton } from './account-button';
 
@@ -163,7 +157,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
-    connectWalletWithoutKeypair,
     publicKey: normalPublicKey,
     isConnected: isNormalConnected,
     disconnectWallet: disconnectNormalWallet,
@@ -264,110 +257,30 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
   }, [connectWallet, onClose]);
 
-  const attemptAutoConnect = useCallback(
-    async (wallet: LinkedWallet): Promise<'connected' | 'requires-reimport' | 'failed'> => {
-      try {
-        if (!hasStoredNormalWalletKey()) {
-          return 'requires-reimport';
-        }
-
-        // Self-custody only: connect address-only. The restoreWallet useEffect
-        // in use-normal-wallet handles the password prompt and keypair restoration.
-        await connectWalletWithoutKeypair(wallet.walletAddress);
-        logger.log('[AccountDrawer] Auto-connected wallet in address-only mode');
-        return 'connected';
-      } catch (error) {
-        logger.error('[AccountDrawer] Error during auto-connect:', error);
-        return 'failed';
-      }
-    },
-    [connectWalletWithoutKeypair]
-  );
-
   const handlePostAuthFlow = useCallback(async () => {
     if (!session) {
       return;
     }
 
+    // Clear any stale local wallet state if the DB record was removed
     if (normalPublicKey && isNormalConnected) {
-      // Verify the wallet is still linked in the DB before auto-connecting.
-      // The user may have unlinked it via settings, which removes the DB record
-      // but leaves the key in localStorage.
       const linkedWallets = await getLinkedWallets();
       const isStillLinked = linkedWallets.some((w) => w.walletAddress === normalPublicKey);
-      if (isStillLinked) {
-        await connectNormalWallet();
-        onClose();
-        return;
+      if (!isStillLinked) {
+        await disconnectNormalWallet();
+        persist.disconnectWallet();
       }
-      // Wallet was unlinked — clear local state and fall through to normal flow.
-      await disconnectNormalWallet();
-      persist.disconnectWallet();
     }
 
-    if (isAutoConnecting) {
-      return;
-    }
-
-    setIsAutoConnecting(true);
-
-    try {
-      const linkedWallets = await getLinkedWallets();
-
-      if (linkedWallets.length === 0) {
-        if (!hasSeenWalletSelectionModal()) {
-          setShowImportOptionInSelection(false);
-          setShowWalletSelection(true);
-        } else {
-          await handleConnectStellarWallet();
-        }
-        return;
-      }
-
-      const mostRecentWallet = linkedWallets[0];
-
-      const autoConnected = await attemptAutoConnect(mostRecentWallet);
-
-      if (autoConnected === 'connected') {
-        enqueueSnackbar(t('Wallet connected successfully'), { variant: 'success' });
-        return;
-      }
-
-      if (autoConnected === 'requires-reimport') {
-        enqueueSnackbar(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE, {
-          variant: 'info',
-          autoHideDuration: 8000,
-        });
-        setShowImportNormalWallet(true);
-        return;
-      }
-
-      logger.warn(
-        '[AccountDrawer] Auto-connect failed for wallet:',
-        mostRecentWallet.walletAddress
-      );
-      enqueueSnackbar(t('Could not auto-connect wallet. Use Switch Wallets to reconnect.'), {
-        variant: 'warning',
-      });
-    } catch (error) {
-      logger.error('[AccountDrawer] Error in handlePostAuthFlow:', error);
-      enqueueSnackbar(t('Could not connect wallet. Use Switch Wallets to try again.'), {
-        variant: 'error',
-      });
-    } finally {
-      setIsAutoConnecting(false);
-    }
+    // Open the wizard so the user can pick their wallet
+    setWizardInitialStep('linked-accounts');
+    setShowLoginModal(true);
   }, [
     session,
     normalPublicKey,
     isNormalConnected,
-    connectNormalWallet,
-    onClose,
-    isAutoConnecting,
-    attemptAutoConnect,
-    handleConnectStellarWallet,
-    enqueueSnackbar,
-    t,
+    disconnectNormalWallet,
+    persist,
   ]);
 
   /** Handle Normal wallet creation success */
@@ -433,7 +346,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [searchParams, router]);
 
   useEffect(() => {
-    const handler = () => { if (!session) setShowLoginModal(true); };
+    const handler = () => {
+      if (!session) {
+        rememberLoginIntent();
+        setShowLoginModal(true);
+      }
+    };
     window.addEventListener('nf:open-login', handler);
     return () => window.removeEventListener('nf:open-login', handler);
   }, [session]);
@@ -454,20 +372,22 @@ export function AccountDrawer(props: AccountDrawerProps) {
       return;
     }
 
-    if (isWalletConnected) {
-      setIsAutoConnecting(false);
-      return;
-    }
-
+    // Check loginIntent BEFORE the isWalletConnected guard.
+    // If the user explicitly clicked Login, always open the wizard so they
+    // can pick a wallet — even if the old wallet was auto-restored from
+    // localStorage after an expired session.
     const hadIntent = consumeLoginIntent();
     if (hadIntent && !hasHandledAuthRef.current) {
       hasHandledAuthRef.current = true;
-      // Always use the wizard for post-auth wallet setup (covers OAuth redirects
-      // where the wizard was closed by the page reload).
-      // If it's already open it handles itself; if not, open it now.
       if (!showLoginModalRef.current) {
         setShowLoginModal(true);
       }
+      return;
+    }
+
+    if (isWalletConnected) {
+      setIsAutoConnecting(false);
+      return;
     }
   }, [authLoading, session, passwordResetSuccess, isWalletConnected]);
 
