@@ -423,6 +423,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [searchParams, router]);
 
   useEffect(() => {
+    const handler = () => { if (!session) setShowLoginModal(true); };
+    window.addEventListener('nf:open-login', handler);
+    return () => window.removeEventListener('nf:open-login', handler);
+  }, [session]);
+
+  useEffect(() => {
     if (authLoading) return;
 
     if (!session) {

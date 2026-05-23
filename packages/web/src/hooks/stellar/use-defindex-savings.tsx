@@ -201,6 +201,21 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   const userPositionRef = useRef(userPosition);
   useEffect(() => { userPositionRef.current = userPosition; }, [userPosition]);
 
+  // Reset position state when wallet address changes (logout → login).
+  // Without this, userPositionRef.current retains the previous session's value,
+  // causing the stale-detection logic in refreshUserPosition to incorrectly
+  // merge old totalDeposited with a fresh API response that has currentValue=0.
+  useEffect(() => {
+    if (!wallet.address) {
+      setUserPosition(null);
+      setPositionFetching(false);
+      return;
+    }
+    const cached = getCachedPosition(wallet.address);
+    setUserPosition(cached ?? null);
+    setPositionFetching(!cached);
+  }, [wallet.address]);
+
   // Sync position from cache when another hook instance writes an optimistic update.
   useEffect(() => {
     const handler = () => {
