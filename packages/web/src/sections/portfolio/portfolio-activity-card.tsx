@@ -36,10 +36,6 @@ function formatRelative(ts: number): string {
   return `${days}d ago`;
 }
 
-function truncateTx(hash: string): string {
-  return `${hash.slice(0, 4)}...${hash.slice(-4)}`;
-}
-
 function getStellarExpertUrl(a: Activity): string | null {
   switch (a.type) {
     case 'Savings Deposit':
@@ -117,6 +113,135 @@ function activityToRow(a: Activity): RowData {
     default:
       return { asset: '—', amount: '—', value: '—', txHash: null };
   }
+}
+
+// -------------------------------------------------------------------
+// PaginationBar
+// -------------------------------------------------------------------
+function PaginationBar({
+  page,
+  totalPages,
+  onPrev,
+  onNext,
+  onPage,
+}: {
+  page: number;
+  totalPages: number;
+  onPrev: () => void;
+  onNext: () => void;
+  onPage: (p: number) => void;
+}) {
+  const range: number[] = [];
+  const delta = 2;
+  const left = Math.max(1, page - delta);
+  const right = Math.min(totalPages, page + delta);
+  for (let i = left; i <= right; i++) range.push(i);
+
+  const btnBase = {
+    height: 32,
+    minWidth: 32,
+    px: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '8px',
+    fontSize: '13px',
+    ...MONO,
+    fontWeight: 400,
+    cursor: 'pointer',
+    border: '1px solid transparent',
+    bgcolor: 'transparent',
+    transition: 'all 0.15s',
+  };
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '4px',
+        px: '20px',
+        py: '14px',
+        borderTop: '1px solid rgba(10,10,15,0.06)',
+      }}
+    >
+      <Box
+        component="button"
+        onClick={onPrev}
+        disabled={page === 1}
+        sx={{
+          ...btnBase,
+          color: page === 1 ? 'rgba(10,10,15,0.25)' : 'rgba(10,10,15,0.6)',
+          cursor: page === 1 ? 'default' : 'pointer',
+          '&:hover': page === 1 ? {} : { bgcolor: '#F4F4F7' },
+        }}
+      >
+        ←
+      </Box>
+
+      {left > 1 && (
+        <>
+          <Box
+            component="button"
+            onClick={() => onPage(1)}
+            sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}
+          >
+            1
+          </Box>
+          {left > 2 && (
+            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>…</Box>
+          )}
+        </>
+      )}
+
+      {range.map((p) => (
+        <Box
+          key={p}
+          component="button"
+          onClick={() => onPage(p)}
+          sx={{
+            ...btnBase,
+            color: p === page ? '#FFFFFF' : 'rgba(10,10,15,0.6)',
+            bgcolor: p === page ? '#0A0A0F' : 'transparent',
+            borderColor: p === page ? '#0A0A0F' : 'transparent',
+            '&:hover': p === page ? {} : { bgcolor: '#F4F4F7' },
+          }}
+        >
+          {p}
+        </Box>
+      ))}
+
+      {right < totalPages && (
+        <>
+          {right < totalPages - 1 && (
+            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>…</Box>
+          )}
+          <Box
+            component="button"
+            onClick={() => onPage(totalPages)}
+            sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}
+          >
+            {totalPages}
+          </Box>
+        </>
+      )}
+
+      <Box
+        component="button"
+        onClick={onNext}
+        disabled={page === totalPages}
+        sx={{
+          ...btnBase,
+          color: page === totalPages ? 'rgba(10,10,15,0.25)' : 'rgba(10,10,15,0.6)',
+          cursor: page === totalPages ? 'default' : 'pointer',
+          '&:hover': page === totalPages ? {} : { bgcolor: '#F4F4F7' },
+        }}
+      >
+        →
+      </Box>
+    </Box>
+  );
 }
 
 // -------------------------------------------------------------------
@@ -276,8 +401,8 @@ export function ActivityCard({ walletAddress }: ActivityCardProps) {
               borderBottom: '1px solid rgba(10,10,15,0.04)',
             }}
           >
-            {[t('Type'), t('Asset'), t('Amount'), t('Value'), t('Date'), t('TX')].map((h) => (
-              <Box key={h} sx={COL_HEADER_SX}>
+            {[t('Type'), t('Asset'), t('Amount'), t('Value'), t('Date'), t('Tx')].map((h, i) => (
+              <Box key={h} sx={{ ...COL_HEADER_SX, textAlign: i === 5 ? 'right' : 'left' }}>
                 {h}
               </Box>
             ))}
@@ -332,42 +457,28 @@ export function ActivityCard({ walletAddress }: ActivityCardProps) {
                     {formatRelative(activity.timestamp)}
                   </Box>
 
-                  {row.txHash ? (
-                    <Box
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '7px',
-                        overflow: 'hidden',
-                      }}
-                    >
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    {expertUrl ? (
                       <Box
                         sx={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          bgcolor: '#1AB37D',
-                          flexShrink: 0,
-                          boxShadow: '0 0 0 3px rgba(26,179,125,0.15)',
-                        }}
-                      />
-                      <Box
-                        sx={{
-                          ...MONO,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
                           fontSize: '12px',
                           fontWeight: 400,
-                          color: 'rgba(10,10,15,0.5)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          color: 'rgba(10,10,15,0.35)',
+                          ...MONO,
                         }}
                       >
-                        {truncateTx(row.txHash)}
+                        View
+                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                          <path d="M2.5 9.5L9.5 2.5M9.5 2.5H5M9.5 2.5V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </Box>
-                    </Box>
-                  ) : (
-                    <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.25)' }}>—</Box>
-                  )}
+                    ) : (
+                      <Box sx={{ fontSize: '12px', fontWeight: 400, color: 'rgba(10,10,15,0.2)', ...MONO }}>—</Box>
+                    )}
+                  </Box>
                 </Box>
               );
             })}
@@ -376,116 +487,14 @@ export function ActivityCard({ walletAddress }: ActivityCardProps) {
         </Box>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            px: '20px',
-            py: '14px',
-            borderTop: '1px solid rgba(10,10,15,0.05)',
-          }}
-        >
-          <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
-            Page {page} of {totalPages}
-          </Box>
-
-          <Box sx={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
-            <Box
-              component="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                px: '12px',
-                py: '6px',
-                borderRadius: '8px',
-                border: '1px solid rgba(10,10,15,0.1)',
-                bgcolor: 'transparent',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: page === 1 ? 'rgba(10,10,15,0.25)' : '#0A0A0F',
-                cursor: page === 1 ? 'not-allowed' : 'pointer',
-                transition: 'background 150ms, border-color 150ms',
-                '&:hover:not(:disabled)': {
-                  bgcolor: 'rgba(10,10,15,0.04)',
-                  borderColor: 'rgba(10,10,15,0.18)',
-                },
-              }}
-            >
-              ← Prev
-            </Box>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-              .reduce<(number | '…')[]>((acc, p, idx, arr) => {
-                if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('…');
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((p, idx) =>
-                p === '…' ? (
-                  <Box
-                    key={`ellipsis-${idx}`}
-                    sx={{ px: '6px', fontSize: '13px', color: 'rgba(10,10,15,0.3)' }}
-                  >
-                    …
-                  </Box>
-                ) : (
-                  <Box
-                    key={p}
-                    component="button"
-                    onClick={() => setPage(p as number)}
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '8px',
-                      border:
-                        page === p ? '1px solid rgba(10,10,15,0.15)' : '1px solid transparent',
-                      bgcolor: page === p ? '#0A0A0F' : 'transparent',
-                      color: page === p ? '#fff' : 'rgba(10,10,15,0.6)',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      transition: 'background 150ms',
-                      '&:hover': { bgcolor: page === p ? '#0A0A0F' : 'rgba(10,10,15,0.04)' },
-                    }}
-                  >
-                    {p}
-                  </Box>
-                )
-              )}
-
-            <Box
-              component="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                px: '12px',
-                py: '6px',
-                borderRadius: '8px',
-                border: '1px solid rgba(10,10,15,0.1)',
-                bgcolor: 'transparent',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: page === totalPages ? 'rgba(10,10,15,0.25)' : '#0A0A0F',
-                cursor: page === totalPages ? 'not-allowed' : 'pointer',
-                transition: 'background 150ms, border-color 150ms',
-                '&:hover:not(:disabled)': {
-                  bgcolor: 'rgba(10,10,15,0.04)',
-                  borderColor: 'rgba(10,10,15,0.18)',
-                },
-              }}
-            >
-              Next →
-            </Box>
-          </Box>
-        </Box>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+          onPage={setPage}
+        />
       )}
     </Box>
   );
