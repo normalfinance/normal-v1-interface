@@ -50,7 +50,7 @@ interface SavingsCardProps extends BoxProps {}
 const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { tokenState, wallet } = usePersistStore();
+  const { tokenState, wallet, getAllTokens } = usePersistStore();
   const config = useStellarConfig();
   const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
 
@@ -109,9 +109,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       }
     } else {
       await withdraw(amount);
+      getAllTokens(true);
     }
     setAmount('');
-  }, [mode, amount, deposit, withdraw]);
+  }, [mode, amount, deposit, withdraw, getAllTokens]);
 
   const availableBalance =
     mode === 'deposit' ? savingsDepositBalance : userPosition?.currentValue || '0';
