@@ -20,7 +20,6 @@ interface SavingsHeroCardProps {
   currentValue: number;
   totalDeposited: number;
   earnings: number;
-  lifetimeEarnings?: number;
   apy: number | null;
   loading: boolean;
   walletAddress?: string;
@@ -31,7 +30,6 @@ export function SavingsHeroCard({
   currentValue,
   totalDeposited,
   earnings,
-  lifetimeEarnings,
   apy,
   loading,
   walletAddress,
@@ -106,33 +104,23 @@ export function SavingsHeroCard({
 
         <Box sx={DIVIDER_SX} />
 
-        {/* Earnings column: Current Earnings (big) + All Time Earnings (sub) */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.02em' }}>
-              {`Current Earnings (+${earningsPct}%)`}
-            </Typography>
-            {loading && earnings === 0 ? (
-              <Skeleton variant="text" width={90} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
-            ) : (
-              <>
-                <Typography sx={{ fontSize: '22px', fontWeight: 700, fontFamily: MONO, letterSpacing: '-0.03em', color: earnings > 0 ? '#4ADE80' : '#FFFFFF', lineHeight: 1.1 }}>
-                  ${fmt(earnings)}
-                </Typography>
-                <Typography sx={{ fontSize: '12px', fontWeight: 500, fontFamily: MONO, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
-                  {fmt7(earnings)} USDC
-                </Typography>
-              </>
-            )}
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.02em', mb: '2px' }}>
-              All Time Earnings
-            </Typography>
-            <Typography sx={{ fontSize: '14px', fontWeight: 600, fontFamily: MONO, letterSpacing: '-0.02em', color: (lifetimeEarnings ?? 0) > 0 ? '#4ADE80' : 'rgba(255,255,255,0.6)' }}>
-              ${fmt(lifetimeEarnings ?? 0)}
-            </Typography>
-          </Box>
+        {/* Current Earnings */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.02em' }}>
+            {`Current Earnings (+${earningsPct}%)`}
+          </Typography>
+          {loading && earnings === 0 ? (
+            <Skeleton variant="text" width={90} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+          ) : (
+            <>
+              <Typography sx={{ fontSize: '22px', fontWeight: 700, fontFamily: MONO, letterSpacing: '-0.03em', color: earnings > 0 ? '#4ADE80' : '#FFFFFF', lineHeight: 1.1 }}>
+                ${fmt(earnings)}
+              </Typography>
+              <Typography sx={{ fontSize: '12px', fontWeight: 500, fontFamily: MONO, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
+                {fmt7(earnings)} USDC
+              </Typography>
+            </>
+          )}
         </Box>
 
         <Box sx={DIVIDER_SX} />
@@ -195,7 +183,6 @@ export function SavingsHeroCard({
       <SavingsChart
         walletAddress={walletAddress}
         currentEarnings={earnings}
-        lifetimeEarnings={lifetimeEarnings}
         currentBalance={currentValue}
         apy={apy}
       />

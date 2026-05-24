@@ -138,7 +138,6 @@ function getPeriodEarnings(points: ChartPoint[], windowMs: number, now: number):
 interface SavingsChartProps {
   walletAddress?: string;
   currentEarnings: number;
-  lifetimeEarnings?: number;
   currentBalance?: number;
   apy?: number | null;
 }
@@ -146,7 +145,6 @@ interface SavingsChartProps {
 export function SavingsChart({
   walletAddress,
   currentEarnings,
-  lifetimeEarnings,
   apy,
 }: SavingsChartProps) {
   const [filter, setFilter] = useState<TimeFilter>('1W');
@@ -163,13 +161,9 @@ export function SavingsChart({
     [recentActivity]
   );
 
-  // lifetimeEarnings from the DeFindex API is the authoritative all-time total (survives withdrawals).
-  // Fall back to currentEarnings when the API value is not yet available.
-  const allTimeEarnings = lifetimeEarnings ?? currentEarnings;
-
   const allPoints = useMemo(
-    () => buildEarningsHistory(savingsActivity, allTimeEarnings, apy ?? 7, now),
-    [savingsActivity, allTimeEarnings, apy, now]
+    () => buildEarningsHistory(savingsActivity, currentEarnings, apy ?? 7, now),
+    [savingsActivity, currentEarnings, apy, now]
   );
 
   const chartPoints = useMemo(
@@ -177,19 +171,26 @@ export function SavingsChart({
     [allPoints, filter, now]
   );
 
-  // Period earnings from curve
-  const weekEarnings = useMemo(
-    () => getPeriodEarnings(allPoints, 7 * 24 * 3600 * 1000, now),
-    [allPoints, now]
-  );
-  const monthEarnings = useMemo(
-    () => getPeriodEarnings(allPoints, 30 * 24 * 3600 * 1000, now),
-    [allPoints, now]
-  );
-  const yearEarnings = useMemo(
-    () => getPeriodEarnings(allPoints, 365 * 24 * 3600 * 1000, now),
-    [allPoints, now]
-  );
+  // Period earnings from curve — one value per filter
+  const periodEarnings = useMemo(() => ({
+    '1W': getPeriodEarnings(allPoints, 7 * 24 * 3600 * 1000, now),
+    '1M': getPeriodEarnings(allPoints, 30 * 24 * 3600 * 1000, now),
+    '3M': getPeriodEarnings(allPoints, 90 * 24 * 3600 * 1000, now),
+    '6M': getPeriodEarnings(allPoints, 180 * 24 * 3600 * 1000, now),
+    '1Y': getPeriodEarnings(allPoints, 365 * 24 * 3600 * 1000, now),
+    '5Y': getPeriodEarnings(allPoints, 5 * 365 * 24 * 3600 * 1000, now),
+    'ALL': currentEarnings,
+  }), [allPoints, currentEarnings, now]);
+
+  const PERIOD_LABEL: Record<TimeFilter, string> = {
+    '1W': '7 Days',
+    '1M': '30 Days',
+    '3M': '90 Days',
+    '6M': '6 Months',
+    '1Y': '1 Year',
+    '5Y': '5 Years',
+    'ALL': 'All Time',
+  };
 
   // Tight y-range: scale to visible data, not 0→globalMax
   const yMinData = chartPoints.length > 0 ? Math.min(...chartPoints.map((p) => p.v)) : 0;
@@ -278,12 +279,9 @@ export function SavingsChart({
           mb: { xs: '24px', sm: '16px' },
         }}
       >
-        {/* Actual earnings */}
+        {/* Earnings for selected period */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
-          <StatChip label="All Time" value={allTimeEarnings} accent />
-          <StatChip label="7 Days" value={weekEarnings} />
-          <StatChip label="30 Days" value={monthEarnings} />
-          <StatChip label="1 Year" value={yearEarnings} />
+          <StatChip label={PERIOD_LABEL[filter]} value={periodEarnings[filter]} accent />
         </Box>
 
         {/* Time filter */}

@@ -322,7 +322,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       >
         {fetching ? (
           <Box sx={{ display: 'grid', gap: '8px' }}>
-            {[t('Your Deposits'), t('Current Value'), t('Current Earnings'), t('All Time Earnings')].map((label) => (
+            {[t('Your Deposits'), t('Current Value'), t('Current Earnings')].map((label) => (
               <Box
                 key={label}
                 sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -347,7 +347,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               { label: t('Your Deposits'), value: userPosition?.totalDeposited, prefix: '' },
               { label: t('Current Value'), value: userPosition?.currentValue, prefix: '' },
               { label: t('Current Earnings'), value: userPosition?.earnings, prefix: '+' },
-              { label: t('All Time Earnings'), value: userPosition?.lifetimeEarnings ?? '0', prefix: '+' },
             ].map(({ label, value, prefix }) => (
               <Box
                 key={label}
