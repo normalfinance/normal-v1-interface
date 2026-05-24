@@ -91,7 +91,7 @@ export default function RoadmapSection() {
       aria-labelledby="roadmap-heading"
       sx={{
         bgcolor: '#FAFAFB',
-        py: { xs: '40px', md: '56px' },
+        pt: { xs: '80px', md: '110px' }, pb: { xs: '40px', md: '56px' }
       }}
     >
       <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
