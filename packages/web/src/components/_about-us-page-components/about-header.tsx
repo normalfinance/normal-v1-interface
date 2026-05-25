@@ -63,8 +63,17 @@ const DEFAULT_LOGOS: LogoItem[] = [
 const META = [
   { label: 'Founded', value: '2022' },
   { label: 'HQ', value: 'Chicago' },
-  { label: 'Team', value: '12' },
-  { label: 'TVL', value: '$15,335.93' },
+];
+
+const TEAM_AVATARS = [
+  cdn('about-page/justin.webp'),
+  cdn('about-page/niko.webp'),
+  cdn('about-page/avm.webp'),
+  cdn('about-page/jake.webp'),
+  cdn('about-page/jay.webp'),
+  cdn('about-page/anth.webp'),
+  cdn('about-page/john.webp'),
+  cdn('about-page/zeal.webp'),
 ];
 
 const GRADIENT =
@@ -262,6 +271,7 @@ export const AboutHeader: React.FC = () => {
                     pt: '28px',
                     borderTop: '1px solid rgba(255,255,255,0.08)',
                     flexWrap: 'wrap',
+                    alignItems: 'flex-end',
                   }}
                 >
                   {META.map((item) => (
@@ -279,7 +289,7 @@ export const AboutHeader: React.FC = () => {
                       </Box>
                       <Box
                         sx={{
-                          fontSize: '19px',
+                          fontSize: '24px',
                           fontWeight: 400,
                           color: '#FFFFFF',
                           letterSpacing: '-0.02em',
@@ -290,6 +300,40 @@ export const AboutHeader: React.FC = () => {
                       </Box>
                     </Box>
                   ))}
+
+                  {/* Team avatars */}
+                  <Box>
+                    <Box
+                      sx={{
+                        fontSize: '10px',
+                        color: 'rgba(255,255,255,0.3)',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        mb: '5px',
+                      }}
+                    >
+                      Team
+                    </Box>
+                    <Box sx={{ display: 'flex' }}>
+                      {TEAM_AVATARS.map((src, i) => (
+                        <Box
+                          key={i}
+                          component="img"
+                          src={src}
+                          alt={`Team member ${i + 1}`}
+                          sx={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            objectPosition: 'top',
+                            border: '2px solid rgba(255,255,255,0.15)',
+                            ml: i === 0 ? 0 : '-12px',
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
                 </Box>
               </Box>
 
