@@ -5,7 +5,7 @@ import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 import { useRouter } from 'next/navigation';
 
-import { Box, Link, Stack, Button, Container, Typography } from '@mui/material';
+import { Box, Link, Stack, Button, Typography } from '@mui/material';
 
 type LogoItem = {
   name: string;
@@ -89,63 +89,56 @@ export const AboutHeader: React.FC = () => {
       <Box
         component="section"
         sx={{
-          bgcolor: '#FAFAFB',
-          pt: { xs: '40px', md: '64px' },
-          pb: { xs: '48px', md: '80px' },
+          position: 'relative',
+          overflow: 'hidden',
+          bgcolor: '#0A0A0F',
+          pt: { xs: '80px', md: '110px' },
+          pb: { xs: '64px', md: '96px' },
+          color: '#fff',
         }}
       >
-        <Container maxWidth="xl">
-          {/* Dark hero card */}
-          <Box
-            sx={{
-              position: 'relative',
-              overflow: 'hidden',
-              borderRadius: '28px',
-              bgcolor: '#0A0A0F',
-              p: { xs: '32px', sm: '48px', md: '64px' },
-              color: '#fff',
-            }}
-          >
-            {/* Dot grid */}
-            <Box
-              aria-hidden="true"
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
-                backgroundSize: '20px 20px',
-                WebkitMaskImage:
-                  'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-                maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-                pointerEvents: 'none',
-              }}
-            />
-            {/* Ambient glow */}
-            <Box
-              aria-hidden="true"
-              sx={{
-                position: 'absolute',
-                inset: '-20%',
-                background: `
-                  radial-gradient(closest-side at 20% 60%, rgba(91,207,255,0.15), transparent 60%),
-                  radial-gradient(closest-side at 80% 40%, rgba(177,123,255,0.15), transparent 60%)
-                `,
-                filter: 'blur(40px)',
-                pointerEvents: 'none',
-              }}
-            />
+        {/* Dot grid */}
+        <Box
+          aria-hidden="true"
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
+            backgroundSize: '20px 20px',
+            WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+            maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Ambient glow */}
+        <Box
+          aria-hidden="true"
+          sx={{
+            position: 'absolute',
+            inset: '-20%',
+            background: `
+              radial-gradient(closest-side at 20% 60%, rgba(91,207,255,0.15), transparent 60%),
+              radial-gradient(closest-side at 80% 40%, rgba(177,123,255,0.15), transparent 60%)
+            `,
+            filter: 'blur(40px)',
+            pointerEvents: 'none',
+          }}
+        />
 
-            {/* Content */}
-            <Box
-              sx={{
-                position: 'relative',
-                zIndex: 1,
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                gap: { xs: '40px', md: '80px' },
-                alignItems: 'center',
-              }}
-            >
+        {/* Content */}
+        <Box
+          sx={{
+            maxWidth: 1200,
+            mx: 'auto',
+            px: 3,
+            position: 'relative',
+            zIndex: 1,
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+            gap: { xs: '40px', md: '80px' },
+            alignItems: 'center',
+          }}
+        >
               {/* Left: text */}
               <Box>
                 {/* Tagline pill — matches landing page "8% APY • live now" style */}
@@ -393,10 +386,7 @@ export const AboutHeader: React.FC = () => {
                   </Box>
                 </Box>
               </Box>
-            </Box>
-          </Box>
-
-        </Container>
+        </Box>
       </Box>
 
       {/* ── TrustedBy ── */}
@@ -404,7 +394,7 @@ export const AboutHeader: React.FC = () => {
         component="section"
         sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
       >
-        <Container maxWidth="xl">
+        <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
           {/* Header */}
           <Box sx={{ mb: '40px' }}>
             <Typography
@@ -512,7 +502,7 @@ export const AboutHeader: React.FC = () => {
               </Stack>
             ))}
           </Box>
-        </Container>
+        </Box>
       </Box>
     </>
   );

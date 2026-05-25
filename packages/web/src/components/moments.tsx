@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import { Box, Container, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 type ImageProps = {
   url?: string;
@@ -48,7 +48,7 @@ export const Moments: React.FC<MomentsProps> = (props) => {
       {...sectionProps}
       sx={{ bgcolor: '#FAFAFB', pt: { xs: '40px', md: '56px' }, pb: { xs: '80px', md: '110px' } }}
     >
-      <Container maxWidth="xl">
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
         {/* Header */}
         <Box mb={{ xs: '40px', md: '56px' }} sx={{ textAlign: 'center' }}>
           <Typography
@@ -133,7 +133,7 @@ export const Moments: React.FC<MomentsProps> = (props) => {
             </Box>
           ))}
         </Box>
-      </Container>
+      </Box>
     </Box>
   );
 };

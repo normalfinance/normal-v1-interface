@@ -8,7 +8,7 @@ import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
-import { Box, Container, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 type FeatureItem = {
   icon: React.ReactNode;
@@ -69,7 +69,7 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
       id="core-values"
       sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
     >
-      <Container maxWidth="xl">
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
         {/* Header */}
         <Box sx={{ mb: { xs: '48px', md: '64px' }, maxWidth: '640px' }}>
           <Typography
@@ -184,7 +184,7 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
             </Box>
           ))}
         </Box>
-      </Container>
+      </Box>
     </Box>
   );
 };

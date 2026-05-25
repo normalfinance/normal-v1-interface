@@ -8,7 +8,7 @@ import { cdn } from '@normalfinance/utils';
 import Link from '@mui/material/Link';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TelegramIcon from '@mui/icons-material/Telegram';
-import { Box, Container, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 type SocialLink = { href: string; icon: React.ReactNode };
 
@@ -61,7 +61,7 @@ export const Vision: React.FC = () => {
       id="our-vision"
       sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
     >
-      <Container maxWidth="xl">
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
         {/* Header */}
         <Box mb={{ xs: '40px', md: '56px' }}>
           <Typography
@@ -269,7 +269,7 @@ export const Vision: React.FC = () => {
             </Box>
           </Box>
         </Box>
-      </Container>
+      </Box>
     </Box>
   );
 };
