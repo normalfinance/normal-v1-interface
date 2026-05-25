@@ -280,9 +280,10 @@ export const AboutHeader: React.FC = () => {
                       <Box
                         sx={{
                           fontSize: '19px',
-                          fontWeight: 700,
+                          fontWeight: 400,
                           color: '#FFFFFF',
                           letterSpacing: '-0.02em',
+                          fontFamily: '"Geist Mono", "Courier New", monospace',
                         }}
                       >
                         {item.value}
@@ -337,10 +338,11 @@ export const AboutHeader: React.FC = () => {
                   <Box
                     sx={{
                       fontSize: '22px',
-                      fontWeight: 700,
+                      fontWeight: 400,
                       color: '#FFFFFF',
                       letterSpacing: '-0.03em',
                       lineHeight: 1,
+                      fontFamily: '"Geist Mono", "Courier New", monospace',
                     }}
                   >
                     $15,335.93
@@ -356,7 +358,7 @@ export const AboutHeader: React.FC = () => {
       {/* ── TrustedBy ── */}
       <Box
         component="section"
-        sx={{ bgcolor: '#FAFAFB', py: { xs: '64px', md: '96px' } }}
+        sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
       >
         <Container maxWidth="xl">
           {/* Header */}

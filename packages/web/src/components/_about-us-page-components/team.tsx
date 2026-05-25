@@ -284,7 +284,7 @@ export const Team: React.FC = () => {
       {/* ── Team grid ── */}
       <Box
         component="section"
-        sx={{ bgcolor: '#FAFAFB', py: { xs: '64px', md: '96px' } }}
+        sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
       >
         <Container maxWidth="xl">
           {/* Header */}

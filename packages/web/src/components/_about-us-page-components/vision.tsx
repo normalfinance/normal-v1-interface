@@ -59,7 +59,7 @@ export const Vision: React.FC = () => {
     <Box
       component="section"
       id="our-vision"
-      sx={{ bgcolor: '#FAFAFB', py: { xs: '64px', md: '96px' } }}
+      sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
     >
       <Container maxWidth="xl">
         {/* Header */}

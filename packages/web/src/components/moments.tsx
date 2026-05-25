@@ -46,7 +46,7 @@ export const Moments: React.FC<MomentsProps> = (props) => {
     <Box
       component="section"
       {...sectionProps}
-      sx={{ bgcolor: '#FAFAFB', py: { xs: '64px', md: '96px' } }}
+      sx={{ bgcolor: '#FAFAFB', pt: { xs: '40px', md: '56px' }, pb: { xs: '80px', md: '110px' } }}
     >
       <Container maxWidth="xl">
         {/* Header */}
@@ -112,6 +112,7 @@ export const Moments: React.FC<MomentsProps> = (props) => {
                 loading="lazy"
                 sx={{
                   width: '100%',
+                  aspectRatio: '1 / 1',
                   display: 'block',
                   objectFit: 'cover',
                   transition: 'transform 300ms ease',
