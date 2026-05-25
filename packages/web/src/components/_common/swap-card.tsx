@@ -14,24 +14,131 @@ import { getXlmToken, getTokenBalance, getSwapUsdcToken } from '@/utils/token-se
 
 import {
   Box,
-  Card,
-  Stack,
   Button,
-  TextField,
   Typography,
-  IconButton,
-  InputAdornment,
   CircularProgress,
 } from '@mui/material';
 
 import { useSnackbar } from '@/components/template/snackbar';
-
-import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
+import { WalletGate } from './wallet-gate';
 
 // ----------------------------------------------------------------------
 
 interface SwapCardProps extends CardProps {}
+
+// ----------------------------------------------------------------------
+
+const TokenRow: React.FC<{
+  label: string;
+  symbol: string;
+  iconKey: string;
+  balance: string;
+  value: string;
+  onChange?: (v: string) => void;
+  disabled?: boolean;
+  loading?: boolean;
+  error?: boolean;
+  onMax?: () => void;
+}> = ({ label, symbol, iconKey, balance, value, onChange, disabled, loading, error, onMax }) => (
+  <Box
+    sx={{
+      p: '16px',
+      borderRadius: '16px',
+      bgcolor: disabled ? '#F4F4F7' : '#FAFAFB',
+      border: '1px solid',
+      borderColor: error ? 'error.main' : 'rgba(10,10,15,0.08)',
+      transition: 'border-color 150ms ease',
+      ...(!disabled && { '&:focus-within': { borderColor: 'rgba(10,10,15,0.24)' } }),
+    }}
+  >
+    {/* Top row: label + balance */}
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '10px' }}>
+      <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        {label}
+      </Typography>
+      <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
+        Balance: <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>{parseFloat(balance).toFixed(4)}</Box> {symbol}
+      </Typography>
+    </Box>
+
+    {/* Bottom row: token pill + amount */}
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <Box
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          px: '12px',
+          py: '8px',
+          borderRadius: '100px',
+          bgcolor: '#FFFFFF',
+          border: '1px solid rgba(10,10,15,0.08)',
+          flexShrink: 0,
+        }}
+      >
+        <Iconify icon={iconKey} width={20} />
+        <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+          {symbol}
+        </Typography>
+      </Box>
+
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {loading ? (
+          <CircularProgress size={18} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+        ) : (
+          <Box
+            component="input"
+            type="number"
+            value={value}
+            onChange={onChange ? (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value) : undefined}
+            placeholder="0.00"
+            disabled={disabled}
+            sx={{
+              flex: 1,
+              border: 'none',
+              outline: 'none',
+              bgcolor: 'transparent',
+              fontSize: '24px',
+              fontWeight: 600,
+              color: disabled ? 'rgba(10,10,15,0.35)' : '#0A0A0F',
+              letterSpacing: '-0.02em',
+              fontFamily: '"Geist Mono", "Courier New", monospace',
+              width: '100%',
+              minWidth: 0,
+              '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
+              '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': { appearance: 'none' },
+            }}
+          />
+        )}
+        {onMax && (
+          <Box
+            component="button"
+            onClick={onMax}
+            sx={{
+              border: 'none',
+              bgcolor: 'rgba(10,10,15,0.06)',
+              color: '#0A0A0F',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              px: '8px',
+              py: '4px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              flexShrink: 0,
+              fontFamily: 'inherit',
+              transition: 'bgcolor 150ms ease',
+              '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+            }}
+          >
+            MAX
+          </Box>
+        )}
+      </Box>
+    </Box>
+  </Box>
+);
 
 // ----------------------------------------------------------------------
 
@@ -72,14 +179,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   const [amountIn, setAmountIn] = useState('');
   const debouncedAmountIn = useDebounce(amountIn, 500);
 
-  // Swap uses canonical Stellar USDC from the selected network config, not Blend USDC.
   const xlmBalance = getTokenBalance(getXlmToken(tokenState.tokens));
   const usdcBalance = getTokenBalance(getSwapUsdcToken(tokenState.tokens, config));
 
   const inputBalance = tokenIn === 'XLM' ? xlmBalance : usdcBalance;
   const outputBalance = tokenOut === 'XLM' ? xlmBalance : usdcBalance;
 
-  // Fetch quote when amount changes
   useEffect(() => {
     if (debouncedAmountIn && parseFloat(debouncedAmountIn) > 0) {
       getQuote(TOKENS[tokenIn].address, TOKENS[tokenOut].address, debouncedAmountIn);
@@ -88,16 +193,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
     }
   }, [debouncedAmountIn, tokenIn, tokenOut, getQuote, clearQuote]);
 
-  // Handle token swap direction
   const handleSwapDirection = useCallback(() => {
     setTokenIn(tokenOut);
     setTokenOut(tokenIn);
     setAmountIn(quote?.amountOut || '');
   }, [tokenIn, tokenOut, quote]);
 
-  // Handle max button
   const handleMax = useCallback(() => {
-    // Leave some XLM for fees if swapping XLM
     const maxAmount =
       tokenIn === 'XLM'
         ? Math.max(0, parseFloat(inputBalance) - 1).toFixed(7)
@@ -105,7 +207,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
     setAmountIn(maxAmount);
   }, [tokenIn, inputBalance]);
 
-  // Handle swap execution
   const handleSwap = useCallback(async () => {
     if (!quote) return;
     await executeSwap(quote, {
@@ -115,7 +216,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
     setAmountIn('');
   }, [quote, executeSwap, tokenIn, tokenOut]);
 
-  // Calculate exchange rate
   const exchangeRate =
     quote && parseFloat(quote.amountIn) > 0
       ? (parseFloat(quote.amountOut) / parseFloat(quote.amountIn)).toFixed(6)
@@ -123,7 +223,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
 
   const isInsufficientBalance = parseFloat(amountIn) > parseFloat(inputBalance);
   const needsAccountActivation = tokenOut === 'USDC' && !isCheckingAccount && !accountExists;
-  const needsTrustline = tokenOut === 'USDC' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
+  const needsTrustline =
+    tokenOut === 'USDC' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
 
   const handleAddTrustline = useCallback(async () => {
     const usdcIssuer = config.USDC_ISSUER;
@@ -138,174 +239,149 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   }, [addTrustLine, refetchAccountStatus, enqueueSnackbar, t]);
 
   return (
-    <Card
+    <Box
       sx={{
-        p: 3,
-        borderRadius: 2,
-        bgcolor: 'background.paper',
+        p: '22px',
+        borderRadius: '22px',
+        border: '1px solid rgba(10,10,15,0.08)',
+        bgcolor: '#FFFFFF',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.04)',
         ...other.sx,
       }}
-      {...other}
     >
-      <Typography variant="h6" sx={{ mb: 3 }}>
-        {t('Swap')}
+      {/* Header */}
+      <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', mb: '4px' }}>
+        {t('Swap tokens')}
+      </Typography>
+      <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mb: '20px' }}>
+        {t('Exchange XLM and USDC instantly with the best rates.')}
       </Typography>
 
-      <Stack spacing={2}>
-        {/* Input Token */}
-        <Box>
-          <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('From')}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {t('Balance')}: {parseFloat(inputBalance).toFixed(4)} {tokenIn}
-            </Typography>
-          </Stack>
-          <TextField
-            fullWidth
-            type="number"
-            value={amountIn}
-            onChange={(e) => setAmountIn(e.target.value)}
-            placeholder="0.00"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Iconify icon={TOKENS[tokenIn].icon} width={24} />
-                    <Typography variant="subtitle2">{tokenIn}</Typography>
-                  </Stack>
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Button size="small" onClick={handleMax} sx={{ minWidth: 'auto' }}>
-                    {t('MAX')}
-                  </Button>
-                </InputAdornment>
-              ),
-            }}
-            error={isInsufficientBalance}
-            helperText={isInsufficientBalance ? t('Insufficient balance') : ''}
-          />
-        </Box>
+      {/* You pay */}
+      <TokenRow
+        label={t('You pay')}
+        symbol={tokenIn}
+        iconKey={TOKENS[tokenIn].icon}
+        balance={inputBalance}
+        value={amountIn}
+        onChange={setAmountIn}
+        error={isInsufficientBalance}
+        onMax={handleMax}
+      />
 
-        {/* Swap Direction Button */}
-        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-          <IconButton
-            onClick={handleSwapDirection}
-            sx={{
-              bgcolor: 'action.hover',
-              '&:hover': { bgcolor: 'action.selected' },
-            }}
-          >
-            <Iconify icon="solar:transfer-vertical-bold" />
-          </IconButton>
+      {/* Swap direction button */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: '8px' }}>
+        <Box
+          component="button"
+          onClick={handleSwapDirection}
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: '10px',
+            border: '1px solid rgba(10,10,15,0.08)',
+            bgcolor: '#FAFAFB',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#0A0A0F',
+            transition: 'all 150ms ease',
+            '&:hover': { bgcolor: '#F4F4F7', borderColor: 'rgba(10,10,15,0.16)' },
+          }}
+        >
+          <Iconify icon="solar:transfer-vertical-bold" width={18} />
         </Box>
+      </Box>
 
-        {/* Output Token */}
-        <Box>
-          <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('To')}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {t('Balance')}: {parseFloat(outputBalance).toFixed(4)} {tokenOut}
-            </Typography>
-          </Stack>
-          <TextField
-            fullWidth
-            type="number"
-            value={quoteLoading ? '...' : quote?.amountOut || ''}
-            placeholder="0.00"
-            disabled
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Iconify icon={TOKENS[tokenOut].icon} width={24} />
-                    <Typography variant="subtitle2">{tokenOut}</Typography>
-                  </Stack>
-                </InputAdornment>
-              ),
-              endAdornment: quoteLoading ? (
-                <InputAdornment position="end">
-                  <CircularProgress size={20} />
-                </InputAdornment>
-              ) : null,
-            }}
-          />
-        </Box>
+      {/* You receive */}
+      <TokenRow
+        label={t('You receive')}
+        symbol={tokenOut}
+        iconKey={TOKENS[tokenOut].icon}
+        balance={outputBalance}
+        value={quoteLoading ? '' : quote?.amountOut || ''}
+        disabled
+        loading={quoteLoading}
+      />
 
-        {/* Exchange Rate + Fee Breakdown */}
-        {quote && parseFloat(quote.amountIn) > 0 && (
-          <Box
-            sx={{
-              px: 1.5,
-              py: 1,
-              borderRadius: 1,
-              bgcolor: 'action.hover',
-            }}
-          >
-            <Stack spacing={0.5}>
-              {exchangeRate && (
-                <Typography variant="caption" color="text.secondary">
-                  1 {tokenIn} = {exchangeRate} {tokenOut}
-                </Typography>
-              )}
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="caption" color="text.secondary">
-                  {t('Normal fee (0.5%)')}
-                </Typography>
-                <Typography variant="caption" fontWeight="medium">
-                  -{parseFloat(quote.fee || '0').toFixed(4)} {tokenIn}
-                </Typography>
-              </Stack>
-              <Typography variant="caption" color="text.secondary">
-                {t("You'll sign two transactions: the Normal fee and your swap.")}
+      {/* Rate + fee info */}
+      {quote && parseFloat(quote.amountIn) > 0 && (
+        <Box
+          sx={{
+            mt: '12px',
+            p: '12px 14px',
+            borderRadius: '12px',
+            bgcolor: '#FAFAFB',
+            border: '1px solid rgba(10,10,15,0.06)',
+          }}
+        >
+          {exchangeRate && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '6px' }}>
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                {t('Rate')}
               </Typography>
-            </Stack>
+              <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
+                1 {tokenIn} = {exchangeRate} {tokenOut}
+              </Typography>
+            </Box>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '6px' }}>
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+              {t('Normal fee (0.5%)')}
+            </Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
+              -{parseFloat(quote.fee || '0').toFixed(4)} {tokenIn}
+            </Typography>
           </Box>
-        )}
-
-        {/* Error Display */}
-        {error && (
-          <Typography variant="caption" color="error.main">
-            {error}
+          <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.5 }}>
+            {t("You'll sign two transactions: the Normal fee and your swap.")}
           </Typography>
-        )}
+        </Box>
+      )}
 
-        {/* Swap Button */}
+      {/* Error */}
+      {error && (
+        <Typography sx={{ fontSize: '12px', color: 'error.main', mt: '8px' }}>
+          {error}
+        </Typography>
+      )}
+
+      {/* Action */}
+      <Box sx={{ mt: '16px' }}>
         <WalletGate buttonText={t('Connect wallet to swap')} fullWidth variant="contained">
           {needsAccountActivation ? (
-            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-              {t(
-                'Fund this account with at least 1 XLM to activate Stellar before adding a USDC trustline.'
-              )}
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', px: 1 }}>
+              {t('Fund this account with at least 1 XLM to activate Stellar before adding a USDC trustline.')}
             </Typography>
           ) : needsTrustline ? (
-            <Stack spacing={1}>
-              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+            <Box>
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mb: '10px' }}>
                 {t('A USDC trustline is required before swapping to USDC')}
               </Typography>
               <Button
                 variant="contained"
-                color="primary"
                 fullWidth
                 size="large"
                 disabled={isAddingTrustline}
                 onClick={handleAddTrustline}
-                startIcon={
-                  isAddingTrustline ? <CircularProgress size={20} color="inherit" /> : null
-                }
+                startIcon={isAddingTrustline ? <CircularProgress size={18} color="inherit" /> : null}
+                sx={{
+                  borderRadius: '12px',
+                  bgcolor: '#0A0A0F',
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  py: '13px',
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: '#1a1a25' },
+                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+                }}
               >
                 {isAddingTrustline ? t('Adding Trustline...') : t('Add USDC Trustline')}
               </Button>
-            </Stack>
+            </Box>
           ) : (
             <Button
               variant="contained"
-              color="primary"
               fullWidth
               size="large"
               disabled={
@@ -318,20 +394,31 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
                 parseFloat(amountIn) <= 0
               }
               onClick={handleSwap}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
+              sx={{
+                borderRadius: '12px',
+                bgcolor: '#0A0A0F',
+                fontWeight: 700,
+                fontSize: '15px',
+                py: '13px',
+                textTransform: 'none',
+                letterSpacing: '-0.01em',
+                '&:hover': { bgcolor: '#1a1a25' },
+                '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+              }}
             >
               {loading
                 ? t('Swapping...')
                 : isInsufficientBalance
                   ? t('Insufficient balance')
                   : !amountIn || parseFloat(amountIn) <= 0
-                    ? t('Enter amount')
+                    ? t('Enter an amount')
                     : t('Swap')}
             </Button>
           )}
         </WalletGate>
-      </Stack>
-    </Card>
+      </Box>
+    </Box>
   );
 };
 
