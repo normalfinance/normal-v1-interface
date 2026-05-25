@@ -8,22 +8,34 @@ import { supabase } from '@/lib/createSupabaseClient';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import Switch from '@mui/material/Switch';
-import Divider from '@mui/material/Divider';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
-import CardContent from '@mui/material/CardContent';
-import { alpha, useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
+// ----------------------------------------------------------------------
+
+const CardBox = ({ children }: { children: React.ReactNode }) => (
+  <Box
+    sx={{
+      p: '22px',
+      borderRadius: '22px',
+      border: '1px solid rgba(10,10,15,0.08)',
+      bgcolor: '#FFFFFF',
+    }}
+  >
+    {children}
+  </Box>
+);
+
+// ----------------------------------------------------------------------
+
 export function SettingsGeneral() {
   const { t } = useTranslate();
-  const theme = useTheme();
   const { session } = useSupabaseAuth();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -88,115 +100,124 @@ export function SettingsGeneral() {
   };
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2}>
       {/* Profile card */}
-      <Card>
-        <CardContent>
-          <Stack spacing={3}>
-            <Stack direction="row" spacing={2.5} alignItems="center">
-              <Avatar src={userAvatar} alt={displayName} sx={{ width: 72, height: 72 }} />
-              <Stack spacing={0.5}>
-                <Typography variant="h6">{displayName}</Typography>
-                <Typography variant="body2" color="text.secondary">{userEmail}</Typography>
-              </Stack>
-            </Stack>
+      <CardBox>
+        {/* Avatar + name */}
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: '20px' }}>
+          <Avatar src={userAvatar} alt={displayName} sx={{ width: 64, height: 64 }} />
+          <Box>
+            <Typography sx={{ fontSize: '16px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+              {displayName}
+            </Typography>
+            <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '2px' }}>
+              {userEmail}
+            </Typography>
+          </Box>
+        </Stack>
 
-            <Divider />
+        <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mb: '20px' }} />
 
-            <Stack spacing={1.5}>
-              <Row label={t('Display name')} value={displayName} />
-              <Row label={t('Email')} value={userEmail} />
-              <Row label={t('Account created')} value={createdAt} />
-              <Row
-                label={t('Auth provider')}
-                value={authProvider.charAt(0).toUpperCase() + authProvider.slice(1)}
-              />
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
+        {/* Details rows */}
+        <Stack spacing={0}>
+          <InfoRow label={t('Display name')} value={displayName} />
+          <InfoRow label={t('Email')} value={userEmail} />
+          <InfoRow label={t('Account created')} value={createdAt} />
+          <InfoRow
+            label={t('Auth provider')}
+            value={authProvider.charAt(0).toUpperCase() + authProvider.slice(1)}
+            last
+          />
+        </Stack>
+      </CardBox>
 
       {/* Notifications card */}
-      <Card>
-        <CardContent>
-          <Stack spacing={2}>
-            <Typography variant="subtitle1" fontWeight={600}>{t('Notifications')}</Typography>
+      <CardBox>
+        <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F', mb: '16px' }}>
+          {t('Notifications')}
+        </Typography>
 
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            p: '14px 16px',
+            borderRadius: '14px',
+            bgcolor: '#FAFAFB',
+            border: '1px solid rgba(10,10,15,0.08)',
+            gap: '12px',
+          }}
+        >
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+            <Box
               sx={{
-                p: 2,
-                borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
-                bgcolor: marketingOptIn
-                  ? alpha(theme.palette.primary.main, 0.04)
-                  : 'transparent',
-                transition: 'background-color 0.2s',
+                width: 38,
+                height: 38,
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: marketingOptIn ? 'rgba(10,10,15,0.08)' : 'rgba(10,10,15,0.04)',
+                flexShrink: 0,
+                transition: 'background 200ms ease',
               }}
             >
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 1.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: marketingOptIn
-                      ? alpha(theme.palette.primary.main, 0.12)
-                      : alpha(theme.palette.text.primary, 0.06),
-                    transition: 'background-color 0.2s',
-                  }}
-                >
-                  <Iconify
-                    icon="solar:mailbox-bold"
-                    width={22}
-                    sx={{
-                      color: marketingOptIn ? 'primary.main' : 'text.secondary',
-                      transition: 'color 0.2s',
-                    }}
-                  />
+              <Iconify
+                icon="solar:mailbox-bold"
+                width={20}
+                sx={{ color: marketingOptIn ? '#0A0A0F' : 'rgba(10,10,15,0.35)', transition: 'color 200ms ease' }}
+              />
+            </Box>
+
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
+                {t('Product updates')}
+              </Typography>
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', mt: '2px', lineHeight: 1.4 }}>
+                {t('New features and announcements sent to')}{' '}
+                <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 500 }}>
+                  {userEmail}
                 </Box>
-
-                <Stack spacing={0.25}>
-                  <Typography variant="body2" fontWeight={500}>
-                    {t('Product updates')}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {t('New features, improvements, and announcements sent to')}{' '}
-                    <Typography component="span" variant="caption" fontWeight={500} color="text.primary">
-                      {userEmail}
-                    </Typography>
-                  </Typography>
-                </Stack>
-              </Stack>
-
-              {isFetchingOptIn ? (
-                <Skeleton variant="rounded" width={44} height={24} sx={{ borderRadius: 3, flexShrink: 0 }} />
-              ) : (
-                <Switch
-                  checked={marketingOptIn}
-                  onChange={(e) => handleMarketingToggle(e.target.checked)}
-                  disabled={isSaving}
-                  sx={{ flexShrink: 0 }}
-                />
-              )}
-            </Stack>
+              </Typography>
+            </Box>
           </Stack>
-        </CardContent>
-      </Card>
+
+          {isFetchingOptIn ? (
+            <Skeleton variant="rounded" width={44} height={24} sx={{ borderRadius: '12px', flexShrink: 0 }} />
+          ) : (
+            <Switch
+              checked={marketingOptIn}
+              onChange={(e) => handleMarketingToggle(e.target.checked)}
+              disabled={isSaving}
+              sx={{
+                flexShrink: 0,
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#0A0A0F',
+                  '& + .MuiSwitch-track': { bgcolor: '#0A0A0F' },
+                },
+              }}
+            />
+          )}
+        </Box>
+      </CardBox>
     </Stack>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="center">
-      <Typography variant="body2" color="text.secondary">{label}</Typography>
-      <Typography variant="body2">{value}</Typography>
-    </Stack>
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        py: '12px',
+        borderBottom: last ? 'none' : '1px solid rgba(10,10,15,0.06)',
+      }}
+    >
+      <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)' }}>{label}</Typography>
+      <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>{value}</Typography>
+    </Box>
   );
 }
