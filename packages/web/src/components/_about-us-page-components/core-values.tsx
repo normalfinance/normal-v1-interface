@@ -2,12 +2,16 @@
 
 import React from 'react';
 import { useTranslate } from '@/locales';
-import { cdn } from '@normalfinance/utils';
 
+import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
 import { Box, Container, Typography } from '@mui/material';
 
 type FeatureItem = {
-  icon: { src: string; alt: string };
+  icon: React.ReactNode;
   heading: string;
   description: string;
 };
@@ -23,29 +27,29 @@ export const CoreValuesDefaults: Props = {
   heading: 'Core Values',
   features: [
     {
-      icon: { src: cdn('about-page/i1.svg'), alt: 'Icon 1' },
+      icon: <PeopleAltOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Keep Crypto Human',
-      description: 'Remove complexity, speak plainly, and design for real people — not power users. Every screen, every error message, and every transaction should be explainable in a single sentence. If your parents can\'t use it, we\'re not done.',
+      description: "Remove complexity, speak plainly, and design for real people — not power users. Every screen, every error message, and every transaction should be explainable in a single sentence. If your parents can't use it, we're not done.",
     },
     {
-      icon: { src: cdn('about-page/i2.svg'), alt: 'Icon 2' },
+      icon: <VerifiedUserOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Security First',
-      description: 'Audited contracts, battle-tested code, and 24/7 monitoring on every deployment. Halborn reviews every release before it touches mainnet. We treat your savings with the same seriousness you do — because cutting corners on security isn\'t a tradeoff, it\'s a failure.',
+      description: "Audited contracts, battle-tested code, and 24/7 monitoring on every deployment. Halborn reviews every release before it touches mainnet. We treat your savings with the same seriousness you do — because cutting corners on security isn't a tradeoff, it's a failure.",
     },
     {
-      icon: { src: cdn('about-page/i3.svg'), alt: 'Icon 3' },
+      icon: <CodeOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Permissionless Innovation',
       description: 'Build composable primitives that anyone can extend, fork, or build on top of. Open SDK, public smart contracts, MIT-licensed components. We believe the best financial infrastructure is infrastructure no single company controls.',
     },
     {
-      icon: { src: cdn('about-page/i4.svg'), alt: 'Icon 4' },
+      icon: <GroupsOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Community Ownership',
-      description: 'NORM token holders create and vote on every proposal that shapes the protocol. No backroom decisions, no surprise upgrades. The roadmap belongs to the people using the product — we\'re here to build what the community decides.',
+      description: "NORM token holders create and vote on every proposal that shapes the protocol. No backroom decisions, no surprise upgrades. The roadmap belongs to the people using the product — we're here to build what the community decides.",
     },
     {
-      icon: { src: cdn('about-page/i5.svg'), alt: 'Icon 5' },
+      icon: <InsightsOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Data > Hype',
-      description: 'Let on-chain metrics guide every product decision. We don\'t ship features because they\'re trending — we ship them because usage data says users need them. Hype fades. Real yield, real volume, and real retention don\'t.',
+      description: "Let on-chain metrics guide every product decision. We don't ship features because they're trending — we ship them because usage data says users need them. Hype fades. Real yield, real volume, and real retention don't.",
     },
   ],
 };
@@ -105,14 +109,14 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
           </Typography>
         </Box>
 
-        {/* Numbered editorial list */}
+        {/* List */}
         <Box>
-          {features.map((feature, i) => (
+          {features.map((feature) => (
             <Box
               key={feature.heading}
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: '56px 1fr 1fr' },
+                gridTemplateColumns: { xs: '1fr', sm: '48px 1fr 1fr' },
                 gap: { xs: '6px', sm: '40px' },
                 alignItems: 'start',
                 py: { xs: '24px', md: '32px' },
@@ -120,18 +124,35 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
                 '&:last-child': { borderBottom: '1px solid rgba(10,10,15,0.07)' },
               }}
             >
-              {/* Number */}
+              {/* Icon */}
               <Box
                 sx={{
-                  fontFamily: '"Geist Mono", "Courier New", monospace',
-                  fontSize: '18px',
-                  fontWeight: 500,
-                  color: 'rgba(10,10,15,0.25)',
-                  letterSpacing: '0.06em',
-                  pt: { xs: 0, sm: '5px' },
+                  width: 48,
+                  height: 48,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: '#FFFFFF',
+                  border: '1px solid rgba(10,10,15,0.08)',
+                  borderRadius: '10px',
+                  mt: { xs: 0, sm: '2px' },
+                  boxShadow: '0 1px 4px rgba(10,10,15,0.06)',
                 }}
               >
-                {String(i + 1).padStart(2, '0')}
+                <Box
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(10,10,15,0.05)',
+                    borderRadius: '6px',
+                  }}
+                >
+                  {feature.icon}
+                </Box>
               </Box>
 
               {/* Heading */}
@@ -142,6 +163,7 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
                   color: '#0A0A0F',
                   letterSpacing: '-0.02em',
                   lineHeight: 1.3,
+                  pt: { xs: 0, sm: '7px' },
                 }}
               >
                 {t(feature.heading)}
@@ -153,6 +175,7 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
                   fontSize: '16px',
                   color: '#6B6B76',
                   lineHeight: 1.55,
+                  pt: { xs: 0, sm: '7px' },
                 }}
               >
                 {t(feature.description)}
