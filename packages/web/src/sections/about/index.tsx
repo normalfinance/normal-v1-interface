@@ -11,8 +11,9 @@ const AboutUsView: React.FC = () => (
   <>
     <AboutHeader />
     <CoreValues />
-    <Vision />
+    
     <Team />
+    <Vision />
     <Moments />
     <CtaImage />
   </>

@@ -180,34 +180,40 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
     sx={{
       display: 'flex',
       flexDirection: 'column',
+      bgcolor: '#FFFFFF',
+      border: '1px solid rgba(10,10,15,0.08)',
+      borderRadius: '20px',
+      overflow: 'hidden',
+      boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.05)',
     }}
   >
     {/* Photo */}
-    <Box
-      sx={{
-        position: 'relative',
-        overflow: 'hidden',
-        aspectRatio: '4 / 5',
-        borderRadius: '18px',
-        mb: '16px',
-      }}
-    >
+    <Box sx={{ p: '12px', pb: 0 }}>
       <Box
-        component="img"
-        src={member.image}
-        alt={member.name}
         sx={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'top',
-          display: 'block',
+          position: 'relative',
+          overflow: 'hidden',
+          aspectRatio: '4 / 5',
+          borderRadius: '12px',
         }}
-      />
+      >
+        <Box
+          component="img"
+          src={member.image}
+          alt={member.name}
+          sx={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'top',
+            display: 'block',
+          }}
+        />
+      </Box>
     </Box>
 
     {/* Info */}
-    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: '18px' }}>
       <Typography
         sx={{
           fontSize: '18px',
@@ -330,7 +336,8 @@ export const Team: React.FC = () => {
             sx={{
               display: 'grid',
               gridTemplateColumns: {
-                xs: '1fr 1fr',
+                xs: '1fr',
+                sm: '1fr 1fr',
                 md: 'repeat(4, 1fr)',
               },
               gap: { xs: '24px', md: '32px' },

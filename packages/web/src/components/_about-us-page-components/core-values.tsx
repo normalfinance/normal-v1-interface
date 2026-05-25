@@ -137,6 +137,7 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
                   border: '1px solid rgba(10,10,15,0.08)',
                   borderRadius: '10px',
                   mt: { xs: 0, sm: '2px' },
+                  mb: { xs: '16px', sm: 0 },
                   boxShadow: '0 1px 4px rgba(10,10,15,0.06)',
                 }}
               >
