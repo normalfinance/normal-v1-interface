@@ -180,10 +180,6 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
     sx={{
       display: 'flex',
       flexDirection: 'column',
-      transition: 'transform 200ms ease',
-      '&:hover': {
-        transform: 'translateY(-4px)',
-      },
     }}
   >
     {/* Photo */}
@@ -335,7 +331,7 @@ export const Team: React.FC = () => {
               display: 'grid',
               gridTemplateColumns: {
                 xs: '1fr 1fr',
-                md: 'repeat(3, 1fr)',
+                md: 'repeat(4, 1fr)',
               },
               gap: { xs: '24px', md: '32px' },
             }}

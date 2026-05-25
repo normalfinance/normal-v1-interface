@@ -424,6 +424,8 @@ export const AboutHeader: React.FC = () => {
                   px: { xs: '16px', sm: '28px', md: '40px' },
                   py: { xs: '24px', md: '36px' },
                   textDecoration: 'none',
+                  transition: 'background 150ms ease',
+                  '&:hover': { bgcolor: 'rgba(10,10,15,0.03)', textDecoration: 'none' },
                   borderRight: {
                     xs: i % 2 === 0 ? '1px solid rgba(10,10,15,0.06)' : 'none',
                     sm: i % 3 !== 2 ? '1px solid rgba(10,10,15,0.06)' : 'none',
@@ -458,7 +460,7 @@ export const AboutHeader: React.FC = () => {
                     maxWidth: { xs: '80px', md: '140px' },
                     objectFit: 'contain',
                     filter: 'brightness(0)',
-                    opacity: 0.5,
+                    opacity: 0.85,
                   }}
                 />
               </Stack>

@@ -50,49 +50,38 @@ export const Moments: React.FC<MomentsProps> = (props) => {
     >
       <Container maxWidth="xl">
         {/* Header */}
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            alignItems: { md: 'flex-end' },
-            justifyContent: 'space-between',
-            gap: '24px',
-            mb: { xs: '40px', md: '56px' },
-          }}
-        >
-          <Box>
-            <Typography
-              sx={{
-                fontSize: '11px',
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-                color: '#6B6B76',
-                mb: 1.5,
-              }}
-            >
-              — Culture
-            </Typography>
-            <Typography
-              component="h2"
-              sx={{
-                fontWeight: 500,
-                fontSize: 'clamp(32px, 4vw, 52px)',
-                lineHeight: 1.15,
-                letterSpacing: '-0.03em',
-                color: '#0A0A0F',
-              }}
-            >
-              {t(heading)}
-              {' '}
-              <Box component="span" sx={{ color: '#E53935' }}>♥</Box>
-            </Typography>
-          </Box>
+        <Box mb={{ xs: '40px', md: '56px' }} sx={{ textAlign: 'center' }}>
+          <Typography
+            sx={{
+              fontSize: '11px',
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: '#6B6B76',
+              mb: 1.5,
+            }}
+          >
+            — Culture
+          </Typography>
+          <Typography
+            component="h2"
+            sx={{
+              fontWeight: 500,
+              fontSize: 'clamp(32px, 4vw, 52px)',
+              lineHeight: 1.15,
+              letterSpacing: '-0.03em',
+              color: '#0A0A0F',
+              mb: '16px',
+            }}
+          >
+            {t(heading)}
+          </Typography>
           <Typography
             sx={{
               fontSize: '16px',
               color: '#6B6B76',
               lineHeight: 1.55,
-              maxWidth: '420px',
+              maxWidth: '520px',
+              mx: 'auto',
             }}
           >
             {t(description)}

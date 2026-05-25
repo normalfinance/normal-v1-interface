@@ -18,7 +18,8 @@ type Founder = {
   role: string;
   quote: string;
   bio: string;
-  stats: { label: string; value: string }[];
+  extraBio: string;
+  stat: { label: string; value: string };
   socialLinks: SocialLink[];
 };
 
@@ -32,11 +33,9 @@ const FOUNDER: Founder = {
   role: 'Founder & CEO',
   quote:
     "We're not building a wallet. We're building the bank account most people wish they already had.",
-  bio: 'Justin formerly designed products at Bitcoin of America and CoinFlip, has invested in crypto for 7+ years, and holds a BS in Learning & Organizational Change from Northwestern.',
-  stats: [
-    { label: 'Years in crypto', value: '7+' },
-    { label: 'Companies built', value: '3' },
-  ],
+  bio: 'Justin formerly designed products at Bitcoin of America and CoinFlip — two of the largest crypto ATM and exchange networks in the US. He has invested in crypto for 7+ years and holds a BS in Learning & Organizational Change from Northwestern University.',
+  extraBio: 'He started Normal after realising that DeFi\'s best yields were locked behind interfaces built for traders, not everyday savers. His goal is simple: take the complexity out of on-chain finance and put real, sustainable yield in the hands of anyone with a phone.',
+  stat: { label: 'Years in crypto', value: '7+' },
   socialLinks: [
     {
       href: 'https://x.com/justinbenjaminn',
@@ -74,7 +73,7 @@ export const Vision: React.FC = () => {
               mb: 1.5,
             }}
           >
-            — Our Founders
+            — Our Founder
           </Typography>
           <Typography
             component="h2"
@@ -87,7 +86,7 @@ export const Vision: React.FC = () => {
               mb: '16px',
             }}
           >
-            {t('Our Founders')}
+            {t('Our Founder')}
           </Typography>
           <Typography
             sx={{
@@ -97,7 +96,7 @@ export const Vision: React.FC = () => {
               maxWidth: '520px',
             }}
           >
-            {t('The people behind the vision — building the savings account crypto always deserved.')}
+            {t('The person behind the vision — building the savings account crypto always deserved.')}
           </Typography>
         </Box>
 
@@ -107,11 +106,11 @@ export const Vision: React.FC = () => {
             bgcolor: '#FFFFFF',
             border: '1px solid rgba(10,10,15,0.08)',
             borderRadius: '22px',
-            p: { xs: '24px', md: '32px' },
+            p: { xs: '20px', md: '28px' },
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '1fr 1.3fr' },
-            gap: { xs: '28px', md: '40px' },
-            alignItems: 'start',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1.4fr' },
+            gap: { xs: '24px', md: '48px' },
+            alignItems: 'stretch',
             boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 32px rgba(10,10,15,0.06)',
           }}
         >
@@ -122,34 +121,34 @@ export const Vision: React.FC = () => {
             alt={FOUNDER.name}
             sx={{
               width: '100%',
-              minHeight: { xs: '240px', md: '380px' },
+              minHeight: { xs: '260px', md: '440px' },
               height: '100%',
               objectFit: 'cover',
               objectPosition: 'top',
-              borderRadius: '16px',
+              borderRadius: '14px',
               display: 'block',
             }}
           />
 
           {/* Content */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '22px', py: { md: '8px' } }}>
             {/* Name + role */}
             <Box>
               <Typography
                 sx={{
-                  fontSize: '28px',
+                  fontSize: '32px',
                   fontWeight: 500,
                   color: '#0A0A0F',
-                  letterSpacing: '-0.025em',
-                  lineHeight: 1.2,
-                  mb: '4px',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.1,
+                  mb: '6px',
                 }}
               >
                 {FOUNDER.name}
               </Typography>
               <Typography
                 sx={{
-                  fontSize: '14px',
+                  fontSize: '15px',
                   color: '#6B6B76',
                   fontWeight: 400,
                 }}
@@ -163,13 +162,13 @@ export const Vision: React.FC = () => {
               component="blockquote"
               sx={{
                 m: 0,
-                pl: '16px',
+                pl: '18px',
                 borderLeft: '3px solid #0A0A0F',
               }}
             >
               <Typography
                 sx={{
-                  fontSize: '17px',
+                  fontSize: '18px',
                   fontWeight: 500,
                   color: '#0A0A0F',
                   lineHeight: 1.5,
@@ -183,80 +182,90 @@ export const Vision: React.FC = () => {
             {/* Bio */}
             <Typography
               sx={{
-                fontSize: '14.5px',
+                fontSize: '15px',
                 color: '#2A2A33',
-                lineHeight: 1.6,
+                lineHeight: 1.65,
               }}
             >
               {FOUNDER.bio}
             </Typography>
 
-            {/* Stats */}
+            {/* Extra bio */}
+            <Typography
+              sx={{
+                fontSize: '15px',
+                color: '#2A2A33',
+                lineHeight: 1.65,
+              }}
+            >
+              {FOUNDER.extraBio}
+            </Typography>
+
+            {/* Stat + socials row */}
             <Box
               sx={{
                 display: 'flex',
-                gap: '28px',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 pt: '20px',
                 borderTop: '1px solid rgba(10,10,15,0.07)',
+                mt: 'auto',
               }}
             >
-              {FOUNDER.stats.map((stat) => (
-                <Box key={stat.label}>
-                  <Typography
-                    sx={{
-                      fontSize: '24px',
-                      fontWeight: 600,
-                      color: '#0A0A0F',
-                      letterSpacing: '-0.03em',
-                      lineHeight: 1,
-                      mb: '4px',
-                    }}
-                  >
-                    {stat.value}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: '11px',
-                      fontWeight: 500,
-                      color: '#6B6B76',
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {stat.label}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-
-            {/* Social icons */}
-            <Box sx={{ display: 'flex', gap: '8px' }}>
-              {FOUNDER.socialLinks.map((link, idx) => (
-                <Link
-                  key={idx}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              <Box>
+                <Typography
                   sx={{
-                    width: 30,
-                    height: 30,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: '#F4F4F7',
-                    borderRadius: '8px',
+                    fontSize: '28px',
+                    fontWeight: 600,
                     color: '#0A0A0F',
-                    transition: 'bgcolor 120ms ease, color 120ms ease',
-                    '&:hover': {
-                      bgcolor: '#0A0A0F',
-                      color: '#fff',
-                      '& svg': { color: '#fff !important' },
-                    },
+                    letterSpacing: '-0.03em',
+                    lineHeight: 1,
+                    mb: '4px',
                   }}
                 >
-                  {link.icon}
-                </Link>
-              ))}
+                  {FOUNDER.stat.value}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    color: '#6B6B76',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {FOUNDER.stat.label}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: '8px' }}>
+                {FOUNDER.socialLinks.map((link, idx) => (
+                  <Link
+                    key={idx}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: '#F4F4F7',
+                      borderRadius: '8px',
+                      color: '#0A0A0F',
+                      transition: 'bgcolor 120ms ease, color 120ms ease',
+                      '&:hover': {
+                        bgcolor: '#0A0A0F',
+                        color: '#fff',
+                        '& svg': { color: '#fff !important' },
+                      },
+                    }}
+                  >
+                    {link.icon}
+                  </Link>
+                ))}
+              </Box>
             </Box>
           </Box>
         </Box>
