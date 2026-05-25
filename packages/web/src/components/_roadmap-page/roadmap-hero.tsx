@@ -1,13 +1,19 @@
 'use client';
 
 import React from 'react';
-import { paths } from '@/routes/paths';
 import { Box, Typography } from '@mui/material';
 
 const GRADIENT =
   'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)';
 
-export const CtaCommunity: React.FC = () => (
+const META = [
+  { label: 'Shipped', value: '6' },
+  { label: 'In progress', value: '3' },
+  { label: 'Planned', value: '5' },
+  { label: 'Next ship', value: 'June 2026' },
+];
+
+export const RoadmapHero: React.FC = () => (
   <Box
     component="section"
     sx={{
@@ -15,9 +21,8 @@ export const CtaCommunity: React.FC = () => (
       overflow: 'hidden',
       bgcolor: '#0A0A0F',
       pt: { xs: '80px', md: '110px' },
-      pb: { xs: '80px', md: '120px' },
-      textAlign: 'center',
-      isolation: 'isolate',
+      pb: { xs: '64px', md: '96px' },
+      color: '#fff',
     }}
   >
     {/* Multi-colour glow */}
@@ -54,16 +59,9 @@ export const CtaCommunity: React.FC = () => (
       }}
     />
 
-    <Box
-      sx={{
-        position: 'relative',
-        zIndex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}
-    >
-      {/* Pill */}
+    {/* Content */}
+    <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3, position: 'relative', zIndex: 1 }}>
+      {/* Live pill */}
       <Box
         sx={{
           display: 'inline-flex',
@@ -77,7 +75,7 @@ export const CtaCommunity: React.FC = () => (
           fontSize: '13px',
           fontWeight: 500,
           color: 'rgba(255,255,255,0.85)',
-          mb: '18px',
+          mb: '22px',
         }}
       >
         <Box
@@ -89,23 +87,21 @@ export const CtaCommunity: React.FC = () => (
             boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
           }}
         />
-        Join the community
+        Roadmap · updated weekly
       </Box>
 
       <Typography
-        component="h2"
+        component="h1"
         sx={{
           fontWeight: 500,
-          fontSize: { xs: '2.75rem', sm: '3.5rem', md: 'clamp(44px, 6vw, 80px)' },
-          lineHeight: 1.04,
+          fontSize: { xs: '3rem', sm: '4.5rem', md: '6rem', lg: '7rem' },
+          lineHeight: 1.0,
           letterSpacing: '-0.04em',
+          mb: '22px',
           color: '#fff',
-          mx: 'auto',
-          mt: 0,
-          mb: 0,
         }}
       >
-        Help us achieve{' '}
+        Where we're headed{' '}
         <Box
           component="span"
           sx={{
@@ -113,85 +109,66 @@ export const CtaCommunity: React.FC = () => (
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
+            display: 'inline-block',
+            pb: '0.08em',
           }}
         >
-          our mission.
+          next.
         </Box>
       </Typography>
 
       <Typography
         sx={{
-          fontSize: '16px',
-          color: 'rgba(255,255,255,0.65)',
-          lineHeight: 1.6,
+          fontSize: '17px',
+          color: 'rgba(255,255,255,0.7)',
+          lineHeight: 1.55,
           maxWidth: '540px',
-          mt: '18px',
+          mb: '48px',
         }}
       >
-        Every milestone on this page is shaped by feedback from real users. Tell us what to build
-        next.
+        Most people earn next to nothing on their savings. Normal is built to change that —
+        starting with a USDC savings account that pays real yield, with no bank in the middle.
       </Typography>
 
+      {/* Meta row */}
       <Box
         sx={{
-          display: 'flex',
-          gap: '10px',
-          mt: '30px',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
+          pt: '30px',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          display: 'grid',
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+          gap: '28px',
         }}
       >
-        <Box
-          component="a"
-          href={paths.socials.twitter}
-          target="_blank"
-          rel="noopener noreferrer"
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            px: '20px',
-            py: '11px',
-            borderRadius: '100px',
-            bgcolor: '#FFFFFF',
-            color: '#0A0A0F',
-            fontSize: '14px',
-            fontWeight: 500,
-            textDecoration: 'none',
-            transition: 'opacity 150ms ease',
-            '&:hover': { opacity: 0.9 },
-          }}
-        >
-          Follow us on X →
-        </Box>
-        <Box
-          component="a"
-          href={paths.socials.discord}
-          target="_blank"
-          rel="noopener noreferrer"
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            px: '20px',
-            py: '11px',
-            borderRadius: '100px',
-            bgcolor: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.16)',
-            color: '#fff',
-            fontSize: '14px',
-            fontWeight: 500,
-            textDecoration: 'none',
-            transition: 'all 150ms ease',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.14)', borderColor: 'rgba(255,255,255,0.24)' },
-          }}
-        >
-          Join our Discord
-        </Box>
+        {META.map((item) => (
+          <Box key={item.label} sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <Box
+              sx={{
+                fontSize: '11px',
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.5)',
+                fontWeight: 500,
+              }}
+            >
+              {item.label}
+            </Box>
+            <Box
+              sx={{
+                fontSize: '22px',
+                fontWeight: 500,
+                color: '#fff',
+                fontFamily: '"Geist Mono", "Courier New", monospace',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {item.value}
+            </Box>
+          </Box>
+        ))}
       </Box>
     </Box>
   </Box>
 );
 
-CtaCommunity.displayName = 'CtaCommunity';
-export default CtaCommunity;
+export default RoadmapHero;

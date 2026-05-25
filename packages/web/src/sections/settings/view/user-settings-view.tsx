@@ -1,17 +1,15 @@
 'use client';
 
-import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useTabs } from 'minimal-shared/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
 
 import Box from '@mui/material/Box';
-import Tab from '@mui/material/Tab';
-import Card from '@mui/material/Card';
-
-import { Iconify } from '@/components/template/iconify';
-import { CustomTabs } from '@/components/template/custom-tabs';
-import { CustomBreadcrumbs } from '@/components/template/custom-breadcrumbs';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import { SettingsGeneral } from '../settings-general';
 import { SettingsAccounts } from '../settings-accounts';
@@ -20,21 +18,9 @@ import { SettingsSecurity } from '../settings-security';
 // ----------------------------------------------------------------------
 
 const TABS = [
-  {
-    value: 'general',
-    label: 'General',
-    icon: <Iconify width={24} icon="solar:user-id-bold" />,
-  },
-  {
-    value: 'accounts',
-    label: 'Accounts',
-    icon: <Iconify width={24} icon="solar:wallet-bold" />,
-  },
-  {
-    value: 'security',
-    label: 'Security',
-    icon: <Iconify width={24} icon="ic:round-vpn-key" />,
-  },
+  { value: 'general', label: 'General', icon: <PersonOutlinedIcon sx={{ fontSize: 17 }} /> },
+  { value: 'accounts', label: 'Accounts', icon: <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 17 }} /> },
+  { value: 'security', label: 'Security', icon: <LockOutlinedIcon sx={{ fontSize: 17 }} /> },
 ];
 
 export function UserSettingsView() {
@@ -42,40 +28,61 @@ export function UserSettingsView() {
   const tabs = useTabs('general');
 
   return (
-    <Box
-      sx={(theme) => ({
-        bgcolor: theme.palette.grey[100],
-        minHeight: '100dvh',
-        ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[900] }),
-      })}
-    >
-      <DashboardContent maxWidth="xl">
-        <CustomBreadcrumbs
-          heading={t('Settings')}
-          links={[{ name: t('Home'), href: paths.root }, { name: t('Settings') }]}
-          sx={{ mb: 3 }}
-        />
+    <DashboardContent maxWidth="xl">
+      {/* Page title */}
+      <Stack spacing={0.5} sx={{ mb: '24px' }}>
+        <Typography sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+          {t('Settings')}
+        </Typography>
+        <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)' }}>
+          {t('Manage your account, wallets and security preferences.')}
+        </Typography>
+      </Stack>
 
-        <Card>
-          <CustomTabs value={tabs.value} onChange={tabs.onChange} sx={{ mb: 3 }}>
-            {TABS.map((tab) => (
-              <Tab
-                key={tab.value}
-                value={tab.value}
-                label={tab.label}
-                icon={tab.icon}
-                iconPosition="start"
-              />
-            ))}
-          </CustomTabs>
-
-          <Box sx={{ p: 3 }}>
-            {tabs.value === 'general' && <SettingsGeneral />}
-            {tabs.value === 'accounts' && <SettingsAccounts />}
-            {tabs.value === 'security' && <SettingsSecurity />}
+      {/* Pill tab bar */}
+      <Box
+        sx={{
+          display: 'inline-flex',
+          gap: '4px',
+          p: '4px',
+          borderRadius: '12px',
+          bgcolor: '#F4F4F7',
+          mb: '24px',
+        }}
+      >
+        {TABS.map((tab) => (
+          <Box
+            key={tab.value}
+            component="button"
+            onClick={() => tabs.onChange(null as any, tab.value)}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              px: '16px',
+              py: '8px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: '14px',
+              fontWeight: tabs.value === tab.value ? 600 : 500,
+              bgcolor: tabs.value === tab.value ? '#FFFFFF' : 'transparent',
+              color: tabs.value === tab.value ? '#0A0A0F' : 'rgba(10,10,15,0.5)',
+              boxShadow: tabs.value === tab.value ? '0 1px 3px rgba(10,10,15,0.1)' : 'none',
+              transition: 'all 150ms ease',
+            }}
+          >
+            {tab.icon}
+            {t(tab.label)}
           </Box>
-        </Card>
-      </DashboardContent>
-    </Box>
+        ))}
+      </Box>
+
+      {/* Tab content */}
+      {tabs.value === 'general' && <SettingsGeneral />}
+      {tabs.value === 'accounts' && <SettingsAccounts />}
+      {tabs.value === 'security' && <SettingsSecurity />}
+    </DashboardContent>
   );
 }

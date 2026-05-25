@@ -1,13 +1,16 @@
 import React from 'react';
 
-import ContactForm from '@/components/_contact/contact-form';
-
+import { ContactHero } from './contact-hero';
+import { ContactChannels } from './contact-channels';
 import { FaqAccordion } from '../landing-page/faq';
+import { CtaImage } from '../landing-page/cta';
 
 const ContactView: React.FC = () => (
   <>
-    <ContactForm />
+    <ContactHero />
+    <ContactChannels />
     <FaqAccordion />
+    <CtaImage />
   </>
 );
 

@@ -17,17 +17,13 @@ import {
   sanitizeAmountInput,
 } from '@normalfinance/utils';
 
-import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
   Stack,
   Button,
   Dialog,
   Tooltip,
-  Divider,
-  InputBase,
   Typography,
-  IconButton,
   DialogTitle,
   DialogContent,
 } from '@mui/material';
@@ -47,7 +43,6 @@ interface SendModalProps {
 }
 
 export default function SendModal({ open, onClose }: SendModalProps) {
-  const theme = useTheme();
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
 
@@ -208,74 +203,118 @@ export default function SendModal({ open, onClose }: SendModalProps) {
         onClose={onClose}
         maxWidth="xs"
         fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+        slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
       >
-        <DialogTitle sx={{ px: 3, pt: 3, pb: 0 }}>
+        <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">{t('Send')}</Typography>
-            <IconButton onClick={onClose} size="small">
-              <Iconify icon="mingcute:close-line" width={20} />
-            </IconButton>
+            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+              {t('Send')}
+            </Typography>
+            <Box
+              component="button"
+              onClick={onClose}
+              sx={{
+                width: 28,
+                height: 28,
+                borderRadius: '8px',
+                border: 'none',
+                bgcolor: 'rgba(10,10,15,0.06)',
+                color: '#0A0A0F',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'background 150ms ease',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+              }}
+            >
+              <Iconify icon="mingcute:close-line" width={16} />
+            </Box>
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ px: 3, pt: 2, pb: 3 }}>
-          <Stack spacing={2}>
-            {/* Asset + available balance */}
+        <DialogContent sx={{ px: '22px', pt: '16px', pb: '22px' }}>
+          <Stack spacing={1.5}>
+            {/* Asset selector */}
             <Box
               onClick={() => setPickerOpen(true)}
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                px: 2,
-                py: 1.5,
-                borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
+                p: '16px',
+                borderRadius: '16px',
+                bgcolor: '#FAFAFB',
+                border: '1px solid rgba(10,10,15,0.08)',
                 cursor: 'pointer',
-                '&:hover': { bgcolor: alpha(theme.palette.grey[500], 0.06) },
+                transition: 'border-color 150ms ease',
+                '&:hover': { borderColor: 'rgba(10,10,15,0.16)' },
               }}
             >
               {sendToken ? (
                 <>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Box
-                      component="img"
-                      src={sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)}
-                      sx={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                    <Box>
-                      <Typography variant="subtitle2">{sendToken.symbol}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {t('Available:')}{' '}
-                        <Box component="span" fontWeight={600} color="text.primary">
-                          {spendableBalance.toFixed(Math.min(sendToken.decimals, 4), BigNumber.ROUND_DOWN)} {sendToken.symbol}
-                        </Box>
-                        {' '}
-                        <Box component="span" color="text.disabled">
-                          ({fCurrency(spendableBalance.multipliedBy(sendToken.price))})
-                        </Box>
-                      </Typography>
-                    </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '10px' }}>
+                    <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Asset
+                    </Typography>
+                    <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
+                      Available:{' '}
+                      <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
+                        {spendableBalance.toFixed(Math.min(sendToken.decimals, 4), BigNumber.ROUND_DOWN)} {sendToken.symbol}
+                      </Box>
+                    </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Button
-                      variant="soft"
-                      color="primary"
-                      size="small"
-                      sx={{ minWidth: 44, height: 26, fontSize: 11, fontWeight: 700, px: 1 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMaxClick();
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        px: '12px',
+                        py: '8px',
+                        borderRadius: '100px',
+                        bgcolor: '#FFFFFF',
+                        border: '1px solid rgba(10,10,15,0.08)',
                       }}
                     >
-                      {t('MAX')}
-                    </Button>
-                    <Iconify icon="eva:chevron-down-fill" width={18} color="text.secondary" />
+                      <Box
+                        component="img"
+                        src={sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)}
+                        sx={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                      <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+                        {sendToken.symbol}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Box
+                        component="button"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          handleMaxClick();
+                        }}
+                        sx={{
+                          border: 'none',
+                          bgcolor: 'rgba(10,10,15,0.06)',
+                          color: '#0A0A0F',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          letterSpacing: '0.06em',
+                          px: '8px',
+                          py: '4px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          fontFamily: 'inherit',
+                          '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+                        }}
+                      >
+                        MAX
+                      </Box>
+                      <Iconify icon="eva:chevron-down-fill" width={18} sx={{ color: 'rgba(10,10,15,0.4)' }} />
+                    </Box>
                   </Box>
                 </>
               ) : (
-                <Typography variant="body2" color="text.secondary">
+                <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.4)' }}>
                   {t('Select asset')}
                 </Typography>
               )}
@@ -284,55 +323,86 @@ export default function SendModal({ open, onClose }: SendModalProps) {
             {/* Amount input */}
             <Box
               sx={{
-                px: 2,
-                py: 2,
-                borderRadius: 2,
-                border: `1px solid ${insufficientBalance ? theme.palette.error.main : theme.palette.divider}`,
-                bgcolor: alpha(theme.palette.grey[500], 0.04),
+                p: '16px',
+                borderRadius: '16px',
+                bgcolor: '#FAFAFB',
+                border: '1px solid',
+                borderColor: insufficientBalance ? 'error.main' : 'rgba(10,10,15,0.08)',
+                transition: 'border-color 150ms ease',
+                '&:focus-within': {
+                  borderColor: insufficientBalance ? 'error.main' : 'rgba(10,10,15,0.24)',
+                },
               }}
             >
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+              <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '10px' }}>
                 {t('Amount')}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {isFiatMode && (
-                  <Typography variant="h5" color="text.secondary" sx={{ lineHeight: 1 }}>
+                  <Typography sx={{ fontSize: '24px', fontWeight: 600, color: 'rgba(10,10,15,0.35)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                     $
                   </Typography>
                 )}
-                <InputBase
-                  inputRef={inputRef}
+                <Box
+                  ref={inputRef}
+                  component="input"
                   type="number"
                   value={amount}
                   onChange={handleInputChange}
                   placeholder="0"
-                  onKeyDown={(e) => e.key === '-' && e.preventDefault()}
+                  onKeyDown={(e: React.KeyboardEvent) => e.key === '-' && e.preventDefault()}
                   sx={{
                     flex: 1,
-                    '& input': {
-                      fontSize: '28px',
-                      fontWeight: 600,
-                      lineHeight: 1.2,
-                      color: insufficientBalance ? theme.palette.error.main : theme.palette.text.primary,
-                      p: 0,
-                    },
+                    border: 'none',
+                    outline: 'none',
+                    bgcolor: 'transparent',
+                    fontSize: '24px',
+                    fontWeight: 600,
+                    color: insufficientBalance ? 'error.main' : '#0A0A0F',
+                    letterSpacing: '-0.02em',
+                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    width: '100%',
+                    minWidth: 0,
+                    '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
+                    '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': { appearance: 'none' },
                   }}
-                  inputProps={{ min: 0 }}
                 />
                 {!isFiatMode && sendToken && (
-                  <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600, flexShrink: 0 }}>
+                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: 'rgba(10,10,15,0.45)', flexShrink: 0 }}>
                     {sendToken.symbol}
                   </Typography>
                 )}
                 <Tooltip title={t('Toggle USD / crypto')}>
-                  <IconButton size="small" onClick={toggleMode} sx={{ ml: 0.5 }}>
-                    <Iconify icon="solar:transfer-vertical-bold-duotone" width={18} />
-                  </IconButton>
+                  <Box
+                    component="button"
+                    onClick={toggleMode}
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      border: 'none',
+                      bgcolor: 'rgba(10,10,15,0.06)',
+                      color: '#0A0A0F',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      fontFamily: 'inherit',
+                      '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+                    }}
+                  >
+                    <Iconify icon="solar:transfer-vertical-bold-duotone" width={16} />
+                  </Box>
                 </Tooltip>
               </Box>
-
-              {/* Converted value */}
-              <Typography variant="caption" color={insufficientBalance ? 'error' : 'text.secondary'} sx={{ mt: 0.5, display: 'block' }}>
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  color: insufficientBalance ? 'error.main' : 'rgba(10,10,15,0.45)',
+                  mt: '6px',
+                }}
+              >
                 {insufficientBalance
                   ? t('Exceeds available balance')
                   : sendToken && coinAmount.gt(0)
@@ -346,38 +416,58 @@ export default function SendModal({ open, onClose }: SendModalProps) {
             {/* Destination */}
             <Box
               sx={{
-                px: 2,
-                py: 1.5,
-                borderRadius: 2,
-                border: `1px solid ${
+                p: '16px',
+                borderRadius: '16px',
+                bgcolor: '#FAFAFB',
+                border: '1px solid',
+                borderColor:
                   destination && !isValidStellarAddress(destination)
-                    ? theme.palette.error.main
-                    : theme.palette.divider
-                }`,
-                bgcolor: alpha(theme.palette.grey[500], 0.04),
+                    ? 'error.main'
+                    : 'rgba(10,10,15,0.08)',
+                transition: 'border-color 150ms ease',
+                '&:focus-within': {
+                  borderColor:
+                    destination && !isValidStellarAddress(destination)
+                      ? 'error.main'
+                      : 'rgba(10,10,15,0.24)',
+                },
               }}
             >
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+              <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '10px' }}>
                 {t('To')}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <InputBase
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Box
+                  component="input"
                   type="text"
                   value={destination}
-                  onChange={(e) => setDestination(e.target.value.trim())}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setDestination(e.target.value.trim())
+                  }
                   placeholder="G…"
                   sx={{
                     flex: 1,
-                    '& input': { fontSize: '14px', p: 0, fontFamily: 'monospace' },
+                    border: 'none',
+                    outline: 'none',
+                    bgcolor: 'transparent',
+                    fontSize: '13px',
+                    color: '#0A0A0F',
+                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    width: '100%',
+                    minWidth: 0,
+                    '&::placeholder': { color: 'rgba(10,10,15,0.25)' },
                   }}
                 />
                 <PasteIconButton
                   alert="Destination pasted"
-                  onSubmit={(v) => { setDestination(v.trim()); return true; }}
+                  onSubmit={(v) => {
+                    setDestination(v.trim());
+                    return true;
+                  }}
                 />
               </Box>
               {destination && !isValidStellarAddress(destination) && (
-                <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                <Typography sx={{ fontSize: '12px', color: 'error.main', mt: '6px' }}>
                   {t('Not a valid Stellar address')}
                 </Typography>
               )}
@@ -385,38 +475,75 @@ export default function SendModal({ open, onClose }: SendModalProps) {
 
             {/* Memo toggle */}
             <Box>
-              <Button
-                size="small"
-                color="inherit"
-                startIcon={<Iconify icon={showMemo ? 'eva:minus-circle-outline' : 'eva:plus-circle-outline'} width={16} />}
+              <Box
+                component="button"
                 onClick={() => setShowMemo((p) => !p)}
-                sx={{ color: 'text.secondary', fontSize: 12 }}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  border: 'none',
+                  bgcolor: 'transparent',
+                  color: 'rgba(10,10,15,0.5)',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  p: 0,
+                  transition: 'color 150ms ease',
+                  '&:hover': { color: '#0A0A0F' },
+                }}
               >
+                <Iconify
+                  icon={showMemo ? 'eva:minus-circle-outline' : 'eva:plus-circle-outline'}
+                  width={16}
+                />
                 {showMemo ? t('Remove memo') : t('Add memo (optional)')}
-              </Button>
+              </Box>
+
               {showMemo && (
                 <Box
                   sx={{
-                    mt: 1,
-                    px: 2,
-                    py: 1.5,
-                    borderRadius: 2,
-                    border: `1px solid ${theme.palette.divider}`,
-                    bgcolor: alpha(theme.palette.grey[500], 0.04),
+                    mt: '10px',
+                    p: '16px',
+                    borderRadius: '16px',
+                    bgcolor: '#FAFAFB',
+                    border: '1px solid rgba(10,10,15,0.08)',
+                    transition: 'border-color 150ms ease',
+                    '&:focus-within': { borderColor: 'rgba(10,10,15,0.24)' },
                   }}
                 >
-                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                  <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '10px' }}>
                     {t('Memo')}
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <InputBase
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Box
+                      component="input"
                       type="text"
                       value={memo}
-                      onChange={(e) => setMemo(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setMemo(e.target.value)
+                      }
                       placeholder={t('Exchange ID, note…')}
-                      sx={{ flex: 1, '& input': { fontSize: '14px', p: 0 } }}
+                      sx={{
+                        flex: 1,
+                        border: 'none',
+                        outline: 'none',
+                        bgcolor: 'transparent',
+                        fontSize: '14px',
+                        color: '#0A0A0F',
+                        fontFamily: 'inherit',
+                        width: '100%',
+                        minWidth: 0,
+                        '&::placeholder': { color: 'rgba(10,10,15,0.25)' },
+                      }}
                     />
-                    <PasteIconButton alert="Memo pasted" onSubmit={(v) => { setMemo(v); return true; }} />
+                    <PasteIconButton
+                      alert="Memo pasted"
+                      onSubmit={(v) => {
+                        setMemo(v);
+                        return true;
+                      }}
+                    />
                   </Box>
                 </Box>
               )}
@@ -425,26 +552,27 @@ export default function SendModal({ open, onClose }: SendModalProps) {
             {/* Fee + reserve info */}
             <Box
               sx={{
-                px: 2,
-                py: 1.5,
-                borderRadius: 2,
-                bgcolor: alpha(theme.palette.grey[500], 0.04),
-                border: `1px solid ${theme.palette.divider}`,
+                p: '12px 14px',
+                borderRadius: '12px',
+                bgcolor: '#FAFAFB',
+                border: '1px solid rgba(10,10,15,0.06)',
               }}
             >
               <Stack spacing={0.75}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
                       {t('Network fee')}
                     </Typography>
                     <Tooltip title={t('Stellar network fee paid to validators. Cannot be changed.')}>
-                      <Iconify icon="eva:info-outline" width={14} sx={{ color: 'text.disabled', cursor: 'help' }} />
+                      <Box sx={{ display: 'flex', color: 'rgba(10,10,15,0.3)', cursor: 'help' }}>
+                        <Iconify icon="eva:info-outline" width={13} />
+                      </Box>
                     </Tooltip>
                   </Box>
-                  <Typography variant="caption" color="text.primary" fontWeight={600}>
+                  <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
                     {NETWORK_FEE_XLM} XLM{' '}
-                    <Box component="span" color="text.secondary" fontWeight={400}>
+                    <Box component="span" sx={{ color: 'rgba(10,10,15,0.45)', fontWeight: 400 }}>
                       ({fCurrency(feeFiat)})
                     </Box>
                   </Typography>
@@ -452,17 +580,19 @@ export default function SendModal({ open, onClose }: SendModalProps) {
 
                 {sendToken?.symbol === 'XLM' && xlmReserve !== undefined && (
                   <>
-                    <Divider sx={{ my: 0.5 }} />
+                    <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
                           {t('Minimum reserve')}
                         </Typography>
                         <Tooltip title={t('Stellar requires every account to keep a minimum XLM balance (2 XLM base + 0.5 XLM per trustline/offer). This amount stays in your account and is not sent.')}>
-                          <Iconify icon="eva:info-outline" width={14} sx={{ color: 'text.disabled', cursor: 'help' }} />
+                          <Box sx={{ display: 'flex', color: 'rgba(10,10,15,0.3)', cursor: 'help' }}>
+                            <Iconify icon="eva:info-outline" width={13} />
+                          </Box>
                         </Tooltip>
                       </Box>
-                      <Typography variant="caption" color="text.primary" fontWeight={600}>
+                      <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
                         {xlmReserve.toFixed(1)} XLM
                       </Typography>
                     </Box>
@@ -475,11 +605,20 @@ export default function SendModal({ open, onClose }: SendModalProps) {
             <Button
               fullWidth
               variant="contained"
-              color="primary"
               size="large"
               disabled={!isReviewReady}
               onClick={handleReviewClick}
-              sx={{ borderRadius: 2, fontWeight: 700 }}
+              sx={{
+                borderRadius: '12px',
+                bgcolor: '#0A0A0F',
+                fontWeight: 700,
+                fontSize: '15px',
+                py: '13px',
+                textTransform: 'none',
+                letterSpacing: '-0.01em',
+                '&:hover': { bgcolor: '#1a1a25' },
+                '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+              }}
             >
               {t(getButtonLabel())}
             </Button>

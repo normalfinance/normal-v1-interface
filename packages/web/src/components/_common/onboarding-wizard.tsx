@@ -307,23 +307,15 @@ export default function OnboardingWizard({
         setStep('choose-wallet');
         return;
       }
-      // Returning user — they have at least one linked wallet
+      // Returning user — always show wallet picker so they can choose which wallet to use
       if (marketingConsent) syncMarketingOptIn(true);
-      const most = wallets[0];
       setIsReturningUser(true);
-      if (hasStoredNormalWalletKey()) {
-        await connectWalletWithoutKeypair(most.walletAddress);
-        setWizardWalletAddress(most.walletAddress);
-        setStep('fund-xlm'); // auto-advance effects will close wizard if already fully set up
-      } else {
-        // Key was cleared — show linked accounts so user can choose which to reconnect
-        setStep('linked-accounts');
-      }
+      setStep('linked-accounts');
     } catch (err) {
       logger.error('[OnboardingWizard] handleAfterAuth error:', err);
       setStep('choose-wallet');
     }
-  }, [connectWalletWithoutKeypair, marketingConsent, syncMarketingOptIn]);
+  }, [marketingConsent, syncMarketingOptIn]);
 
   useEffect(() => {
     if (!open) return;

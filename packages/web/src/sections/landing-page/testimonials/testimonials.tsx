@@ -212,7 +212,7 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = (props) => {
 
   return (
     <SectionRoot aria-labelledby="testimonials-heading" {...props}>
-      <Box sx={{ pt: { xs: '80px', md: '110px' }, pb: { xs: '40px', md: '56px' } }}>
+      <Box sx={{ py: { xs: '40px', md: '56px' }, }}>
         {/* Header */}
         <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3, mb: '56px', textAlign: 'center' }}>
           <Box

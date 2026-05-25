@@ -1,30 +1,100 @@
 'use client';
 
-import { useTranslate } from '@/locales';
+import { useEffect, useMemo, useState } from 'react';
 import { logger } from '@normalfinance/utils';
-import React, { useMemo, useEffect } from 'react';
-import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
+import { BigNumber } from 'bignumber.js';
+import { DashboardContent } from '@/layouts/dashboard';
 
-import { Grid2, Stack, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import Skeleton from '@mui/material/Skeleton';
 
-import { MyBalanceSection, MySavingsSection } from '@/components/_assets-page-components';
+import SavingsCard from '@/components/_common/savings-card';
+
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+
+import { HeroCard } from './portfolio-hero-card';
+import { HoldingsCard } from './portfolio-holdings-card';
+import { ActivityCard } from './portfolio-activity-card';
+import type { HoldingData } from './_shared';
 
 export default function PortfolioView() {
-  const { t } = useTranslate();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens } = usePersistStore();
+  const {
+    wallet,
+    getAllTokens,
+    tokenState: { tokens },
+  } = usePersistStore();
 
-  const { vaultInfo, userPosition, fetching, positionFetching } = useDefindexSavings();
+  const { userPosition, fetching, positionFetching } = useDefindexSavings();
 
   const savingsValue = useMemo(() => {
     const v = parseFloat(userPosition?.currentValue || '0');
     return v > 0 ? v : 0;
   }, [userPosition]);
 
-  // Effect hook to fetch all tokens once the component mounts
+  const earnings = useMemo(() => parseFloat(userPosition?.earnings || '0'), [userPosition]);
+
+  const walletBalance = useMemo(
+    () =>
+      tokens
+        .reduce(
+          (acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
+          BigNumber(0)
+        )
+        .toNumber(),
+    [tokens]
+  );
+
+  const totalBalance = walletBalance + savingsValue;
+
+  const holdingsWithBalance = useMemo(
+    () => tokens.filter((tkn) => BigNumber(tkn.balance).gt(0)),
+    [tokens]
+  );
+
+  const holdingsData: HoldingData[] = useMemo(() => {
+    const entries: HoldingData[] = holdingsWithBalance.map((tkn) => ({
+      token: tkn,
+      value: BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber(),
+      percentage:
+        totalBalance > 0
+          ? BigNumber(tkn.balance)
+              .multipliedBy(tkn.price)
+              .dividedBy(totalBalance)
+              .multipliedBy(100)
+              .toNumber()
+          : 0,
+    }));
+
+    if (savingsValue > 0) {
+      entries.push({
+        token: {
+          symbol: 'Savings',
+          contract: '__savings__',
+          name: 'Normal Savings',
+          issuer: '',
+          org: '',
+          domain: '',
+          icon: 'https://cdn.normalapi.com/logo/logo-single.png',
+          decimals: 4,
+          featured: false,
+          balance: String(savingsValue),
+          price: '1',
+          percentageChange: 0,
+        },
+        value: savingsValue,
+        percentage: totalBalance > 0 ? (savingsValue / totalBalance) * 100 : 0,
+      });
+    }
+
+    return entries.sort((a, b) => b.value - a.value);
+  }, [holdingsWithBalance, totalBalance, savingsValue]);
+
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
@@ -39,30 +109,112 @@ export default function PortfolioView() {
     refreshTokens();
   }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
+  if (!mounted) {
+    return (
+      <DashboardContent maxWidth="xl">
+        {/* Hero skeleton */}
+        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }} />
+
+        {/* Holdings + Savings skeleton */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px', mt: '20px' }}>
+          <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+          <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+        </Box>
+
+        {/* Activity skeleton */}
+        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }} />
+      </DashboardContent>
+    );
+  }
+
+  if (!wallet.address) {
+    return (
+      <DashboardContent maxWidth="xl">
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '60vh',
+            gap: '16px',
+            textAlign: 'center',
+          }}
+        >
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: '16px',
+              bgcolor: '#F4F4F7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'rgba(10,10,15,0.4)',
+            }}
+          >
+            <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
+          </Box>
+          <Box>
+            <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
+              Connect your wallet
+            </Box>
+            <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', maxWidth: 280 }}>
+              Sign in to view your portfolio, holdings, and activity.
+            </Box>
+          </Box>
+          <Box
+            component="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('nf:open-login'))}
+            sx={{
+              mt: '4px',
+              px: '24px',
+              py: '10px',
+              borderRadius: '10px',
+              border: 'none',
+              bgcolor: '#0A0A0F',
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'opacity 150ms',
+              '&:hover': { opacity: 0.85 },
+            }}
+          >
+            Sign in
+          </Box>
+        </Box>
+      </DashboardContent>
+    );
+  }
+
   return (
     <DashboardContent maxWidth="xl">
-      <Stack spacing={1}>
-        <Typography variant="h4" color="text.primary">
-          {t('Portfolio')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t('View your total balance and asset breakdown.')}
-        </Typography>
-      </Stack>
+      <HeroCard
+        totalBalance={totalBalance}
+        walletBalance={walletBalance}
+        savingsValue={savingsValue}
+        earnings={earnings}
+        loading={fetching || positionFetching}
+        holdingsData={holdingsData}
+      />
 
-      <Grid2 container spacing={3} sx={{ mt: 3 }}>
-        <Grid2 width={1} sx={{ mt: 3 }}>
-          <MyBalanceSection savingsValue={savingsValue} />
-        </Grid2>
-        <Grid2 width={1}>
-          <MySavingsSection
-            vaultInfo={vaultInfo}
-            userPosition={userPosition}
-            fetching={fetching}
-            positionFetching={positionFetching}
-          />
-        </Grid2>
-      </Grid2>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
+          gap: '20px',
+          mt: '20px',
+        }}
+      >
+        <HoldingsCard holdingsData={holdingsData} totalBalance={totalBalance} />
+        <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
+      </Box>
+
+      <Box sx={{ mt: '20px' }}>
+        <ActivityCard walletAddress={wallet.address} />
+      </Box>
     </DashboardContent>
   );
 }

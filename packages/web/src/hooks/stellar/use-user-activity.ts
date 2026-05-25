@@ -43,6 +43,7 @@ function mapWalletActivityItem(item: WalletActivityItem): Activity {
         id: item.id,
         timestamp,
         type: 'Swap',
+        txHash: item.txHash,
         tokenIn: {
           address: item.tokenInAddress,
           symbol: symIn,
@@ -134,6 +135,7 @@ async function fetchStellarPayments(walletAddress: string): Promise<Activity[]> 
         timestamp,
         type: isReceive ? 'Receive' : 'Sent',
         address: isReceive ? p.from : p.to,
+        txHash: (p as any).transaction_hash ?? null,
         token: {
           address: isNative ? 'native' : (p.asset_code ?? 'USDC'),
           symbol,

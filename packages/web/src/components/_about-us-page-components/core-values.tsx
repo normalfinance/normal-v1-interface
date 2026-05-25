@@ -2,91 +2,57 @@
 
 import React from 'react';
 import { useTranslate } from '@/locales';
-import { cdn } from '@normalfinance/utils';
 
-import Grid2 from '@mui/material/Grid2';
-import { Box, Paper, Stack, Container, Typography } from '@mui/material';
-
-/* --------------------------------- Types --------------------------------- */
+import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
+import { Box, Typography } from '@mui/material';
 
 type FeatureItem = {
-  icon: {
-    src: string;
-    alt: string;
-    bg?: string; // optional background color for icon container
-  };
+  icon: React.ReactNode;
   heading: string;
   description: string;
 };
 
 type Props = {
   heading: string;
-  features: FeatureItem[]; // expect 5 items
+  features: FeatureItem[];
 };
 
 export type CoreValuesProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
-
-/* ------------------------------- Defaults -------------------------------- */
 
 export const CoreValuesDefaults: Props = {
   heading: 'Core Values',
   features: [
     {
-      icon: { src: cdn('about-page/i1.svg'), alt: 'Icon 1' },
+      icon: <PeopleAltOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Keep Crypto Human',
-      description: 'Remove complexity, speak plainly, design for real people.',
+      description: "Remove complexity, speak plainly, and design for real people — not power users. Every screen, every error message, and every transaction should be explainable in a single sentence. If your parents can't use it, we're not done.",
     },
     {
-      icon: { src: cdn('about-page/i2.svg'), alt: 'Icon 2' },
+      icon: <VerifiedUserOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Security First',
-      description: 'Audited contracts, battle-tested code, and 24/7 monitoring.',
+      description: "Audited contracts, battle-tested code, and 24/7 monitoring on every deployment. Halborn reviews every release before it touches mainnet. We treat your savings with the same seriousness you do — because cutting corners on security isn't a tradeoff, it's a failure.",
     },
     {
-      icon: { src: cdn('about-page/i3.svg'), alt: 'Icon 3' },
+      icon: <CodeOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Permissionless Innovation',
-      description: 'Build composable primitives that anyone can extend.',
+      description: 'Build composable primitives that anyone can extend, fork, or build on top of. Open SDK, public smart contracts, MIT-licensed components. We believe the best financial infrastructure is infrastructure no single company controls.',
     },
     {
-      icon: { src: cdn('about-page/i4.svg'), alt: 'Icon 4' },
+      icon: <GroupsOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Community Ownership',
-      description: 'NORM token holders create and vote on proposals.',
+      description: "NORM token holders create and vote on every proposal that shapes the protocol. No backroom decisions, no surprise upgrades. The roadmap belongs to the people using the product — we're here to build what the community decides.",
     },
     {
-      icon: { src: cdn('about-page/i5.svg'), alt: 'Icon 5' },
+      icon: <InsightsOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Data > Hype',
-      description: 'Let on-chain metrics guide every product decision.',
+      description: "Let on-chain metrics guide every product decision. We don't ship features because they're trending — we ship them because usage data says users need them. Hype fades. Real yield, real volume, and real retention don't.",
     },
   ],
 };
-
-/* --------------------------------- Styles -------------------------------- */
-
-const cardSx = {
-  bgcolor: 'background.neutral',
-  borderRadius: 3,
-};
-
-const pad = { xs: 2.5, md: 3.5 };
-
-/* ------------------------------ Subcomponents ---------------------------- */
-
-const ValueCard: React.FC<FeatureItem> = ({ icon, heading, description }) => (
-  <Paper variant="outlined" sx={{ ...cardSx, height: '100%' }}>
-    <Stack p={pad}>
-      <Box component="img" src={icon.src} alt={icon.alt} sx={{ width: 44, height: 44 }} mb={4} />
-
-      <Typography variant="subtitle1" fontWeight={700} mb={1}>
-        {heading}
-      </Typography>
-
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-    </Stack>
-  </Paper>
-);
-
-/* --------------------------------- Main ---------------------------------- */
 
 export const CoreValues: React.FC<CoreValuesProps> = (props) => {
   const { t } = useTranslate();
@@ -96,74 +62,129 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
     ...props,
   };
 
-  // guard: need 5 items to match layout; if fewer, it still renders responsively
-  const [f1, f2, f3, f4, f5] = features;
-
   return (
-    <Box component="section" {...sectionProps} py={{ xs: 8, md: 12, lg: 14 }} id="core-values">
-      <Container>
-        <Grid2
-          container
-          spacing={{ xs: 4, md: 6 }}
-          alignItems="flex-start"
-          display="flex"
-          flexDirection="column"
-        >
-          {/* Left column: heading + intro */}
-          <Grid2 size={{ xs: 12, md: 6 }}>
-            <Typography
-              component="h2"
+    <Box
+      component="section"
+      {...sectionProps}
+      id="core-values"
+      sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
+    >
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
+        {/* Header */}
+        <Box sx={{ mb: { xs: '48px', md: '64px' }, maxWidth: '640px' }}>
+          <Typography
+            sx={{
+              fontSize: '11px',
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: '#6B6B76',
+              mb: 1.5,
+            }}
+          >
+            — Our Principles
+          </Typography>
+          <Typography
+            component="h2"
+            sx={{
+              fontWeight: 500,
+              fontSize: 'clamp(32px, 4vw, 52px)',
+              lineHeight: 1.15,
+              letterSpacing: '-0.03em',
+              color: '#0A0A0F',
+              mb: '16px',
+            }}
+          >
+            {t(heading)}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '16px',
+              color: '#6B6B76',
+              lineHeight: 1.55,
+            }}
+          >
+            {t(
+              'Five guiding principles that keep us focused on making crypto transparent, secure, and genuinely useful.'
+            )}
+          </Typography>
+        </Box>
+
+        {/* List */}
+        <Box>
+          {features.map((feature) => (
+            <Box
+              key={feature.heading}
               sx={{
-                fontWeight: 500,
-                fontSize: { xs: '2rem', md: '3rem', lg: '3rem' },
-                lineHeight: 1.15,
-                mb: { xs: 2, md: 3 },
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: '48px 1fr 1fr' },
+                gap: { xs: '6px', sm: '40px' },
+                alignItems: 'start',
+                py: { xs: '24px', md: '32px' },
+                borderTop: '1px solid rgba(10,10,15,0.07)',
+                '&:last-child': { borderBottom: '1px solid rgba(10,10,15,0.07)' },
               }}
             >
-              {t(heading)}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {t(
-                'Our five guiding principles keep us focused on making crypto transparent, secure, and genuinely useful. They inform every roadmap decision, code review, and community vote.'
-              )}
-            </Typography>
-          </Grid2>
+              {/* Icon */}
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: '#FFFFFF',
+                  border: '1px solid rgba(10,10,15,0.08)',
+                  borderRadius: '10px',
+                  mt: { xs: 0, sm: '2px' },
+                  mb: { xs: '16px', sm: 0 },
+                  boxShadow: '0 1px 4px rgba(10,10,15,0.06)',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(10,10,15,0.05)',
+                    borderRadius: '6px',
+                  }}
+                >
+                  {feature.icon}
+                </Box>
+              </Box>
 
-          {/* Right column: card grid (3 on top, 2 wide on bottom) */}
-          <Grid2 size={{ xs: 12, md: 12 }}>
-            <Grid2 container spacing={{ xs: 2, md: 2 }}>
-              {/* Row 1: three equal cards */}
-              {f1 && (
-                <Grid2 size={{ xs: 12, sm: 6, lg: 4 }}>
-                  <ValueCard {...f1} />
-                </Grid2>
-              )}
-              {f2 && (
-                <Grid2 size={{ xs: 12, sm: 6, lg: 4 }}>
-                  <ValueCard {...f2} />
-                </Grid2>
-              )}
-              {f3 && (
-                <Grid2 size={{ xs: 12, sm: 12, lg: 4 }}>
-                  <ValueCard {...f3} />
-                </Grid2>
-              )}
+              {/* Heading */}
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '17px', md: '20px' },
+                  color: '#0A0A0F',
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1.3,
+                  pt: { xs: 0, sm: '7px' },
+                }}
+              >
+                {t(feature.heading)}
+              </Typography>
 
-              {/* Row 2: two wider cards */}
-              {f4 && (
-                <Grid2 size={{ xs: 12, lg: 6 }}>
-                  <ValueCard {...f4} />
-                </Grid2>
-              )}
-              {f5 && (
-                <Grid2 size={{ xs: 12, lg: 6 }}>
-                  <ValueCard {...f5} />
-                </Grid2>
-              )}
-            </Grid2>
-          </Grid2>
-        </Grid2>
-      </Container>
+              {/* Description */}
+              <Typography
+                sx={{
+                  fontSize: '16px',
+                  color: '#6B6B76',
+                  lineHeight: 1.55,
+                  pt: { xs: 0, sm: '7px' },
+                }}
+              >
+                {t(feature.description)}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
     </Box>
   );
 };
