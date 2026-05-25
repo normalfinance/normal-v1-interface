@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslate } from '@/locales';
-import { fCurrency } from '@/utils/format-number';
+import { fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -99,9 +99,9 @@ export function HeroCard({
   const { t } = useTranslate();
 
   const stats = [
-    { label: t('Wallet'), value: fCurrency(walletBalance), colored: false },
-    { label: t('Savings'), value: fCurrency(savingsValue), colored: false },
-    { label: t('Earnings'), value: fCurrency(Math.abs(earnings)), colored: true, positive: earnings >= 0 },
+    { label: t('Wallet'), value: fCurrencyTwoDecimals(walletBalance), colored: false, sub: null },
+    { label: t('Savings'), value: fCurrencyTwoDecimals(savingsValue), colored: false, sub: null },
+    { label: t('Earnings'), value: fCurrencyTwoDecimals(Math.abs(earnings)), colored: true, positive: earnings >= 0, sub: `${Math.abs(earnings).toFixed(7)} USDC` },
   ];
 
   return (
@@ -187,7 +187,7 @@ export function HeroCard({
                   lineHeight: 1.05,
                 }}
               >
-                {fCurrency(totalBalance)}
+                {fCurrencyTwoDecimals(totalBalance)}
               </Box>
             )}
           </Box>
@@ -213,20 +213,27 @@ export function HeroCard({
                     sx={{ bgcolor: 'rgba(255,255,255,0.08)', borderRadius: '4px' }}
                   />
                 ) : (
-                  <Box
-                    sx={{
-                      ...MONO,
-                      fontSize: '22px',
-                      fontWeight: 500,
-                      color: stat.colored
-                        ? stat.positive
-                          ? '#1AB37D'
-                          : 'rgba(255,255,255,0.75)'
-                        : 'rgba(255,255,255,0.9)',
-                    }}
-                  >
-                    {stat.value}
-                  </Box>
+                  <>
+                    <Box
+                      sx={{
+                        ...MONO,
+                        fontSize: '22px',
+                        fontWeight: 500,
+                        color: stat.colored
+                          ? stat.positive
+                            ? '#1AB37D'
+                            : 'rgba(255,255,255,0.75)'
+                          : 'rgba(255,255,255,0.9)',
+                      }}
+                    >
+                      {stat.value}
+                    </Box>
+                    {stat.sub && (
+                      <Box sx={{ ...MONO, fontSize: '12px', color: 'rgba(255,255,255,0.35)', mt: '4px' }}>
+                        {stat.sub}
+                      </Box>
+                    )}
+                  </>
                 )}
               </Box>
             ))}
