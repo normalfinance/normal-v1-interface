@@ -157,7 +157,7 @@ function enqueueSuccessWithStellarExpert(
 export function useDefindexSavings(): UseDefindexSavingsReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { wallet } = usePersistStore();
+  const { wallet, getAllTokens } = usePersistStore();
   const config = useStellarConfig();
 
   const { publicKey: stellarPublicKey } = useStellarWalletsKit();
@@ -196,6 +196,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   // concurrently without cancelling each other.
   const vaultTokenRef = useRef(0);
   const positionTokenRef = useRef(0);
+  // Tracks pending post-operation refresh timeouts so they can be cancelled
+  // before a new operation starts, preventing stale API responses from
+  // overwriting a fresh optimistic update.
+  const refreshTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   // Mirror of userPosition so callbacks can read the latest value without
   // needing it as a dependency.
   const userPositionRef = useRef(userPosition);
@@ -583,12 +587,21 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         });
         window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
 
-        // Refresh vault info, then position. Retry at 3 s, 15 s, 45 s so that
-        // totalDeposited settles once the events indexer catches up.
+        // Cancel any pending post-operation refreshes from a previous operation
+        // before scheduling new ones, so stale API responses don't overwrite
+        // the optimistic state we just wrote.
+        refreshTimeoutsRef.current.forEach(clearTimeout);
+        refreshTimeoutsRef.current = [];
+
+        // Refresh token balances so wallet USDC reflects the deposit immediately.
+        getAllTokens().catch(() => {});
+
         await refreshVaultInfo();
-        setTimeout(() => refreshUserPosition(), 3_000);
-        setTimeout(() => refreshUserPosition(), 15_000);
-        setTimeout(() => refreshUserPosition(), 45_000);
+        refreshTimeoutsRef.current = [
+          setTimeout(() => refreshUserPosition(), 3_000),
+          setTimeout(() => refreshUserPosition(), 15_000),
+          setTimeout(() => refreshUserPosition(), 45_000),
+        ];
 
         return depositResult.hash;
       } catch (err: any) {
@@ -618,6 +631,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       signOrReconnect,
       enqueueSnackbar,
       t,
+      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]
@@ -785,10 +799,18 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         });
         window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
 
+        refreshTimeoutsRef.current.forEach(clearTimeout);
+        refreshTimeoutsRef.current = [];
+
+        // Refresh token balances so wallet USDC reflects the withdrawal immediately.
+        getAllTokens().catch(() => {});
+
         await refreshVaultInfo();
-        setTimeout(() => refreshUserPosition(), 3_000);
-        setTimeout(() => refreshUserPosition(), 15_000);
-        setTimeout(() => refreshUserPosition(), 45_000);
+        refreshTimeoutsRef.current = [
+          setTimeout(() => refreshUserPosition(), 3_000),
+          setTimeout(() => refreshUserPosition(), 15_000),
+          setTimeout(() => refreshUserPosition(), 45_000),
+        ];
 
         return withdrawResult.hash;
       } catch (err: any) {
@@ -819,6 +841,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       signOrReconnect,
       enqueueSnackbar,
       t,
+      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]
