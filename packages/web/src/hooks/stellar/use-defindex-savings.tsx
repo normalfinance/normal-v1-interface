@@ -680,8 +680,33 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           return horizonServer.submitTransaction(signedTx);
         };
 
-        // 1. Build + sign + submit the yield commission fee first.
-        // If this fails the withdrawal is aborted entirely.
+        // 1. Build + sign + submit the DeFindex withdraw first so the user
+        // always has USDC in their wallet to cover the commission — even if
+        // they deposited their entire balance.
+        const withdrawResponse = await fetch('/api/savings/withdraw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, caller: walletAddress }),
+        });
+        const withdrawData = await withdrawResponse.json();
+        if (!withdrawData.success) {
+          throw new Error(withdrawData.error || 'Failed to build withdraw transaction');
+        }
+        if (!withdrawData.xdr) {
+          throw new Error('No transaction XDR returned from DeFindex');
+        }
+
+        setTxStep('withdraw_sign');
+        let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
+        try {
+          withdrawResult = await signAndSubmit(withdrawData.xdr, () => setTxStep('withdraw_broadcast'));
+        } catch (withdrawErr: any) {
+          throw new Error(parseSigningError(withdrawErr));
+        }
+
+        // 2. Build + sign + submit the yield commission fee from the funds
+        // just received. Runs after the withdrawal so an empty wallet never
+        // blocks the user from accessing their savings.
         let commissionTxHash: string | null = null;
         if (commissionAmount > 0) {
           const commissionResponse = await fetch('/api/fees/build-payment', {
@@ -707,34 +732,6 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             throw new Error(`Yield commission payment failed: ${parseSigningError(commissionErr)}`);
           }
           commissionTxHash = commissionResult.hash;
-        }
-
-        // 2. Build + sign + submit the DeFindex withdraw.
-        const withdrawResponse = await fetch('/api/savings/withdraw', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, caller: walletAddress }),
-        });
-        const withdrawData = await withdrawResponse.json();
-        if (!withdrawData.success) {
-          throw new Error(
-            `${withdrawData.error || 'Failed to build withdraw transaction'}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
-          );
-        }
-        if (!withdrawData.xdr) {
-          throw new Error(
-            `No transaction XDR returned from DeFindex${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
-          );
-        }
-
-        setTxStep('withdraw_sign');
-        let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          withdrawResult = await signAndSubmit(withdrawData.xdr, () => setTxStep('withdraw_broadcast'));
-        } catch (withdrawErr: any) {
-          throw new Error(
-            `${parseSigningError(withdrawErr)}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
-          );
         }
 
         // Log withdrawal to DB (fire-and-forget)

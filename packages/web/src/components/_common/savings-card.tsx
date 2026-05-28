@@ -164,17 +164,17 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const withdrawSteps = hasWithdrawCommission
     ? [
         {
-          id: 'commission_sign',
-          label: t('Signing yield commission'),
-          sub: t('Approve in your wallet · 1 of 2'),
-        },
-        { id: 'commission_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
-        {
           id: 'withdraw_sign',
           label: t('Signing withdrawal'),
-          sub: t('Approve in your wallet · 2 of 2'),
+          sub: t('Approve in your wallet · 1 of 2'),
         },
         { id: 'withdraw_broadcast', label: t('Processing withdrawal'), sub: 'horizon.stellar.org' },
+        {
+          id: 'commission_sign',
+          label: t('Signing yield commission'),
+          sub: t('Approve in your wallet · 2 of 2'),
+        },
+        { id: 'commission_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
       ]
     : [
         { id: 'withdraw_sign', label: t('Signing withdrawal'), sub: t('Approve in your wallet') },
