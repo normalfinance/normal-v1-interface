@@ -157,7 +157,7 @@ function enqueueSuccessWithStellarExpert(
 export function useDefindexSavings(): UseDefindexSavingsReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { wallet } = usePersistStore();
+  const { wallet, getAllTokens } = usePersistStore();
   const config = useStellarConfig();
 
   const { publicKey: stellarPublicKey } = useStellarWalletsKit();
@@ -196,6 +196,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   // concurrently without cancelling each other.
   const vaultTokenRef = useRef(0);
   const positionTokenRef = useRef(0);
+  // Tracks pending post-operation refresh timeouts so they can be cancelled
+  // before a new operation starts, preventing stale API responses from
+  // overwriting a fresh optimistic update.
+  const refreshTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   // Mirror of userPosition so callbacks can read the latest value without
   // needing it as a dependency.
   const userPositionRef = useRef(userPosition);
@@ -583,12 +587,21 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         });
         window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
 
-        // Refresh vault info, then position. Retry at 3 s, 15 s, 45 s so that
-        // totalDeposited settles once the events indexer catches up.
+        // Cancel any pending post-operation refreshes from a previous operation
+        // before scheduling new ones, so stale API responses don't overwrite
+        // the optimistic state we just wrote.
+        refreshTimeoutsRef.current.forEach(clearTimeout);
+        refreshTimeoutsRef.current = [];
+
+        // Refresh token balances so wallet USDC reflects the deposit immediately.
+        getAllTokens().catch(() => {});
+
         await refreshVaultInfo();
-        setTimeout(() => refreshUserPosition(), 3_000);
-        setTimeout(() => refreshUserPosition(), 15_000);
-        setTimeout(() => refreshUserPosition(), 45_000);
+        refreshTimeoutsRef.current = [
+          setTimeout(() => refreshUserPosition(), 3_000),
+          setTimeout(() => refreshUserPosition(), 15_000),
+          setTimeout(() => refreshUserPosition(), 45_000),
+        ];
 
         return depositResult.hash;
       } catch (err: any) {
@@ -618,6 +631,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       signOrReconnect,
       enqueueSnackbar,
       t,
+      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]
@@ -680,8 +694,33 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           return horizonServer.submitTransaction(signedTx);
         };
 
-        // 1. Build + sign + submit the yield commission fee first.
-        // If this fails the withdrawal is aborted entirely.
+        // 1. Build + sign + submit the DeFindex withdraw first so the user
+        // always has USDC in their wallet to cover the commission — even if
+        // they deposited their entire balance.
+        const withdrawResponse = await fetch('/api/savings/withdraw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, caller: walletAddress }),
+        });
+        const withdrawData = await withdrawResponse.json();
+        if (!withdrawData.success) {
+          throw new Error(withdrawData.error || 'Failed to build withdraw transaction');
+        }
+        if (!withdrawData.xdr) {
+          throw new Error('No transaction XDR returned from DeFindex');
+        }
+
+        setTxStep('withdraw_sign');
+        let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
+        try {
+          withdrawResult = await signAndSubmit(withdrawData.xdr, () => setTxStep('withdraw_broadcast'));
+        } catch (withdrawErr: any) {
+          throw new Error(parseSigningError(withdrawErr));
+        }
+
+        // 2. Build + sign + submit the yield commission fee from the funds
+        // just received. Runs after the withdrawal so an empty wallet never
+        // blocks the user from accessing their savings.
         let commissionTxHash: string | null = null;
         if (commissionAmount > 0) {
           const commissionResponse = await fetch('/api/fees/build-payment', {
@@ -707,34 +746,6 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             throw new Error(`Yield commission payment failed: ${parseSigningError(commissionErr)}`);
           }
           commissionTxHash = commissionResult.hash;
-        }
-
-        // 2. Build + sign + submit the DeFindex withdraw.
-        const withdrawResponse = await fetch('/api/savings/withdraw', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, caller: walletAddress }),
-        });
-        const withdrawData = await withdrawResponse.json();
-        if (!withdrawData.success) {
-          throw new Error(
-            `${withdrawData.error || 'Failed to build withdraw transaction'}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
-          );
-        }
-        if (!withdrawData.xdr) {
-          throw new Error(
-            `No transaction XDR returned from DeFindex${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
-          );
-        }
-
-        setTxStep('withdraw_sign');
-        let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          withdrawResult = await signAndSubmit(withdrawData.xdr, () => setTxStep('withdraw_broadcast'));
-        } catch (withdrawErr: any) {
-          throw new Error(
-            `${parseSigningError(withdrawErr)}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
-          );
         }
 
         // Log withdrawal to DB (fire-and-forget)
@@ -788,10 +799,18 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         });
         window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
 
+        refreshTimeoutsRef.current.forEach(clearTimeout);
+        refreshTimeoutsRef.current = [];
+
+        // Refresh token balances so wallet USDC reflects the withdrawal immediately.
+        getAllTokens().catch(() => {});
+
         await refreshVaultInfo();
-        setTimeout(() => refreshUserPosition(), 3_000);
-        setTimeout(() => refreshUserPosition(), 15_000);
-        setTimeout(() => refreshUserPosition(), 45_000);
+        refreshTimeoutsRef.current = [
+          setTimeout(() => refreshUserPosition(), 3_000),
+          setTimeout(() => refreshUserPosition(), 15_000),
+          setTimeout(() => refreshUserPosition(), 45_000),
+        ];
 
         return withdrawResult.hash;
       } catch (err: any) {
@@ -822,6 +841,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       signOrReconnect,
       enqueueSnackbar,
       t,
+      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]
