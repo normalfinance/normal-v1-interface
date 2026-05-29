@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png',
+        url: '/og/about.png',
         width: 1200,
         height: 630,
         alt: 'Normal – About Us',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'About Us | Normal',
     description: 'Get to know the people, mission, and values driving Normal.',
-    images: ['/og/home.png'],
+    images: ['/og/about.png'],
   },
   robots: {
     index: true,

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png',
+        url: '/og/swap.png',
         width: 1200,
         height: 630,
         alt: 'Normal Swap',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Swap | Normal',
     description: 'Swap XLM and USDC instantly on Normal.',
-    images: ['/og/home.png'],
+    images: ['/og/swap.png'],
   },
   robots: {
     index: true,

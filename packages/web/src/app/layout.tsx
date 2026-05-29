@@ -40,8 +40,8 @@ export const metadata: Metadata = {
     default: 'Normal',
     template: '%s · Normal',
   },
-  description: 'Invest in diversified crypto indices and synthetic assets with Normal.',
-  keywords: 'crypto, investing, crypto index, defi',
+  description: 'Earn yield on your USDC with Normal — self-custody savings powered by DeFindex and Blend on Stellar.',
+  keywords: 'crypto savings, USDC yield, DeFi, Stellar, Blend, DeFindex, Normal Finance',
   openGraph: {
     siteName: 'Normal',
     images: [

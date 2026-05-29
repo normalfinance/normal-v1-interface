@@ -10,18 +10,18 @@ export const metadata: Metadata = {
     default: 'Portfolio | Normal',
     template: '%s · Normal',
   },
-  description: 'View and manage your asset and index fund portfolio on Normal.',
+  description: 'View your wallet balances, savings position, and earnings all in one place on Normal.',
   alternates: {
     canonical: '/invest',
   },
   openGraph: {
     title: 'Portfolio | Normal',
-    description: 'View and manage your asset and index fund portfolio on Normal.',
+    description: 'View your wallet balances, savings position, and earnings all in one place on Normal.',
     url: `${CONFIG.siteUrl}/invest`,
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
+        url: '/og/portfolio.png',
         width: 1200,
         height: 630,
         alt: 'Normal Portfolio overview',
@@ -33,15 +33,15 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Portfolio | Normal',
-    description: 'View and manage your asset and index fund portfolio on Normal.',
-    images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
+    description: 'View your wallet balances, savings position, and earnings all in one place on Normal.',
+    images: ['/og/portfolio.png'],
   },
   robots: {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'token swap', 'crypto exchange', 'DEX'],
+  keywords: ['Normal', 'Normal Finance', 'portfolio', 'USDC savings', 'crypto wallet', 'Stellar'],
 };
 
 export default function Page() {

@@ -9,14 +9,14 @@ export const metadata: Metadata = {
     template: '%s · Normal',
   },
   description:
-    'Normal helps you invest or diversify any global asset in seconds with low fees and deep liquidity.',
+    'Normal gives your USDC a job. Earn real yield through self-custody savings powered by DeFindex and Blend on Stellar.',
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'Home | Normal',
     description:
-      'Normal helps you invest or diversify any global asset in seconds with low fees and deep liquidity.',
+      'Normal gives your USDC a job. Earn real yield through self-custody savings powered by DeFindex and Blend on Stellar.',
     url: CONFIG.siteUrl,
     siteName: 'Normal',
     images: [
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Home | Normal',
     description:
-      'Normal helps you invest or diversify any global asset in seconds with low fees and deep liquidity.',
+      'Normal gives your USDC a job. Earn real yield through self-custody savings powered by DeFindex and Blend on Stellar.',
     images: ['/og/home.png'],
   },
   robots: {
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'crypto index', 'crypto investing', 'web3 portfolio'],
+  keywords: ['Normal', 'Normal Finance', 'USDC yield', 'crypto savings', 'DeFi', 'Stellar', 'Blend'],
 };
 
 export default function Page() {
