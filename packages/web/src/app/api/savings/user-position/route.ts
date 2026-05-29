@@ -191,44 +191,31 @@ export async function GET(request: NextRequest) {
 
     const lifetimeEarnings = accountPosition?.totalInterestEarned ?? null;
 
-    // totalDeposited priority:
-    // 1. DB records — authoritative net (deposits − withdrawals) in USDC. Covers all
-    //    transactions logged through Normal since DB tracking was added.
-    // 2. Events fallback — unreliable because withdrawal amounts in the events API are
-    //    recorded in vault shares, not USDC, so withdrawals are under-counted when PPS > 1.
-    //    Only used when there are no DB records (e.g. very early deposits before DB tracking).
-    // 3. underlyingValue — last resort.
-    //
+    // totalDeposited: events API is authoritative; DB is fallback only.
     // NOTE: accountPosition.totalDeposited is NOT used here — the DeFindex API returns the
     // cumulative gross deposit total (all deposits ever, ignoring withdrawals), which is
     // wrong for display. Only totalInterestEarned from that endpoint is used (for earnings).
     const records = depositRecords.status === 'fulfilled' ? depositRecords.value : [];
     const events = eventsResult.status === 'fulfilled' ? eventsResult.value : [];
+    const totalDepositedFromEvents = computeTotalDepositedFromEvents(events);
 
     let totalDeposited: number;
-    if (records.length > 0) {
-      let running = 0;
-      for (const r of records) {
-        const amount = parseFloat(r.amount) || 0;
-        if (r.type === 'deposit') {
-          running += amount;
-        } else {
-          // Clamp to 0: a full withdrawal that returns slightly more than deposited (due to
-          // yield accrued) must not leave a negative balance that bleeds into the next deposit.
-          running = Math.max(0, running - amount);
-        }
-      }
-      totalDeposited = running;
-      console.log('[user-position] totalDeposited from DB:', totalDeposited);
+    if (totalDepositedFromEvents !== null) {
+      totalDeposited = totalDepositedFromEvents;
+      console.log('[user-position] totalDeposited from events:', totalDeposited);
     } else {
-      const totalDepositedFromEvents = computeTotalDepositedFromEvents(events);
-      if (totalDepositedFromEvents !== null) {
-        totalDeposited = totalDepositedFromEvents;
-        console.log('[user-position] totalDeposited from events fallback:', totalDeposited);
-      } else {
+      // Fall back to DB when events API returns nothing
+      if (records.length === 0) {
         totalDeposited = underlyingValue;
-        console.log('[user-position] totalDeposited from underlyingValue fallback:', totalDeposited);
+      } else {
+        totalDeposited = records.reduce(
+          (sum: number, r: { type: string; amount: string }) =>
+            r.type === 'deposit' ? sum + (parseFloat(r.amount) || 0) : sum - (parseFloat(r.amount) || 0),
+          0
+        );
+        if (totalDeposited < 0) totalDeposited = 0;
       }
+      console.log('[user-position] totalDeposited from DB fallback:', totalDeposited);
     }
 
     // If getVaultBalance failed (rejected), return null so the client preserves its cached
