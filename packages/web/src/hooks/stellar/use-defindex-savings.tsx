@@ -11,7 +11,7 @@ import type { VaultInfo, SavingsPosition } from '@/types/savings';
 // ---------------------------------------------------------------------------
 // Position cache
 // ---------------------------------------------------------------------------
-const POSITION_CACHE_KEY = 'nf_savings_position_cache';
+const POSITION_CACHE_KEY = 'nf_savings_position_cache_v2';
 const CACHE_KEY = POSITION_CACHE_KEY; // alias used below
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
