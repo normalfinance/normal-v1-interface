@@ -20,9 +20,9 @@ const MONO = {
 } as const;
 
 const STATS = [
-  { label: 'Registered users', value: '618',    hint: 'and growing daily' },
-  { label: 'Total volume',      value: '$15.2K', hint: 'deposits & withdrawals' },
-  { label: 'Savings TVL',       value: '$12.6K', hint: 'earning yield now' },
+  { label: 'Total accounts',    value: '4,065',  hint: 'across DeFindex protocol' },
+  { label: 'Total txs',         value: '21,526', hint: 'deposits & withdrawals' },
+  { label: 'Savings TVL',       value: '$1.4M',  hint: 'earning yield now' },
   { label: 'Avg. settlement',   value: '~0.5s',  hint: 'on Stellar mainnet' },
 ];
 
