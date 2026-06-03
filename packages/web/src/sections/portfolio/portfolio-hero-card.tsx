@@ -198,6 +198,7 @@ export function HeroCard({
               display: 'grid',
               gridTemplateColumns: 'repeat(3, 1fr)',
               gap: { xs: '20px', md: '32px' },
+              mt: { xs: '20px', md: 0 },
             }}
           >
             {stats.map((stat) => (

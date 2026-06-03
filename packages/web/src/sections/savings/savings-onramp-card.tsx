@@ -7,6 +7,8 @@ import { useAppStore } from '@normalfinance/state';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
 
@@ -54,7 +56,6 @@ function OnrampButton({
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          fontSize: '20px',
         }}
       >
         {icon}
@@ -98,7 +99,7 @@ export function SavingsOnrampCard() {
       <Stack spacing={1.5}>
         <WalletGate buttonText={t('Login to deposit cash')} fullWidth variant="soft" requireWalletConnection={false}>
           <OnrampButton
-            icon="💵"
+            icon={<AccountBalanceOutlinedIcon sx={{ fontSize: 20, color: '#0A0A0F' }} />}
             label={t('Deposit cash')}
             description={t('Bank transfer or card via MoneyGram')}
             onClick={() => setModalView(ModalType.ON_RAMP, true)}
@@ -107,7 +108,7 @@ export function SavingsOnrampCard() {
 
         <WalletGate buttonText={t('Login to deposit crypto')} fullWidth variant="soft">
           <OnrampButton
-            icon="🔗"
+            icon={<AccountBalanceWalletOutlinedIcon sx={{ fontSize: 20, color: '#0A0A0F' }} />}
             label={t('Deposit crypto')}
             description={t('Send from any external wallet')}
             onClick={() => setModalView(ModalType.DEPOSIT_CRYPTO, true)}

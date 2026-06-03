@@ -382,6 +382,29 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
     refreshUserPosition();
   }, [refreshUserPosition]);
 
+  // Re-fetch when the tab becomes visible again after sleep/hibernation,
+  // and when the browser comes back online after a restart with no network.
+  // Gated on cache expiry so quick tab switches don't trigger unnecessary calls.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!getCachedPosition(wallet.address)) {
+        refreshVaultInfo();
+        refreshUserPosition();
+      }
+    };
+    const handleOnline = () => {
+      refreshVaultInfo();
+      refreshUserPosition();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [wallet.address, refreshVaultInfo, refreshUserPosition]);
+
   // Deposit to vault — two transactions: (1) classic USDC fee payment,
   // (2) DeFindex deposit for the net amount. Fee goes first so if the
   // Soroban deposit fails the user only loses the small flat fee.

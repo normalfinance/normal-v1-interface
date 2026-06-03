@@ -382,7 +382,7 @@ export const AboutHeader: React.FC = () => {
                       fontFamily: '"Geist Mono", "Courier New", monospace',
                     }}
                   >
-                    $15,335.93
+                    $1,428,629
                   </Box>
                 </Box>
               </Box>
