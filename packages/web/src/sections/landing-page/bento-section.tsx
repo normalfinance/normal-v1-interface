@@ -311,70 +311,123 @@ const BACKERS = [
     name: 'Stellar Development Foundation',
     role: 'Lead investor & advisor',
     logo: cdn('homepage/stellar-logo.webp'),
+    href: 'https://stellar.org',
   },
   {
     name: 'DraperU Ventures',
     role: 'Tim Draper · Lead investor',
     logo: cdn('homepage/draper-university.webp'),
+    href: 'https://draperuniversity.com',
   },
 ];
 
 function BackedByCard() {
   return (
-    <Box sx={{ ...CARD_BASE, gridColumn: { xs: '1 / -1', md: 'span 3' }, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <Box
+      sx={{
+        ...CARD_BASE,
+        gridColumn: { xs: '1 / -1', md: 'span 3' },
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+      }}
+    >
+      {/* Header */}
       <Box>
         <Typography sx={EYEBROW_SX}>Backed by</Typography>
         <Typography sx={{ ...CARD_H3_SX, mb: 1 }}>
           Trusted by leaders.
         </Typography>
-        <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.55, mb: 3 }}>
-          Normal is backed by the most credible names in crypto and venture — giving you confidence your funds are in safe hands.
+        <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.6 }}>
+          The most credible names in crypto and venture — giving you confidence your funds are in safe hands.
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      {/* Backer rows */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: '10px', mt: 3 }}>
         {BACKERS.map((b) => (
           <Box
             key={b.name}
+            component="a"
+            href={b.href}
+            target="_blank"
+            rel="noopener noreferrer"
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 2,
-              background: '#F7F7F9',
+              gap: '14px',
+              background: '#fff',
               border: '1px solid rgba(10,10,15,0.07)',
-              borderRadius: '14px',
+              borderRadius: '16px',
               px: '16px',
-              py: '13px',
+              py: '14px',
+              boxShadow: '0 1px 4px rgba(10,10,15,0.05)',
+              transition: 'box-shadow 150ms, border-color 150ms',
+              textDecoration: 'none',
+              cursor: 'pointer',
+              '&:hover': {
+                boxShadow: '0 4px 16px rgba(10,10,15,0.09)',
+                borderColor: 'rgba(10,10,15,0.13)',
+              },
             }}
           >
+            {/* Logo container */}
             <Box
-              component="img"
-              src={b.logo}
-              alt={b.name}
               sx={{
                 width: 56,
                 height: 56,
-                objectFit: 'contain',
+                borderRadius: '12px',
+                background: '#F4F4F7',
+                border: '1px solid rgba(10,10,15,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 flexShrink: 0,
-                filter: 'brightness(0)',
-                opacity: 0.7,
+                p: '6px',
               }}
-            />
-            <Box>
+            >
+              <Box
+                component="img"
+                src={b.logo}
+                alt={b.name}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  filter: 'brightness(0)',
+                  opacity: 0.75,
+                }}
+              />
+            </Box>
+
+            <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.2 }}>
                 {b.name}
               </Typography>
-              <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: 0.25 }}>
+              <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: '3px' }}>
                 {b.role}
               </Typography>
+            </Box>
+
+            {/* Checkmark badge */}
+            <Box sx={{
+              width: 22, height: 22, borderRadius: '50%',
+              bgcolor: 'rgba(26,179,125,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Box component="span" sx={{ fontSize: '11px', color: '#1AB37D', lineHeight: 1 }}>✓</Box>
             </Box>
           </Box>
         ))}
 
         {/* Valuation tag */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0 }} />
-          <Typography sx={{ fontSize: '11.5px', color: '#6B6B76' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', mt: '4px' }}>
+          <Box sx={{
+            width: 6, height: 6, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0,
+            boxShadow: '0 0 0 3px rgba(26,179,125,0.18)',
+          }} />
+          <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
             $4M valuation round · bridge funding
           </Typography>
         </Box>
