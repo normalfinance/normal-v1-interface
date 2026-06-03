@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { cdn } from '@normalfinance/utils';
@@ -99,7 +99,7 @@ const CAROUSEL_SLIDES = [
     eyebrow: 'Normal Savings',
     title: 'Earn yield on your USDC',
     description: 'Deposit USDC and earn real yield through Blend Protocol — self-custody, no middlemen.',
-    image: cdn('mockups/savings.webp'),
+    image: cdn('mockups/savings2.webp'),
   },
   {
     href: '/portfolio',
@@ -134,6 +134,8 @@ function MockupCarouselCard() {
   const prev = (slide - 1 + CAROUSEL_SLIDES.length) % CAROUSEL_SLIDES.length;
   const next = (slide + 1) % CAROUSEL_SLIDES.length;
 
+  const touchStartX = useRef(0);
+
   const SIDE_PAD = '20px';
 
   return (
@@ -150,6 +152,11 @@ function MockupCarouselCard() {
         '&:hover': { boxShadow: '0 8px 32px rgba(10,10,15,0.18)' },
       }}
       onClick={() => router.push(current.href)}
+      onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        const delta = touchStartX.current - e.changedTouches[0].clientX;
+        if (Math.abs(delta) > 40) goTo(delta > 0 ? next : prev);
+      }}
     >
       {/* Full-bleed image */}
       <Box
