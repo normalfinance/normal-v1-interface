@@ -3,7 +3,7 @@
 import { useTranslate } from '@/locales';
 import React, { useRef, useState, useEffect } from 'react';
 
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Skeleton, Stack, Typography } from '@mui/material';
 
 // ----------------------------------------------------------------------
 
@@ -190,7 +190,13 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
           maxWidth: 380,
         }}
       >
-        Your USDC earns {displayApy != null ? `${displayApy}%` : '~8%'} APY in audited lending pools on Stellar. Yield compounds daily — withdraw anytime, no lock-ups.
+        Your USDC earns{' '}
+        {displayApy != null ? (
+          `${displayApy}%`
+        ) : (
+          <Skeleton variant="text" width={36} sx={{ bgcolor: 'rgba(255,255,255,0.12)', display: 'inline-block', verticalAlign: 'middle' }} />
+        )}{' '}
+        APY in audited lending pools on Stellar. Yield compounds daily — withdraw anytime, no lock-ups.
       </Typography>
 
       {/* Live balance */}

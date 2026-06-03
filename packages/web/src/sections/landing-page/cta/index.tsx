@@ -5,6 +5,8 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 
 import Box from '@mui/material/Box';
+import Skeleton from '@mui/material/Skeleton';
+import { useVaultApy } from '@/hooks/use-vault-apy';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -18,6 +20,7 @@ export type CtaImageProps = React.ComponentPropsWithoutRef<'section'>;
 
 export const CtaImage: React.FC<CtaImageProps> = (sectionProps) => {
   const { t } = useTranslate();
+  const apy = useVaultApy();
 
   return (
     <Box
@@ -114,7 +117,11 @@ export const CtaImage: React.FC<CtaImageProps> = (sectionProps) => {
               animation: 'pulseDot 2.4s ease-in-out infinite',
             }}
           />
-          {t('8% APY · live now')}
+          {apy == null ? (
+            <Skeleton variant="text" width={90} sx={{ bgcolor: 'rgba(255,255,255,0.12)', display: 'inline-block', verticalAlign: 'middle' }} />
+          ) : (
+            `${Number(apy).toFixed(2)}% APY · live now`
+          )}
         </Box>
 
         {/* Heading */}

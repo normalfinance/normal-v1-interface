@@ -12,6 +12,7 @@ import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import ArrowForwardOutlinedIcon from '@mui/icons-material/ArrowForwardOutlined';
 
 import EarnAnimation from '@/components/ui/earn-animation';
+import { useVaultApy } from '@/hooks/use-vault-apy';
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -113,30 +114,20 @@ const CAROUSEL_SLIDES = [
 function MockupCarouselCard() {
   const router = useRouter();
   const [slide, setSlide] = useState(0);
-  const [fading, setFading] = useState(false);
+  const touchStartX = useRef(0);
 
-  const goTo = useCallback((index: number) => {
-    setFading(true);
-    setTimeout(() => {
-      setSlide(index);
-      setFading(false);
-    }, 180);
-  }, []);
+  const goTo = useCallback((index: number) => setSlide(index), []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      goTo((slide + 1) % CAROUSEL_SLIDES.length);
+      setSlide((s) => (s + 1) % CAROUSEL_SLIDES.length);
     }, 7000);
     return () => clearInterval(interval);
-  }, [slide, goTo]);
+  }, []);
 
   const current = CAROUSEL_SLIDES[slide];
   const prev = (slide - 1 + CAROUSEL_SLIDES.length) % CAROUSEL_SLIDES.length;
   const next = (slide + 1) % CAROUSEL_SLIDES.length;
-
-  const touchStartX = useRef(0);
-
-  const SIDE_PAD = '20px';
 
   return (
     <Box
@@ -158,54 +149,41 @@ function MockupCarouselCard() {
         if (Math.abs(delta) > 40) goTo(delta > 0 ? next : prev);
       }}
     >
-      {/* Full-bleed image */}
-      <Box
-        component="img"
-        src={current.image}
-        alt={current.title}
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'top',
-          display: 'block',
-          transition: 'opacity 180ms ease',
-          opacity: fading ? 0 : 1,
-        }}
-      />
+      {/* Cross-fading images — all rendered, opacity toggled */}
+      {CAROUSEL_SLIDES.map((s, i) => (
+        <Box
+          key={i}
+          component="img"
+          src={s.image}
+          alt={s.title}
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'top',
+            display: 'block',
+            transition: 'opacity 600ms ease',
+            opacity: i === slide ? 1 : 0,
+          }}
+        />
+      ))}
 
       {/* Dark gradient — bottom portion */}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
+      <Box sx={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)',
+      }} />
 
       {/* Bottom overlay — text left, arrows + dots right */}
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          px: '20px',
-          pb: '18px',
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          gap: 2,
-        }}
-      >
+      <Box sx={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        px: '20px', pb: '18px',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 2,
+      }}>
         {/* Text — bottom left */}
-        <Box sx={{ minWidth: 0, transition: 'opacity 180ms', opacity: fading ? 0 : 1 }}>
-          <Typography sx={{ ...EYEBROW_SX, color: 'rgba(255,255,255,0.55)', mb: 0.5 }}>
-            {current.eyebrow}
-          </Typography>
+        <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ ...CARD_H3_SX, color: '#fff', mb: 0.5, fontSize: '18px' }}>
             {current.title}
           </Typography>
@@ -216,41 +194,31 @@ function MockupCarouselCard() {
 
         {/* Dots + arrows — bottom right */}
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
-          {/* Dots */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             {CAROUSEL_SLIDES.map((_, i) => (
               <Box
                 key={i}
                 onClick={(e) => { e.stopPropagation(); goTo(i); }}
                 sx={{
-                  width: i === slide ? 18 : 5,
-                  height: 5,
+                  width: i === slide ? 18 : 5, height: 5,
                   borderRadius: '999px',
                   bgcolor: i === slide ? '#fff' : 'rgba(255,255,255,0.4)',
-                  cursor: 'pointer',
-                  transition: 'all 220ms ease',
+                  cursor: 'pointer', transition: 'all 220ms ease',
                 }}
               />
             ))}
           </Box>
-          {/* Arrows */}
           <Box sx={{ display: 'flex', gap: '6px' }}>
             {(['prev', 'next'] as const).map((dir) => (
               <Box
                 key={dir}
                 onClick={(e) => { e.stopPropagation(); goTo(dir === 'prev' ? prev : next); }}
                 sx={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: '50%',
-                  bgcolor: 'rgba(255,255,255,0.15)',
-                  backdropFilter: 'blur(6px)',
+                  width: 30, height: 30, borderRadius: '50%',
+                  bgcolor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(6px)',
                   border: '1px solid rgba(255,255,255,0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'background 150ms, transform 150ms',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'background 150ms, transform 150ms',
                   '&:hover': { bgcolor: 'rgba(255,255,255,0.28)', transform: 'scale(1.08)' },
                 }}
               >
@@ -527,16 +495,7 @@ function NonCustodialCard() {
 /* BentoSection                                                        */
 /* ------------------------------------------------------------------ */
 export function BentoSection() {
-  const [liveApy, setLiveApy] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetch('/api/savings/vault-info?network=mainnet')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.vault?.apy != null) setLiveApy(Number(data.vault.apy));
-      })
-      .catch(() => {});
-  }, []);
+  const liveApy = useVaultApy();
 
   return (
     <Box component="section" sx={{ py: { xs: '80px', md: '110px' }, background: '#FAFAFB' }}>
