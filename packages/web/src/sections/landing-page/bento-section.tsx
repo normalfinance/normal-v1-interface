@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { cdn } from '@normalfinance/utils';
+
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
@@ -225,16 +227,14 @@ function StellarSpeedCard() {
 /* ------------------------------------------------------------------ */
 const BACKERS = [
   {
-    initials: 'SDF',
     name: 'Stellar Development Foundation',
     role: 'Lead investor & advisor',
-    color: '#1B9FFF',
+    logo: cdn('homepage/stellar-logo.webp'),
   },
   {
-    initials: 'TD',
     name: 'DraperU Ventures',
     role: 'Tim Draper · Lead investor',
-    color: '#7C5CFC',
+    logo: cdn('homepage/draper-university.webp'),
   },
 ];
 
@@ -266,24 +266,19 @@ function BackedByCard() {
               py: '13px',
             }}
           >
-            {/* Initials badge */}
             <Box
+              component="img"
+              src={b.logo}
+              alt={b.name}
               sx={{
-                width: 38,
-                height: 38,
-                borderRadius: '10px',
-                background: `${b.color}18`,
-                border: `1px solid ${b.color}30`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                width: 56,
+                height: 56,
+                objectFit: 'contain',
                 flexShrink: 0,
+                filter: 'brightness(0)',
+                opacity: 0.7,
               }}
-            >
-              <Typography sx={{ fontSize: '11px', fontWeight: 700, color: b.color, ...MONO, letterSpacing: '0.02em' }}>
-                {b.initials}
-              </Typography>
-            </Box>
+            />
             <Box>
               <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.2 }}>
                 {b.name}
