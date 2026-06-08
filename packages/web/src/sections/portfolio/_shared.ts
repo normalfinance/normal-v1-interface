@@ -16,6 +16,23 @@ export const CARD_SX = {
 } as const;
 
 export const DONUT_COLORS = ['#5BCFFF', '#B17BFF', '#FF7BC5', '#FFB060', '#6E8BFF', '#1AB37D', '#FF8A65'];
+
+const ASSET_BRAND_COLORS: Record<string, string> = {
+  '__btc__':     '#F7931A', // Bitcoin orange
+  'BTC':         '#F7931A',
+  '__savings__': '#FF6EB4', // Savings pink
+  'Savings':     '#FF6EB4',
+  'USDC':        '#2775CA', // USDC blue
+  'XLM':         '#B17BFF', // Stellar violet
+};
+
+export function getHoldingColor(token: { contract: string; symbol: string }, index: number): string {
+  return (
+    ASSET_BRAND_COLORS[token.contract] ??
+    ASSET_BRAND_COLORS[token.symbol] ??
+    DONUT_COLORS[index % DONUT_COLORS.length]
+  );
+}
 export const DONUT_R = 76;
 export const DONUT_SIZE = 210;
 export const DONUT_CX = DONUT_SIZE / 2;

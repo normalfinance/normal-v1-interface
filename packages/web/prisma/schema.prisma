@@ -102,6 +102,20 @@ model SwapLog {
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TurnkeyWallet {
+  id              String   @id @default(cuid())
+  supabaseUid     String   @unique
+  subOrgId        String   @unique
+  walletId        String
+  bitcoinAddress  String?
+  ethereumAddress String?
+  stellarAddress  String?
+  createdAt       DateTime @default(now())
+
+  @@index([supabaseUid])
+  @@map("turnkey_wallets")
+}
+
 model normal_contract_events {
   id                          String   @id
   type                        String

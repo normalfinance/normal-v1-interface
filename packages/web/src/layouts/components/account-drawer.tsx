@@ -9,9 +9,11 @@ import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, format, logger } from '@normalfinance/utils';
 import { useUserActivity, useStellarConfig } from '@/hooks';
+import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
@@ -104,10 +106,17 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
     }
   }, [drawerOpen, address, refreshVaultInfo, refreshUserPosition]);  
 
-  const assetsBalance = tokens.reduce((acc, tkn) => {
-    const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
-    return acc.plus(holdings);
-  }, BigNumber(0));
+  const { btcToken } = useBtcPortfolio(true);
+
+  const allTokens = useMemo(
+    () => (btcToken ? [...tokens, btcToken] : tokens),
+    [tokens, btcToken]
+  );
+
+  const assetsBalance = useMemo(
+    () => allTokens.reduce((acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)), BigNumber(0)),
+    [allTokens]
+  );
 
   const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
   const savingsLoaded = userPosition !== null;
@@ -133,7 +142,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
         savingsFetching={savingsFetching && !savingsLoaded}
         tokensFetching={tokensFetching}
         percentageChange={0}
-        tokens={tokens}
+        tokens={allTokens}
         activity={recentActivity}
       />
     </Box>
@@ -184,6 +193,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address || publicKey || normalPublicKey;
   const isWalletConnected = !!connectedAddress || isConnected || isNormalConnected;
+
+  const { addresses: turnkeyAddresses } = useTurnkeyWallet(open && !!session);
+  const bitcoinAddress = turnkeyAddresses?.bitcoinAddress ?? null;
 
   // Only fetch account status while the drawer is open and a wallet is connected
   const { isLoading: isCheckingSetup, accountExists, hasUsdcTrustline } = useAccountStatus(
@@ -543,44 +555,45 @@ export function AccountDrawer(props: AccountDrawerProps) {
         {session && (
           <Scrollbar sx={{ flexGrow: 1 }}>
             <Stack spacing={2} sx={{ px: 2, pt: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={2} sx={{ pb: '2px' }}>
-                <Avatar
-                  src={userAvatar}
-                  alt={displayName}
-                  sx={{ width: 44, height: 44, flexShrink: 0 }}
-                />
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography sx={{ fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: '#0A0A0F' }}>
-                    {displayName}
-                  </Typography>
-                  <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
-                    {userEmail}
-                  </Typography>
-                  {connectedAddress && (
-                    <Stack direction="row" alignItems="center" spacing={0} sx={{ mt: '6px' }}>
-                      <Box
-                        sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          px: '10px',
-                          py: '4px',
-                          bgcolor: 'rgba(10,10,15,0.04)',
-                          border: '1px solid rgba(10,10,15,0.06)',
-                          borderRadius: '999px',
-                          fontSize: '11.5px',
-                          color: '#2A2A33',
-                          fontFamily: '"Geist Mono", ui-monospace, monospace',
-                          letterSpacing: '-0.01em',
-                        }}
-                      >
-                        {format.fTruncate(connectedAddress, 22)}
+              <Box sx={{ pb: '2px' }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Avatar
+                    src={userAvatar}
+                    alt={displayName}
+                    sx={{ width: 44, height: 44, flexShrink: 0 }}
+                  />
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{ fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: '#0A0A0F' }}>
+                      {displayName}
+                    </Typography>
+                    <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
+                      {userEmail}
+                    </Typography>
+                  </Box>
+                </Stack>
+                {connectedAddress && (
+                  <Box sx={{ mt: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <Stack direction="row" alignItems="center" gap="8px">
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#14B8A6', flexShrink: 0 }} />
+                      <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Stellar</Box>
+                      <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {`${connectedAddress.slice(0, 8)}...${connectedAddress.slice(-6)}`}
                       </Box>
-                      <CopyIconButton value={connectedAddress} alert="Account ID copied" />
+                      <CopyIconButton value={connectedAddress} alert="Stellar address copied" />
                     </Stack>
-                  )}
-                </Box>
-              </Stack>
+                    {bitcoinAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#F7931A', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Bitcoin</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${bitcoinAddress.slice(0, 8)}...${bitcoinAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={bitcoinAddress} alert="Bitcoin address copied" />
+                      </Stack>
+                    )}
+                  </Box>
+                )}
+              </Box>
               {isAutoConnecting ? (
                 <Box
                   sx={{

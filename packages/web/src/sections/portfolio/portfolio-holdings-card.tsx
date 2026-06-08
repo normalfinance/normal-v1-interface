@@ -34,7 +34,7 @@ import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWall
 
 import ReceiveModal from '@/components/_common/receive-modal';
 
-import { MONO, CARD_SX, DONUT_COLORS } from './_shared';
+import { MONO, CARD_SX, getHoldingColor } from './_shared';
 import type { HoldingData } from './_shared';
 
 // ----------------------------------------------------------------------
@@ -239,7 +239,7 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
                 const balanceDisplay = BigNumber(h.token.balance).toFixed(
                   h.token.decimals > 4 ? 4 : h.token.decimals
                 );
-                const color = DONUT_COLORS[i % DONUT_COLORS.length];
+                const color = getHoldingColor(h.token, i);
 
                 return (
                   <Box

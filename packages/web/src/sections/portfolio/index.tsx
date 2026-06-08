@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { logger } from '@normalfinance/utils';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { BigNumber } from 'bignumber.js';
 import { DashboardContent } from '@/layouts/dashboard';
 
@@ -22,6 +24,9 @@ import type { HoldingData } from './_shared';
 export default function PortfolioView() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  const { user } = useSupabaseAuth();
+  const { btcToken } = useBtcPortfolio(!!user);
 
   const { setGlobalIsLoading } = useAppStore();
   const {
@@ -50,7 +55,12 @@ export default function PortfolioView() {
     [tokens]
   );
 
-  const totalBalance = walletBalance + savingsValue;
+  const btcValue = useMemo(
+    () => btcToken ? BigNumber(btcToken.balance).multipliedBy(btcToken.price).toNumber() : 0,
+    [btcToken]
+  );
+
+  const totalBalance = walletBalance + savingsValue + btcValue;
 
   const holdingsWithBalance = useMemo(
     () => tokens.filter((tkn) => BigNumber(tkn.balance).gt(0)),
@@ -92,8 +102,16 @@ export default function PortfolioView() {
       });
     }
 
+    if (btcToken) {
+      entries.push({
+        token: btcToken,
+        value: btcValue,
+        percentage: totalBalance > 0 ? (btcValue / totalBalance) * 100 : 0,
+      });
+    }
+
     return entries.sort((a, b) => b.value - a.value);
-  }, [holdingsWithBalance, totalBalance, savingsValue]);
+  }, [holdingsWithBalance, totalBalance, savingsValue, btcToken, btcValue]);
 
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
