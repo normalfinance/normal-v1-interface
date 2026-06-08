@@ -33,6 +33,7 @@ import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import ReceiveModal from '@/components/_common/receive-modal';
+import { ReceiveAssetPicker } from '@/components/_common/receive-asset-picker';
 
 import { MONO, CARD_SX, getHoldingColor } from './_shared';
 import type { HoldingData } from './_shared';
@@ -102,9 +103,11 @@ function ActionChooserDialog({
 interface HoldingsCardProps {
   holdingsData: HoldingData[];
   totalBalance: number;
+  onBtcReceive?: () => void;
+  hasBitcoinWallet?: boolean;
 }
 
-export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) {
+export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitcoinWallet }: HoldingsCardProps) {
   const { t } = useTranslate();
   const router = useRouter();
   const { setModalView } = useAppStore();
@@ -112,11 +115,28 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [receiveContext, setReceiveContext] = useState<'deposit' | 'receive' | null>(null);
+  const [receivePickerOpen, setReceivePickerOpen] = useState(false);
+  const [pendingReceiveContext, setPendingReceiveContext] = useState<'deposit' | 'receive'>('receive');
 
   const openReceiveModal = (context: 'deposit' | 'receive') => {
     setTransferDialogOpen(false);
     setDepositDialogOpen(false);
-    setReceiveContext(context);
+    if (hasBitcoinWallet) {
+      setPendingReceiveContext(context);
+      setReceivePickerOpen(true);
+    } else {
+      setReceiveContext(context);
+    }
+  };
+
+  const handlePickerSelectStellar = () => {
+    setReceivePickerOpen(false);
+    setReceiveContext(pendingReceiveContext);
+  };
+
+  const handlePickerSelectBitcoin = () => {
+    setReceivePickerOpen(false);
+    onBtcReceive?.();
   };
 
   const openSendModal = () => {
@@ -241,9 +261,13 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
                 );
                 const color = getHoldingColor(h.token, i);
 
+                const isBtc = h.token.contract === '__btc__';
+                const handleRowClick = isBtc && onBtcReceive ? onBtcReceive : undefined;
+
                 return (
                   <Box
                     key={h.token.contract}
+                    onClick={handleRowClick}
                     sx={{
                       display: 'grid',
                       gridTemplateColumns: HOLDINGS_COLS,
@@ -254,6 +278,7 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
                       borderBottom: '1px solid rgba(10,10,15,0.05)',
                       '&:last-child': { borderBottom: 'none' },
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.02)', borderRadius: '10px' },
+                      ...(isBtc && onBtcReceive && { cursor: 'pointer' }),
                     }}
                   >
                     {/* Asset */}
@@ -332,6 +357,13 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
         open={!!receiveContext}
         context={receiveContext ?? 'deposit'}
         onClose={() => setReceiveContext(null)}
+      />
+
+      <ReceiveAssetPicker
+        open={receivePickerOpen}
+        onClose={() => setReceivePickerOpen(false)}
+        onSelectStellar={handlePickerSelectStellar}
+        onSelectBitcoin={handlePickerSelectBitcoin}
       />
     </>
   );

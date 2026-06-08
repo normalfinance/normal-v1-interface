@@ -35,6 +35,8 @@ import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
 import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 import ReceiveModal from '@/components/_common/receive-modal';
+import { ReceiveAssetPicker } from '@/components/_common/receive-asset-picker';
+import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
@@ -110,6 +112,7 @@ export interface ConnectedWalletProps {
   percentageChange?: number;
   tokens?: Token[];
   activity?: Activity[];
+  bitcoinAddress?: string | null;
 }
 
 export default function ConnectedWallet({
@@ -121,6 +124,7 @@ export default function ConnectedWallet({
   percentageChange,
   tokens,
   activity,
+  bitcoinAddress,
 }: ConnectedWalletProps) {
   const { t } = useTranslate();
   const router = useRouter();
@@ -128,11 +132,29 @@ export default function ConnectedWallet({
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [receiveContext, setReceiveContext] = useState<'deposit' | 'receive' | null>(null);
+  const [receivePickerOpen, setReceivePickerOpen] = useState(false);
+  const [pendingReceiveContext, setPendingReceiveContext] = useState<'deposit' | 'receive'>('receive');
+  const [btcReceiveOpen, setBtcReceiveOpen] = useState(false);
 
   const openReceiveModal = (context: 'deposit' | 'receive') => {
     setTransferDialogOpen(false);
     setDepositDialogOpen(false);
-    setReceiveContext(context);
+    if (bitcoinAddress) {
+      setPendingReceiveContext(context);
+      setReceivePickerOpen(true);
+    } else {
+      setReceiveContext(context);
+    }
+  };
+
+  const handlePickerSelectStellar = () => {
+    setReceivePickerOpen(false);
+    setReceiveContext(pendingReceiveContext);
+  };
+
+  const handlePickerSelectBitcoin = () => {
+    setReceivePickerOpen(false);
+    setBtcReceiveOpen(true);
   };
 
   const openSendModal = () => {
@@ -319,6 +341,19 @@ export default function ConnectedWallet({
         open={!!receiveContext}
         context={receiveContext ?? 'deposit'}
         onClose={() => setReceiveContext(null)}
+      />
+
+      <ReceiveAssetPicker
+        open={receivePickerOpen}
+        onClose={() => setReceivePickerOpen(false)}
+        onSelectStellar={handlePickerSelectStellar}
+        onSelectBitcoin={handlePickerSelectBitcoin}
+      />
+
+      <BitcoinReceiveModal
+        open={btcReceiveOpen}
+        address={bitcoinAddress ?? null}
+        onClose={() => setBtcReceiveOpen(false)}
       />
 
       <Tabs

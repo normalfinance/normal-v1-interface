@@ -56,7 +56,7 @@ import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
 
 import { AccountButton } from './account-button';
 
-function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen: boolean }) {
+function WalletConnected({ address, drawerOpen, bitcoinAddress }: { address: string; drawerOpen: boolean; bitcoinAddress: string | null }) {
   const { setGlobalIsLoading } = useAppStore();
 
   const {
@@ -66,7 +66,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
   const network = useNetworkStore((s) => s.network);
   const [tokensFetching, setTokensFetching] = useState(true);
 
-  const { recentActivity } = useUserActivity(address);
+  const { recentActivity } = useUserActivity(address, bitcoinAddress);
   const {
     userPosition,
     fetching: savingsFetching,
@@ -144,6 +144,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
         percentageChange={0}
         tokens={allTokens}
         activity={recentActivity}
+        bitcoinAddress={bitcoinAddress}
       />
     </Box>
   );
@@ -659,7 +660,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       </Stack>
                     </Box>
                   )}
-                  <WalletConnected address={connectedAddress} drawerOpen={open} />
+                  <WalletConnected address={connectedAddress} drawerOpen={open} bitcoinAddress={bitcoinAddress} />
                 </>
               ) : (
                 <Box sx={{ px: 1, py: 3 }}>

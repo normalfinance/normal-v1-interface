@@ -19,6 +19,7 @@ import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalance
 import { HeroCard } from './portfolio-hero-card';
 import { HoldingsCard } from './portfolio-holdings-card';
 import { ActivityCard } from './portfolio-activity-card';
+import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 import type { HoldingData } from './_shared';
 
 export default function PortfolioView() {
@@ -26,7 +27,8 @@ export default function PortfolioView() {
   useEffect(() => { setMounted(true); }, []);
 
   const { user } = useSupabaseAuth();
-  const { btcToken } = useBtcPortfolio(!!user);
+  const { btcToken, bitcoinAddress } = useBtcPortfolio(!!user);
+  const [btcReceiveOpen, setBtcReceiveOpen] = useState(false);
 
   const { setGlobalIsLoading } = useAppStore();
   const {
@@ -226,13 +228,24 @@ export default function PortfolioView() {
           mt: '20px',
         }}
       >
-        <HoldingsCard holdingsData={holdingsData} totalBalance={totalBalance} />
+        <HoldingsCard
+          holdingsData={holdingsData}
+          totalBalance={totalBalance}
+          hasBitcoinWallet={!!bitcoinAddress}
+          onBtcReceive={bitcoinAddress ? () => setBtcReceiveOpen(true) : undefined}
+        />
         <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
       </Box>
 
       <Box sx={{ mt: '20px' }}>
         <ActivityCard walletAddress={wallet.address} />
       </Box>
+
+      <BitcoinReceiveModal
+        open={btcReceiveOpen}
+        address={bitcoinAddress}
+        onClose={() => setBtcReceiveOpen(false)}
+      />
     </DashboardContent>
   );
 }

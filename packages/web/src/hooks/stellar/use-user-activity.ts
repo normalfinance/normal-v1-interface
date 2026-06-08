@@ -4,7 +4,7 @@ import type { WalletActivityItem, WalletActivityResponse } from '@/types/wallet-
 import useSWR from 'swr';
 import { Horizon } from '@stellar/stellar-sdk';
 import { listTransactions } from '@/lib/mgi/history';
-import { constants, getCryptoIconUrl } from '@normalfinance/utils';
+import { constants, getCryptoIconUrl, cdn } from '@normalfinance/utils';
 
 function fallbackSymbol(address: string, stored: string | null): string {
   if (stored) return stored;
@@ -151,6 +151,75 @@ async function fetchStellarPayments(walletAddress: string): Promise<Activity[]> 
   }
 }
 
+async function fetchBtcActivity(bitcoinAddress: string): Promise<Activity[]> {
+  try {
+    const res = await fetch(`https://mempool.space/api/address/${bitcoinAddress}/txs`);
+    if (!res.ok) return [];
+    const txs: any[] = await res.json();
+
+    const activities: Activity[] = [];
+
+    for (const tx of txs) {
+      const txid: string = tx.txid;
+      const timestamp: number = tx.status?.confirmed
+        ? (tx.status.block_time as number) * 1000
+        : Date.now();
+
+      const userInputs: any[] = tx.vin.filter(
+        (v: any) => v.prevout?.scriptpubkey_address === bitcoinAddress
+      );
+      const nonUserOutputs: any[] = tx.vout.filter(
+        (v: any) => v.scriptpubkey_address !== bitcoinAddress
+      );
+      const userOutputs: any[] = tx.vout.filter(
+        (v: any) => v.scriptpubkey_address === bitcoinAddress
+      );
+
+      const isFromUser = userInputs.length > 0;
+      const sentToOthers: number = nonUserOutputs.reduce((s: number, v: any) => s + v.value, 0);
+      const receivedByUser: number = userOutputs.reduce((s: number, v: any) => s + v.value, 0);
+      const btcIcon = cdn('tokens/bitcoin.webp');
+
+      if (isFromUser && sentToOthers > 0) {
+        activities.push({
+          id: `btc:${txid}`,
+          timestamp,
+          type: 'Sent',
+          address: nonUserOutputs[0]?.scriptpubkey_address ?? txid,
+          txHash: txid,
+          token: {
+            address: '__btc__',
+            symbol: 'BTC',
+            iconUrl: btcIcon,
+            amount: sentToOthers / 1e8,
+          },
+        });
+      } else if (receivedByUser > 0) {
+        const senderAddress = isFromUser
+          ? bitcoinAddress
+          : (tx.vin[0]?.prevout?.scriptpubkey_address ?? txid);
+        activities.push({
+          id: `btc:${txid}`,
+          timestamp,
+          type: 'Receive',
+          address: senderAddress,
+          txHash: txid,
+          token: {
+            address: '__btc__',
+            symbol: 'BTC',
+            iconUrl: btcIcon,
+            amount: receivedByUser / 1e8,
+          },
+        });
+      }
+    }
+
+    return activities;
+  } catch {
+    return [];
+  }
+}
+
 async function fetchWalletActivity(url: string): Promise<Activity[]> {
   const res = await fetch(url);
   const data: WalletActivityResponse = await res.json();
@@ -160,7 +229,10 @@ async function fetchWalletActivity(url: string): Promise<Activity[]> {
   return data.items.map(mapWalletActivityItem);
 }
 
-export function useUserActivity(walletAddress: string | null | undefined): {
+export function useUserActivity(
+  walletAddress: string | null | undefined,
+  bitcoinAddress?: string | null
+): {
   recentActivity: Activity[];
   isLoading: boolean;
   error: Error | undefined;
@@ -188,9 +260,18 @@ export function useUserActivity(walletAddress: string | null | undefined): {
     { revalidateOnFocus: true, dedupingInterval: 60_000 }
   );
 
-  const recentActivity = [...(data ?? []), ...(mgiData ?? []), ...(stellarData ?? [])].sort(
-    (a, b) => b.timestamp - a.timestamp
+  const { data: btcData } = useSWR<Activity[]>(
+    bitcoinAddress ? ['btc-activity', bitcoinAddress] : null,
+    ([, addr]) => fetchBtcActivity(addr as string),
+    { revalidateOnFocus: true, dedupingInterval: 60_000 }
   );
+
+  const recentActivity = [
+    ...(data ?? []),
+    ...(mgiData ?? []),
+    ...(stellarData ?? []),
+    ...(btcData ?? []),
+  ].sort((a, b) => b.timestamp - a.timestamp);
 
   return {
     recentActivity,
