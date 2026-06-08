@@ -12,7 +12,6 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-
 import MonetizationOnOutlined from '@mui/icons-material/MonetizationOnOutlined';
 
 const ICON_BOX_SX = {

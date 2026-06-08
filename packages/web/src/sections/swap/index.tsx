@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
 import { logger } from '@normalfinance/utils';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import React, { useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import SwapCard from '@/components/_common/swap-card';
+
 import { SavingsOnrampCard } from '../savings/savings-onramp-card';
 
 export default function SwapView() {

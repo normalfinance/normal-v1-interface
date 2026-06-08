@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+
 import { Box, Typography } from '@mui/material';
 
 const GRADIENT =
@@ -101,7 +102,7 @@ export const RoadmapHero: React.FC = () => (
           color: '#fff',
         }}
       >
-        Where we're headed{' '}
+        Where we&apos;re headed{' '}
         <Box
           component="span"
           sx={{

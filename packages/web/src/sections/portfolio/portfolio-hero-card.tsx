@@ -9,14 +9,15 @@ import Skeleton from '@mui/material/Skeleton';
 import {
   MONO,
   DONUT_R,
-  DONUT_SIZE,
   DONUT_CX,
   DONUT_CY,
+  DONUT_GAP,
+  DONUT_SIZE,
   DONUT_CIRC,
   DONUT_STROKE,
-  DONUT_GAP,
   getHoldingColor,
 } from './_shared';
+
 import type { HoldingData } from './_shared';
 
 // -------------------------------------------------------------------

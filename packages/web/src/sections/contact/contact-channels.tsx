@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Icon } from '@iconify/react';
-import { Box, Typography, Link } from '@mui/material';
+
+import { Box, Link, Typography } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 type Channel = {

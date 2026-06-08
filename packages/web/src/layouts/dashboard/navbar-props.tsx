@@ -7,10 +7,10 @@ import FlagOutlined from '@mui/icons-material/FlagOutlined';
 import FeedOutlined from '@mui/icons-material/FeedOutlined';
 import MailOutlined from '@mui/icons-material/MailOutlined';
 import HelpOutlined from '@mui/icons-material/HelpOutlined';
-import BarChartOutlined from '@mui/icons-material/BarChartOutlined';
+import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
 import ArticleOutlined from '@mui/icons-material/ArticleOutlined';
-import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
+import BarChartOutlined from '@mui/icons-material/BarChartOutlined';
 import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import type { Props } from './normal-navbar';

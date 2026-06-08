@@ -1,25 +1,25 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { BigNumber } from 'bignumber.js';
 import { logger } from '@normalfinance/utils';
+import { useMemo, useState, useEffect } from 'react';
+import { DashboardContent } from '@/layouts/dashboard';
+import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
-import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
-import { BigNumber } from 'bignumber.js';
-import { DashboardContent } from '@/layouts/dashboard';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import SavingsCard from '@/components/_common/savings-card';
-
-import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 
 import { HeroCard } from './portfolio-hero-card';
 import { HoldingsCard } from './portfolio-holdings-card';
 import { ActivityCard } from './portfolio-activity-card';
-import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
+
 import type { HoldingData } from './_shared';
 
 export default function PortfolioView() {

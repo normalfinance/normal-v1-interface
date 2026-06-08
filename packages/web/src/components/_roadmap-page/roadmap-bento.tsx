@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+
 import { Box, Typography } from '@mui/material';
 
 const GRADIENT =
@@ -43,7 +44,7 @@ export const RoadmapBento: React.FC = () => (
           mb: 1.5,
         }}
       >
-        — What we're building right now
+        — What we&apos;re building right now
       </Typography>
       <Typography
         component="h2"

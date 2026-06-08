@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
+
 import { useTheme } from '@mui/material/styles';
 import { Box, Stack, Container, Typography } from '@mui/material';
 
@@ -43,13 +44,13 @@ export const HeroHeader: React.FC = () => {
   return (
     <Box
       component="section"
-      sx={(t) => ({
+      sx={(th) => ({
         position: 'relative',
         overflow: 'hidden',
         px: '5%',
         py: { xs: 7, md: 9, lg: 11 },
         bgcolor: '#FAFAFB',
-        ...t.applyStyles('dark', { bgcolor: 'background.paper' }),
+        ...th.applyStyles('dark', { bgcolor: 'background.paper' }),
       })}
     >
       {/* Wavy canvas */}
@@ -70,14 +71,14 @@ export const HeroHeader: React.FC = () => {
 
       {/* Fade top */}
       <Box
-        sx={(t) => ({
+        sx={(th) => ({
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           height: '90px',
-          background: t.palette.mode === 'dark'
-            ? `linear-gradient(to bottom, ${t.palette.background.paper} 0%, transparent 100%)`
+          background: th.palette.mode === 'dark'
+            ? `linear-gradient(to bottom, ${th.palette.background.paper} 0%, transparent 100%)`
             : 'linear-gradient(to bottom, rgba(250,250,251,1) 0%, rgba(250,250,251,0) 100%)',
           zIndex: 1,
           pointerEvents: 'none',
@@ -86,14 +87,14 @@ export const HeroHeader: React.FC = () => {
 
       {/* Fade bottom */}
       <Box
-        sx={(t) => ({
+        sx={(th) => ({
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
           height: '140px',
-          background: t.palette.mode === 'dark'
-            ? `linear-gradient(to top, ${t.palette.background.paper} 0%, transparent 100%)`
+          background: th.palette.mode === 'dark'
+            ? `linear-gradient(to top, ${th.palette.background.paper} 0%, transparent 100%)`
             : 'linear-gradient(to top, rgba(250,250,251,1) 0%, rgba(250,250,251,0) 100%)',
           zIndex: 1,
           pointerEvents: 'none',
@@ -107,7 +108,7 @@ export const HeroHeader: React.FC = () => {
 
             {/* ---- Hero pill ---- */}
             <Box
-              sx={(t) => ({
+              sx={(th) => ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '10px',
@@ -120,7 +121,7 @@ export const HeroHeader: React.FC = () => {
                 boxShadow:
                   '0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 32px rgba(10,10,15,0.07), 0 2px 6px rgba(10,10,15,0.04)',
                 mb: '28px',
-                ...t.applyStyles('dark', {
+                ...th.applyStyles('dark', {
                   background: 'rgba(20,26,33,0.85)',
                   border: '1px solid rgba(255,255,255,0.08)',
                   boxShadow: '0 1px 0 rgba(255,255,255,0.06) inset, 0 10px 32px rgba(0,0,0,0.2)',
@@ -128,23 +129,23 @@ export const HeroHeader: React.FC = () => {
               })}
             >
               <Typography
-                sx={(t) => ({
+                sx={(th) => ({
                   fontSize: '13.5px',
                   fontWeight: 500,
                   color: '#6B6B76',
                   lineHeight: 1,
-                  ...t.applyStyles('dark', { color: '#9A9AA3' }),
+                  ...th.applyStyles('dark', { color: '#9A9AA3' }),
                 })}
               >
                 {t('Investing that works for you')}
               </Typography>
               <Box
-                sx={(t) => ({
+                sx={(th) => ({
                   width: '1px',
                   height: '12px',
                   background: 'rgba(10,10,15,0.12)',
                   flexShrink: 0,
-                  ...t.applyStyles('dark', { background: 'rgba(255,255,255,0.12)' }),
+                  ...th.applyStyles('dark', { background: 'rgba(255,255,255,0.12)' }),
                 })}
               />
               <Box
@@ -158,14 +159,14 @@ export const HeroHeader: React.FC = () => {
             {/* ---- Title ---- */}
             <Typography
               component="h1"
-              sx={(t) => ({
+              sx={(th) => ({
                 fontSize: 'clamp(40px, 5.6vw, 68px)',
                 fontWeight: 500,
                 letterSpacing: '-0.035em',
                 lineHeight: 1.08,
                 mb: { xs: '32px', md: '40px' },
                 color: '#0A0A0F',
-                ...t.applyStyles('dark', { color: '#FFFFFF' }),
+                ...th.applyStyles('dark', { color: '#FFFFFF' }),
               })}
             >
               {t('Earn passive yield, and')}
@@ -191,7 +192,7 @@ export const HeroHeader: React.FC = () => {
 
             {/* ---- Trust pill ---- */}
             <Box
-              sx={(t) => ({
+              sx={(th) => ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 background: 'rgba(255,255,255,0.6)',
@@ -200,7 +201,7 @@ export const HeroHeader: React.FC = () => {
                 borderRadius: '999px',
                 overflow: 'hidden',
                 mb: '16px',
-                ...t.applyStyles('dark', {
+                ...th.applyStyles('dark', {
                   background: 'rgba(20,26,33,0.6)',
                   border: '1px solid rgba(255,255,255,0.07)',
                 }),
@@ -240,11 +241,11 @@ export const HeroHeader: React.FC = () => {
                   </Stack>
                   {i < trustItems.length - 1 && (
                     <Box
-                      sx={(t) => ({
+                      sx={(th) => ({
                         width: '1px',
                         alignSelf: 'stretch',
                         background: 'rgba(10,10,15,0.07)',
-                        ...t.applyStyles('dark', { background: 'rgba(255,255,255,0.07)' }),
+                        ...th.applyStyles('dark', { background: 'rgba(255,255,255,0.07)' }),
                       })}
                     />
                   )}
@@ -254,12 +255,12 @@ export const HeroHeader: React.FC = () => {
 
             {/* ---- Sub text ---- */}
             <Typography
-              sx={(t) => ({
+              sx={(th) => ({
                 fontSize: '14px',
                 color: '#9A9AA3',
                 letterSpacing: '-0.01em',
                 lineHeight: 1.6,
-                ...t.applyStyles('dark', { color: '#6B6B76' }),
+                ...th.applyStyles('dark', { color: '#6B6B76' }),
               })}
             >
               {t('Self-custody savings. Live yield. Built on Stellar.')}

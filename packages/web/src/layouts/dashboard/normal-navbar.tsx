@@ -4,6 +4,7 @@ import type { ButtonProps as MUIButtonProps } from '@mui/material';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { cdn } from '@normalfinance/utils';
 import { usePathname } from '@/routes/hooks';
 import { m, AnimatePresence } from 'framer-motion';
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
@@ -12,7 +13,6 @@ import { alpha, useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/material';
 
-import { cdn } from '@normalfinance/utils';
 import { Iconify } from '@/components/template/iconify';
 
 

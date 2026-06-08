@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { buildAuthHeaders } from '@/utils/http';
+
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import FingerprintIcon from '@mui/icons-material/Fingerprint';
-import { buildAuthHeaders } from '@/utils/http';
 
 // ---------------------------------------------------------------------------
 // Helpers — convert ArrayBuffer to base64url

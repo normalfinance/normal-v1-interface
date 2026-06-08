@@ -2,15 +2,16 @@
 
 import type { Activity } from '@/types/activity';
 
-import { useState, useEffect, useMemo } from 'react';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { useMemo, useState, useEffect } from 'react';
 import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 
-import { MONO, CARD_SX, TAG_STYLES, PAGE_SIZE } from './_shared';
+import { MONO, CARD_SX, PAGE_SIZE, TAG_STYLES } from './_shared';
+
 import type { ActivityTab } from './_shared';
 
 const ACTIVITY_COLS = '130px minmax(0,1.4fr) 1fr 1fr 1fr minmax(0,1.2fr)';

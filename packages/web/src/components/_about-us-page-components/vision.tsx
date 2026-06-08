@@ -6,9 +6,9 @@ import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
 import Link from '@mui/material/Link';
+import { Box, Typography } from '@mui/material';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TelegramIcon from '@mui/icons-material/Telegram';
-import { Box, Typography } from '@mui/material';
 
 type SocialLink = { href: string; icon: React.ReactNode };
 

@@ -3,7 +3,7 @@
 import { useTranslate } from '@/locales';
 import React, { useRef, useState, useEffect } from 'react';
 
-import { Box, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, Stack, Skeleton, Typography } from '@mui/material';
 
 // ----------------------------------------------------------------------
 
@@ -32,7 +32,6 @@ const POINTS = (() => {
 })();
 
 const LINE_D = `M ${POINTS.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ')}`;
-const AREA_D = `${LINE_D} L ${svgW},${svgH} L 0,${svgH} Z`;
 const MAX_BALANCE = INITIAL * Math.pow(1 + APY / 100, YEARS);
 
 const GRID = (() => {
@@ -64,7 +63,7 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
   // Trigger animation once when scrolled into view
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el) return () => {};
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -80,7 +79,7 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
 
   // Run animation once after scroll trigger
   useEffect(() => {
-    if (!hasStarted) return;
+    if (!hasStarted) return () => {};
     startRef.current = Date.now();
     const id = setInterval(() => {
       const elapsed = Date.now() - startRef.current;

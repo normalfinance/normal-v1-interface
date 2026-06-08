@@ -3,12 +3,12 @@
 import React from 'react';
 import { useTranslate } from '@/locales';
 
+import { Box, Typography } from '@mui/material';
 import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
-import { Box, Typography } from '@mui/material';
 
 type FeatureItem = {
   icon: React.ReactNode;

@@ -1,9 +1,9 @@
 import React from 'react';
 
 import { ContactHero } from './contact-hero';
-import { ContactChannels } from './contact-channels';
-import { FaqAccordion } from '../landing-page/faq';
 import { CtaImage } from '../landing-page/cta';
+import { FaqAccordion } from '../landing-page/faq';
+import { ContactChannels } from './contact-channels';
 
 const ContactView: React.FC = () => (
   <>

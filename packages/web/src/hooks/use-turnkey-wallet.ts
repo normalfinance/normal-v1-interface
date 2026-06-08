@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { buildAuthHeaders } from '@/utils/http';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface TurnkeyAddresses {
   bitcoinAddress: string | null;

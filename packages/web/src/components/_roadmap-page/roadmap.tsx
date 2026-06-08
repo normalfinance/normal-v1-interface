@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { Box, Typography } from '@mui/material';
 
 export type MilestoneStatus = 'shipped' | 'in-progress' | 'planned';

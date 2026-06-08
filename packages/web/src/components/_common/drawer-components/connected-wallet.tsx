@@ -3,12 +3,12 @@
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
-import { useState, type ReactNode } from 'react';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
+import { useState, type ReactNode } from 'react';
 import { ModalType } from '@normalfinance/types';
 import { useAppStore } from '@normalfinance/state';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
@@ -24,16 +24,16 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-
 import AddOutlined from '@mui/icons-material/AddOutlined';
-import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
-import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import CloseOutlined from '@mui/icons-material/CloseOutlined';
+import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import CallMadeOutlined from '@mui/icons-material/CallMadeOutlined';
 import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
 import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
+
 import ReceiveModal from '@/components/_common/receive-modal';
 import { ReceiveAssetPicker } from '@/components/_common/receive-asset-picker';
 import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';

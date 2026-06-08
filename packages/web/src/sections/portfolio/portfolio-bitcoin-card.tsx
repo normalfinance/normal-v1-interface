@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
+
 import Box from '@mui/material/Box';
-import Skeleton from '@mui/material/Skeleton';
 import Tooltip from '@mui/material/Tooltip';
-import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import Skeleton from '@mui/material/Skeleton';
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 
 import { BitcoinWalletSetup } from '@/components/_common/bitcoin-wallet-setup';
-import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
-import { CARD_SX, MONO } from './_shared';
+
+import { MONO, CARD_SX } from './_shared';
 
 // ---------------------------------------------------------------------------
 // BTC logo — inline SVG (matches the "no icon library" convention)

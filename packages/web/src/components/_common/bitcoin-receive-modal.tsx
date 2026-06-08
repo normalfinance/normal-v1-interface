@@ -1,20 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { cdn } from '@normalfinance/utils';
+import { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
+import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import Tooltip from '@mui/material/Tooltip';
-
 import CloseOutlined from '@mui/icons-material/CloseOutlined';
-import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 
 const MONO = {
   fontFamily: '"Geist Mono", ui-monospace, monospace',

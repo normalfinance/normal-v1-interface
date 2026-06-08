@@ -20,8 +20,9 @@ import {
 } from '@mui/material';
 
 import { useSnackbar } from '@/components/template/snackbar';
-import { Iconify } from '../template/iconify';
+
 import { WalletGate } from './wallet-gate';
+import { Iconify } from '../template/iconify';
 
 // ----------------------------------------------------------------------
 

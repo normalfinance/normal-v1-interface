@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { cdn } from '@normalfinance/utils';
 import type { Token } from '@normalfinance/types';
+
+import { cdn } from '@normalfinance/utils';
+import { useState, useEffect } from 'react';
+
 import { useTurnkeyWallet } from './use-turnkey-wallet';
 
 async function fetchBtcData(address: string): Promise<{ btc: number; price: number } | null> {

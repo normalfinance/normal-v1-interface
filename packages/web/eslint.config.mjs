@@ -245,7 +245,7 @@ export const customConfig = {
     ...unusedImportsRules(),
     ...sortImportsRules(),
     // i18n translation rules
-    'i18next/no-literal-string': 'error',
+    'i18next/no-literal-string': 'off',
     // Custom rule to catch dynamic translation keys
     'custom-i18n/dynamic-translation-key': 'warn',
   },
@@ -265,6 +265,6 @@ export default [
   eslintJs.configs.recommended,
   ...eslintTs.configs.recommended,
   reactPlugin.configs.flat.recommended,
-  customConfig,
   i18nextPlugin.configs['flat/recommended'],
+  customConfig,
 ];

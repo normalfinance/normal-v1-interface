@@ -1,9 +1,8 @@
 import type { NextRequest } from 'next/server';
 
+import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-
-import { prisma } from '@/lib/prisma';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 export const dynamic = 'force-dynamic';

@@ -7,26 +7,31 @@ import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
-import { cdn, format, logger } from '@normalfinance/utils';
+import { cdn, logger } from '@normalfinance/utils';
 import { useUserActivity, useStellarConfig } from '@/hooks';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
-import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getLinkedWallets } from '@/services/linked-wallets';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
-import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import {
+  useNormalWallet,
+} from '@/hooks/stellar/use-normal-wallet';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
-import { getLinkedWallets } from '@/services/linked-wallets';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
-import {
-  useNormalWallet,
-  hasStoredNormalWalletKey,
-} from '@/hooks/stellar/use-normal-wallet';
 
 import { alpha, useTheme } from '@mui/material/styles';
+import AddOutlined from '@mui/icons-material/AddOutlined';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import SyncOutlined from '@mui/icons-material/SyncOutlined';
+import CloseOutlined from '@mui/icons-material/CloseOutlined';
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
+import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import {
   Box,
   Stack,
@@ -39,20 +44,13 @@ import {
   CircularProgress,
 } from '@mui/material';
 
-import AddOutlined from '@mui/icons-material/AddOutlined';
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
-import SyncOutlined from '@mui/icons-material/SyncOutlined';
-import CloseOutlined from '@mui/icons-material/CloseOutlined';
-import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
-import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
-
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
+import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
-import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
 
 import { AccountButton } from './account-button';
 

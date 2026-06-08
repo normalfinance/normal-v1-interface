@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-
 import { cdn } from '@normalfinance/utils';
+import { useRouter } from 'next/navigation';
+import { useVaultApy } from '@/hooks/use-vault-apy';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
@@ -12,7 +12,6 @@ import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import ArrowForwardOutlinedIcon from '@mui/icons-material/ArrowForwardOutlined';
 
 import EarnAnimation from '@/components/ui/earn-animation';
-import { useVaultApy } from '@/hooks/use-vault-apy';
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */

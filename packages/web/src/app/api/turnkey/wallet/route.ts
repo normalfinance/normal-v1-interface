@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
-
-import { NextResponse } from 'next/server';
-import { Turnkey, DEFAULT_BITCOIN_MAINNET_P2WPKH_ACCOUNTS, DEFAULT_ETHEREUM_ACCOUNTS, DEFAULT_XLM_ACCOUNTS } from '@turnkey/sdk-server';
 import type { v1AuthenticatorTransport } from '@turnkey/sdk-types';
+
+import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { prisma } from '@/lib/prisma';
+import { Turnkey, DEFAULT_XLM_ACCOUNTS, DEFAULT_ETHEREUM_ACCOUNTS, DEFAULT_BITCOIN_MAINNET_P2WPKH_ACCOUNTS } from '@turnkey/sdk-server';
 
 // ---------------------------------------------------------------------------
 // Turnkey client — instantiated once per cold start
