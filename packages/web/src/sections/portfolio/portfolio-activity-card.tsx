@@ -37,7 +37,10 @@ function formatRelative(ts: number): string {
   return `${days}d ago`;
 }
 
-function getStellarExpertUrl(a: Activity): string | null {
+function getExplorerUrl(a: Activity): string | null {
+  if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('btc:') && a.txHash) {
+    return `https://mempool.space/tx/${a.txHash}`;
+  }
   switch (a.type) {
     case 'Savings Deposit':
     case 'Savings Withdraw':
@@ -278,14 +281,15 @@ function TypeTag({ tagKey }: { tagKey: TagKey }) {
 // -------------------------------------------------------------------
 interface ActivityCardProps {
   walletAddress: string | null | undefined;
+  bitcoinAddress?: string | null;
 }
 
-export function ActivityCard({ walletAddress }: ActivityCardProps) {
+export function ActivityCard({ walletAddress, bitcoinAddress }: ActivityCardProps) {
   const { t } = useTranslate();
   const [tab, setTab] = useState<ActivityTab>('all');
   const [page, setPage] = useState(1);
 
-  const { recentActivity, isLoading, mutate } = useUserActivity(walletAddress);
+  const { recentActivity, isLoading, mutate } = useUserActivity(walletAddress, bitcoinAddress);
 
   // Re-fetch wallet activity after a deposit or withdrawal completes.
   useEffect(() => {
@@ -414,7 +418,7 @@ export function ActivityCard({ walletAddress }: ActivityCardProps) {
             {items.map((activity) => {
               const tagKey = activityTagKey(activity);
               const row = activityToRow(activity);
-              const expertUrl = getStellarExpertUrl(activity);
+              const expertUrl = getExplorerUrl(activity);
               return (
                 <Box
                   key={activity.id}

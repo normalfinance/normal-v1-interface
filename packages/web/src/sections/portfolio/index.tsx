@@ -238,7 +238,7 @@ export default function PortfolioView() {
       </Box>
 
       <Box sx={{ mt: '20px' }}>
-        <ActivityCard walletAddress={wallet.address} />
+        <ActivityCard walletAddress={wallet.address} bitcoinAddress={bitcoinAddress} />
       </Box>
 
       <BitcoinReceiveModal
