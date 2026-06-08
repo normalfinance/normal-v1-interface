@@ -49,7 +49,7 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
           challenge: challengeBytes,
           rp: { id: rpId, name: 'Normal Finance' },
           user: {
-            id: new TextEncoder().encode(userId),
+            id: Buffer.from(userId),
             name: userEmail ?? userId,
             displayName: userEmail ?? 'Normal User',
           },
