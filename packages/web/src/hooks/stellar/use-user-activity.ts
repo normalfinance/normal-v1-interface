@@ -153,16 +153,37 @@ async function fetchStellarPayments(walletAddress: string): Promise<Activity[]> 
 
 async function fetchBtcActivity(bitcoinAddress: string): Promise<Activity[]> {
   try {
-    const res = await fetch(`https://mempool.space/api/address/${bitcoinAddress}/txs`);
-    if (!res.ok) return [];
-    const txs: any[] = await res.json();
+    // Fetch confirmed+recent txs AND mempool-only txs in parallel.
+    // /txs returns up to 25 recent transactions and can drop older unconfirmed
+    // ones as new confirmed txs come in. /txs/mempool always contains every
+    // current unconfirmed tx — use it as the authoritative pending source.
+    const [txsRes, mempoolRes] = await Promise.all([
+      fetch(`https://mempool.space/api/address/${bitcoinAddress}/txs`),
+      fetch(`https://mempool.space/api/address/${bitcoinAddress}/txs/mempool`),
+    ]);
+    if (!txsRes.ok) return [];
+    const txs: any[] = await txsRes.json();
+    const mempoolTxs: any[] = mempoolRes.ok ? await mempoolRes.json() : [];
+
+    // Authoritative set of txids that are currently unconfirmed
+    const mempoolIds = new Set<string>(mempoolTxs.map((t: any) => t.txid as string));
+
+    // Merge: /txs results first, then any mempool txs not already included
+    const txMap = new Map<string, any>();
+    for (const tx of txs) txMap.set(tx.txid, tx);
+    for (const tx of mempoolTxs) {
+      if (!txMap.has(tx.txid)) txMap.set(tx.txid, tx);
+    }
+    const allTxs = Array.from(txMap.values());
 
     const activities: Activity[] = [];
 
-    for (const tx of txs) {
+    for (const tx of allTxs) {
       const txid: string = tx.txid;
-      const timestamp: number = tx.status?.confirmed
-        ? (tx.status.block_time as number) * 1000
+      // Use mempool endpoint as ground-truth for unconfirmed status
+      const isConfirmed = mempoolIds.has(txid) ? false : (tx.status?.confirmed ?? false);
+      const timestamp: number = isConfirmed
+        ? (tx.status?.block_time as number) * 1000
         : Date.now();
 
       const userInputs: any[] = tx.vin.filter(
@@ -187,6 +208,7 @@ async function fetchBtcActivity(bitcoinAddress: string): Promise<Activity[]> {
           type: 'Sent',
           address: nonUserOutputs[0]?.scriptpubkey_address ?? txid,
           txHash: txid,
+          confirmed: isConfirmed,
           token: {
             address: '__btc__',
             symbol: 'BTC',
@@ -204,6 +226,7 @@ async function fetchBtcActivity(bitcoinAddress: string): Promise<Activity[]> {
           type: 'Receive',
           address: senderAddress,
           txHash: txid,
+          confirmed: isConfirmed,
           token: {
             address: '__btc__',
             symbol: 'BTC',
@@ -263,7 +286,7 @@ export function useUserActivity(
   const { data: btcData } = useSWR<Activity[]>(
     bitcoinAddress ? ['btc-activity', bitcoinAddress] : null,
     ([, addr]) => fetchBtcActivity(addr as string),
-    { revalidateOnFocus: true, dedupingInterval: 60_000 }
+    { revalidateOnFocus: true, dedupingInterval: 15_000 }
   );
 
   const recentActivity = [

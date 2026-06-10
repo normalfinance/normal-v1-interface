@@ -81,6 +81,7 @@
     "autosuggest-highlight": "^3.3.4",
     "axios": "^1.7.9",
     "bignumber.js": "^9.3.1",
+    "bitcoinjs-lib": "^7.0.1",
     "canvas-confetti": "^1.9.4",
     "dayjs": "^1.11.13",
     "es-toolkit": "^1.31.0",

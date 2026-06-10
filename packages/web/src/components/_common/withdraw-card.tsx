@@ -32,6 +32,7 @@ import {
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { WalletGate } from './wallet-gate';
+import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { Iconify } from '../template/iconify';
 import PasteIconButton from '../paste-icon-button';
 
@@ -46,6 +47,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
   const { enqueueSnackbar } = useSnackbar();
 
   const { setModalView } = useAppStore();
+  const { send: stellarSend } = useSendToken();
 
   // State declarations...
   const [sendToken, setSendToken] = useState<Token | null>(tokens.length ? tokens[0] : null);
@@ -599,6 +601,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
           fiatValue={fiatValue}
           address={destination}
           memo={memo}
+          sendFn={(params) => stellarSend({ destination: params.destination, token: params.token, amount: params.amount, memo: params.memo })}
         />
       )}
       {/* Token Picker Popup */}

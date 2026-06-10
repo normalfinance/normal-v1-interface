@@ -21,6 +21,7 @@ export interface SentActivity extends ActivityBase {
   address: string; // ⬅ where the funds went
   token: TokenAmount;
   txHash: string | null;
+  confirmed?: boolean; // undefined = unknown (Stellar); false = pending (BTC mempool)
 }
 
 export interface ReceiveActivity extends ActivityBase {
@@ -28,6 +29,7 @@ export interface ReceiveActivity extends ActivityBase {
   address: string; // ⬅ where the funds came from
   token: TokenAmount;
   txHash: string | null;
+  confirmed?: boolean; // undefined = unknown (Stellar); false = pending (BTC mempool)
 }
 
 export interface MintActivity extends ActivityBase {

@@ -4621,6 +4621,7 @@ __metadata:
     autosuggest-highlight: ^3.3.4
     axios: ^1.7.9
     bignumber.js: ^9.3.1
+    bitcoinjs-lib: ^7.0.1
     canvas-confetti: ^1.9.4
     commitizen: ^4.3.0
     cz-conventional-changelog: ^3.3.0
@@ -9275,6 +9276,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bip174@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "bip174@npm:3.0.0"
+  dependencies:
+    uint8array-tools: ^0.0.9
+    varuint-bitcoin: ^2.0.0
+  checksum: b8a8877dd546350ebea89991cb4e4c5d9a9f78b0abcdb7faa55602c6096bc8365929b590efcdf28ba2285e71abb755a60627888e735e58908739fe6e7cfd9ce5
+  languageName: node
+  linkType: hard
+
 "bip32-path@npm:^0.4.2":
   version: 0.4.2
   resolution: "bip32-path@npm:0.4.2"
@@ -9293,6 +9304,21 @@ __metadata:
   version: 1.4.1
   resolution: "bitcoin-ops@npm:1.4.1"
   checksum: 3daa3303d6af49c0727041b5d7801a20c5806d00f1cc1afa2d53099974e30a7b1e7e9e578723dd25f5e120903f2725c595c0205d5d99a6578ad65213d74d806d
+  languageName: node
+  linkType: hard
+
+"bitcoinjs-lib@npm:^7.0.1":
+  version: 7.0.1
+  resolution: "bitcoinjs-lib@npm:7.0.1"
+  dependencies:
+    "@noble/hashes": ^1.2.0
+    bech32: ^2.0.0
+    bip174: ^3.0.0
+    bs58check: ^4.0.0
+    uint8array-tools: ^0.0.9
+    valibot: ^1.2.0
+    varuint-bitcoin: ^2.0.0
+  checksum: 338eca1bfbbdd98f3646e34d5ab5e79dcd0f153f8043983e0841d3e7e105f2730c13431b8ab5e844598a292aaa42df3bca5af985524beab741e4d2107d5b3bd9
   languageName: node
   linkType: hard
 
@@ -20614,6 +20640,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"uint8array-tools@npm:^0.0.9":
+  version: 0.0.9
+  resolution: "uint8array-tools@npm:0.0.9"
+  checksum: 66cd8c414638285bf6dfec71df5aff0bb2be64e9331612a99ae63c2eebb201181a0c0d618c94d2abbefe5d5fae29b0fc3c25dad2cbd7ee8f3a4130ebec35970b
+  languageName: node
+  linkType: hard
+
 "uint8arrays@npm:3.1.1, uint8arrays@npm:^3.0.0, uint8arrays@npm:^3.1.0":
   version: 3.1.1
   resolution: "uint8arrays@npm:3.1.1"
@@ -21125,6 +21158,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"valibot@npm:^1.2.0":
+  version: 1.4.1
+  resolution: "valibot@npm:1.4.1"
+  peerDependencies:
+    typescript: ">=5"
+  peerDependenciesMeta:
+    typescript:
+      optional: true
+  checksum: 11e8ade8a447c287c353488906d448e2e358c0c945216f5e611f4012a989a3e36ca632c0747dc5a24c41d37616a4649c2db30a5cbed640b8dea4d1acecf88fd5
+  languageName: node
+  linkType: hard
+
 "valtio@npm:1.11.2":
   version: 1.11.2
   resolution: "valtio@npm:1.11.2"
@@ -21150,7 +21195,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"varuint-bitcoin@npm:2.0.0":
+"varuint-bitcoin@npm:2.0.0, varuint-bitcoin@npm:^2.0.0":
   version: 2.0.0
   resolution: "varuint-bitcoin@npm:2.0.0"
   dependencies:

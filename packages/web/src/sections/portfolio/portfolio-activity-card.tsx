@@ -435,7 +435,29 @@ export function ActivityCard({ walletAddress, bitcoinAddress }: ActivityCardProp
                     '&:hover': { bgcolor: 'rgba(10,10,15,0.025)' },
                   }}
                 >
-                  <TypeTag tagKey={tagKey} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                    <TypeTag tagKey={tagKey} />
+                    {(activity.type === 'Sent' || activity.type === 'Receive') &&
+                      activity.confirmed === false && (
+                        <Box
+                          component="span"
+                          sx={{
+                            display: 'inline-block',
+                            px: '8px',
+                            py: '3px',
+                            borderRadius: '999px',
+                            bgcolor: 'rgba(245,158,11,0.1)',
+                            color: '#B45309',
+                            fontSize: '10px',
+                            fontWeight: 500,
+                            letterSpacing: '0.02em',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Pending
+                        </Box>
+                      )}
+                  </Box>
 
                   <Box
                     sx={{
