@@ -1,38 +1,12 @@
 import type { NextRequest } from 'next/server';
-import type { v1AuthenticatorTransport } from '@turnkey/sdk-types';
 
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
+import { turnkey, buildPasskeyRootUser } from '@/lib/turnkey/server';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { Turnkey, DEFAULT_XLM_ACCOUNTS, DEFAULT_ETHEREUM_ACCOUNTS, DEFAULT_BITCOIN_MAINNET_P2WPKH_ACCOUNTS } from '@turnkey/sdk-server';
-
-// ---------------------------------------------------------------------------
-// Turnkey client — instantiated once per cold start
-// ---------------------------------------------------------------------------
-const turnkey = new Turnkey({
-  apiBaseUrl: 'https://api.turnkey.com',
-  apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY!,
-  apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
-  defaultOrganizationId: process.env.TURNKEY_ORGANIZATION_ID!,
-});
-
-// Wallet accounts we create for every user — order defines addresses[0,1,2]
-const WALLET_ACCOUNTS = [
-  ...DEFAULT_BITCOIN_MAINNET_P2WPKH_ACCOUNTS, // addresses[0] → bc1q...
-  ...DEFAULT_ETHEREUM_ACCOUNTS,               // addresses[1] → 0x...
-  ...DEFAULT_XLM_ACCOUNTS,                   // addresses[2] → G...
-];
-
-// WebAuthn transport string → Turnkey enum
-const TRANSPORT_MAP: Record<string, v1AuthenticatorTransport> = {
-  usb:      'AUTHENTICATOR_TRANSPORT_USB',
-  nfc:      'AUTHENTICATOR_TRANSPORT_NFC',
-  ble:      'AUTHENTICATOR_TRANSPORT_BLE',
-  internal: 'AUTHENTICATOR_TRANSPORT_INTERNAL',
-  hybrid:   'AUTHENTICATOR_TRANSPORT_HYBRID',
-};
+import { XLM_ACCOUNT, BITCOIN_ACCOUNT } from '@/lib/turnkey/account-specs';
 
 // ---------------------------------------------------------------------------
 // GET /api/turnkey/wallet
@@ -45,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   const wallet = await prisma.turnkeyWallet.findUnique({
     where: { supabaseUid: user.id },
-    select: { bitcoinAddress: true, ethereumAddress: true, stellarAddress: true },
+    select: { subOrgId: true, walletId: true, bitcoinAddress: true, ethereumAddress: true, stellarAddress: true },
   });
 
   return NextResponse.json({ wallet: wallet ?? null });
@@ -81,6 +55,7 @@ export async function POST(request: NextRequest) {
       attestationObject: string;
       transports: string[];
     };
+    chain?: 'bitcoin' | 'stellar';
   };
 
   try {
@@ -90,6 +65,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { challenge, attestation } = body;
+  const chain = body.chain === 'stellar' ? 'stellar' : 'bitcoin';
   if (!challenge || !attestation?.credentialId) {
     return NextResponse.json({ error: 'Missing challenge or attestation' }, { status: 400 });
   }
@@ -100,36 +76,18 @@ export async function POST(request: NextRequest) {
     const result = await apiClient.createSubOrganization({
       subOrganizationName: `normal-${user.id.slice(0, 8)}`,
       rootQuorumThreshold: 1,
-      rootUsers: [
-        {
-          userName: user.email ?? user.id,
-          userEmail: user.email ?? undefined,
-          apiKeys: [],
-          oauthProviders: [],
-          authenticators: [
-            {
-              authenticatorName: 'Passkey',
-              challenge,
-              attestation: {
-                credentialId: attestation.credentialId,
-                clientDataJson: attestation.clientDataJson,
-                attestationObject: attestation.attestationObject,
-                transports: (attestation.transports ?? []).map(
-                  (t) => TRANSPORT_MAP[t] ?? 'AUTHENTICATOR_TRANSPORT_INTERNAL'
-                ) as v1AuthenticatorTransport[],
-              },
-            },
-          ],
-        },
-      ],
+      rootUsers: [buildPasskeyRootUser(user, challenge, attestation)],
       wallet: {
         walletName: 'Normal Wallet',
-        accounts: WALLET_ACCOUNTS,
+        // Lazily provisioned — ONLY the requested chain's account is created.
+        // Other chains are added on demand (Turnkey pricing scales with
+        // addresses).
+        accounts: chain === 'stellar' ? XLM_ACCOUNT : BITCOIN_ACCOUNT,
       },
     });
 
     const subOrgId = result.subOrganizationId;
-    const addresses = result.wallet?.addresses ?? [];
+    const address = result.wallet?.addresses?.[0] ?? null;
     const walletId = result.wallet?.walletId ?? '';
 
     const saved = await prisma.turnkeyWallet.create({
@@ -137,13 +95,13 @@ export async function POST(request: NextRequest) {
         supabaseUid: user.id,
         subOrgId,
         walletId,
-        bitcoinAddress: addresses[0] ?? null,
-        ethereumAddress: addresses[1] ?? null,
-        stellarAddress: addresses[2] ?? null,
+        bitcoinAddress: chain === 'bitcoin' ? address : null,
+        stellarAddress: chain === 'stellar' ? address : null,
+        ethereumAddress: null,
       },
     });
 
-    logger.log('[turnkey/wallet] Created wallet for user', { uid: user.id.slice(0, 8) });
+    logger.log('[turnkey/wallet] Created wallet for user', { uid: user.id.slice(0, 8), chain });
 
     return NextResponse.json(
       {

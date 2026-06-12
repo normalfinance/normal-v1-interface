@@ -1,10 +1,11 @@
 import type { MnemonicStrength } from '@normalfinance/utils';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
 import { useWalletPassword } from '@/providers/WalletPasswordProvider';
 import { logger, createKeypairFromSecret } from '@normalfinance/utils';
 import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
+import { getTurnkeyWalletInfo, isTurnkeyStellarAddress } from '@/lib/turnkey/wallet-info';
 import {
   isLegacyBase64,
   isPasswordEncrypted,
@@ -72,9 +73,11 @@ export const hasStoredNormalWalletKey = (): boolean => {
 };
 
 /**
- * Remove private key from localStorage
+ * Remove private key from localStorage.
+ * Exported so the Turnkey import flow can retire the local key once the
+ * wallet is passkey-secured.
  */
-const removeStoredPrivateKey = (): void => {
+export const removeStoredNormalWalletKey = (): void => {
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(NORMAL_WALLET_STORAGE_KEY);
@@ -82,6 +85,8 @@ const removeStoredPrivateKey = (): void => {
     logger.error('[NORMAL WALLET] Failed to remove private key:', error);
   }
 };
+
+const removeStoredPrivateKey = removeStoredNormalWalletKey;
 
 export const useNormalWallet = () => {
   const persistStore = usePersistStore();
@@ -119,14 +124,19 @@ export const useNormalWallet = () => {
         if (!storedAddress) return;
 
         if (!hasStoredNormalWalletKey()) {
-          logger.warn(
-            '[NORMAL WALLET] Persisted Normal wallet is missing a local key; clearing stale connection state'
-          );
-          normalWalletStore.setKeypair(null);
-          normalWalletStore.setPublicKey(null);
-          normalWalletStore.setConnected(false);
-          persistStore.disconnectWallet();
-          return;
+          // Turnkey-imported wallets have no local key — signing goes through
+          // the passkey, so the connection is still valid.
+          const isTurnkeyManaged = await isTurnkeyStellarAddress(storedAddress);
+          if (!isTurnkeyManaged) {
+            logger.warn(
+              '[NORMAL WALLET] Persisted Normal wallet is missing a local key; clearing stale connection state'
+            );
+            normalWalletStore.setKeypair(null);
+            normalWalletStore.setPublicKey(null);
+            normalWalletStore.setConnected(false);
+            persistStore.disconnectWallet();
+            return;
+          }
         }
 
         // Address-only restore: never prompt for password on mount. The
@@ -238,7 +248,7 @@ export const useNormalWallet = () => {
 
   const connectWalletWithoutKeypair = useCallback(
     async (address: string) => {
-      if (!hasStoredNormalWalletKey()) {
+      if (!hasStoredNormalWalletKey() && !(await isTurnkeyStellarAddress(address))) {
         throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
       }
 
@@ -262,6 +272,19 @@ export const useNormalWallet = () => {
       const walletAddress = persistStore.wallet.address || latest.publicKey;
       if (!walletAddress) {
         throw new Error('No wallet connected');
+      }
+
+      // Turnkey-managed wallet: sign with the user's passkey — no local key,
+      // no password. Takes precedence over any stored local key.
+      const turnkeyInfo = await getTurnkeyWalletInfo();
+      if (turnkeyInfo?.subOrgId && turnkeyInfo.stellarAddress === walletAddress) {
+        const { signStellarXdrWithTurnkey } = await import('@/lib/turnkey/stellar-signer');
+        return signStellarXdrWithTurnkey(
+          xdr,
+          networkPassphrase,
+          turnkeyInfo.subOrgId,
+          turnkeyInfo.stellarAddress
+        );
       }
 
       // Self-custody: prompt for password and decrypt the locally-stored key
@@ -350,10 +373,26 @@ export const useNormalWallet = () => {
     }
   }, [normalWalletStore, persistStore]);
 
-  // canSign is true when the wallet can sign transactions locally:
-  // either a keypair is already in memory, or a locally-stored key exists
-  // (v2, v1, or legacy) that signTransaction can unlock on demand.
-  const canSign = !!normalWalletStore.keypair || hasStoredNormalWalletKey();
+  // Turnkey-managed wallets sign via passkey — no local key needed.
+  const [isTurnkeyManaged, setIsTurnkeyManaged] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const addr = normalWalletStore.publicKey;
+    if (!addr) {
+      setIsTurnkeyManaged(false);
+      return undefined;
+    }
+    isTurnkeyStellarAddress(addr).then((managed) => {
+      if (!cancelled) setIsTurnkeyManaged(managed);
+    });
+    return () => { cancelled = true; };
+  }, [normalWalletStore.publicKey]);
+
+  // canSign is true when the wallet can sign transactions: a keypair is in
+  // memory, a locally-stored key exists (v2, v1, or legacy) that
+  // signTransaction can unlock on demand, or the address is Turnkey-managed
+  // (passkey signing).
+  const canSign = !!normalWalletStore.keypair || hasStoredNormalWalletKey() || isTurnkeyManaged;
 
   return {
     publicKey: normalWalletStore.publicKey,

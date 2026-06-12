@@ -1,21 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { buildAuthHeaders } from '@/utils/http';
+import { ensureChainAccount } from '@/lib/turnkey/add-account';
 
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import FingerprintIcon from '@mui/icons-material/Fingerprint';
-
-// ---------------------------------------------------------------------------
-// Helpers — convert ArrayBuffer to base64url
-// ---------------------------------------------------------------------------
-function toBase64Url(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -38,59 +28,9 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
     setError(null);
 
     try {
-      // Step 1 — generate a random 32-byte challenge (base64url encoded)
-      const challengeBytes = crypto.getRandomValues(new Uint8Array(32));
-      const challenge = toBase64Url(challengeBytes.buffer);
-
-      // Step 2 — create the passkey in the browser (triggers Face ID / Touch ID / Windows Hello)
-      const rpId = process.env.NEXT_PUBLIC_TURNKEY_RP_ID || 'localhost';
-      const credential = (await navigator.credentials.create({
-        publicKey: {
-          challenge: challengeBytes,
-          rp: { id: rpId, name: 'Normal Finance' },
-          user: {
-            id: Buffer.from(userId),
-            name: userEmail ?? userId,
-            displayName: userEmail ?? 'Normal User',
-          },
-          pubKeyCredParams: [
-            { type: 'public-key', alg: -7 },   // ES256 (P-256)
-            { type: 'public-key', alg: -257 },  // RS256
-          ],
-          timeout: 60000,
-          attestation: 'direct',
-          authenticatorSelection: {
-            residentKey: 'preferred',
-            requireResidentKey: false,
-            userVerification: 'preferred',
-          },
-        },
-      })) as PublicKeyCredential | null;
-
-      if (!credential) throw new Error('Passkey creation was cancelled');
-
-      const response = credential.response as AuthenticatorAttestationResponse;
-
-      const attestation = {
-        credentialId: toBase64Url(credential.rawId),
-        clientDataJson: toBase64Url(response.clientDataJSON),
-        attestationObject: toBase64Url(response.attestationObject),
-        transports: response.getTransports?.() ?? [],
-      };
-
-      // Step 3 — send attestation to backend to create the Turnkey sub-org
-      const headers = await buildAuthHeaders();
-      const res = await fetch('/api/turnkey/wallet', {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ challenge, attestation }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error ?? `Server error ${res.status}`);
-      }
-
+      // Lazy provisioning — derives BTC on the existing wallet, or creates
+      // passkey + sub-org + BTC-only wallet for first-time users.
+      await ensureChainAccount('bitcoin', userId, userEmail);
       onSuccess();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');

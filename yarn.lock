@@ -4605,7 +4605,10 @@ __metadata:
     "@svgr/webpack": ^8.1.0
     "@testing-library/jest-dom": ^6.1.3
     "@testing-library/react": ^14.2.0
+    "@turnkey/crypto": ^2.10.0
+    "@turnkey/http": ^4.1.0
     "@turnkey/sdk-server": ^6.1.0
+    "@turnkey/webauthn-stamper": ^0.6.0
     "@types/autosuggest-highlight": ^3.2.3
     "@types/canvas-confetti": ^1.9.0
     "@types/node": ^22.10.3
@@ -6937,7 +6940,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@turnkey/crypto@npm:2.10.0":
+"@turnkey/crypto@npm:2.10.0, @turnkey/crypto@npm:^2.10.0":
   version: 2.10.0
   resolution: "@turnkey/crypto@npm:2.10.0"
   dependencies:
@@ -6963,7 +6966,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@turnkey/http@npm:4.1.0":
+"@turnkey/http@npm:4.1.0, @turnkey/http@npm:^4.1.0":
   version: 4.1.0
   resolution: "@turnkey/http@npm:4.1.0"
   dependencies:
@@ -7010,7 +7013,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@turnkey/webauthn-stamper@npm:0.6.0":
+"@turnkey/webauthn-stamper@npm:0.6.0, @turnkey/webauthn-stamper@npm:^0.6.0":
   version: 0.6.0
   resolution: "@turnkey/webauthn-stamper@npm:0.6.0"
   dependencies:
