@@ -4,6 +4,7 @@ import { paths } from '@/routes/paths';
 import { cdn } from '@normalfinance/utils';
 
 import FlagOutlined from '@mui/icons-material/FlagOutlined';
+import TollOutlined from '@mui/icons-material/TollOutlined';
 import FeedOutlined from '@mui/icons-material/FeedOutlined';
 import MailOutlined from '@mui/icons-material/MailOutlined';
 import HelpOutlined from '@mui/icons-material/HelpOutlined';
@@ -59,6 +60,12 @@ export const NormalNavbarDefaults: Props = {
                 icon: <BarChartOutlined sx={{ fontSize: 20 }} />,
                 title: 'Portfolio',
                 description: 'Track your holdings.',
+              },
+              {
+                url: paths.assets.root,
+                icon: <TollOutlined sx={{ fontSize: 20 }} />,
+                title: 'Assets',
+                description: 'Send, receive and manage assets.',
               },
             ],
           },

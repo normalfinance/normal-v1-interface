@@ -33,6 +33,7 @@ import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWall
 
 import ReceiveModal from '@/components/_common/receive-modal';
 import { ReceiveAssetPicker } from '@/components/_common/receive-asset-picker';
+import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
 
 import { MONO, CARD_SX, getHoldingColor } from './_shared';
 
@@ -261,8 +262,10 @@ export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitc
                 );
                 const color = getHoldingColor(h.token, i);
 
-                const isBtc = h.token.contract === '__btc__';
-                const handleRowClick = isBtc && onBtcReceive ? onBtcReceive : undefined;
+                const isSavings = h.token.contract === '__savings__';
+                const handleRowClick = isSavings
+                  ? () => router.push(paths.savings)
+                  : () => router.push(paths.assets.details(h.token.symbol));
 
                 return (
                   <Box
@@ -276,9 +279,9 @@ export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitc
                       px: '8px',
                       py: '13px',
                       borderBottom: '1px solid rgba(10,10,15,0.05)',
+                      cursor: 'pointer',
                       '&:last-child': { borderBottom: 'none' },
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.02)', borderRadius: '10px' },
-                      ...(isBtc && onBtcReceive && { cursor: 'pointer' }),
                     }}
                   >
                     {/* Asset */}
@@ -289,8 +292,11 @@ export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitc
                         sx={{ width: 34, height: 34, flexShrink: 0 }}
                       />
                       <Box sx={{ minWidth: 0 }}>
-                        <Box sx={{ fontSize: '14px', fontWeight: 400, color: '#0A0A0F', lineHeight: 1.3 }}>
-                          {h.token.symbol}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Box sx={{ fontSize: '14px', fontWeight: 400, color: '#0A0A0F', lineHeight: 1.3 }}>
+                            {h.token.symbol}
+                          </Box>
+                          {!isSavings && <NetworkBadge network={getAssetNetwork(h.token)} />}
                         </Box>
                         <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.3 }}>
                           {h.token.name}

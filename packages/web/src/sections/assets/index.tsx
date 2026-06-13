@@ -2,14 +2,15 @@
 
 import type { Token } from '@normalfinance/types';
 
-import { useEffect } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
+import { useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { cdn, logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { fNumber, fCurrency } from '@/utils/format-number';
-import { logger, getCryptoIconUrl } from '@normalfinance/utils';
+import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import {
@@ -17,7 +18,6 @@ import {
   Card,
   Stack,
   Table,
-  Avatar,
   TableRow,
   TableBody,
   TableCell,
@@ -26,6 +26,8 @@ import {
   CardContent,
   TableContainer,
 } from '@mui/material';
+
+import { AssetAvatar } from '@/components/_common/asset-avatar';
 
 export default function AssetsView() {
   const { t } = useTranslate();
@@ -53,17 +55,43 @@ export default function AssetsView() {
     refreshTokens();
   }, [wallet.address]);
 
-  // Filter tokens with balance > 0 and sort by value (descending)
-  const tokensWithBalance = tokens
-    .filter((token) => BigNumber(token.balance).gt(0))
-    .sort((a, b) => {
+  const { btcToken } = useBtcPortfolio(true);
+
+  // Core assets (BTC, XLM, USDC) are always listed so they can be picked even
+  // at zero balance; other Stellar tokens appear once the user holds them.
+  // BTC is native (not in the Stellar token store), so it's synthesized here
+  // when the user has no Bitcoin address yet.
+  const displayTokens = useMemo(() => {
+    const stellar = tokens.filter(
+      (token) =>
+        token.symbol !== 'BTC' &&
+        (BigNumber(token.balance).gt(0) || token.featured || token.symbol === 'XLM' || token.symbol === 'USDC')
+    );
+    const btc: Token =
+      btcToken ??
+      ({
+        symbol: 'BTC',
+        contract: '__btc__',
+        name: 'Bitcoin',
+        issuer: '',
+        org: '',
+        domain: '',
+        icon: cdn('tokens/bitcoin.webp'),
+        decimals: 8,
+        featured: false,
+        balance: '0',
+        price: tokens.find((token) => token.symbol === 'BTC')?.price ?? '0',
+        percentageChange: 0,
+      } as Token);
+    return [btc, ...stellar].sort((a, b) => {
       const aValue = BigNumber(a.balance).multipliedBy(a.price);
       const bValue = BigNumber(b.balance).multipliedBy(b.price);
       return bValue.minus(aValue).toNumber();
     });
+  }, [tokens, btcToken]);
 
   // Calculate total value
-  const totalValue = tokensWithBalance.reduce((acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)), BigNumber(0));
+  const totalValue = displayTokens.reduce((acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)), BigNumber(0));
 
   const handleRowClick = (token: Token) => {
     router.push(paths.assets.details(token.symbol));
@@ -116,14 +144,14 @@ export default function AssetsView() {
                       <Typography color="text.secondary">{t('Loading...')}</Typography>
                     </TableCell>
                   </TableRow>
-                ) : tokensWithBalance.length === 0 ? (
+                ) : displayTokens.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} align="center">
                       <Typography color="text.secondary">{t('No assets found')}</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  tokensWithBalance.map((token) => {
+                  displayTokens.map((token) => {
                     const balance = BigNumber(token.balance);
                     const value = balance.multipliedBy(token.price);
                     const balanceDisplay = balance.toFixed(
@@ -139,11 +167,7 @@ export default function AssetsView() {
                       >
                         <TableCell>
                           <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Avatar
-                              src={token.icon || getCryptoIconUrl(token.symbol)}
-                              alt={token.name}
-                              sx={{ width: 32, height: 32 }}
-                            />
+                            <AssetAvatar token={token} size={32} />
                             <Stack>
                               <Typography variant="subtitle2">{token.symbol}</Typography>
                               <Typography variant="caption" color="text.secondary" noWrap>

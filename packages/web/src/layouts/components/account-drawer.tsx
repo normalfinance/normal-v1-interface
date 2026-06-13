@@ -367,6 +367,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
     return () => window.removeEventListener('nf:open-login', handler);
   }, [session]);
 
+  // Opens the wizard regardless of session — used when a logged-in user
+  // starts an action that needs a wallet they don't have yet (lazy setup).
+  useEffect(() => {
+    const handler = () => setShowLoginModal(true);
+    window.addEventListener('nf:open-wallet-setup', handler);
+    return () => window.removeEventListener('nf:open-wallet-setup', handler);
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
 

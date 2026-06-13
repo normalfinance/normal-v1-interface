@@ -75,6 +75,30 @@ function activityTagKey(a: Activity): TagKey {
   }
 }
 
+// Whether an activity involves the given asset symbol (used by the
+// per-asset view on /assets/[symbol]). Savings flows are USDC by definition.
+function matchesAsset(a: Activity, symbol: string): boolean {
+  switch (a.type) {
+    case 'Swap':
+      return a.tokenIn.symbol === symbol || a.tokenOut.symbol === symbol;
+    case 'Savings Deposit':
+    case 'Savings Withdraw':
+      return symbol === 'USDC';
+    case 'Sent':
+    case 'Receive':
+      return a.token.symbol === symbol;
+    case 'Buy':
+    case 'Sell':
+    case 'Mint':
+    case 'Redeem':
+    case 'Add Liquidity':
+    case 'Remove Liquidity':
+      return a.symbol === symbol;
+    default:
+      return false;
+  }
+}
+
 interface RowData {
   asset: string;
   amount: string;
@@ -282,9 +306,11 @@ function TypeTag({ tagKey }: { tagKey: TagKey }) {
 interface ActivityCardProps {
   walletAddress: string | null | undefined;
   bitcoinAddress?: string | null;
+  /** Show only activity involving this asset (e.g. "BTC" on /assets/BTC). */
+  assetSymbol?: string;
 }
 
-export function ActivityCard({ walletAddress, bitcoinAddress }: ActivityCardProps) {
+export function ActivityCard({ walletAddress, bitcoinAddress, assetSymbol }: ActivityCardProps) {
   const { t } = useTranslate();
   const [tab, setTab] = useState<ActivityTab>('all');
   const [page, setPage] = useState(1);
@@ -299,21 +325,24 @@ export function ActivityCard({ walletAddress, bitcoinAddress }: ActivityCardProp
   }, [mutate]);
 
   const filtered = useMemo(() => {
+    const base = assetSymbol
+      ? recentActivity.filter((a) => matchesAsset(a, assetSymbol))
+      : recentActivity;
     switch (tab) {
       case 'swaps':
-        return recentActivity.filter((a) => a.type === 'Swap');
+        return base.filter((a) => a.type === 'Swap');
       case 'savings':
-        return recentActivity.filter(
+        return base.filter(
           (a) => a.type === 'Savings Deposit' || a.type === 'Savings Withdraw'
         );
       case 'transfers':
-        return recentActivity.filter(
+        return base.filter(
           (a) => a.type === 'Sent' || a.type === 'Receive' || a.type === 'Buy' || a.type === 'Sell'
         );
       default:
-        return recentActivity;
+        return base;
     }
-  }, [recentActivity, tab]);
+  }, [recentActivity, tab, assetSymbol]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const items = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);

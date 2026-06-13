@@ -33,9 +33,10 @@ import PickToken from './pick-token';
 import SendReview from './send-review';
 import { Iconify } from '../template/iconify';
 import PasteIconButton from '../paste-icon-button';
+import { BtcTxStatusModal } from './btc-tx-status-modal';
 import { createStellarAdapter } from './send-adapters/stellar';
 import { createBitcoinAdapter } from './send-adapters/bitcoin';
-import { BtcTxStatusModal } from './btc-tx-status-modal';
+import { NetworkBadge, getAssetNetwork } from './network-badge';
 
 import type { SendAdapter } from './send-adapters';
 
@@ -44,9 +45,11 @@ import type { SendAdapter } from './send-adapters';
 interface SendModalProps {
   open: boolean;
   onClose: () => void;
+  /** Preselect this asset on open (e.g. from the asset detail page). */
+  initialSymbol?: string;
 }
 
-export default function SendModal({ open, onClose }: SendModalProps) {
+export default function SendModal({ open, onClose, initialSymbol }: SendModalProps) {
   const { t } = useTranslate('auto');
   const { enqueueSnackbar } = useSnackbar();
 
@@ -104,14 +107,17 @@ export default function SendModal({ open, onClose }: SendModalProps) {
     setShowMemo(false);
     setXlmSubentries(null);
     setBtcFeeRateSatPerVbyte(null);
+    const preselected = initialSymbol
+      ? sendableTokens.find((tkn) => tkn.symbol === initialSymbol)
+      : undefined;
     const best = [...sendableTokens].sort(
       (a, b) =>
         BigNumber(b.balance)
           .multipliedBy(b.price)
           .comparedTo(BigNumber(a.balance).multipliedBy(a.price)) ?? 0,
     )[0];
-    setSendToken(best ?? sendableTokens[0] ?? null);
-  }, [open, sendableTokens]);
+    setSendToken(preselected ?? best ?? sendableTokens[0] ?? null);
+  }, [open, sendableTokens, initialSymbol]);
 
   // Fetch XLM subentry count for accurate reserve calculation
   useEffect(() => {
@@ -355,6 +361,7 @@ export default function SendModal({ open, onClose }: SendModalProps) {
                       <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
                         {sendToken.symbol}
                       </Typography>
+                      <NetworkBadge network={getAssetNetwork(sendToken)} />
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Box

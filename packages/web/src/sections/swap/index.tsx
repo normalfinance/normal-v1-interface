@@ -110,6 +110,11 @@ export default function SwapView() {
     );
   }
 
+  // Deep-link preselect (/swap?from=USDC). Safe to read here: this code only
+  // runs after the `mounted` gate above, so window always exists.
+  const fromParam = new URLSearchParams(window.location.search).get('from')?.toUpperCase();
+  const initialTokenIn = fromParam === 'USDC' || fromParam === 'XLM' ? fromParam : undefined;
+
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={0.5} sx={{ mb: '24px' }}>
@@ -129,7 +134,7 @@ export default function SwapView() {
           alignItems: 'start',
         }}
       >
-        <SwapCard />
+        <SwapCard initialTokenIn={initialTokenIn} />
         <SavingsOnrampCard />
       </Box>
     </DashboardContent>
