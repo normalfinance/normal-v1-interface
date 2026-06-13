@@ -22,14 +22,14 @@ export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser(accessToken);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  let body: { walletId?: string; expectedStellarAddress?: string };
+  let body: { walletId?: string; expectedStellarAddress?: string; chain?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { walletId, expectedStellarAddress } = body;
+  const { walletId, expectedStellarAddress, chain } = body;
   if (!walletId) {
     return NextResponse.json({ error: 'Missing walletId' }, { status: 400 });
   }
@@ -82,18 +82,45 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Never null out a previously linked address: only update a chain's
-    // address when this wallet actually has an account for it. A user's
-    // funded BTC address must survive importing a (XLM-only) wallet.
+    // Address writes are ADDITIVE and chain-scoped so adding one chain can
+    // never clobber another (chains may live on different seeds — e.g. a
+    // reattached BTC address). Two modes:
+    //   - chain provided (lazy add)  → write ONLY that chain's column
+    //   - chain absent (first import) → fill only columns still empty
+    const columnFor: Record<string, 'bitcoinAddress' | 'ethereumAddress' | 'solanaAddress' | 'stellarAddress'> = {
+      bitcoin: 'bitcoinAddress',
+      ethereum: 'ethereumAddress',
+      solana: 'solanaAddress',
+      stellar: 'stellarAddress',
+    };
+    const derived: Record<string, string | null> = {
+      bitcoin: bitcoinAddress,
+      ethereum: ethereumAddress,
+      solana: solanaAddress,
+      stellar: stellarAddress,
+    };
+
+    const data: Record<string, string> = { walletId };
+    if (chain && columnFor[chain]) {
+      const addr = derived[chain];
+      if (!addr) {
+        return NextResponse.json(
+          { error: `Wallet has no ${chain} account` },
+          { status: 422 }
+        );
+      }
+      data[columnFor[chain]] = addr;
+    } else {
+      // Genuine import — only fill empty columns, never overwrite an
+      // already-linked (possibly reattached) address.
+      for (const [c, col] of Object.entries(columnFor)) {
+        if (derived[c] && !row[col]) data[col] = derived[c]!;
+      }
+    }
+
     const saved = await prisma.turnkeyWallet.update({
       where: { supabaseUid: user.id },
-      data: {
-        walletId,
-        bitcoinAddress: bitcoinAddress ?? undefined,
-        ethereumAddress: ethereumAddress ?? undefined,
-        solanaAddress: solanaAddress ?? undefined,
-        stellarAddress: stellarAddress ?? undefined,
-      },
+      data,
     });
 
     logger.log('[turnkey/import] Imported wallet recorded', { uid: user.id.slice(0, 8) });

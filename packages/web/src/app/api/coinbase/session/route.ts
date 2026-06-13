@@ -7,10 +7,13 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, asset = 'USDC' } = await req.json();
+    const { address, asset = 'USDC', blockchain = 'stellar' } = await req.json();
 
     if (!address) {
       return NextResponse.json({ error: 'Missing wallet address' }, { status: 400 });
+    }
+    if (!['stellar', 'bitcoin', 'ethereum', 'solana'].includes(blockchain)) {
+      return NextResponse.json({ error: 'Unsupported blockchain' }, { status: 400 });
     }
 
     const token = getAccessToken(req);
@@ -28,7 +31,7 @@ export async function POST(req: NextRequest) {
     const clientIp = isPrivateIp ? undefined : rawIp;
 
     const body: Record<string, unknown> = {
-      addresses: [{ address, blockchains: ['stellar'] }],
+      addresses: [{ address, blockchains: [blockchain] }],
       assets: [asset],
     };
     if (clientIp) body.clientIp = clientIp;

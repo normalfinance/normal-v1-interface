@@ -252,9 +252,24 @@ async function fetchWalletActivity(url: string): Promise<Activity[]> {
   return data.items.map(mapWalletActivityItem);
 }
 
+// ETH/SOL history come pre-normalized to Activity[] from our server routes
+// (the API keys stay server-side).
+async function fetchChainActivity(url: string): Promise<Activity[]> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data?.success && Array.isArray(data.items) ? (data.items as Activity[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function useUserActivity(
   walletAddress: string | null | undefined,
-  bitcoinAddress?: string | null
+  bitcoinAddress?: string | null,
+  ethereumAddress?: string | null,
+  solanaAddress?: string | null
 ): {
   recentActivity: Activity[];
   isLoading: boolean;
@@ -289,12 +304,45 @@ export function useUserActivity(
     { revalidateOnFocus: true, dedupingInterval: 15_000 }
   );
 
+  const { data: ethData } = useSWR<Activity[]>(
+    ethereumAddress ? `/api/activity/ethereum?address=${ethereumAddress}` : null,
+    fetchChainActivity,
+    { revalidateOnFocus: true, dedupingInterval: 30_000 }
+  );
+
+  const { data: solData } = useSWR<Activity[]>(
+    solanaAddress ? `/api/activity/solana?address=${solanaAddress}` : null,
+    fetchChainActivity,
+    { revalidateOnFocus: true, dedupingInterval: 30_000 }
+  );
+
+  // A cross-chain swap is recorded as one "Swap" row (from SwapLog) whose
+  // txHash is the SOURCE-chain transaction. The same tx also surfaces as a
+  // raw "Sent" leg from that chain's history — suppress it so the swap shows
+  // once, as a swap, not as a send.
+  const swapTxHashes = new Set(
+    (data ?? [])
+      .filter((a): a is Extract<Activity, { type: 'Swap' }> => a.type === 'Swap' && !!a.txHash)
+      .map((a) => a.txHash as string)
+  );
+
   const recentActivity = [
     ...(data ?? []),
     ...(mgiData ?? []),
     ...(stellarData ?? []),
     ...(btcData ?? []),
-  ].sort((a, b) => b.timestamp - a.timestamp);
+    ...(ethData ?? []),
+    ...(solData ?? []),
+  ]
+    .filter(
+      (a) =>
+        !(
+          (a.type === 'Sent' || a.type === 'Receive') &&
+          a.txHash &&
+          swapTxHashes.has(a.txHash)
+        )
+    )
+    .sort((a, b) => b.timestamp - a.timestamp);
 
   return {
     recentActivity,

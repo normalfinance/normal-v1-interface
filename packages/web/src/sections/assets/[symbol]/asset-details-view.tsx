@@ -9,17 +9,17 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ModalType } from '@normalfinance/types';
 import { DashboardContent } from '@/layouts/dashboard';
+import { usePersistStore } from '@normalfinance/state';
+import { useUsdPrice } from '@/hooks/use-price-history';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
 import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { fCurrency, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { ActivityCard } from '@/sections/portfolio/portfolio-activity-card';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { fCurrency, fTokenAmount, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -35,6 +35,7 @@ import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
 import { Iconify } from '@/components/template/iconify';
 import SendModal from '@/components/_common/send-modal';
 import { useSnackbar } from '@/components/template/snackbar';
+import OnRampDialog from '@/components/_common/onramp-dialog';
 import ReceiveModal from '@/components/_common/receive-modal';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
@@ -57,7 +58,7 @@ function getAssetActions(symbol: string): AssetActionKey[] {
     case 'BTC':
     case 'ETH':
     case 'SOL':
-      return ['send', 'receive'];
+      return ['send', 'receive', 'buy'];
     case 'USDC':
       return ['send', 'receive', 'swap', 'save', 'buy'];
     case 'XLM':
@@ -107,7 +108,6 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const { copy } = useCopyToClipboard();
   const { enqueueSnackbar } = useSnackbar();
   const { user } = useSupabaseAuth();
-  const { setModalView } = useAppStore();
 
   const {
     wallet,
@@ -126,23 +126,29 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const eth = useEthPortfolio(isEth);
   const sol = useSolPortfolio(isSol);
 
+  // Live USD price for natives the user has no address for yet (the
+  // synthesized token would otherwise show $0.00)
+  const nativeUsdPrice = useUsdPrice(upperSymbol, !!native);
+
   const nativeToken = isBtc ? btc.btcToken : isEth ? eth.ethToken : isSol ? sol.solToken : null;
   const nativeAddress = isBtc ? btc.bitcoinAddress : isEth ? eth.ethereumAddress : isSol ? sol.solanaAddress : null;
   const nativeLoading = isBtc ? btc.loading : isEth ? eth.loading : isSol ? sol.loading : false;
+  const nativeError = isEth ? eth.error : isSol ? sol.error : false;
   const refetchNative = isBtc ? btc.refetch : isEth ? eth.refetch : sol.refetch;
 
   const [sendOpen, setSendOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [nativeReceiveOpen, setNativeReceiveOpen] = useState(false);
+  const [buyOpen, setBuyOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   // Action the user started before the chain account existed; resumed after setup
-  const [pendingAction, setPendingAction] = useState<'send' | 'receive' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'send' | 'receive' | 'buy' | null>(null);
 
   // Native chains have no entry in the Stellar token store — synthesize a
   // display token (zero balance until the address exists and balance loads).
   const token: Token | undefined = useMemo(() => {
     if (!native) return storeToken;
-    if (nativeToken) return nativeToken;
+    if (nativeToken && BigNumber(nativeToken.price || 0).gt(0)) return nativeToken;
     return {
       symbol: upperSymbol,
       contract: native.contract,
@@ -153,11 +159,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       icon: native.icon,
       decimals: native.decimals,
       featured: false,
-      balance: '0',
-      price: storeToken?.price ?? '0',
+      balance: nativeToken?.balance ?? '0',
+      price: String(nativeUsdPrice),
       percentageChange: 0,
     } as Token;
-  }, [native, storeToken, nativeToken, upperSymbol]);
+  }, [native, storeToken, nativeToken, upperSymbol, nativeUsdPrice]);
 
   if (native && nativeLoading && !nativeToken) {
     return (
@@ -200,12 +206,13 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   // Native-chain actions gate on the address existing. If it doesn't, the
   // user explicitly confirms wallet setup first (lazy provisioning) — the
   // action resumes afterwards. Never create the account silently.
-  const openNativeAction = (action: 'send' | 'receive') => {
+  const openNativeAction = (action: 'send' | 'receive' | 'buy') => {
     if (action === 'send') setSendOpen(true);
+    else if (action === 'buy') setBuyOpen(true);
     else setNativeReceiveOpen(true);
   };
 
-  const requireNativeWallet = (action: 'send' | 'receive') => {
+  const requireNativeWallet = (action: 'send' | 'receive' | 'buy') => {
     requireLogin(() => {
       if (!nativeAddress) {
         setPendingAction(action);
@@ -247,7 +254,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     buy: {
       label: t('Buy'),
       icon: <AttachMoneyOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => requireStellarWallet(() => setModalView(ModalType.ON_RAMP, true)),
+      onClick: () => (native ? requireNativeWallet('buy') : requireStellarWallet(() => setBuyOpen(true))),
     },
   };
 
@@ -331,14 +338,44 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             <Box sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '6px' }}>
               {t('Your Balance')}
             </Box>
-            <Box sx={{ ...MONO, fontSize: '28px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-              {balance.toFormat(token.decimals > 4 ? 4 : token.decimals)} {token.symbol}
-            </Box>
-            <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
-              {fCurrencyTwoDecimals(value.toNumber())}
-              <Box component="span" sx={{ mx: '8px', color: 'rgba(10,10,15,0.2)' }}>·</Box>
-              {fCurrency(price.toNumber())} / {token.symbol}
-            </Box>
+            {nativeError ? (
+              <>
+                <Box sx={{ ...MONO, fontSize: '28px', fontWeight: 600, color: 'rgba(10,10,15,0.3)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                  — {token.symbol}
+                </Box>
+                <Box
+                  component="button"
+                  onClick={() => refetchNative()}
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    mt: '6px',
+                    border: 'none',
+                    bgcolor: 'transparent',
+                    color: '#B45309',
+                    fontSize: '13px',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    p: 0,
+                  }}
+                >
+                  <Iconify icon="solar:refresh-linear" width={14} />
+                  {t("Couldn't load balance — tap to retry")}
+                </Box>
+              </>
+            ) : (
+              <>
+                <Box sx={{ ...MONO, fontSize: '28px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                  {fTokenAmount(balance)} {token.symbol}
+                </Box>
+                <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
+                  {fCurrencyTwoDecimals(value.toNumber())}
+                  <Box component="span" sx={{ mx: '8px', color: 'rgba(10,10,15,0.2)' }}>·</Box>
+                  {fCurrency(price.toNumber())} / {token.symbol}
+                </Box>
+              </>
+            )}
           </Box>
 
           {/* Actions */}
@@ -465,6 +502,8 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         <ActivityCard
           walletAddress={wallet.address}
           bitcoinAddress={isBtc ? btc.bitcoinAddress : undefined}
+          ethereumAddress={isEth ? eth.ethereumAddress : undefined}
+          solanaAddress={isSol ? sol.solanaAddress : undefined}
           assetSymbol={token.symbol}
         />
       </Box>
@@ -480,6 +519,15 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         open={receiveOpen}
         context="receive"
         onClose={() => setReceiveOpen(false)}
+      />
+
+      <OnRampDialog
+        open={buyOpen}
+        amount="100"
+        onClose={() => setBuyOpen(false)}
+        walletAddress={(native ? nativeAddress : wallet.address) ?? undefined}
+        asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
+        providers={['stripe', 'coinbase']}
       />
 
       {isBtc && (

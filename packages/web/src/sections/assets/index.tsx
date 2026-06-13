@@ -9,8 +9,9 @@ import { useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cdn, logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
-import { fNumber, fCurrency } from '@/utils/format-number';
+import { useUsdPrice } from '@/hooks/use-price-history';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { fCurrency, fTokenAmount } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
@@ -60,6 +61,12 @@ export default function AssetsView() {
   const { ethToken } = useEthPortfolio(true);
   const { solToken } = useSolPortfolio(true);
 
+  // Live prices for natives the user has no address for yet (their
+  // synthesized rows would otherwise show $0.00)
+  const btcUsd = useUsdPrice('BTC', !btcToken);
+  const ethUsd = useUsdPrice('ETH', !ethToken);
+  const solUsd = useUsdPrice('SOL', !solToken);
+
   // Core assets (BTC, ETH, SOL, XLM, USDC) are always listed so they can be
   // picked even at zero balance; other Stellar tokens appear once the user
   // holds them. Native chains aren't in the Stellar token store, so they're
@@ -72,7 +79,7 @@ export default function AssetsView() {
         (BigNumber(token.balance).gt(0) || token.featured || token.symbol === 'XLM' || token.symbol === 'USDC')
     );
 
-    const synthesize = (symbol: string, name: string, contract: string, icon: string, decimals: number): Token =>
+    const synthesize = (symbol: string, name: string, contract: string, icon: string, decimals: number, usdPrice: number): Token =>
       ({
         symbol,
         contract,
@@ -84,14 +91,14 @@ export default function AssetsView() {
         decimals,
         featured: false,
         balance: '0',
-        price: tokens.find((token) => token.symbol === symbol)?.price ?? '0',
+        price: String(usdPrice),
         percentageChange: 0,
       } as Token);
 
     const natives = [
-      btcToken ?? synthesize('BTC', 'Bitcoin', '__btc__', cdn('tokens/bitcoin.webp'), 8),
-      ethToken ?? synthesize('ETH', 'Ethereum', '__eth__', cdn('tokens/ethereum.webp'), 18),
-      solToken ?? synthesize('SOL', 'Solana', '__sol__', cdn('tokens/solana.webp'), 9),
+      btcToken ?? synthesize('BTC', 'Bitcoin', '__btc__', cdn('tokens/bitcoin.webp'), 8, btcUsd),
+      ethToken ?? synthesize('ETH', 'Ethereum', '__eth__', cdn('tokens/ethereum.webp'), 18, ethUsd),
+      solToken ?? synthesize('SOL', 'Solana', '__sol__', cdn('tokens/solana.webp'), 9, solUsd),
     ];
 
     return [...natives, ...stellar].sort((a, b) => {
@@ -99,7 +106,7 @@ export default function AssetsView() {
       const bValue = BigNumber(b.balance).multipliedBy(b.price);
       return bValue.minus(aValue).toNumber();
     });
-  }, [tokens, btcToken, ethToken, solToken]);
+  }, [tokens, btcToken, ethToken, solToken, btcUsd, ethUsd, solUsd]);
 
   // Calculate total value
   const totalValue = displayTokens.reduce((acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)), BigNumber(0));
@@ -165,9 +172,7 @@ export default function AssetsView() {
                   displayTokens.map((token) => {
                     const balance = BigNumber(token.balance);
                     const value = balance.multipliedBy(token.price);
-                    const balanceDisplay = balance.toFixed(
-                      token.decimals > 4 ? 4 : token.decimals
-                    );
+                    const balanceDisplay = fTokenAmount(token.balance);
 
                     return (
                       <TableRow
@@ -188,7 +193,7 @@ export default function AssetsView() {
                           </Stack>
                         </TableCell>
                         <TableCell align="right">
-                          <Typography variant="body2">{fNumber(balanceDisplay)}</Typography>
+                          <Typography variant="body2">{balanceDisplay}</Typography>
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2">{fCurrency(token.price)}</Typography>

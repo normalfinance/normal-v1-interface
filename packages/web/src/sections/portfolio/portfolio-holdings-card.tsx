@@ -8,9 +8,9 @@ import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
 import { ModalType } from '@normalfinance/types';
-import { fCurrency } from '@/utils/format-number';
 import { useAppStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fCurrency, fTokenAmount } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -257,9 +257,7 @@ export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitc
                   totalBalance > 0
                     ? BigNumber(h.value).dividedBy(totalBalance).multipliedBy(100).toFixed(1)
                     : '0.0';
-                const balanceDisplay = BigNumber(h.token.balance).toFixed(
-                  h.token.decimals > 4 ? 4 : h.token.decimals
-                );
+                const balanceDisplay = fTokenAmount(h.token.balance);
                 const color = getHoldingColor(h.token, i);
 
                 const isSavings = h.token.contract === '__savings__';

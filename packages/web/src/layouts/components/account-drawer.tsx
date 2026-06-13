@@ -21,6 +21,7 @@ import {
 } from '@/hooks/stellar/use-normal-wallet';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
+import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
@@ -54,7 +55,7 @@ import OnboardingWizard, { type WizardStep } from '@/components/_common/onboardi
 
 import { AccountButton } from './account-button';
 
-function WalletConnected({ address, drawerOpen, bitcoinAddress }: { address: string; drawerOpen: boolean; bitcoinAddress: string | null }) {
+function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress, solanaAddress }: { address: string; drawerOpen: boolean; bitcoinAddress: string | null; ethereumAddress: string | null; solanaAddress: string | null }) {
   const { setGlobalIsLoading } = useAppStore();
 
   const {
@@ -64,7 +65,7 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress }: { address: str
   const network = useNetworkStore((s) => s.network);
   const [tokensFetching, setTokensFetching] = useState(true);
 
-  const { recentActivity } = useUserActivity(address, bitcoinAddress);
+  const { recentActivity } = useUserActivity(address, bitcoinAddress, ethereumAddress, solanaAddress);
   const {
     userPosition,
     fetching: savingsFetching,
@@ -105,10 +106,12 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress }: { address: str
   }, [drawerOpen, address, refreshVaultInfo, refreshUserPosition]);  
 
   const { btcToken } = useBtcPortfolio(true);
+  const { ethToken } = useEthPortfolio(true);
+  const { solToken } = useSolPortfolio(true);
 
   const allTokens = useMemo(
-    () => (btcToken ? [...tokens, btcToken] : tokens),
-    [tokens, btcToken]
+    () => [...tokens, btcToken, ethToken, solToken].filter((tkn): tkn is NonNullable<typeof tkn> => !!tkn),
+    [tokens, btcToken, ethToken, solToken]
   );
 
   const assetsBalance = useMemo(
@@ -195,6 +198,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   const { addresses: turnkeyAddresses } = useTurnkeyWallet(open && !!session);
   const bitcoinAddress = turnkeyAddresses?.bitcoinAddress ?? null;
+  const ethereumAddress = turnkeyAddresses?.ethereumAddress ?? null;
+  const solanaAddress = turnkeyAddresses?.solanaAddress ?? null;
 
   // Only fetch account status while the drawer is open and a wallet is connected
   const { isLoading: isCheckingSetup, accountExists, hasUsdcTrustline } = useAccountStatus(
@@ -598,6 +603,26 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         <CopyIconButton value={bitcoinAddress} alert="Bitcoin address copied" />
                       </Stack>
                     )}
+                    {ethereumAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#627EEA', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Ethereum</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${ethereumAddress.slice(0, 8)}...${ethereumAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={ethereumAddress} alert="Ethereum address copied" />
+                      </Stack>
+                    )}
+                    {solanaAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#9945FF', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Solana</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${solanaAddress.slice(0, 8)}...${solanaAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={solanaAddress} alert="Solana address copied" />
+                      </Stack>
+                    )}
                   </Box>
                 )}
               </Box>
@@ -666,7 +691,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       </Stack>
                     </Box>
                   )}
-                  <WalletConnected address={connectedAddress} drawerOpen={open} bitcoinAddress={bitcoinAddress} />
+                  <WalletConnected address={connectedAddress} drawerOpen={open} bitcoinAddress={bitcoinAddress} ethereumAddress={ethereumAddress} solanaAddress={solanaAddress} />
                 </>
               ) : (
                 <Box sx={{ px: 1, py: 3 }}>

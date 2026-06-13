@@ -21,7 +21,8 @@ import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from '
 export async function addWalletAccounts(
   subOrgId: string,
   walletId: string,
-  accounts: v1WalletAccountParams[]
+  accounts: v1WalletAccountParams[],
+  chain?: TurnkeyChain
 ): Promise<ChainAddresses> {
   const rpId =
     typeof window !== 'undefined'
@@ -48,7 +49,7 @@ export async function addWalletAccounts(
   const res = await fetch('/api/turnkey/import', {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ walletId }),
+    body: JSON.stringify({ walletId, chain }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -123,7 +124,7 @@ export async function ensureChainAccount(
 
   // Existing wallet missing this chain → derive on the same seed
   if (existing?.walletId) {
-    return addWalletAccounts(existing.subOrgId, existing.walletId, spec);
+    return addWalletAccounts(existing.subOrgId, existing.walletId, spec, chain);
   }
 
   // Sub-org without a wallet (e.g. abandoned import) → create the wallet,
@@ -150,7 +151,7 @@ export async function ensureChainAccount(
     const res = await fetch('/api/turnkey/import', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ walletId }),
+      body: JSON.stringify({ walletId, chain }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

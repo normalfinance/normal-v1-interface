@@ -15,8 +15,11 @@ import { useTurnkeyWallet } from './use-turnkey-wallet';
 
 export const ETH_RPC_URL =
   process.env.NEXT_PUBLIC_ETH_RPC_URL ?? 'https://ethereum-rpc.publicnode.com';
+// NOTE: the official api.mainnet-beta.solana.com endpoint 403s browser/agent
+// requests — use publicnode's keyless RPC by default. For production set a
+// dedicated keyed RPC (e.g. Helius) via NEXT_PUBLIC_SOLANA_RPC_URL.
 export const SOL_RPC_URL =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://solana-rpc.publicnode.com';
 
 async function rpc(url: string, method: string, params: unknown[]): Promise<any> {
   const res = await fetch(url, {
@@ -88,19 +91,28 @@ function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
   const { addresses, loading: walletLoading, hasWallet, refetch } = useTurnkeyWallet(enabled);
   const [token, setToken] = useState<Token | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  // True when the balance RPC failed — distinct from a genuine zero balance,
+  // so the UI never silently shows "0" for funds it simply couldn't read.
+  const [balanceError, setBalanceError] = useState(false);
 
   const address = addresses?.[spec.addressKey] ?? null;
 
   useEffect(() => {
     if (!address) {
       setToken(null);
+      setBalanceError(false);
       return;
     }
     setBalanceLoading(true);
+    setBalanceError(false);
     Promise.all([
-      spec.fetchBalance(address).catch(() => 0),
+      spec.fetchBalance(address).then(
+        (b) => ({ balance: b, ok: true }),
+        () => ({ balance: 0, ok: false })
+      ),
       fetchUsdPrice(spec.symbol),
-    ]).then(([balance, price]) => {
+    ]).then(([res, price]) => {
+      setBalanceError(!res.ok);
       setToken({
         symbol: spec.symbol,
         contract: spec.contract,
@@ -111,7 +123,7 @@ function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
         icon: spec.icon,
         decimals: spec.decimals,
         featured: false,
-        balance: String(balance),
+        balance: String(res.balance),
         price: String(price),
         percentageChange: 0,
       } as Token);
@@ -125,16 +137,17 @@ function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
     address,
     hasWallet,
     loading: walletLoading || balanceLoading,
+    error: balanceError,
     refetch,
   };
 }
 
 export function useEthPortfolio(enabled = true) {
-  const { token, address, hasWallet, loading, refetch } = useChainPortfolio('ethereum', enabled);
-  return { ethToken: token, ethereumAddress: address, hasWallet, loading, refetch };
+  const { token, address, hasWallet, loading, error, refetch } = useChainPortfolio('ethereum', enabled);
+  return { ethToken: token, ethereumAddress: address, hasWallet, loading, error, refetch };
 }
 
 export function useSolPortfolio(enabled = true) {
-  const { token, address, hasWallet, loading, refetch } = useChainPortfolio('solana', enabled);
-  return { solToken: token, solanaAddress: address, hasWallet, loading, refetch };
+  const { token, address, hasWallet, loading, error, refetch } = useChainPortfolio('solana', enabled);
+  return { solToken: token, solanaAddress: address, hasWallet, loading, error, refetch };
 }

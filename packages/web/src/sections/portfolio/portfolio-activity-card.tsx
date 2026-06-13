@@ -41,6 +41,12 @@ function getExplorerUrl(a: Activity): string | null {
   if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('btc:') && a.txHash) {
     return `https://mempool.space/tx/${a.txHash}`;
   }
+  if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('eth:') && a.txHash) {
+    return `https://etherscan.io/tx/${a.txHash}`;
+  }
+  if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('sol:') && a.txHash) {
+    return `https://solscan.io/tx/${a.txHash}`;
+  }
   switch (a.type) {
     case 'Savings Deposit':
     case 'Savings Withdraw':
@@ -306,16 +312,32 @@ function TypeTag({ tagKey }: { tagKey: TagKey }) {
 interface ActivityCardProps {
   walletAddress: string | null | undefined;
   bitcoinAddress?: string | null;
+  ethereumAddress?: string | null;
+  solanaAddress?: string | null;
   /** Show only activity involving this asset (e.g. "BTC" on /assets/BTC). */
   assetSymbol?: string;
+  /** Initial filter tab (defaults to "all"). */
+  defaultTab?: ActivityTab;
 }
 
-export function ActivityCard({ walletAddress, bitcoinAddress, assetSymbol }: ActivityCardProps) {
+export function ActivityCard({
+  walletAddress,
+  bitcoinAddress,
+  ethereumAddress,
+  solanaAddress,
+  assetSymbol,
+  defaultTab = 'all',
+}: ActivityCardProps) {
   const { t } = useTranslate();
-  const [tab, setTab] = useState<ActivityTab>('all');
+  const [tab, setTab] = useState<ActivityTab>(defaultTab);
   const [page, setPage] = useState(1);
 
-  const { recentActivity, isLoading, mutate } = useUserActivity(walletAddress, bitcoinAddress);
+  const { recentActivity, isLoading, mutate } = useUserActivity(
+    walletAddress,
+    bitcoinAddress,
+    ethereumAddress,
+    solanaAddress
+  );
 
   // Re-fetch wallet activity after a deposit or withdrawal completes.
   useEffect(() => {

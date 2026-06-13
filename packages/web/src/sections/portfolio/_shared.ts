@@ -20,6 +20,10 @@ export const DONUT_COLORS = ['#5BCFFF', '#B17BFF', '#FF7BC5', '#FFB060', '#6E8BF
 const ASSET_BRAND_COLORS: Record<string, string> = {
   '__btc__':     '#F7931A', // Bitcoin orange
   'BTC':         '#F7931A',
+  '__eth__':     '#627EEA', // Ethereum indigo
+  'ETH':         '#627EEA',
+  '__sol__':     '#9945FF', // Solana purple
+  'SOL':         '#9945FF',
   '__savings__': '#FF6EB4', // Savings pink
   'Savings':     '#FF6EB4',
   'USDC':        '#2775CA', // USDC blue

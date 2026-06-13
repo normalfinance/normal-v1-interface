@@ -8,6 +8,7 @@ import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
+import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -28,6 +29,8 @@ export default function PortfolioView() {
 
   const { user } = useSupabaseAuth();
   const { btcToken, bitcoinAddress } = useBtcPortfolio(!!user);
+  const { ethToken, ethereumAddress } = useEthPortfolio(!!user);
+  const { solToken, solanaAddress } = useSolPortfolio(!!user);
   const [btcReceiveOpen, setBtcReceiveOpen] = useState(false);
 
   const { setGlobalIsLoading } = useAppStore();
@@ -46,7 +49,7 @@ export default function PortfolioView() {
 
   const earnings = useMemo(() => parseFloat(userPosition?.earnings || '0'), [userPosition]);
 
-  const walletBalance = useMemo(
+  const stellarBalance = useMemo(
     () =>
       tokens
         .reduce(
@@ -57,12 +60,27 @@ export default function PortfolioView() {
     [tokens]
   );
 
-  const btcValue = useMemo(
-    () => btcToken ? BigNumber(btcToken.balance).multipliedBy(btcToken.price).toNumber() : 0,
-    [btcToken]
+  // Native (non-Stellar) chain tokens with a balance — BTC, ETH, SOL
+  const nativeTokens = useMemo(
+    () =>
+      [btcToken, ethToken, solToken].filter(
+        (tkn): tkn is NonNullable<typeof tkn> => !!tkn && BigNumber(tkn.balance).gt(0)
+      ),
+    [btcToken, ethToken, solToken]
   );
 
-  const totalBalance = walletBalance + savingsValue + btcValue;
+  const nativeValue = useMemo(
+    () =>
+      nativeTokens.reduce(
+        (acc, tkn) => acc + BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber(),
+        0
+      ),
+    [nativeTokens]
+  );
+
+  // "Wallet" = everything the user holds outside of savings, on any chain
+  const walletBalance = stellarBalance + nativeValue;
+  const totalBalance = walletBalance + savingsValue;
 
   const holdingsWithBalance = useMemo(
     () => tokens.filter((tkn) => BigNumber(tkn.balance).gt(0)),
@@ -104,16 +122,17 @@ export default function PortfolioView() {
       });
     }
 
-    if (btcToken) {
+    nativeTokens.forEach((tkn) => {
+      const value = BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber();
       entries.push({
-        token: btcToken,
-        value: btcValue,
-        percentage: totalBalance > 0 ? (btcValue / totalBalance) * 100 : 0,
+        token: tkn,
+        value,
+        percentage: totalBalance > 0 ? (value / totalBalance) * 100 : 0,
       });
-    }
+    });
 
     return entries.sort((a, b) => b.value - a.value);
-  }, [holdingsWithBalance, totalBalance, savingsValue, btcToken, btcValue]);
+  }, [holdingsWithBalance, totalBalance, savingsValue, nativeTokens]);
 
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
@@ -238,7 +257,12 @@ export default function PortfolioView() {
       </Box>
 
       <Box sx={{ mt: '20px' }}>
-        <ActivityCard walletAddress={wallet.address} bitcoinAddress={bitcoinAddress} />
+        <ActivityCard
+          walletAddress={wallet.address}
+          bitcoinAddress={bitcoinAddress}
+          ethereumAddress={ethereumAddress}
+          solanaAddress={solanaAddress}
+        />
       </Box>
 
       <BitcoinReceiveModal
