@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { Token } from '@normalfinance/types';
+import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import BigNumber from 'bignumber.js';
 import { paths } from '@/routes/paths';
@@ -11,13 +12,14 @@ import { useRouter } from 'next/navigation';
 import { ModalType } from '@normalfinance/types';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
-import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
+import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { fCurrency, fCurrencyTwoDecimals } from '@/utils/format-number';
 import { ActivityCard } from '@/sections/portfolio/portfolio-activity-card';
+import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -35,13 +37,17 @@ import SendModal from '@/components/_common/send-modal';
 import { useSnackbar } from '@/components/template/snackbar';
 import ReceiveModal from '@/components/_common/receive-modal';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
-import { BitcoinSetupDialog } from '@/components/_common/bitcoin-setup-dialog';
+import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
+import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
 import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
 
+import { AssetPriceChart } from './asset-price-chart';
+
 // ---------------------------------------------------------------------------
 // Per-asset capabilities. Swap is Soroswap (XLM↔USDC only), Save is the USDC
-// savings vault, Buy is the fiat on-ramp. BTC gets Buy once LI.FI lands.
+// savings vault, Buy is the fiat on-ramp. BTC/ETH/SOL get Buy once LI.FI
+// lands.
 // ---------------------------------------------------------------------------
 
 type AssetActionKey = 'send' | 'receive' | 'swap' | 'save' | 'buy';
@@ -49,6 +55,8 @@ type AssetActionKey = 'send' | 'receive' | 'swap' | 'save' | 'buy';
 function getAssetActions(symbol: string): AssetActionKey[] {
   switch (symbol) {
     case 'BTC':
+    case 'ETH':
+    case 'SOL':
       return ['send', 'receive'];
     case 'USDC':
       return ['send', 'receive', 'swap', 'save', 'buy'];
@@ -58,6 +66,38 @@ function getAssetActions(symbol: string): AssetActionKey[] {
       return ['send', 'receive'];
   }
 }
+
+// Native (non-Stellar) chain config for the synthesized display tokens and
+// the per-chain notes shown under the action row.
+const NATIVE_CHAINS: Record<
+  string,
+  { chain: TurnkeyChain; name: string; contract: string; icon: string; decimals: number; note: string }
+> = {
+  BTC: {
+    chain: 'bitcoin',
+    name: 'Bitcoin',
+    contract: '__btc__',
+    icon: cdn('tokens/bitcoin.webp'),
+    decimals: 8,
+    note: 'Bitcoin lives on its own network. You can send and receive BTC here, but it can’t be swapped or used for savings yet.',
+  },
+  ETH: {
+    chain: 'ethereum',
+    name: 'Ethereum',
+    contract: '__eth__',
+    icon: cdn('tokens/ethereum.webp'),
+    decimals: 18,
+    note: 'Ethereum lives on its own network. You can send and receive ETH here, but it can’t be swapped or used for savings yet.',
+  },
+  SOL: {
+    chain: 'solana',
+    name: 'Solana',
+    contract: '__sol__',
+    icon: cdn('tokens/solana.webp'),
+    decimals: 9,
+    note: 'Solana lives on its own network. You can send and receive SOL here, but it can’t be swapped or used for savings yet.',
+  },
+};
 
 // ---------------------------------------------------------------------------
 
@@ -74,40 +114,52 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     tokenState: { tokens },
   } = usePersistStore();
 
-  const isBtc = symbol.toUpperCase() === 'BTC';
+  const upperSymbol = symbol.toUpperCase();
+  const native = NATIVE_CHAINS[upperSymbol];
+  const isBtc = upperSymbol === 'BTC';
+  const isEth = upperSymbol === 'ETH';
+  const isSol = upperSymbol === 'SOL';
+
   const storeToken = tokens.find((tkn) => tkn.symbol.toLowerCase() === symbol.toLowerCase());
 
-  const { btcToken, bitcoinAddress, loading: btcLoading, refetch: refetchBtc } = useBtcPortfolio(isBtc);
+  const btc = useBtcPortfolio(isBtc);
+  const eth = useEthPortfolio(isEth);
+  const sol = useSolPortfolio(isSol);
+
+  const nativeToken = isBtc ? btc.btcToken : isEth ? eth.ethToken : isSol ? sol.solToken : null;
+  const nativeAddress = isBtc ? btc.bitcoinAddress : isEth ? eth.ethereumAddress : isSol ? sol.solanaAddress : null;
+  const nativeLoading = isBtc ? btc.loading : isEth ? eth.loading : isSol ? sol.loading : false;
+  const refetchNative = isBtc ? btc.refetch : isEth ? eth.refetch : sol.refetch;
 
   const [sendOpen, setSendOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
-  const [btcReceiveOpen, setBtcReceiveOpen] = useState(false);
-  const [btcSetupOpen, setBtcSetupOpen] = useState(false);
-  // BTC action the user started before the wallet existed; resumed after setup
-  const [pendingBtcAction, setPendingBtcAction] = useState<'send' | 'receive' | null>(null);
+  const [nativeReceiveOpen, setNativeReceiveOpen] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
+  // Action the user started before the chain account existed; resumed after setup
+  const [pendingAction, setPendingAction] = useState<'send' | 'receive' | null>(null);
 
-  // BTC has no entry in the Stellar token store — synthesize a display token
-  // (zero balance until the address exists and the balance loads).
+  // Native chains have no entry in the Stellar token store — synthesize a
+  // display token (zero balance until the address exists and balance loads).
   const token: Token | undefined = useMemo(() => {
-    if (!isBtc) return storeToken;
-    if (btcToken) return btcToken;
+    if (!native) return storeToken;
+    if (nativeToken) return nativeToken;
     return {
-      symbol: 'BTC',
-      contract: '__btc__',
-      name: 'Bitcoin',
+      symbol: upperSymbol,
+      contract: native.contract,
+      name: native.name,
       issuer: '',
       org: '',
       domain: '',
-      icon: cdn('tokens/bitcoin.webp'),
-      decimals: 8,
+      icon: native.icon,
+      decimals: native.decimals,
       featured: false,
       balance: '0',
       price: storeToken?.price ?? '0',
       percentageChange: 0,
     } as Token;
-  }, [isBtc, storeToken, btcToken]);
+  }, [native, storeToken, nativeToken, upperSymbol]);
 
-  if (isBtc && btcLoading && !btcToken) {
+  if (native && nativeLoading && !nativeToken) {
     return (
       <DashboardContent maxWidth="xl">
         <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
@@ -145,39 +197,42 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     });
   };
 
-  // BTC actions gate on the address existing. If it doesn't, the user
-  // explicitly confirms wallet setup first (lazy provisioning) — the action
-  // resumes afterwards. Never create the account silently.
-  const requireBtcWallet = (action: 'send' | 'receive') => {
+  // Native-chain actions gate on the address existing. If it doesn't, the
+  // user explicitly confirms wallet setup first (lazy provisioning) — the
+  // action resumes afterwards. Never create the account silently.
+  const openNativeAction = (action: 'send' | 'receive') => {
+    if (action === 'send') setSendOpen(true);
+    else setNativeReceiveOpen(true);
+  };
+
+  const requireNativeWallet = (action: 'send' | 'receive') => {
     requireLogin(() => {
-      if (!bitcoinAddress) {
-        setPendingBtcAction(action);
-        setBtcSetupOpen(true);
+      if (!nativeAddress) {
+        setPendingAction(action);
+        setSetupOpen(true);
         return;
       }
-      if (action === 'send') setSendOpen(true);
-      else setBtcReceiveOpen(true);
+      openNativeAction(action);
     });
   };
 
-  const handleBtcSetupSuccess = async () => {
-    await refetchBtc();
-    setBtcSetupOpen(false);
-    if (pendingBtcAction === 'send') setSendOpen(true);
-    else if (pendingBtcAction === 'receive') setBtcReceiveOpen(true);
-    setPendingBtcAction(null);
+  const handleSetupSuccess = async () => {
+    await refetchNative();
+    setSetupOpen(false);
+    if (pendingAction) openNativeAction(pendingAction);
+    setPendingAction(null);
   };
 
   const ACTION_CONFIG: Record<AssetActionKey, { label: string; icon: ReactNode; onClick: () => void }> = {
     send: {
       label: t('Send'),
       icon: <CallMadeOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (isBtc ? requireBtcWallet('send') : requireStellarWallet(() => setSendOpen(true))),
+      onClick: () => (native ? requireNativeWallet('send') : requireStellarWallet(() => setSendOpen(true))),
     },
     receive: {
       label: t('Receive'),
       icon: <CallReceivedOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (isBtc ? requireBtcWallet('receive') : requireStellarWallet(() => setReceiveOpen(true))),
+      onClick: () => (native ? requireNativeWallet('receive') : requireStellarWallet(() => setReceiveOpen(true))),
     },
     swap: {
       label: t('Swap'),
@@ -203,11 +258,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     enqueueSnackbar(message, { variant: 'success' });
   };
 
-  const infoRows: { label: string; value: string; copyable?: boolean }[] = isBtc
+  const infoRows: { label: string; value: string; copyable?: boolean }[] = native
     ? [
-        ...(bitcoinAddress ? [{ label: t('Your address'), value: bitcoinAddress, copyable: true }] : []),
-        { label: t('Network'), value: 'Bitcoin' },
-        { label: t('Decimals'), value: '8' },
+        ...(nativeAddress ? [{ label: t('Your address'), value: nativeAddress, copyable: true }] : []),
+        { label: t('Network'), value: native.name },
+        { label: t('Decimals'), value: String(native.decimals) },
       ]
     : [
         { label: t('Network'), value: 'Stellar' },
@@ -340,7 +395,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             ))}
           </Box>
 
-          {isBtc && (
+          {native && (
             <Box
               sx={{
                 mt: '14px',
@@ -354,9 +409,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                 lineHeight: 1.5,
               }}
             >
-              {t(
-                'Bitcoin lives on its own network. You can send and receive BTC here, but it can’t be swapped or used for savings yet.'
-              )}
+              {t(native.note)}
             </Box>
           )}
         </Box>
@@ -404,11 +457,14 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         </Box>
       </Box>
 
+      {/* Price history */}
+      <AssetPriceChart symbol={token.symbol} />
+
       {/* Asset-scoped activity */}
       <Box sx={{ mt: '20px' }}>
         <ActivityCard
           walletAddress={wallet.address}
-          bitcoinAddress={isBtc ? bitcoinAddress : undefined}
+          bitcoinAddress={isBtc ? btc.bitcoinAddress : undefined}
           assetSymbol={token.symbol}
         />
       </Box>
@@ -426,22 +482,39 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         onClose={() => setReceiveOpen(false)}
       />
 
-      <BitcoinReceiveModal
-        open={btcReceiveOpen}
-        address={bitcoinAddress}
-        onClose={() => setBtcReceiveOpen(false)}
-      />
+      {isBtc && (
+        <BitcoinReceiveModal
+          open={nativeReceiveOpen}
+          address={btc.bitcoinAddress}
+          onClose={() => setNativeReceiveOpen(false)}
+        />
+      )}
 
-      {user && (
-        <BitcoinSetupDialog
-          open={btcSetupOpen}
+      {(isEth || isSol) && (
+        <ChainReceiveModal
+          open={nativeReceiveOpen}
+          onClose={() => setNativeReceiveOpen(false)}
+          address={nativeAddress}
+          chainLabel={native!.name}
+          symbol={token.symbol}
+          warning={t('Only send {{symbol}} on the {{chain}} network to this address!', {
+            symbol: token.symbol,
+            chain: native!.name,
+          })}
+        />
+      )}
+
+      {user && native && (
+        <ChainSetupDialog
+          open={setupOpen}
           onClose={() => {
-            setBtcSetupOpen(false);
-            setPendingBtcAction(null);
+            setSetupOpen(false);
+            setPendingAction(null);
           }}
+          chain={native.chain}
           userId={user.id}
           userEmail={user.email}
-          onSuccess={handleBtcSetupSuccess}
+          onSuccess={handleSetupSuccess}
         />
       )}
     </DashboardContent>

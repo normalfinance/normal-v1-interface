@@ -14,6 +14,7 @@ export interface TurnkeyWalletInfo {
   walletId: string;
   bitcoinAddress: string | null;
   ethereumAddress: string | null;
+  solanaAddress: string | null;
   stellarAddress: string | null;
 }
 

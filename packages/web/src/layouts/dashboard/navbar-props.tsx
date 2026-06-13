@@ -36,7 +36,7 @@ export const NormalNavbarDefaults: Props = {
         },
         categoryLinks: [
           {
-            title: 'Earn',
+            title: 'Earn & Trade',
             links: [
               {
                 url: paths.savings,
@@ -44,17 +44,17 @@ export const NormalNavbarDefaults: Props = {
                 title: 'Savings',
                 description: 'Earn 8%+ APY on USDC.',
               },
-            ],
-          },
-          {
-            title: 'Move',
-            links: [
               {
                 url: paths.swap,
                 icon: <SwapVertOutlined sx={{ fontSize: 20 }} />,
                 title: 'Swap',
                 description: 'Exchange XLM, USDC and more.',
               },
+            ],
+          },
+          {
+            title: 'Wallet',
+            links: [
               {
                 url: paths.portfolio,
                 icon: <BarChartOutlined sx={{ fontSize: 20 }} />,

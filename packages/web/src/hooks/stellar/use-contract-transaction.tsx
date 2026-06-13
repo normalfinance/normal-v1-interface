@@ -2,7 +2,7 @@
 
 import type { ContractType } from '@normalfinance/types';
 import type { SnackbarKey } from '@/components/template/snackbar';
-import type { AssembledTransaction } from '@stellar/stellar-sdk/lib/contract';
+import type { AssembledTransaction } from '@stellar/stellar-sdk/contract';
 
 import { useCallback } from 'react';
 import { paths } from '@/routes/paths';

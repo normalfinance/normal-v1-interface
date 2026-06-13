@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
 
     const bitcoinAddress = byFormat('ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH');
     const ethereumAddress = byFormat('ADDRESS_FORMAT_ETHEREUM');
+    const solanaAddress = byFormat('ADDRESS_FORMAT_SOLANA');
     const stellarAddress = byFormat('ADDRESS_FORMAT_XLM');
 
     if (!stellarAddress && !bitcoinAddress) {
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
         walletId,
         bitcoinAddress: bitcoinAddress ?? undefined,
         ethereumAddress: ethereumAddress ?? undefined,
+        solanaAddress: solanaAddress ?? undefined,
         stellarAddress: stellarAddress ?? undefined,
       },
     });
@@ -101,6 +103,7 @@ export async function POST(request: NextRequest) {
         wallet: {
           bitcoinAddress: saved.bitcoinAddress,
           ethereumAddress: saved.ethereumAddress,
+          solanaAddress: saved.solanaAddress,
           stellarAddress: saved.stellarAddress,
         },
         stellarMatch,

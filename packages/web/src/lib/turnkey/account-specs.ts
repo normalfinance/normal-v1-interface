@@ -29,6 +29,16 @@ export const ETHEREUM_ACCOUNT: v1WalletAccountParams[] = [
   },
 ];
 
+/** Solana (base58) — standard BIP-44 ed25519 path */
+export const SOLANA_ACCOUNT: v1WalletAccountParams[] = [
+  {
+    curve: 'CURVE_ED25519',
+    pathFormat: 'PATH_FORMAT_BIP32',
+    path: "m/44'/501'/0'/0'",
+    addressFormat: 'ADDRESS_FORMAT_SOLANA',
+  },
+];
+
 /** Stellar (G…) — standard SEP-0005 path, matches our local mnemonic derivation */
 export const XLM_ACCOUNT: v1WalletAccountParams[] = [
   {

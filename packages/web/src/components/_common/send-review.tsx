@@ -73,6 +73,9 @@ const SendReview: React.FC<SendReviewProps> = ({
   const [copied, setCopied] = useState(false);
 
   const isBtc = sendToken.contract === '__btc__';
+  const isEth = sendToken.contract === '__eth__';
+  const isSol = sendToken.contract === '__sol__';
+  const isNative = isBtc || isEth || isSol;
 
   const tokens = usePersistStore((s) => s.tokenState.tokens);
   const xlmPrice = BigNumber(tokens.find((tok) => tok.symbol === 'XLM')?.price ?? 0);
@@ -252,7 +255,11 @@ const SendReview: React.FC<SendReviewProps> = ({
                   title={
                     isBtc
                       ? t('Estimated Bitcoin miner fee. Actual fee is set at signing time based on current mempool conditions.')
-                      : t('Fixed Stellar network fee paid to validators.')
+                      : isEth
+                        ? t('Ethereum gas fee, estimated from current network conditions at signing time.')
+                        : isSol
+                          ? t('Solana base network fee for a single transfer.')
+                          : t('Fixed Stellar network fee paid to validators.')
                   }
                 >
                   <Box sx={{ display: 'flex', color: 'rgba(10,10,15,0.3)', cursor: 'help' }}>
@@ -268,6 +275,14 @@ const SendReview: React.FC<SendReviewProps> = ({
                       ({fCurrency(btcFeeFiat)})
                     </Box>
                   )}
+                </Typography>
+              ) : isEth ? (
+                <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
+                  {t('Estimated at signing')}
+                </Typography>
+              ) : isSol ? (
+                <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
+                  0.000005 SOL
                 </Typography>
               ) : (
                 <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
@@ -297,6 +312,15 @@ const SendReview: React.FC<SendReviewProps> = ({
                         + ~{estimatedFeeSat.toLocaleString()} sat {t('fee')}
                       </Typography>
                     )}
+                  </>
+                ) : isEth || isSol ? (
+                  <>
+                    <Typography sx={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
+                      {BigNumber(tokenValue).toFixed(6, BigNumber.ROUND_DOWN)} {sendToken.symbol}
+                    </Typography>
+                    <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.45)' }}>
+                      + {t('network fee')}
+                    </Typography>
                   </>
                 ) : sendToken.symbol === 'XLM' ? (
                   <Typography sx={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
@@ -329,8 +353,8 @@ const SendReview: React.FC<SendReviewProps> = ({
             <Box sx={{ display: 'flex', gap: '8px', mb: '10px' }}>
               <Iconify icon="eva:alert-triangle-outline" width={16} sx={{ color: 'warning.main', flexShrink: 0, mt: '1px' }} />
               <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.6)', lineHeight: 1.55 }}>
-                {isBtc
-                  ? t('Bitcoin transactions are irreversible. Your device biometrics will be required to authorise the transaction. Double-check the destination address.')
+                {isNative
+                  ? t('Blockchain transactions are irreversible. Your device biometrics will be required to authorise the transaction. Double-check the destination address.')
                   : t('Blockchain transactions are irreversible. Double-check the destination address — funds sent to the wrong address cannot be recovered.')}
               </Typography>
             </Box>
@@ -374,7 +398,7 @@ const SendReview: React.FC<SendReviewProps> = ({
             '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
           }}
         >
-          {isBtc ? t('Send with passkey') : (
+          {isNative ? t('Send with passkey') : (
             <>{t('Send')} {BigNumber(tokenValue).toFixed(4, BigNumber.ROUND_DOWN)} {sendToken.symbol}</>
           )}
         </LoadingButton>

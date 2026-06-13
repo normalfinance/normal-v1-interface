@@ -6,7 +6,16 @@ import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
 import { turnkey, buildPasskeyRootUser } from '@/lib/turnkey/server';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { XLM_ACCOUNT, BITCOIN_ACCOUNT } from '@/lib/turnkey/account-specs';
+import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from '@/lib/turnkey/account-specs';
+
+const CHAIN_SPECS = {
+  bitcoin: BITCOIN_ACCOUNT,
+  stellar: XLM_ACCOUNT,
+  ethereum: ETHEREUM_ACCOUNT,
+  solana: SOLANA_ACCOUNT,
+} as const;
+
+type Chain = keyof typeof CHAIN_SPECS;
 
 // ---------------------------------------------------------------------------
 // GET /api/turnkey/wallet
@@ -19,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   const wallet = await prisma.turnkeyWallet.findUnique({
     where: { supabaseUid: user.id },
-    select: { subOrgId: true, walletId: true, bitcoinAddress: true, ethereumAddress: true, stellarAddress: true },
+    select: { subOrgId: true, walletId: true, bitcoinAddress: true, ethereumAddress: true, solanaAddress: true, stellarAddress: true },
   });
 
   return NextResponse.json({ wallet: wallet ?? null });
@@ -42,6 +51,7 @@ export async function POST(request: NextRequest) {
       wallet: {
         bitcoinAddress: existing.bitcoinAddress,
         ethereumAddress: existing.ethereumAddress,
+        solanaAddress: existing.solanaAddress,
         stellarAddress: existing.stellarAddress,
       },
     });
@@ -55,7 +65,7 @@ export async function POST(request: NextRequest) {
       attestationObject: string;
       transports: string[];
     };
-    chain?: 'bitcoin' | 'stellar';
+    chain?: Chain;
   };
 
   try {
@@ -65,7 +75,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { challenge, attestation } = body;
-  const chain = body.chain === 'stellar' ? 'stellar' : 'bitcoin';
+  const chain: Chain = body.chain && body.chain in CHAIN_SPECS ? body.chain : 'bitcoin';
   if (!challenge || !attestation?.credentialId) {
     return NextResponse.json({ error: 'Missing challenge or attestation' }, { status: 400 });
   }
@@ -82,7 +92,7 @@ export async function POST(request: NextRequest) {
         // Lazily provisioned — ONLY the requested chain's account is created.
         // Other chains are added on demand (Turnkey pricing scales with
         // addresses).
-        accounts: chain === 'stellar' ? XLM_ACCOUNT : BITCOIN_ACCOUNT,
+        accounts: CHAIN_SPECS[chain],
       },
     });
 
@@ -97,7 +107,8 @@ export async function POST(request: NextRequest) {
         walletId,
         bitcoinAddress: chain === 'bitcoin' ? address : null,
         stellarAddress: chain === 'stellar' ? address : null,
-        ethereumAddress: null,
+        ethereumAddress: chain === 'ethereum' ? address : null,
+        solanaAddress: chain === 'solana' ? address : null,
       },
     });
 
@@ -108,6 +119,7 @@ export async function POST(request: NextRequest) {
         wallet: {
           bitcoinAddress: saved.bitcoinAddress,
           ethereumAddress: saved.ethereumAddress,
+          solanaAddress: saved.solanaAddress,
           stellarAddress: saved.stellarAddress,
         },
       },

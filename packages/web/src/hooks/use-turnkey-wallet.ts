@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 export interface TurnkeyAddresses {
   bitcoinAddress: string | null;
   ethereumAddress: string | null;
+  solanaAddress: string | null;
   stellarAddress: string | null;
 }
 

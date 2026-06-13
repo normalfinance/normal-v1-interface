@@ -12,6 +12,7 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { fNumber, fCurrency } from '@/utils/format-number';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
 import {
   Box,
@@ -56,39 +57,49 @@ export default function AssetsView() {
   }, [wallet.address]);
 
   const { btcToken } = useBtcPortfolio(true);
+  const { ethToken } = useEthPortfolio(true);
+  const { solToken } = useSolPortfolio(true);
 
-  // Core assets (BTC, XLM, USDC) are always listed so they can be picked even
-  // at zero balance; other Stellar tokens appear once the user holds them.
-  // BTC is native (not in the Stellar token store), so it's synthesized here
-  // when the user has no Bitcoin address yet.
+  // Core assets (BTC, ETH, SOL, XLM, USDC) are always listed so they can be
+  // picked even at zero balance; other Stellar tokens appear once the user
+  // holds them. Native chains aren't in the Stellar token store, so they're
+  // synthesized here when the user has no address for them yet.
   const displayTokens = useMemo(() => {
+    const nativeSymbols = ['BTC', 'ETH', 'SOL'];
     const stellar = tokens.filter(
       (token) =>
-        token.symbol !== 'BTC' &&
+        !nativeSymbols.includes(token.symbol) &&
         (BigNumber(token.balance).gt(0) || token.featured || token.symbol === 'XLM' || token.symbol === 'USDC')
     );
-    const btc: Token =
-      btcToken ??
+
+    const synthesize = (symbol: string, name: string, contract: string, icon: string, decimals: number): Token =>
       ({
-        symbol: 'BTC',
-        contract: '__btc__',
-        name: 'Bitcoin',
+        symbol,
+        contract,
+        name,
         issuer: '',
         org: '',
         domain: '',
-        icon: cdn('tokens/bitcoin.webp'),
-        decimals: 8,
+        icon,
+        decimals,
         featured: false,
         balance: '0',
-        price: tokens.find((token) => token.symbol === 'BTC')?.price ?? '0',
+        price: tokens.find((token) => token.symbol === symbol)?.price ?? '0',
         percentageChange: 0,
       } as Token);
-    return [btc, ...stellar].sort((a, b) => {
+
+    const natives = [
+      btcToken ?? synthesize('BTC', 'Bitcoin', '__btc__', cdn('tokens/bitcoin.webp'), 8),
+      ethToken ?? synthesize('ETH', 'Ethereum', '__eth__', cdn('tokens/ethereum.webp'), 18),
+      solToken ?? synthesize('SOL', 'Solana', '__sol__', cdn('tokens/solana.webp'), 9),
+    ];
+
+    return [...natives, ...stellar].sort((a, b) => {
       const aValue = BigNumber(a.balance).multipliedBy(a.price);
       const bValue = BigNumber(b.balance).multipliedBy(b.price);
       return bValue.minus(aValue).toNumber();
     });
-  }, [tokens, btcToken]);
+  }, [tokens, btcToken, ethToken, solToken]);
 
   // Calculate total value
   const totalValue = displayTokens.reduce((acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)), BigNumber(0));

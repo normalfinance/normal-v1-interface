@@ -12,6 +12,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import React, { useRef, useMemo, useState, useEffect } from 'react';
+import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import {
   getMaxAmount,
   getCryptoIconUrl,
@@ -34,9 +35,11 @@ import SendReview from './send-review';
 import { Iconify } from '../template/iconify';
 import PasteIconButton from '../paste-icon-button';
 import { BtcTxStatusModal } from './btc-tx-status-modal';
+import { createSolanaAdapter } from './send-adapters/solana';
 import { createStellarAdapter } from './send-adapters/stellar';
 import { createBitcoinAdapter } from './send-adapters/bitcoin';
 import { NetworkBadge, getAssetNetwork } from './network-badge';
+import { createEthereumAdapter } from './send-adapters/ethereum';
 
 import type { SendAdapter } from './send-adapters';
 
@@ -59,15 +62,17 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
 
   const { send: stellarSend } = useSendToken();
   const { btcToken, bitcoinAddress } = useBtcPortfolio(open);
+  const { ethToken, ethereumAddress } = useEthPortfolio(open);
+  const { solToken, solanaAddress } = useSolPortfolio(open);
 
-  // Build the full sendable list: Stellar tokens + BTC
+  // Build the full sendable list: Stellar tokens + native chains with balance
   const sendableTokens = useMemo(() => {
     const stellar = tokens.filter((tkn) => BigNumber(tkn.balance).gt(0));
-    if (btcToken && BigNumber(btcToken.balance).gt(0)) {
-      return [...stellar, btcToken];
-    }
-    return stellar;
-  }, [tokens, btcToken]);
+    const natives = [btcToken, ethToken, solToken].filter(
+      (tkn): tkn is Token => !!tkn && BigNumber(tkn.balance).gt(0)
+    );
+    return [...stellar, ...natives];
+  }, [tokens, btcToken, ethToken, solToken]);
 
   const xlmPrice = useMemo(
     () => BigNumber(tokens.find((tok) => tok.symbol === 'XLM')?.price ?? 0).toNumber(),
@@ -96,6 +101,9 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isBtc = sendToken?.contract === '__btc__';
+  const isEth = sendToken?.contract === '__eth__';
+  const isSol = sendToken?.contract === '__sol__';
+  const isNative = isBtc || isEth || isSol;
 
   // Reset form each time the dialog opens
   useEffect(() => {
@@ -144,14 +152,23 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   // Build the active adapter based on selected token
   const adapter = useMemo((): SendAdapter | null => {
     if (!sendToken) return null;
+    const onError = (msg: string) => {
+      enqueueSnackbar(msg, { variant: 'error' });
+    };
     if (isBtc) {
       if (!bitcoinAddress) return null;
-      return createBitcoinAdapter(bitcoinAddress, (msg) => {
-        enqueueSnackbar(msg, { variant: 'error' });
-      });
+      return createBitcoinAdapter(bitcoinAddress, onError);
+    }
+    if (isEth) {
+      if (!ethereumAddress) return null;
+      return createEthereumAdapter(ethereumAddress, onError);
+    }
+    if (isSol) {
+      if (!solanaAddress) return null;
+      return createSolanaAdapter(solanaAddress, onError);
     }
     return createStellarAdapter(stellarSend, xlmPrice);
-  }, [sendToken, isBtc, bitcoinAddress, stellarSend, xlmPrice, enqueueSnackbar]);
+  }, [sendToken, isBtc, isEth, isSol, bitcoinAddress, ethereumAddress, solanaAddress, stellarSend, xlmPrice, enqueueSnackbar]);
 
   const xlmSubentriesForAdapter = xlmSubentries ?? undefined;
 
@@ -207,7 +224,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     if (isFiatMode) {
       setAmount(spendableBalance.multipliedBy(sendToken.price).toFixed(2, BigNumber.ROUND_DOWN));
     } else {
-      if (isBtc) {
+      if (isNative) {
         setAmount(spendableBalance.toFixed(8, BigNumber.ROUND_DOWN));
       } else {
         setAmount(getMaxAmount(sendToken, false, xlmSubentries !== null ? (2 + xlmSubentries) * 0.5 : undefined));
@@ -231,7 +248,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     if (!sendToken) return t('Select an asset');
     if (!destination) return t('Enter destination address');
     if (!isAddressValid) {
-      return isBtc ? t('Invalid Bitcoin address') : t('Invalid destination address');
+      return t('Invalid destination address');
     }
     if (!amount || coinAmount.isZero()) return t('Enter an amount');
     if (insufficientBalance) return t('Insufficient {{symbol}} balance', { symbol: sendToken.symbol });
@@ -242,7 +259,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
 
   const handleReviewClick = () => {
     if (!sendToken || !isReviewReady) return;
-    if (!isBtc && destination === persist.wallet.address) {
+    if (adapter?.network === 'stellar' && destination === persist.wallet.address) {
       enqueueSnackbar(t('Cannot send to your own address'), { variant: 'error' });
       return;
     }
@@ -535,7 +552,14 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               </Box>
               {destination && !isAddressValid && (
                 <Typography sx={{ fontSize: '12px', color: 'error.main', mt: '6px' }}>
-                  {isBtc ? t('Not a valid Bitcoin address') : t('Not a valid Stellar address')}
+                  {t('Not a valid {{network}} address', {
+                    network:
+                      adapter?.network === 'stellar'
+                        ? 'Stellar'
+                        : adapter
+                          ? adapter.network.charAt(0).toUpperCase() + adapter.network.slice(1)
+                          : '',
+                  })}
                 </Typography>
               )}
             </Box>

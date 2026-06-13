@@ -109,6 +109,7 @@ model TurnkeyWallet {
   walletId        String
   bitcoinAddress  String?
   ethereumAddress String?
+  solanaAddress   String?
   stellarAddress  String?
   createdAt       DateTime @default(now())
 

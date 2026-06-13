@@ -21,7 +21,7 @@ export interface AdapterFeeInfo {
  * Add new networks (ETH, SOL, …) by implementing this interface.
  */
 export interface SendAdapter {
-  readonly network: 'stellar' | 'bitcoin';
+  readonly network: 'stellar' | 'bitcoin' | 'ethereum' | 'solana';
   readonly hasMemo: boolean;
   readonly addressPlaceholder: string;
   validateAddress(address: string): boolean;

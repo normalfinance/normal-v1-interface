@@ -5,8 +5,8 @@ import type { v1WalletAccountParams } from '@turnkey/sdk-types';
 import { buildAuthHeaders } from '@/utils/http';
 
 import { createPasskeyRegistration } from './passkey';
-import { XLM_ACCOUNT, BITCOIN_ACCOUNT } from './account-specs';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from './wallet-info';
+import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from './account-specs';
 
 // ---------------------------------------------------------------------------
 // Adds accounts for a new chain to the user's EXISTING Turnkey wallet.
@@ -22,7 +22,7 @@ export async function addWalletAccounts(
   subOrgId: string,
   walletId: string,
   accounts: v1WalletAccountParams[]
-): Promise<{ bitcoinAddress: string | null; ethereumAddress: string | null; stellarAddress: string | null }> {
+): Promise<ChainAddresses> {
   const rpId =
     typeof window !== 'undefined'
       ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
@@ -61,16 +61,34 @@ export async function addWalletAccounts(
   return {
     bitcoinAddress: data.wallet?.bitcoinAddress ?? null,
     ethereumAddress: data.wallet?.ethereumAddress ?? null,
+    solanaAddress: data.wallet?.solanaAddress ?? null,
     stellarAddress: data.wallet?.stellarAddress ?? null,
   };
 }
 
-export type TurnkeyChain = 'bitcoin' | 'stellar';
+export type TurnkeyChain = 'bitcoin' | 'stellar' | 'ethereum' | 'solana';
+
+export const CHAIN_ACCOUNT_SPECS: Record<TurnkeyChain, v1WalletAccountParams[]> = {
+  bitcoin: BITCOIN_ACCOUNT,
+  stellar: XLM_ACCOUNT,
+  ethereum: ETHEREUM_ACCOUNT,
+  solana: SOLANA_ACCOUNT,
+};
 
 export interface ChainAddresses {
   bitcoinAddress: string | null;
   ethereumAddress: string | null;
+  solanaAddress: string | null;
   stellarAddress: string | null;
+}
+
+function chainAddress(addresses: ChainAddresses, chain: TurnkeyChain): string | null {
+  switch (chain) {
+    case 'bitcoin': return addresses.bitcoinAddress;
+    case 'ethereum': return addresses.ethereumAddress;
+    case 'solana': return addresses.solanaAddress;
+    default: return addresses.stellarAddress;
+  }
 }
 
 /**
@@ -87,16 +105,17 @@ export async function ensureChainAccount(
   supabaseUserId: string,
   userEmail?: string | null
 ): Promise<ChainAddresses> {
-  const spec = chain === 'stellar' ? XLM_ACCOUNT : BITCOIN_ACCOUNT;
+  const spec = CHAIN_ACCOUNT_SPECS[chain];
   const existing = await getTurnkeyWalletInfo();
 
   // Already provisioned
   if (existing) {
-    const current = chain === 'stellar' ? existing.stellarAddress : existing.bitcoinAddress;
+    const current = chainAddress(existing, chain);
     if (current) {
       return {
         bitcoinAddress: existing.bitcoinAddress,
         ethereumAddress: existing.ethereumAddress,
+        solanaAddress: existing.solanaAddress,
         stellarAddress: existing.stellarAddress,
       };
     }
@@ -142,6 +161,7 @@ export async function ensureChainAccount(
     return {
       bitcoinAddress: data.wallet?.bitcoinAddress ?? null,
       ethereumAddress: data.wallet?.ethereumAddress ?? null,
+      solanaAddress: data.wallet?.solanaAddress ?? null,
       stellarAddress: data.wallet?.stellarAddress ?? null,
     };
   }
@@ -164,6 +184,7 @@ export async function ensureChainAccount(
   return {
     bitcoinAddress: data.wallet?.bitcoinAddress ?? null,
     ethereumAddress: data.wallet?.ethereumAddress ?? null,
+    solanaAddress: data.wallet?.solanaAddress ?? null,
     stellarAddress: data.wallet?.stellarAddress ?? null,
   };
 }
