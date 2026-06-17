@@ -47,6 +47,12 @@ function getExplorerUrl(a: Activity): string | null {
   if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('sol:') && a.txHash) {
     return `https://solscan.io/tx/${a.txHash}`;
   }
+  // Cross-chain (LI.FI) swap — link to LI.FI's own explorer, which shows the
+  // whole journey (source + bridge + destination + status) in one view,
+  // rather than a single-leg chain explorer.
+  if (a.type === 'Swap' && a.txHash && a.tokenIn.address?.startsWith('lifi:')) {
+    return `https://scan.li.fi/tx/${a.txHash}`;
+  }
   switch (a.type) {
     case 'Savings Deposit':
     case 'Savings Withdraw':
@@ -114,13 +120,22 @@ interface RowData {
 
 function activityToRow(a: Activity): RowData {
   switch (a.type) {
-    case 'Swap':
+    case 'Swap': {
+      // Only USDC legs are ~$1; other tokens' amounts aren't dollars, so show
+      // the received amount in its own token rather than mis-labeling it USD.
+      const value =
+        a.tokenOut.symbol === 'USDC'
+          ? fCurrency(a.tokenOut.amount)
+          : a.tokenIn.symbol === 'USDC'
+            ? fCurrency(a.tokenIn.amount)
+            : `${a.tokenOut.amount.toFixed(7)} ${a.tokenOut.symbol}`;
       return {
         asset: `${a.tokenIn.symbol} → ${a.tokenOut.symbol}`,
         amount: a.tokenIn.amount.toFixed(7),
-        value: fCurrency(a.tokenOut.amount),
+        value,
         txHash: a.txHash,
       };
+    }
     case 'Savings Deposit':
     case 'Savings Withdraw': {
       const n = parseFloat(a.amount);
@@ -488,26 +503,65 @@ export function ActivityCard({
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                     <TypeTag tagKey={tagKey} />
-                    {(activity.type === 'Sent' || activity.type === 'Receive') &&
-                      activity.confirmed === false && (
-                        <Box
-                          component="span"
-                          sx={{
-                            display: 'inline-block',
-                            px: '8px',
-                            py: '3px',
-                            borderRadius: '999px',
-                            bgcolor: 'rgba(245,158,11,0.1)',
-                            color: '#B45309',
-                            fontSize: '10px',
-                            fontWeight: 500,
-                            letterSpacing: '0.02em',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          Pending
-                        </Box>
-                      )}
+                    {(((activity.type === 'Sent' || activity.type === 'Receive') &&
+                      activity.confirmed === false) ||
+                      (activity.type === 'Swap' && activity.pending)) && (
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-block',
+                          px: '8px',
+                          py: '3px',
+                          borderRadius: '999px',
+                          bgcolor: 'rgba(245,158,11,0.1)',
+                          color: '#B45309',
+                          fontSize: '10px',
+                          fontWeight: 500,
+                          letterSpacing: '0.02em',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Pending
+                      </Box>
+                    )}
+                    {activity.type === 'Swap' && activity.failed && (
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-block',
+                          px: '8px',
+                          py: '3px',
+                          borderRadius: '999px',
+                          bgcolor: 'rgba(220,38,38,0.1)',
+                          color: '#B91C1C',
+                          fontSize: '10px',
+                          fontWeight: 500,
+                          letterSpacing: '0.02em',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Failed
+                      </Box>
+                    )}
+                    {activity.type === 'Swap' && activity.refunded && (
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-block',
+                          px: '8px',
+                          py: '3px',
+                          borderRadius: '999px',
+                          bgcolor: 'rgba(245,158,11,0.1)',
+                          color: '#B45309',
+                          fontSize: '10px',
+                          fontWeight: 500,
+                          letterSpacing: '0.02em',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Refunded
+                      </Box>
+                    )}
                   </Box>
 
                   <Box

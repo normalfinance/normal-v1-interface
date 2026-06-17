@@ -95,6 +95,12 @@ export interface SwapActivity extends ActivityBase {
   tokenIn: TokenAmount;
   tokenOut: TokenAmount;
   txHash: string | null;
+  /** Cross-chain (LI.FI) swaps stay pending until the bridge delivers. */
+  pending?: boolean;
+  /** Cross-chain swap whose source tx never landed / the bridge failed. */
+  failed?: boolean;
+  /** Bridge returned the funds — the swap didn't deliver (funds are safe). */
+  refunded?: boolean;
 }
 
 // -----------------------------------------------------------------------------

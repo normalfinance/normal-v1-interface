@@ -43,33 +43,42 @@ export async function GET(request: NextRequest) {
     /* fall through */
   }
 
-  try {
-    const url =
-      `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist` +
-      `&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${apiKey}`;
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) {
-      return NextResponse.json({ success: false, error: `Etherscan error (${res.status})` }, { status: 502 });
-    }
-    const data = await res.json();
-    const txs: EtherscanTx[] = Array.isArray(data?.result) ? data.result : [];
+  const base = `https://api.etherscan.io/v2/api?chainid=1&module=account&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${apiKey}`;
 
-    const items: Activity[] = txs
-      // Only genuine value transfers (skip 0-value contract calls), successful only
-      .filter((tx) => tx.isError === '0' && tx.value !== '0')
-      .map((tx): Activity => {
-        const isReceive = tx.to?.toLowerCase() === address;
-        const amount = Number(BigInt(tx.value)) / 1e18;
-        return {
-          id: `eth:${tx.hash}`,
-          timestamp: Number(tx.timeStamp) * 1000,
-          type: isReceive ? 'Receive' : 'Sent',
-          address: isReceive ? tx.from : tx.to,
-          txHash: tx.hash,
-          confirmed: true,
-          token: { address: '__eth__', symbol: 'ETH', iconUrl: ETH_ICON, amount },
-        };
-      });
+  try {
+    // Normal txs (wallet→wallet) AND internal txs (contract-initiated, e.g.
+    // exchange/onramp/bridge deliveries). Onramps usually arrive as internal,
+    // so querying only txlist misses them entirely.
+    const [normalRes, internalRes] = await Promise.all([
+      fetch(`${base}&action=txlist`, { cache: 'no-store' }),
+      fetch(`${base}&action=txlistinternal`, { cache: 'no-store' }),
+    ]);
+
+    const normalData = normalRes.ok ? await normalRes.json() : { result: [] };
+    const internalData = internalRes.ok ? await internalRes.json() : { result: [] };
+    const normalTxs: EtherscanTx[] = Array.isArray(normalData?.result) ? normalData.result : [];
+    const internalTxs: EtherscanTx[] = Array.isArray(internalData?.result) ? internalData.result : [];
+
+    const toActivity = (tx: EtherscanTx, idSuffix: string): Activity => {
+      const isReceive = tx.to?.toLowerCase() === address;
+      const amount = Number(BigInt(tx.value)) / 1e18;
+      return {
+        id: `eth:${tx.hash}${idSuffix}`,
+        timestamp: Number(tx.timeStamp) * 1000,
+        type: isReceive ? 'Receive' : 'Sent',
+        address: isReceive ? tx.from : tx.to,
+        txHash: tx.hash,
+        confirmed: true,
+        token: { address: '__eth__', symbol: 'ETH', iconUrl: ETH_ICON, amount },
+      };
+    };
+
+    const items: Activity[] = [
+      ...normalTxs.filter((tx) => tx.isError === '0' && tx.value !== '0').map((tx) => toActivity(tx, '')),
+      ...internalTxs.filter((tx) => tx.isError === '0' && tx.value !== '0').map((tx, i) => toActivity(tx, `:i${i}`)),
+    ]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 25);
 
     try {
       await redis.set(cacheKey, items, { ex: CACHE_TTL_SECONDS });

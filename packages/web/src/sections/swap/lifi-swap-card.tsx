@@ -6,7 +6,6 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
 import { executeLifiSwap } from '@/lib/lifi/execute';
@@ -15,7 +14,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
 import { cdn , sanitizeAmountInput } from '@normalfinance/utils';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { ETH_RPC_URL, useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -89,6 +88,8 @@ export function LifiSwapCard() {
     toChainId: number;
     fromSymbol: string;
     toSymbol: string;
+    amountIn: string;
+    amountOut: string;
   } | null>(null);
 
   const addresses = useMemo(
@@ -211,8 +212,30 @@ export function LifiSwapCard() {
     setToSymbol(symbol);
   };
 
-  const handleMax = () => {
-    const max = BigNumber.max(fromBalance.minus(from.feeReserve), 0);
+  const handleMax = async () => {
+    let reserve = from.feeReserve;
+
+    // ETH: reserve only what gas actually costs right now (gas limit × live
+    // gas price × buffer), not a flat amount — a fixed reserve is either far
+    // too large in USD (ETH is pricey) or too small when gas spikes.
+    if (fromSymbol === 'ETH') {
+      try {
+        const res = await fetch(ETH_RPC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_gasPrice', params: [] }),
+        });
+        const data = await res.json();
+        const gasPriceWei = BigInt(data.result);
+        // ~250k gas (typical bridge deposit) × 1.6 safety buffer for price drift
+        const gasCostEth = Number((gasPriceWei * 250_000n * 16n) / 10n) / 1e18;
+        reserve = Math.min(Math.max(gasCostEth, 0.0005), 0.02);
+      } catch {
+        reserve = 0.003;
+      }
+    }
+
+    const max = BigNumber.max(fromBalance.minus(reserve), 0);
     setAmountIn(max.toFixed(Math.min(from.decimals, 8), BigNumber.ROUND_DOWN));
   };
 
@@ -237,31 +260,17 @@ export function LifiSwapCard() {
         solanaAddress: addresses.SOL,
       });
 
-      // Record it so the feed shows one "Swap A → B" row (not two legs).
-      // Non-blocking: the swap already succeeded regardless of this.
-      try {
-        const headers = await buildAuthHeaders();
-        await fetch('/api/lifi/record', {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fromSymbol,
-            toSymbol,
-            amountIn: amount.toFixed(),
-            amountOut: (toAmount ?? BigNumber(0)).toFixed(),
-            txHash,
-          }),
-        });
-      } catch {
-        /* recording is best-effort */
-      }
-
+      // Open the tracker immediately. It confirms the source tx, then records
+      // the swap (so a dropped tx never becomes a phantom row) and tracks the
+      // bridge — all non-blocking, no frozen button.
       setStatusTx({
         txHash,
         fromChainId: quote.action.fromChainId,
         toChainId: quote.action.toChainId,
         fromSymbol,
         toSymbol,
+        amountIn: amount.toFixed(),
+        amountOut: (toAmount ?? BigNumber(0)).toFixed(),
       });
       setAmountIn('');
       setQuote(null);
@@ -567,6 +576,8 @@ export function LifiSwapCard() {
           toChainId={statusTx.toChainId}
           fromSymbol={statusTx.fromSymbol}
           toSymbol={statusTx.toSymbol}
+          amountIn={statusTx.amountIn}
+          amountOut={statusTx.amountOut}
         />
       )}
     </Box>

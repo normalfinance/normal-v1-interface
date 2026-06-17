@@ -46,6 +46,12 @@ export interface LifiQuote {
   transactionRequest: LifiTransactionRequest;
 }
 
+function log(msg: string, extra?: unknown) {
+  // Visible in browser devtools to trace each swap step.
+  if (extra !== undefined) console.log(`[lifi-swap] ${msg}`, extra);
+  else console.log(`[lifi-swap] ${msg}`);
+}
+
 async function getTurnkeyClient() {
   const rpId =
     typeof window !== 'undefined'
@@ -81,13 +87,12 @@ async function executeEvm(
 
   const tx = quote.transactionRequest;
   const client = createPublicClient({ chain: mainnet, transport: http(ETH_RPC_URL) });
+  log('ETH: fetching nonce + gas');
   const nonce = await client.getTransactionCount({
     address: ethereumAddress as `0x${string}`,
     blockTag: 'pending',
   });
 
-  // Respect whichever gas model LI.FI returned — legacy (gasPrice) or
-  // EIP-1559 (maxFeePerGas). Forcing one would corrupt the other.
   const common = {
     chainId: tx.chainId ?? mainnet.id,
     nonce,
@@ -96,16 +101,32 @@ async function executeEvm(
     data: tx.data as `0x${string}`,
     gas: BigInt(tx.gasLimit ?? '0'),
   };
+
+  // LI.FI's quoted gas price can be stale by the time the user approves the
+  // passkey — if it's below the live network rate the tx gets dropped from
+  // the mempool and never mines. Re-price to the current network fee, never
+  // going below what LI.FI intended.
+  const max = (a: bigint, b: bigint) => (a > b ? a : b);
+  const liveFees = await client.estimateFeesPerGas().catch(() => null);
+
   const unsigned = tx.gasPrice
-    ? serializeTransaction({ ...common, type: 'legacy', gasPrice: BigInt(tx.gasPrice) })
+    ? serializeTransaction({
+        ...common,
+        type: 'legacy',
+        gasPrice: max(BigInt(tx.gasPrice), (await client.getGasPrice().catch(() => 0n)) as bigint),
+      })
     : serializeTransaction({
         ...common,
         type: 'eip1559',
-        maxFeePerGas: BigInt(tx.maxFeePerGas ?? '0'),
-        maxPriorityFeePerGas: BigInt(tx.maxPriorityFeePerGas ?? '0'),
+        maxFeePerGas: max(BigInt(tx.maxFeePerGas ?? '0'), liveFees?.maxFeePerGas ?? 0n),
+        maxPriorityFeePerGas: max(
+          BigInt(tx.maxPriorityFeePerGas ?? '0'),
+          liveFees?.maxPriorityFeePerGas ?? 0n
+        ),
       });
 
   const turnkey = await getTurnkeyClient();
+  log('ETH: requesting passkey signature');
   const signResult = await turnkey.signTransaction({
     type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
     timestampMs: String(Date.now()),
@@ -119,9 +140,15 @@ async function executeEvm(
   const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
   if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
 
-  return client.sendRawTransaction({
+  log('ETH: broadcasting');
+  // Return as soon as the tx is broadcast — the status modal tracks the
+  // receipt + bridge non-blockingly (a dropped/underpriced tx surfaces there
+  // as "Failed", not as a frozen button).
+  const hash = await client.sendRawTransaction({
     serializedTransaction: (signedTx.startsWith('0x') ? signedTx : `0x${signedTx}`) as `0x${string}`,
   });
+  log('ETH: broadcast hash', hash);
+  return hash;
 }
 
 // --- Bitcoin source ----------------------------------------------------------
@@ -137,6 +164,7 @@ async function executeBtc(
     : quote.transactionRequest.data;
 
   const turnkey = await getTurnkeyClient();
+  log('BTC: requesting passkey signature for PSBT');
   const signResult = await turnkey.signTransaction({
     type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
     timestampMs: String(Date.now()),
@@ -150,6 +178,7 @@ async function executeBtc(
   const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
   if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
 
+  log('BTC: broadcasting');
   const res = await fetch('/api/turnkey/broadcast-btc', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -160,6 +189,7 @@ async function executeBtc(
     throw new Error(err.error ?? `Broadcast failed (${res.status})`);
   }
   const data = await res.json();
+  log('BTC: broadcast txid', data.txid);
   return data.txid as string;
 }
 
@@ -185,6 +215,7 @@ async function executeSol(
 
   // Sign the serialized message bytes (ed25519, no pre-hash) with Turnkey.
   const turnkey = await getTurnkeyClient();
+  log('SOL: requesting passkey signature');
   const signResult = await turnkey.signRawPayload({
     type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
     timestampMs: String(Date.now()),
@@ -204,7 +235,10 @@ async function executeSol(
   signature.set(hexToBytes(result.s.padStart(64, '0')), 32);
   vtx.signatures[signerIndex] = signature;
 
-  return connection.sendRawTransaction(vtx.serialize(), { skipPreflight: false });
+  log('SOL: broadcasting');
+  const sig = await connection.sendRawTransaction(vtx.serialize(), { skipPreflight: false });
+  log('SOL: broadcast signature', sig);
+  return sig;
 }
 
 // --- Entry -------------------------------------------------------------------

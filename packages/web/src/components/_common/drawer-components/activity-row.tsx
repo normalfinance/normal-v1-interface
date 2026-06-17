@@ -155,9 +155,9 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     'Remove Liquidity': { label: 'Remove Liquidity', color: '#7A1D4A', bg: 'rgba(255,123,197,0.12)' },
   };
   const chip = CHIP[activity.type] ?? { label: activity.type, color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' };
-  const isPendingBtc =
-    (activity.type === 'Sent' || activity.type === 'Receive') &&
-    activity.confirmed === false;
+  const isPending =
+    ((activity.type === 'Sent' || activity.type === 'Receive') && activity.confirmed === false) ||
+    (activity.type === 'Swap' && activity.pending === true);
 
   let icon: React.ReactNode = null;
   let amountStr = '';
@@ -282,7 +282,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                 '& .MuiChip-label': { px: '8px' },
               }}
             />
-            {isPendingBtc && (
+            {isPending && (
               <Box
                 component="span"
                 sx={{
@@ -299,6 +299,44 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                 }}
               >
                 Pending
+              </Box>
+            )}
+            {activity.type === 'Swap' && activity.failed && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 20,
+                  px: '7px',
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(220,38,38,0.1)',
+                  color: '#B91C1C',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Failed
+              </Box>
+            )}
+            {activity.type === 'Swap' && activity.refunded && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 20,
+                  px: '7px',
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(245,158,11,0.1)',
+                  color: '#B45309',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Refunded
               </Box>
             )}
           </Box>

@@ -2,6 +2,7 @@ import type { Activity } from '@/types/activity';
 import type { WalletActivityItem, WalletActivityResponse } from '@/types/wallet-activity';
 
 import useSWR from 'swr';
+import { useEffect } from 'react';
 import { Horizon } from '@stellar/stellar-sdk';
 import { listTransactions } from '@/lib/mgi/history';
 import { cdn, constants, getCryptoIconUrl } from '@normalfinance/utils';
@@ -286,6 +287,18 @@ export function useUserActivity(
     dedupingInterval: 10_000,
   });
 
+  // Refresh the feed immediately when a swap/deposit just completed, instead
+  // of waiting for focus/interval revalidation. Dispatched by the swap cards.
+  useEffect(() => {
+    const handler = () => {
+      setTimeout(() => {
+        mutate();
+      }, 800);
+    };
+    window.addEventListener('nf:activity-updated', handler);
+    return () => window.removeEventListener('nf:activity-updated', handler);
+  }, [mutate]);
+
   const { data: mgiData } = useSWR<Activity[]>(
     walletAddress ? 'mgi-activity' : null,
     fetchMgiActivity,
@@ -316,6 +329,38 @@ export function useUserActivity(
     { revalidateOnFocus: true, dedupingInterval: 30_000 }
   );
 
+  // Cross-chain (LI.FI) swaps recorded under `lifi:` token refs stay pending
+  // until the bridge delivers — fetch their live status so the feed can show
+  // a Pending badge and flip to done on its own.
+  const lifiSwaps = (data ?? []).filter(
+    (a): a is Extract<Activity, { type: 'Swap' }> =>
+      a.type === 'Swap' &&
+      !!a.txHash &&
+      (a.tokenIn.address?.startsWith('lifi:') || a.tokenOut.address?.startsWith('lifi:'))
+  );
+  const lifiKey = lifiSwaps.map((s) => s.txHash).join(',');
+
+  const { data: swapStatuses } = useSWR<Record<string, string>>(
+    lifiKey ? ['lifi-statuses', lifiKey] : null,
+    async () => {
+      const res = await fetch('/api/lifi/statuses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          swaps: lifiSwaps.map((s) => ({
+            txHash: s.txHash,
+            fromSymbol: s.tokenIn.symbol,
+            toSymbol: s.tokenOut.symbol,
+          })),
+        }),
+      });
+      if (!res.ok) return {};
+      const d = await res.json();
+      return d?.statuses ?? {};
+    },
+    { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
+  );
+
   // A cross-chain swap is recorded as one "Swap" row (from SwapLog) whose
   // txHash is the SOURCE-chain transaction. The same tx also surfaces as a
   // raw "Sent" leg from that chain's history — suppress it so the swap shows
@@ -325,6 +370,39 @@ export function useUserActivity(
       .filter((a): a is Extract<Activity, { type: 'Swap' }> => a.type === 'Swap' && !!a.txHash)
       .map((a) => a.txHash as string)
   );
+
+  // Mark cross-chain swaps pending: pending unless LI.FI reports DONE. Before
+  // a status comes back, treat recent (<1h) ones as pending (they just fired).
+  const enrich = (a: Activity): Activity => {
+    if (
+      a.type === 'Swap' &&
+      a.txHash &&
+      (a.tokenIn.address?.startsWith('lifi:') || a.tokenOut.address?.startsWith('lifi:'))
+    ) {
+      const status = swapStatuses?.[a.txHash];
+      const ageMs = Date.now() - a.timestamp;
+      let pending = false;
+      let failed = false;
+      let refunded = false;
+      if (status === 'DONE') {
+        // settled
+      } else if (status === 'REFUNDED') {
+        refunded = true;
+      } else if (status === 'FAILED') {
+        failed = true;
+      } else if (status === 'NOTFOUND') {
+        // Source tx not on-chain: dead if it's had time to index, else new.
+        if (ageMs > 600_000) failed = true;
+        else pending = true;
+      } else {
+        // PENDING/unknown: in flight, unless stuck for hours.
+        if (ageMs > 6 * 3_600_000) failed = true;
+        else pending = true;
+      }
+      return { ...a, pending, failed, refunded };
+    }
+    return a;
+  };
 
   const recentActivity = [
     ...(data ?? []),
@@ -342,6 +420,7 @@ export function useUserActivity(
           swapTxHashes.has(a.txHash)
         )
     )
+    .map(enrich)
     .sort((a, b) => b.timestamp - a.timestamp);
 
   return {

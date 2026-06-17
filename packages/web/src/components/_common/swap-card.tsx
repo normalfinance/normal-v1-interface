@@ -218,6 +218,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ initialTokenIn, ...other }) => {
       tokenOutSymbol: TOKENS[tokenOut].symbol,
     });
     setAmountIn('');
+    // Refresh the activity feed so the swap appears without a manual reload.
+    window.dispatchEvent(new Event('nf:activity-updated'));
   }, [quote, executeSwap, tokenIn, tokenOut]);
 
   const exchangeRate =
