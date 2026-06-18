@@ -3,7 +3,7 @@
 import type { Token } from '@normalfinance/types';
 
 import { cdn } from '@normalfinance/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
 
@@ -31,37 +31,52 @@ export function useBtcPortfolio(enabled = true) {
   const [btcToken, setBtcToken] = useState<Token | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
-  useEffect(() => {
-    const addr = addresses?.bitcoinAddress;
-    if (!addr) {
+  const address = addresses?.bitcoinAddress ?? null;
+
+  // Re-runnable on demand (e.g. after a swap) — the effect alone only fires on
+  // address change, so a same-address balance update would otherwise be missed.
+  const loadBalance = useCallback(async () => {
+    if (!address) {
       setBtcToken(null);
       return;
     }
     setBalanceLoading(true);
-    fetchBtcData(addr).then((data) => {
-      setBtcToken({
-        symbol: 'BTC',
-        contract: '__btc__',
-        name: 'Bitcoin',
-        issuer: '',
-        org: '',
-        domain: '',
-        icon: cdn('tokens/bitcoin.webp'),
-        decimals: 8,
-        featured: false,
-        balance: String(data?.btc ?? 0),
-        price: String(data?.price ?? 0),
-        percentageChange: 0,
-      } as Token);
-      setBalanceLoading(false);
-    });
-  }, [addresses?.bitcoinAddress]);
+    const data = await fetchBtcData(address);
+    setBtcToken({
+      symbol: 'BTC',
+      contract: '__btc__',
+      name: 'Bitcoin',
+      issuer: '',
+      org: '',
+      domain: '',
+      icon: cdn('tokens/bitcoin.webp'),
+      decimals: 8,
+      featured: false,
+      balance: String(data?.btc ?? 0),
+      price: String(data?.price ?? 0),
+      percentageChange: 0,
+    } as Token);
+    setBalanceLoading(false);
+  }, [address]);
+
+  useEffect(() => {
+    loadBalance();
+  }, [loadBalance]);
+
+  // Auto-refresh when a swap settles (fires `nf:activity-updated`), so the BTC
+  // balance updates everywhere without a manual page refresh.
+  useEffect(() => {
+    const onUpdate = () => loadBalance();
+    window.addEventListener('nf:activity-updated', onUpdate);
+    return () => window.removeEventListener('nf:activity-updated', onUpdate);
+  }, [loadBalance]);
 
   return {
     btcToken,
-    bitcoinAddress: addresses?.bitcoinAddress ?? null,
+    bitcoinAddress: address,
     hasWallet,
     loading: walletLoading || balanceLoading,
     refetch,
+    refetchBalance: loadBalance,
   };
 }

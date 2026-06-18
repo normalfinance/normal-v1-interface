@@ -3,7 +3,7 @@
 import type { Token } from '@normalfinance/types';
 
 import { cdn } from '@normalfinance/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
 
@@ -97,7 +97,10 @@ function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
 
   const address = addresses?.[spec.addressKey] ?? null;
 
-  useEffect(() => {
+  // Pulled out of the effect so it can be re-run on demand (e.g. after a swap)
+  // without waiting for the address to change — the effect only fires on mount
+  // / address change, which never happens for a same-address balance update.
+  const loadBalance = useCallback(async () => {
     if (!address) {
       setToken(null);
       setBalanceError(false);
@@ -105,32 +108,42 @@ function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
     }
     setBalanceLoading(true);
     setBalanceError(false);
-    Promise.all([
+    const [res, price] = await Promise.all([
       spec.fetchBalance(address).then(
         (b) => ({ balance: b, ok: true }),
         () => ({ balance: 0, ok: false })
       ),
       fetchUsdPrice(spec.symbol),
-    ]).then(([res, price]) => {
-      setBalanceError(!res.ok);
-      setToken({
-        symbol: spec.symbol,
-        contract: spec.contract,
-        name: spec.name,
-        issuer: '',
-        org: '',
-        domain: '',
-        icon: spec.icon,
-        decimals: spec.decimals,
-        featured: false,
-        balance: String(res.balance),
-        price: String(price),
-        percentageChange: 0,
-      } as Token);
-      setBalanceLoading(false);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
+    ]);
+    setBalanceError(!res.ok);
+    setToken({
+      symbol: spec.symbol,
+      contract: spec.contract,
+      name: spec.name,
+      issuer: '',
+      org: '',
+      domain: '',
+      icon: spec.icon,
+      decimals: spec.decimals,
+      featured: false,
+      balance: String(res.balance),
+      price: String(price),
+      percentageChange: 0,
+    } as Token);
+    setBalanceLoading(false);
+  }, [address, spec]);
+
+  useEffect(() => {
+    loadBalance();
+  }, [loadBalance]);
+
+  // Auto-refresh when a swap (cross-chain or Stellar) settles, so every surface
+  // showing this balance updates without a manual page refresh.
+  useEffect(() => {
+    const onUpdate = () => loadBalance();
+    window.addEventListener('nf:activity-updated', onUpdate);
+    return () => window.removeEventListener('nf:activity-updated', onUpdate);
+  }, [loadBalance]);
 
   return {
     token,
@@ -139,15 +152,16 @@ function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
     loading: walletLoading || balanceLoading,
     error: balanceError,
     refetch,
+    refetchBalance: loadBalance,
   };
 }
 
 export function useEthPortfolio(enabled = true) {
-  const { token, address, hasWallet, loading, error, refetch } = useChainPortfolio('ethereum', enabled);
-  return { ethToken: token, ethereumAddress: address, hasWallet, loading, error, refetch };
+  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio('ethereum', enabled);
+  return { ethToken: token, ethereumAddress: address, hasWallet, loading, error, refetch, refetchBalance };
 }
 
 export function useSolPortfolio(enabled = true) {
-  const { token, address, hasWallet, loading, error, refetch } = useChainPortfolio('solana', enabled);
-  return { solToken: token, solanaAddress: address, hasWallet, loading, error, refetch };
+  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio('solana', enabled);
+  return { solToken: token, solanaAddress: address, hasWallet, loading, error, refetch, refetchBalance };
 }
