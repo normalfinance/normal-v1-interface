@@ -67,6 +67,11 @@ export async function POST(request: NextRequest) {
     fromAddress,
     toAddress,
     integrator: process.env.NEXT_PUBLIC_LIFI_INTEGRATOR ?? 'normalfinance',
+    // Gas.zip is a gas-refuel bridge, not a value bridge — it mis-handled a
+    // real SOL→ETH swap (stuck 20h+, then refunded). Blocklist it so LI.FI
+    // routes value swaps through proper bridges (Mayan/Chainflip/Near/Relay…).
+    // We deny (not allow) so newly added bridges still flow in automatically.
+    denyBridges: 'gasZipBridge',
   });
 
   const fee = process.env.LIFI_FEE;
@@ -90,10 +95,15 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return NextResponse.json(
-        { success: false, error: err.message ?? `Quote failed (${res.status})` },
-        { status: res.status }
-      );
+      // LI.FI returns 404 / a "no available quotes" message when no bridge will
+      // carry this amount+pair. Surface a clear, actionable message instead of
+      // the raw upstream error so the user knows to try a larger amount.
+      const raw = String(err.message ?? '');
+      const noRoute = res.status === 404 || /no (available )?(quote|route)/i.test(raw);
+      const error = noRoute
+        ? 'No route found for this amount — try a larger amount or a different pair.'
+        : err.message ?? `Quote failed (${res.status})`;
+      return NextResponse.json({ success: false, error }, { status: res.status });
     }
 
     const quote = await res.json();

@@ -62,6 +62,12 @@ const ASSETS: LifiAsset[] = [
 
 const assetBySymbol = (symbol: string) => ASSETS.find((a) => a.symbol === symbol)!;
 
+// Cross-chain swaps below this USD value have poor route coverage and a high
+// stuck/refund rate (LI.FI's own guidance: ~$5+ for best success). We enforce
+// it client-side before quoting so users get instant feedback and we don't
+// waste quote calls on amounts no bridge will reliably carry.
+const MIN_SWAP_USD = 5;
+
 export function LifiSwapCard() {
   const { t } = useTranslate();
   const { user } = useSupabaseAuth();
@@ -141,13 +147,17 @@ export function LifiSwapCard() {
 
   const amount = BigNumber(amountIn || 0);
   const insufficient = amount.gt(0) && amount.gt(fromBalance);
+  // Only enforce the floor when we actually have a price; if price is unknown
+  // (0) we let the quote attempt proceed and lean on LI.FI's no-route response.
+  const amountUsd = fromPrice.gt(0) ? amount.multipliedBy(fromPrice) : null;
+  const belowMinimum = amount.gt(0) && amountUsd !== null && amountUsd.lt(MIN_SWAP_USD);
 
   // Fetch a quote whenever the pair/amount/addresses are complete.
   // `stale` (not the abort signal) gates state writes, so a superseded request
   // can never leave the spinner stuck — the latest request always settles it.
   useEffect(() => {
     const value = BigNumber(debouncedAmountIn || 0);
-    if (!fromAddress || !toAddress || value.lte(0)) {
+    if (!fromAddress || !toAddress || value.lte(0) || belowMinimum) {
       setQuote(null);
       setQuoteError(null);
       setQuoteLoading(false);
@@ -193,7 +203,7 @@ export function LifiSwapCard() {
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedAmountIn, fromSymbol, toSymbol, fromAddress, toAddress]);
+  }, [debouncedAmountIn, fromSymbol, toSymbol, fromAddress, toAddress, belowMinimum]);
 
   const handleFlip = () => {
     setFromSymbol(toSymbol);
@@ -294,13 +304,14 @@ export function LifiSwapCard() {
       return { label: t('Set up {{chain}} wallet', { chain: to.name }), action: () => setSetupChain(to.chain) };
     if (!amountIn || amount.lte(0)) return { label: t('Enter an amount'), action: null };
     if (insufficient) return { label: t('Insufficient {{symbol}} balance', { symbol: fromSymbol }), action: null };
+    if (belowMinimum) return { label: t('Minimum swap is ${{min}}', { min: MIN_SWAP_USD }), action: null };
     if (quoteLoading) return { label: t('Fetching quote…'), action: null };
     if (quoteError) return { label: t('Quote unavailable'), action: null };
     if (!quote) return { label: t('Fetching quote…'), action: null };
     if (executing) return { label: t('Confirm in your passkey prompt…'), action: null };
     return { label: t('Swap with passkey'), action: handleExecute };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, fromAddress, toAddress, amountIn, amount, insufficient, quoteLoading, quoteError, quote, executing, fromSymbol, from, to, t]);
+  }, [user, fromAddress, toAddress, amountIn, amount, insufficient, belowMinimum, quoteLoading, quoteError, quote, executing, fromSymbol, from, to, t]);
 
   const toAmount = quote ? BigNumber(quote.estimate.toAmount).dividedBy(BigNumber(10).pow(to.decimals)) : null;
   const toAmountMin = quote ? BigNumber(quote.estimate.toAmountMin).dividedBy(BigNumber(10).pow(to.decimals)) : null;
