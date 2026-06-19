@@ -7,8 +7,8 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 import BigNumber from 'bignumber.js';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
-import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { useUsdPrice } from '@/hooks/use-price-history';
@@ -31,12 +31,15 @@ import CallMadeOutlined from '@mui/icons-material/CallMadeOutlined';
 import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
 import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
 import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
+import MoneyOffOutlined from '@mui/icons-material/MoneyOffOutlined';
 
 import { Iconify } from '@/components/template/iconify';
 import SendModal from '@/components/_common/send-modal';
 import { useSnackbar } from '@/components/template/snackbar';
 import OnRampDialog from '@/components/_common/onramp-dialog';
+import OffRampDialog from '@/components/_common/offramp-dialog';
 import ReceiveModal from '@/components/_common/receive-modal';
+import { CoinbaseOfframpModal } from '@/components/_common/coinbase-offramp-modal';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
@@ -51,14 +54,17 @@ import { AssetPriceChart } from './asset-price-chart';
 // lands.
 // ---------------------------------------------------------------------------
 
-type AssetActionKey = 'send' | 'receive' | 'swap' | 'save' | 'buy';
+type AssetActionKey = 'send' | 'receive' | 'swap' | 'save' | 'buy' | 'sell';
 
 function getAssetActions(symbol: string): AssetActionKey[] {
   switch (symbol) {
+    // Sell (Coinbase off-ramp) is live for native chains only. USDC/XLM
+    // off-ramp via Coinbase needs the Stellar memo question resolved first —
+    // re-added in the next step.
     case 'BTC':
     case 'ETH':
     case 'SOL':
-      return ['send', 'receive', 'buy'];
+      return ['send', 'receive', 'buy', 'sell'];
     case 'USDC':
       return ['send', 'receive', 'swap', 'save', 'buy'];
     case 'XLM':
@@ -105,6 +111,7 @@ const NATIVE_CHAINS: Record<
 export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const { t } = useTranslate();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { copy } = useCopyToClipboard();
   const { enqueueSnackbar } = useSnackbar();
   const { user } = useSupabaseAuth();
@@ -140,9 +147,21 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [nativeReceiveOpen, setNativeReceiveOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
+  const [sellOpen, setSellOpen] = useState(false);
+  const [coinbaseOfframpOpen, setCoinbaseOfframpOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   // Action the user started before the chain account existed; resumed after setup
-  const [pendingAction, setPendingAction] = useState<'send' | 'receive' | 'buy' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'send' | 'receive' | 'buy' | 'sell' | null>(null);
+
+  // Returning from a Coinbase off-ramp (native chains): Coinbase can't pull
+  // funds from a self-custody wallet, so we resume here to send the crypto.
+  useEffect(() => {
+    if (searchParams.get('offramp') === 'coinbase' && native && user) {
+      setCoinbaseOfframpOpen(true);
+      router.replace(paths.assets.details(upperSymbol));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, native, user, upperSymbol]);
 
   // Native chains have no entry in the Stellar token store — synthesize a
   // display token (zero balance until the address exists and balance loads).
@@ -206,13 +225,14 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   // Native-chain actions gate on the address existing. If it doesn't, the
   // user explicitly confirms wallet setup first (lazy provisioning) — the
   // action resumes afterwards. Never create the account silently.
-  const openNativeAction = (action: 'send' | 'receive' | 'buy') => {
+  const openNativeAction = (action: 'send' | 'receive' | 'buy' | 'sell') => {
     if (action === 'send') setSendOpen(true);
     else if (action === 'buy') setBuyOpen(true);
+    else if (action === 'sell') setSellOpen(true);
     else setNativeReceiveOpen(true);
   };
 
-  const requireNativeWallet = (action: 'send' | 'receive' | 'buy') => {
+  const requireNativeWallet = (action: 'send' | 'receive' | 'buy' | 'sell') => {
     requireLogin(() => {
       if (!nativeAddress) {
         setPendingAction(action);
@@ -255,6 +275,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       label: t('Buy'),
       icon: <AttachMoneyOutlined sx={{ fontSize: 14 }} />,
       onClick: () => (native ? requireNativeWallet('buy') : requireStellarWallet(() => setBuyOpen(true))),
+    },
+    sell: {
+      label: t('Sell'),
+      icon: <MoneyOffOutlined sx={{ fontSize: 14 }} />,
+      onClick: () => (native ? requireNativeWallet('sell') : requireStellarWallet(() => setSellOpen(true))),
     },
   };
 
@@ -382,7 +407,8 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: `repeat(${Math.min(actions.length, 5)}, 1fr)`,
+              // ≤5 actions sit in one row; 6 (USDC) wrap into a tidy 3×2.
+              gridTemplateColumns: `repeat(${actions.length > 5 ? 3 : actions.length}, 1fr)`,
               gap: '6px',
             }}
           >
@@ -530,6 +556,19 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         providers={['stripe', 'coinbase']}
       />
 
+      {/* Coinbase only — mirrors the Buy dialog on this page, which omits
+          MoneyGram. (MoneyGram cash-out is USDC-only and stays in the
+          savings/cash flow; it would also be wrong to offer it for XLM.) */}
+      <OffRampDialog
+        open={sellOpen}
+        amount="100"
+        onClose={() => setSellOpen(false)}
+        walletAddress={(native ? nativeAddress : wallet.address) ?? undefined}
+        asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
+        providers={['coinbase']}
+        assetBalance={native ? balance.toNumber() : undefined}
+      />
+
       {isBtc && (
         <BitcoinReceiveModal
           open={nativeReceiveOpen}
@@ -549,6 +588,17 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             symbol: token.symbol,
             chain: native!.name,
           })}
+        />
+      )}
+
+      {native && nativeAddress && (
+        <CoinbaseOfframpModal
+          open={coinbaseOfframpOpen}
+          onClose={() => setCoinbaseOfframpOpen(false)}
+          chain={native.chain}
+          symbol={upperSymbol}
+          address={nativeAddress}
+          token={token}
         />
       )}
 

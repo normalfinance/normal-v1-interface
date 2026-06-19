@@ -22,6 +22,12 @@ export interface SentActivity extends ActivityBase {
   token: TokenAmount;
   txHash: string | null;
   confirmed?: boolean; // undefined = unknown (Stellar); false = pending (BTC mempool)
+  /** This send is the on-chain leg of a fiat off-ramp (e.g. Coinbase sell). */
+  offramp?: boolean;
+  /** Off-ramp progress, reconciled against the provider (pending → completed). */
+  offrampStatus?: 'pending' | 'completed' | 'failed';
+  /** Off-ramp provider label (e.g. "Coinbase"). */
+  offrampProvider?: string;
 }
 
 export interface ReceiveActivity extends ActivityBase {

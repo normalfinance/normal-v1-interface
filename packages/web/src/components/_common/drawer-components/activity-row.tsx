@@ -154,10 +154,14 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     'Add Liquidity':    { label: 'Add Liquidity',    color: '#0A5272', bg: 'rgba(91,207,255,0.14)'  },
     'Remove Liquidity': { label: 'Remove Liquidity', color: '#7A1D4A', bg: 'rgba(255,123,197,0.12)' },
   };
-  const chip = CHIP[activity.type] ?? { label: activity.type, color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' };
+  const chip =
+    activity.type === 'Sent' && activity.offramp
+      ? CHIP['Sell']
+      : CHIP[activity.type] ?? { label: activity.type, color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' };
   const isPending =
     ((activity.type === 'Sent' || activity.type === 'Receive') && activity.confirmed === false) ||
-    (activity.type === 'Swap' && activity.pending === true);
+    (activity.type === 'Swap' && activity.pending === true) ||
+    (activity.type === 'Sent' && activity.offramp === true && activity.offrampStatus === 'pending');
 
   let icon: React.ReactNode = null;
   let amountStr = '';
@@ -179,7 +183,9 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       const { token: { symbol, amount, iconUrl }, address } = activity;
       icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
       amountStr = fmtAmount(amount, symbol);
-      subtitle = `To ${format.shortenAddress(address)}`;
+      subtitle = activity.offramp
+        ? activity.offrampProvider ?? 'Off-ramp'
+        : `To ${format.shortenAddress(address)}`;
       isPositive = false;
       usdStr = symbol === 'USDC' ? fmtUsd(amount) : fmtAmount(amount, symbol);
       break;
@@ -301,7 +307,10 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                 Pending
               </Box>
             )}
-            {activity.type === 'Swap' && activity.failed && (
+            {((activity.type === 'Swap' && activity.failed) ||
+              (activity.type === 'Sent' &&
+                activity.offramp &&
+                activity.offrampStatus === 'failed')) && (
               <Box
                 component="span"
                 sx={{

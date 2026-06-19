@@ -13,7 +13,13 @@ export type CreateCoinbaseOfframpUrlOpts = {
   redirectUrl: string;
   partnerUserRef: string; // less than 50 characters
   defaultNetwork?: string;
+  defaultAsset?: string;
+  /** Preset the crypto amount to sell (we cap this to the wallet's spendable). */
+  presetCryptoAmount?: string;
+  /** Lock the order so the user can't change our preset amount on Coinbase. */
+  disableEdit?: boolean;
   fiat?: string;
-  path: 'sell';
+  // Coinbase Offramp lives at /v3/sell/input (a bare /sell falls back to buy).
+  path?: 'v3/sell/input';
   sandbox?: boolean;
 };

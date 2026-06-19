@@ -4,8 +4,68 @@ import type { WalletActivityItem, WalletActivityResponse } from '@/types/wallet-
 import useSWR from 'swr';
 import { useEffect } from 'react';
 import { Horizon } from '@stellar/stellar-sdk';
+import { buildAuthHeaders } from '@/utils/http';
 import { listTransactions } from '@/lib/mgi/history';
 import { cdn, constants, getCryptoIconUrl } from '@normalfinance/utils';
+
+// Coinbase off-ramp sends are recorded client-side as { coinbaseTxnId: ourTxHash }
+// when we broadcast the on-chain transfer (see coinbase-offramp-modal). We join
+// that with the live Coinbase status to re-label the matching Sent row as an
+// off-ramp and show its real status. (localStorage v1 — DB-backed is the
+// hardening follow-up.)
+const OFFRAMP_FILLS_KEY = 'nf:cb-offramp-fills';
+
+function readOfframpFills(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(OFFRAMP_FILLS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+interface OfframpInfo {
+  status: 'pending' | 'completed' | 'failed';
+  symbol: string;
+  amount: number;
+}
+
+function mapCoinbaseStatus(s: string): OfframpInfo['status'] {
+  if (s === 'TRANSACTION_STATUS_SUCCESS') return 'completed';
+  if (s === 'TRANSACTION_STATUS_FAILED' || s === 'TRANSACTION_STATUS_EXPIRED') return 'failed';
+  return 'pending';
+}
+
+// Returns a map of our on-chain txHash -> off-ramp status, by joining the
+// local { coinbaseTxnId: txHash } fills with the Coinbase status API
+// (keyed by coinbaseTxnId).
+async function fetchOfframpStatuses(): Promise<Record<string, OfframpInfo>> {
+  const fills = readOfframpFills();
+  const entries = Object.entries(fills).filter(([, h]) => h && h !== 'pending');
+  if (!entries.length) return {};
+  try {
+    const headers = await buildAuthHeaders();
+    const res = await fetch('/api/coinbase/offramp-status', { headers });
+    if (!res.ok) return {};
+    const data = await res.json();
+    const byTxn: Record<string, any> = {};
+    for (const tx of data.transactions ?? []) byTxn[tx.transactionId] = tx;
+    const map: Record<string, OfframpInfo> = {};
+    for (const [txnId, txHash] of entries) {
+      const tx = byTxn[txnId];
+      if (tx) {
+        map[txHash] = {
+          status: mapCoinbaseStatus(tx.status),
+          symbol: String(tx.asset ?? '').toUpperCase(),
+          amount: parseFloat(tx.amount ?? '0'),
+        };
+      }
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
 
 function fallbackSymbol(address: string, stored: string | null): string {
   if (stored) return stored;
@@ -329,6 +389,21 @@ export function useUserActivity(
     { revalidateOnFocus: true, dedupingInterval: 30_000 }
   );
 
+  // Coinbase off-ramp statuses: keyed by our on-chain txHash so we can re-label
+  // the matching native Sent row as an off-ramp with its real status.
+  const { data: offrampStatuses, mutate: mutateOfframp } = useSWR<Record<string, OfframpInfo>>(
+    ethereumAddress || solanaAddress || bitcoinAddress ? 'coinbase-offramp-statuses' : null,
+    fetchOfframpStatuses,
+    { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
+  );
+
+  // Refresh off-ramp statuses too when a send/settle just happened.
+  useEffect(() => {
+    const handler = () => setTimeout(() => mutateOfframp(), 800);
+    window.addEventListener('nf:activity-updated', handler);
+    return () => window.removeEventListener('nf:activity-updated', handler);
+  }, [mutateOfframp]);
+
   // Cross-chain (LI.FI) swaps recorded under `lifi:` token refs stay pending
   // until the bridge delivers — fetch their live status so the feed can show
   // a Pending badge and flip to done on its own.
@@ -404,6 +479,16 @@ export function useUserActivity(
     return a;
   };
 
+  // Re-label a native send to Coinbase as an off-ramp ("Sell") with its live
+  // status, when our local fill maps this txHash to a Coinbase sell.
+  const enrichOfframp = (a: Activity): Activity => {
+    if (a.type === 'Sent' && a.txHash && offrampStatuses?.[a.txHash]) {
+      const info = offrampStatuses[a.txHash];
+      return { ...a, offramp: true, offrampStatus: info.status, offrampProvider: 'Coinbase' };
+    }
+    return a;
+  };
+
   const recentActivity = [
     ...(data ?? []),
     ...(mgiData ?? []),
@@ -421,6 +506,7 @@ export function useUserActivity(
         )
     )
     .map(enrich)
+    .map(enrichOfframp)
     .sort((a, b) => b.timestamp - a.timestamp);
 
   return {

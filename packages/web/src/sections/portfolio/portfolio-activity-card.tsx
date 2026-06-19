@@ -75,7 +75,7 @@ function activityTagKey(a: Activity): TagKey {
     case 'Savings Deposit': return 'deposit';
     case 'Savings Withdraw': return 'withdraw';
     case 'Swap': return 'swap';
-    case 'Sent': return 'send';
+    case 'Sent': return a.offramp ? 'sell' : 'send';
     case 'Receive': return 'receive';
     case 'Buy': return 'buy';
     case 'Sell': return 'sell';
@@ -505,7 +505,10 @@ export function ActivityCard({
                     <TypeTag tagKey={tagKey} />
                     {(((activity.type === 'Sent' || activity.type === 'Receive') &&
                       activity.confirmed === false) ||
-                      (activity.type === 'Swap' && activity.pending)) && (
+                      (activity.type === 'Swap' && activity.pending) ||
+                      (activity.type === 'Sent' &&
+                        activity.offramp &&
+                        activity.offrampStatus === 'pending')) && (
                       <Box
                         component="span"
                         sx={{
@@ -524,7 +527,10 @@ export function ActivityCard({
                         Pending
                       </Box>
                     )}
-                    {activity.type === 'Swap' && activity.failed && (
+                    {((activity.type === 'Swap' && activity.failed) ||
+                      (activity.type === 'Sent' &&
+                        activity.offramp &&
+                        activity.offrampStatus === 'failed')) && (
                       <Box
                         component="span"
                         sx={{
