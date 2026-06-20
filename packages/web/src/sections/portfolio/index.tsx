@@ -1,14 +1,16 @@
 'use client';
 
+import type { PortfolioAsset } from '@/types/portfolio';
+
 import { BigNumber } from 'bignumber.js';
 import { logger } from '@normalfinance/utils';
+import { usePortfolio } from '@/hooks/use-portfolio';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
-import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
-import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -28,9 +30,11 @@ export default function PortfolioView() {
   useEffect(() => { setMounted(true); }, []);
 
   const { user } = useSupabaseAuth();
-  const { btcToken, bitcoinAddress } = useBtcPortfolio(!!user);
-  const { ethToken, ethereumAddress } = useEthPortfolio(!!user);
-  const { solToken, solanaAddress } = useSolPortfolio(!!user);
+  // Single aggregated source of truth for all native balances + addresses.
+  const { getAsset } = usePortfolio(!!user);
+  const bitcoinAddress = getAsset('BTC')?.address ?? null;
+  const ethereumAddress = getAsset('ETH')?.address ?? null;
+  const solanaAddress = getAsset('SOL')?.address ?? null;
   const [btcReceiveOpen, setBtcReceiveOpen] = useState(false);
 
   const { setGlobalIsLoading } = useAppStore();
@@ -63,10 +67,12 @@ export default function PortfolioView() {
   // Native (non-Stellar) chain tokens with a balance — BTC, ETH, SOL
   const nativeTokens = useMemo(
     () =>
-      [btcToken, ethToken, solToken].filter(
-        (tkn): tkn is NonNullable<typeof tkn> => !!tkn && BigNumber(tkn.balance).gt(0)
-      ),
-    [btcToken, ethToken, solToken]
+      (['BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[])
+        .filter(
+          (a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0)
+        )
+        .map(portfolioAssetToToken),
+    [getAsset]
   );
 
   const nativeValue = useMemo(
