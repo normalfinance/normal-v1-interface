@@ -7,6 +7,7 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 import SendModal from '@/components/_common/send-modal';
 import OnRampDialog from '@/components/_common/onramp-dialog';
 import OffRampDialog from '@/components/_common/offramp-dialog';
+import { OfframpResumeHandler } from '@/components/_common/offramp-resume-handler';
 
 import ReceiveModal from '../components/_common/receive-modal';
 
@@ -23,6 +24,9 @@ export function ModalProvider({ children }: ModalProviderProps) {
   return (
     <>
       {children}
+
+      {/* Completes a Coinbase off-ramp on return from Coinbase, on any page. */}
+      <OfframpResumeHandler />
 
       {modalState.ON_RAMP && (
         <OnRampDialog

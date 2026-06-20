@@ -12,8 +12,8 @@ import {
   fetchSwapVolume,
   fetchLinkedWallets,
   fetchWalletActivity,
-  fetchAllDepositWallets,
   fetchTransactionLog,
+  fetchAllDepositWallets,
 } from '@/services/prisma-sync';
 
 export const dynamic = 'force-dynamic';

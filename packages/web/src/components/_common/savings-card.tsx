@@ -6,7 +6,6 @@ import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import React, { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
-import { keyframes } from '@mui/system';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
@@ -22,6 +21,7 @@ import {
   getSavingsDepositTokenLabel,
 } from '@/utils/token-selectors';
 
+import { keyframes } from '@mui/system';
 import {
   Box,
   Stack,

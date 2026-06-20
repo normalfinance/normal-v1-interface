@@ -2,15 +2,16 @@
 
 import type { Activity } from '@/types/activity';
 
-import { useState, useEffect, useMemo } from 'react';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { useMemo, useState, useEffect } from 'react';
 import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 
-import { MONO, CARD_SX, TAG_STYLES, PAGE_SIZE } from './_shared';
+import { MONO, CARD_SX, PAGE_SIZE, TAG_STYLES } from './_shared';
+
 import type { ActivityTab } from './_shared';
 
 const ACTIVITY_COLS = '130px minmax(0,1.4fr) 1fr 1fr 1fr minmax(0,1.2fr)';
@@ -36,7 +37,22 @@ function formatRelative(ts: number): string {
   return `${days}d ago`;
 }
 
-function getStellarExpertUrl(a: Activity): string | null {
+function getExplorerUrl(a: Activity): string | null {
+  if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('btc:') && a.txHash) {
+    return `https://mempool.space/tx/${a.txHash}`;
+  }
+  if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('eth:') && a.txHash) {
+    return `https://etherscan.io/tx/${a.txHash}`;
+  }
+  if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('sol:') && a.txHash) {
+    return `https://solscan.io/tx/${a.txHash}`;
+  }
+  // Cross-chain (LI.FI) swap — link to LI.FI's own explorer, which shows the
+  // whole journey (source + bridge + destination + status) in one view,
+  // rather than a single-leg chain explorer.
+  if (a.type === 'Swap' && a.txHash && a.tokenIn.address?.startsWith('lifi:')) {
+    return `https://scan.li.fi/tx/${a.txHash}`;
+  }
   switch (a.type) {
     case 'Savings Deposit':
     case 'Savings Withdraw':
@@ -59,7 +75,7 @@ function activityTagKey(a: Activity): TagKey {
     case 'Savings Deposit': return 'deposit';
     case 'Savings Withdraw': return 'withdraw';
     case 'Swap': return 'swap';
-    case 'Sent': return 'send';
+    case 'Sent': return a.offramp ? 'sell' : 'send';
     case 'Receive': return 'receive';
     case 'Buy': return 'buy';
     case 'Sell': return 'sell';
@@ -68,6 +84,30 @@ function activityTagKey(a: Activity): TagKey {
     case 'Add Liquidity': return 'add_liq';
     case 'Remove Liquidity': return 'remove_liq';
     default: return 'withdraw';
+  }
+}
+
+// Whether an activity involves the given asset symbol (used by the
+// per-asset view on /assets/[symbol]). Savings flows are USDC by definition.
+function matchesAsset(a: Activity, symbol: string): boolean {
+  switch (a.type) {
+    case 'Swap':
+      return a.tokenIn.symbol === symbol || a.tokenOut.symbol === symbol;
+    case 'Savings Deposit':
+    case 'Savings Withdraw':
+      return symbol === 'USDC';
+    case 'Sent':
+    case 'Receive':
+      return a.token.symbol === symbol;
+    case 'Buy':
+    case 'Sell':
+    case 'Mint':
+    case 'Redeem':
+    case 'Add Liquidity':
+    case 'Remove Liquidity':
+      return a.symbol === symbol;
+    default:
+      return false;
   }
 }
 
@@ -80,13 +120,22 @@ interface RowData {
 
 function activityToRow(a: Activity): RowData {
   switch (a.type) {
-    case 'Swap':
+    case 'Swap': {
+      // Only USDC legs are ~$1; other tokens' amounts aren't dollars, so show
+      // the received amount in its own token rather than mis-labeling it USD.
+      const value =
+        a.tokenOut.symbol === 'USDC'
+          ? fCurrency(a.tokenOut.amount)
+          : a.tokenIn.symbol === 'USDC'
+            ? fCurrency(a.tokenIn.amount)
+            : `${a.tokenOut.amount.toFixed(7)} ${a.tokenOut.symbol}`;
       return {
         asset: `${a.tokenIn.symbol} → ${a.tokenOut.symbol}`,
         amount: a.tokenIn.amount.toFixed(7),
-        value: fCurrency(a.tokenOut.amount),
+        value,
         txHash: a.txHash,
       };
+    }
     case 'Savings Deposit':
     case 'Savings Withdraw': {
       const n = parseFloat(a.amount);
@@ -277,14 +326,33 @@ function TypeTag({ tagKey }: { tagKey: TagKey }) {
 // -------------------------------------------------------------------
 interface ActivityCardProps {
   walletAddress: string | null | undefined;
+  bitcoinAddress?: string | null;
+  ethereumAddress?: string | null;
+  solanaAddress?: string | null;
+  /** Show only activity involving this asset (e.g. "BTC" on /assets/BTC). */
+  assetSymbol?: string;
+  /** Initial filter tab (defaults to "all"). */
+  defaultTab?: ActivityTab;
 }
 
-export function ActivityCard({ walletAddress }: ActivityCardProps) {
+export function ActivityCard({
+  walletAddress,
+  bitcoinAddress,
+  ethereumAddress,
+  solanaAddress,
+  assetSymbol,
+  defaultTab = 'all',
+}: ActivityCardProps) {
   const { t } = useTranslate();
-  const [tab, setTab] = useState<ActivityTab>('all');
+  const [tab, setTab] = useState<ActivityTab>(defaultTab);
   const [page, setPage] = useState(1);
 
-  const { recentActivity, isLoading, mutate } = useUserActivity(walletAddress);
+  const { recentActivity, isLoading, mutate } = useUserActivity(
+    walletAddress,
+    bitcoinAddress,
+    ethereumAddress,
+    solanaAddress
+  );
 
   // Re-fetch wallet activity after a deposit or withdrawal completes.
   useEffect(() => {
@@ -294,21 +362,24 @@ export function ActivityCard({ walletAddress }: ActivityCardProps) {
   }, [mutate]);
 
   const filtered = useMemo(() => {
+    const base = assetSymbol
+      ? recentActivity.filter((a) => matchesAsset(a, assetSymbol))
+      : recentActivity;
     switch (tab) {
       case 'swaps':
-        return recentActivity.filter((a) => a.type === 'Swap');
+        return base.filter((a) => a.type === 'Swap');
       case 'savings':
-        return recentActivity.filter(
+        return base.filter(
           (a) => a.type === 'Savings Deposit' || a.type === 'Savings Withdraw'
         );
       case 'transfers':
-        return recentActivity.filter(
+        return base.filter(
           (a) => a.type === 'Sent' || a.type === 'Receive' || a.type === 'Buy' || a.type === 'Sell'
         );
       default:
-        return recentActivity;
+        return base;
     }
-  }, [recentActivity, tab]);
+  }, [recentActivity, tab, assetSymbol]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const items = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -413,7 +484,7 @@ export function ActivityCard({ walletAddress }: ActivityCardProps) {
             {items.map((activity) => {
               const tagKey = activityTagKey(activity);
               const row = activityToRow(activity);
-              const expertUrl = getStellarExpertUrl(activity);
+              const expertUrl = getExplorerUrl(activity);
               return (
                 <Box
                   key={activity.id}
@@ -430,7 +501,74 @@ export function ActivityCard({ walletAddress }: ActivityCardProps) {
                     '&:hover': { bgcolor: 'rgba(10,10,15,0.025)' },
                   }}
                 >
-                  <TypeTag tagKey={tagKey} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                    <TypeTag tagKey={tagKey} />
+                    {(((activity.type === 'Sent' || activity.type === 'Receive') &&
+                      activity.confirmed === false) ||
+                      (activity.type === 'Swap' && activity.pending) ||
+                      (activity.type === 'Sent' &&
+                        activity.offramp &&
+                        activity.offrampStatus === 'pending')) && (
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-block',
+                          px: '8px',
+                          py: '3px',
+                          borderRadius: '999px',
+                          bgcolor: 'rgba(245,158,11,0.1)',
+                          color: '#B45309',
+                          fontSize: '10px',
+                          fontWeight: 500,
+                          letterSpacing: '0.02em',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Pending
+                      </Box>
+                    )}
+                    {((activity.type === 'Swap' && activity.failed) ||
+                      (activity.type === 'Sent' &&
+                        activity.offramp &&
+                        activity.offrampStatus === 'failed')) && (
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-block',
+                          px: '8px',
+                          py: '3px',
+                          borderRadius: '999px',
+                          bgcolor: 'rgba(220,38,38,0.1)',
+                          color: '#B91C1C',
+                          fontSize: '10px',
+                          fontWeight: 500,
+                          letterSpacing: '0.02em',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Failed
+                      </Box>
+                    )}
+                    {activity.type === 'Swap' && activity.refunded && (
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-block',
+                          px: '8px',
+                          py: '3px',
+                          borderRadius: '999px',
+                          bgcolor: 'rgba(245,158,11,0.1)',
+                          color: '#B45309',
+                          fontSize: '10px',
+                          fontWeight: 500,
+                          letterSpacing: '0.02em',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Refunded
+                      </Box>
+                    )}
+                  </Box>
 
                   <Box
                     sx={{

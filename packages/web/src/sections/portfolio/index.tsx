@@ -1,27 +1,37 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { BigNumber } from 'bignumber.js';
 import { logger } from '@normalfinance/utils';
+import { useMemo, useState, useEffect } from 'react';
+import { DashboardContent } from '@/layouts/dashboard';
+import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
-import { BigNumber } from 'bignumber.js';
-import { DashboardContent } from '@/layouts/dashboard';
+import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import SavingsCard from '@/components/_common/savings-card';
-
-import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 
 import { HeroCard } from './portfolio-hero-card';
 import { HoldingsCard } from './portfolio-holdings-card';
 import { ActivityCard } from './portfolio-activity-card';
+
 import type { HoldingData } from './_shared';
 
 export default function PortfolioView() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  const { user } = useSupabaseAuth();
+  const { btcToken, bitcoinAddress } = useBtcPortfolio(!!user);
+  const { ethToken, ethereumAddress } = useEthPortfolio(!!user);
+  const { solToken, solanaAddress } = useSolPortfolio(!!user);
+  const [btcReceiveOpen, setBtcReceiveOpen] = useState(false);
 
   const { setGlobalIsLoading } = useAppStore();
   const {
@@ -39,7 +49,7 @@ export default function PortfolioView() {
 
   const earnings = useMemo(() => parseFloat(userPosition?.earnings || '0'), [userPosition]);
 
-  const walletBalance = useMemo(
+  const stellarBalance = useMemo(
     () =>
       tokens
         .reduce(
@@ -50,6 +60,26 @@ export default function PortfolioView() {
     [tokens]
   );
 
+  // Native (non-Stellar) chain tokens with a balance — BTC, ETH, SOL
+  const nativeTokens = useMemo(
+    () =>
+      [btcToken, ethToken, solToken].filter(
+        (tkn): tkn is NonNullable<typeof tkn> => !!tkn && BigNumber(tkn.balance).gt(0)
+      ),
+    [btcToken, ethToken, solToken]
+  );
+
+  const nativeValue = useMemo(
+    () =>
+      nativeTokens.reduce(
+        (acc, tkn) => acc + BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber(),
+        0
+      ),
+    [nativeTokens]
+  );
+
+  // "Wallet" = everything the user holds outside of savings, on any chain
+  const walletBalance = stellarBalance + nativeValue;
   const totalBalance = walletBalance + savingsValue;
 
   const holdingsWithBalance = useMemo(
@@ -92,8 +122,17 @@ export default function PortfolioView() {
       });
     }
 
+    nativeTokens.forEach((tkn) => {
+      const value = BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber();
+      entries.push({
+        token: tkn,
+        value,
+        percentage: totalBalance > 0 ? (value / totalBalance) * 100 : 0,
+      });
+    });
+
     return entries.sort((a, b) => b.value - a.value);
-  }, [holdingsWithBalance, totalBalance, savingsValue]);
+  }, [holdingsWithBalance, totalBalance, savingsValue, nativeTokens]);
 
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
@@ -208,13 +247,29 @@ export default function PortfolioView() {
           mt: '20px',
         }}
       >
-        <HoldingsCard holdingsData={holdingsData} totalBalance={totalBalance} />
+        <HoldingsCard
+          holdingsData={holdingsData}
+          totalBalance={totalBalance}
+          hasBitcoinWallet={!!bitcoinAddress}
+          onBtcReceive={bitcoinAddress ? () => setBtcReceiveOpen(true) : undefined}
+        />
         <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
       </Box>
 
       <Box sx={{ mt: '20px' }}>
-        <ActivityCard walletAddress={wallet.address} />
+        <ActivityCard
+          walletAddress={wallet.address}
+          bitcoinAddress={bitcoinAddress}
+          ethereumAddress={ethereumAddress}
+          solanaAddress={solanaAddress}
+        />
       </Box>
+
+      <BitcoinReceiveModal
+        open={btcReceiveOpen}
+        address={bitcoinAddress}
+        onClose={() => setBtcReceiveOpen(false)}
+      />
     </DashboardContent>
   );
 }

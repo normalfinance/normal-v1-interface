@@ -7,8 +7,8 @@ import { DashboardContent } from '@/layouts/dashboard';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import { SettingsGeneral } from '../settings-general';

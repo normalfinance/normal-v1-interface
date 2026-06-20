@@ -226,7 +226,7 @@ export function FooterSection({ sx }: FooterProps = {}) {
             flexWrap: 'wrap',
           }}
         >
-          {/* eslint-disable-next-line i18next/no-literal-string */}
+          { }
           <Typography sx={{ fontSize: 13, color: '#8a8a93' }}>
             © 2026 Normal Finance Inc.
           </Typography>

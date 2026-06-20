@@ -7,24 +7,32 @@ import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
-import { cdn, format, logger } from '@normalfinance/utils';
+import { cdn, logger } from '@normalfinance/utils';
 import { useUserActivity, useStellarConfig } from '@/hooks';
+import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getLinkedWallets } from '@/services/linked-wallets';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
-import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
-import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
-import { getLinkedWallets } from '@/services/linked-wallets';
-import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   useNormalWallet,
-  hasStoredNormalWalletKey,
 } from '@/hooks/stellar/use-normal-wallet';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
+import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
 import { alpha, useTheme } from '@mui/material/styles';
+import AddOutlined from '@mui/icons-material/AddOutlined';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import SyncOutlined from '@mui/icons-material/SyncOutlined';
+import CloseOutlined from '@mui/icons-material/CloseOutlined';
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
+import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import {
   Box,
   Stack,
@@ -37,24 +45,17 @@ import {
   CircularProgress,
 } from '@mui/material';
 
-import AddOutlined from '@mui/icons-material/AddOutlined';
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
-import SyncOutlined from '@mui/icons-material/SyncOutlined';
-import CloseOutlined from '@mui/icons-material/CloseOutlined';
-import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
-import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
-
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
+import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
-import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
 
 import { AccountButton } from './account-button';
 
-function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen: boolean }) {
+function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress, solanaAddress }: { address: string; drawerOpen: boolean; bitcoinAddress: string | null; ethereumAddress: string | null; solanaAddress: string | null }) {
   const { setGlobalIsLoading } = useAppStore();
 
   const {
@@ -64,7 +65,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
   const network = useNetworkStore((s) => s.network);
   const [tokensFetching, setTokensFetching] = useState(true);
 
-  const { recentActivity } = useUserActivity(address);
+  const { recentActivity } = useUserActivity(address, bitcoinAddress, ethereumAddress, solanaAddress);
   const {
     userPosition,
     fetching: savingsFetching,
@@ -104,10 +105,19 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
     }
   }, [drawerOpen, address, refreshVaultInfo, refreshUserPosition]);  
 
-  const assetsBalance = tokens.reduce((acc, tkn) => {
-    const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
-    return acc.plus(holdings);
-  }, BigNumber(0));
+  const { btcToken } = useBtcPortfolio(true);
+  const { ethToken } = useEthPortfolio(true);
+  const { solToken } = useSolPortfolio(true);
+
+  const allTokens = useMemo(
+    () => [...tokens, btcToken, ethToken, solToken].filter((tkn): tkn is NonNullable<typeof tkn> => !!tkn),
+    [tokens, btcToken, ethToken, solToken]
+  );
+
+  const assetsBalance = useMemo(
+    () => allTokens.reduce((acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)), BigNumber(0)),
+    [allTokens]
+  );
 
   const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
   const savingsLoaded = userPosition !== null;
@@ -133,8 +143,9 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
         savingsFetching={savingsFetching && !savingsLoaded}
         tokensFetching={tokensFetching}
         percentageChange={0}
-        tokens={tokens}
+        tokens={allTokens}
         activity={recentActivity}
+        bitcoinAddress={bitcoinAddress}
       />
     </Box>
   );
@@ -184,6 +195,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   /* ↓ derived state ---------------------------------------------- */
   const connectedAddress = persist.wallet.address || publicKey || normalPublicKey;
   const isWalletConnected = !!connectedAddress || isConnected || isNormalConnected;
+
+  const { addresses: turnkeyAddresses } = useTurnkeyWallet(open && !!session);
+  const bitcoinAddress = turnkeyAddresses?.bitcoinAddress ?? null;
+  const ethereumAddress = turnkeyAddresses?.ethereumAddress ?? null;
+  const solanaAddress = turnkeyAddresses?.solanaAddress ?? null;
 
   // Only fetch account status while the drawer is open and a wallet is connected
   const { isLoading: isCheckingSetup, accountExists, hasUsdcTrustline } = useAccountStatus(
@@ -355,6 +371,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
     window.addEventListener('nf:open-login', handler);
     return () => window.removeEventListener('nf:open-login', handler);
   }, [session]);
+
+  // Opens the wizard regardless of session — used when a logged-in user
+  // starts an action that needs a wallet they don't have yet (lazy setup).
+  useEffect(() => {
+    const handler = () => setShowLoginModal(true);
+    window.addEventListener('nf:open-wallet-setup', handler);
+    return () => window.removeEventListener('nf:open-wallet-setup', handler);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -543,44 +567,65 @@ export function AccountDrawer(props: AccountDrawerProps) {
         {session && (
           <Scrollbar sx={{ flexGrow: 1 }}>
             <Stack spacing={2} sx={{ px: 2, pt: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={2} sx={{ pb: '2px' }}>
-                <Avatar
-                  src={userAvatar}
-                  alt={displayName}
-                  sx={{ width: 44, height: 44, flexShrink: 0 }}
-                />
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography sx={{ fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: '#0A0A0F' }}>
-                    {displayName}
-                  </Typography>
-                  <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
-                    {userEmail}
-                  </Typography>
-                  {connectedAddress && (
-                    <Stack direction="row" alignItems="center" spacing={0} sx={{ mt: '6px' }}>
-                      <Box
-                        sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          px: '10px',
-                          py: '4px',
-                          bgcolor: 'rgba(10,10,15,0.04)',
-                          border: '1px solid rgba(10,10,15,0.06)',
-                          borderRadius: '999px',
-                          fontSize: '11.5px',
-                          color: '#2A2A33',
-                          fontFamily: '"Geist Mono", ui-monospace, monospace',
-                          letterSpacing: '-0.01em',
-                        }}
-                      >
-                        {format.fTruncate(connectedAddress, 22)}
+              <Box sx={{ pb: '2px' }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Avatar
+                    src={userAvatar}
+                    alt={displayName}
+                    sx={{ width: 44, height: 44, flexShrink: 0 }}
+                  />
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{ fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: '#0A0A0F' }}>
+                      {displayName}
+                    </Typography>
+                    <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
+                      {userEmail}
+                    </Typography>
+                  </Box>
+                </Stack>
+                {connectedAddress && (
+                  <Box sx={{ mt: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <Stack direction="row" alignItems="center" gap="8px">
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#14B8A6', flexShrink: 0 }} />
+                      <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Stellar</Box>
+                      <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {`${connectedAddress.slice(0, 8)}...${connectedAddress.slice(-6)}`}
                       </Box>
-                      <CopyIconButton value={connectedAddress} alert="Account ID copied" />
+                      <CopyIconButton value={connectedAddress} alert="Stellar address copied" />
                     </Stack>
-                  )}
-                </Box>
-              </Stack>
+                    {bitcoinAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#F7931A', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Bitcoin</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${bitcoinAddress.slice(0, 8)}...${bitcoinAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={bitcoinAddress} alert="Bitcoin address copied" />
+                      </Stack>
+                    )}
+                    {ethereumAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#627EEA', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Ethereum</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${ethereumAddress.slice(0, 8)}...${ethereumAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={ethereumAddress} alert="Ethereum address copied" />
+                      </Stack>
+                    )}
+                    {solanaAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#9945FF', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Solana</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${solanaAddress.slice(0, 8)}...${solanaAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={solanaAddress} alert="Solana address copied" />
+                      </Stack>
+                    )}
+                  </Box>
+                )}
+              </Box>
               {isAutoConnecting ? (
                 <Box
                   sx={{
@@ -646,7 +691,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       </Stack>
                     </Box>
                   )}
-                  <WalletConnected address={connectedAddress} drawerOpen={open} />
+                  <WalletConnected address={connectedAddress} drawerOpen={open} bitcoinAddress={bitcoinAddress} ethereumAddress={ethereumAddress} solanaAddress={solanaAddress} />
                 </>
               ) : (
                 <Box sx={{ px: 1, py: 3 }}>

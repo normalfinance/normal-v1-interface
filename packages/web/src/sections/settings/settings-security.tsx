@@ -12,8 +12,8 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { useSnackbar } from '@/components/template/snackbar';
 import { Iconify } from '@/components/template/iconify';
+import { useSnackbar } from '@/components/template/snackbar';
 
 // ----------------------------------------------------------------------
 

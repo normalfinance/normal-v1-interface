@@ -2,7 +2,7 @@
 
 import type { SavingsDepositActivity, SavingsWithdrawActivity } from '@/types/activity';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 
 import Box from '@mui/material/Box';

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Typography, Tooltip } from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+
 import CheckIcon from '@mui/icons-material/Check';
+import { Box, Tooltip, Typography } from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 const GRADIENT =

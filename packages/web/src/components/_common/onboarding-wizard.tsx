@@ -10,15 +10,18 @@ import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
+import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { importMnemonicIntoTurnkey } from '@/lib/turnkey/import-mnemonic';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
-import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { useNormalWallet, hasStoredNormalWalletKey } from '@/hooks/stellar/use-normal-wallet';
+import { getTurnkeyWalletInfo, isTurnkeyStellarAddress } from '@/lib/turnkey/wallet-info';
+import { linkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
+import { useNormalWallet, hasStoredNormalWalletKey, removeStoredNormalWalletKey } from '@/hooks/stellar/use-normal-wallet';
 import { verifyOtp, signInWithOtp, resetPassword, signInWithGoogle, signInWithPassword, signUpWithPassword, resendConfirmationEmail } from '@/services/auth';
 import {
   logger,
@@ -27,10 +30,7 @@ import {
   validateMnemonic,
   normalizeMnemonic,
   validatePrivateKey,
-  splitMnemonicToWords,
-  formatMnemonicForDisplay,
   createCoinbasePayOnrampURL,
-  getRandomVerificationWords,
 } from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
@@ -65,9 +65,7 @@ export type WizardStep =
   | 'sign-in'
   | 'verify-email'
   | 'choose-wallet'
-  | 'new-wallet'
-  | 'backup-phrase'
-  | 'verify-phrase'
+  | 'create-wallet'
   | 'import-wallet'
   | 'fund-xlm'
   | 'add-trustline'
@@ -75,55 +73,40 @@ export type WizardStep =
   | 'linked-accounts';
 
 type AuthMode = 'magic-link' | 'password';
-type NewWalletStage = 'creating' | 'ready';
 type ImportType = 'mnemonic' | 'private-key';
 
-interface VerificationQuestion {
-  index: number;
-  correctWord: string;
-  options: string[];
-}
+const TOTAL_DOTS = 6;
 
-const VERIFICATION_WORD_COUNT = 3;
-const CLIPBOARD_CLEAR_SECONDS = 30;
-const TOTAL_DOTS = 8;
-
-// Maps each step to its dot position (0-indexed, 0–7)
+// Maps each step to its dot position (0-indexed, 0–5)
 const STEP_DOT: Record<WizardStep, number> = {
   'sign-in': 0,
   'verify-email': 0,
   'choose-wallet': 1,
-  'new-wallet': 2,
-  'backup-phrase': 3,
-  'verify-phrase': 4,
+  'create-wallet': 2,
   'import-wallet': 2,
-  'fund-xlm': 5,
-  'add-trustline': 6,
-  'all-set': 7,
-  'linked-accounts': 7,
+  'fund-xlm': 3,
+  'add-trustline': 4,
+  'all-set': 5,
+  'linked-accounts': 5,
 };
 
 const STEP_NUMBER: Record<WizardStep, number> = {
   'sign-in': 1,
   'verify-email': 1,
   'choose-wallet': 2,
-  'new-wallet': 3,
-  'backup-phrase': 4,
-  'verify-phrase': 5,
+  'create-wallet': 3,
   'import-wallet': 3,
-  'fund-xlm': 6,
-  'add-trustline': 7,
-  'all-set': 8,
-  'linked-accounts': 8,
+  'fund-xlm': 4,
+  'add-trustline': 5,
+  'all-set': 6,
+  'linked-accounts': 6,
 };
 
 const STEP_LABEL: Record<WizardStep, string> = {
   'sign-in': 'SIGN IN',
   'verify-email': 'VERIFY EMAIL',
   'choose-wallet': 'CHOOSE WALLET',
-  'new-wallet': 'NEW WALLET',
-  'backup-phrase': 'BACKUP PHRASE',
-  'verify-phrase': 'VERIFY PHRASE',
+  'create-wallet': 'CREATE WALLET',
   'import-wallet': 'IMPORT WALLET',
   'fund-xlm': 'FUND WITH XLM',
   'add-trustline': 'ADD TRUSTLINE',
@@ -133,7 +116,7 @@ const STEP_LABEL: Record<WizardStep, string> = {
 
 // Steps that allow navigating back
 const PREV_STEP: Partial<Record<WizardStep, WizardStep>> = {
-  'new-wallet': 'choose-wallet',
+  'create-wallet': 'choose-wallet',
   'import-wallet': 'choose-wallet',
   'add-trustline': 'fund-xlm',
 };
@@ -166,7 +149,6 @@ export default function OnboardingWizard({
   const { disclaimer, setDisclaimerAccepted } = persist;
 
   const {
-    createWallet,
     importWalletFromMnemonic,
     importWalletFromPrivateKey,
     connectWalletWithoutKeypair,
@@ -204,16 +186,9 @@ export default function OnboardingWizard({
   const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
   const [isResendingConfirmation, setIsResendingConfirmation] = useState(false);
 
-  // ── New-wallet state ──────────────────────────────────────────────────────
-  const [newWalletStage, setNewWalletStage] = useState<NewWalletStage>('creating');
-  const [mnemonic, setMnemonic] = useState<string | null>(null);
-  const [createdPublicKey, setCreatedPublicKey] = useState<string | null>(null);
-  const [walletName, setWalletName] = useState('');
+  // ── Create-wallet (Turnkey) state ─────────────────────────────────────────
+  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
   const [walletCreateError, setWalletCreateError] = useState<string | null>(null);
-  const [backupAcknowledged, setBackupAcknowledged] = useState(false);
-  const [verificationQuestions, setVerificationQuestions] = useState<VerificationQuestion[]>([]);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // ── Import-wallet state ───────────────────────────────────────────────────
   const [importType, setImportType] = useState<ImportType>('mnemonic');
@@ -223,6 +198,7 @@ export default function OnboardingWizard({
   const [importPrivateKeyError, setImportPrivateKeyError] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importStage, setImportStage] = useState<string | null>(null);
 
   // ── Fund-XLM state ────────────────────────────────────────────────────────
   const [qrCodeUrl, setQrCodeUrl] = useState('');
@@ -237,6 +213,7 @@ export default function OnboardingWizard({
 
 
   // ── Linked-accounts step state ────────────────────────────────────────────
+  const [turnkeyStellarAddress, setTurnkeyStellarAddress] = useState<string | null>(null);
   const [linkedWalletsForStep, setLinkedWalletsForStep] = useState<LinkedWallet[]>([]);
   const [isLoadingLinkedWallets, setIsLoadingLinkedWallets] = useState(false);
   const [linkedWalletEditingAddr, setLinkedWalletEditingAddr] = useState<string | null>(null);
@@ -250,15 +227,10 @@ export default function OnboardingWizard({
   const [isReturningUser, setIsReturningUser] = useState(false);
 
   // ── Derived ──────────────────────────────────────────────────────────────
-  const formattedMnemonic = useMemo(
-    () => (mnemonic ? formatMnemonicForDisplay(mnemonic) : []),
-    [mnemonic]
-  );
-  const isLocked = step === 'backup-phrase' || step === 'verify-phrase';
   const isTosAcceptanceMissing = !tosAccepted;
   const dotIndex = STEP_DOT[step];
   const stepNumber = STEP_NUMBER[step];
-  const canGoBack = !isLocked && !!PREV_STEP[step];
+  const canGoBack = !!PREV_STEP[step];
 
   // ── Effects ───────────────────────────────────────────────────────────────
 
@@ -302,20 +274,40 @@ export default function OnboardingWizard({
   const handleAfterAuth = useCallback(async () => {
     try {
       const wallets = await getLinkedWallets();
+      if (marketingConsent) syncMarketingOptIn(true);
+
       if (wallets.length === 0) {
-        if (marketingConsent) syncMarketingOptIn(true);
         setStep('choose-wallet');
         return;
       }
-      // Returning user — always show wallet picker so they can choose which wallet to use
-      if (marketingConsent) syncMarketingOptIn(true);
+
+      // When every linked wallet is Turnkey-managed there is nothing the
+      // user needs to do — connect silently and skip the wizard entirely.
+      const tk = await getTurnkeyWalletInfo();
+      const tkAddress = tk?.stellarAddress ?? null;
+      setTurnkeyStellarAddress(tkAddress);
+
+      const allTurnkey = !!tkAddress && wallets.every((w) => w.walletAddress === tkAddress);
+      if (allTurnkey) {
+        try {
+          await connectWalletWithoutKeypair(tkAddress);
+          onClose();
+          return;
+        } catch (err) {
+          logger.error('[OnboardingWizard] Turnkey auto-connect failed:', err);
+          // fall through to the picker
+        }
+      }
+
+      // Mixed wallets (some outside Turnkey) — show the picker; it offers a
+      // one-click "Continue with Turnkey" when a Turnkey wallet exists.
       setIsReturningUser(true);
       setStep('linked-accounts');
     } catch (err) {
       logger.error('[OnboardingWizard] handleAfterAuth error:', err);
       setStep('choose-wallet');
     }
-  }, [marketingConsent, syncMarketingOptIn]);
+  }, [marketingConsent, syncMarketingOptIn, connectWalletWithoutKeypair, onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -327,31 +319,6 @@ export default function OnboardingWizard({
     }
     if (!session) hasHandledAuthRef.current = false;
   }, [open, session, step, authHookLoading, handleAfterAuth, initialStep]);
-
-  // Create wallet when entering new-wallet step
-  useEffect(() => {
-    if (step !== 'new-wallet' || newWalletStage !== 'creating' || !open) return undefined;
-    let cancelled = false;
-    const doCreate = async () => {
-      try {
-        setWalletCreateError(null);
-        const result = await createWallet();
-        if (!cancelled) {
-          setMnemonic(result.mnemonic);
-          setCreatedPublicKey(result.publicKey);
-          setWizardWalletAddress(result.publicKey);
-          setNewWalletStage('ready');
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          logger.error('[OnboardingWizard] createWallet failed:', err);
-          setWalletCreateError(err.message || t('Failed to create wallet'));
-        }
-      }
-    };
-    doCreate();
-    return () => { cancelled = true; };
-  }, [step, newWalletStage, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Generate QR when entering fund-xlm
   useEffect(() => {
@@ -410,8 +377,11 @@ export default function OnboardingWizard({
     const load = async () => {
       setIsLoadingLinkedWallets(true);
       try {
-        const list = await getLinkedWallets();
-        if (!cancelled) setLinkedWalletsForStep(list);
+        const [list, tk] = await Promise.all([getLinkedWallets(), getTurnkeyWalletInfo()]);
+        if (!cancelled) {
+          setLinkedWalletsForStep(list);
+          setTurnkeyStellarAddress(tk?.stellarAddress ?? null);
+        }
       } catch (err) {
         logger.error('[OnboardingWizard] Failed to load linked wallets:', err);
       } finally {
@@ -436,14 +406,9 @@ export default function OnboardingWizard({
   };
 
   const handleBack = () => {
-    if (isLocked) return;
     const prev = PREV_STEP[step];
     if (!prev) return;
-    if (step === 'new-wallet') {
-      setNewWalletStage('creating');
-      setMnemonic(null);
-      setCreatedPublicKey(null);
-      setWalletName('');
+    if (step === 'create-wallet') {
       setWalletCreateError(null);
     }
     if (step === 'import-wallet') {
@@ -461,19 +426,16 @@ export default function OnboardingWizard({
     setAuthError(null); setAuthMode('password'); setIsSignUp(false);
     setForgotPassword(false); setResetEmailSent(false); setCaptchaToken(null);
     setVerifyEmailAddress(''); setIsResendingConfirmation(false);
-    setMnemonic(null); setCreatedPublicKey(null); setWalletName('');
-    setNewWalletStage('creating'); setBackupAcknowledged(false);
-    setVerificationQuestions([]); setSelectedAnswers({}); setCurrentQuestionIndex(0);
-    setWalletCreateError(null);
+    setWalletCreateError(null); setIsCreatingWallet(false);
     setImportMnemonic(''); setImportPrivateKey(''); setImportError(null);
     setQrCodeUrl(''); setTrustlineError(null); setIsReturningUser(false);
     setLinkedWalletsForStep([]); setIsLoadingLinkedWallets(false);
+    setTurnkeyStellarAddress(null);
     setLinkedWalletEditingAddr(null); setLinkedWalletEditName(''); setIsSavingLinkedWalletName(false);
     hasHandledAuthRef.current = false;
   };
 
   const handleClose = () => {
-    if (isLocked) return;
     onClose();
   };
 
@@ -560,68 +522,26 @@ export default function OnboardingWizard({
     }
   };
 
-  // ── Wallet creation handlers ───────────────────────────────────────────────
-
-  const handleShowRecoveryPhrase = async () => {
-    if (walletName.trim() && createdPublicKey) {
-      try { await updateWalletName(createdPublicKey, walletName.trim()); }
-      catch (err: any) {
-        logger.warn('[OnboardingWizard] Failed to update wallet name:', err);
-        enqueueSnackbar(err?.message || t('Failed to save wallet name'), { variant: 'warning' });
-      }
-    }
-    setStep('backup-phrase');
-  };
-
-  const handleCopyMnemonic = async () => {
-    if (!mnemonic) return;
+  // ── Wallet creation handler (Turnkey) ─────────────────────────────────────
+  // Creates a passkey-secured Turnkey wallet with ONLY the XLM account
+  // (other chains are provisioned lazily). No seed phrase to back up.
+  const handleCreateTurnkeyWallet = async () => {
+    if (!session?.user) { setWalletCreateError(t('You must be signed in to create a wallet')); return; }
+    setIsCreatingWallet(true); setWalletCreateError(null);
     try {
-      await navigator.clipboard.writeText(mnemonic);
-      enqueueSnackbar(`${t('Recovery phrase copied. Clipboard clears in ')}${CLIPBOARD_CLEAR_SECONDS}s`, { variant: 'success' });
-      setTimeout(() => navigator.clipboard.writeText('').catch(() => {}), CLIPBOARD_CLEAR_SECONDS * 1000);
-    } catch { enqueueSnackbar(t('Failed to copy recovery phrase'), { variant: 'error' }); }
+      const result = await ensureChainAccount('stellar', session.user.id, session.user.email);
+      if (!result.stellarAddress) throw new Error(t('Wallet creation did not return a Stellar address'));
+
+      await linkWallet(result.stellarAddress);
+      await connectWalletWithoutKeypair(result.stellarAddress);
+      setWizardWalletAddress(result.stellarAddress);
+      enqueueSnackbar(t('Wallet created and secured with your passkey!'), { variant: 'success' });
+      setStep('fund-xlm');
+    } catch (err: any) {
+      logger.error('[OnboardingWizard] Turnkey wallet creation failed:', err);
+      setWalletCreateError(err.message || t('Failed to create wallet. Please try again.'));
+    } finally { setIsCreatingWallet(false); }
   };
-
-  const startVerification = useCallback(() => {
-    if (!mnemonic) return;
-    const words = splitMnemonicToWords(mnemonic);
-    const count = Math.min(VERIFICATION_WORD_COUNT, words.length);
-    const verificationWords = getRandomVerificationWords(mnemonic, count);
-    const formatted = formatMnemonicForDisplay(mnemonic);
-    const questions: VerificationQuestion[] = verificationWords.map(({ index, word }) => {
-      const others = formatted.filter((i) => i.index !== index).map((i) => i.word);
-      const distractors = others.sort(() => 0.5 - Math.random()).slice(0, 3);
-      return { index, correctWord: word, options: [...distractors, word].sort(() => 0.5 - Math.random()) };
-    });
-    setVerificationQuestions(questions);
-    setSelectedAnswers({}); setCurrentQuestionIndex(0);
-    setStep('verify-phrase');
-  }, [mnemonic]);
-
-  // Auto-verified: selecting the wrong answer sends back immediately, correct last answer advances
-  const handleSelectAnswer = useCallback(
-    (index: number, value: string) => {
-      const question = verificationQuestions[currentQuestionIndex];
-      const isCorrect = value.toLowerCase() === question.correctWord.toLowerCase();
-      if (!isCorrect) {
-        setSelectedAnswers({}); setCurrentQuestionIndex(0); setBackupAcknowledged(false);
-        enqueueSnackbar(t('Incorrect! Please re-read your recovery phrase carefully.'), { variant: 'error' });
-        setStep('backup-phrase');
-        return;
-      }
-      const newAnswers = { ...selectedAnswers, [index]: value };
-      setSelectedAnswers(newAnswers);
-      if (currentQuestionIndex < verificationQuestions.length - 1) {
-        setTimeout(() => setCurrentQuestionIndex((prev) => prev + 1), 350);
-      } else {
-        setTimeout(() => {
-          enqueueSnackbar(t('Recovery phrase verified!'), { variant: 'success' });
-          setStep('fund-xlm');
-        }, 500);
-      }
-    },
-    [currentQuestionIndex, verificationQuestions, selectedAnswers, enqueueSnackbar, t]
-  );
 
   // ── Import handlers ───────────────────────────────────────────────────────
 
@@ -645,6 +565,53 @@ export default function OnboardingWizard({
       logger.error('[OnboardingWizard] Import failed:', err);
       setImportError(err.message || t('Failed to import wallet'));
     } finally { setIsImporting(false); }
+  };
+
+  // Import the mnemonic AND secure it with a Turnkey passkey (recommended path).
+  // The phrase is encrypted in this browser to a Turnkey enclave key — it never
+  // reaches our server. No local key is stored; signing goes through the passkey.
+  const handleImportWithPasskey = async () => {
+    if (!session?.user) { setImportError(t('You must be signed in to import a wallet')); return; }
+    const normalized = normalizeMnemonic(importMnemonic);
+    if (!validateMnemonic(normalized)) { setImportMnemonicError(t('Invalid recovery phrase')); return; }
+
+    setIsImporting(true); setImportError(null);
+    try {
+      // 1 — derive + link + connect locally; keypair stays in memory only
+      const result = await importWalletFromMnemonic(normalized, undefined, undefined, { persistLocally: false });
+      setWizardWalletAddress(result.publicKey);
+
+      // 2 — import the same phrase into Turnkey (passkey ceremony if first time)
+      const STAGE_LABELS: Record<string, string> = {
+        passkey: t('Create your passkey…'),
+        preparing: t('Preparing secure import…'),
+        authorize: t('Approve with your passkey…'),
+        encrypting: t('Encrypting your phrase…'),
+        importing: t('Approve import with your passkey…'),
+      };
+      const tk = await importMnemonicIntoTurnkey({
+        mnemonic: normalized,
+        supabaseUserId: session.user.id,
+        userEmail: session.user.email,
+        expectedStellarAddress: result.publicKey,
+        onStage: (stage) => setImportStage(STAGE_LABELS[stage] ?? null),
+      });
+
+      if (!tk.stellarMatch) {
+        // Should be impossible (identical derivation paths) — keep the wallet
+        // usable and let the user fall back to the password option.
+        setImportError(t('Passkey setup did not match this wallet. You can retry, or import with a password below.'));
+        return;
+      }
+
+      // Passkey signs from now on — retire any locally stored key
+      removeStoredNormalWalletKey();
+      enqueueSnackbar(t('Wallet imported and secured with your passkey!'), { variant: 'success' });
+      setStep('fund-xlm');
+    } catch (err: any) {
+      logger.error('[OnboardingWizard] Passkey import failed:', err);
+      setImportError(err.message || t('Failed to set up passkey signing. You can retry, or import with a password below.'));
+    } finally { setIsImporting(false); setImportStage(null); }
   };
 
   // ── Stellar connect ───────────────────────────────────────────────────────
@@ -977,7 +944,7 @@ export default function OnboardingWizard({
       <Stack spacing={1.5}>
         {/* Create Normal Wallet */}
         <Box
-          onClick={() => { setNewWalletStage('creating'); setStep('new-wallet'); }}
+          onClick={() => { setWalletCreateError(null); setStep('create-wallet'); }}
           sx={{
             p: 2, borderRadius: 2, cursor: 'pointer',
             border: `1.5px solid ${theme.palette.success.main}`,
@@ -997,7 +964,7 @@ export default function OnboardingWizard({
                   <Typography variant="caption" fontWeight={700} sx={{ color: 'success.dark', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>RECOMMENDED</Typography>
                 </Box>
               </Stack>
-              <Typography variant="caption" color="text.secondary">{t('We generate a fresh wallet. Backup your recovery phrase in the next step.')}</Typography>
+              <Typography variant="caption" color="text.secondary">{t('Secured by your passkey (Face ID / fingerprint). No seed phrase to write down.')}</Typography>
             </Box>
             <Iconify icon="mingcute:right-line" sx={{ color: 'text.disabled', flexShrink: 0 }} />
           </Stack>
@@ -1048,162 +1015,57 @@ export default function OnboardingWizard({
           </Stack>
         </Box>
       </Stack>
-    </Stack>
-  );
-
-  const renderNewWallet = () => (
-    <Stack spacing={2.5}>
-      {walletCreateError && <Alert severity="error" sx={{ borderRadius: 2 }}>{walletCreateError}</Alert>}
-      {newWalletStage === 'creating' ? (
-        <Stack alignItems="center" spacing={2} sx={{ py: 6 }}>
-          <CircularProgress size={40} />
-          <Typography variant="body2" color="text.secondary">{t('Creating your wallet…')}</Typography>
-        </Stack>
-      ) : (
-        <>
-          <Box>
-            <Typography variant="h4" fontWeight={700} gutterBottom>{t('Before we show your recovery phrase')}</Typography>
-            <Typography variant="body2" color="text.secondary">{t('This is the only way to recover your wallet. Take a moment to read this.')}</Typography>
-          </Box>
-
-          <TextField
-            label={t('Wallet name (optional)')}
-            placeholder={t('My Normal wallet')}
-            value={walletName}
-            onChange={(e) => setWalletName(e.target.value)}
-            fullWidth slotProps={{ htmlInput: { maxLength: 50 } }}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-          />
-
-          <Box sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.warning.main, 0.08), border: `1px solid ${alpha(theme.palette.warning.main, 0.25)}` }}>
-            <Stack direction="row" spacing={1.5}>
-              <Iconify icon="solar:info-circle-bold" width={20} sx={{ color: 'warning.main', flexShrink: 0, mt: 0.1 }} />
-              <Typography variant="body2" color="text.primary">
-                <strong>{t('Never share your recovery phrase.')}</strong>{' '}
-                {t("Normal can't recover it for you. Anyone with these 24 words can drain your wallet — store them offline.")}
-              </Typography>
-            </Stack>
-          </Box>
-
-          <Stack direction="row" justifyContent="space-between" spacing={1.5} sx={{ pt: 1 }}>
-            <Button variant="outlined" onClick={handleBack} sx={{ ...btnOutlined, px: 3 }}>{t('Back')}</Button>
-            <Button variant="contained" onClick={handleShowRecoveryPhrase} sx={{ ...btnPrimary, flex: 1 }}>{t('Show recovery phrase')}</Button>
-          </Stack>
-        </>
-      )}
-    </Stack>
-  );
-
-  const renderBackupPhrase = () => (
-    <Stack spacing={2.5}>
-      <Box>
-        <Typography variant="h4" fontWeight={700} gutterBottom>{t('Write down your recovery phrase')}</Typography>
-        <Typography variant="body2" color="text.secondary">{t("All 24 words, in order. We'll quiz you on three of them next.")}</Typography>
-      </Box>
-
-      {/* Word grid */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '1px',
-          bgcolor: theme.palette.divider,
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 2,
-          overflow: 'hidden',
-        }}
-      >
-        {formattedMnemonic.map((item) => (
-          <Box
-            key={item.index}
-            sx={{ px: 1.25, py: 1, display: 'flex', alignItems: 'center', gap: 0.75, bgcolor: 'background.paper' }}
-          >
-            <Typography variant="caption" sx={{ color: 'text.disabled', minWidth: 18, textAlign: 'right', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-              {String(item.index).padStart(2, '0')}
-            </Typography>
-            <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.8rem' }}>{item.word}</Typography>
-          </Box>
-        ))}
-      </Box>
-
-      <FormControlLabel
-        control={<Checkbox checked={backupAcknowledged} onChange={(e) => setBackupAcknowledged(e.target.checked)} sx={{ mt: -0.25 }} />}
-        label={<Typography variant="body2" color="text.secondary">{t("I've written down my recovery phrase and stored it somewhere safe.")}</Typography>}
-        sx={{ alignItems: 'flex-start', mr: 0 }}
-      />
 
       <Button
-        fullWidth variant="contained" size="large"
-        disabled={!backupAcknowledged}
-        onClick={startVerification}
-        sx={btnPrimary}
+        variant="text" size="small" fullWidth
+        onClick={handleClose}
+        sx={{ color: 'text.disabled', fontWeight: 500 }}
       >
-        {t('Continue to verification')}
+        {t('Skip for now — set up a wallet later')}
       </Button>
     </Stack>
   );
 
-  const renderVerifyPhrase = () => {
-    if (!verificationQuestions.length) return null;
-    const current = verificationQuestions[currentQuestionIndex];
-    return (
-      <Stack spacing={2.5}>
-        <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>{`${t('Pick word')} #${current.index}`}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('Choose the word that comes at position')} <strong>{current.index}</strong> {t('in your recovery phrase.')}
-          </Typography>
-        </Box>
+  const renderCreateWallet = () => (
+    <Stack spacing={2.5}>
+      <Box>
+        <Typography variant="h4" fontWeight={700} gutterBottom>{t('Create your wallet')}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t('Your wallet is secured by your passkey — Face ID, fingerprint, or device PIN. Nothing to write down, nothing to lose.')}
+        </Typography>
+      </Box>
 
-        {/* Progress bar */}
-        <Stack direction="row" spacing={0.75}>
-          {verificationQuestions.map((_, idx) => (
-            <Box key={idx} sx={{
-              flex: 1, height: 4, borderRadius: 2,
-              bgcolor: idx < currentQuestionIndex ? 'success.main' : idx === currentQuestionIndex ? 'primary.main' : alpha(theme.palette.text.primary, 0.1),
-              transition: 'background-color 0.3s',
-            }} />
-          ))}
-        </Stack>
+      {walletCreateError && <Alert severity="error" sx={{ borderRadius: 2 }}>{walletCreateError}</Alert>}
 
-        {/* 2×2 word options grid */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-          {current.options.map((option, idx) => (
-            <Button
-              key={idx}
-              variant="outlined"
-              fullWidth
-              onClick={() => handleSelectAnswer(current.index, option)}
-              sx={{
-                borderRadius: 2,
-                py: 1.75,
-                textTransform: 'none',
-                fontSize: '1rem',
-                fontWeight: 500,
-                borderColor: alpha(theme.palette.text.primary, 0.2),
-                color: 'text.primary',
-                '&:hover': { borderColor: 'text.primary', bgcolor: alpha(theme.palette.text.primary, 0.04) },
-              }}
-            >
-              {option}
-            </Button>
-          ))}
-        </Box>
-
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Button
-            variant="text" size="small"
-            onClick={() => { setSelectedAnswers({}); setCurrentQuestionIndex(0); setStep('backup-phrase'); }}
-            sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
-            startIcon={<Iconify icon="mingcute:left-line" width={14} />}
-          >
-            {t('Show phrase again')}
-          </Button>
-          <Typography variant="caption" color="text.disabled">{t('Wrong answers send you back.')}</Typography>
-        </Stack>
+      <Stack spacing={1.25}>
+        {[
+          { icon: 'solar:shield-keyhole-bold', text: t('Keys live in secure hardware — never on this device or our servers') },
+          { icon: 'solar:smartphone-bold', text: t('Approve transactions with one tap using your passkey') },
+          { icon: 'solar:key-bold', text: t('Your recovery phrase can be exported any time if you ever want it') },
+        ].map((item) => (
+          <Stack key={item.icon} direction="row" spacing={1.5} alignItems="flex-start">
+            <Box sx={{ width: 34, height: 34, borderRadius: '9px', bgcolor: alpha(theme.palette.success.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Iconify icon={item.icon} width={18} sx={{ color: 'success.dark' }} />
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ pt: 0.75 }}>{item.text}</Typography>
+          </Stack>
+        ))}
       </Stack>
-    );
-  };
+
+      <Stack direction="row" justifyContent="space-between" spacing={1.5} sx={{ pt: 1 }}>
+        <Button variant="outlined" onClick={handleBack} disabled={isCreatingWallet} sx={{ ...btnOutlined, px: 3 }}>{t('Back')}</Button>
+        <Button
+          variant="contained"
+          onClick={handleCreateTurnkeyWallet}
+          disabled={isCreatingWallet}
+          startIcon={isCreatingWallet ? <CircularProgress size={16} color="inherit" /> : <Iconify icon="solar:shield-keyhole-bold" width={18} />}
+          sx={{ ...btnPrimary, flex: 1 }}
+        >
+          {isCreatingWallet ? t('Creating…') : t('Create with passkey')}
+        </Button>
+      </Stack>
+    </Stack>
+  );
 
   const renderImportWallet = () => (
     <Stack spacing={2.5}>
@@ -1248,16 +1110,42 @@ export default function OnboardingWizard({
       )}
 
       <Stack direction="row" justifyContent="space-between" spacing={1.5}>
-        <Button variant="outlined" onClick={handleBack} sx={{ ...btnOutlined, px: 3 }}>{t('Back')}</Button>
+        <Button variant="outlined" onClick={handleBack} disabled={isImporting} sx={{ ...btnOutlined, px: 3 }}>{t('Back')}</Button>
         <Button
           variant="contained" sx={{ ...btnPrimary, flex: 1 }}
-          onClick={handleImport}
+          onClick={importType === 'mnemonic' ? handleImportWithPasskey : handleImport}
           disabled={isImporting || (importType === 'mnemonic' ? !importMnemonic.trim() : !importPrivateKey.trim())}
-          startIcon={isImporting ? <CircularProgress size={16} color="inherit" /> : null}
+          startIcon={
+            isImporting
+              ? <CircularProgress size={16} color="inherit" />
+              : importType === 'mnemonic'
+                ? <Iconify icon="solar:shield-keyhole-bold" width={18} />
+                : null
+          }
         >
-          {isImporting ? t('Importing…') : t('Import wallet')}
+          {isImporting
+            ? (importStage ?? t('Importing…'))
+            : importType === 'mnemonic'
+              ? t('Import & secure with passkey')
+              : t('Import wallet')}
         </Button>
       </Stack>
+
+      {importType === 'mnemonic' && (
+        <>
+          <Typography variant="caption" color="text.disabled" align="center" display="block">
+            {t('Your phrase is encrypted on this device and secured by your passkey — no password needed to sign.')}
+          </Typography>
+          <Button
+            variant="text" size="small" fullWidth
+            onClick={handleImport}
+            disabled={isImporting || !importMnemonic.trim()}
+            sx={{ color: 'text.secondary', fontWeight: 500 }}
+          >
+            {t('Import with a password instead (stored on this device)')}
+          </Button>
+        </>
+      )}
     </Stack>
   );
 
@@ -1426,13 +1314,14 @@ export default function OnboardingWizard({
   );
 
   const handleUseWallet = async (walletAddress: string) => {
-    if (!hasStoredNormalWalletKey()) {
-      setWizardWalletAddress(walletAddress);
-      setStep('import-wallet');
-      return;
-    }
     setConnectingWalletAddr(walletAddress);
     try {
+      // No local key and not Turnkey-managed → the user must re-import
+      if (!hasStoredNormalWalletKey() && !(await isTurnkeyStellarAddress(walletAddress))) {
+        setWizardWalletAddress(walletAddress);
+        setStep('import-wallet');
+        return;
+      }
       await connectWalletWithoutKeypair(walletAddress);
       enqueueSnackbar(t('Wallet switched'), { variant: 'success' });
       onClose();
@@ -1492,6 +1381,37 @@ export default function OnboardingWizard({
                 ? t('Select an account to reconnect your wallet key.')
                 : t('Your wallet accounts linked to this profile.')}
             </Typography>
+          </Box>
+        )}
+
+        {/* One-click entry with the passkey-secured Turnkey wallet */}
+        {!isLoadingLinkedWallets && isReturningUser && turnkeyStellarAddress && (
+          <Box
+            onClick={() => handleUseWallet(turnkeyStellarAddress)}
+            sx={{
+              p: 2, borderRadius: 2, cursor: 'pointer',
+              border: `1.5px solid ${theme.palette.success.main}`,
+              bgcolor: alpha(theme.palette.success.main, 0.04),
+              '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.08) },
+              transition: 'background 0.15s',
+            }}
+          >
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: alpha(theme.palette.success.main, 0.12), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {connectingWalletAddr === turnkeyStellarAddress ? (
+                  <CircularProgress size={18} sx={{ color: 'success.dark' }} />
+                ) : (
+                  <Iconify icon="solar:shield-keyhole-bold" width={22} sx={{ color: 'success.dark' }} />
+                )}
+              </Box>
+              <Box flex={1} minWidth={0}>
+                <Typography variant="subtitle2" fontWeight={700}>{t('Continue with Turnkey')}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                  {format.fTruncate(turnkeyStellarAddress, 20)}
+                </Typography>
+              </Box>
+              <Iconify icon="mingcute:right-line" sx={{ color: 'text.disabled', flexShrink: 0 }} />
+            </Stack>
           </Box>
         )}
 
@@ -1670,9 +1590,7 @@ export default function OnboardingWizard({
       case 'sign-in': return renderSignIn();
       case 'verify-email': return renderVerifyEmail();
       case 'choose-wallet': return renderChooseWallet();
-      case 'new-wallet': return renderNewWallet();
-      case 'backup-phrase': return renderBackupPhrase();
-      case 'verify-phrase': return renderVerifyPhrase();
+      case 'create-wallet': return renderCreateWallet();
       case 'import-wallet': return renderImportWallet();
       case 'fund-xlm': return renderFundXlm();
       case 'add-trustline': return renderAddTrustline();
@@ -1687,11 +1605,7 @@ export default function OnboardingWizard({
   return (
     <Dialog
       open={open}
-      onClose={(_e, reason) => {
-        if (isLocked && (reason === 'backdropClick' || reason === 'escapeKeyDown')) return;
-        handleClose();
-      }}
-      disableEscapeKeyDown={isLocked}
+      onClose={handleClose}
       maxWidth={false}
       slotProps={{
         paper: {
@@ -1739,7 +1653,7 @@ export default function OnboardingWizard({
           variant="caption"
           sx={{ flex: 1, fontWeight: 600, letterSpacing: 0.3, color: 'text.secondary', fontSize: '0.7rem' }}
         >
-          {t('{{step}}/8 — {{label}}', { step: stepNumber, label: STEP_LABEL[step] })}
+          {t('{{step}}/6 — {{label}}', { step: stepNumber, label: STEP_LABEL[step] })}
         </Typography>
 
         {/* Back arrow */}
@@ -1761,24 +1675,10 @@ export default function OnboardingWizard({
           <Iconify icon="mingcute:right-line" width={16} />
         </IconButton>
 
-        {/* Copy button (backup step only) */}
-        {step === 'backup-phrase' && (
-          <Button
-            size="small" variant="outlined"
-            startIcon={<Iconify icon="solar:copy-outline" width={14} />}
-            onClick={handleCopyMnemonic}
-            sx={{ borderRadius: 1.5, fontSize: '0.75rem', py: 0.4, px: 1.25, borderColor: alpha(theme.palette.text.primary, 0.2), color: 'text.secondary', ml: 0.5 }}
-          >
-            {t('Copy')}
-          </Button>
-        )}
-
         {/* Close */}
-        {!isLocked && (
-          <IconButton size="small" onClick={handleClose} sx={{ color: 'text.secondary', ml: 0.5 }}>
-            <Iconify icon="mingcute:close-line" width={18} />
-          </IconButton>
-        )}
+        <IconButton size="small" onClick={handleClose} sx={{ color: 'text.secondary', ml: 0.5 }}>
+          <Iconify icon="mingcute:close-line" width={18} />
+        </IconButton>
       </Box>
 
       <DialogContent sx={{ px: 3, pt: 2.5, pb: 3 }}>

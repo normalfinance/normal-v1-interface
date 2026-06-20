@@ -7,23 +7,30 @@ import { isTestnet } from '../network';
 const ONRAMP_HOST = 'api.developer.coinbase.com';
 const ONRAMP_PATH = '/onramp/v1/token';
 
-export async function getCdpBearerToken() {
+// Mints a short-lived CDP JWT. Defaults to the Onramp session-token request
+// (POST /onramp/v1/token); pass method+path to authenticate other CDP calls
+// such as the Offramp transaction-status GET. The JWT's `uris` claim must match
+// the exact request method + host + path (query string excluded), so callers
+// that hit a dynamic path must pass the fully-resolved path here.
+export async function getCdpBearerToken(
+  requestMethod: string = 'POST',
+  requestPath: string = ONRAMP_PATH
+) {
   const apiKeyId = process.env.COINBASE_KEY_ID!;
   const apiKeySecret = process.env.COINBASE_SECRET!;
   if (!apiKeyId || !apiKeySecret) throw new Error('Missing COINBASE_KEY_ID / COINBASE_SECRET');
 
-  // Build a JWT specifically for the Session Token request
-  // (JWTs expire quickly; generate per request)
+  // Build a JWT specifically for this request (JWTs expire quickly).
   const jwt = await generateJwt({
     apiKeyId,
     apiKeySecret,
-    requestMethod: 'POST',
+    requestMethod,
     requestHost: ONRAMP_HOST,
-    requestPath: ONRAMP_PATH,
+    requestPath,
     // expiresIn: 120, // optional, defaults to 120s
   });
 
-  return { jwt, host: ONRAMP_HOST, path: ONRAMP_PATH };
+  return { jwt, host: ONRAMP_HOST, path: requestPath };
 }
 
 export function createCoinbasePayOnrampURL(opts: CreateCoinbaseOnrampUrlOpts): string {
@@ -56,10 +63,15 @@ export function createCoinbasePayOfframpURL(opts: CreateCoinbaseOfframpUrlOpts):
     sessionToken,
     partnerUserRef,
     fiat = 'USD',
-    path = 'sell',
+    // Coinbase Offramp lives at /v3/sell/input — a bare /sell path is not
+    // recognized and Coinbase silently falls back to the buy flow.
+    path = 'v3/sell/input',
     redirectUrl,
     sandbox = isTestnet(),
     defaultNetwork,
+    defaultAsset,
+    presetCryptoAmount,
+    disableEdit,
   } = opts;
 
   const base = sandbox ? 'https://pay-sandbox.coinbase.com' : 'https://pay.coinbase.com';
@@ -72,6 +84,10 @@ export function createCoinbasePayOfframpURL(opts: CreateCoinbaseOfframpUrlOpts):
   });
 
   if (defaultNetwork) params.set('defaultNetwork', defaultNetwork);
+  if (defaultAsset) params.set('defaultAsset', defaultAsset);
+  if (presetCryptoAmount) params.set('presetCryptoAmount', presetCryptoAmount);
+  // Lock the preset so the user can't override our spendable-capped amount.
+  if (disableEdit) params.set('disableEdit', 'true');
 
   return `${base}/${path}?${params.toString()}`;
 }

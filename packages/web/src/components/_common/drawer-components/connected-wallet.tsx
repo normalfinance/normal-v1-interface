@@ -3,12 +3,12 @@
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
-import { useState, type ReactNode } from 'react';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
+import { useState, type ReactNode } from 'react';
 import { ModalType } from '@normalfinance/types';
 import { useAppStore } from '@normalfinance/state';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
@@ -24,17 +24,19 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-
 import AddOutlined from '@mui/icons-material/AddOutlined';
-import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
-import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import CloseOutlined from '@mui/icons-material/CloseOutlined';
+import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import CallMadeOutlined from '@mui/icons-material/CallMadeOutlined';
 import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
 import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
+
 import ReceiveModal from '@/components/_common/receive-modal';
+import { ReceiveAssetPicker } from '@/components/_common/receive-asset-picker';
+import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
@@ -110,6 +112,7 @@ export interface ConnectedWalletProps {
   percentageChange?: number;
   tokens?: Token[];
   activity?: Activity[];
+  bitcoinAddress?: string | null;
 }
 
 export default function ConnectedWallet({
@@ -121,6 +124,7 @@ export default function ConnectedWallet({
   percentageChange,
   tokens,
   activity,
+  bitcoinAddress,
 }: ConnectedWalletProps) {
   const { t } = useTranslate();
   const router = useRouter();
@@ -128,11 +132,29 @@ export default function ConnectedWallet({
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [receiveContext, setReceiveContext] = useState<'deposit' | 'receive' | null>(null);
+  const [receivePickerOpen, setReceivePickerOpen] = useState(false);
+  const [pendingReceiveContext, setPendingReceiveContext] = useState<'deposit' | 'receive'>('receive');
+  const [btcReceiveOpen, setBtcReceiveOpen] = useState(false);
 
   const openReceiveModal = (context: 'deposit' | 'receive') => {
     setTransferDialogOpen(false);
     setDepositDialogOpen(false);
-    setReceiveContext(context);
+    if (bitcoinAddress) {
+      setPendingReceiveContext(context);
+      setReceivePickerOpen(true);
+    } else {
+      setReceiveContext(context);
+    }
+  };
+
+  const handlePickerSelectStellar = () => {
+    setReceivePickerOpen(false);
+    setReceiveContext(pendingReceiveContext);
+  };
+
+  const handlePickerSelectBitcoin = () => {
+    setReceivePickerOpen(false);
+    setBtcReceiveOpen(true);
   };
 
   const openSendModal = () => {
@@ -321,6 +343,19 @@ export default function ConnectedWallet({
         onClose={() => setReceiveContext(null)}
       />
 
+      <ReceiveAssetPicker
+        open={receivePickerOpen}
+        onClose={() => setReceivePickerOpen(false)}
+        onSelectStellar={handlePickerSelectStellar}
+        onSelectBitcoin={handlePickerSelectBitcoin}
+      />
+
+      <BitcoinReceiveModal
+        open={btcReceiveOpen}
+        address={bitcoinAddress ?? null}
+        onClose={() => setBtcReceiveOpen(false)}
+      />
+
       <Tabs
         value={tabs.value}
         onChange={tabs.onChange}
@@ -354,7 +389,7 @@ export default function ConnectedWallet({
 
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'assets' && (
-        <TokensTab tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0))} />
+        <TokensTab tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__')} />
       )}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
     </Stack>

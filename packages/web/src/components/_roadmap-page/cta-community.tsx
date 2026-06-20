@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { paths } from '@/routes/paths';
+
 import { Box, Typography } from '@mui/material';
 
 const GRADIENT =

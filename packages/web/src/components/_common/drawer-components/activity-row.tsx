@@ -12,7 +12,6 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-
 import MonetizationOnOutlined from '@mui/icons-material/MonetizationOnOutlined';
 
 const ICON_BOX_SX = {
@@ -155,7 +154,14 @@ export function ActivityRow({ activity }: { activity: Activity }) {
     'Add Liquidity':    { label: 'Add Liquidity',    color: '#0A5272', bg: 'rgba(91,207,255,0.14)'  },
     'Remove Liquidity': { label: 'Remove Liquidity', color: '#7A1D4A', bg: 'rgba(255,123,197,0.12)' },
   };
-  const chip = CHIP[activity.type] ?? { label: activity.type, color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' };
+  const chip =
+    activity.type === 'Sent' && activity.offramp
+      ? CHIP['Sell']
+      : CHIP[activity.type] ?? { label: activity.type, color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' };
+  const isPending =
+    ((activity.type === 'Sent' || activity.type === 'Receive') && activity.confirmed === false) ||
+    (activity.type === 'Swap' && activity.pending === true) ||
+    (activity.type === 'Sent' && activity.offramp === true && activity.offrampStatus === 'pending');
 
   let icon: React.ReactNode = null;
   let amountStr = '';
@@ -177,7 +183,9 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       const { token: { symbol, amount, iconUrl }, address } = activity;
       icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
       amountStr = fmtAmount(amount, symbol);
-      subtitle = `To ${format.shortenAddress(address)}`;
+      subtitle = activity.offramp
+        ? activity.offrampProvider ?? 'Off-ramp'
+        : `To ${format.shortenAddress(address)}`;
       isPositive = false;
       usdStr = symbol === 'USDC' ? fmtUsd(amount) : fmtAmount(amount, symbol);
       break;
@@ -266,19 +274,81 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       <Stack direction="row" sx={{ flexGrow: 1 }} alignItems="center" justifyContent="space-between">
         {/* left: chip + amount + subtitle */}
         <Stack spacing={0.4} alignItems="flex-start">
-          <Chip
-            label={chip.label}
-            size="small"
-            sx={{
-              height: 20,
-              fontSize: '11px',
-              fontWeight: 600,
-              color: chip.color,
-              bgcolor: chip.bg,
-              borderRadius: '6px',
-              '& .MuiChip-label': { px: '8px' },
-            }}
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Chip
+              label={chip.label}
+              size="small"
+              sx={{
+                height: 20,
+                fontSize: '11px',
+                fontWeight: 600,
+                color: chip.color,
+                bgcolor: chip.bg,
+                borderRadius: '6px',
+                '& .MuiChip-label': { px: '8px' },
+              }}
+            />
+            {isPending && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 20,
+                  px: '7px',
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(245,158,11,0.1)',
+                  color: '#B45309',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Pending
+              </Box>
+            )}
+            {((activity.type === 'Swap' && activity.failed) ||
+              (activity.type === 'Sent' &&
+                activity.offramp &&
+                activity.offrampStatus === 'failed')) && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 20,
+                  px: '7px',
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(220,38,38,0.1)',
+                  color: '#B91C1C',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Failed
+              </Box>
+            )}
+            {activity.type === 'Swap' && activity.refunded && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 20,
+                  px: '7px',
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(245,158,11,0.1)',
+                  color: '#B45309',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Refunded
+              </Box>
+            )}
+          </Box>
           {amountStr && (
             <Typography sx={{ fontSize: '12px', color: '#6B6B76', ...MONO }}>
               {amountStr}

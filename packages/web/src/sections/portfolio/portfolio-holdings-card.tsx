@@ -5,12 +5,12 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
-import { getCryptoIconUrl } from '@normalfinance/utils';
 import { ModalType } from '@normalfinance/types';
 import { useAppStore } from '@normalfinance/state';
-import { BigNumber } from 'bignumber.js';
-import { fCurrency } from '@/utils/format-number';
+import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fCurrency, fTokenAmount } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -21,20 +21,22 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-
 import AddOutlined from '@mui/icons-material/AddOutlined';
 import CloseOutlined from '@mui/icons-material/CloseOutlined';
 import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
-import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import CallMadeOutlined from '@mui/icons-material/CallMadeOutlined';
 import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
 import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import ReceiveModal from '@/components/_common/receive-modal';
+import { ReceiveAssetPicker } from '@/components/_common/receive-asset-picker';
+import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
 
-import { MONO, CARD_SX, DONUT_COLORS } from './_shared';
+import { MONO, CARD_SX, getHoldingColor } from './_shared';
+
 import type { HoldingData } from './_shared';
 
 // ----------------------------------------------------------------------
@@ -102,9 +104,11 @@ function ActionChooserDialog({
 interface HoldingsCardProps {
   holdingsData: HoldingData[];
   totalBalance: number;
+  onBtcReceive?: () => void;
+  hasBitcoinWallet?: boolean;
 }
 
-export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) {
+export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitcoinWallet }: HoldingsCardProps) {
   const { t } = useTranslate();
   const router = useRouter();
   const { setModalView } = useAppStore();
@@ -112,11 +116,28 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [receiveContext, setReceiveContext] = useState<'deposit' | 'receive' | null>(null);
+  const [receivePickerOpen, setReceivePickerOpen] = useState(false);
+  const [pendingReceiveContext, setPendingReceiveContext] = useState<'deposit' | 'receive'>('receive');
 
   const openReceiveModal = (context: 'deposit' | 'receive') => {
     setTransferDialogOpen(false);
     setDepositDialogOpen(false);
-    setReceiveContext(context);
+    if (hasBitcoinWallet) {
+      setPendingReceiveContext(context);
+      setReceivePickerOpen(true);
+    } else {
+      setReceiveContext(context);
+    }
+  };
+
+  const handlePickerSelectStellar = () => {
+    setReceivePickerOpen(false);
+    setReceiveContext(pendingReceiveContext);
+  };
+
+  const handlePickerSelectBitcoin = () => {
+    setReceivePickerOpen(false);
+    onBtcReceive?.();
   };
 
   const openSendModal = () => {
@@ -236,14 +257,18 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
                   totalBalance > 0
                     ? BigNumber(h.value).dividedBy(totalBalance).multipliedBy(100).toFixed(1)
                     : '0.0';
-                const balanceDisplay = BigNumber(h.token.balance).toFixed(
-                  h.token.decimals > 4 ? 4 : h.token.decimals
-                );
-                const color = DONUT_COLORS[i % DONUT_COLORS.length];
+                const balanceDisplay = fTokenAmount(h.token.balance);
+                const color = getHoldingColor(h.token, i);
+
+                const isSavings = h.token.contract === '__savings__';
+                const handleRowClick = isSavings
+                  ? () => router.push(paths.savings)
+                  : () => router.push(paths.assets.details(h.token.symbol));
 
                 return (
                   <Box
                     key={h.token.contract}
+                    onClick={handleRowClick}
                     sx={{
                       display: 'grid',
                       gridTemplateColumns: HOLDINGS_COLS,
@@ -252,6 +277,7 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
                       px: '8px',
                       py: '13px',
                       borderBottom: '1px solid rgba(10,10,15,0.05)',
+                      cursor: 'pointer',
                       '&:last-child': { borderBottom: 'none' },
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.02)', borderRadius: '10px' },
                     }}
@@ -264,8 +290,11 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
                         sx={{ width: 34, height: 34, flexShrink: 0 }}
                       />
                       <Box sx={{ minWidth: 0 }}>
-                        <Box sx={{ fontSize: '14px', fontWeight: 400, color: '#0A0A0F', lineHeight: 1.3 }}>
-                          {h.token.symbol}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Box sx={{ fontSize: '14px', fontWeight: 400, color: '#0A0A0F', lineHeight: 1.3 }}>
+                            {h.token.symbol}
+                          </Box>
+                          {!isSavings && <NetworkBadge network={getAssetNetwork(h.token)} />}
                         </Box>
                         <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.3 }}>
                           {h.token.name}
@@ -332,6 +361,13 @@ export function HoldingsCard({ holdingsData, totalBalance }: HoldingsCardProps) 
         open={!!receiveContext}
         context={receiveContext ?? 'deposit'}
         onClose={() => setReceiveContext(null)}
+      />
+
+      <ReceiveAssetPicker
+        open={receivePickerOpen}
+        onClose={() => setReceivePickerOpen(false)}
+        onSelectStellar={handlePickerSelectStellar}
+        onSelectBitcoin={handlePickerSelectBitcoin}
       />
     </>
   );

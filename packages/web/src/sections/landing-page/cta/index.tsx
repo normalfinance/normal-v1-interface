@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { useVaultApy } from '@/hooks/use-vault-apy';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
-import { useVaultApy } from '@/hooks/use-vault-apy';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */

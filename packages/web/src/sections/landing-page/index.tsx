@@ -9,11 +9,10 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 import BrandMarquee from '@/components/BrandMarquee';
 import RoadmapSection from '@/components/RoadmapSection';
 
-import { BentoSection } from './bento-section';
-
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
 import { HeroHeader } from './hero-header';
+import { BentoSection } from './bento-section';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
 

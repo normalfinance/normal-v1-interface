@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import { logger } from '@normalfinance/utils';
+import { useMemo, useState, useEffect } from 'react';
+import { DashboardContent } from '@/layouts/dashboard';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
-import { DashboardContent } from '@/layouts/dashboard';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';

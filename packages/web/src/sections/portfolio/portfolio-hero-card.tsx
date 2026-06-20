@@ -8,15 +8,16 @@ import Skeleton from '@mui/material/Skeleton';
 
 import {
   MONO,
-  DONUT_COLORS,
   DONUT_R,
-  DONUT_SIZE,
   DONUT_CX,
   DONUT_CY,
+  DONUT_GAP,
+  DONUT_SIZE,
   DONUT_CIRC,
   DONUT_STROKE,
-  DONUT_GAP,
+  getHoldingColor,
 } from './_shared';
+
 import type { HoldingData } from './_shared';
 
 // -------------------------------------------------------------------
@@ -63,7 +64,7 @@ function DonutChart({ holdingsData }: { holdingsData: HoldingData[] }) {
             cy={DONUT_CY}
             r={DONUT_R}
             fill="none"
-            stroke={DONUT_COLORS[i % DONUT_COLORS.length]}
+            stroke={getHoldingColor(h.token, i)}
             strokeWidth={DONUT_STROKE}
             strokeDasharray={`${dash} ${DONUT_CIRC - dash}`}
             strokeDashoffset={-(offset * DONUT_CIRC)}
@@ -268,9 +269,9 @@ export function HeroCard({
                         width: 10,
                         height: 10,
                         borderRadius: '50%',
-                        bgcolor: DONUT_COLORS[i % DONUT_COLORS.length],
+                        bgcolor: getHoldingColor(h.token, i),
                         flexShrink: 0,
-                        boxShadow: `0 0 6px ${DONUT_COLORS[i % DONUT_COLORS.length]}88`,
+                        boxShadow: `0 0 6px ${getHoldingColor(h.token, i)}88`,
                       }}
                     />
                     <Box sx={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', flex: 1 }}>

@@ -4,13 +4,14 @@ import { paths } from '@/routes/paths';
 import { cdn } from '@normalfinance/utils';
 
 import FlagOutlined from '@mui/icons-material/FlagOutlined';
+import TollOutlined from '@mui/icons-material/TollOutlined';
 import FeedOutlined from '@mui/icons-material/FeedOutlined';
 import MailOutlined from '@mui/icons-material/MailOutlined';
 import HelpOutlined from '@mui/icons-material/HelpOutlined';
-import BarChartOutlined from '@mui/icons-material/BarChartOutlined';
+import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
 import ArticleOutlined from '@mui/icons-material/ArticleOutlined';
-import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
+import BarChartOutlined from '@mui/icons-material/BarChartOutlined';
 import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import type { Props } from './normal-navbar';
@@ -35,7 +36,7 @@ export const NormalNavbarDefaults: Props = {
         },
         categoryLinks: [
           {
-            title: 'Earn',
+            title: 'Earn & Trade',
             links: [
               {
                 url: paths.savings,
@@ -43,22 +44,28 @@ export const NormalNavbarDefaults: Props = {
                 title: 'Savings',
                 description: 'Earn 8%+ APY on USDC.',
               },
-            ],
-          },
-          {
-            title: 'Move',
-            links: [
               {
                 url: paths.swap,
                 icon: <SwapVertOutlined sx={{ fontSize: 20 }} />,
                 title: 'Swap',
                 description: 'Exchange XLM, USDC and more.',
               },
+            ],
+          },
+          {
+            title: 'Wallet',
+            links: [
               {
                 url: paths.portfolio,
                 icon: <BarChartOutlined sx={{ fontSize: 20 }} />,
                 title: 'Portfolio',
                 description: 'Track your holdings.',
+              },
+              {
+                url: paths.assets.root,
+                icon: <TollOutlined sx={{ fontSize: 20 }} />,
+                title: 'Assets',
+                description: 'Send, receive and manage assets.',
               },
             ],
           },

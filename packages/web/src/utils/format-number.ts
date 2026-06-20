@@ -139,6 +139,22 @@ export function fCurrencyTwoDecimals(inputValue: InputNumberValue, options?: Opt
   return fm;
 }
 
+// ----------------------------------------------------------------------
+// Coin/token amount — up to 7 decimal places, trailing zeros trimmed.
+// Use for on-chain balances (BTC, ETH, SOL, XLM, …); pair with
+// fCurrency/fCurrencyTwoDecimals (2 dp) for the matching USD value.
+// ----------------------------------------------------------------------
+export function fTokenAmount(inputValue: InputNumberValue, options?: Options) {
+  const locale = formatNumberLocale() || DEFAULT_LOCALE;
+  const number = processInput(inputValue);
+  if (number === null) return '';
+  return new Intl.NumberFormat(locale.code, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 7,
+    ...options,
+  }).format(number);
+}
+
 export function fCurrencyCompact(inputValue: InputNumberValue, options?: Options) {
   const locale = formatNumberLocale() || DEFAULT_LOCALE;
   const number = processInput(inputValue);

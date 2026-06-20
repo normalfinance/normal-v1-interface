@@ -20,12 +20,16 @@ import {
 } from '@mui/material';
 
 import { useSnackbar } from '@/components/template/snackbar';
-import { Iconify } from '../template/iconify';
+
 import { WalletGate } from './wallet-gate';
+import { Iconify } from '../template/iconify';
 
 // ----------------------------------------------------------------------
 
-interface SwapCardProps extends CardProps {}
+interface SwapCardProps extends CardProps {
+  /** Token to sell on first render (deep link, e.g. /swap?from=USDC). */
+  initialTokenIn?: 'XLM' | 'USDC';
+}
 
 // ----------------------------------------------------------------------
 
@@ -142,7 +146,7 @@ const TokenRow: React.FC<{
 
 // ----------------------------------------------------------------------
 
-const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
+const SwapCard: React.FC<SwapCardProps> = ({ initialTokenIn, ...other }) => {
   const { t } = useTranslate();
   const { wallet, tokenState } = usePersistStore();
   const config = useStellarConfig();
@@ -174,8 +178,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
   } = useAccountStatus(wallet.address);
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
 
-  const [tokenIn, setTokenIn] = useState<'XLM' | 'USDC'>('XLM');
-  const [tokenOut, setTokenOut] = useState<'XLM' | 'USDC'>('USDC');
+  const [tokenIn, setTokenIn] = useState<'XLM' | 'USDC'>(initialTokenIn ?? 'XLM');
+  const [tokenOut, setTokenOut] = useState<'XLM' | 'USDC'>(initialTokenIn === 'USDC' ? 'XLM' : 'USDC');
   const [amountIn, setAmountIn] = useState('');
   const debouncedAmountIn = useDebounce(amountIn, 500);
 
@@ -214,6 +218,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ ...other }) => {
       tokenOutSymbol: TOKENS[tokenOut].symbol,
     });
     setAmountIn('');
+    // Refresh the activity feed so the swap appears without a manual reload.
+    window.dispatchEvent(new Event('nf:activity-updated'));
   }, [quote, executeSwap, tokenIn, tokenOut]);
 
   const exchangeRate =
