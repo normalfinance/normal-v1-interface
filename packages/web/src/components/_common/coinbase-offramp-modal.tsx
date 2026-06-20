@@ -5,7 +5,10 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
+import { usePersistStore } from '@normalfinance/state';
+import { useSendToken } from '@/hooks/stellar/use-send-token';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -62,13 +65,14 @@ interface PendingTxn {
   currency: string | null;
   txHash: string | null;
   createdAt: string | null;
+  memo: string | null; // required for Stellar (XLM/USDC) deposits to Coinbase
 }
 
 interface CoinbaseOfframpModalProps {
   open: boolean;
   onClose: () => void;
-  chain: TurnkeyChain; // 'bitcoin' | 'ethereum' | 'solana'
-  symbol: string; // 'BTC' | 'ETH' | 'SOL'
+  chain: TurnkeyChain; // 'bitcoin' | 'ethereum' | 'solana' | 'stellar'
+  symbol: string; // 'BTC' | 'ETH' | 'SOL' | 'USDC' | 'XLM'
   address: string;
   token: Token;
 }
@@ -105,6 +109,21 @@ async function fetchTransactions(): Promise<PendingTxn[]> {
   return (data.transactions ?? []) as PendingTxn[];
 }
 
+// SEP-0029: a Stellar account that needs a memo flags it with a
+// `config.memo_required` data entry. Coinbase's offramp deposit addresses don't
+// (they match by sender address), so we only refuse a memo-less send when the
+// destination genuinely requires one.
+async function destinationRequiresMemo(horizonUrl: string, address: string): Promise<boolean> {
+  try {
+    const r = await fetch(`${horizonUrl}/accounts/${address}`);
+    if (!r.ok) return false;
+    const acc = await r.json();
+    return Boolean(acc?.data?.['config.memo_required']);
+  } catch {
+    return false;
+  }
+}
+
 export function CoinbaseOfframpModal({
   open,
   onClose,
@@ -114,13 +133,21 @@ export function CoinbaseOfframpModal({
   token,
 }: CoinbaseOfframpModalProps) {
   const { t } = useTranslate();
+  const config = useStellarConfig();
+  const { send: sendStellar } = useSendToken();
+  // Stellar (USDC/XLM) balances live in the token store, which the chain-portfolio
+  // refresh event doesn't cover — refresh it directly after a Stellar off-ramp.
+  const getAllTokens = usePersistStore((s) => s.getAllTokens);
   const [stage, setStage] = useState<Stage>('searching');
   const [txn, setTxn] = useState<PendingTxn | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const isStellar = chain === 'stellar';
+
   // The pending sell that needs us to send crypto: STARTED, for this asset,
   // with a deposit address + amount, and not already fulfilled by us.
   const findPending = useCallback((list: PendingTxn[]): PendingTxn | null => {
+    const balance = parseFloat(token.balance || '0');
     const candidates = list
       .filter(
         (x) =>
@@ -128,12 +155,21 @@ export function CoinbaseOfframpModal({
           x.toAddress &&
           x.amount &&
           String(x.asset).toUpperCase() === symbol.toUpperCase() &&
+          // Safety: the amount MUST be denominated in the crypto, not fiat —
+          // Coinbase sometimes returns sell_amount in EUR, which we must never
+          // send as a crypto amount.
+          String(x.currency).toUpperCase() === symbol.toUpperCase() &&
+          // Only orders the wallet can actually fulfill. Crucially, this skips
+          // stale/abandoned STARTED orders from earlier attempts after the user
+          // has already cashed out (balance dropped) — otherwise the modal would
+          // re-prompt to send an amount that's no longer in the wallet.
+          parseFloat(x.amount) <= balance &&
           !x.txHash && // Coinbase already saw an on-chain send for it
           getFill(x.transactionId) === undefined // we haven't sent for it
       )
       .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     return candidates[0] ?? null;
-  }, [symbol]);
+  }, [symbol, token.balance]);
 
   const pollSettle = useCallback(async (id: string) => {
     for (let i = 0; i < 30; i += 1) {
@@ -204,6 +240,42 @@ export function CoinbaseOfframpModal({
     if (!txn) return;
     setError(null);
 
+    // ---- Stellar (XLM / USDC) ----
+    // useSendToken handles the XLM min-reserve, USDC-by-issuer, the optional
+    // memo, and the right signer (Turnkey passkey vs connected wallet).
+    // Coinbase's offramp matches by sender address, so no memo is provided/needed
+    // — but if the destination genuinely flags memo-required (SEP-29) and we have
+    // none, refuse rather than risk losing funds.
+    if (isStellar) {
+      if (!txn.memo && (await destinationRequiresMemo(config.HORIZON_URL, txn.toAddress))) {
+        setError(
+          t('This destination requires a memo, but Coinbase didn’t provide one — we can’t safely send. Please contact support.')
+        );
+        return;
+      }
+      setStage('sending');
+      markFill(txn.transactionId, 'pending');
+      const hash = await sendStellar({
+        destination: txn.toAddress,
+        token,
+        amount: String(txn.amount),
+        memo: txn.memo ?? undefined,
+      });
+      if (!hash) {
+        // useSendToken already surfaced the specific reason via snackbar.
+        clearFill(txn.transactionId);
+        setStage('failed');
+        return;
+      }
+      markFill(txn.transactionId, hash);
+      window.dispatchEvent(new Event('nf:activity-updated'));
+      getAllTokens(true).catch(() => {}); // refresh USDC/XLM balance in the store
+      setStage('confirming');
+      pollSettle(txn.transactionId);
+      return;
+    }
+
+    // ---- Native (BTC / ETH / SOL) ----
     // Pre-flight: Coinbase's sell amount (especially "Max") can exceed what the
     // wallet can actually send once the network fee + on-chain minimums are kept
     // back. Catch it here with a clear message instead of a raw simulation error.
@@ -304,6 +376,7 @@ export function CoinbaseOfframpModal({
               <Stack spacing={1}>
                 <Row label={t('Amount')} value={`${txn.amount} ${symbol}`} />
                 <Row label={t('To (Coinbase)')} value={txn.toAddress} mono truncate />
+                {isStellar && txn.memo && <Row label={t('Memo')} value={txn.memo} mono truncate />}
               </Stack>
             </Box>
           )}

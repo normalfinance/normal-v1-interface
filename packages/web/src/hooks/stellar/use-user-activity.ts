@@ -392,7 +392,11 @@ export function useUserActivity(
   // Coinbase off-ramp statuses: keyed by our on-chain txHash so we can re-label
   // the matching native Sent row as an off-ramp with its real status.
   const { data: offrampStatuses, mutate: mutateOfframp } = useSWR<Record<string, OfframpInfo>>(
-    ethereumAddress || solanaAddress || bitcoinAddress ? 'coinbase-offramp-statuses' : null,
+    // Any wallet (incl. Stellar for USDC/XLM off-ramps) — fetcher is a no-op
+    // when there are no local off-ramp fills, so this is cheap.
+    walletAddress || ethereumAddress || solanaAddress || bitcoinAddress
+      ? 'coinbase-offramp-statuses'
+      : null,
     fetchOfframpStatuses,
     { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
   );

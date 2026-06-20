@@ -7,8 +7,8 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 import BigNumber from 'bignumber.js';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
-import { useMemo, useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { useUsdPrice } from '@/hooks/use-price-history';
@@ -39,7 +39,6 @@ import { useSnackbar } from '@/components/template/snackbar';
 import OnRampDialog from '@/components/_common/onramp-dialog';
 import OffRampDialog from '@/components/_common/offramp-dialog';
 import ReceiveModal from '@/components/_common/receive-modal';
-import { CoinbaseOfframpModal } from '@/components/_common/coinbase-offramp-modal';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
@@ -66,9 +65,9 @@ function getAssetActions(symbol: string): AssetActionKey[] {
     case 'SOL':
       return ['send', 'receive', 'buy', 'sell'];
     case 'USDC':
-      return ['send', 'receive', 'swap', 'save', 'buy'];
+      return ['send', 'receive', 'swap', 'save', 'buy', 'sell'];
     case 'XLM':
-      return ['send', 'receive', 'swap', 'buy'];
+      return ['send', 'receive', 'swap', 'buy', 'sell'];
     default:
       return ['send', 'receive'];
   }
@@ -111,7 +110,6 @@ const NATIVE_CHAINS: Record<
 export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const { t } = useTranslate();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { copy } = useCopyToClipboard();
   const { enqueueSnackbar } = useSnackbar();
   const { user } = useSupabaseAuth();
@@ -148,20 +146,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const [nativeReceiveOpen, setNativeReceiveOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
   const [sellOpen, setSellOpen] = useState(false);
-  const [coinbaseOfframpOpen, setCoinbaseOfframpOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   // Action the user started before the chain account existed; resumed after setup
   const [pendingAction, setPendingAction] = useState<'send' | 'receive' | 'buy' | 'sell' | null>(null);
-
-  // Returning from a Coinbase off-ramp (native chains): Coinbase can't pull
-  // funds from a self-custody wallet, so we resume here to send the crypto.
-  useEffect(() => {
-    if (searchParams.get('offramp') === 'coinbase' && native && user) {
-      setCoinbaseOfframpOpen(true);
-      router.replace(paths.assets.details(upperSymbol));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, native, user, upperSymbol]);
+  // Note: completing a Coinbase off-ramp on return is handled globally by
+  // OfframpResumeHandler (mounted in ModalProvider) — not per-page.
 
   // Native chains have no entry in the Stellar token store — synthesize a
   // display token (zero balance until the address exists and balance loads).
@@ -556,17 +545,17 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         providers={['stripe', 'coinbase']}
       />
 
-      {/* Coinbase only — mirrors the Buy dialog on this page, which omits
-          MoneyGram. (MoneyGram cash-out is USDC-only and stays in the
-          savings/cash flow; it would also be wrong to offer it for XLM.) */}
+      {/* USDC offers Coinbase + MoneyGram (both cash out Stellar USDC); BTC/ETH/
+          SOL/XLM are Coinbase only. The amount step caps to the spendable
+          balance; the global resume handler completes the send on return. */}
       <OffRampDialog
         open={sellOpen}
         amount="100"
         onClose={() => setSellOpen(false)}
         walletAddress={(native ? nativeAddress : wallet.address) ?? undefined}
         asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
-        providers={['coinbase']}
-        assetBalance={native ? balance.toNumber() : undefined}
+        providers={token.symbol === 'USDC' ? ['coinbase', 'moneygram'] : ['coinbase']}
+        assetBalance={balance.toNumber()}
       />
 
       {isBtc && (
@@ -588,17 +577,6 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             symbol: token.symbol,
             chain: native!.name,
           })}
-        />
-      )}
-
-      {native && nativeAddress && (
-        <CoinbaseOfframpModal
-          open={coinbaseOfframpOpen}
-          onClose={() => setCoinbaseOfframpOpen(false)}
-          chain={native.chain}
-          symbol={upperSymbol}
-          address={nativeAddress}
-          token={token}
         />
       )}
 

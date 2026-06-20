@@ -1,7 +1,6 @@
 import type { OnrampAsset, OnrampProvider } from './onramp-dialog';
 
-import { paths } from '@/routes/paths';
-import { useBoolean } from '@/hooks';
+import { useBoolean, useStellarConfig } from '@/hooks';
 import React, { useState, useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
@@ -85,6 +84,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
+  const config = useStellarConfig();
 
   const persist = usePersistStore();
 
@@ -99,6 +99,8 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   const [cbLoading, setCbLoading] = useState(false);
   // BTC miner fee swings widely — resolve the reserve from the live fee rate.
   const [btcReserve, setBtcReserve] = useState<number | null>(null);
+  // XLM must keep an account min-balance reserve (Stellar's rent equivalent).
+  const [xlmReserve, setXlmReserve] = useState<number | null>(null);
 
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 
@@ -129,12 +131,40 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
     };
   }, [cbStep, asset.blockchain]);
 
+  // When the XLM amount step opens, fetch the account's actual min-balance
+  // reserve from Horizon ((2 + subentries) × 0.5 XLM + fee) so Max stays sendable.
+  useEffect(() => {
+    if (!cbStep || asset.blockchain !== 'stellar' || asset.symbol !== 'XLM' || !walletAddress) {
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${config.HORIZON_URL}/accounts/${walletAddress}`);
+        const acc = await r.json();
+        const subentries = Number(acc.subentry_count ?? 1);
+        const reserveXlm = (2 + subentries) * 0.5 + 0.01;
+        if (!cancelled) setXlmReserve(reserveXlm);
+      } catch {
+        if (!cancelled) setXlmReserve(1.6);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cbStep, asset.blockchain, asset.symbol, walletAddress, config.HORIZON_URL]);
+
   // Most the user can sell while leaving fee/rent behind (floored so it's always
   // safely sendable). Only used when assetBalance is provided (native off-ramp).
+  // USDC has no reserve on the USDC amount (the fee is paid in XLM separately).
   const reserve =
     asset.blockchain === 'bitcoin'
       ? btcReserve ?? NATIVE_RESERVE.bitcoin
-      : NATIVE_RESERVE[asset.blockchain] ?? 0;
+      : asset.blockchain === 'stellar'
+        ? asset.symbol === 'XLM'
+          ? xlmReserve ?? 1.6
+          : 0
+        : NATIVE_RESERVE[asset.blockchain] ?? 0;
   const sellMax =
     assetBalance != null ? Math.max(Math.floor((assetBalance - reserve) * 1e6) / 1e6, 0) : null;
 
@@ -173,21 +203,17 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
     }
     const url = createCoinbasePayOfframpURL({
       sessionToken,
-      // Native chains: mark the return so the asset page resumes the on-chain
-      // send (Coinbase can't pull funds from a self-custody wallet).
-      redirectUrl: `${window.location.origin}${
-        isStellarAsset
-          ? paths.invest
-          : `${paths.assets.details(asset.symbol)}?offramp=coinbase`
-      }`,
+      // Return to the current page with markers so the GLOBAL resume handler
+      // (mounted in ModalProvider) can complete the on-chain send — Coinbase
+      // can't pull funds from a self-custody wallet.
+      redirectUrl: `${window.location.origin}${window.location.pathname}?offramp=coinbase&sym=${asset.symbol}&chain=${asset.blockchain}`,
       // URL-safe, stable identifier — the status API path includes this verbatim,
       // so an email (with an encoded '@') would break the JWT path match (401).
       partnerUserRef: user.id,
       fiat: 'USD',
       sandbox: isTestnet(),
       defaultAsset: asset.symbol,
-      // Native chains: tell Coinbase which network to default to.
-      ...(isStellarAsset ? {} : { defaultNetwork: asset.blockchain }),
+      defaultNetwork: asset.blockchain,
       // Pre-fill our spendable-capped amount, but leave the order EDITABLE so the
       // user can still choose their cash-out destination (bank, EUR/USD balance…).
       // We don't lock it (disableEdit) because that also removes the destination

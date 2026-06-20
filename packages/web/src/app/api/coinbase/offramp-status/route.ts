@@ -66,6 +66,16 @@ export async function GET(req: NextRequest) {
       currency: tx.sell_amount?.currency ?? tx.asset ?? null,
       txHash: tx.tx_hash ?? null,
       createdAt: tx.created_at ?? null,
+      // Stellar deposits to Coinbase REQUIRE a memo (shared address routing).
+      // Coinbase's exact field name isn't documented for offramp, so surface any
+      // plausible candidate — the client hard-guards if it's still missing.
+      memo:
+        tx.memo ??
+        tx.deposit_memo ??
+        tx.destination_tag ??
+        tx.to_memo ??
+        tx.to_address_memo ??
+        null,
     }));
 
     return NextResponse.json({ transactions });
