@@ -10,7 +10,6 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
-import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -30,8 +29,8 @@ export default function PortfolioView() {
   useEffect(() => { setMounted(true); }, []);
 
   const { user } = useSupabaseAuth();
-  // Single aggregated source of truth for all native balances + addresses.
-  const { getAsset } = usePortfolio(!!user);
+  // Single source of truth for all balances + savings.
+  const { getAsset, savings, savingsUsd, isLoading: balancesLoading } = usePortfolio(!!user);
   const bitcoinAddress = getAsset('BTC')?.address ?? null;
   const ethereumAddress = getAsset('ETH')?.address ?? null;
   const solanaAddress = getAsset('SOL')?.address ?? null;
@@ -44,14 +43,9 @@ export default function PortfolioView() {
     tokenState: { tokens },
   } = usePersistStore();
 
-  const { userPosition, fetching, positionFetching } = useDefindexSavings();
-
-  const savingsValue = useMemo(() => {
-    const v = parseFloat(userPosition?.currentValue || '0');
-    return v > 0 ? v : 0;
-  }, [userPosition]);
-
-  const earnings = useMemo(() => parseFloat(userPosition?.earnings || '0'), [userPosition]);
+  const savingsValue = savingsUsd;
+  const earnings = savings.earnings;
+  const savingsLoading = savings.vaultLoading || savings.positionLoading;
 
   const stellarBalance = useMemo(
     () =>
@@ -241,7 +235,7 @@ export default function PortfolioView() {
         walletBalance={walletBalance}
         savingsValue={savingsValue}
         earnings={earnings}
-        loading={fetching || positionFetching}
+        loading={savingsLoading}
         holdingsData={holdingsData}
       />
 
@@ -258,6 +252,7 @@ export default function PortfolioView() {
           totalBalance={totalBalance}
           hasBitcoinWallet={!!bitcoinAddress}
           onBtcReceive={bitcoinAddress ? () => setBtcReceiveOpen(true) : undefined}
+          loading={balancesLoading || (savings.positionLoading && holdingsData.length === 0)}
         />
         <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
       </Box>

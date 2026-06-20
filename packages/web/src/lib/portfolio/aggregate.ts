@@ -1,16 +1,19 @@
 import type { NetworkType } from '@normalfinance/utils';
-import type { AssetStatus, PortfolioAsset, PortfolioPayload, PortfolioChain } from '@/types/portfolio';
+import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import { redis } from '@/server/rateLimiter';
+import { buildAsset } from './normalize';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
+
+// Pure normalization + stale-fallback live in ./normalize (unit-tested).
+export { applyStaleFallback } from './normalize';
 
 // ---------------------------------------------------------------------------
 // Server-side portfolio aggregator — the single source of truth for balances.
 //
 // Resolves all chain balances + batched spot prices IN PARALLEL with per-source
-// timeouts, normalizes them, and degrades gracefully (a failed chain is marked
-// `error`, or `stale` if the route can backfill a last-good value). Designed so
-// the orchestration core is unit-testable with mocked fetchers.
+// timeouts, normalizes them (via ./normalize), and degrades gracefully (a failed
+// chain is marked `error`, or `stale` when the route backfills a last-good value).
 // ---------------------------------------------------------------------------
 
 export interface PortfolioAddresses {
@@ -22,14 +25,6 @@ export interface PortfolioAddresses {
 
 const SOURCE_TIMEOUT_MS = 5000;
 const SPOT_TTL_SECONDS = 45;
-
-const ASSET_META: Record<string, { chain: PortfolioChain; decimals: number }> = {
-  BTC: { chain: 'bitcoin', decimals: 8 },
-  ETH: { chain: 'ethereum', decimals: 18 },
-  SOL: { chain: 'solana', decimals: 9 },
-  XLM: { chain: 'stellar', decimals: 7 },
-  USDC: { chain: 'stellar', decimals: 7 },
-};
 
 function withTimeout<T>(p: Promise<T>, ms = SOURCE_TIMEOUT_MS): Promise<T> {
   return Promise.race([
@@ -140,31 +135,7 @@ async function fetchStellarBalances(
   return { xlm, usdc };
 }
 
-// ------------------------------ normalization ------------------------------
-
-function buildAsset(
-  symbol: string,
-  address: string | null,
-  balance: number | null, // null = error
-  price: number | null
-): PortfolioAsset {
-  const meta = ASSET_META[symbol];
-  // No address → chain not set up → genuinely holds nothing (not an error).
-  const bal = address ? balance : 0;
-  const status: AssetStatus = bal === null ? 'error' : 'ok';
-  const balanceStr = bal === null ? null : String(bal);
-  const usdValue = bal !== null && price !== null ? String(bal * price) : null;
-  return {
-    symbol,
-    chain: meta.chain,
-    address,
-    balance: balanceStr,
-    price: price !== null ? String(price) : null,
-    usdValue,
-    decimals: meta.decimals,
-    status,
-  };
-}
+// ------------------------------ orchestration ------------------------------
 
 /** Orchestrates all sources in parallel and returns the normalized payload. */
 export async function aggregatePortfolio(
@@ -211,25 +182,4 @@ export async function aggregatePortfolio(
   ];
 
   return { updatedAt: now, assets };
-}
-
-/** Merge fresh assets with a last-good snapshot: error assets fall back to the
- *  prior value, marked `stale`. Returns the merged payload + the new snapshot. */
-export function applyStaleFallback(
-  fresh: PortfolioPayload,
-  lastGood: Record<string, PortfolioAsset> | null
-): { merged: PortfolioPayload; snapshot: Record<string, PortfolioAsset> } {
-  const snapshot: Record<string, PortfolioAsset> = { ...(lastGood ?? {}) };
-  const assets = fresh.assets.map((a) => {
-    if (a.status === 'ok') {
-      snapshot[a.symbol] = a; // refresh last-good
-      return a;
-    }
-    const prior = lastGood?.[a.symbol];
-    if (prior && prior.balance !== null) {
-      return { ...prior, status: 'stale' as AssetStatus, price: a.price ?? prior.price };
-    }
-    return a; // still error — nothing to fall back to
-  });
-  return { merged: { ...fresh, assets }, snapshot };
 }

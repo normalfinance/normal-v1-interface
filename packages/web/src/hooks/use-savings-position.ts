@@ -4,6 +4,7 @@ import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
 import useSWR from 'swr';
 import { useMemo, useEffect } from 'react';
+import { reconcileSavingsPosition } from '@/lib/portfolio/normalize';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 
 // ---------------------------------------------------------------------------
@@ -115,29 +116,9 @@ async function fetchUserPosition(address: string, network: string): Promise<Savi
   const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Failed to fetch user position');
 
-  const apiPos: SavingsPosition | undefined = data.userPosition;
-  if (!apiPos) return { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
-
-  // Reconcile against the cached value: the DeFindex events indexer lags
-  // 30-120s behind on-chain state, so guard against it briefly reporting a
-  // lower totalDeposited than a just-made (optimistically cached) deposit.
-  const prev = getCachedPosition(address);
-  let result = apiPos;
-  if (prev) {
-    const apiTD = parseFloat(apiPos.totalDeposited);
-    const prevTD = parseFloat(prev.totalDeposited);
-    const currentValue = parseFloat(apiPos.currentValue);
-    const tdDrop = prevTD - apiTD;
-    const smallIndexerLag = tdDrop > 0.001 && prevTD > 0 && tdDrop / prevTD < 0.2;
-    const stale = apiTD > currentValue + 0.001 || smallIndexerLag;
-    if (stale) {
-      result = {
-        ...apiPos,
-        totalDeposited: prev.totalDeposited,
-        earnings: Math.max(currentValue - prevTD, 0).toFixed(7),
-      };
-    }
-  }
+  // Reconcile against the cached value (never clobber a held position with a
+  // transient 0; handle indexer lag) — pure + unit-tested in ./normalize.
+  const result = reconcileSavingsPosition(data.userPosition, getCachedPosition(address));
   setCachedPosition(address, result);
   return result;
 }
