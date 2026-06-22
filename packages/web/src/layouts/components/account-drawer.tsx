@@ -9,8 +9,9 @@ import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, logger } from '@normalfinance/utils';
 import { useUserActivity, useStellarConfig } from '@/hooks';
-import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { usePortfolio } from '@/hooks/use-portfolio';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
@@ -20,8 +21,6 @@ import {
   useNormalWallet,
 } from '@/hooks/stellar/use-normal-wallet';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
-import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
@@ -66,12 +65,15 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
   const [tokensFetching, setTokensFetching] = useState(true);
 
   const { recentActivity } = useUserActivity(address, bitcoinAddress, ethereumAddress, solanaAddress);
-  const {
-    userPosition,
-    fetching: savingsFetching,
-    refreshVaultInfo,
-    refreshUserPosition,
-  } = useDefindexSavings();
+
+  // Unified, deduped source: native balances + savings from one place.
+  const { getAsset, savings } = usePortfolio(true);
+  const userPosition = savings.position;
+  const savingsFetching = savings.positionLoading;
+  const savingsRef = useRef(savings);
+  useEffect(() => {
+    savingsRef.current = savings;
+  });
 
   // Effect hook to fetch all tokens when the component mounts, address changes, or network toggles
   useEffect(() => {
@@ -97,17 +99,23 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
     return () => clearTimeout(timer);
   }, [address, getAllTokens, network, setGlobalIsLoading]);
 
-  // Refresh both vault info and user position every time the drawer opens
+  // Refresh savings when the drawer opens.
   useEffect(() => {
-    if (drawerOpen && address) {
-      refreshVaultInfo();
-      refreshUserPosition();
-    }
-  }, [drawerOpen, address, refreshVaultInfo, refreshUserPosition]);  
+    if (drawerOpen && address) savingsRef.current.refresh();
+  }, [drawerOpen, address]);
 
-  const { btcToken } = useBtcPortfolio(true);
-  const { ethToken } = useEthPortfolio(true);
-  const { solToken } = useSolPortfolio(true);
+  const btcToken = useMemo(() => {
+    const a = getAsset('BTC');
+    return a ? portfolioAssetToToken(a) : null;
+  }, [getAsset]);
+  const ethToken = useMemo(() => {
+    const a = getAsset('ETH');
+    return a ? portfolioAssetToToken(a) : null;
+  }, [getAsset]);
+  const solToken = useMemo(() => {
+    const a = getAsset('SOL');
+    return a ? portfolioAssetToToken(a) : null;
+  }, [getAsset]);
 
   const allTokens = useMemo(
     () => [...tokens, btcToken, ethToken, solToken].filter((tkn): tkn is NonNullable<typeof tkn> => !!tkn),

@@ -1,7 +1,8 @@
 'use client';
 
+import useSWR from 'swr';
 import { buildAuthHeaders } from '@/utils/http';
-import { useState, useEffect, useCallback } from 'react';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 export interface TurnkeyAddresses {
   bitcoinAddress: string | null;
@@ -10,39 +11,33 @@ export interface TurnkeyAddresses {
   stellarAddress: string | null;
 }
 
-interface State {
-  addresses: TurnkeyAddresses | null;
-  loading: boolean;
-  hasWallet: boolean | null; // null = not yet checked
-}
+// ---------------------------------------------------------------------------
+// The user's Turnkey wallet addresses, behind ONE shared SWR so every consumer
+// dedupes onto a single /api/turnkey/wallet request (previously each hook
+// instance fetched independently — a flood across views). Keyed by user so a
+// logout/login can't bleed addresses between accounts.
+// ---------------------------------------------------------------------------
 
 export function useTurnkeyWallet(enabled = true) {
-  const [state, setState] = useState<State>({
-    addresses: null,
-    loading: false,
-    hasWallet: null,
-  });
+  const { user } = useSupabaseAuth();
 
-  const fetchWallet = useCallback(async () => {
-    setState((s) => ({ ...s, loading: true }));
-    try {
+  const { data, isLoading, mutate } = useSWR<TurnkeyAddresses | null>(
+    enabled && user ? ['turnkey-wallet', user.id] : null,
+    async () => {
       const headers = await buildAuthHeaders();
       const res = await fetch('/api/turnkey/wallet', { headers });
       if (!res.ok) throw new Error('fetch failed');
-      const data = await res.json();
-      if (data.wallet) {
-        setState({ addresses: data.wallet, loading: false, hasWallet: true });
-      } else {
-        setState({ addresses: null, loading: false, hasWallet: false });
-      }
-    } catch {
-      setState({ addresses: null, loading: false, hasWallet: false });
-    }
-  }, []);
+      const d = await res.json();
+      return (d.wallet ?? null) as TurnkeyAddresses | null;
+    },
+    { revalidateOnFocus: false, dedupingInterval: 60_000, keepPreviousData: true }
+  );
 
-  useEffect(() => {
-    if (enabled) fetchWallet();
-  }, [enabled, fetchWallet]);
-
-  return { ...state, refetch: fetchWallet };
+  return {
+    addresses: data ?? null,
+    loading: isLoading,
+    // null = not checked yet; false = no wallet; truthy object = has wallet
+    hasWallet: data === undefined ? null : !!data,
+    refetch: () => mutate(),
+  };
 }

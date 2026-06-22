@@ -16,6 +16,7 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import Dialog from '@mui/material/Dialog';
+import Skeleton from '@mui/material/Skeleton';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
@@ -106,9 +107,28 @@ interface HoldingsCardProps {
   totalBalance: number;
   onBtcReceive?: () => void;
   hasBitcoinWallet?: boolean;
+  /** Show skeleton rows while balances load with nothing cached yet. */
+  loading?: boolean;
 }
 
-export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitcoinWallet }: HoldingsCardProps) {
+function HoldingsSkeleton() {
+  return (
+    <Stack spacing="13px" sx={{ px: '8px', pt: '6px' }}>
+      {[0, 1, 2].map((i) => (
+        <Stack key={i} direction="row" alignItems="center" spacing="11px">
+          <Skeleton variant="circular" width={34} height={34} />
+          <Box sx={{ flex: 1 }}>
+            <Skeleton variant="text" width="35%" height={16} />
+            <Skeleton variant="text" width="22%" height={12} />
+          </Box>
+          <Skeleton variant="text" width={64} height={16} />
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
+export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitcoinWallet, loading }: HoldingsCardProps) {
   const { t } = useTranslate();
   const router = useRouter();
   const { setModalView } = useAppStore();
@@ -226,9 +246,13 @@ export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitc
         </Box>
 
         {holdingsData.length === 0 ? (
-          <Box sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '24px' }}>
-            {t('No holdings yet')}
-          </Box>
+          loading ? (
+            <HoldingsSkeleton />
+          ) : (
+            <Box sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '24px' }}>
+              {t('No holdings yet')}
+            </Box>
+          )
         ) : (
           <Box sx={{ overflowX: 'auto' }}>
             <Box sx={{ minWidth: 520 }}>
