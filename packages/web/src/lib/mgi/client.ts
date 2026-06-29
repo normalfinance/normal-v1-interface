@@ -5,7 +5,7 @@ import { buildAuthHeaders } from '@/utils/http';
 
 import { openMoneyGram } from './flow';
 import { getTransaction } from './history';
-import { signXDRWithWalletKit } from './kit-signer';
+import { signStellarTxForMgi } from './kit-signer';
 
 const DEFAULT_TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
 const LS_KEY = 'mgiAuth.v1';
@@ -122,8 +122,8 @@ export async function getMgiAuthToken(userAccount: string) {
   const cached = getValidToken(key);
   if (cached) return cached;
 
-  // 3) Sign & exchange
-  const signed = await signXDRWithWalletKit(ch.transaction, passphrase, userAccount);
+  // 3) Sign (Normal wallet via passkey, or external wallet via kit) & exchange
+  const signed = await signStellarTxForMgi(ch.transaction, passphrase, userAccount);
   const token = await completeMgiAuth(signed);
 
   // 4) Cache with real JWT exp if present
@@ -301,7 +301,7 @@ export async function openTxInAnchorUI(
     tries += 1;
 
     try {
-      const tx = await getTransaction(txId /* , token if your proxy needs it */);
+      const tx = await getTransaction(txId, token);
       const status = (tx?.status || '').toLowerCase();
 
       if (terminal.includes(status)) {
