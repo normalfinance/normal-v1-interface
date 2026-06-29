@@ -536,13 +536,15 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         onClose={() => setReceiveOpen(false)}
       />
 
+      {/* USDC can also be bought with cash via MoneyGram (Stellar USDC deposit);
+          other assets are Stripe + Coinbase only. */}
       <OnRampDialog
         open={buyOpen}
         amount="100"
         onClose={() => setBuyOpen(false)}
         walletAddress={(native ? nativeAddress : wallet.address) ?? undefined}
         asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
-        providers={['stripe', 'coinbase']}
+        providers={token.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']}
       />
 
       {/* USDC offers Coinbase + MoneyGram (both cash out Stellar USDC); BTC/ETH/
