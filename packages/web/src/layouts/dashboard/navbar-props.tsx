@@ -28,11 +28,10 @@ export const NormalNavbarDefaults: Props = {
       url: '/',
       megaMenu: {
         banner: {
-          badge: '~8% APY',
-          title: 'Start saving in 60 seconds',
+          title: 'Start investing in 60 seconds',
           subtitle: 'No fees. Withdraw anytime. Non-custodial.',
           buttonLabel: 'Open app →',
-          buttonHref: paths.savings,
+          buttonHref: paths.portfolio,
         },
         categoryLinks: [
           {

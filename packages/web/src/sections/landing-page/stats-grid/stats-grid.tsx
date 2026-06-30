@@ -19,11 +19,14 @@ const MONO = {
   fontVariantNumeric: 'tabular-nums',
 } as const;
 
+// Infrastructure totals — the providers Normal is built on (not Normal's own
+// figures), so labels attribute them to LI.FI / Turnkey. Point-in-time values,
+// hardcoded (verified from li.fi + turnkey.com, 2026-06).
 const STATS = [
-  { label: 'Total accounts',    value: '4,065',  hint: 'across DeFindex protocol' },
-  { label: 'Total txs',         value: '21,526', hint: 'deposits & withdrawals' },
-  { label: 'Savings TVL',       value: '$1.4M',  hint: 'earning yield now' },
-  { label: 'Avg. settlement',   value: '~0.5s',  hint: 'on Stellar mainnet' },
+  { label: 'LI.FI volume',    value: '$80B+',  hint: 'cross-chain routed' },
+  { label: 'LI.FI transfers', value: '100M+',  hint: 'swaps & bridges' },
+  { label: 'Turnkey volume',  value: '$100B+', hint: 'stablecoin signed' },
+  { label: 'Turnkey uptime',  value: '99.9%',  hint: 'signing infrastructure' },
 ];
 
 // ----------------------------------------------------------------------
