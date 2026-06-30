@@ -1,20 +1,31 @@
 'use client';
 
-import * as React from 'react';
+import type { Token } from '@normalfinance/types';
+import type { TurnkeyChain } from '@/lib/turnkey/add-account';
+
 import { paths } from '@/routes/paths';
+import { BigNumber } from 'bignumber.js';
 import { useMemo, useState } from 'react';
 import { cdn } from '@normalfinance/utils';
 import { useRouter } from 'next/navigation';
 import { ModalType } from '@normalfinance/types';
-import { useAppStore } from '@normalfinance/state';
 import { useVaultApy } from '@/hooks/use-vault-apy';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { assetDisplay } from '@/lib/portfolio/display';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import { Box, Stack, Skeleton, Typography } from '@mui/material';
 
+import PickToken from '@/components/_common/pick-token';
 import { Iconify } from '@/components/template/iconify';
+import OnRampDialog from '@/components/_common/onramp-dialog';
+import ReceiveModal from '@/components/_common/receive-modal';
+import OffRampDialog from '@/components/_common/offramp-dialog';
+import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
+import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
+import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 
 // ----------------------------------------------------------------------
 // Home-hero portfolio card. Logged-in → the user's real holdings (wallet
@@ -74,12 +85,32 @@ const DEMO_ROWS: Row[] = [
 ];
 const DEMO_OVERALL_CHANGE = 2.4;
 
-const ACTIONS = [
-  { key: 'buy', label: 'Buy', icon: 'ic:round-add', modal: ModalType.ON_RAMP },
-  { key: 'sell', label: 'Sell', icon: 'ic:round-remove', modal: ModalType.OFF_RAMP },
-  { key: 'send', label: 'Send', icon: 'ic:round-arrow-upward', modal: ModalType.SEND_CRYPTO },
-  { key: 'receive', label: 'Receive', icon: 'ic:round-arrow-downward', modal: ModalType.DEPOSIT_CRYPTO },
-] as const;
+type Blockchain = 'stellar' | 'bitcoin' | 'ethereum' | 'solana';
+interface AssetMeta {
+  symbol: string;
+  blockchain: Blockchain;
+  name: string;
+  icon: string;
+  decimals: number;
+  contract: string;
+}
+
+// Assets offered in the Buy / Receive pickers (Sell filters to held only).
+const SUPPORTED: AssetMeta[] = [
+  { symbol: 'USDC', blockchain: 'stellar', name: 'USD Coin', icon: assetDisplay('USDC').icon, decimals: 7, contract: '__usdc__' },
+  { symbol: 'XLM', blockchain: 'stellar', name: 'Stellar Lumens', icon: assetDisplay('XLM').icon, decimals: 7, contract: '__xlm__' },
+  { symbol: 'BTC', blockchain: 'bitcoin', name: 'Bitcoin', icon: assetDisplay('BTC').icon, decimals: 8, contract: '__btc__' },
+  { symbol: 'ETH', blockchain: 'ethereum', name: 'Ethereum', icon: assetDisplay('ETH').icon, decimals: 18, contract: '__eth__' },
+  { symbol: 'SOL', blockchain: 'solana', name: 'Solana', icon: assetDisplay('SOL').icon, decimals: 9, contract: '__sol__' },
+];
+
+type ActionKey = 'buy' | 'sell' | 'send' | 'receive';
+const ACTIONS: { key: ActionKey; label: string; icon: string }[] = [
+  { key: 'buy', label: 'Buy', icon: 'ic:round-add' },
+  { key: 'sell', label: 'Sell', icon: 'ic:round-remove' },
+  { key: 'send', label: 'Send', icon: 'ic:round-arrow-upward' },
+  { key: 'receive', label: 'Receive', icon: 'ic:round-arrow-downward' },
+];
 
 export function HeroPortfolioCard() {
   const { user } = useSupabaseAuth();
@@ -87,8 +118,13 @@ export function HeroPortfolioCard() {
   const portfolio = usePortfolio(isAuthed);
   const apy = useVaultApy();
   const router = useRouter();
+  const persist = usePersistStore();
   const { setModalView } = useAppStore();
+  const { addresses, refetch: refetchAddresses } = useTurnkeyWallet(isAuthed);
   const [tab, setTab] = useState<TabId>('all');
+  const [picker, setPicker] = useState<'buy' | 'sell' | 'receive' | null>(null);
+  const [flow, setFlow] = useState<{ action: 'buy' | 'sell' | 'receive'; symbol: string } | null>(null);
+  const [setup, setSetup] = useState<{ chain: TurnkeyChain; action: 'buy' | 'sell' | 'receive'; symbol: string } | null>(null);
 
   const rows = useMemo<Row[]>(() => {
     if (!isAuthed) return [...DEMO_ROWS].sort((a, b) => b.usd - a.usd);
@@ -146,17 +182,84 @@ export function HeroPortfolioCard() {
   const loading =
     isAuthed && (portfolio.isLoading || (portfolio.savings.positionLoading && rows.length === 0));
 
-  const handleAction = (modal: ModalType) => () => {
+  const addressFor = (bc: Blockchain): string | null => {
+    if (bc === 'stellar') return persist.wallet.address || null;
+    if (bc === 'bitcoin') return addresses?.bitcoinAddress ?? null;
+    if (bc === 'ethereum') return addresses?.ethereumAddress ?? null;
+    return addresses?.solanaAddress ?? null;
+  };
+
+  // Token objects for the picker: real store tokens for Stellar (USDC/XLM),
+  // synthesized from portfolio data for the native chains.
+  const pickerTokens: Token[] = SUPPORTED.map((m) => {
+    const stored = m.blockchain === 'stellar'
+      ? persist.tokenState.tokens.find((tk) => tk.symbol === m.symbol)
+      : undefined;
+    if (stored) return stored;
+    const a = portfolio.getAsset(m.symbol);
+    return {
+      symbol: m.symbol,
+      contract: m.contract,
+      name: m.name,
+      issuer: '',
+      org: '',
+      domain: '',
+      icon: m.icon,
+      decimals: m.decimals,
+      featured: false,
+      balance: a?.balance ?? '0',
+      price: a?.price ?? '0',
+      percentageChange: a?.change24h ?? 0,
+    } as Token;
+  });
+  const sellTokens = pickerTokens.filter((tk) => BigNumber(tk.balance).gt(0));
+
+  // Open the chosen asset's flow — provisioning the native chain first if its
+  // address doesn't exist yet (lazy, like the asset detail page).
+  const startFlow = (action: 'buy' | 'sell' | 'receive', symbol: string) => {
+    const m = SUPPORTED.find((x) => x.symbol === symbol);
+    if (!m) return;
+    if (m.blockchain === 'stellar') {
+      if (!persist.wallet.address) {
+        window.dispatchEvent(new CustomEvent('nf:open-wallet-setup'));
+        return;
+      }
+    } else if (!addressFor(m.blockchain)) {
+      setSetup({ chain: m.blockchain as TurnkeyChain, action, symbol });
+      return;
+    }
+    setFlow({ action, symbol });
+  };
+
+  const handleActionClick = (key: ActionKey) => () => {
     if (!isAuthed) {
       window.dispatchEvent(new CustomEvent('nf:open-login'));
       return;
     }
-    setModalView(modal, true);
+    if (key === 'send') {
+      setModalView(ModalType.SEND_CRYPTO, true);
+      return;
+    }
+    setPicker(key);
   };
+
+  const handleSetupSuccess = async () => {
+    await refetchAddresses();
+    const s = setup;
+    setSetup(null);
+    if (s) setFlow({ action: s.action, symbol: s.symbol });
+  };
+
+  const flowMeta = flow ? SUPPORTED.find((m) => m.symbol === flow.symbol) ?? null : null;
+  const flowBlockchain: Blockchain = flowMeta?.blockchain ?? 'stellar';
+  const flowAddress = flowMeta ? addressFor(flowMeta.blockchain) : null;
+  const flowBalanceNum = flow ? Number(portfolio.getAsset(flow.symbol)?.balance ?? 0) : 0;
+  const isReceive = flow?.action === 'receive';
 
   const changeColor = overallChange >= 0 ? UP : DOWN;
 
   return (
+    <>
     <Box
       sx={{
         width: '100%',
@@ -317,8 +420,8 @@ export function HeroPortfolioCard() {
             key={a.key}
             role="button"
             tabIndex={0}
-            onClick={handleAction(a.modal)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleAction(a.modal)(); }}
+            onClick={handleActionClick(a.key)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActionClick(a.key)(); }}
             sx={{
               flex: 1,
               display: 'flex',
@@ -356,6 +459,71 @@ export function HeroPortfolioCard() {
         ))}
       </Stack>
     </Box>
+
+      {/* Asset picker → routes Buy / Sell / Receive into the chosen asset's flow */}
+      <PickToken
+        open={picker !== null}
+        onClose={() => setPicker(null)}
+        buttonSource={picker ?? undefined}
+        tokens={picker === 'sell' ? sellTokens : pickerTokens}
+        onTokenSelect={(token) => {
+          const action = picker;
+          setPicker(null);
+          if (action) startFlow(action, token.symbol);
+        }}
+      />
+
+      <OnRampDialog
+        open={flow?.action === 'buy'}
+        amount="100"
+        onClose={() => setFlow(null)}
+        walletAddress={flowAddress ?? undefined}
+        asset={{ symbol: flow?.symbol ?? 'USDC', blockchain: flowBlockchain }}
+        providers={flow?.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']}
+      />
+
+      <OffRampDialog
+        open={flow?.action === 'sell'}
+        amount="100"
+        onClose={() => setFlow(null)}
+        walletAddress={flowAddress ?? undefined}
+        asset={{ symbol: flow?.symbol ?? 'USDC', blockchain: flowBlockchain }}
+        providers={flow?.symbol === 'USDC' ? ['coinbase', 'moneygram'] : ['coinbase']}
+        assetBalance={flowBalanceNum}
+      />
+
+      <ReceiveModal
+        open={isReceive && flowBlockchain === 'stellar'}
+        context="receive"
+        onClose={() => setFlow(null)}
+      />
+
+      <BitcoinReceiveModal
+        open={isReceive && flowBlockchain === 'bitcoin'}
+        address={addressFor('bitcoin')}
+        onClose={() => setFlow(null)}
+      />
+
+      <ChainReceiveModal
+        open={isReceive && (flowBlockchain === 'ethereum' || flowBlockchain === 'solana')}
+        onClose={() => setFlow(null)}
+        address={flowAddress}
+        chainLabel={flowMeta?.name ?? ''}
+        symbol={flow?.symbol ?? ''}
+        warning={`Only send ${flow?.symbol ?? ''} on the ${flowMeta?.name ?? ''} network to this address!`}
+      />
+
+      {user && setup && (
+        <ChainSetupDialog
+          open
+          onClose={() => setSetup(null)}
+          chain={setup.chain}
+          userId={user.id}
+          userEmail={user.email}
+          onSuccess={handleSetupSuccess}
+        />
+      )}
+    </>
   );
 }
 
