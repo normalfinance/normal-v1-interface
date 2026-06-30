@@ -3,6 +3,7 @@
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
+import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useSwap } from '@/hooks/stellar/use-swap';
 import { usePersistStore } from '@normalfinance/state';
@@ -25,6 +26,8 @@ export interface SoroswapEngineProps {
   /** gross token amount the user is paying */
   amount: BigNumber;
   fromBalance: BigNumber;
+  /** USD price of the source token, for showing the fee in both denominations */
+  fromPrice: BigNumber;
   /** true only while this engine's group is the active selection */
   enabled: boolean;
   resetInput: () => void;
@@ -35,6 +38,7 @@ export function useSoroswapEngine({
   toSymbol,
   amount,
   fromBalance,
+  fromPrice,
   enabled,
   resetInput,
 }: SoroswapEngineProps): SwapEngineResult {
@@ -178,7 +182,10 @@ export function useSoroswapEngine({
             {t('Normal fee (0.5%)')}
           </Typography>
           <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
-            -{parseFloat(quote.fee || '0').toFixed(4)} {fromSymbol}
+            −{parseFloat(quote.fee || '0').toFixed(4)} {fromSymbol}
+            {fromPrice.gt(0)
+              ? ` (${fCurrency(BigNumber(quote.fee || '0').multipliedBy(fromPrice))})`
+              : ''}
           </Typography>
         </Stack>
         <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.5 }}>

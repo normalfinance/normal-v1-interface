@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
   });
 
   const fee = process.env.LIFI_FEE;
+  // Whether the Normal integrator fee actually ends up on this quote — flipped
+  // off if the 1011 fallback below strips it, so the client shows the real fee.
+  let feeApplied = Boolean(fee);
   if (fee) params.set('fee', fee);
 
   try {
@@ -89,6 +92,7 @@ export async function POST(request: NextRequest) {
           fromSymbol,
         });
         params.delete('fee');
+        feeApplied = false;
         res = await fetchQuote(params);
       }
     }
@@ -107,7 +111,9 @@ export async function POST(request: NextRequest) {
     }
 
     const quote = await res.json();
-    return NextResponse.json({ success: true, quote });
+    // feePercent as a fraction (e.g. 0.005 = 0.5%); 0 when the fee was stripped.
+    const feePercent = feeApplied && fee ? Number(fee) : 0;
+    return NextResponse.json({ success: true, quote, feePercent });
   } catch (error) {
     logger.error('[lifi/quote] Error fetching quote:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch quote' }, { status: 502 });

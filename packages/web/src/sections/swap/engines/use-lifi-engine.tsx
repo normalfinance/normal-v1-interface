@@ -5,6 +5,7 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
 import { MONO } from '@/sections/portfolio/_shared';
 import { executeLifiSwap } from '@/lib/lifi/execute';
@@ -21,7 +22,9 @@ import { useSnackbar } from '@/components/template/snackbar';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
 import { LifiStatusModal } from '../lifi-status-modal';
+import { isTerminal, useLifiTracker } from './lifi-tracker';
 
+import type { LifiTrackedTx } from './lifi-tracker';
 import type { CrosschainSymbol, SwapEngineResult } from './types';
 
 // ---------------------------------------------------------------------------
@@ -90,19 +93,36 @@ export function useLifiEngine({
   const toAddress = addresses[toSymbol];
 
   const [quote, setQuote] = useState<LifiQuote | null>(null);
+  // Integrator fee as a fraction (e.g. 0.005), reported by the quote route — 0
+  // when the portal stripped it (1011 fallback), so we never show a phantom fee.
+  const [feePercent, setFeePercent] = useState(0);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [executing, setExecuting] = useState(false);
   const [setupChain, setSetupChain] = useState<TurnkeyChain | null>(null);
-  const [statusTx, setStatusTx] = useState<{
-    txHash: string;
-    fromChainId: number;
-    toChainId: number;
-    fromSymbol: string;
-    toSymbol: string;
-    amountIn: string;
-    amountOut: string;
-  } | null>(null);
+  const [statusTx, setStatusTx] = useState<LifiTrackedTx | null>(null);
+  const [statusOpen, setStatusOpen] = useState(false);
+
+  // Tracking runs here (not in the modal) so "Continue in background" actually
+  // keeps confirming, refreshing balances and notifying after the dialog closes.
+  const stage = useLifiTracker(statusTx, {
+    onActivity: () => window.dispatchEvent(new Event('nf:activity-updated')),
+    onTerminal: (st) => {
+      if (st === 'done')
+        enqueueSnackbar(
+          t('Swap complete — {{symbol}} delivered to your wallet.', { symbol: statusTx?.toSymbol ?? toSymbol }),
+          { variant: 'success' }
+        );
+      else if (st === 'refunded')
+        enqueueSnackbar(
+          t('Swap refunded — your {{symbol}} was returned. No funds were lost.', {
+            symbol: statusTx?.fromSymbol ?? fromSymbol,
+          }),
+          { variant: 'warning' }
+        );
+      else enqueueSnackbar(t('Cross-chain swap failed — no funds were moved.'), { variant: 'error' });
+    },
+  });
 
   const amountUsd = fromPrice.gt(0) ? amount.multipliedBy(fromPrice) : null;
   const belowMinimum = amount.gt(0) && amountUsd !== null && amountUsd.lt(MIN_SWAP_USD);
@@ -147,6 +167,7 @@ export function useLifiEngine({
           setQuoteError(data.error ?? t('Failed to fetch quote'));
         } else {
           setQuote(data.quote);
+          setFeePercent(typeof data.feePercent === 'number' ? data.feePercent : 0);
         }
       } catch {
         if (!stale) setQuoteError(t('Failed to fetch quote'));
@@ -170,6 +191,12 @@ export function useLifiEngine({
     : null;
   const rate = quote && amount.gt(0) && toAmount ? toAmount.dividedBy(amount) : null;
   const etaMinutes = quote ? Math.max(1, Math.round(quote.estimate.executionDuration / 60)) : null;
+
+  // Normal's integrator fee — a fraction of the amount paid, taken by LI.FI on
+  // our behalf (already reflected in the quoted output). Shown for transparency.
+  const feeToken = quote && feePercent > 0 && amount.gt(0) ? amount.multipliedBy(feePercent) : null;
+  const feeUsd = feeToken && fromPrice.gt(0) ? feeToken.multipliedBy(fromPrice) : null;
+  const feeLabel = t('Normal fee ({{pct}}%)', { pct: +(feePercent * 100).toFixed(2) });
 
   // Reserve only what gas actually costs right now for ETH (live gas price ×
   // limit × buffer); a flat reserve is either far too large in USD or too small
@@ -209,8 +236,8 @@ export function useLifiEngine({
         solanaAddress: addresses.SOL,
       });
 
-      // Open the tracker immediately — it confirms the source tx, records the
-      // swap, then tracks the bridge, all non-blocking.
+      // Start the background tracker + open its view. Tracking lives in the
+      // engine now, so closing the dialog won't stop it.
       setStatusTx({
         txHash,
         fromChainId: quote.action.fromChainId,
@@ -220,6 +247,7 @@ export function useLifiEngine({
         amountIn: amount.toFixed(),
         amountOut: (toAmount ?? BigNumber(0)).toFixed(),
       });
+      setStatusOpen(true);
       resetInput();
       setQuote(null);
     } catch (err: any) {
@@ -300,6 +328,15 @@ export function useLifiEngine({
             </Typography>
           </Box>
         )}
+        {feeToken && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{feeLabel}</Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+              −{feeToken.toFixed(6, BigNumber.ROUND_DOWN)} {fromSymbol}
+              {feeUsd ? ` (${fCurrency(feeUsd)})` : ''}
+            </Typography>
+          </Box>
+        )}
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Route')}</Typography>
           <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F' }}>{quote.tool}</Typography>
@@ -340,15 +377,19 @@ export function useLifiEngine({
       )}
       {statusTx && (
         <LifiStatusModal
-          open
-          onClose={() => setStatusTx(null)}
+          open={statusOpen}
+          // Closing only hides the view — the tracker keeps running in the
+          // background and clears the tx once it has settled.
+          onClose={() => {
+            setStatusOpen(false);
+            if (isTerminal(stage)) setStatusTx(null);
+          }}
+          stage={stage}
           txHash={statusTx.txHash}
           fromChainId={statusTx.fromChainId}
           toChainId={statusTx.toChainId}
           fromSymbol={statusTx.fromSymbol}
           toSymbol={statusTx.toSymbol}
-          amountIn={statusTx.amountIn}
-          amountOut={statusTx.amountOut}
         />
       )}
     </>

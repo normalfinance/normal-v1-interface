@@ -139,6 +139,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     toSymbol: (activeGroup === 'stellar' ? toSymbol : 'USDC') as StellarSymbol,
     amount: activeGroup === 'stellar' ? amount : ZERO,
     fromBalance: activeGroup === 'stellar' ? fromBalance : ZERO,
+    fromPrice: activeGroup === 'stellar' ? fromPrice : ZERO,
     enabled: activeGroup === 'stellar',
     resetInput,
   });
