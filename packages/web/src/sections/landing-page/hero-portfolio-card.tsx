@@ -328,25 +328,30 @@ export function HeroPortfolioCard() {
               py: '12px',
               borderRadius: '14px',
               cursor: 'pointer',
+              color: '#6B6B76',
               border: '1px solid rgba(10,10,15,0.08)',
-              transition: 'background 150ms, border-color 150ms, transform 150ms',
-              '&:hover': { bgcolor: 'rgba(10,10,15,0.03)', borderColor: 'rgba(10,10,15,0.14)', transform: 'translateY(-1px)' },
+              transition: 'all .15s ease',
+              '&:hover': { bgcolor: 'rgba(10,10,15,0.03)', color: '#0A0A0F', borderColor: 'rgba(10,10,15,0.14)' },
+              '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
             }}
           >
             <Box
+              className="action-icon-box"
               sx={{
                 width: 30,
                 height: 30,
                 borderRadius: '9px',
-                bgcolor: 'rgba(10,10,15,0.05)',
+                bgcolor: '#F4F4F7',
+                color: '#0A0A0F',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                transition: 'all .15s ease',
               }}
             >
-              <Iconify icon={a.icon} width={18} sx={{ color: INK }} />
+              <Iconify icon={a.icon} width={18} sx={{ color: 'inherit' }} />
             </Box>
-            <Typography sx={{ fontSize: 12, fontWeight: 500, color: INK }}>{a.label}</Typography>
+            <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'inherit' }}>{a.label}</Typography>
           </Box>
         ))}
       </Stack>
