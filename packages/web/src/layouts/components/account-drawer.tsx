@@ -8,13 +8,13 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, logger } from '@normalfinance/utils';
-import { useUserActivity, useStellarConfig } from '@/hooks';
 import { usePortfolio } from '@/hooks/use-portfolio';
+import { useUserActivity, useStellarConfig } from '@/hooks';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
+import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import {
@@ -37,10 +37,14 @@ import {
   Stack,
   Avatar,
   Button,
+  Dialog,
   Drawer,
   Tooltip,
   IconButton,
   Typography,
+  DialogTitle,
+  DialogActions,
+  DialogContent,
   CircularProgress,
 } from '@mui/material';
 
@@ -220,6 +224,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     (!accountExists || !!(savingsUsdcIssuer && !hasUsdcTrustline));
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [wizardInitialStep, setWizardInitialStep] = useState<WizardStep | undefined>(undefined);
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
@@ -362,11 +367,22 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [searchParams, router]);
 
   useEffect(() => {
-    if (searchParams.get('setup') === 'continue') {
-      setWizardInitialStep('fund-xlm');
-      setShowLoginModal(true);
-      router.replace(paths.savings, { scroll: false });
-    }
+    if (searchParams.get('setup') !== 'continue') return;
+    // Resume the user at the step they left off, based on real setup state:
+    //  - no wallet yet           → choose a wallet
+    //  - wallet not activated    → fund with XLM (e.g. just returned from buying XLM)
+    //  - activated, missing USDC → add the trustline
+    // (accountExists may still be loading here → defaults to fund-xlm, which
+    //  polls and auto-advances once funding is detected, so it self-corrects.)
+    const resumeStep: WizardStep = !connectedAddress
+      ? 'choose-wallet'
+      : accountExists
+        ? 'add-trustline'
+        : 'fund-xlm';
+    setWizardInitialStep(resumeStep);
+    setShowLoginModal(true);
+    router.replace(paths.savings, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, router]);
 
   useEffect(() => {
@@ -549,7 +565,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <Tooltip title={isDisconnecting ? 'Logging out...' : 'Logout'}>
               <Button
                 size="small"
-                onClick={handleDisconnect}
+                onClick={() => setShowLogoutConfirm(true)}
                 disabled={isDisconnecting}
                 data-testid="logout-button"
                 sx={{
@@ -742,7 +758,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         fullWidth
                         onClick={() => {
                           if (session) {
-                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
+                            // No connected wallet here. Let the wizard route by the
+                            // user's actual state (no wallet → choose-wallet; an
+                            // existing Turnkey wallet → auto-connect) instead of
+                            // jumping straight to the deposit-XLM step.
+                            setWizardInitialStep(undefined);
                             setShowLoginModal(true);
                           } else {
                             handleConnectClick();
@@ -765,6 +785,47 @@ export function AccountDrawer(props: AccountDrawerProps) {
           </Scrollbar>
         )}
       </Drawer>
+
+      {/* Logout confirmation — an extra, deliberate step so a wallet can't be
+          disconnected (and an unbacked-up wallet effectively lost) in one tap. */}
+      <Dialog
+        open={showLogoutConfirm}
+        onClose={() => !isDisconnecting && setShowLogoutConfirm(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>{t('Log out of this device?')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {t(
+              "You'll be signed out and your wallet disconnected from this device. Make sure you've backed up your recovery phrase — without it, an imported wallet can't be restored."
+            )}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            onClick={() => setShowLogoutConfirm(false)}
+            disabled={isDisconnecting}
+            sx={{ textTransform: 'none', color: 'text.secondary' }}
+          >
+            {t('Cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={isDisconnecting}
+            startIcon={isDisconnecting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            onClick={async () => {
+              await handleDisconnect();
+              setShowLogoutConfirm(false);
+            }}
+            sx={{ textTransform: 'none', borderRadius: '999px' }}
+          >
+            {isDisconnecting ? t('Logging out…') : t('Log out')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <OnboardingWizard
         open={showLoginModal}
         initialStep={wizardInitialStep}
