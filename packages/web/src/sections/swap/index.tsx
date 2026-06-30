@@ -14,14 +14,13 @@ import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
-import SwapCard from '@/components/_common/swap-card';
-
-import { LifiSwapCard } from './lifi-swap-card';
+import SwapCard from './swap-card';
 import { SavingsOnrampCard } from '../savings/savings-onramp-card';
+
+import type { SwapSymbol } from './engines/types';
 
 export default function SwapView() {
   const [mounted, setMounted] = useState(false);
-  const [mode, setMode] = useState<'stellar' | 'crosschain'>('stellar');
   useEffect(() => { setMounted(true); }, []);
 
   const { setGlobalIsLoading } = useAppStore();
@@ -89,7 +88,7 @@ export default function SwapView() {
               Connect your wallet
             </Box>
             <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', maxWidth: 280 }}>
-              Sign in to swap tokens between XLM and USDC.
+              Sign in to swap XLM, USDC, BTC, ETH and SOL.
             </Box>
           </Box>
           <Box
@@ -118,54 +117,23 @@ export default function SwapView() {
     );
   }
 
-  // Deep-link preselect (/swap?from=USDC). Safe to read here: this code only
-  // runs after the `mounted` gate above, so window always exists.
+  // Deep-link preselect (/swap?from=BTC). Safe to read here: this code only runs
+  // after the `mounted` gate above, so window always exists.
   const fromParam = new URLSearchParams(window.location.search).get('from')?.toUpperCase();
-  const initialTokenIn = fromParam === 'USDC' || fromParam === 'XLM' ? fromParam : undefined;
+  const VALID: SwapSymbol[] = ['XLM', 'USDC', 'BTC', 'ETH', 'SOL'];
+  const initial = VALID.includes(fromParam as SwapSymbol) ? (fromParam as SwapSymbol) : undefined;
 
   return (
     <DashboardContent maxWidth="xl">
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', mb: '24px' }}>
+      <Box sx={{ mb: '24px' }}>
         <Stack spacing={0.5}>
           <Typography sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
             Swap
           </Typography>
           <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)' }}>
-            {mode === 'stellar'
-              ? 'Exchange XLM and USDC instantly with the best rates.'
-              : 'Swap BTC, ETH and SOL across networks — delivered to your own wallet.'}
+            Exchange XLM, USDC, BTC, ETH and SOL — delivered to your own wallet.
           </Typography>
         </Stack>
-
-        {/* Mode toggle */}
-        <Box sx={{ display: 'inline-flex', bgcolor: 'rgba(10,10,15,0.04)', borderRadius: '999px', p: '4px', gap: '2px' }}>
-          {([
-            { value: 'stellar', label: 'Stellar' },
-            { value: 'crosschain', label: 'Cross-chain' },
-          ] as const).map((item) => (
-            <Box
-              key={item.value}
-              component="button"
-              onClick={() => setMode(item.value)}
-              sx={{
-                px: '16px',
-                py: '7px',
-                borderRadius: '999px',
-                border: 'none',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                transition: 'background 150ms, color 150ms',
-                bgcolor: mode === item.value ? '#fff' : 'transparent',
-                color: mode === item.value ? '#0A0A0F' : 'rgba(10,10,15,0.45)',
-                boxShadow: mode === item.value ? '0 1px 2px rgba(10,10,15,0.08)' : 'none',
-              }}
-            >
-              {item.label}
-            </Box>
-          ))}
-        </Box>
       </Box>
 
       <Box
@@ -176,29 +144,19 @@ export default function SwapView() {
           alignItems: 'start',
         }}
       >
-        {mode === 'stellar' ? (
-          <>
-            <SwapCard initialTokenIn={initialTokenIn} />
-            <SavingsOnrampCard />
-          </>
-        ) : (
-          <LifiSwapCard />
-        )}
+        <SwapCard initial={initial} />
+        <SavingsOnrampCard />
       </Box>
 
-      {/* Activity under the active swap */}
+      {/* Unified activity — swaps + cross-chain transfers */}
       <Box sx={{ mt: '20px' }}>
-        {mode === 'stellar' ? (
-          <ActivityCard walletAddress={wallet.address} defaultTab="swaps" />
-        ) : (
-          <ActivityCard
-            walletAddress={wallet.address}
-            bitcoinAddress={bitcoinAddress}
-            ethereumAddress={ethereumAddress}
-            solanaAddress={solanaAddress}
-            defaultTab="transfers"
-          />
-        )}
+        <ActivityCard
+          walletAddress={wallet.address}
+          bitcoinAddress={bitcoinAddress}
+          ethereumAddress={ethereumAddress}
+          solanaAddress={solanaAddress}
+          defaultTab="swaps"
+        />
       </Box>
     </DashboardContent>
   );

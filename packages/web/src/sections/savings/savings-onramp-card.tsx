@@ -3,6 +3,7 @@
 import { useTranslate } from '@/locales';
 import { ModalType } from '@normalfinance/types';
 import { useAppStore } from '@normalfinance/state';
+import { useAssetActions } from '@/hooks/use-asset-actions';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -78,6 +79,7 @@ function OnrampButton({
 export function SavingsOnrampCard() {
   const { t } = useTranslate();
   const { setModalView } = useAppStore();
+  const { startAction, flowModals } = useAssetActions();
 
   return (
     <Box
@@ -111,10 +113,12 @@ export function SavingsOnrampCard() {
             icon={<AccountBalanceWalletOutlinedIcon sx={{ fontSize: 20, color: '#0A0A0F' }} />}
             label={t('Deposit crypto')}
             description={t('Send from any external wallet')}
-            onClick={() => setModalView(ModalType.DEPOSIT_CRYPTO, true)}
+            onClick={() => startAction('receive')}
           />
         </WalletGate>
       </Stack>
+
+      {flowModals}
     </Box>
   );
 }
