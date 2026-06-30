@@ -151,7 +151,7 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
             },
           }}
         />
-        {t('Normal Savings')}
+        {t('Audited DeFi')}
       </Box>
 
       {/* Headline */}
@@ -165,7 +165,7 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
           mb: 1,
         }}
       >
-        Deposit. Earn.{' '}
+        Earn. Diversify.{' '}
         <Box
           component="span"
           sx={{
@@ -175,7 +175,7 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
             backgroundClip: 'text',
           }}
         >
-          Compound.
+          Stay secure.
         </Box>
       </Typography>
 
@@ -189,13 +189,13 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
           maxWidth: 380,
         }}
       >
-        Your USDC earns{' '}
+        Earn{' '}
         {displayApy != null ? (
           `${displayApy}%`
         ) : (
           <Skeleton variant="text" width={36} sx={{ bgcolor: 'rgba(255,255,255,0.12)', display: 'inline-block', verticalAlign: 'middle' }} />
         )}{' '}
-        APY in audited lending pools on Stellar. Yield compounds daily — withdraw anytime, no lock-ups.
+        APY on USDC in audited lending pools, diversify across leading crypto assets, and keep full self-custody — withdraw anytime, no lock-ups.
       </Typography>
 
       {/* Live balance */}
