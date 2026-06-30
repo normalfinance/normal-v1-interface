@@ -270,8 +270,17 @@ export default function ConnectedWallet({
 
         <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mx: '14px' }} />
 
-        {/* Savings row */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: '14px', py: '12px' }}>
+        {/* Savings row → /savings */}
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          role="button"
+          tabIndex={0}
+          onClick={() => router.push(paths.savings)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(paths.savings); }}
+          sx={{ px: '14px', py: '12px', cursor: 'pointer', borderRadius: '8px', transition: 'background 150ms', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
+        >
           <Typography sx={{ fontSize: '13.5px', color: '#6B6B76' }}>
             {t('Savings')}
           </Typography>

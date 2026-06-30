@@ -7,9 +7,8 @@ import { cdn } from '@normalfinance/utils';
 import { useTheme } from '@mui/material/styles';
 import { Box, Stack, Container, Typography } from '@mui/material';
 
-import SavingsCard from '@/components/_common/savings-card';
-
 import { WavyBackground } from './wavy-background';
+import { HeroPortfolioCard } from '../hero-portfolio-card';
 
 // ----------------------------------------------------------------------
 
@@ -169,7 +168,7 @@ export const HeroHeader: React.FC = () => {
                 ...th.applyStyles('dark', { color: '#FFFFFF' }),
               })}
             >
-              {t('Earn passive yield, and')}
+              {t('Buy crypto. Earn yield.')}
               <br />
               <Box
                 component="span"
@@ -181,13 +180,13 @@ export const HeroHeader: React.FC = () => {
                   backgroundClip: 'text',
                 }}
               >
-                {t('watch it grow')}
+                {t('All in one place.')}
               </Box>
             </Typography>
 
-            {/* ---- Savings card ---- */}
+            {/* ---- Portfolio card ---- */}
             <Box sx={{ maxWidth: 480, width: '100%', mx: 'auto', mb: '24px' }}>
-              <SavingsCard />
+              <HeroPortfolioCard />
             </Box>
 
             {/* ---- Trust pill ---- */}

@@ -1,8 +1,6 @@
 'use client';
 
 import type { Position, PositionStatus, PortfolioAsset } from '@/types/portfolio';
-import type { UseSavingsPositionResult } from './use-savings-position';
-import type { UseWalletBalancesResult } from './use-wallet-balances';
 
 import { useMemo } from 'react';
 import { cdn } from '@normalfinance/utils';
@@ -10,6 +8,9 @@ import { assetDisplay } from '@/lib/portfolio/display';
 
 import { useWalletBalances } from './use-wallet-balances';
 import { useSavingsPosition } from './use-savings-position';
+
+import type { UseWalletBalancesResult } from './use-wallet-balances';
+import type { UseSavingsPositionResult } from './use-savings-position';
 
 // ---------------------------------------------------------------------------
 // THE portfolio data layer. Composes the fast wallet aggregator and the slow
@@ -62,6 +63,7 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
           balance: a.balance,
           price: a.price,
           usdValue: a.usdValue,
+          change24h: a.change24h,
           decimals: a.decimals,
           status: a.status as PositionStatus,
         };
