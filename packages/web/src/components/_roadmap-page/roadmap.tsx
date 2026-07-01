@@ -53,28 +53,43 @@ const MILESTONES: FeatureItem[] = [
     description: 'Crossed $24M TVL across USDC savings vaults.',
   },
   {
-    status: 'in-progress',
-    title: 'Normal Mobile App',
-    date: 'June 2026',
-    description: 'Native iOS and Android app bringing the full Normal experience to mobile.',
+    status: 'shipped',
+    title: 'Multi-chain support — Turnkey, LI.FI & MoneyGram',
+    date: 'Jun 2026',
+    description:
+      'Self-custody BTC, ETH and SOL wallets via Turnkey, cross-chain swaps through LI.FI, and MoneyGram cash in & out.',
   },
   {
     status: 'in-progress',
-    title: 'Recurring deposits + auto-compound',
-    date: 'Q3 2026',
-    description: 'Schedule recurring buys, auto-roll yield, set DCA targets.',
+    title: 'Blockdaemon setup',
+    date: 'Aug 2026',
+    description:
+      'Enterprise-grade node infrastructure via Blockdaemon for faster, more reliable multi-chain reads and broadcasts.',
   },
   {
     status: 'in-progress',
-    title: 'BTC and ETH support via bridges',
-    date: 'Q3 2026',
-    description: 'Hold and earn across multi-asset positions, settled on Stellar.',
+    title: 'Token listing: BNB, ADA, AVAX, DOT, NEAR, STX, ONDO',
+    date: 'Aug 2026',
+    description:
+      'Expanding supported assets — buy, hold and send BNB, ADA, AVAX, DOT, NEAR, STX and ONDO.',
   },
   {
-    status: 'planned',
+    status: 'in-progress',
     title: 'Normal Crypto Indexes',
     date: 'Q4 2026',
     description: 'Build and invest in custom crypto indexes tailored to your strategy.',
+  },
+  {
+    status: 'planned',
+    title: 'Normal Mobile App',
+    date: 'Q4 2026',
+    description: 'Native iOS and Android app bringing the full Normal experience to mobile.',
+  },
+  {
+    status: 'planned',
+    title: 'Recurring deposits + auto-compound',
+    date: 'Q4 2026',
+    description: 'Schedule recurring buys, auto-roll yield, set DCA targets.',
   },
   {
     status: 'planned',
@@ -93,12 +108,6 @@ const MILESTONES: FeatureItem[] = [
     title: 'Open developer SDK',
     date: '2027',
     description: 'Public TypeScript SDK and on-chain identity for builders on Stellar.',
-  },
-  {
-    status: 'planned',
-    title: 'Multi-chain wallet (Solana, Base)',
-    date: '2027',
-    description: 'Same UX, more chains. One account, multiple homes for your money.',
   },
 ];
 

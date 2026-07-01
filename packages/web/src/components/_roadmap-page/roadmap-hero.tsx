@@ -8,10 +8,10 @@ const GRADIENT =
   'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)';
 
 const META = [
-  { label: 'Shipped', value: '6' },
+  { label: 'Shipped', value: '7' },
   { label: 'In progress', value: '3' },
   { label: 'Planned', value: '5' },
-  { label: 'Next ship', value: 'June 2026' },
+  { label: 'Next ship', value: 'August 2026' },
 ];
 
 export const RoadmapHero: React.FC = () => (
