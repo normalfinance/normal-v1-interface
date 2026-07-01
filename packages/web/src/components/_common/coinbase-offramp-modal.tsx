@@ -3,12 +3,13 @@
 import type { Token } from '@normalfinance/types';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
-import { useState, useEffect, useCallback } from 'react';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
 import { usePersistStore } from '@normalfinance/state';
+import { useState, useEffect, useCallback } from 'react';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
+import { fetchSolBalance, fetchEthBalance } from '@/hooks/use-chain-portfolio';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -19,8 +20,6 @@ import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from '@/components/template/iconify';
-
-import { fetchSolBalance, fetchEthBalance } from '@/hooks/use-chain-portfolio';
 
 import { createSolanaAdapter } from './send-adapters/solana';
 import { createBitcoinAdapter } from './send-adapters/bitcoin';

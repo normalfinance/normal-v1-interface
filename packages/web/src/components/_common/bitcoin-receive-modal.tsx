@@ -1,11 +1,11 @@
 'use client';
 
 import QRCode from 'qrcode';
-import { cdn } from '@normalfinance/utils';
 import { BigNumber } from 'bignumber.js';
+import { cdn } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
+import { useMemo, useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
-import { useState, useEffect, useMemo } from 'react';
 import { useBtcAddressWatch } from '@/hooks/use-btc-address-watch';
 
 import Box from '@mui/material/Box';

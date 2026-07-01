@@ -1,10 +1,8 @@
-import type { OnrampAsset, OnrampProvider } from './onramp-dialog';
-
-import { useBoolean, useStellarConfig } from '@/hooks';
-import React, { useState, useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
+import React, { useState, useEffect } from 'react';
 import { runWithdrawFlow } from '@/lib/mgi/client';
+import { useBoolean, useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { cdn, isTestnet, createCoinbasePayOfframpURL } from '@normalfinance/utils';
@@ -32,6 +30,8 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import AmountDialog from '../deposit-amount-dialog';
+
+import type { OnrampAsset, OnrampProvider } from './onramp-dialog';
 
 // ----------------------------------------------------------------------
 // TYPES ----------------------------------------------------------------
