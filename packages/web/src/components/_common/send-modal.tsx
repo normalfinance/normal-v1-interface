@@ -12,6 +12,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import React, { useRef, useMemo, useState, useEffect } from 'react';
+import { spendableXlm, SAVINGS_XLM_BUFFER } from '@/utils/stellar-reserve';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import {
   getMaxAmount,
@@ -88,6 +89,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   const [pickerOpen, setPickerOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [xlmSubentries, setXlmSubentries] = useState<number | null>(null);
+  const [maxLoading, setMaxLoading] = useState(false);
   // BTC fee estimate — fetched when BTC is selected
   const [btcFeeRateSatPerVbyte, setBtcFeeRateSatPerVbyte] = useState<number | null>(null);
   // Post-send BTC transaction status
@@ -219,18 +221,49 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     setAmount(sanitizeAmountInput(e.target.value));
   };
 
-  const handleMaxClick = () => {
+  const handleMaxClick = async () => {
     if (!sendToken) return;
     if (isFiatMode) {
       setAmount(spendableBalance.multipliedBy(sendToken.price).toFixed(2, BigNumber.ROUND_DOWN));
-    } else {
-      if (isNative) {
-        setAmount(spendableBalance.toFixed(8, BigNumber.ROUND_DOWN));
-      } else {
-        setAmount(getMaxAmount(sendToken, false, xlmSubentries !== null ? (2 + xlmSubentries) * 0.5 : undefined));
-      }
+      return;
     }
+    if (isNative) {
+      setAmount(spendableBalance.toFixed(8, BigNumber.ROUND_DOWN));
+      return;
+    }
+    if (sendToken.symbol === 'XLM' && persist.wallet.address) {
+      // Fresh on-chain read so MAX exactly matches what the send will accept —
+      // the cached store balance/subentry count can lag, and the send execution
+      // does its own fresh read. Same spendableXlm helper on both sides.
+      setMaxLoading(true);
+      try {
+        const server = new Horizon.Server(config.HORIZON_URL, {
+          allowHttp: config.HORIZON_URL.startsWith('http://'),
+        });
+        const acc = await server.loadAccount(persist.wallet.address);
+        setXlmSubentries(acc.subentry_count);
+        const nativeBal = acc.balances.find((b) => b.asset_type === 'native')?.balance ?? '0';
+        let max = spendableXlm(nativeBal, acc.subentry_count);
+        // Savings-capable accounts (they hold the USDC trustline) keep a small
+        // XLM buffer so future deposit/withdraw fees are always covered — but
+        // only when there's enough headroom to bother.
+        if (acc.subentry_count > 0 && max.gt(SAVINGS_XLM_BUFFER)) {
+          max = max.minus(SAVINGS_XLM_BUFFER);
+        }
+        setAmount(max.toFixed(7, BigNumber.ROUND_DOWN));
+      } catch {
+        setAmount(spendableBalance.toFixed(7, BigNumber.ROUND_DOWN));
+      } finally {
+        setMaxLoading(false);
+      }
+      return;
+    }
+    // Other Stellar tokens (e.g. USDC): full balance.
+    setAmount(getMaxAmount(sendToken, false));
   };
+
+  // Whether MAX kept the extra savings buffer (drives the info note below).
+  const savingsBufferApplies = sendToken?.symbol === 'XLM' && (xlmSubentries ?? 0) > 0;
 
   const toggleMode = () => {
     if (!sendToken || !amount) { setIsFiatMode((p) => !p); return; }
@@ -383,6 +416,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Box
                         component="button"
+                        disabled={maxLoading}
                         onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleMaxClick(); }}
                         sx={{
                           border: 'none',
@@ -394,13 +428,14 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                           px: '8px',
                           py: '4px',
                           borderRadius: '6px',
-                          cursor: 'pointer',
+                          cursor: maxLoading ? 'default' : 'pointer',
+                          opacity: maxLoading ? 0.5 : 1,
                           flexShrink: 0,
                           fontFamily: 'inherit',
                           '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
                         }}
                       >
-                        MAX
+                        {maxLoading ? '…' : 'MAX'}
                       </Box>
                       <Iconify icon="eva:chevron-down-fill" width={18} sx={{ color: 'rgba(10,10,15,0.4)' }} />
                     </Box>
@@ -682,6 +717,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                           {((2 + xlmSubentries) * 0.5).toFixed(1)} XLM
                         </Typography>
                       </Box>
+                      {savingsBufferApplies && (
+                        <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.4 }}>
+                          {t('MAX keeps ~{{buffer}} XLM extra so you can always pay savings deposit & withdrawal fees.', { buffer: SAVINGS_XLM_BUFFER })}
+                        </Typography>
+                      )}
                     </>
                   )}
                 </Stack>

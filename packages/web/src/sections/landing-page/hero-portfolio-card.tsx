@@ -9,8 +9,8 @@ import { useRouter } from 'next/navigation';
 import { useVaultApy } from '@/hooks/use-vault-apy';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { assetDisplay } from '@/lib/portfolio/display';
-import { useAssetActions } from '@/hooks/use-asset-actions';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 
 import { Box, Stack, Skeleton, Typography } from '@mui/material';
 
@@ -88,7 +88,7 @@ export function HeroPortfolioCard() {
   const portfolio = usePortfolio(isAuthed);
   const apy = useVaultApy();
   const router = useRouter();
-  const { startAction, flowModals } = useAssetActions();
+  const { startAction } = useAssetActionsContext();
   const [tab, setTab] = useState<TabId>('all');
 
   const rows = useMemo<Row[]>(() => {
@@ -150,8 +150,7 @@ export function HeroPortfolioCard() {
   const changeColor = overallChange >= 0 ? UP : DOWN;
 
   return (
-    <>
-      <Box
+    <Box
         sx={{
           width: '100%',
           maxWidth: 440,
@@ -208,19 +207,25 @@ export function HeroPortfolioCard() {
                 sx={{
                   flex: 1,
                   px: '12px',
-                  py: '9px',
+                  py: '10px',
                   borderRadius: '12px',
                   cursor: 'pointer',
                   userSelect: 'none',
                   bgcolor: on ? '#fff' : 'rgba(10,10,15,0.035)',
                   border: `1px solid ${on ? 'rgba(10,10,15,0.1)' : 'transparent'}`,
-                  transition: 'background 150ms, border-color 150ms',
+                  transition: 'all .15s ease',
+                  // Hover animation for the inactive tabs — mirrors the Buy/Sell/
+                  // Send/Receive buttons below (bg lifts, border shows, text darkens).
+                  ...(!on && {
+                    '&:hover': { bgcolor: 'rgba(10,10,15,0.06)', borderColor: 'rgba(10,10,15,0.12)' },
+                    '&:hover .tab-label': { color: INK },
+                  }),
                 }}
               >
-                <Typography sx={{ fontSize: 12, fontWeight: 600, color: on ? INK : '#6B6B76', lineHeight: 1.2 }}>
+                <Typography className="tab-label" sx={{ fontSize: 14, fontWeight: 600, color: on ? INK : '#6B6B76', lineHeight: 1.25, transition: 'color .15s ease' }}>
                   {tb.label}
                 </Typography>
-                <Typography sx={{ fontSize: 12.5, color: on ? '#6B6B76' : '#9A9AA3', mt: '2px', ...MONO }}>
+                <Typography sx={{ fontSize: 13, color: on ? '#6B6B76' : '#9A9AA3', mt: '3px', ...MONO }}>
                   {loading ? '—' : fmtUsd0(subtotals[tb.id])}
                 </Typography>
               </Box>
@@ -229,10 +234,10 @@ export function HeroPortfolioCard() {
         </Stack>
 
         {/* holdings */}
-        <Stack sx={{ mt: 1 }} divider={<Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />}>
+        <Stack sx={{ mt: 2 }} divider={<Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />}>
           {loading ? (
             [0, 1, 2].map((i) => (
-              <Stack key={i} direction="row" alignItems="center" spacing={1.5} sx={{ py: '12px' }}>
+              <Stack key={i} direction="row" alignItems="center" spacing={1.5} sx={{ py: '15px' }}>
                 <Skeleton variant="circular" width={36} height={36} />
                 <Box sx={{ flex: 1 }}>
                   <Skeleton variant="text" width="40%" />
@@ -257,7 +262,7 @@ export function HeroPortfolioCard() {
                 onClick={() => router.push(r.href)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(r.href); }}
                 sx={{
-                  py: '12px',
+                  py: '15px',
                   px: '8px',
                   mx: '-8px',
                   borderRadius: '12px',
@@ -300,7 +305,7 @@ export function HeroPortfolioCard() {
         </Stack>
 
         {/* actions */}
-        <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+        <Stack direction="row" spacing={1} sx={{ mt: 2.5 }}>
           {ACTIONS.map((a) => (
             <Box
               key={a.key}
@@ -345,9 +350,6 @@ export function HeroPortfolioCard() {
           ))}
         </Stack>
       </Box>
-
-      {flowModals}
-    </>
   );
 }
 

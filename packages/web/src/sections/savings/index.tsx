@@ -3,6 +3,7 @@
 import { logger } from '@normalfinance/utils';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 
@@ -13,6 +14,7 @@ import Typography from '@mui/material/Typography';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import SavingsCard from '@/components/_common/savings-card';
+import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
 import { SavingsHeroCard } from './savings-hero-card';
 import { SavingsOnrampCard } from './savings-onramp-card';
@@ -22,6 +24,8 @@ export default function SavingsView() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
+  const { user } = useSupabaseAuth();
+  const [walletSetupOpen, setWalletSetupOpen] = useState(false);
   const { setGlobalIsLoading } = useAppStore();
   const { wallet, getAllTokens } = usePersistStore();
 
@@ -102,15 +106,21 @@ export default function SavingsView() {
           </Box>
           <Box>
             <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
-              Connect your wallet
+              {user ? 'Set up your savings wallet' : 'Connect your wallet'}
             </Box>
-            <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', maxWidth: 280 }}>
-              Sign in to view your savings and start earning yield.
+            <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', maxWidth: 300 }}>
+              {user
+                ? 'Savings runs on Stellar. Create your Stellar wallet in one tap to start earning yield on USDC.'
+                : 'Sign in to view your savings and start earning yield.'}
             </Box>
           </Box>
           <Box
             component="button"
-            onClick={() => window.dispatchEvent(new CustomEvent('nf:open-login'))}
+            onClick={() =>
+              user
+                ? setWalletSetupOpen(true)
+                : window.dispatchEvent(new CustomEvent('nf:open-login'))
+            }
             sx={{
               mt: '4px',
               px: '24px',
@@ -127,9 +137,23 @@ export default function SavingsView() {
               '&:hover': { opacity: 0.85 },
             }}
           >
-            Sign in
+            {user ? 'Set up wallet' : 'Sign in'}
           </Box>
         </Box>
+
+        {/* Lazy Stellar wallet creation — savings-specific setup happens here now,
+            not at signup. On success the dialog connects the wallet, so the
+            savings UI below appears automatically. */}
+        {user && walletSetupOpen && (
+          <ChainSetupDialog
+            open
+            onClose={() => setWalletSetupOpen(false)}
+            chain="stellar"
+            userId={user.id}
+            userEmail={user.email}
+            onSuccess={() => setWalletSetupOpen(false)}
+          />
+        )}
       </DashboardContent>
     );
   }

@@ -7,8 +7,8 @@ import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
 import { getCryptoIconUrl } from '@normalfinance/utils';
-import { useAssetActions } from '@/hooks/use-asset-actions';
 import { fCurrency, fTokenAmount } from '@/utils/format-number';
+import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -70,11 +70,10 @@ function HoldingsSkeleton() {
 export function HoldingsCard({ holdingsData, totalBalance, loading }: HoldingsCardProps) {
   const { t } = useTranslate();
   const router = useRouter();
-  const { startAction, flowModals } = useAssetActions();
+  const { startAction } = useAssetActionsContext();
 
   return (
-    <>
-      <Box sx={{ ...CARD_SX, minWidth: 0 }}>
+    <Box sx={{ ...CARD_SX, minWidth: 0 }}>
         {/* Header */}
         <Box sx={{ mb: '20px' }}>
           <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', mb: '14px' }}>
@@ -251,8 +250,5 @@ export function HoldingsCard({ holdingsData, totalBalance, loading }: HoldingsCa
           </Box>
         )}
       </Box>
-
-      {flowModals}
-    </>
   );
 }

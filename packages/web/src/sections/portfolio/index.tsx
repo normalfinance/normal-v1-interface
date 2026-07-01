@@ -7,6 +7,7 @@ import { logger } from '@normalfinance/utils';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -16,6 +17,7 @@ import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import SavingsCard from '@/components/_common/savings-card';
+import { GetStartedPicker } from '@/components/_common/get-started-picker';
 
 import { HeroCard } from './portfolio-hero-card';
 import { HoldingsCard } from './portfolio-holdings-card';
@@ -33,6 +35,10 @@ export default function PortfolioView() {
   const bitcoinAddress = getAsset('BTC')?.address ?? null;
   const ethereumAddress = getAsset('ETH')?.address ?? null;
   const solanaAddress = getAsset('SOL')?.address ?? null;
+  // "Has any wallet" — a Stellar Normal wallet OR a Turnkey chain wallet. Flips
+  // reactively when a wallet is provisioned (refetchAddresses). `null` = still
+  // checking, so we don't flash the picker at an existing user.
+  const { hasWallet: hasTurnkeyWallet } = useTurnkeyWallet(!!user);
 
   const { setGlobalIsLoading } = useAppStore();
   const {
@@ -40,6 +46,11 @@ export default function PortfolioView() {
     getAllTokens,
     tokenState: { tokens },
   } = usePersistStore();
+
+  const hasAnyWallet = !!wallet.address || hasTurnkeyWallet === true;
+  // Still resolving whether an authed user has a wallet — keep the skeleton so we
+  // don't flash the "get started" picker at someone who actually has one.
+  const walletChecking = !!user && !wallet.address && hasTurnkeyWallet === null;
 
   const savingsValue = savingsUsd;
   const earnings = savings.earnings;
@@ -146,7 +157,7 @@ export default function PortfolioView() {
     refreshTokens();
   }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
-  if (!mounted) {
+  if (!mounted || walletChecking) {
     return (
       <DashboardContent maxWidth="xl">
         {/* Hero skeleton */}
@@ -164,7 +175,31 @@ export default function PortfolioView() {
     );
   }
 
-  if (!wallet.address) {
+  if (!hasAnyWallet) {
+    // Signed in but no wallet yet (e.g. skipped the asset picker) → let them pick
+    // an asset here instead of a dead-end "Sign in". Not signed in → sign in.
+    if (user) {
+      return (
+        <DashboardContent maxWidth="xl">
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 4, md: 7 } }}>
+            <Box
+              sx={{
+                width: '100%',
+                maxWidth: 460,
+                p: { xs: '24px', md: '32px' },
+                borderRadius: '22px',
+                border: '1px solid rgba(10,10,15,0.08)',
+                bgcolor: '#fff',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.04)',
+              }}
+            >
+              <GetStartedPicker />
+            </Box>
+          </Box>
+        </DashboardContent>
+      );
+    }
+
     return (
       <DashboardContent maxWidth="xl">
         <Box

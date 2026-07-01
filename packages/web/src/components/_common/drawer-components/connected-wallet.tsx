@@ -9,8 +9,8 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
-import { useAssetActions } from '@/hooks/use-asset-actions';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
+import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -56,7 +56,7 @@ export default function ConnectedWallet({
   const { t } = useTranslate();
   const router = useRouter();
   // Same Buy / Sell / Send / Receive flows as the hero portfolio card.
-  const { startAction, flowModals } = useAssetActions();
+  const { startAction } = useAssetActionsContext();
 
   const actionButtons: { label: string; icon: ReactNode; onClick: () => void }[] = [
     { label: t('Buy'), icon: <Iconify icon="ic:round-add" width={16} />, onClick: () => startAction('buy') },
@@ -213,8 +213,6 @@ export default function ConnectedWallet({
         <TokensTab tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__')} />
       )}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
-
-      {flowModals}
     </Stack>
   );
 }

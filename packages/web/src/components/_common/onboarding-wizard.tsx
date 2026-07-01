@@ -57,6 +57,8 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
+import { GetStartedPicker } from './get-started-picker';
+
 // ---------------------------------------------------------------------------
 // Types & Constants
 // ---------------------------------------------------------------------------
@@ -64,6 +66,7 @@ import { useSnackbar } from '@/components/template/snackbar';
 export type WizardStep =
   | 'sign-in'
   | 'verify-email'
+  | 'get-started'
   | 'choose-wallet'
   | 'create-wallet'
   | 'import-wallet'
@@ -81,6 +84,7 @@ const TOTAL_DOTS = 6;
 const STEP_DOT: Record<WizardStep, number> = {
   'sign-in': 0,
   'verify-email': 0,
+  'get-started': 1,
   'choose-wallet': 1,
   'create-wallet': 2,
   'import-wallet': 2,
@@ -93,6 +97,7 @@ const STEP_DOT: Record<WizardStep, number> = {
 const STEP_NUMBER: Record<WizardStep, number> = {
   'sign-in': 1,
   'verify-email': 1,
+  'get-started': 2,
   'choose-wallet': 2,
   'create-wallet': 3,
   'import-wallet': 3,
@@ -105,6 +110,7 @@ const STEP_NUMBER: Record<WizardStep, number> = {
 const STEP_LABEL: Record<WizardStep, string> = {
   'sign-in': 'SIGN IN',
   'verify-email': 'VERIFY EMAIL',
+  'get-started': 'GET STARTED',
   'choose-wallet': 'CHOOSE WALLET',
   'create-wallet': 'CREATE WALLET',
   'import-wallet': 'IMPORT WALLET',
@@ -116,6 +122,7 @@ const STEP_LABEL: Record<WizardStep, string> = {
 
 // Steps that allow navigating back
 const PREV_STEP: Partial<Record<WizardStep, WizardStep>> = {
+  'choose-wallet': 'get-started',
   'create-wallet': 'choose-wallet',
   'import-wallet': 'choose-wallet',
   'add-trustline': 'fund-xlm',
@@ -277,7 +284,8 @@ export default function OnboardingWizard({
       if (marketingConsent) syncMarketingOptIn(true);
 
       if (wallets.length === 0) {
-        setStep('choose-wallet');
+        // New user — asset-first. No wallet is created until they pick an asset.
+        setStep('get-started');
         return;
       }
 
@@ -305,7 +313,7 @@ export default function OnboardingWizard({
       setStep('linked-accounts');
     } catch (err) {
       logger.error('[OnboardingWizard] handleAfterAuth error:', err);
-      setStep('choose-wallet');
+      setStep('get-started');
     }
   }, [marketingConsent, syncMarketingOptIn, connectWalletWithoutKeypair, onClose]);
 
@@ -536,7 +544,9 @@ export default function OnboardingWizard({
       await connectWalletWithoutKeypair(result.stellarAddress);
       setWizardWalletAddress(result.stellarAddress);
       enqueueSnackbar(t('Wallet created and secured with your passkey!'), { variant: 'success' });
-      setStep('fund-xlm');
+      // Asset-first: land on "get started" (buy/receive) instead of forcing the
+      // savings-specific XLM funding + trustline.
+      setStep('get-started');
     } catch (err: any) {
       logger.error('[OnboardingWizard] Turnkey wallet creation failed:', err);
       setWalletCreateError(err.message || t('Failed to create wallet. Please try again.'));
@@ -548,19 +558,24 @@ export default function OnboardingWizard({
   const handleImport = async () => {
     setIsImporting(true); setImportError(null);
     try {
+      let importedAddress: string;
       if (importType === 'mnemonic') {
         const normalized = normalizeMnemonic(importMnemonic);
         if (!validateMnemonic(normalized)) { setImportMnemonicError(t('Invalid recovery phrase')); setIsImporting(false); return; }
         const result = await importWalletFromMnemonic(normalized, undefined, undefined, { persistLocally: true });
-        setWizardWalletAddress(result.publicKey);
+        importedAddress = result.publicKey;
       } else {
         const trimmed = importPrivateKey.trim();
         if (!validatePrivateKey(trimmed)) { setImportPrivateKeyError(t('Invalid private key (must start with S, 56 characters)')); setIsImporting(false); return; }
         const result = await importWalletFromPrivateKey(trimmed, undefined, { persistLocally: true });
-        setWizardWalletAddress(result.publicKey);
+        importedAddress = result.publicKey;
       }
+      setWizardWalletAddress(importedAddress);
+      // Connect the imported wallet so the asset-first flow recognises it as the
+      // active wallet (and never tries to lazily create a new one for it).
+      await connectWalletWithoutKeypair(importedAddress);
       enqueueSnackbar(t('Wallet imported successfully!'), { variant: 'success' });
-      setStep('fund-xlm');
+      setStep('get-started');
     } catch (err: any) {
       logger.error('[OnboardingWizard] Import failed:', err);
       setImportError(err.message || t('Failed to import wallet'));
@@ -932,6 +947,13 @@ export default function OnboardingWizard({
         </Button>
       </Stack>
     </Stack>
+  );
+
+  // Asset-first landing for new users — the shared picker (choose an asset → buy
+  // or receive; wallet provisioned lazily). "Bring your own wallet" drops to the
+  // create/import screen.
+  const renderGetStarted = () => (
+    <GetStartedPicker onBringOwnWallet={() => setStep('choose-wallet')} />
   );
 
   const renderChooseWallet = () => (
@@ -1589,6 +1611,7 @@ export default function OnboardingWizard({
     switch (step) {
       case 'sign-in': return renderSignIn();
       case 'verify-email': return renderVerifyEmail();
+      case 'get-started': return renderGetStarted();
       case 'choose-wallet': return renderChooseWallet();
       case 'create-wallet': return renderCreateWallet();
       case 'import-wallet': return renderImportWallet();

@@ -4,11 +4,13 @@ import type { BoxProps } from '@mui/material';
 
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
-import React, { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
+import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
+import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 import {
   getYieldCommission,
   getSavingsDepositFee,
@@ -35,6 +37,7 @@ import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
 import { useSnackbar } from '../template/snackbar';
 import { TrustlineModal } from './trustline-modal';
+import { SavingsSetupDialog } from './savings-setup-dialog';
 
 // ----------------------------------------------------------------------
 
@@ -57,10 +60,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const {
     isLoading: isCheckingAccount,
     accountExists,
+    xlmBalance,
     hasUsdcTrustline,
     refetch: refetchAccountStatus,
   } = useAccountStatus(wallet.address, { assetIssuer: savingsUsdcIssuer });
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
+  const { startFlow } = useAssetActionsContext();
 
   const {
     vaultInfo,
@@ -80,6 +85,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
   const [spentOnDeposits, setSpentOnDeposits] = useState(0);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const setupAutoOpened = useRef(false);
 
   const rawDepositBalance = getTokenBalance(getSavingsDepositToken(tokenState.tokens, config));
   const rawDepositBalanceNum = parseFloat(rawDepositBalance);
@@ -146,7 +153,62 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       ? Math.round(getYieldCommissionRate(parsedAmount) * 100)
       : 0;
   const isAmountMissing = !amount || parsedAmount <= 0;
-  const showAddTrustlineAction = accountExists && !hasUsdcTrustline && !!savingsUsdcIssuer;
+  const trustlineRequired = !!savingsUsdcIssuer;
+
+  // Whether we've completed at least one account-status check for this wallet, so
+  // the setup UI is driven by the REAL account state — not by the transient
+  // isCheckingAccount that toggles on every poll. (Basing it on isCheckingAccount
+  // made the pop-up close mid-poll: each 2.5s re-check briefly looked like "no
+  // longer needs setup", which closed it.)
+  const [hasCheckedOnce, setHasCheckedOnce] = useState(false);
+  useEffect(() => { setHasCheckedOnce(false); }, [wallet.address]);
+  useEffect(() => { if (!isCheckingAccount) setHasCheckedOnce(true); }, [isCheckingAccount]);
+
+  // Savings-specific setup: activate the Stellar account (XLM), then add the USDC
+  // trustline. `setupComplete` deliberately ignores isCheckingAccount, so a
+  // re-check in flight never looks "done" and closes the pop-up.
+  const needsSetup =
+    hasCheckedOnce &&
+    !!wallet.address &&
+    (!accountExists || (trustlineRequired && !hasUsdcTrustline));
+  const setupComplete =
+    hasCheckedOnce && !!wallet.address && accountExists && (!trustlineRequired || hasUsdcTrustline);
+
+  // Auto-open the guided setup once when it's first needed (the user can reopen
+  // it later via the "Set up savings" button).
+  useEffect(() => {
+    if (needsSetup && !setupAutoOpened.current) {
+      setupAutoOpened.current = true;
+      setSetupOpen(true);
+    }
+  }, [needsSetup]);
+
+  // Close it only when setup is genuinely complete — never while a re-check is in
+  // flight — and return the card to the normal deposit UI.
+  useEffect(() => {
+    if (setupComplete) setSetupOpen(false);
+  }, [setupComplete]);
+
+  // While the setup pop-up is open and the account isn't active yet, poll for
+  // incoming XLM so activation auto-advances to the trustline step the moment
+  // funds land — no manual refresh needed (mirrors the old fund-xlm step). The
+  // interval reads refetch through a ref, so an unstable refetch identity can't
+  // keep resetting the timer (which previously meant it never fired).
+  const refetchRef = useRef(refetchAccountStatus);
+  refetchRef.current = refetchAccountStatus;
+  useEffect(() => {
+    if (!setupOpen || accountExists) return undefined;
+    const id = setInterval(() => refetchRef.current(), 2500);
+    return () => clearInterval(id);
+  }, [setupOpen, accountExists]);
+
+  // Re-check the account (XLM balance included) after any buy/receive/setup flow
+  // so the low-XLM warning clears once the user tops up.
+  useEffect(() => {
+    const handler = () => refetchRef.current();
+    window.addEventListener('nf:activity-updated', handler);
+    return () => window.removeEventListener('nf:activity-updated', handler);
+  }, []);
 
   const depositSteps = [
     { id: 'checking', label: t('Checking balance'), sub: t('Verifying USDC on Stellar') },
@@ -207,22 +269,40 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     await refetchAccountStatus();
   }, [setNeedsTrustline, refetchAccountStatus]);
 
+  // Savings deposits & withdrawals are Soroban transactions whose fees are paid
+  // in XLM (above the account reserve). If that spendable XLM runs too low, the
+  // transaction would fail on-chain — so we warn and block until they top up.
+  // Most important for withdrawals: money is locked in savings and can't come
+  // out without a little XLM for the fee.
+  const lowXlmForSavings =
+    accountExists && xlmAvailableForFees(xlmBalance).lt(MIN_XLM_FOR_SAVINGS_TX);
+
+  // While XLM is too low to transact, keep re-checking so the warning clears
+  // itself the moment the user tops up — same auto-detect as the setup flow.
+  useEffect(() => {
+    if (!lowXlmForSavings) return undefined;
+    const id = setInterval(() => refetchRef.current(), 4000);
+    return () => clearInterval(id);
+  }, [lowXlmForSavings]);
+
   const isWithdrawPositionLoading = mode === 'withdraw' && positionFetching && !userPosition;
   const isActionDisabled =
-    loading || isWithdrawPositionLoading || isInsufficientBalance || isAmountMissing;
+    loading || isWithdrawPositionLoading || lowXlmForSavings || isInsufficientBalance || isAmountMissing;
   const actionButtonText = loading
     ? mode === 'deposit'
       ? t('Depositing...')
       : t('Withdrawing...')
     : isWithdrawPositionLoading
       ? t('Loading balance...')
-      : isInsufficientBalance
-        ? t('Insufficient balance')
-        : isAmountMissing
-          ? t('Enter amount')
-          : mode === 'deposit'
-            ? t('Deposit')
-            : t('Withdraw');
+      : lowXlmForSavings
+        ? t('Add XLM to continue')
+        : isInsufficientBalance
+          ? t('Insufficient balance')
+          : isAmountMissing
+            ? t('Enter amount')
+            : mode === 'deposit'
+              ? t('Deposit')
+              : t('Withdraw');
 
   return (
     <Box
@@ -664,44 +744,96 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         </Typography>
       )}
 
+      {/* Low-XLM warning — savings fees are paid in XLM, so you can't
+          deposit or (crucially) withdraw without a little XLM in your wallet. */}
+      {!needsSetup && lowXlmForSavings && (
+        <Box
+          sx={(theme) => ({
+            display: 'flex',
+            gap: '10px',
+            p: '12px 14px',
+            mb: '12px',
+            borderRadius: '14px',
+            bgcolor: 'rgba(245,158,11,0.08)',
+            border: '1px solid rgba(245,158,11,0.28)',
+            ...theme.applyStyles('dark', { bgcolor: 'rgba(245,158,11,0.12)' }),
+          })}
+        >
+          <Iconify icon="eva:alert-triangle-fill" width={18} sx={{ color: '#B26A00', mt: '1px', flexShrink: 0 }} />
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#7A4A00', lineHeight: 1.4 }}>
+              {mode === 'withdraw'
+                ? t('You need a little XLM to withdraw')
+                : t('You need a little XLM to deposit')}
+            </Typography>
+            <Typography sx={{ fontSize: '12px', color: '#8A6A2E', lineHeight: 1.5, mt: '2px' }}>
+              {t('Savings network fees are paid in XLM. Add some XLM to your wallet to move money in or out of savings.')}
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: '10px' }}>
+              <Button
+                onClick={() => startFlow('buy', 'XLM')}
+                sx={{
+                  bgcolor: '#0A0A0F',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderRadius: '10px',
+                  px: '12px',
+                  py: '6px',
+                  '&:hover': { bgcolor: '#1A1A28' },
+                }}
+              >
+                {t('Buy XLM')}
+              </Button>
+              <Button
+                onClick={() => startFlow('receive', 'XLM')}
+                sx={{
+                  bgcolor: 'transparent',
+                  color: '#7A4A00',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderRadius: '10px',
+                  px: '12px',
+                  py: '6px',
+                  border: '1px solid rgba(245,158,11,0.4)',
+                  '&:hover': { bgcolor: 'rgba(245,158,11,0.12)' },
+                }}
+              >
+                {t('Receive XLM')}
+              </Button>
+            </Stack>
+          </Box>
+        </Box>
+      )}
+
       {/* Action Button */}
       <WalletGate buttonText={t('Connect wallet to save')} fullWidth variant="contained">
-        {showAddTrustlineAction ? (
-          <Button
-            fullWidth
-            disabled={isAddingTrustline}
-            onClick={handleAddTrustline}
-            sx={{
-              background: 'linear-gradient(120deg, #0A0A0F 0%, #1A1A28 100%)',
-              borderRadius: '14px',
-              padding: '14px 16px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#FFFFFF',
-              textTransform: 'none',
-              boxShadow: '0 8px 22px rgba(10,10,15,0.22)',
-              transition: 'transform 0.18s ease, box-shadow 0.18s ease',
-              '&:hover': {
-                background: 'linear-gradient(120deg, #1A1A22 0%, #252535 100%)',
-                transform: 'translateY(-1px)',
-                boxShadow: '0 12px 30px rgba(10,10,15,0.28)',
-              },
-              '&.Mui-disabled': {
-                opacity: 0.5,
+        {needsSetup ? (
+          <Stack spacing={1.25}>
+            <Typography sx={{ fontSize: '12.5px', color: 'text.secondary', textAlign: 'center', px: 1, lineHeight: 1.55 }}>
+              {accountExists
+                ? t('One quick step left — add a USDC trustline to start earning.')
+                : t('Activate your account and add USDC to start earning yield.')}
+            </Typography>
+            <Button
+              fullWidth
+              onClick={() => setSetupOpen(true)}
+              sx={{
+                background: '#0A0A0F',
+                borderRadius: '14px',
+                padding: '14px 16px',
+                fontSize: '14px',
+                fontWeight: 600,
                 color: '#FFFFFF',
-                background: 'linear-gradient(120deg, #0A0A0F 0%, #1A1A28 100%)',
-              },
-            }}
-            startIcon={
-              isAddingTrustline ? (
-                <CircularProgress size={18} sx={{ color: '#FFFFFF' }} />
-              ) : (
-                <Iconify icon="solar:add-circle-bold" sx={{ color: '#FFFFFF' }} />
-              )
-            }
-          >
-            {isAddingTrustline ? t('Adding trustline...') : t('Add USDC trustline')}
-          </Button>
+                textTransform: 'none',
+                '&:hover': { background: '#1A1A28' },
+              }}
+            >
+              {accountExists ? t('Continue setup') : t('Set up savings')}
+            </Button>
+          </Stack>
         ) : (
           <Button
             fullWidth
@@ -909,6 +1041,20 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         open={needsTrustline}
         onClose={() => setNeedsTrustline(false)}
         onSuccess={handleTrustlineSuccess}
+      />
+
+      {/* Guided savings setup — activate (XLM) → add USDC trustline. */}
+      <SavingsSetupDialog
+        open={setupOpen}
+        onClose={() => setSetupOpen(false)}
+        walletAddress={wallet.address || ''}
+        accountExists={accountExists}
+        hasUsdcTrustline={hasUsdcTrustline}
+        trustlineRequired={!!savingsUsdcIssuer}
+        isCheckingAccount={isCheckingAccount}
+        onRefetch={refetchAccountStatus}
+        onAddTrustline={handleAddTrustline}
+        isAddingTrustline={isAddingTrustline}
       />
     </Box>
   );

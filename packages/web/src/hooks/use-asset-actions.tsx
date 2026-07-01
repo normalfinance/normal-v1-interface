@@ -52,6 +52,8 @@ export type AssetActionKey = 'buy' | 'sell' | 'send' | 'receive';
 
 export function useAssetActions(): {
   startAction: (action: AssetActionKey) => void;
+  /** Begin a specific asset's flow directly (asset-first entry, e.g. onboarding). */
+  startFlow: (action: 'buy' | 'sell' | 'receive', symbol: string) => void;
   flowModals: React.ReactNode;
 } {
   const { user } = useSupabaseAuth();
@@ -97,17 +99,14 @@ export function useAssetActions(): {
   });
   const sellTokens = pickerTokens.filter((tk) => BigNumber(tk.balance).gt(0));
 
-  // Open the chosen asset's flow — provisioning the native chain first if its
-  // address doesn't exist yet (lazy, like the asset detail page).
+  // Open the chosen asset's flow — provisioning the asset's chain first if its
+  // address doesn't exist yet (lazy, via ChainSetupDialog). Stellar is handled
+  // by the same dialog now (it links + connects the wallet), so every asset —
+  // including USDC/XLM — can be set up on demand from any Buy/Receive button.
   const startFlow = (action: 'buy' | 'sell' | 'receive', symbol: string) => {
     const m = SUPPORTED.find((x) => x.symbol === symbol);
     if (!m) return;
-    if (m.blockchain === 'stellar') {
-      if (!persist.wallet.address) {
-        window.dispatchEvent(new CustomEvent('nf:open-wallet-setup'));
-        return;
-      }
-    } else if (!addressFor(m.blockchain)) {
+    if (!addressFor(m.blockchain)) {
       setSetup({ chain: m.blockchain as TurnkeyChain, action, symbol });
       return;
     }
@@ -128,6 +127,9 @@ export function useAssetActions(): {
 
   const handleSetupSuccess = async () => {
     await refetchAddresses();
+    // A new chain address exists now — refresh balances so the portfolio/drawer
+    // reflect it immediately (the gate also flips off the just-refetched address).
+    window.dispatchEvent(new Event('nf:activity-updated'));
     const s = setup;
     setSetup(null);
     if (s) setFlow({ action: s.action, symbol: s.symbol });
@@ -207,5 +209,5 @@ export function useAssetActions(): {
     </>
   );
 
-  return { startAction, flowModals };
+  return { startAction, startFlow, flowModals };
 }

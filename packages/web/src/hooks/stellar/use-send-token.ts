@@ -9,6 +9,7 @@ import { BigNumber } from 'bignumber.js';
 import { useStellarConfig } from '@/hooks';
 import { detectMemoType } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
+import { spendableXlm, stellarMinReserve } from '@/utils/stellar-reserve';
 import { Memo, Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
@@ -82,13 +83,14 @@ export function useSendToken(): ReturnType {
       if (args.token.symbol === 'XLM') {
         const xlmBalance = account.balances.find((b) => b.asset_type === 'native');
         const rawBalance = xlmBalance?.balance ?? '0';
-        const minReserve = BigNumber(2 + account.subentry_count).multipliedBy('0.5');
-        const spendable = BigNumber(rawBalance).minus(minReserve).minus('0.0002');
+        // Same reserve math as the send modal's MAX/validation — single source
+        // of truth, so a MAX'd amount can never be rejected here.
+        const spendable = spendableXlm(rawBalance, account.subentry_count);
         if (BigNumber(args.amount).gt(spendable)) {
           throw new Error(
             t('Insufficient balance. You can send at most {{max}} XLM (minimum reserve: {{reserve}} XLM)', {
-              max: BigNumber.max(spendable, 0).toFixed(7, BigNumber.ROUND_DOWN),
-              reserve: minReserve.toFixed(1),
+              max: spendable.toFixed(7, BigNumber.ROUND_DOWN),
+              reserve: stellarMinReserve(account.subentry_count).toFixed(1),
             })
           );
         }

@@ -3,7 +3,7 @@
 import { useTranslate } from '@/locales';
 import { ModalType } from '@normalfinance/types';
 import { useAppStore } from '@normalfinance/state';
-import { useAssetActions } from '@/hooks/use-asset-actions';
+import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -79,7 +79,7 @@ function OnrampButton({
 export function SavingsOnrampCard() {
   const { t } = useTranslate();
   const { setModalView } = useAppStore();
-  const { startAction, flowModals } = useAssetActions();
+  const { startAction } = useAssetActionsContext();
 
   return (
     <Box
@@ -117,8 +117,6 @@ export function SavingsOnrampCard() {
           />
         </WalletGate>
       </Stack>
-
-      {flowModals}
     </Box>
   );
 }

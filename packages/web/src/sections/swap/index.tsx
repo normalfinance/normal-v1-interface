@@ -4,6 +4,8 @@ import { logger } from '@normalfinance/utils';
 import React, { useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { ActivityCard } from '@/sections/portfolio/portfolio-activity-card';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
@@ -14,6 +16,8 @@ import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
+import { GetStartedPicker } from '@/components/_common/get-started-picker';
+
 import SwapCard from './swap-card';
 import { SavingsOnrampCard } from '../savings/savings-onramp-card';
 
@@ -23,11 +27,16 @@ export default function SwapView() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
+  const { user } = useSupabaseAuth();
   const { setGlobalIsLoading } = useAppStore();
   const { wallet, getAllTokens } = usePersistStore();
   const { bitcoinAddress } = useBtcPortfolio(true);
   const { ethereumAddress } = useEthPortfolio(true);
   const { solanaAddress } = useSolPortfolio(true);
+  // Any wallet (Stellar or a Turnkey chain wallet); null = still checking.
+  const { hasWallet: hasTurnkeyWallet } = useTurnkeyWallet(!!user);
+  const hasAnyWallet = !!wallet.address || hasTurnkeyWallet === true;
+  const walletChecking = !!user && !wallet.address && hasTurnkeyWallet === null;
 
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
@@ -43,7 +52,7 @@ export default function SwapView() {
     refreshTokens();
   }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
-  if (!mounted) {
+  if (!mounted || walletChecking) {
     return (
       <DashboardContent maxWidth="xl">
         <Skeleton variant="rectangular" height={48} width={200} sx={{ borderRadius: '12px', bgcolor: 'rgba(10,10,15,0.08)', mb: '24px' }} />
@@ -55,7 +64,31 @@ export default function SwapView() {
     );
   }
 
-  if (!wallet.address) {
+  if (!hasAnyWallet) {
+    // Signed in but no wallet yet → pick an asset (sets up the wallet), rather
+    // than a dead-end "Sign in". Not signed in → sign in.
+    if (user) {
+      return (
+        <DashboardContent maxWidth="xl">
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 4, md: 7 } }}>
+            <Box
+              sx={{
+                width: '100%',
+                maxWidth: 460,
+                p: { xs: '24px', md: '32px' },
+                borderRadius: '22px',
+                border: '1px solid rgba(10,10,15,0.08)',
+                bgcolor: '#fff',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.04)',
+              }}
+            >
+              <GetStartedPicker />
+            </Box>
+          </Box>
+        </DashboardContent>
+      );
+    }
+
     return (
       <DashboardContent maxWidth="xl">
         <Box
