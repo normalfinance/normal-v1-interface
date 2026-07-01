@@ -1,39 +1,21 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { AssetActionKey } from '@/hooks/use-asset-actions';
 
-import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useRouter } from 'next/navigation';
-import { ModalType } from '@normalfinance/types';
-import { useAppStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { useAssetActions } from '@/hooks/use-asset-actions';
 import { fCurrency, fTokenAmount } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
-import Dialog from '@mui/material/Dialog';
 import Skeleton from '@mui/material/Skeleton';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import AddOutlined from '@mui/icons-material/AddOutlined';
-import CloseOutlined from '@mui/icons-material/CloseOutlined';
-import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
-import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
-import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
-import CallMadeOutlined from '@mui/icons-material/CallMadeOutlined';
-import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
-import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
-import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 
-import ReceiveModal from '@/components/_common/receive-modal';
-import { ReceiveAssetPicker } from '@/components/_common/receive-asset-picker';
+import { Iconify } from '@/components/template/iconify';
 import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
 
 import { MONO, CARD_SX, getHoldingColor } from './_shared';
@@ -51,62 +33,19 @@ const COL_HEADER_SX = {
   letterSpacing: '0.07em',
 };
 
-type ActionChooserOption = { label: string; icon: ReactNode; onClick: () => void };
-
-function ActionChooserDialog({
-  open,
-  title,
-  actions,
-  onClose,
-}: {
-  open: boolean;
-  title: string;
-  actions: ActionChooserOption[];
-  onClose: () => void;
-}) {
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="xs"
-      slotProps={{ paper: { sx: { borderRadius: 2, p: 1 } } }}
-    >
-      <DialogTitle sx={{ p: 2, pb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-          <Typography variant="h6">{title}</Typography>
-          <IconButton onClick={onClose} aria-label="close dialog">
-            <CloseOutlined sx={{ fontSize: 20 }} />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-      <DialogContent sx={{ p: 2, pt: 1.5 }}>
-        <Stack spacing={1}>
-          {actions.map((action) => (
-            <Button
-              key={action.label}
-              fullWidth
-              variant="outlined"
-              color="inherit"
-              onClick={action.onClick}
-              startIcon={action.icon}
-              sx={{ justifyContent: 'flex-start', py: 1.5, px: 2, textTransform: 'none' }}
-            >
-              {action.label}
-            </Button>
-          ))}
-        </Stack>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// Same Buy / Sell / Send / Receive flows as the home hero card, via the shared
+// useAssetActions hook (asset picker → on/off-ramp / receive, lazy chain setup).
+const ACTIONS: { key: AssetActionKey; label: string; icon: string }[] = [
+  { key: 'buy', label: 'Buy', icon: 'ic:round-add' },
+  { key: 'sell', label: 'Sell', icon: 'ic:round-remove' },
+  { key: 'send', label: 'Send', icon: 'ic:round-arrow-upward' },
+  { key: 'receive', label: 'Receive', icon: 'ic:round-arrow-downward' },
+];
 
 // ----------------------------------------------------------------------
 interface HoldingsCardProps {
   holdingsData: HoldingData[];
   totalBalance: number;
-  onBtcReceive?: () => void;
-  hasBitcoinWallet?: boolean;
   /** Show skeleton rows while balances load with nothing cached yet. */
   loading?: boolean;
 }
@@ -128,64 +67,10 @@ function HoldingsSkeleton() {
   );
 }
 
-export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitcoinWallet, loading }: HoldingsCardProps) {
+export function HoldingsCard({ holdingsData, totalBalance, loading }: HoldingsCardProps) {
   const { t } = useTranslate();
   const router = useRouter();
-  const { setModalView } = useAppStore();
-
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
-  const [receiveContext, setReceiveContext] = useState<'deposit' | 'receive' | null>(null);
-  const [receivePickerOpen, setReceivePickerOpen] = useState(false);
-  const [pendingReceiveContext, setPendingReceiveContext] = useState<'deposit' | 'receive'>('receive');
-
-  const openReceiveModal = (context: 'deposit' | 'receive') => {
-    setTransferDialogOpen(false);
-    setDepositDialogOpen(false);
-    if (hasBitcoinWallet) {
-      setPendingReceiveContext(context);
-      setReceivePickerOpen(true);
-    } else {
-      setReceiveContext(context);
-    }
-  };
-
-  const handlePickerSelectStellar = () => {
-    setReceivePickerOpen(false);
-    setReceiveContext(pendingReceiveContext);
-  };
-
-  const handlePickerSelectBitcoin = () => {
-    setReceivePickerOpen(false);
-    onBtcReceive?.();
-  };
-
-  const openSendModal = () => {
-    setTransferDialogOpen(false);
-    setModalView(ModalType.SEND_CRYPTO, true);
-  };
-
-  const openDepositCashModal = () => {
-    setDepositDialogOpen(false);
-    setModalView(ModalType.ON_RAMP, true);
-  };
-
-  const actionButtons = [
-    { label: t('Transfer'), icon: <SyncAltOutlined sx={{ fontSize: 14 }} />, onClick: () => setTransferDialogOpen(true) },
-    { label: t('Deposit'), icon: <AddOutlined sx={{ fontSize: 14 }} />, onClick: () => setDepositDialogOpen(true) },
-    { label: t('Savings'), icon: <SavingsOutlined sx={{ fontSize: 14 }} />, onClick: () => router.push(paths.savings) },
-    { label: t('Swap'), icon: <SwapVertOutlined sx={{ fontSize: 14 }} />, onClick: () => router.push(paths.swap) },
-  ];
-
-  const transferActions: ActionChooserOption[] = [
-    { label: t('Send'), icon: <CallMadeOutlined sx={{ fontSize: 20 }} />, onClick: openSendModal },
-    { label: t('Receive'), icon: <CallReceivedOutlined sx={{ fontSize: 20 }} />, onClick: () => openReceiveModal('receive') },
-  ];
-
-  const depositActions: ActionChooserOption[] = [
-    { label: t('Deposit cash'), icon: <AttachMoneyOutlined sx={{ fontSize: 20 }} />, onClick: openDepositCashModal },
-    { label: t('Deposit crypto'), icon: <AccountBalanceWalletOutlined sx={{ fontSize: 20 }} />, onClick: () => openReceiveModal('deposit') },
-  ];
+  const { startAction, flowModals } = useAssetActions();
 
   return (
     <>
@@ -198,11 +83,11 @@ export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitc
 
           {/* Action buttons */}
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-            {actionButtons.map((btn) => (
+            {ACTIONS.map((btn) => (
               <Box
-                key={btn.label}
+                key={btn.key}
                 component="button"
-                onClick={btn.onClick}
+                onClick={() => startAction(btn.key)}
                 sx={{
                   appearance: 'none',
                   border: '1px solid rgba(10,10,15,0.08)',
@@ -237,7 +122,7 @@ export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitc
                     transition: 'all .15s ease',
                   }}
                 >
-                  {btn.icon}
+                  <Iconify icon={btn.icon} width={18} sx={{ color: 'inherit' }} />
                 </Box>
                 {btn.label}
               </Box>
@@ -367,32 +252,7 @@ export function HoldingsCard({ holdingsData, totalBalance, onBtcReceive, hasBitc
         )}
       </Box>
 
-      <ActionChooserDialog
-        open={transferDialogOpen}
-        title={t('Transfer')}
-        actions={transferActions}
-        onClose={() => setTransferDialogOpen(false)}
-      />
-
-      <ActionChooserDialog
-        open={depositDialogOpen}
-        title={t('Deposit')}
-        actions={depositActions}
-        onClose={() => setDepositDialogOpen(false)}
-      />
-
-      <ReceiveModal
-        open={!!receiveContext}
-        context={receiveContext ?? 'deposit'}
-        onClose={() => setReceiveContext(null)}
-      />
-
-      <ReceiveAssetPicker
-        open={receivePickerOpen}
-        onClose={() => setReceivePickerOpen(false)}
-        onSelectStellar={handlePickerSelectStellar}
-        onSelectBitcoin={handlePickerSelectBitcoin}
-      />
+      {flowModals}
     </>
   );
 }

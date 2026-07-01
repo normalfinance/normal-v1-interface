@@ -16,7 +16,6 @@ import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import SavingsCard from '@/components/_common/savings-card';
-import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 
 import { HeroCard } from './portfolio-hero-card';
 import { HoldingsCard } from './portfolio-holdings-card';
@@ -34,7 +33,6 @@ export default function PortfolioView() {
   const bitcoinAddress = getAsset('BTC')?.address ?? null;
   const ethereumAddress = getAsset('ETH')?.address ?? null;
   const solanaAddress = getAsset('SOL')?.address ?? null;
-  const [btcReceiveOpen, setBtcReceiveOpen] = useState(false);
 
   const { setGlobalIsLoading } = useAppStore();
   const {
@@ -250,8 +248,6 @@ export default function PortfolioView() {
         <HoldingsCard
           holdingsData={holdingsData}
           totalBalance={totalBalance}
-          hasBitcoinWallet={!!bitcoinAddress}
-          onBtcReceive={bitcoinAddress ? () => setBtcReceiveOpen(true) : undefined}
           loading={balancesLoading || (savings.positionLoading && holdingsData.length === 0)}
         />
         <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
@@ -265,12 +261,6 @@ export default function PortfolioView() {
           solanaAddress={solanaAddress}
         />
       </Box>
-
-      <BitcoinReceiveModal
-        open={btcReceiveOpen}
-        address={bitcoinAddress}
-        onClose={() => setBtcReceiveOpen(false)}
-      />
     </DashboardContent>
   );
 }
