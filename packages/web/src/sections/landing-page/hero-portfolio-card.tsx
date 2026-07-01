@@ -240,8 +240,13 @@ export function HeroPortfolioCard() {
         <Stack
           sx={{
             mt: 2,
-            mx: '-8px',
-            px: '8px',
+            // Asymmetric gutter: left stays at -8px (row hover bleed aligned),
+            // right is wider so the scrollbar sits further into the margin and
+            // clears the USD amounts. Amounts stay put — only the scrollbar moves.
+            ml: '-8px',
+            pl: '8px',
+            mr: '-14px',
+            pr: '14px',
             maxHeight: 350,
             overflowY: 'auto',
             overflowX: 'hidden',
