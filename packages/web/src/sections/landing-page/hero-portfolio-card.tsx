@@ -233,8 +233,27 @@ export function HeroPortfolioCard() {
           })}
         </Stack>
 
-        {/* holdings */}
-        <Stack sx={{ mt: 2 }} divider={<Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />}>
+        {/* holdings — capped height so the list scrolls once there are more than
+            ~5 assets (we keep adding more). The container carries the same -8px
+            gutter as the rows so the hover bleed stays aligned and the scrollbar
+            sits in the margin, clear of the USD amounts. */}
+        <Stack
+          sx={{
+            mt: 2,
+            mx: '-8px',
+            px: '8px',
+            maxHeight: 350,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            '&::-webkit-scrollbar': { width: '5px' },
+            '&::-webkit-scrollbar-track': { background: 'transparent' },
+            '&::-webkit-scrollbar-thumb': { background: 'rgba(10,10,15,0.14)', borderRadius: '3px' },
+            '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(10,10,15,0.26)' },
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(10,10,15,0.14) transparent',
+          }}
+          divider={<Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />}
+        >
           {loading ? (
             [0, 1, 2].map((i) => (
               <Stack key={i} direction="row" alignItems="center" spacing={1.5} sx={{ py: '15px' }}>
