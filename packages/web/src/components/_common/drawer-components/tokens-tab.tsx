@@ -2,8 +2,10 @@
 
 import type { Token } from '@normalfinance/types';
 
+import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fNumber, fCurrency } from '@/utils/format-number';
 
@@ -18,20 +20,26 @@ const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureS
 
 export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
   const { t } = useTranslate('auto');
+  const router = useRouter();
 
   return (
     <Box sx={{ pb: 2, bgcolor: 'background.paper' }}>
       {tokens.length > 0 ? (
         [...tokens]
           .sort((a, b) => {
-            const aBal = a.balance;
-            const bBal = b.balance;
-            return BigNumber(bBal).minus(aBal).toNumber();
+            // Biggest holdings first, by USD value (price × balance) — not coin count.
+            const aUsd = BigNumber(a.price).multipliedBy(a.balance);
+            const bUsd = BigNumber(b.price).multipliedBy(b.balance);
+            return bUsd.minus(aUsd).toNumber();
           })
           .map((token) => (
             <Box
               key={token.contract}
-              sx={{ display: 'flex', padding: '12px 8px', width: '100%', alignItems: 'center', justifyContent: 'space-between', borderRadius: '12px', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
+              role="button"
+              tabIndex={0}
+              onClick={() => router.push(paths.assets.details(token.symbol))}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(paths.assets.details(token.symbol)); }}
+              sx={{ display: 'flex', padding: '12px 8px', width: '100%', alignItems: 'center', justifyContent: 'space-between', borderRadius: '12px', cursor: 'pointer', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
             >
               <Box display="flex" alignItems="center" gap="12px">
                 <Box

@@ -4,7 +4,9 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { linkWallet } from '@/services/linked-wallets';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -49,6 +51,7 @@ export function ChainSetupDialog({
   onSuccess,
 }: ChainSetupDialogProps) {
   const { t } = useTranslate();
+  const { connectWalletWithoutKeypair } = useNormalWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +63,18 @@ export function ChainSetupDialog({
     try {
       // Lazy provisioning — derives the chain account on the existing wallet,
       // or creates passkey + sub-org + single-chain wallet for first-timers.
-      await ensureChainAccount(chain, userId, userEmail);
+      const result = await ensureChainAccount(chain, userId, userEmail);
+      // Stellar is the app's primary wallet: link it and connect it into the
+      // persist store (sets wallet.address) so the rest of the app recognises
+      // it — mirrors the onboarding wizard's create-wallet step. The other
+      // chains are read via useTurnkeyWallet, which the caller refetches.
+      if (chain === 'stellar') {
+        if (!result.stellarAddress) {
+          throw new Error(t('Wallet creation did not return a Stellar address'));
+        }
+        await linkWallet(result.stellarAddress);
+        await connectWalletWithoutKeypair(result.stellarAddress);
+      }
       onSuccess();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');

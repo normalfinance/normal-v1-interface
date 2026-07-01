@@ -131,7 +131,7 @@ export function useBtcAddressWatch(
     if (!enabled || !address) {
       setIncomingTxs([]);
       setIsConnected(false);
-      return;
+      return undefined;
     }
 
     cancelledRef.current = false;

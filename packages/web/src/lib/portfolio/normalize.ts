@@ -21,7 +21,8 @@ export function buildAsset(
   symbol: string,
   address: string | null,
   balance: number | null,
-  price: number | null
+  price: number | null,
+  change24h: number | null = null
 ): PortfolioAsset {
   const meta = ASSET_META[symbol];
   const bal = address ? balance : 0;
@@ -35,6 +36,7 @@ export function buildAsset(
     balance: balanceStr,
     price: price !== null ? String(price) : null,
     usdValue,
+    change24h,
     decimals: meta.decimals,
     status,
   };

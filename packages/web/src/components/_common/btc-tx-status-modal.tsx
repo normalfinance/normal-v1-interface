@@ -3,9 +3,9 @@
 import useSWR from 'swr';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
+import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
-import { fCurrency } from '@/utils/format-number';
 
 import {
   Box,

@@ -8,7 +8,6 @@ import type { VaultInfo, SavingsPosition } from '@/types/savings';
 // and the indexer-lag merge now live in `useSavingsPosition` — one deduped SWR
 // shared across all views. This hook consumes it for the read and keeps the
 // deposit/withdraw transaction engine.
-
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';

@@ -55,7 +55,10 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
   const network = useNetworkStore((s) => s.network);
   const stellar = wallet.address ?? '';
 
-  const swrKey = enabled && stellar ? `${stellar}:${network}` : null;
+  // Fetch for any signed-in user (enabled), even without a Stellar address — the
+  // server aggregator reads the BTC/ETH/SOL addresses from the authed DB row, so
+  // a chain-only wallet (e.g. BTC-first) still gets its balances.
+  const swrKey = enabled ? `${stellar || 'none'}:${network}` : null;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<PortfolioPayload>(
     swrKey,

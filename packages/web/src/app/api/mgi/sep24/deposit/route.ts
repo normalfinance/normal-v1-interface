@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
-// MoneyGram sandbox USDC issuer on Stellar Testnet (FYI, we do NOT send it unless you decide to)
-const USDC_TESTNET_ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+// We send only `asset_code: 'USDC'`; MoneyGram resolves the issuer for its
+// network, so no hardcoded (testnet) issuer is needed here.
 
 export async function POST(req: Request) {
   const t0 = Date.now();
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       account,
       amount: String(n), // string per SEP-24 convention
       lang,
-      // asset_issuer: USDC_TESTNET_ISSUER, // uncomment if required by your tenant
+      // asset_issuer: '<mainnet USDC issuer>', // only if your MGI tenant requires it
       // memo: '123456', memo_type: 'id',   // for custodial setups
     };
 

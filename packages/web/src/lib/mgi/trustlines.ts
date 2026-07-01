@@ -1,51 +1,51 @@
+'use client';
+
 import * as Stellar from '@stellar/stellar-sdk';
-// @ts-expect-error @ts-expect-error
-import { signXDRWithConnectedWallet } from '@/lib/mgi/client';
+import { useNetworkStore } from '@normalfinance/state';
+import { type NetworkType, getStellarConfigForNetwork } from '@normalfinance/utils';
+
+import { signStellarTxForMgi } from './kit-signer';
+
+// ---------------------------------------------------------------------------
+// USDC trustline management for the MoneyGram flow. NETWORK-AWARE: the Horizon
+// URL, USDC issuer and network passphrase all come from the app's active
+// network (testnet vs mainnet) — never hardcoded. Signing dispatches by wallet
+// type (Normal-wallet passkey or external wallet) via signStellarTxForMgi.
+// ---------------------------------------------------------------------------
 
 const SDK: any = (Stellar as any).default ?? Stellar;
-const {
-  Asset,
-  Account, // we'll construct an Account(publicKey, sequence)
-  TransactionBuilder,
-  Operation,
-  BASE_FEE: BASE_FEE_CONST,
-} = SDK;
+const { Asset, Account, TransactionBuilder, Operation, BASE_FEE: BASE_FEE_CONST } = SDK;
 
-// -----------------------
-// Horizon (TESTNET)
-// -----------------------
-const HORIZON = 'https://horizon-testnet.stellar.org';
-export const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
-
-// Fallback fee constant if SDK doesn’t expose BASE_FEE
 const BASE_FEE: string = typeof BASE_FEE_CONST === 'string' ? BASE_FEE_CONST : '100';
 const INACTIVE_STELLAR_ACCOUNT_MESSAGE =
   'This Stellar account is not active yet. Please fund it with at least 1 XLM first.';
 
-// -----------------------
-// USDC on TESTNET
-// -----------------------
-export const USDC_TESTNET_ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
-export const USDC = new Asset('USDC', USDC_TESTNET_ISSUER);
+function activeNetwork(): NetworkType {
+  try {
+    return useNetworkStore.getState().network as NetworkType;
+  } catch {
+    return 'mainnet';
+  }
+}
 
-// -----------------------
-// Horizon helpers (no Server)
-// -----------------------
-async function fetchAccountRaw(publicKey: string): Promise<any> {
-  const r = await fetch(`${HORIZON}/accounts/${encodeURIComponent(publicKey)}`);
+/** { HORIZON_URL, USDC_ISSUER, NETWORK_PASSPHRASE } for the active network. */
+function stellarCfg() {
+  return getStellarConfigForNetwork(activeNetwork());
+}
+
+async function fetchAccountRaw(horizon: string, publicKey: string): Promise<any> {
+  const r = await fetch(`${horizon}/accounts/${encodeURIComponent(publicKey)}`);
   if (!r.ok) {
-    if (r.status === 404) {
-      throw new Error(INACTIVE_STELLAR_ACCOUNT_MESSAGE);
-    }
+    if (r.status === 404) throw new Error(INACTIVE_STELLAR_ACCOUNT_MESSAGE);
     const body = await r.text().catch(() => '');
     throw new Error(`Horizon loadAccount failed (${r.status}): ${body || r.statusText}`);
   }
   return r.json();
 }
 
-async function submitTransactionXDR(xdr: string): Promise<any> {
+async function submitTransactionXDR(horizon: string, xdr: string): Promise<any> {
   const body = new URLSearchParams({ tx: xdr }).toString();
-  const r = await fetch(`${HORIZON}/transactions`, {
+  const r = await fetch(`${horizon}/transactions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
@@ -57,43 +57,33 @@ async function submitTransactionXDR(xdr: string): Promise<any> {
   } catch {
     data = text;
   }
-  if (!r.ok) {
-    // bubble up Horizon error JSON exactly for debugging
-    throw new Error(typeof data === 'string' ? data : JSON.stringify(data));
-  }
+  if (!r.ok) throw new Error(typeof data === 'string' ? data : JSON.stringify(data));
   return data;
 }
 
-// -----------------------
-// Public helpers
-// -----------------------
-
-/** Returns true if the account already has a USDC trustline. */
+/** Returns true if the account already has a USDC trustline (active network). */
 export async function hasUSDCTrustline(publicKey: string): Promise<boolean> {
-  const acct = await fetchAccountRaw(publicKey);
+  const cfg = stellarCfg();
+  const acct = await fetchAccountRaw(cfg.HORIZON_URL, publicKey);
   const balances: any[] = acct?.balances ?? [];
-  return balances.some((b) => b.asset_code === 'USDC' && b.asset_issuer === USDC_TESTNET_ISSUER);
+  return balances.some((b) => b.asset_code === 'USDC' && b.asset_issuer === cfg.USDC_ISSUER);
 }
 
-/** Builds a changeTrust transaction XDR for adding the USDC trustline on TESTNET. */
+/** Builds a changeTrust XDR adding the USDC trustline on the active network. */
 export async function buildUSDCTrustlineTxXDR(publicKey: string): Promise<string> {
-  const acct = await fetchAccountRaw(publicKey);
+  const cfg = stellarCfg();
+  const acct = await fetchAccountRaw(cfg.HORIZON_URL, publicKey);
   const sequence = acct?.sequence;
   if (!sequence) throw new Error(INACTIVE_STELLAR_ACCOUNT_MESSAGE);
 
-  // Build a minimal Account instance (no Server needed)
   const account = new Account(publicKey, sequence);
+  const usdc = new Asset('USDC', cfg.USDC_ISSUER);
 
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
-    networkPassphrase: TESTNET_PASSPHRASE,
+    networkPassphrase: cfg.NETWORK_PASSPHRASE,
   })
-    .addOperation(
-      Operation.changeTrust({
-        asset: USDC, // USDC on TESTNET
-        // limit: undefined -> default max
-      })
-    )
+    .addOperation(Operation.changeTrust({ asset: usdc }))
     .setTimeout(180)
     .build();
 
@@ -101,23 +91,21 @@ export async function buildUSDCTrustlineTxXDR(publicKey: string): Promise<string
 }
 
 /**
- * Signs the changeTrust XDR with the connected wallet (xBull/Freighter/Lobstr/Hana/WalletConnect)
- * and submits to Horizon testnet.
+ * Adds the USDC trustline: builds the changeTrust, signs it with whichever
+ * wallet the user has (Normal-wallet passkey or external wallet), and submits
+ * to Horizon for the active network.
  */
 export async function addUSDCTrustline(publicKey: string) {
-  // Short-circuit if already present
+  const cfg = stellarCfg();
+
+  // Short-circuit if already present.
   if (await hasUSDCTrustline(publicKey)) {
     return { alreadyTrusted: true, txResult: null };
   }
 
-  // 1) Build XDR
   const unsignedXDR = await buildUSDCTrustlineTxXDR(publicKey);
-
-  // 2) Ask active connector to sign (your abstraction handles xBull/Freighter/etc.)
-  const signedXDR = await signXDRWithConnectedWallet(unsignedXDR, TESTNET_PASSPHRASE, publicKey);
-
-  // 3) Submit to Horizon (no Server object)
-  const txResult = await submitTransactionXDR(signedXDR);
+  const signedXDR = await signStellarTxForMgi(unsignedXDR, cfg.NETWORK_PASSPHRASE, publicKey);
+  const txResult = await submitTransactionXDR(cfg.HORIZON_URL, signedXDR);
 
   return { alreadyTrusted: false, txResult };
 }

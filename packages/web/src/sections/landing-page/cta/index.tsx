@@ -165,7 +165,7 @@ export const CtaImage: React.FC<CtaImageProps> = (sectionProps) => {
           }}
         >
           {t(
-            'Join thousands earning yield, sending money globally, and keeping full custody of their funds.'
+            'Join thousands investing in crypto, earning yield, and keeping full custody of their funds.'
           )}
         </Box>
 
@@ -193,7 +193,7 @@ export const CtaImage: React.FC<CtaImageProps> = (sectionProps) => {
           </Box>
           <Box
             component="a"
-            href="https://docsend.com/view/s/ajddjyp5bzzb4nid"
+            href="https://normalfi.substack.com/p/making-crypto-normal-simple-safe"
             target="_blank"
             rel="noopener noreferrer"
             sx={{

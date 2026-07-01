@@ -23,11 +23,17 @@ import type { HoldingData } from './_shared';
 // -------------------------------------------------------------------
 // DonutChart
 // -------------------------------------------------------------------
+
+// Hairline minimum arc (~2px at the donut's rendered size) so a genuinely tiny
+// holding still shows a sliver. Larger slices render at their true proportion,
+// so a 1% asset stays thin rather than being padded out.
+const MIN_SEG_DASH = 2;
+
 function DonutChart({ holdingsData }: { holdingsData: HoldingData[] }) {
   const total = holdingsData.reduce((s, h) => s + h.value, 0);
   if (total === 0) {
     return (
-      <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width={DONUT_SIZE} height={DONUT_SIZE}>
+      <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width="100%" height="100%" style={{ display: 'block' }}>
         <circle
           cx={DONUT_CX}
           cy={DONUT_CY}
@@ -40,9 +46,15 @@ function DonutChart({ holdingsData }: { holdingsData: HoldingData[] }) {
     );
   }
 
-  let cumulativePct = 0;
+  // Reserve one gap after every slice; the rest is shared by true proportion.
+  // Only genuinely tiny holdings hit the hairline floor below, so gaps stay
+  // clean and a 1% asset renders as a thin sliver, not a padded chunk.
+  const nonZero = holdingsData.filter((h) => h.value > 0).length;
+  const usable = DONUT_CIRC - nonZero * DONUT_GAP;
+
+  let cursor = 0;
   return (
-    <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width={DONUT_SIZE} height={DONUT_SIZE}>
+    <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width="100%" height="100%" style={{ display: 'block' }}>
       <circle
         cx={DONUT_CX}
         cy={DONUT_CY}
@@ -53,10 +65,10 @@ function DonutChart({ holdingsData }: { holdingsData: HoldingData[] }) {
       />
       {holdingsData.map((h, i) => {
         const pct = h.value / total;
-        const dash = Math.max(pct * DONUT_CIRC - DONUT_GAP, 0);
-        if (dash <= 0) return null;
-        const offset = cumulativePct;
-        cumulativePct += pct;
+        if (pct <= 0) return null;
+        const dash = Math.max(pct * usable, MIN_SEG_DASH);
+        const offset = cursor;
+        cursor += dash + DONUT_GAP;
         return (
           <circle
             key={h.token.contract}
@@ -67,7 +79,7 @@ function DonutChart({ holdingsData }: { holdingsData: HoldingData[] }) {
             stroke={getHoldingColor(h.token, i)}
             strokeWidth={DONUT_STROKE}
             strokeDasharray={`${dash} ${DONUT_CIRC - dash}`}
-            strokeDashoffset={-(offset * DONUT_CIRC)}
+            strokeDashoffset={-offset}
             transform={`rotate(-90 ${DONUT_CX} ${DONUT_CY})`}
             strokeLinecap="butt"
           />
@@ -153,6 +165,9 @@ export function HeroCard({
           alignItems: 'stretch',
           gap: { xs: '32px', md: '64px' },
           flexDirection: { xs: 'column', sm: 'row' },
+          // Taller than the donut so space-between opens up a clear gap under the
+          // balance and the legend column has room for more assets before wrapping.
+          minHeight: { xs: 'auto', sm: 264 },
         }}
       >
         {/* Left: label + balance + stats */}
@@ -193,12 +208,12 @@ export function HeroCard({
             )}
           </Box>
 
-          {/* Bottom group: stats */}
+          {/* Bottom group: stats — grouped together with clear spacing between */}
           <Box
             sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: { xs: '20px', md: '32px' },
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: { xs: '32px', md: '72px' },
               mt: { xs: '20px', md: 0 },
             }}
           >
@@ -242,27 +257,36 @@ export function HeroCard({
           </Box>
         </Box>
 
-        {/* Right: donut chart + legend */}
+        {/* Right: legend (left) + donut chart */}
         {!loading && holdingsData.length > 0 && (
           <Box
             sx={{
               display: 'flex',
-              flexDirection: { xs: 'row', sm: 'column' },
-              alignItems: 'center',
-              gap: { xs: '20px', sm: '16px' },
+              flexDirection: { xs: 'column-reverse', sm: 'row' },
+              // Left-align on mobile (matches the stats above); center on desktop
+              // where it sits beside the balance.
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              gap: { xs: '20px', sm: '32px' },
               flexShrink: 0,
             }}
           >
-            <DonutChart holdingsData={holdingsData} />
-
-            {/* Legend */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '130px' }}>
-              {holdingsData.slice(0, 5).map((h, i) => {
+            {/* Legend — left of the donut, flowing into more columns as assets grow */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateRows: 'repeat(8, auto)',
+                gridAutoFlow: 'column',
+                columnGap: '28px',
+                rowGap: '14px',
+                justifyItems: 'stretch',
+              }}
+            >
+              {holdingsData.map((h, i) => {
                 const pct = totalBalance > 0 ? ((h.value / totalBalance) * 100).toFixed(1) : '0';
                 return (
                   <Box
                     key={h.token.contract}
-                    sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+                    sx={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 124 }}
                   >
                     <Box
                       sx={{
@@ -290,11 +314,17 @@ export function HeroCard({
                   </Box>
                 );
               })}
-              {holdingsData.length > 5 && (
-                <Box sx={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', pl: '20px' }}>
-                  +{holdingsData.length - 5} more
-                </Box>
-              )}
+            </Box>
+
+            {/* Full-width square on mobile; fixed size beside the balance on desktop */}
+            <Box
+              sx={{
+                width: { xs: '100%', sm: DONUT_SIZE },
+                aspectRatio: '1 / 1',
+                flexShrink: 0,
+              }}
+            >
+              <DonutChart holdingsData={holdingsData} />
             </Box>
           </Box>
         )}

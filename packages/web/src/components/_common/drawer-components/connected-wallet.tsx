@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
@@ -8,100 +9,28 @@ import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
-import { useState, type ReactNode } from 'react';
-import { ModalType } from '@normalfinance/types';
-import { useAppStore } from '@normalfinance/state';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
+import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
-import Dialog from '@mui/material/Dialog';
-import Button from '@mui/material/Button';
 import Skeleton from '@mui/material/Skeleton';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import AddOutlined from '@mui/icons-material/AddOutlined';
-import CloseOutlined from '@mui/icons-material/CloseOutlined';
-import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
-import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
-import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
-import CallMadeOutlined from '@mui/icons-material/CallMadeOutlined';
-import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
-import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
-import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 
-import ReceiveModal from '@/components/_common/receive-modal';
-import { ReceiveAssetPicker } from '@/components/_common/receive-asset-picker';
-import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
+import { Iconify } from '@/components/template/iconify';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
 
 // ----------------------------------------------------------------------
-type ActionChooserOption = {
-  label: string;
-  icon: ReactNode;
-  onClick: () => void;
-};
 
-type ActionChooserDialogProps = {
-  open: boolean;
-  title: string;
-  actions: ActionChooserOption[];
-  onClose: () => void;
-};
-
-function ActionChooserDialog({ open, title, actions, onClose }: ActionChooserDialogProps) {
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="xs"
-      slotProps={{
-        paper: {
-          sx: {
-            borderRadius: 2,
-            p: 1,
-          },
-        },
-      }}
-    >
-      <DialogTitle sx={{ p: 2, pb: 1 }}>
-        <Box
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
-        >
-          <Typography variant="h6">{title}</Typography>
-          <IconButton onClick={onClose} aria-label="close dialog">
-            <CloseOutlined sx={{ fontSize: 20 }} />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-
-      <DialogContent sx={{ p: 2, pt: 1.5 }}>
-        <Stack spacing={1}>
-          {actions.map((action) => (
-            <Button
-              key={action.label}
-              fullWidth
-              variant="outlined"
-              color="inherit"
-              onClick={action.onClick}
-              startIcon={action.icon}
-              sx={{ justifyContent: 'flex-start', py: 1.5, px: 2, textTransform: 'none' }}
-            >
-              {action.label}
-            </Button>
-          ))}
-        </Stack>
-      </DialogContent>
-    </Dialog>
-  );
-}
+const MONO = {
+  fontFamily: '"Geist Mono", ui-monospace, monospace',
+  fontFeatureSettings: '"ss01","ss02","zero"',
+  fontVariantNumeric: 'tabular-nums',
+} as const;
 
 export interface ConnectedWalletProps {
   address: string;
@@ -121,103 +50,19 @@ export default function ConnectedWallet({
   savingsValue = 0,
   savingsFetching = false,
   tokensFetching = false,
-  percentageChange,
   tokens,
   activity,
-  bitcoinAddress,
 }: ConnectedWalletProps) {
   const { t } = useTranslate();
   const router = useRouter();
-  const { setModalView } = useAppStore();
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
-  const [receiveContext, setReceiveContext] = useState<'deposit' | 'receive' | null>(null);
-  const [receivePickerOpen, setReceivePickerOpen] = useState(false);
-  const [pendingReceiveContext, setPendingReceiveContext] = useState<'deposit' | 'receive'>('receive');
-  const [btcReceiveOpen, setBtcReceiveOpen] = useState(false);
+  // Same Buy / Sell / Send / Receive flows as the hero portfolio card.
+  const { startAction } = useAssetActionsContext();
 
-  const openReceiveModal = (context: 'deposit' | 'receive') => {
-    setTransferDialogOpen(false);
-    setDepositDialogOpen(false);
-    if (bitcoinAddress) {
-      setPendingReceiveContext(context);
-      setReceivePickerOpen(true);
-    } else {
-      setReceiveContext(context);
-    }
-  };
-
-  const handlePickerSelectStellar = () => {
-    setReceivePickerOpen(false);
-    setReceiveContext(pendingReceiveContext);
-  };
-
-  const handlePickerSelectBitcoin = () => {
-    setReceivePickerOpen(false);
-    setBtcReceiveOpen(true);
-  };
-
-  const openSendModal = () => {
-    setTransferDialogOpen(false);
-    setModalView(ModalType.SEND_CRYPTO, true);
-  };
-
-  const openDepositCashModal = () => {
-    setDepositDialogOpen(false);
-    setModalView(ModalType.ON_RAMP, true);
-  };
-
-  const actionButtons = [
-    {
-      label: t('Transfer'),
-      icon: <SyncAltOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => setTransferDialogOpen(true),
-    },
-    {
-      label: t('Deposit'),
-      icon: <AddOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => setDepositDialogOpen(true),
-    },
-    {
-      label: t('Savings'),
-      icon: <SavingsOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => {
-        router.push(paths.savings);
-      },
-    },
-    {
-      label: t('Swap'),
-      icon: <SwapVertOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => {
-        router.push(paths.swap);
-      },
-    },
-  ];
-
-  const transferActions: ActionChooserOption[] = [
-    {
-      label: t('Send'),
-      icon: <CallMadeOutlined sx={{ fontSize: 20 }} />,
-      onClick: openSendModal,
-    },
-    {
-      label: t('Receive'),
-      icon: <CallReceivedOutlined sx={{ fontSize: 20 }} />,
-      onClick: () => openReceiveModal('receive'),
-    },
-  ];
-
-  const depositActions: ActionChooserOption[] = [
-    {
-      label: t('Deposit cash'),
-      icon: <AttachMoneyOutlined sx={{ fontSize: 20 }} />,
-      onClick: openDepositCashModal,
-    },
-    {
-      label: t('Deposit crypto'),
-      icon: <AccountBalanceWalletOutlined sx={{ fontSize: 20 }} />,
-      onClick: () => openReceiveModal('deposit'),
-    },
+  const actionButtons: { label: string; icon: ReactNode; onClick: () => void }[] = [
+    { label: t('Buy'), icon: <Iconify icon="ic:round-add" width={16} />, onClick: () => startAction('buy') },
+    { label: t('Sell'), icon: <Iconify icon="ic:round-remove" width={16} />, onClick: () => startAction('sell') },
+    { label: t('Send'), icon: <Iconify icon="ic:round-arrow-upward" width={16} />, onClick: () => startAction('send') },
+    { label: t('Receive'), icon: <Iconify icon="ic:round-arrow-downward" width={16} />, onClick: () => startAction('receive') },
   ];
 
   const tabs = useTabs('assets');
@@ -246,7 +91,7 @@ export default function ConnectedWallet({
           {savingsFetching || tokensFetching ? (
             <Skeleton variant="text" width={90} height={28} />
           ) : (
-            <Typography sx={{ fontSize: '22px', fontWeight: 400, lineHeight: 1.2, letterSpacing: '-0.02em', fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums' }}>
+            <Typography sx={{ fontSize: '22px', fontWeight: 400, lineHeight: 1.2, ...MONO, letterSpacing: '-0.02em' }}>
               {fCurrencyTwoDecimals(balance + savingsValue)}
             </Typography>
           )}
@@ -262,7 +107,7 @@ export default function ConnectedWallet({
           {tokensFetching ? (
             <Skeleton variant="text" width={60} height={22} />
           ) : (
-            <Typography sx={{ fontSize: '15px', fontWeight: 400, fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
+            <Typography sx={{ fontSize: '15px', fontWeight: 400, ...MONO, letterSpacing: '-0.01em' }}>
               {fCurrencyTwoDecimals(balance)}
             </Typography>
           )}
@@ -270,21 +115,30 @@ export default function ConnectedWallet({
 
         <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mx: '14px' }} />
 
-        {/* Savings row */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: '14px', py: '12px' }}>
+        {/* Savings row → /savings */}
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          role="button"
+          tabIndex={0}
+          onClick={() => router.push(paths.savings)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(paths.savings); }}
+          sx={{ px: '14px', py: '12px', cursor: 'pointer', borderRadius: '8px', transition: 'background 150ms', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
+        >
           <Typography sx={{ fontSize: '13.5px', color: '#6B6B76' }}>
             {t('Savings')}
           </Typography>
           {savingsFetching ? (
             <Skeleton variant="text" width={60} height={24} />
           ) : (
-            <Typography sx={{ fontSize: '15px', fontWeight: 400, fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
+            <Typography sx={{ fontSize: '15px', fontWeight: 400, ...MONO, letterSpacing: '-0.01em' }}>
               {fCurrencyTwoDecimals(savingsValue)}
             </Typography>
           )}
         </Stack>
 
-        {/* Action buttons — 4-column grid */}
+        {/* Action buttons — Buy / Sell / Send / Receive */}
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', mt: '12px', mx: '8px' }}>
           {actionButtons.map((btn) => (
             <Box
@@ -322,39 +176,6 @@ export default function ConnectedWallet({
           ))}
         </Box>
       </Box>
-
-      <ActionChooserDialog
-        open={transferDialogOpen}
-        title={t('Transfer')}
-        actions={transferActions}
-        onClose={() => setTransferDialogOpen(false)}
-      />
-
-      <ActionChooserDialog
-        open={depositDialogOpen}
-        title={t('Deposit')}
-        actions={depositActions}
-        onClose={() => setDepositDialogOpen(false)}
-      />
-
-      <ReceiveModal
-        open={!!receiveContext}
-        context={receiveContext ?? 'deposit'}
-        onClose={() => setReceiveContext(null)}
-      />
-
-      <ReceiveAssetPicker
-        open={receivePickerOpen}
-        onClose={() => setReceivePickerOpen(false)}
-        onSelectStellar={handlePickerSelectStellar}
-        onSelectBitcoin={handlePickerSelectBitcoin}
-      />
-
-      <BitcoinReceiveModal
-        open={btcReceiveOpen}
-        address={bitcoinAddress ?? null}
-        onClose={() => setBtcReceiveOpen(false)}
-      />
 
       <Tabs
         value={tabs.value}

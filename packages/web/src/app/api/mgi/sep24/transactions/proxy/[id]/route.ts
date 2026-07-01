@@ -23,9 +23,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const host = process.env.MGI_ACCESS_HOST;
     if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
-    const auth = req.headers.get('authorization') || '';
-    if (!auth.toLowerCase().startsWith('bearer ')) {
-      return j(401, { error: 'Missing or invalid Authorization (Bearer token required)' });
+    // The SEP-10 token comes via x-mgi-token (Authorization carries the Supabase
+    // session used to authenticate the user above).
+    const sep10 = req.headers.get('x-mgi-token') || '';
+    if (!sep10) {
+      return j(401, { error: 'Missing MoneyGram SEP-10 token (x-mgi-token header required)' });
     }
 
     const id = params.id;
@@ -37,7 +39,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       method: 'GET',
       headers: {
         Accept: 'application/json, text/plain, */*',
-        Authorization: auth,
+        Authorization: `Bearer ${sep10}`,
       },
       redirect: 'manual',
     });

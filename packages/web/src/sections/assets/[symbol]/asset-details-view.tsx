@@ -28,17 +28,17 @@ import Skeleton from '@mui/material/Skeleton';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
 import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import CallMadeOutlined from '@mui/icons-material/CallMadeOutlined';
+import MoneyOffOutlined from '@mui/icons-material/MoneyOffOutlined';
 import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
 import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
 import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
-import MoneyOffOutlined from '@mui/icons-material/MoneyOffOutlined';
 
 import { Iconify } from '@/components/template/iconify';
 import SendModal from '@/components/_common/send-modal';
 import { useSnackbar } from '@/components/template/snackbar';
 import OnRampDialog from '@/components/_common/onramp-dialog';
-import OffRampDialog from '@/components/_common/offramp-dialog';
 import ReceiveModal from '@/components/_common/receive-modal';
+import OffRampDialog from '@/components/_common/offramp-dialog';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
@@ -536,13 +536,15 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         onClose={() => setReceiveOpen(false)}
       />
 
+      {/* USDC can also be bought with cash via MoneyGram (Stellar USDC deposit);
+          other assets are Stripe + Coinbase only. */}
       <OnRampDialog
         open={buyOpen}
         amount="100"
         onClose={() => setBuyOpen(false)}
         walletAddress={(native ? nativeAddress : wallet.address) ?? undefined}
         asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
-        providers={['stripe', 'coinbase']}
+        providers={token.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']}
       />
 
       {/* USDC offers Coinbase + MoneyGram (both cash out Stellar USDC); BTC/ETH/

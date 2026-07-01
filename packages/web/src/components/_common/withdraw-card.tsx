@@ -7,6 +7,7 @@ import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import React, { useRef, useState, useEffect } from 'react';
 import { ModalType, type Token } from '@normalfinance/types';
+import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import {
   getMaxAmount,
@@ -32,7 +33,6 @@ import {
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { WalletGate } from './wallet-gate';
-import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { Iconify } from '../template/iconify';
 import PasteIconButton from '../paste-icon-button';
 

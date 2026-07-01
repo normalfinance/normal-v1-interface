@@ -6,17 +6,15 @@ import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useUserActivity } from '@/hooks';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, logger } from '@normalfinance/utils';
-import { useUserActivity, useStellarConfig } from '@/hooks';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
-import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
+import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import {
   useNormalWallet,
 } from '@/hooks/stellar/use-normal-wallet';
@@ -25,22 +23,23 @@ import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
-import { alpha, useTheme } from '@mui/material/styles';
 import AddOutlined from '@mui/icons-material/AddOutlined';
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import SyncOutlined from '@mui/icons-material/SyncOutlined';
 import CloseOutlined from '@mui/icons-material/CloseOutlined';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
-import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import {
   Box,
   Stack,
   Avatar,
   Button,
+  Dialog,
   Drawer,
   Tooltip,
   IconButton,
   Typography,
+  DialogTitle,
+  DialogActions,
+  DialogContent,
   CircularProgress,
 } from '@mui/material';
 
@@ -118,7 +117,14 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
   }, [getAsset]);
 
   const allTokens = useMemo(
-    () => [...tokens, btcToken, ethToken, solToken].filter((tkn): tkn is NonNullable<typeof tkn> => !!tkn),
+    () =>
+      [...tokens, btcToken, ethToken, solToken]
+        .filter((tkn): tkn is NonNullable<typeof tkn> => !!tkn)
+        // Only assets the user actually holds. The portfolio aggregator always
+        // emits a BTC/ETH/SOL/XLM/USDC entry (0 when there's no address/balance),
+        // so without this a Stellar-only user sees a phantom "BTC $0". Mirrors the
+        // balance>0 filtering the holdings/hero views already use.
+        .filter((tkn) => BigNumber(tkn.balance).gt(0)),
     [tokens, btcToken, ethToken, solToken]
   );
 
@@ -130,7 +136,11 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
   const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
   const savingsLoaded = userPosition !== null;
 
-  if (!address) {
+  // Render whenever the user has ANY wallet — a Turnkey-only (e.g. BTC-first)
+  // user has no Stellar `address` but should still see their real drawer.
+  // ConnectedWallet ignores `address`; balances come from the portfolio.
+  const hasWallet = !!address || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
+  if (!hasWallet) {
     return null;
   }
 
@@ -167,12 +177,9 @@ export type AccountDrawerProps = IconButtonProps;
 export function AccountDrawer(props: AccountDrawerProps) {
   /*  stores ------------------------------------------------------ */
   const persist = usePersistStore();
-  const theme = useTheme();
   const { t } = useTranslate();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const config = useStellarConfig();
-  const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
@@ -209,17 +216,13 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const ethereumAddress = turnkeyAddresses?.ethereumAddress ?? null;
   const solanaAddress = turnkeyAddresses?.solanaAddress ?? null;
 
-  // Only fetch account status while the drawer is open and a wallet is connected
-  const { isLoading: isCheckingSetup, accountExists, hasUsdcTrustline } = useAccountStatus(
-    open && connectedAddress ? connectedAddress : '',
-    { assetIssuer: savingsUsdcIssuer }
-  );
-  const isSetupIncomplete =
-    !!connectedAddress &&
-    !isCheckingSetup &&
-    (!accountExists || !!(savingsUsdcIssuer && !hasUsdcTrustline));
+  // Has ANY wallet — a Stellar wallet OR a Turnkey chain wallet (BTC/ETH/SOL).
+  // Asset-first users may have e.g. only BTC and no Stellar address yet.
+  const hasAnyWallet =
+    isWalletConnected || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [wizardInitialStep, setWizardInitialStep] = useState<WizardStep | undefined>(undefined);
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
@@ -362,11 +365,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [searchParams, router]);
 
   useEffect(() => {
-    if (searchParams.get('setup') === 'continue') {
-      setWizardInitialStep('fund-xlm');
-      setShowLoginModal(true);
-      router.replace(paths.savings, { scroll: false });
-    }
+    if (searchParams.get('setup') !== 'continue') return;
+    // Legacy onramp return: savings setup (activation + trustline) now completes
+    // on /savings itself, so just land the user there — the savings card guides
+    // the next step based on real account state.
+    router.replace(paths.savings, { scroll: false });
+     
   }, [searchParams, router]);
 
   useEffect(() => {
@@ -549,7 +553,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <Tooltip title={isDisconnecting ? 'Logging out...' : 'Logout'}>
               <Button
                 size="small"
-                onClick={handleDisconnect}
+                onClick={() => setShowLogoutConfirm(true)}
                 disabled={isDisconnecting}
                 data-testid="logout-button"
                 sx={{
@@ -591,16 +595,18 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     </Typography>
                   </Box>
                 </Stack>
-                {connectedAddress && (
+                {(connectedAddress || bitcoinAddress || ethereumAddress || solanaAddress) && (
                   <Box sx={{ mt: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <Stack direction="row" alignItems="center" gap="8px">
-                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#14B8A6', flexShrink: 0 }} />
-                      <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Stellar</Box>
-                      <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {`${connectedAddress.slice(0, 8)}...${connectedAddress.slice(-6)}`}
-                      </Box>
-                      <CopyIconButton value={connectedAddress} alert="Stellar address copied" />
-                    </Stack>
+                    {connectedAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#14B8A6', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Stellar</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${connectedAddress.slice(0, 8)}...${connectedAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={connectedAddress} alert="Stellar address copied" />
+                      </Stack>
+                    )}
                     {bitcoinAddress && (
                       <Stack direction="row" alignItems="center" gap="8px">
                         <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#F7931A', flexShrink: 0 }} />
@@ -649,122 +655,112 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     {t('Connecting to your wallet...')}
                   </Typography>
                 </Box>
-              ) : isWalletConnected && connectedAddress ? (
-                <>
-                  {isSetupIncomplete && (
-                    <Box
+              ) : hasAnyWallet ? (
+                // Any wallet (incl. a Turnkey-only BTC/ETH/SOL user with no
+                // Stellar address yet) → the real drawer. Savings-specific setup
+                // is no longer nagged here; it lives on /savings, on demand.
+                <WalletConnected address={connectedAddress ?? ''} drawerOpen={open} bitcoinAddress={bitcoinAddress} ethereumAddress={ethereumAddress} solanaAddress={solanaAddress} />
+              ) : (
+                // No wallet yet — a calm $0 empty state. The pick-an-asset prompt
+                // only shows here (never once the user has created any wallet).
+                <Box sx={{ px: 2, py: 5 }}>
+                  <Stack spacing={2.5} alignItems="center" textAlign="center">
+                    <Typography
                       sx={{
-                        mx: 1,
-                        mb: 0.5,
-                        p: 2,
-                        borderRadius: 2,
-                        bgcolor: alpha(theme.palette.warning.main, 0.08),
-                        border: `1px solid ${alpha(theme.palette.warning.main, 0.25)}`,
+                        fontFamily: '"Geist Mono", ui-monospace, monospace',
+                        fontFeatureSettings: '"ss01","ss02","zero"',
+                        fontSize: '30px',
+                        fontWeight: 500,
+                        color: 'text.primary',
+                        letterSpacing: '-0.02em',
                       }}
                     >
-                      <Stack spacing={1.5}>
-                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                          <InfoOutlined sx={{ fontSize: 18, color: 'warning.main', flexShrink: 0, mt: 0.15 }} />
-                          <Box>
-                            <Typography variant="subtitle2" sx={{ mb: 0.25 }}>
-                              {!accountExists ? t('Activate your wallet') : t('Add USDC trustline')}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {!accountExists
-                                ? t('Send 1+ XLM to activate your wallet on Stellar.')
-                                : t('One quick step to hold and earn USDC.')}
-                            </Typography>
-                          </Box>
-                        </Stack>
+                      $0.00
+                    </Typography>
+                    {session ? (
+                      <>
+                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
+                          {t('Pick an asset to get started — we’ll set up your wallet for it in one tap.')}
+                        </Typography>
                         <Button
                           variant="contained"
-                          size="small"
                           onClick={() => {
-                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
+                            setWizardInitialStep(undefined);
                             setShowLoginModal(true);
-                            onClose();
                           }}
                           sx={{
+                            bgcolor: '#0A0A0F',
+                            color: '#fff',
                             borderRadius: 1.5,
-                            bgcolor: 'warning.main',
-                            color: 'warning.contrastText',
-                            '&:hover': { bgcolor: 'warning.dark' },
-                            alignSelf: 'flex-start',
-                            fontSize: '0.8rem',
-                            px: 1.75,
+                            px: 3,
+                            '&:hover': { bgcolor: '#1a1a25' },
                           }}
                         >
-                          {t('Continue setup')}
+                          {t('Pick an asset')}
                         </Button>
-                      </Stack>
-                    </Box>
-                  )}
-                  <WalletConnected address={connectedAddress} drawerOpen={open} bitcoinAddress={bitcoinAddress} ethereumAddress={ethereumAddress} solanaAddress={solanaAddress} />
-                </>
-              ) : (
-                <Box sx={{ px: 1, py: 3 }}>
-                  <Box
-                    sx={{
-                      border: 1,
-                      borderColor: 'warning.light',
-                      borderRadius: 2,
-                      p: 2.5,
-                      bgcolor: alpha(theme.palette.warning.main, 0.04),
-                    }}
-                  >
-                    <Stack spacing={2}>
-                      <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Box
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 1.5,
-                            bgcolor: alpha(theme.palette.warning.main, 0.12),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
+                      </>
+                    ) : (
+                      <>
+                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
+                          {t('Sign in to start buying, earning, and holding crypto.')}
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          onClick={handleConnectClick}
+                          sx={{ borderRadius: 1.5, px: 3 }}
                         >
-                          <RocketLaunchOutlined sx={{ fontSize: 22, color: 'warning.dark' }} />
-                        </Box>
-                        <Box>
-                          <Typography variant="subtitle1" fontWeight={600}>
-                            {t('Account Setup')}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {t('Complete your setup to start investing')}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        onClick={() => {
-                          if (session) {
-                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
-                            setShowLoginModal(true);
-                          } else {
-                            handleConnectClick();
-                          }
-                        }}
-                        sx={{
-                          bgcolor: 'warning.main',
-                          color: 'warning.contrastText',
-                          '&:hover': { bgcolor: 'warning.dark' },
-                          borderRadius: 1.5,
-                        }}
-                      >
-                        {t('Continue setup')}
-                      </Button>
-                    </Stack>
-                  </Box>
+                          {t('Sign in')}
+                        </Button>
+                      </>
+                    )}
+                  </Stack>
                 </Box>
               )}
             </Stack>
           </Scrollbar>
         )}
       </Drawer>
+
+      {/* Logout confirmation — an extra, deliberate step so a wallet can't be
+          disconnected (and an unbacked-up wallet effectively lost) in one tap. */}
+      <Dialog
+        open={showLogoutConfirm}
+        onClose={() => !isDisconnecting && setShowLogoutConfirm(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>{t('Log out of this device?')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {t(
+              "You'll be signed out and your wallet disconnected from this device. Make sure you've backed up your recovery phrase — without it, an imported wallet can't be restored."
+            )}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            onClick={() => setShowLogoutConfirm(false)}
+            disabled={isDisconnecting}
+            sx={{ textTransform: 'none', color: 'text.secondary' }}
+          >
+            {t('Cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={isDisconnecting}
+            startIcon={isDisconnecting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            onClick={async () => {
+              await handleDisconnect();
+              setShowLogoutConfirm(false);
+            }}
+            sx={{ textTransform: 'none', borderRadius: '999px' }}
+          >
+            {isDisconnecting ? t('Logging out…') : t('Log out')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <OnboardingWizard
         open={showLoginModal}
         initialStep={wizardInitialStep}

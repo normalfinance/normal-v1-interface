@@ -2,8 +2,9 @@ import type { NetworkType } from '@normalfinance/utils';
 import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import { redis } from '@/server/rateLimiter';
-import { buildAsset } from './normalize';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
+
+import { buildAsset } from './normalize';
 
 // Pure normalization + stale-fallback live in ./normalize (unit-tested).
 export { applyStaleFallback } from './normalize';
@@ -37,12 +38,19 @@ function withTimeout<T>(p: Promise<T>, ms = SOURCE_TIMEOUT_MS): Promise<T> {
 
 const COINGECKO_IDS = 'bitcoin,ethereum,solana,stellar,usd-coin';
 
-/** Batched USD spot prices for all assets, shared across users via Redis. */
-export async function getSpotPrices(): Promise<Record<string, number>> {
-  const key = 'prices:spot';
+export interface SpotData {
+  /** Symbol → USD spot price. */
+  prices: Record<string, number>;
+  /** Symbol → 24h price change %. */
+  changes: Record<string, number>;
+}
+
+/** Batched USD spot prices + 24h change for all assets, shared via Redis. */
+export async function getSpotPrices(): Promise<SpotData> {
+  const key = 'prices:spot:v2';
   try {
-    const cached = await redis.get<Record<string, number>>(key);
-    if (cached) return cached;
+    const cached = await redis.get<SpotData>(key);
+    if (cached?.prices) return cached;
   } catch {
     /* cache miss / unavailable */
   }
@@ -51,10 +59,11 @@ export async function getSpotPrices(): Promise<Record<string, number>> {
   if (process.env.COINGECKO_API_KEY) headers['x-cg-demo-api-key'] = process.env.COINGECKO_API_KEY;
 
   const prices: Record<string, number> = { USDC: 1 };
+  const changes: Record<string, number> = { USDC: 0 };
   try {
     const res = await withTimeout(
       fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${COINGECKO_IDS}&vs_currencies=usd`,
+        `https://api.coingecko.com/api/v3/simple/price?ids=${COINGECKO_IDS}&vs_currencies=usd&include_24hr_change=true`,
         { headers, cache: 'no-store' }
       )
     );
@@ -65,8 +74,13 @@ export async function getSpotPrices(): Promise<Record<string, number>> {
       prices.SOL = d.solana?.usd ?? 0;
       prices.XLM = d.stellar?.usd ?? 0;
       prices.USDC = d['usd-coin']?.usd ?? 1;
+      changes.BTC = d.bitcoin?.usd_24h_change ?? 0;
+      changes.ETH = d.ethereum?.usd_24h_change ?? 0;
+      changes.SOL = d.solana?.usd_24h_change ?? 0;
+      changes.XLM = d.stellar?.usd_24h_change ?? 0;
+      changes.USDC = d['usd-coin']?.usd_24h_change ?? 0;
       try {
-        await redis.set(key, prices, { ex: SPOT_TTL_SECONDS });
+        await redis.set(key, { prices, changes }, { ex: SPOT_TTL_SECONDS });
       } catch {
         /* non-fatal */
       }
@@ -74,7 +88,7 @@ export async function getSpotPrices(): Promise<Record<string, number>> {
   } catch {
     /* upstream failed — return what we have (USDC=1) */
   }
-  return prices;
+  return { prices, changes };
 }
 
 // --------------------------- per-chain balances ----------------------------
@@ -153,8 +167,9 @@ export async function aggregatePortfolio(
       : Promise.resolve<{ xlm: number; usdc: number } | null>(null),
   ]);
 
-  const prices = pricesR.status === 'fulfilled' ? pricesR.value : {};
-  const priceOf = (s: string): number | null => (s in prices ? prices[s] : null);
+  const spot = pricesR.status === 'fulfilled' ? pricesR.value : { prices: {}, changes: {} };
+  const priceOf = (s: string): number | null => (s in spot.prices ? spot.prices[s] : null);
+  const changeOf = (s: string): number | null => (s in spot.changes ? spot.changes[s] : null);
 
   // number on success, null on error — `undefined` never happens (settled).
   const settledBalance = (r: PromiseSettledResult<number | null>): number | null =>
@@ -164,20 +179,22 @@ export async function aggregatePortfolio(
   const stellarFailed = stellarR.status === 'rejected';
 
   const assets: PortfolioAsset[] = [
-    buildAsset('BTC', addresses.bitcoin, settledBalance(btcR), priceOf('BTC')),
-    buildAsset('ETH', addresses.ethereum, settledBalance(ethR), priceOf('ETH')),
-    buildAsset('SOL', addresses.solana, settledBalance(solR), priceOf('SOL')),
+    buildAsset('BTC', addresses.bitcoin, settledBalance(btcR), priceOf('BTC'), changeOf('BTC')),
+    buildAsset('ETH', addresses.ethereum, settledBalance(ethR), priceOf('ETH'), changeOf('ETH')),
+    buildAsset('SOL', addresses.solana, settledBalance(solR), priceOf('SOL'), changeOf('SOL')),
     buildAsset(
       'XLM',
       addresses.stellar,
       addresses.stellar ? (stellarFailed ? null : stellar?.xlm ?? 0) : null,
-      priceOf('XLM')
+      priceOf('XLM'),
+      changeOf('XLM')
     ),
     buildAsset(
       'USDC',
       addresses.stellar,
       addresses.stellar ? (stellarFailed ? null : stellar?.usdc ?? 0) : null,
-      priceOf('USDC')
+      priceOf('USDC'),
+      changeOf('USDC')
     ),
   ];
 

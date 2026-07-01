@@ -13,6 +13,7 @@ import { I18nProvider } from '@/locales/i18n-provider';
 import { ModalProvider } from '@/providers/ModalProvider';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
+import { AssetActionsProvider } from '@/providers/AssetActionsProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 import { SupabaseAuthProvider } from '@/providers/SupabaseAuthProvider';
 import { WalletPasswordProvider } from '@/providers/WalletPasswordProvider';
@@ -144,7 +145,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                               <AnnouncementProvider>
                                 <WalletPasswordProvider>
                                   <ModalProvider>
-                                    <DashboardLayout>{children}</DashboardLayout>
+                                    <AssetActionsProvider>
+                                      <DashboardLayout>{children}</DashboardLayout>
+                                    </AssetActionsProvider>
                                   </ModalProvider>
                                 </WalletPasswordProvider>
                               </AnnouncementProvider>

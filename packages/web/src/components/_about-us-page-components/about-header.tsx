@@ -370,7 +370,7 @@ export const AboutHeader: React.FC = () => {
                       mb: '5px',
                     }}
                   >
-                    Total Value Locked
+                    Backed by
                   </Box>
                   <Box
                     sx={{
@@ -382,7 +382,7 @@ export const AboutHeader: React.FC = () => {
                       fontFamily: '"Geist Mono", "Courier New", monospace',
                     }}
                   >
-                    $1,428,629
+                    Stellar · Draper
                   </Box>
                 </Box>
               </Box>

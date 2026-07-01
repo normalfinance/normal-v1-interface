@@ -27,9 +27,12 @@ export async function listTransactions(opts?: {
 }
 
 export async function getTransaction(id: string, authToken?: string) {
-  const url = `/api/mgi/sep24/transaction/proxy/${encodeURIComponent(id)}`;
+  const url = `/api/mgi/sep24/transactions/proxy/${encodeURIComponent(id)}`;
 
-  const headers = await buildAuthHeaders();
+  const headers = { ...(await buildAuthHeaders()) } as Record<string, string>;
+  // SEP-10 token rides in its own header — Authorization stays the Supabase token.
+  if (authToken) headers['x-mgi-token'] = authToken;
+
   const r = await fetch(url, {
     headers,
     credentials: 'include',

@@ -13,6 +13,7 @@ export interface PortfolioAsset {
   balance: string | null; // coin units; null only on error
   price: string | null; // USD spot
   usdValue: string | null; // balance × price; null when either is missing
+  change24h: number | null; // 24h price change %, null when unknown
   decimals: number;
   status: AssetStatus;
 }
@@ -42,6 +43,7 @@ export interface Position {
   balance: string | null;
   price: string | null;
   usdValue: string | null;
+  change24h?: number | null; // 24h price change %, null/undefined when unknown
   decimals: number;
   status: PositionStatus;
 }

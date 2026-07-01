@@ -16,6 +16,9 @@ const BRANDS = [
   'Coinbase',
   'MoonPay',
   'Visa',
+  'MoneyGram',
+  'Turnkey',
+  'LI.FI',
 ] as const;
 
 const MarqueeWrapper = styled('div')({
