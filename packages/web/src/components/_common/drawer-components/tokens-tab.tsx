@@ -2,147 +2,70 @@
 
 import type { Token } from '@normalfinance/types';
 
+import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useRouter } from 'next/navigation';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fNumber, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
-import { useTheme } from '@mui/material/styles';
 import { Chip, Typography } from '@mui/material';
 
 export interface ToeknsTabsProps {
   tokens?: Token[];
 }
 
+const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' } as const;
+
 export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
-  const theme = useTheme();
   const { t } = useTranslate('auto');
+  const router = useRouter();
 
   return (
     <Box sx={{ pb: 2, bgcolor: 'background.paper' }}>
       {tokens.length > 0 ? (
         [...tokens]
           .sort((a, b) => {
-            const aBal = a.balance;
-            const bBal = b.balance;
-            return BigNumber(bBal).minus(aBal).toNumber();
+            // Biggest holdings first, by USD value (price × balance) — not coin count.
+            const aUsd = BigNumber(a.price).multipliedBy(a.balance);
+            const bUsd = BigNumber(b.price).multipliedBy(b.balance);
+            return bUsd.minus(aUsd).toNumber();
           })
           .map((token) => (
             <Box
               key={token.contract}
-              sx={{
-                display: 'flex',
-                padding: '16px 0px',
-                width: '100%',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              role="button"
+              tabIndex={0}
+              onClick={() => router.push(paths.assets.details(token.symbol))}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(paths.assets.details(token.symbol)); }}
+              sx={{ display: 'flex', padding: '12px 8px', width: '100%', alignItems: 'center', justifyContent: 'space-between', borderRadius: '12px', cursor: 'pointer', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
             >
-              <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
+              <Box display="flex" alignItems="center" gap="12px">
                 <Box
                   component="img"
                   src={token.icon ?? getCryptoIconUrl(token.symbol)}
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                  }}
+                  sx={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
                 />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Typography
-                    variant="body2"
-                    sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                  >
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
                     {token.symbol.startsWith('sn') && (
                       <Chip label="Short" color="error" size="small" variant="soft" />
                     )}{' '}
                     {token.symbol.replace('sn', '')}
                   </Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#6B6B76', mt: '2px' }}>
+                    {token.name}
+                  </Typography>
                 </Box>
               </Box>
-              <Box>
-                <Box>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-end',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                    >
-                      {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                      {fNumber(token.balance)} {token.symbol.replace('sn', '')}
-                    </Typography>
-                    {/* <Stack direction="row" spacing={0.5} alignItems="center" mt="4px">
-                      <Box
-                        component="span"
-                        sx={{
-                          width: 16,
-                          height: 16,
-                          display: 'flex',
-                          borderRadius: '50%',
-                          position: 'relative',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: varAlpha(theme.vars.palette.success.mainChannel, 0.16),
-                          color: 'success.dark',
-                          ...theme.applyStyles('dark', {
-                            color: 'success.light',
-                          }),
-                          ...(token.percentageChange &&
-                            token.percentageChange < 0 && {
-                              bgcolor: varAlpha(theme.vars.palette.error.mainChannel, 0.16),
-                              color: 'error.dark',
-                              ...theme.applyStyles('dark', {
-                                color: 'error.light',
-                              }),
-                            }),
-                        }}
-                      >
-                        <Iconify
-                          width={10}
-                          icon={
-                            token.percentageChange && token.percentageChange < 0
-                              ? 'eva:trending-down-fill'
-                              : 'eva:trending-up-fill'
-                          }
-                          color={
-                            token.percentageChange && token.percentageChange < 0
-                              ? 'error.main'
-                              : 'success.main'
-                          }
-                        />
-                      </Box>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color:
-                            token.percentageChange && token.percentageChange < 0
-                              ? 'error.main'
-                              : 'success.main',
-                        }}
-                      >
-                        {token.percentageChange && token.percentageChange >= 0 && '+'}
-                        {fPercent(token.percentageChange && token.percentageChange)}
-                      </Typography>
-                    </Stack> */}
-                  </Box>
-                </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <Typography sx={{ fontSize: '14px', fontWeight: 400, color: '#0A0A0F', ...MONO }}>
+                  {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
+                </Typography>
+                <Typography sx={{ fontSize: '11.5px', color: '#6B6B76', mt: '2px', ...MONO }}>
+                  {fNumber(token.balance)} {token.symbol.replace('sn', '')}
+                </Typography>
               </Box>
             </Box>
           ))

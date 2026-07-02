@@ -55,17 +55,35 @@ export interface OnrampOption {
   onClick?: () => void;
 }
 
+export interface OnrampAsset {
+  symbol: string; // 'USDC' | 'XLM' | 'BTC' | 'ETH' | 'SOL'
+  blockchain: 'stellar' | 'bitcoin' | 'ethereum' | 'solana';
+}
+
+export type OnrampProvider = 'stripe' | 'coinbase' | 'moneygram';
+
 export interface OnRampDialogProps {
   open: boolean;
   amount: string;
   onClose: () => void;
   walletAddress: string | undefined;
+  /** Asset to onramp into; defaults to USDC on Stellar (legacy behavior). */
+  asset?: OnrampAsset;
+  /** Which providers to offer; defaults to all of them. */
+  providers?: OnrampProvider[];
 }
 
 // ----------------------------------------------------------------------
 // COMPONENT -------------------------------------------------------------
 
-const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, walletAddress }) => {
+const OnRampDialog: React.FC<OnRampDialogProps> = ({
+  open,
+  amount,
+  onClose,
+  walletAddress,
+  asset = { symbol: 'USDC', blockchain: 'stellar' },
+  providers = ['stripe', 'coinbase', 'moneygram'],
+}) => {
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -81,8 +99,12 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
 
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 
+  // Non-Stellar assets onramp straight to the chain address passed in —
+  // Stellar account/trustline prerequisites don't apply to them.
+  const isStellarAsset = asset.blockchain === 'stellar';
+
   const userAddress = persist.wallet.address;
-  const isConnected = !!userAddress;
+  const isConnected = isStellarAsset ? !!userAddress : !!walletAddress;
 
   // Account status checks
   const {
@@ -95,8 +117,17 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   // Trustline hook
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
 
-  // Check if prerequisites are met
-  const prerequisitesMet = accountExists && hasUsdcTrustline;
+  // Prerequisites are Stellar-specific: USDC needs an activated account with
+  // a trustline; XLM purchases activate the account themselves; native chains
+  // just need their address, which the caller guarantees.
+  const prerequisitesMet = !isStellarAsset
+    ? true
+    : asset.symbol === 'USDC'
+      ? accountExists && hasUsdcTrustline
+      : asset.symbol === 'XLM'
+        ? true
+        : accountExists;
+  const checkingAccount = isStellarAsset && asset.symbol !== 'XLM' ? isCheckingAccount : false;
 
   const handleNormalWalletCreated = async () => {
     setShowCreateNormalWallet(false);
@@ -136,7 +167,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
   // });
 
   /** Stripe */
-  const stripeUrl = createStripeURL(amount);
+  const stripeUrl = createStripeURL(amount, asset.symbol.toLowerCase(), asset.blockchain);
 
   /** Coinbase */
   const handleCoinbaseClick = async () => {
@@ -163,7 +194,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify({ address: walletAddress, asset: 'USDC' }),
+        body: JSON.stringify({
+          address: walletAddress,
+          asset: asset.symbol,
+          blockchain: asset.blockchain,
+        }),
       });
 
       const { token: sessionToken, error } = await r.json();
@@ -174,12 +209,12 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
       }
       const url = createCoinbasePayOnrampURL({
         amountUsd: amount,
-        assetSymbol: 'USDC',
+        assetSymbol: asset.symbol,
         sessionToken,
         fiat: 'USD',
         sandbox: isTestnet(),
         path: 'buy/select-asset',
-        redirectUrl: `${window.location.origin}${paths.invest}`,
+        redirectUrl: `${window.location.origin}${isStellarAsset ? paths.invest : paths.assets.details(asset.symbol)}`,
       });
       if (win) {
         win.opener = null;
@@ -216,7 +251,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
     }
   };
 
-  const ONRAMPS: OnrampOption[] = [
+  const ALL_ONRAMPS: (OnrampOption & { id: OnrampProvider })[] = [
     {
       id: 'stripe',
       avatar:
@@ -241,6 +276,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
     },
   ];
 
+  // MoneyGram is a Stellar/USDC flow — never offer it for other chains
+  const ONRAMPS = ALL_ONRAMPS.filter(
+    (option) => providers.includes(option.id) && (isStellarAsset || option.id !== 'moneygram')
+  );
+
   return (
     <>
       <Dialog
@@ -262,7 +302,9 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
         <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" color="text.primary">
-              {t('Deposit Cash')}
+              {isStellarAsset && asset.symbol === 'USDC'
+                ? t('Deposit Cash')
+                : t('Buy {{symbol}}', { symbol: asset.symbol })}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <IconButton onClick={onClose} aria-label="close dialog">
@@ -283,7 +325,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             },
           }}
         >
-          {!isConnected && (
+          {!isConnected && isStellarAsset && (
             <Stack spacing={2} sx={{ mb: 2 }}>
               <Alert severity="info" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
@@ -306,7 +348,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             </Stack>
           )}
 
-          {isConnected && isCheckingAccount && (
+          {isConnected && checkingAccount && (
             <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
               <CircularProgress size={32} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
@@ -315,7 +357,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             </Stack>
           )}
 
-          {!isCheckingAccount && isConnected && accountExists && !hasUsdcTrustline && (
+          {isStellarAsset && !isCheckingAccount && isConnected && accountExists && !hasUsdcTrustline && (
             <Stack spacing={2} sx={{ mb: 2 }}>
               <Alert severity="info" icon={<Iconify icon="solar:link-bold" width={22} />}>
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
@@ -345,7 +387,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
             </Stack>
           )}
 
-          {!isCheckingAccount && isConnected && prerequisitesMet && (
+          {!checkingAccount && isConnected && prerequisitesMet && (
             <List disablePadding>
               {ONRAMPS.map((checkout) => (
                 <ListItemButton
@@ -388,7 +430,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({ open, amount, onClose, wall
           )}
         </DialogContent>
 
-        {!isCheckingAccount && isConnected && prerequisitesMet && (
+        {!checkingAccount && isConnected && prerequisitesMet && (
           <Box sx={{ px: 4, pb: 4, width: '100%' }}>
             <Typography
               variant="body2"

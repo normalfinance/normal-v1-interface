@@ -12,11 +12,9 @@ import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { logger, isTestnet, createCoinbasePayOnrampURL } from '@normalfinance/utils';
 
-import { alpha, useTheme } from '@mui/material/styles';
 import {
   Box,
   Stack,
-  Alert,
   Dialog,
   Button,
   Divider,
@@ -38,7 +36,6 @@ interface ReceiveModalProps {
 }
 
 export default function ReceiveModal({ open, onClose, context = 'deposit' }: ReceiveModalProps) {
-  const theme = useTheme();
   const { t } = useTranslate();
   const { copy } = useCopyToClipboard();
   const { enqueueSnackbar } = useSnackbar();
@@ -67,8 +64,8 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         width: 200,
         margin: 1,
         color: {
-          dark: theme.palette.text.primary,
-          light: theme.palette.background.paper,
+          dark: '#0A0A0F',
+          light: '#FFFFFF',
         },
       });
       setQrCodeUrl(qrDataUrl);
@@ -78,7 +75,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
     } finally {
       setIsGeneratingQR(false);
     }
-  }, [walletAddress, theme.palette.text.primary, theme.palette.background.paper, enqueueSnackbar]);
+  }, [walletAddress, enqueueSnackbar]);
 
   useEffect(() => {
     if (open && walletAddress) {
@@ -95,9 +92,6 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
 
   const handleCoinbaseXlm = async () => {
     if (!walletAddress) return;
-    // Open synchronously so Safari treats it as user-initiated.
-    // Avoid 'noopener' here — it causes window.open to return null in Safari,
-    // preventing us from setting the URL later. We null opener manually instead.
     const win = window.open('', '_blank');
     setIsCoinbaseLoading(true);
     try {
@@ -153,30 +147,202 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
     return null;
   }
 
+  // Reusable QR code box
+  const QrBox = (
+    <Box
+      sx={{
+        p: '16px',
+        borderRadius: '16px',
+        bgcolor: '#FAFAFB',
+        border: '1px solid rgba(10,10,15,0.08)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: 220,
+      }}
+    >
+      {isGeneratingQR ? (
+        <CircularProgress size={36} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+      ) : qrCodeUrl ? (
+        <Box
+          component="img"
+          src={qrCodeUrl}
+          alt="Wallet Address QR Code"
+          sx={{ maxWidth: '100%', height: 'auto', borderRadius: '4px' }}
+        />
+      ) : (
+        <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.4)' }}>
+          {t('Unable to generate QR code')}
+        </Typography>
+      )}
+    </Box>
+  );
+
+  // Reusable address + buttons + coinbase block
+  const AddressBlock = (
+    <Stack spacing={1.5} alignItems="center" sx={{ width: '100%' }}>
+      {/* Address */}
+      <Box
+        sx={{
+          px: '14px',
+          py: '12px',
+          borderRadius: '12px',
+          bgcolor: '#FAFAFB',
+          border: '1px solid rgba(10,10,15,0.08)',
+          width: '100%',
+          wordBreak: 'break-all',
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: '12px',
+            color: '#0A0A0F',
+            fontFamily: '"Geist Mono", "Courier New", monospace',
+            lineHeight: 1.6,
+          }}
+        >
+          {walletAddress}
+        </Typography>
+      </Box>
+
+      {/* Action buttons */}
+      <Stack direction="row" spacing={1}>
+        <Box
+          component="button"
+          onClick={handleCopyAddress}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            px: '14px',
+            py: '8px',
+            borderRadius: '10px',
+            border: '1px solid rgba(10,10,15,0.12)',
+            bgcolor: '#FFFFFF',
+            color: '#0A0A0F',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'background 150ms ease',
+            '&:hover': { bgcolor: '#F4F4F7' },
+          }}
+        >
+          <Iconify icon="solar:copy-outline" width={15} />
+          {t('Copy Account ID')}
+        </Box>
+
+        <Box
+          component="button"
+          onClick={handleViewOnExplorer}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            px: '14px',
+            py: '8px',
+            borderRadius: '10px',
+            border: '1px solid rgba(10,10,15,0.12)',
+            bgcolor: '#FFFFFF',
+            color: '#0A0A0F',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'background 150ms ease',
+            '&:hover': { bgcolor: '#F4F4F7' },
+          }}
+        >
+          <Iconify icon="eva:external-link-outline" width={15} />
+          {t('View Explorer')}
+        </Box>
+      </Stack>
+
+      <Divider sx={{ width: '100%' }}>
+        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)' }}>
+          {t('or')}
+        </Typography>
+      </Divider>
+
+      {/* Coinbase CTA */}
+      <Button
+        fullWidth
+        variant="contained"
+        disabled={isCoinbaseLoading}
+        onClick={handleCoinbaseXlm}
+        startIcon={
+          isCoinbaseLoading ? (
+            <CircularProgress size={18} color="inherit" />
+          ) : (
+            <Box
+              component="img"
+              src="https://avatars.githubusercontent.com/u/1885080?s=200&v=4"
+              sx={{ width: 18, height: 18, borderRadius: '50%' }}
+            />
+          )
+        }
+        sx={{
+          borderRadius: '12px',
+          bgcolor: '#0A0A0F',
+          fontWeight: 700,
+          fontSize: '15px',
+          py: '13px',
+          textTransform: 'none',
+          letterSpacing: '-0.01em',
+          '&:hover': { bgcolor: '#1a1a25' },
+          '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+        }}
+      >
+        {isCoinbaseLoading ? t('Opening Coinbase…') : t('Buy XLM via Coinbase')}
+      </Button>
+    </Stack>
+  );
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="sm"
+      maxWidth="xs"
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          p: 1,
-        },
-      }}
+      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
     >
-      <DialogTitle sx={{ textAlign: 'center', pb: 2 }}>
-        <Typography variant="h6" component="div">
-          {t(isReceiveContext ? 'Receive Crypto' : 'Deposit Crypto')}
-        </Typography>
+      <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
+        <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', mb: '2px' }}>
+          <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em', textAlign: 'center' }}>
+            {t(isReceiveContext ? 'Receive Crypto' : 'Deposit Crypto')}
+          </Typography>
+          <Box
+            component="button"
+            onClick={onClose}
+            sx={{
+              position: 'absolute',
+              right: 0,
+              width: 28,
+              height: 28,
+              borderRadius: '8px',
+              border: 'none',
+              bgcolor: 'rgba(10,10,15,0.06)',
+              color: '#0A0A0F',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'background 150ms ease',
+              '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+            }}
+          >
+            <Iconify icon="mingcute:close-line" width={16} />
+          </Box>
+        </Box>
+
         {!isCheckingAccount && accountExists && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}>
             {t('Scan the QR code or copy your account ID below')}
           </Typography>
         )}
         {!isCheckingAccount && !accountExists && !accountStatusError && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}>
             {t(
               isReceiveContext
                 ? 'Activate your Stellar account first, then receive other Stellar assets'
@@ -186,259 +352,112 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         )}
       </DialogTitle>
 
-      <DialogContent sx={{ textAlign: 'center', py: 3 }}>
-        {/* Loading state */}
+      <DialogContent sx={{ px: '22px', pt: '16px', pb: '22px' }}>
+        {/* Loading */}
         {isCheckingAccount && (
-          <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
-            <CircularProgress size={32} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          <Stack alignItems="center" justifyContent="center" sx={{ py: '32px' }}>
+            <CircularProgress size={32} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+            <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '12px' }}>
               {t('Checking account status...')}
             </Typography>
           </Stack>
         )}
 
-        {/* Account status error */}
+        {/* Error */}
         {!isCheckingAccount && accountStatusError && (
-          <Stack spacing={2} alignItems="center">
-            <Alert severity="error" sx={{ width: '100%', textAlign: 'left' }}>
-              <Typography variant="body2">
-                {t(
-                  'We could not check your Stellar account right now. Please try again in a moment.'
-                )}
-              </Typography>
-            </Alert>
-
-            <Button
-              variant="soft"
-              color="info"
-              startIcon={<Iconify icon="solar:copy-outline" />}
-              onClick={handleCopyAddress}
+          <Stack spacing={1.5} alignItems="center">
+            <Box
+              sx={{
+                px: '14px',
+                py: '12px',
+                borderRadius: '12px',
+                bgcolor: 'rgba(239,68,68,0.05)',
+                border: '1px solid rgba(239,68,68,0.15)',
+                width: '100%',
+              }}
             >
+              <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
+                {t('We could not check your Stellar account right now. Please try again in a moment.')}
+              </Typography>
+            </Box>
+            <Box
+              component="button"
+              onClick={handleCopyAddress}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                px: '14px',
+                py: '8px',
+                borderRadius: '10px',
+                border: '1px solid rgba(10,10,15,0.12)',
+                bgcolor: '#FFFFFF',
+                color: '#0A0A0F',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                '&:hover': { bgcolor: '#F4F4F7' },
+              }}
+            >
+              <Iconify icon="solar:copy-outline" width={15} />
               {t('Copy Account ID')}
-            </Button>
+            </Box>
           </Stack>
         )}
 
-        {/* Account not funded yet - show activation instructions */}
+        {/* Not activated yet */}
         {!isCheckingAccount && !accountExists && !accountStatusError && (
-          <Stack spacing={3} alignItems="center">
-            <Alert severity="info" sx={{ width: '100%', textAlign: 'left' }}>
-              <Typography variant="body2" sx={{ mb: 1 }}>
+          <Stack spacing={1.5} alignItems="center">
+            <Box
+              sx={{
+                px: '14px',
+                py: '12px',
+                borderRadius: '12px',
+                bgcolor: 'rgba(59,130,246,0.05)',
+                border: '1px solid rgba(59,130,246,0.15)',
+                width: '100%',
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55, mb: '6px' }}>
                 {t('This Stellar account is not active on-chain yet.')}
               </Typography>
-              <Typography variant="body2">
-                {t(
-                  'Send at least 1 XLM to this account ID first. Once the account is funded, you can receive USDC and other Stellar assets here.'
-                )}
-              </Typography>
-            </Alert>
-
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
-                backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                minHeight: 220,
-                minWidth: 220,
-              }}
-            >
-              {isGeneratingQR ? (
-                <CircularProgress size={40} />
-              ) : qrCodeUrl ? (
-                <Box
-                  component="img"
-                  src={qrCodeUrl}
-                  alt="Wallet Address QR Code"
-                  sx={{
-                    maxWidth: '100%',
-                    height: 'auto',
-                  }}
-                />
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  {t('Unable to generate QR code')}
-                </Typography>
-              )}
-            </Box>
-
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: 1.5,
-                border: `1px solid ${theme.palette.divider}`,
-                backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                width: '100%',
-                wordBreak: 'break-all',
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  fontFamily: 'monospace',
-                  fontSize: '0.875rem',
-                  color: theme.palette.text.primary,
-                }}
-              >
-                {walletAddress}
+              <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
+                {t('Send at least 1 XLM to this account ID first. Once the account is funded, you can receive USDC and other Stellar assets here.')}
               </Typography>
             </Box>
 
-            <Stack direction="row" spacing={1}>
-              <Button
-                key="copy"
-                variant="soft"
-                color="info"
-                startIcon={<Iconify icon="solar:copy-outline" />}
-                onClick={handleCopyAddress}
-              >
-                {t('Copy Account ID')}
-              </Button>
-
-              <Button
-                key="view"
-                variant="soft"
-                color="secondary"
-                startIcon={<Iconify icon="eva:external-link-outline" />}
-                onClick={handleViewOnExplorer}
-              >
-                {t('View Explorer')}
-              </Button>
-            </Stack>
-
-            <Divider sx={{ width: '100%' }}>
-              <Typography variant="caption" color="text.secondary">
-                {t('or')}
-              </Typography>
-            </Divider>
-
-            <Button
-              fullWidth
-              variant="contained"
-              color="primary"
-              disabled={isCoinbaseLoading}
-              onClick={handleCoinbaseXlm}
-              startIcon={
-                isCoinbaseLoading
-                  ? <CircularProgress size={18} color="inherit" />
-                  : <Box component="img" src="https://avatars.githubusercontent.com/u/1885080?s=200&v=4" sx={{ width: 18, height: 18, borderRadius: '50%' }} />
-              }
-            >
-              {isCoinbaseLoading ? t('Opening Coinbase…') : t('Buy XLM via Coinbase')}
-            </Button>
+            {QrBox}
+            {AddressBlock}
           </Stack>
         )}
 
-        {/* Account exists - show QR code and address */}
+        {/* Account active */}
         {!isCheckingAccount && accountExists && (
-          <Stack spacing={3} alignItems="center">
+          <Stack spacing={1.5} alignItems="center">
+            {QrBox}
+
+            {/* Stellar-only warning */}
             <Box
               sx={{
-                p: 2,
-                borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
-                backgroundColor: alpha(theme.palette.grey[500], 0.08),
                 display: 'flex',
-                justifyContent: 'center',
                 alignItems: 'center',
-                minHeight: 220,
-                minWidth: 220,
+                gap: '8px',
+                px: '12px',
+                py: '10px',
+                borderRadius: '10px',
+                bgcolor: 'rgba(245,158,11,0.06)',
+                border: '1px solid rgba(245,158,11,0.2)',
+                width: '100%',
               }}
             >
-              {isGeneratingQR ? (
-                <CircularProgress size={40} />
-              ) : qrCodeUrl ? (
-                <Box
-                  component="img"
-                  src={qrCodeUrl}
-                  alt="Wallet Address QR Code"
-                  sx={{
-                    maxWidth: '100%',
-                    height: 'auto',
-                  }}
-                />
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  {t('Unable to generate QR code')}
-                </Typography>
-              )}
+              <Iconify icon="eva:alert-triangle-outline" width={15} sx={{ color: 'warning.main', flexShrink: 0 }} />
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
+                {t('This wallet ONLY supports Stellar tokens!')}
+              </Typography>
             </Box>
 
-            <Stack spacing={2} alignItems="center" sx={{ width: '100%' }}>
-              <Alert severity="warning">
-                <Typography variant="body2">
-                  {t('This wallet ONLY supports Stellar tokens!')}
-                </Typography>
-              </Alert>
-
-              <Box
-                sx={{
-                  p: 2,
-                  borderRadius: 1.5,
-                  border: `1px solid ${theme.palette.divider}`,
-                  backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                  width: '100%',
-                  wordBreak: 'break-all',
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontFamily: 'monospace',
-                    fontSize: '0.875rem',
-                    color: theme.palette.text.primary,
-                  }}
-                >
-                  {walletAddress}
-                </Typography>
-              </Box>
-
-              <Stack direction="row" spacing={1}>
-                <Button
-                  key="copy"
-                  variant="soft"
-                  color="info"
-                  startIcon={<Iconify icon="solar:copy-outline" />}
-                  onClick={handleCopyAddress}
-                >
-                  {t('Copy Account ID')}
-                </Button>
-
-                <Button
-                  key="view"
-                  variant="soft"
-                  color="secondary"
-                  startIcon={<Iconify icon="eva:external-link-outline" />}
-                  onClick={handleViewOnExplorer}
-                >
-                  {t('View Explorer')}
-                </Button>
-              </Stack>
-
-              <Divider sx={{ width: '100%' }}>
-                <Typography variant="caption" color="text.secondary">
-                  {t('or')}
-                </Typography>
-              </Divider>
-
-              <Button
-                fullWidth
-                variant="contained"
-                color="primary"
-                disabled={isCoinbaseLoading}
-                onClick={handleCoinbaseXlm}
-                startIcon={
-                  isCoinbaseLoading
-                    ? <CircularProgress size={18} color="inherit" />
-                    : <Box component="img" src="https://avatars.githubusercontent.com/u/1885080?s=200&v=4" sx={{ width: 18, height: 18, borderRadius: '50%' }} />
-                }
-              >
-                {isCoinbaseLoading ? t('Opening Coinbase…') : t('Buy XLM via Coinbase')}
-              </Button>
-            </Stack>
+            {AddressBlock}
           </Stack>
         )}
       </DialogContent>

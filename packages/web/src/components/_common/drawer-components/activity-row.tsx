@@ -11,22 +11,8 @@ import { format, getCryptoIconUrl } from '@normalfinance/utils';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import { grey } from '@mui/material/colors';
 import Typography from '@mui/material/Typography';
-
-import { Iconify } from '@/components/template/iconify';
-
-/* ------------------------------------------------------------------ */
-/* Iconify fallback (align with swap-card TOKENS)                      */
-/* ------------------------------------------------------------------ */
-function iconifyIconForSymbol(symbol: string): string {
-  const u = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (u === 'XLM') return 'cryptocurrency:xlm';
-  if (u === 'USDC') return 'cryptocurrency-color:usdc';
-  const slug = symbol.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (slug) return `cryptocurrency:${slug}`;
-  return 'mdi:coins';
-}
+import MonetizationOnOutlined from '@mui/icons-material/MonetizationOnOutlined';
 
 const ICON_BOX_SX = {
   display: 'flex',
@@ -34,12 +20,19 @@ const ICON_BOX_SX = {
   justifyContent: 'center',
   borderRadius: '50%',
   flexShrink: 0,
-  bgcolor: 'action.hover',
+  bgcolor: 'rgba(10,10,15,0.06)',
+} as const;
+
+const MONO = {
+  fontFamily: '"Geist Mono", ui-monospace, monospace',
+  fontFeatureSettings: '"ss01","ss02","zero"',
+  fontVariantNumeric: 'tabular-nums',
+  letterSpacing: '-0.01em',
 } as const;
 
 function ActivityTokenImage({
   src,
-  symbol,
+  symbol: _symbol,
   size = 32,
 }: {
   src: string;
@@ -55,7 +48,7 @@ function ActivityTokenImage({
   if (failed) {
     return (
       <Box sx={{ ...ICON_BOX_SX, width: size, height: size }} aria-hidden>
-        <Iconify icon={iconifyIconForSymbol(symbol)} width={size * 0.65} />
+        <MonetizationOnOutlined sx={{ fontSize: size * 0.65 }} />
       </Box>
     );
   }
@@ -128,9 +121,11 @@ export function SplitAvatar({
 /* Helpers                                                            */
 /* ------------------------------------------------------------------ */
 function fmtAmount(amount: number, symbol: string): string {
-  if (symbol === 'USDC') return `${amount.toFixed(2)} USDC`;
-  if (symbol === 'XLM') return `${amount.toFixed(4)} XLM`;
-  return `${amount.toFixed(4)} ${symbol}`;
+  return `${amount.toFixed(7)} ${symbol}`;
+}
+
+function fmtUsd(amount: number): string {
+  return `$${amount.toFixed(2)}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -145,20 +140,28 @@ export function ActivityRow({ activity }: { activity: Activity }) {
   const time = format.ago(createdAtSec);
 
   type ChipConfig = { label: string; color: string; bg: string };
+  // Palette anchored to #1AB37D (savings green) + brand gradient colors
   const CHIP: Record<string, ChipConfig> = {
-    'Buy':              { label: 'On-Ramp',         color: '#0a6640', bg: '#d3f9d8' },
-    'Sell':             { label: 'Off-Ramp',         color: '#7d4a00', bg: '#ffe8cc' },
-    'Receive':          { label: 'Received',         color: '#0c4a6e', bg: '#e0f2fe' },
-    'Sent':             { label: 'Sent',             color: '#374151', bg: '#f3f4f6' },
-    'Swap':             { label: 'Swap',             color: '#1e3a8a', bg: '#dbeafe' },
-    'Savings Deposit':  { label: 'Savings Deposit',  color: '#4a1d96', bg: '#f3e8ff' },
-    'Savings Withdraw': { label: 'Savings Withdraw', color: '#7d1d1d', bg: '#fee2e2' },
-    'Mint':             { label: 'Mint',             color: '#065f46', bg: '#d1fae5' },
-    'Redeem':           { label: 'Redeem',           color: '#7d4a00', bg: '#fef3c7' },
-    'Add Liquidity':    { label: 'Add Liquidity',    color: '#065f46', bg: '#d1fae5' },
-    'Remove Liquidity': { label: 'Remove Liquidity', color: '#7d1d1d', bg: '#fee2e2' },
+    'Buy':              { label: 'On-Ramp',         color: '#0A6649', bg: 'rgba(26,179,125,0.11)' },
+    'Sell':             { label: 'Off-Ramp',         color: '#8A4A00', bg: 'rgba(255,176,96,0.16)'  },
+    'Receive':          { label: 'Received',         color: '#0A5272', bg: 'rgba(91,207,255,0.14)'  },
+    'Sent':             { label: 'Sent',             color: '#2A2A33', bg: 'rgba(10,10,15,0.07)'    },
+    'Swap':             { label: 'Swap',             color: '#5A2E9E', bg: 'rgba(177,123,255,0.13)' },
+    'Savings Deposit':  { label: 'Deposit',          color: '#0A6649', bg: 'rgba(26,179,125,0.11)'  },
+    'Savings Withdraw': { label: 'Withdraw',         color: '#2A2A33', bg: 'rgba(10,10,15,0.07)'    },
+    'Mint':             { label: 'Mint',             color: '#0A6649', bg: 'rgba(26,179,125,0.11)'  },
+    'Redeem':           { label: 'Redeem',           color: '#8A4A00', bg: 'rgba(255,176,96,0.16)'  },
+    'Add Liquidity':    { label: 'Add Liquidity',    color: '#0A5272', bg: 'rgba(91,207,255,0.14)'  },
+    'Remove Liquidity': { label: 'Remove Liquidity', color: '#7A1D4A', bg: 'rgba(255,123,197,0.12)' },
   };
-  const chip = CHIP[activity.type] ?? { label: activity.type, color: '#374151', bg: '#f3f4f6' };
+  const chip =
+    activity.type === 'Sent' && activity.offramp
+      ? CHIP['Sell']
+      : CHIP[activity.type] ?? { label: activity.type, color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' };
+  const isPending =
+    ((activity.type === 'Sent' || activity.type === 'Receive') && activity.confirmed === false) ||
+    (activity.type === 'Swap' && activity.pending === true) ||
+    (activity.type === 'Sent' && activity.offramp === true && activity.offrampStatus === 'pending');
 
   let icon: React.ReactNode = null;
   let amountStr = '';
@@ -173,16 +176,18 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       amountStr = fmtAmount(amount, symbol);
       subtitle = `From ${format.shortenAddress(address)}`;
       isPositive = true;
-      if (symbol === 'USDC') usdStr = `$${amount.toFixed(2)}`;
+      usdStr = symbol === 'USDC' ? fmtUsd(amount) : fmtAmount(amount, symbol);
       break;
     }
     case 'Sent': {
       const { token: { symbol, amount, iconUrl }, address } = activity;
       icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
       amountStr = fmtAmount(amount, symbol);
-      subtitle = `To ${format.shortenAddress(address)}`;
+      subtitle = activity.offramp
+        ? activity.offrampProvider ?? 'Off-ramp'
+        : `To ${format.shortenAddress(address)}`;
       isPositive = false;
-      if (symbol === 'USDC') usdStr = `$${amount.toFixed(2)}`;
+      usdStr = symbol === 'USDC' ? fmtUsd(amount) : fmtAmount(amount, symbol);
       break;
     }
     case 'Buy': {
@@ -191,7 +196,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       amountStr = fmtAmount(amount, symbol);
       subtitle = provider ?? '';
       isPositive = true;
-      usdStr = `$${amount.toFixed(2)}`;
+      usdStr = symbol === 'USDC' ? fmtUsd(amount) : fmtAmount(amount, symbol);
       break;
     }
     case 'Sell': {
@@ -200,7 +205,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       amountStr = fmtAmount(amount, symbol);
       subtitle = provider ?? '';
       isPositive = false;
-      usdStr = `$${amount.toFixed(2)}`;
+      usdStr = symbol === 'USDC' ? fmtUsd(amount) : fmtAmount(amount, symbol);
       break;
     }
     case 'Savings Deposit': {
@@ -209,7 +214,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       amountStr = fmtAmount(parseFloat(amount), 'USDC');
       subtitle = 'Normal Savings';
       isPositive = true;
-      usdStr = `$${parseFloat(amount).toFixed(2)}`;
+      usdStr = fmtUsd(parseFloat(amount));
       break;
     }
     case 'Savings Withdraw': {
@@ -218,7 +223,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       amountStr = fmtAmount(parseFloat(amount), 'USDC');
       subtitle = 'Normal Savings';
       isPositive = false;
-      usdStr = `$${parseFloat(amount).toFixed(2)}`;
+      usdStr = fmtUsd(parseFloat(amount));
       break;
     }
     case 'Swap': {
@@ -233,8 +238,9 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       );
       amountStr = `${fmtAmount(aIn, sIn)} → ${fmtAmount(aOut, sOut)}`;
       isPositive = null;
-      if (sOut === 'USDC') usdStr = `$${aOut.toFixed(2)}`;
-      else if (sIn === 'USDC') usdStr = `$${aIn.toFixed(2)}`;
+      if (sOut === 'USDC') usdStr = fmtUsd(aOut);
+      else if (sIn === 'USDC') usdStr = fmtUsd(aIn);
+      else usdStr = fmtAmount(aOut, sOut);
       break;
     }
     case 'Add Liquidity':
@@ -245,44 +251,111 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
       amountStr = fmtAmount(amount, symbol);
       isPositive = null;
-      if (symbol === 'USDC') usdStr = `$${amount.toFixed(2)}`;
+      usdStr = symbol === 'USDC' ? fmtUsd(amount) : fmtAmount(amount, symbol);
       break;
     }
     default:
       break;
   }
 
-  const amountColor = isPositive === true ? 'success.main' : 'text.primary';
+  const amountColor = isPositive === true ? '#1AB37D' : '#0A0A0F';
   const amountPrefix = isPositive === true ? '+' : '';
 
   /* ---------- UI ------------------------------------------------ */
   return (
-    <Stack direction="row" spacing={1.5} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={1.5}
+      alignItems="center"
+      sx={{ borderRadius: '12px', padding: '4px 8px', mx: '-8px', transition: 'background .15s ease', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
+    >
       {icon}
 
       <Stack direction="row" sx={{ flexGrow: 1 }} alignItems="center" justifyContent="space-between">
         {/* left: chip + amount + subtitle */}
-        <Stack spacing={0.3} alignItems="flex-start">
-          <Chip
-            label={chip.label}
-            size="small"
-            sx={{
-              height: 20,
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              color: chip.color,
-              bgcolor: chip.bg,
-              borderRadius: '6px',
-              '& .MuiChip-label': { px: 1 },
-            }}
-          />
+        <Stack spacing={0.4} alignItems="flex-start">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Chip
+              label={chip.label}
+              size="small"
+              sx={{
+                height: 20,
+                fontSize: '11px',
+                fontWeight: 600,
+                color: chip.color,
+                bgcolor: chip.bg,
+                borderRadius: '6px',
+                '& .MuiChip-label': { px: '8px' },
+              }}
+            />
+            {isPending && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 20,
+                  px: '7px',
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(245,158,11,0.1)',
+                  color: '#B45309',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Pending
+              </Box>
+            )}
+            {((activity.type === 'Swap' && activity.failed) ||
+              (activity.type === 'Sent' &&
+                activity.offramp &&
+                activity.offrampStatus === 'failed')) && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 20,
+                  px: '7px',
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(220,38,38,0.1)',
+                  color: '#B91C1C',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Failed
+              </Box>
+            )}
+            {activity.type === 'Swap' && activity.refunded && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 20,
+                  px: '7px',
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(245,158,11,0.1)',
+                  color: '#B45309',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Refunded
+              </Box>
+            )}
+          </Box>
           {amountStr && (
-            <Typography variant="caption" color="text.secondary" fontWeight={500}>
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76', ...MONO }}>
               {amountStr}
             </Typography>
           )}
           {subtitle && (
-            <Typography variant="caption" color="text.disabled">
+            <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
               {subtitle}
             </Typography>
           )}
@@ -291,11 +364,11 @@ export function ActivityRow({ activity }: { activity: Activity }) {
         {/* right: usd value + time */}
         <Stack alignItems="flex-end" spacing={0.2}>
           {usdStr && (
-            <Typography variant="subtitle2" fontWeight={600} color={amountColor}>
+            <Typography sx={{ fontSize: '13.5px', fontWeight: 400, color: amountColor, ...MONO }}>
               {amountPrefix}{usdStr}
             </Typography>
           )}
-          <Typography variant="caption" color={grey[500]}>
+          <Typography sx={{ fontSize: '11px', color: '#9A9AA3', ...MONO }}>
             {time} {t('ago')}
           </Typography>
         </Stack>

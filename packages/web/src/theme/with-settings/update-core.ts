@@ -3,8 +3,11 @@ import type { SettingsState } from '@/components/template/settings';
 
 import { setFont, hexToRgbChannel, createPaletteChannel } from 'minimal-shared/utils';
 
+import { themeConfig } from '../theme-config';
 import { primaryColorPresets } from './color-presets';
 import { createShadowColor } from '../core/custom-shadows';
+
+const BUNDLED_FONTS = new Set(['Satoshi', 'DM Sans', 'Nunito Sans', 'Inter']);
 
 import type { ThemeOptions, ThemeColorScheme } from '../types';
 
@@ -79,7 +82,9 @@ export function updateCoreWithSettings(
     },
     typography: {
       ...theme.typography,
-      fontFamily: setFont(fontFamily),
+      fontFamily: setFont(
+        fontFamily && BUNDLED_FONTS.has(fontFamily) ? fontFamily : themeConfig.fontFamily.primary
+      ),
     },
   };
 }

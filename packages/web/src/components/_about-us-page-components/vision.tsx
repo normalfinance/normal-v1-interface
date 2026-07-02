@@ -1,228 +1,275 @@
 'use client';
 
 import React from 'react';
+import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import Grid2 from '@mui/material/Grid2';
-import { Box, Paper, Stack, Container, Typography, CardContent } from '@mui/material';
+import Link from '@mui/material/Link';
+import { Box, Typography } from '@mui/material';
+import LinkedInIcon from '@mui/icons-material/LinkedIn';
+import TelegramIcon from '@mui/icons-material/Telegram';
 
-import WorldMap from '../ui/world-map';
-import EarnAnimation from '../ui/earn-animation';
+type SocialLink = { href: string; icon: React.ReactNode };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Types                                    */
-/* -------------------------------------------------------------------------- */
-
-type Img = { src: string; alt?: string };
-
-type TopCard = {
-  title: string;
-  description: string;
+type Founder = {
+  image: string;
+  name: string;
+  role: string;
+  quote: string;
+  bio: string;
+  extraBio: string;
+  stat: { label: string; value: string };
+  socialLinks: SocialLink[];
 };
 
-type BottomCard = {
-  icon: Img;
-  title: string;
-  description: string;
-};
+const BRAND_X = 'currentColor';
+const BRAND_LI = '#0077B5';
+const BRAND_TG = '#0088CC';
 
-type Props = {
-  heading: string;
-  topCards: [TopCard, TopCard];
-  bottomCards: [BottomCard, BottomCard, BottomCard];
-};
-
-export type VisionProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
-
-/* -------------------------------------------------------------------------- */
-/*                                 Defaults                                   */
-/* -------------------------------------------------------------------------- */
-
-export const VisionDefaults: Props = {
-  heading: 'Our Vision',
-  topCards: [
+const FOUNDER: Founder = {
+  image: cdn('about-page/justin.webp'),
+  name: 'Justin Benjamin',
+  role: 'Founder & CEO',
+  quote:
+    "We're not building a wallet. We're building the bank account most people wish they already had.",
+  bio: 'Justin formerly designed products at Bitcoin of America and CoinFlip — two of the largest crypto ATM and exchange networks in the US. He has invested in crypto for 7+ years and holds a BS in Learning & Organizational Change from Northwestern University.',
+  extraBio: 'He started Normal after realising that DeFi\'s best yields were locked behind interfaces built for traders, not everyday savers. His goal is simple: take the complexity out of on-chain finance and put real, sustainable yield in the hands of anyone with a phone.',
+  stat: { label: 'Years in crypto', value: '7+' },
+  socialLinks: [
     {
-      title: 'Deposit. Earn. Compound.',
-      description:
-        'Your USDC goes into audited lending pools on Stellar. Borrowers pay interest to access liquidity — you collect it. Yield compounds daily and you can withdraw anytime.',
+      href: 'https://x.com/justinbenjaminn',
+      icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
     },
     {
-      title: 'Borderless Access',
-      description:
-        "Your zip code shouldn't determine your returns. Normal gives everyone access to yields that used to require the right bank, the right broker, or the right country.",
-    },
-  ],
-  bottomCards: [
-    {
-      icon: { src: cdn('about-page/n1.svg'), alt: 'Deposits' },
-      title: 'Instant Deposits',
-      description:
-        'Cash hits your account in seconds. No hold times, no business-day delays — just your money, moving when you need it to.',
+      href: 'https://www.linkedin.com/in/justin-benjamin1/',
+      icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
     },
     {
-      icon: { src: cdn('about-page/n2.svg'), alt: 'Transparent' },
-      title: 'Transparent by Default',
-      description:
-        'Normal never takes custody of your funds. Your USDC is secured by Stellar\'s blockchain — the same infrastructure trusted by financial institutions and payment networks worldwide. Every rate and every transaction is public. Check it anytime.',
-    },
-    {
-      icon: { src: cdn('about-page/n3.svg'), alt: 'Growth' },
-      title: 'The Start of Something Bigger',
-      description:
-        'USDC savings is the foundation. Crypto, equities, and real assets are coming — all in one place, all yours to control.',
+      href: 'https://t.me/justinbenjamin',
+      icon: <TelegramIcon sx={{ fontSize: 15, color: BRAND_TG }} />,
     },
   ],
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Styles                                   */
-/* -------------------------------------------------------------------------- */
-
-const paperSx = {
-  bgcolor: 'background.neutral',
-  borderRadius: 3,
-};
-
-const topCardPadding = { xs: 3, md: 4 };
-const bottomCardPadding = { xs: 2.5, md: 3.5 };
-
-/* -------------------------------------------------------------------------- */
-/*                              Helper Components                              */
-/* -------------------------------------------------------------------------- */
-
-const TopFeatureCard: React.FC<TopCard & { map?: boolean }> = ({
-  title,
-  description,
-  map = false,
-}) => (
-  <Paper variant="outlined" sx={{ ...paperSx, height: '100%' }}>
-    <Stack p={topCardPadding} height="100%">
-      <Box
-        sx={{
-          width: '100%',
-          height: { xs: 'auto', md: 320 },
-          borderRadius: 2,
-          mb: 4,
-        }}
-      >
-        {map ? (
-          <WorldMap
-            backgroundSrc={cdn('about-page/world-map.webp')}
-            dots={[
-              {
-                start: {
-                  lat: 64.2008,
-                  lng: -149.4937,
-                }, // Alaska (Fairbanks)
-                end: {
-                  lat: 34.0522,
-                  lng: -118.2437,
-                }, // Los Angeles
-              },
-              {
-                start: { lat: 64.2008, lng: -149.4937 }, // Alaska (Fairbanks)
-                end: { lat: -15.7975, lng: -47.8919 }, // Brazil (Brasília)
-              },
-              {
-                start: { lat: -15.7975, lng: -47.8919 }, // Brazil (Brasília)
-                end: { lat: 38.7223, lng: -9.1393 }, // Lisbon
-              },
-              {
-                start: { lat: 51.5074, lng: -0.1278 }, // London
-                end: { lat: 28.6139, lng: 77.209 }, // New Delhi
-              },
-              {
-                start: { lat: 28.6139, lng: 77.209 }, // New Delhi
-                end: { lat: 43.1332, lng: 131.9113 }, // Vladivostok
-              },
-              {
-                start: { lat: 28.6139, lng: 77.209 }, // New Delhi
-                end: { lat: -1.2921, lng: 36.8219 }, // Nairobi
-              },
-            ]}
-          />
-        ) : (
-          <EarnAnimation />
-        )}
-      </Box>
-      <Typography variant="subtitle1" fontWeight={700} mb={1}>
-        {title}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-    </Stack>
-  </Paper>
-);
-
-const BottomStatCard: React.FC<BottomCard> = ({ icon, title, description }) => (
-  <Paper variant="outlined" sx={{ ...paperSx, height: '100%' }}>
-    <CardContent sx={{ p: bottomCardPadding }}>
-      <Box mb={2.5}>
-        <Box component="img" src={icon.src} alt={icon.alt} sx={{ width: 44, height: 44 }} />
-      </Box>
-      <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-        {title}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-    </CardContent>
-  </Paper>
-);
-
-/* -------------------------------------------------------------------------- */
-/*                               Main Component                                */
-/* -------------------------------------------------------------------------- */
-
-export const Vision: React.FC<VisionProps> = (props) => {
+export const Vision: React.FC = () => {
   const { t } = useTranslate();
 
-  const { heading, topCards, bottomCards, ...sectionProps } = {
-    ...VisionDefaults,
-    ...props,
-  };
-
   return (
-    <Box component="section" {...sectionProps} py={{ xs: 8, md: 12, lg: 14 }} id="our-vision" bgcolor="#FAFAFA" sx={(theme) => ({ borderBottom: `1px solid ${theme.palette.divider}` })}>
-      <Container>
-        <Box maxWidth={720} textAlign="left" mb={{ xs: 4, md: 6 }}>
+    <Box
+      component="section"
+      id="our-vision"
+      sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
+    >
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
+        {/* Header */}
+        <Box mb={{ xs: '40px', md: '56px' }}>
+          <Typography
+            sx={{
+              fontSize: '11px',
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: '#6B6B76',
+              mb: 1.5,
+            }}
+          >
+            — Our Founder
+          </Typography>
           <Typography
             component="h2"
             sx={{
               fontWeight: 500,
-              fontSize: { xs: '2rem', md: '2.5rem', lg: '3rem' },
+              fontSize: 'clamp(32px, 4vw, 52px)',
               lineHeight: 1.15,
+              letterSpacing: '-0.03em',
+              color: '#0A0A0F',
+              mb: '16px',
             }}
           >
-            {t(heading)}
+            {t('Our Founder')}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '16px',
+              color: '#6B6B76',
+              lineHeight: 1.55,
+              maxWidth: '520px',
+            }}
+          >
+            {t('The person behind the vision — building the savings account crypto always deserved.')}
           </Typography>
         </Box>
 
-        {/* Top row: two small feature cards */}
-        <Grid2 container spacing={{ xs: 2, md: 2, lg: 2 }} mb={{ xs: 2, md: 2 }}>
-          <Grid2 size={{ xs: 12, lg: 6 }}>
-            <TopFeatureCard {...topCards[0]} />
-          </Grid2>
-          <Grid2 size={{ xs: 12, lg: 6 }}>
-            <TopFeatureCard {...topCards[1]} map />
-          </Grid2>
-        </Grid2>
+        {/* Founder card */}
+        <Box
+          sx={{
+            bgcolor: '#FFFFFF',
+            border: '1px solid rgba(10,10,15,0.08)',
+            borderRadius: '22px',
+            p: { xs: '20px', md: '28px' },
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1.4fr' },
+            gap: { xs: '24px', md: '48px' },
+            alignItems: 'stretch',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 32px rgba(10,10,15,0.06)',
+          }}
+        >
+          {/* Photo */}
+          <Box
+            component="img"
+            src={FOUNDER.image}
+            alt={FOUNDER.name}
+            sx={{
+              width: '100%',
+              minHeight: { xs: '260px', md: '440px' },
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'top',
+              borderRadius: '14px',
+              display: 'block',
+            }}
+          />
 
-        {/* Bottom row: three stat cards */}
-        <Grid2 container spacing={{ xs: 2, md: 2, lg: 2 }}>
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <BottomStatCard {...bottomCards[0]} />
-          </Grid2>
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <BottomStatCard {...bottomCards[1]} />
-          </Grid2>
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <BottomStatCard {...bottomCards[2]} />
-          </Grid2>
-        </Grid2>
-      </Container>
+          {/* Content */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '22px', py: { md: '8px' } }}>
+            {/* Name + role */}
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: '32px',
+                  fontWeight: 500,
+                  color: '#0A0A0F',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.1,
+                  mb: '6px',
+                }}
+              >
+                {FOUNDER.name}
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: '15px',
+                  color: '#6B6B76',
+                  fontWeight: 400,
+                }}
+              >
+                {FOUNDER.role}
+              </Typography>
+            </Box>
+
+            {/* Blockquote */}
+            <Box
+              component="blockquote"
+              sx={{
+                m: 0,
+                pl: '18px',
+                borderLeft: '3px solid #0A0A0F',
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: '18px',
+                  fontWeight: 500,
+                  color: '#0A0A0F',
+                  lineHeight: 1.5,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                &ldquo;{FOUNDER.quote}&rdquo;
+              </Typography>
+            </Box>
+
+            {/* Bio */}
+            <Typography
+              sx={{
+                fontSize: '15px',
+                color: '#2A2A33',
+                lineHeight: 1.65,
+              }}
+            >
+              {FOUNDER.bio}
+            </Typography>
+
+            {/* Extra bio */}
+            <Typography
+              sx={{
+                fontSize: '15px',
+                color: '#2A2A33',
+                lineHeight: 1.65,
+              }}
+            >
+              {FOUNDER.extraBio}
+            </Typography>
+
+            {/* Stat + socials row */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                pt: '20px',
+                borderTop: '1px solid rgba(10,10,15,0.07)',
+                mt: 'auto',
+              }}
+            >
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: '28px',
+                    fontWeight: 600,
+                    color: '#0A0A0F',
+                    letterSpacing: '-0.03em',
+                    lineHeight: 1,
+                    mb: '4px',
+                  }}
+                >
+                  {FOUNDER.stat.value}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    color: '#6B6B76',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {FOUNDER.stat.label}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: '8px' }}>
+                {FOUNDER.socialLinks.map((link, idx) => (
+                  <Link
+                    key={idx}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: '#F4F4F7',
+                      borderRadius: '8px',
+                      color: '#0A0A0F',
+                      transition: 'bgcolor 120ms ease, color 120ms ease',
+                      '&:hover': {
+                        bgcolor: '#0A0A0F',
+                        color: '#fff',
+                        '& svg': { color: '#fff !important' },
+                      },
+                    }}
+                  >
+                    {link.icon}
+                  </Link>
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 };

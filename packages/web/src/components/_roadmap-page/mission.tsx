@@ -1,118 +1,136 @@
 'use client';
 
-import { useTranslate } from '@/locales';
+import React from 'react';
 
-import Grid2 from '@mui/material/Grid2';
-import { Box, Stack, Paper, Divider, Container, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
-const paperSx = {
-  bgcolor: '#F9FAFB',
-  borderRadius: 3,
-};
+const PRINCIPLES = [
+  {
+    n: '01',
+    title: 'Simplicity first',
+    description: 'Deposit in minutes. Earn automatically. No strategy required.',
+  },
+  {
+    n: '02',
+    title: 'Transparency & sovereignty',
+    description:
+      'Your funds are yours at all times. Every rate, balance and transaction is verifiable on-chain.',
+  },
+  {
+    n: '03',
+    title: 'Composability & reach',
+    description:
+      'Built on Stellar and designed to plug into the broader DeFi stack — with real assets coming soon.',
+  },
+  {
+    n: '04',
+    title: 'Community-led evolution',
+    description:
+      'We build in public. Our roadmap is open, our decisions are explained, your feedback shapes what gets built.',
+  },
+];
 
-const cardPadding = { xs: 2.5, md: 4 };
-
-export function MissionSection() {
-  const { t } = useTranslate();
-
-  const pillars = [
-    {
-      emoji: '✨',
-      title: t('Simplicity first'),
-      body: t('Deposit in minutes. Earn automatically. No strategy required.'),
-    },
-    {
-      emoji: '🔍',
-      title: t('Transparency & sovereignty'),
-      body: t('Your funds are yours at all times. Every rate, balance, and transaction is visible and verifiable.'),
-    },
-    {
-      emoji: '🧩',
-      title: t('Composability & reach'),
-      body: t('Built on Stellar and designed to plug into the broader DeFi stack - making Normal the simplest way to access yield today, with real assets like Bitcoin, gold, and commodities coming soon.'),
-    },
-    {
-      emoji: '🌱',
-      title: t('Community-led evolution'),
-      body: t('We build in public. Our roadmap is open, our decisions are explained, and your feedback shapes what gets built next.'),
-    },
-  ];
-
-  const shippingCards = [
-    {
-      emoji: '💵',
-      title: t("What we're shipping"),
-      body: t('A USDC savings account that pays real yield, automatically'),
-    },
-    {
-      emoji: '💸',
-      title: t('Cash in & out'),
-      body: t('Cash deposits and withdrawals via MoneyGram, Coinbase, and Stripe'),
-    },
-    {
-      emoji: '🔎',
-      title: t('Full transparency'),
-      body: t('Full on-chain transparency so you can verify everything yourself'),
-    },
-    {
-      emoji: '🌐',
-      title: t('More assets coming'),
-      body: t('Crypto, equities, and real assets - coming soon'),
-    },
-    {
-      emoji: '🤝',
-      title: t('Our promise'),
-      body: t("We default to transparency, prioritize your safety, and build for the long term - not the hype cycle. Help us shape what Normal becomes next by sharing your feedback."),
-    },
-  ];
-
-  const PillarCard = ({ emoji, title, body }: { emoji: string; title: string; body: string }) => (
-    <Paper variant="outlined" sx={{ ...paperSx }}>
-      <Stack spacing={2} p={cardPadding} flexGrow={1} justifyContent="flex-start">
+export const MissionSection: React.FC = () => (
+  <Box
+    component="section"
+    sx={{ bgcolor: '#FAFAFB', pt: { xs: '80px', md: '110px' }, pb: { xs: '40px', md: '56px' } }}
+  >
+    <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
+      {/* Header */}
+      <Box sx={{ mb: '40px' }}>
         <Typography
-          variant="h5"
-          sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center' }}
+          sx={{
+            fontSize: '11px',
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: '#6B6B76',
+            mb: 1.5,
+          }}
         >
-          <span aria-hidden style={{ marginRight: 8 }}>{emoji}</span>
-          {title}
+          — How we build
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {body}
+        <Typography
+          component="h2"
+          sx={{
+            fontWeight: 500,
+            fontSize: 'clamp(32px, 4vw, 50px)',
+            lineHeight: 1.08,
+            letterSpacing: '-0.03em',
+            color: '#0A0A0F',
+            mb: '16px',
+          }}
+        >
+          Four principles, no shortcuts.
         </Typography>
-      </Stack>
-    </Paper>
-  );
+        <Typography
+          sx={{
+            fontSize: '16px',
+            color: '#6B6B76',
+            lineHeight: 1.55,
+            maxWidth: '520px',
+          }}
+        >
+          They guide every milestone on this page, and every line of code we ship.
+        </Typography>
+      </Box>
 
-  return (
-    <Box sx={{ px: '5%', py: { xs: 8, md: 12 } }}>
-      <Container maxWidth="lg" disableGutters>
-        <Stack spacing={3} sx={{ maxWidth: 960 }}>
-          <Typography variant="h2" sx={{ fontWeight: 600, lineHeight: 1.05 }}>
-            {t("Normal's Product Roadmap")}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            {t("Most people are earning next to nothing on their savings. Normal is built to change that - starting with a USDC savings account that pays real yield with no bank in the middle. Simple to use, transparent by design, and built to grow with you.")}
-          </Typography>
-        </Stack>
-
-        <Grid2 container spacing={2} sx={{ mt: { xs: 4, md: 6 } }}>
-          {pillars.map((p, i) => (
-            <Grid2 key={i} size={{ xs: 12, sm: 6 }}>
-              <PillarCard {...p} />
-            </Grid2>
-          ))}
-        </Grid2>
-
-        <Divider sx={{ my: { xs: 6, md: 8 } }} />
-
-        <Grid2 container spacing={2}>
-          {shippingCards.map((card, i) => (
-            <Grid2 key={i} size={{ xs: 12, sm: 6 }}>
-              <PillarCard {...card} />
-            </Grid2>
-          ))}
-        </Grid2>
-      </Container>
+      {/* Numbered list */}
+      <Box>
+        {PRINCIPLES.map((item) => (
+          <Box
+            key={item.n}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '48px 1fr', md: '80px 1.4fr 2fr' },
+              gap: { xs: '16px', md: '40px' },
+              alignItems: 'start',
+              py: { xs: '22px', md: '28px' },
+              borderTop: '1px solid rgba(10,10,15,0.08)',
+              '&:last-child': { borderBottom: '1px solid rgba(10,10,15,0.08)' },
+              transition: 'background 150ms ease',
+              mx: '-24px',
+              px: '24px',
+              '&:hover': { bgcolor: 'rgba(10,10,15,0.015)' },
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: '22px',
+                fontWeight: 500,
+                color: '#9A9AA3',
+                letterSpacing: '-0.02em',
+                fontFamily: '"Geist Mono", "Courier New", monospace',
+                pt: { xs: 0, md: '2px' },
+              }}
+            >
+              {item.n}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: { xs: '17px', md: '22px' },
+                fontWeight: 500,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.15,
+                color: '#0A0A0F',
+              }}
+            >
+              {item.title}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '14.5px',
+                color: '#6B6B76',
+                lineHeight: 1.6,
+                gridColumn: { xs: '2', md: 'auto' },
+              }}
+            >
+              {item.description}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
     </Box>
-  );
-}
+  </Box>
+);
+
+export default MissionSection;

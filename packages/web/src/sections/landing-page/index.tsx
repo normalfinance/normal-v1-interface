@@ -8,11 +8,11 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import BrandMarquee from '@/components/BrandMarquee';
 import RoadmapSection from '@/components/RoadmapSection';
-import { Vision } from '@/components/_about-us-page-components/vision';
 
 import { CtaImage } from './cta';
 import { FaqAccordion } from './faq';
 import { HeroHeader } from './hero-header';
+import { BentoSection } from './bento-section';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
 
@@ -74,7 +74,7 @@ export default function LandingPage() {
     <>
       <HeroHeader/>
       <BrandMarquee />
-      <Vision />
+      <BentoSection />
       <StatsGrid />
       <RoadmapSection />
       <TestimonialGrid />

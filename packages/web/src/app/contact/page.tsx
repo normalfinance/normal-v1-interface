@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png',
+        url: '/og/contact.png',
         width: 1200,
         height: 630,
         alt: 'Normal – Contact',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Contact | Normal',
     description: 'Reach out to the Normal team for questions, support, or partnership inquiries.',
-    images: ['/og/home.png'],
+    images: ['/og/contact.png'],
   },
   robots: {
     index: true,

@@ -20,12 +20,22 @@ export interface SentActivity extends ActivityBase {
   type: 'Sent';
   address: string; // ⬅ where the funds went
   token: TokenAmount;
+  txHash: string | null;
+  confirmed?: boolean; // undefined = unknown (Stellar); false = pending (BTC mempool)
+  /** This send is the on-chain leg of a fiat off-ramp (e.g. Coinbase sell). */
+  offramp?: boolean;
+  /** Off-ramp progress, reconciled against the provider (pending → completed). */
+  offrampStatus?: 'pending' | 'completed' | 'failed';
+  /** Off-ramp provider label (e.g. "Coinbase"). */
+  offrampProvider?: string;
 }
 
 export interface ReceiveActivity extends ActivityBase {
   type: 'Receive';
   address: string; // ⬅ where the funds came from
   token: TokenAmount;
+  txHash: string | null;
+  confirmed?: boolean; // undefined = unknown (Stellar); false = pending (BTC mempool)
 }
 
 export interface MintActivity extends ActivityBase {
@@ -90,6 +100,13 @@ export interface SwapActivity extends ActivityBase {
   type: 'Swap';
   tokenIn: TokenAmount;
   tokenOut: TokenAmount;
+  txHash: string | null;
+  /** Cross-chain (LI.FI) swaps stay pending until the bridge delivers. */
+  pending?: boolean;
+  /** Cross-chain swap whose source tx never landed / the bridge failed. */
+  failed?: boolean;
+  /** Bridge returned the funds — the swap didn't deliver (funds are safe). */
+  refunded?: boolean;
 }
 
 // -----------------------------------------------------------------------------

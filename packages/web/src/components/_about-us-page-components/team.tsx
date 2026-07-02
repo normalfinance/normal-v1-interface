@@ -1,372 +1,357 @@
 'use client';
 
-import type { ButtonProps } from '@mui/material';
-
 import React from 'react';
 import { Icon } from '@iconify/react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
 import Link from '@mui/material/Link';
+import { Box, Typography } from '@mui/material';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TelegramIcon from '@mui/icons-material/Telegram';
-import { Box, Grid, Container, Typography } from '@mui/material';
 
-type ImageProps = {
-  src: string;
-  alt?: string;
-};
-
-type Footer = {
-  heading: string;
-  description: string;
-  button: CustomButtonProps;
-};
-
-type SocialLink = {
-  href: string;
-  icon: React.ReactNode;
-};
+type SocialLink = { href: string; icon: React.ReactNode };
 
 type TeamMember = {
-  image: ImageProps;
+  image: string;
   name: string;
   jobTitle: string;
-  description: string;
+  bio?: string;
   socialLinks: SocialLink[];
 };
 
-export type CustomButtonProps = ButtonProps & { title: string };
+const BRAND_X = 'currentColor';
+const BRAND_LI = '#0077B5';
+const BRAND_TG = '#0088CC';
 
-type Props = {
-  tagline: string;
-  heading: string;
-  description: string;
-  teamMembers: TeamMember[];
-  footerContent: Footer;
-};
-
-export type TeamProps = React.ComponentPropsWithoutRef<'section'> & Partial<Props>;
-
-const BRAND = {
-  x: 'currentColor',
-  linkedin: '#0077B5',
-  github: 'currentColor',
-  telegram: '#0088CC',
-};
-
-export const TeamDefaults: Props = {
-  tagline: 'Tagline',
-  heading: 'Our team',
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-  teamMembers: [
-    {
-      image: {
-        src: cdn('about-page/justin.webp'),
-        alt: 'Justin Benjamin',
+const TEAM_MEMBERS: TeamMember[] = [
+  {
+    image: cdn('about-page/justin.webp'),
+    name: 'Justin Benjamin',
+    jobTitle: 'Founder & CEO',
+    bio: 'Justin designed products at Bitcoin of America and CoinFlip before starting Normal. Crypto investor for 7+ years, BS from Northwestern.',
+    socialLinks: [
+      {
+        href: 'https://x.com/justinbenjaminn',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
       },
-      name: 'Justin Benjamin',
-      jobTitle: 'Co-founder & CEO',
-      description:
-        'Justin formerly designed products at Bitcoin of America and CoinFlip, has invested in crypto for 7+ years, and holds a BS in Learning & Organizational Change from Northwestern.',
-      socialLinks: [
-        {
-          href: 'https://x.com/justinbenjaminn',
-          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
-        },
-        {
-          href: 'https://www.linkedin.com/in/justin-benjamin1/',
-          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
-        },
-        {
-          href: 'https://t.me/justinbenjamin',
-          icon: <TelegramIcon sx={{ color: BRAND.telegram }} />,
-        }, // ⬅️ new
-      ],
-    },
-    {
-      image: {
-        src: cdn('about-page/avm.webp'),
-        alt: 'Amit Anand',
+      {
+        href: 'https://www.linkedin.com/in/justin-benjamin1/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
       },
-      name: 'Amit Anand',
-      jobTitle: 'Head of Marketing',
-      description:
-        'Built 10m+ impression marketing strategies at Polygon, formerly led Partnerships at Zo World.',
-      socialLinks: [
-        {
-          href: 'https://x.com/0xawmit',
-          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
-        },
-        {
-          href: 'https://www.linkedin.com/in/0xawmit/',
-          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
-        },
-        { href: 'https://t.me/awmitx', icon: <TelegramIcon sx={{ color: BRAND.telegram }} /> }, // ⬅️ new
-      ],
-    },
-    {
-      image: {
-        src: cdn('about-page/jake.webp'),
-        alt: 'Jake Penzato',
+      {
+        href: 'https://t.me/justinbenjamin',
+        icon: <TelegramIcon sx={{ fontSize: 15, color: BRAND_TG }} />,
       },
-      name: 'Jake Penzato',
-      jobTitle: 'Creative Director',
-      description:
-        'Jake has 3 years of crypto investing experience and holds a BS in Marketing from Aurora University.',
-      socialLinks: [
-        {
-          href: 'https://x.com/JakePenzato',
-          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
-        },
-        {
-          href: 'https://www.linkedin.com/in/jake-penzato-a72747245/',
-          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
-        },
-        { href: 'https://t.me/JakeTheCD', icon: <TelegramIcon sx={{ color: BRAND.telegram }} /> }, // ⬅️ new
-      ],
-    },
-    {
-      image: {
-        src: cdn('about-page/niko.webp'),
-        alt: 'Niko Gorjan',
-      },
-      name: 'Niko Gorjan',
-      jobTitle: 'Front-End Developer',
-      description:
-        'Niko grew up in Slovenia and holds a CS degree from FERI, University of Maribor. After freelancing internationally and building a reputation for clean, component-driven React code, he joined Relume to develop reusable UI systems.',
-      socialLinks: [
-        {
-          href: 'https://x.com/NikoGorjan',
-          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
-        },
-        {
-          href: 'https://www.linkedin.com/in/niko-gorjan-582433276/',
-          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
-        },
-        {
-          href: 'https://github.com/nikogorjan',
-          icon: <GitHubIcon sx={{ color: BRAND.github }} />,
-        },
-      ],
-    },
-    {
-      image: {
-        src: cdn('about-page/jay.webp'),
-        alt: 'Jay Malve',
-      },
-      name: 'Jay Malve',
-      jobTitle: 'Full-Stack Developer',
-      description:
-        'Passionate full-stack developer with 5+ years of experience building impactful products across Dubai and US startups, fueled by a love for code and great conversations—especially over music and coffee.',
-      socialLinks: [
-        {
-          href: 'https://x.com/jaydotdev',
-          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
-        },
-        {
-          href: 'https://www.linkedin.com/in/jay-malave/',
-          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
-        },
-        {
-          href: 'https://github.com/jaymalave',
-          icon: <GitHubIcon sx={{ color: BRAND.github }} />,
-        },
-      ],
-    },
-    {
-      image: {
-        src: cdn('about-page/anth.webp'),
-        alt: 'Anthony Benjamin',
-      },
-      name: 'Anthony Benjamin',
-      jobTitle: 'Business Development Lead',
-      description:
-        'Strategy and Client Support. U.S. Navy Veteran with 2 years of experience managing commercial accounts at Ford. Licensed USVI-BVI sail boat captain.',
-      socialLinks: [
-        {
-          href: 'https://x.com/AnthonyBenjamn',
-          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
-        },
-        {
-          href: 'https://www.linkedin.com/in/anthony-benjamin/',
-          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
-        },
-        {
-          href: 'https://t.me/anthonypreprint',
-          icon: <TelegramIcon sx={{ color: BRAND.telegram }} />,
-        },
-      ],
-    },
-    {
-      image: {
-        src: cdn('about-page/john.webp'),
-        alt: 'John Reyes',
-      },
-      name: 'John Reyes',
-      jobTitle: 'Intern',
-      description:
-        'John is an aspiring crypto investor, social media content producer, and incoming freshman at DePaul University.',
-      socialLinks: [
-        {
-          href: 'https://x.com/0xJohnReyes',
-          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
-        },
-        {
-          href: 'https://www.linkedin.com/in/johnpreyes/',
-          icon: <LinkedInIcon sx={{ color: BRAND.linkedin }} />,
-        },
-        { href: '#', icon: <TelegramIcon sx={{ color: BRAND.telegram }} /> }, // ⬅️ new
-      ],
-    },
-    {
-      image: {
-        src: cdn('about-page/zeal.webp'),
-        alt: 'Chief Doge',
-      },
-      name: 'Zeal',
-      jobTitle: 'Chief Doge',
-      description:
-        'Zeal is our team mascot and crypto connoisseur. He keeps us on our toes and reviews our personal crypto investments.',
-      socialLinks: [
-        {
-          href: 'https://x.com/NormalDoge_Zeal',
-          icon: <Icon icon="fa6-brands:x-twitter" width={16} height={16} color={BRAND.x} />,
-        },
-      ],
-    },
-  ],
-  footerContent: {
-    heading: "We're hiring!",
-    description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-    button: { title: 'Open positions', variant: 'outlined' } as CustomButtonProps,
+    ],
   },
-};
+  {
+    image: cdn('about-page/avm.webp'),
+    name: 'Amit Anand',
+    jobTitle: 'Head of Marketing',
+    bio: "Growth strategist with deep roots in Web3, driving Normal's brand and community across every channel.",
+    socialLinks: [
+      {
+        href: 'https://x.com/0xawmit',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/0xawmit/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+      {
+        href: 'https://t.me/awmitx',
+        icon: <TelegramIcon sx={{ fontSize: 15, color: BRAND_TG }} />,
+      },
+    ],
+  },
+  {
+    image: cdn('about-page/jake.webp'),
+    name: 'Jake Penzato',
+    jobTitle: 'Creative Director',
+    bio: "Visual storyteller shaping Normal's design language — from brand identity to product UI.",
+    socialLinks: [
+      {
+        href: 'https://x.com/JakePenzato',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/jake-penzato-a72747245/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+      {
+        href: 'https://t.me/JakeTheCD',
+        icon: <TelegramIcon sx={{ fontSize: 15, color: BRAND_TG }} />,
+      },
+    ],
+  },
+  {
+    image: cdn('about-page/niko.webp'),
+    name: 'Niko Gorjan',
+    jobTitle: 'Front-End Lead',
+    bio: 'Grew up in Slovenia, CS degree from FERI. Built a reputation for clean, component-driven React code across international clients before joining Normal.',
+    socialLinks: [
+      {
+        href: 'https://x.com/NikoGorjan',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/niko-gorjan-582433276/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+      {
+        href: 'https://github.com/nikogorjan',
+        icon: <GitHubIcon sx={{ fontSize: 15 }} />,
+      },
+    ],
+  },
+  {
+    image: cdn('about-page/jay.webp'),
+    name: 'Jay Malve',
+    jobTitle: 'Full-Stack Developer',
+    bio: 'Full-stack engineer bridging smart contracts and polished UIs — if it ships, Jay probably touched it.',
+    socialLinks: [
+      {
+        href: 'https://x.com/jaydotdev',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/jay-malave/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+      {
+        href: 'https://github.com/jaymalave',
+        icon: <GitHubIcon sx={{ fontSize: 15 }} />,
+      },
+    ],
+  },
+  {
+    image: cdn('about-page/anth.webp'),
+    name: 'Anthony Benjamin',
+    jobTitle: 'Business Development Lead',
+    bio: "Forging the partnerships and integrations that expand Normal's footprint across DeFi and beyond.",
+    socialLinks: [
+      {
+        href: 'https://x.com/AnthonyBenjamn',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/anthony-benjamin/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+      {
+        href: 'https://t.me/anthonypreprint',
+        icon: <TelegramIcon sx={{ fontSize: 15, color: BRAND_TG }} />,
+      },
+    ],
+  },
+  {
+    image: cdn('about-page/john.webp'),
+    name: 'John Reyes',
+    jobTitle: 'Intern',
+    bio: 'Lending a hand across ops, research, and content — bringing fresh energy and curiosity to the team.',
+    socialLinks: [
+      {
+        href: 'https://x.com/0xJohnReyes',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/johnpreyes/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+    ],
+  },
+  {
+    image: cdn('about-page/zeal.webp'),
+    name: 'Zeal',
+    jobTitle: 'Chief Doge',
+    bio: 'Official mascot, morale officer, and the most photogenic member of the Normal team.',
+    socialLinks: [
+      {
+        href: 'https://x.com/NormalDoge_Zeal',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+    ],
+  },
+];
 
-export const Team: React.FC<TeamProps> = (props) => {
-  const { t } = useTranslate();
-
-  const { tagline, heading, description, teamMembers, footerContent, ...sectionProps } = {
-    ...TeamDefaults,
-    ...props,
-  };
-
-  return (
-    <Box
-      component="section"
-      {...sectionProps}
-      py={{ xs: 8, md: 12, lg: 14 }}
-      sx={(theme) => ({
-        backgroundColor: theme.palette.grey[50],
-        ...theme.applyStyles('dark', { backgroundColor: theme.palette.grey[900] }),
-      })}
-    >
-      <Container>
-        <Box maxWidth={600} mb={{ xs: 6, md: 9, lg: 10 }}>
-          <Typography
-            component="h2"
-            sx={{
-              fontWeight: 500,
-              fontSize: {
-                xs: '2rem',
-                md: '3rem',
-                lg: '3rem',
-              },
-              mb: 2,
-            }}
-          >
-            {t(heading)}
-          </Typography>
-        </Box>
-
-        <Grid container spacing={{ xs: 4, md: 6 }} mb={{ xs: 8, md: 12 }}>
-          {teamMembers.map((member, index) => (
-            <Grid item xs={12} md={4} key={index}>
-              <TeamMemberCard member={member} />
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
-    </Box>
-  );
-};
-
-const TeamMemberCard: React.FC<{ member: TeamMember }> = ({ member }) => {
-  const { t } = useTranslate();
-
-  return (
-    <Box
-      display="flex"
-      flexDirection="column"
-      p={1}
-      sx={(theme) => ({
-        bgcolor: theme.palette.background.paper,
-        boxShadow: `0 4px 12px ${theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(15, 23, 42, 0.06)'}`,
-        transition: 'transform 120ms ease, box-shadow 120ms ease',
-        borderRadius: 2,
-      })}
-    >
-      <Box position="relative" width="100%" paddingTop="100%" mb={1} sx={{ overflow: 'hidden' }}>
-        <Box
-          component="img"
-          src={member.image.src}
-          alt={member.image.alt}
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            objectFit: 'cover',
-            borderRadius: 2,
-            aspectRatio: 1 / 1,
-          }}
-        />
-      </Box>
+const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
+  <Box
+    sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      bgcolor: '#FFFFFF',
+      border: '1px solid rgba(10,10,15,0.08)',
+      borderRadius: '20px',
+      overflow: 'hidden',
+      boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.05)',
+    }}
+  >
+    {/* Photo */}
+    <Box sx={{ p: '12px', pb: 0 }}>
       <Box
         sx={{
-          backgroundColor: 'background.neutral',
-          borderRadius: 2,
-          p: 3,
+          position: 'relative',
+          overflow: 'hidden',
+          aspectRatio: '4 / 5',
+          borderRadius: '12px',
         }}
       >
-        <Box mb={1.5}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {t(member.name)}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t(member.jobTitle)}
-          </Typography>
-        </Box>
-        <Typography variant="body2" mb={2}>
-          {t(member.description)}
-        </Typography>
-
         <Box
-          mb={2}
-          mt={2}
+          component="img"
+          src={member.image}
+          alt={member.name}
           sx={{
-            backgroundColor: 'divider',
-            width: 1,
-            height: '1px',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'top',
+            display: 'block',
           }}
         />
-
-        <Box display="flex" gap={2} width="100%" justifyContent="flex-end" alignItems="center">
-          {member.socialLinks.map((link, index) => (
-            <Link
-              key={index}
-              href={link.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{ color: 'text.primary' }}
-            >
-              {link.icon}
-            </Link>
-          ))}
-        </Box>
       </Box>
     </Box>
+
+    {/* Info */}
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: '18px' }}>
+      <Typography
+        sx={{
+          fontSize: '18px',
+          fontWeight: 600,
+          color: '#0A0A0F',
+          letterSpacing: '-0.01em',
+          mb: '2px',
+        }}
+      >
+        {member.name}
+      </Typography>
+      <Typography
+        sx={{
+          fontSize: '13px',
+          color: '#6B6B76',
+          mb: '10px',
+        }}
+      >
+        {member.jobTitle}
+      </Typography>
+
+      {member.bio && (
+        <Typography
+          sx={{
+            fontSize: '13.5px',
+            color: '#2A2A33',
+            lineHeight: 1.55,
+            mb: '14px',
+            flex: 1,
+          }}
+        >
+          {member.bio}
+        </Typography>
+      )}
+
+      {/* Social icons */}
+      <Box sx={{ display: 'flex', gap: '8px', mt: 'auto' }}>
+        {member.socialLinks.map((link, idx) => (
+          <Link
+            key={idx}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              width: 30,
+              height: 30,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: '#F4F4F7',
+              borderRadius: '8px',
+              color: '#0A0A0F',
+              transition: 'bgcolor 120ms ease, color 120ms ease',
+              '&:hover': {
+                bgcolor: '#0A0A0F',
+                color: '#fff',
+                '& svg': { color: '#fff !important' },
+              },
+            }}
+          >
+            {link.icon}
+          </Link>
+        ))}
+      </Box>
+    </Box>
+  </Box>
+);
+
+export const Team: React.FC = () => {
+  const { t } = useTranslate();
+
+  return (
+    <>
+      {/* ── Team grid ── */}
+      <Box
+        component="section"
+        sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
+      >
+        <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
+          {/* Header */}
+          <Box mb={{ xs: '40px', md: '56px' }}>
+            <Typography
+              sx={{
+                fontSize: '11px',
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: '#6B6B76',
+                mb: 1.5,
+              }}
+            >
+              — The Team
+            </Typography>
+            <Typography
+              component="h2"
+              sx={{
+                fontWeight: 500,
+                fontSize: 'clamp(32px, 4vw, 52px)',
+                lineHeight: 1.15,
+                letterSpacing: '-0.03em',
+                color: '#0A0A0F',
+                mb: '16px',
+              }}
+            >
+              {t('Meet the Crew')}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '16px',
+                color: '#6B6B76',
+                lineHeight: 1.55,
+                maxWidth: '520px',
+              }}
+            >
+              {t('A small, focused team building the future of everyday crypto finance.')}
+            </Typography>
+          </Box>
+
+          {/* Grid */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: '1fr 1fr',
+                md: 'repeat(4, 1fr)',
+              },
+              gap: { xs: '24px', md: '32px' },
+            }}
+          >
+            {TEAM_MEMBERS.map((member) => (
+              <MemberCard key={member.name} member={member} />
+            ))}
+          </Box>
+        </Box>
+      </Box>
+
+    </>
   );
 };
 

@@ -11,14 +11,14 @@ export const metadata: Metadata = {
     template: '%s · Normal',
   },
   description:
-    'Explore the Normal roadmap – upcoming features, milestones, and our vision for the future of on-chain index funds.',
+    'Explore the Normal roadmap – upcoming features, milestones, and our vision for the future of self-custody savings on Stellar.',
   alternates: {
     canonical: '/roadmap',
   },
   openGraph: {
     title: 'Roadmap | Normal',
     description:
-      'Explore the Normal roadmap – upcoming features, milestones, and our vision for the future of on-chain index funds.',
+      'Explore the Normal roadmap – upcoming features, milestones, and our vision for the future of self-custody savings on Stellar.',
     url: `${CONFIG.siteUrl}/roadmap`,
     siteName: 'Normal',
     images: [
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Roadmap | Normal',
     description:
-      'See what’s next on the Normal roadmap – new features, DeFi integrations, and index fund improvements.',
+      "See what’s next on the Normal roadmap – new features, DeFi integrations, and savings yield improvements.",
     images: ['/og/home.png'],
   },
   robots: {
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     'roadmap',
     'crypto roadmap',
     'DeFi roadmap',
-    'on-chain index funds',
+    'on-chain savings yield',
   ],
 };
 export default function Page() {

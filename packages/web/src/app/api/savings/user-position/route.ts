@@ -84,10 +84,11 @@ async function fetchAllEvents(
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const network = cookieStore.get('normal-network')?.value ?? 'testnet';
+    const { searchParams } = new URL(request.url);
+    const networkOverride = searchParams.get('network');
+    const network = networkOverride ?? cookieStore.get('normal-network')?.value ?? 'testnet';
     const isMainnet = network === 'mainnet';
 
-    const { searchParams } = new URL(request.url);
     const userAddress = searchParams.get('user');
 
     if (!userAddress || !isValidStellarAddress(userAddress)) {
@@ -115,8 +116,8 @@ export async function GET(request: NextRequest) {
 
     const networkParam = isMainnet ? 'mainnet' : 'testnet';
 
-    // Fetch on-chain balance, events, and DB records in parallel.
-    const [balanceResult, eventsResult, depositRecords] = await Promise.allSettled([
+    // Fetch on-chain balance, events, DB records, and account position (lifetime earnings) in parallel.
+    const [balanceResult, eventsResult, depositRecords, accountPositionResult] = await Promise.allSettled([
       withTimeout(sdk.getVaultBalance(VAULT_ADDRESS, userAddress), 25_000, 'getVaultBalance'),
       withTimeout(
         fetchAllEvents(userAddress, VAULT_ADDRESS, networkParam, process.env.DEFINDEX_API_KEY),
@@ -127,6 +128,29 @@ export async function GET(request: NextRequest) {
         where: { walletAddress: userAddress, vaultAddress: VAULT_ADDRESS },
         select: { type: true, amount: true },
       }),
+      withTimeout(
+        fetch(
+          `${DEFINDEX_API_BASE}/account/${userAddress}/vault/${VAULT_ADDRESS}?network=${networkParam}`,
+          {
+            headers: process.env.DEFINDEX_API_KEY
+              ? { Authorization: `Bearer ${process.env.DEFINDEX_API_KEY}` }
+              : {},
+            next: { revalidate: 0 },
+          }
+        ).then(async (res) => {
+          if (!res.ok) return null;
+          const json = await res.json();
+          const perf = json?.performance ?? {};
+          const earned = perf.totalInterestEarned;
+          const deposited = perf.totalDeposited;
+          return {
+            totalInterestEarned: earned != null ? Number(earned) / DECIMALS : null,
+            totalDeposited: deposited != null ? Number(deposited) / DECIMALS : null,
+          };
+        }),
+        10_000,
+        'fetchAccountPosition'
+      ),
     ]);
 
     if (balanceResult.status === 'rejected') {
@@ -152,7 +176,26 @@ export async function GET(request: NextRequest) {
       dfTokens = Number(b.dfTokens) || 0;
     }
 
-    // totalDeposited: events API is authoritative; DB is fallback only
+    // Extract DeFindex account position data (authoritative source for totalDeposited and earnings).
+    // Withdrawal amounts in the events API are recorded in vault shares, not USDC, which causes
+    // computeTotalDepositedFromEvents to underestimate withdrawals when PPS > 1. The account
+    // position API computes these values in USDC terms correctly.
+    const accountPosition =
+      accountPositionResult.status === 'fulfilled' ? accountPositionResult.value : null;
+
+    if (accountPositionResult.status === 'rejected') {
+      console.error('[user-position] fetchAccountPosition failed:', String(accountPositionResult.reason));
+    } else {
+      console.log('[user-position] accountPosition:', JSON.stringify(accountPosition));
+    }
+
+    const lifetimeEarnings = accountPosition?.totalInterestEarned ?? null;
+
+    // totalDeposited: events API is authoritative; DB is fallback only.
+    // NOTE: accountPosition.totalDeposited is NOT used here — the DeFindex API returns the
+    // cumulative gross deposit total (all deposits ever, ignoring withdrawals), which is
+    // wrong for display. Only totalInterestEarned from that endpoint is used (for earnings).
+    const records = depositRecords.status === 'fulfilled' ? depositRecords.value : [];
     const events = eventsResult.status === 'fulfilled' ? eventsResult.value : [];
     const totalDepositedFromEvents = computeTotalDepositedFromEvents(events);
 
@@ -161,8 +204,7 @@ export async function GET(request: NextRequest) {
       totalDeposited = totalDepositedFromEvents;
       console.log('[user-position] totalDeposited from events:', totalDeposited);
     } else {
-      // Fall back to DB
-      const records = depositRecords.status === 'fulfilled' ? depositRecords.value : [];
+      // Fall back to DB when events API returns nothing
       if (records.length === 0) {
         totalDeposited = underlyingValue;
       } else {
@@ -176,18 +218,20 @@ export async function GET(request: NextRequest) {
       console.log('[user-position] totalDeposited from DB fallback:', totalDeposited);
     }
 
-    // If on-chain balance is unavailable and there are no events, return null
-    // so the client preserves its cached position rather than overwriting with zeros.
-    if (underlyingValue === 0 && dfTokens === 0) {
-      if (events.length === 0) {
-        console.warn('[user-position] No on-chain data available for', userAddress);
-      } else {
-        console.warn('[user-position] On-chain balance unavailable, preserving client cache for', userAddress);
-      }
+    // If getVaultBalance failed (rejected), return null so the client preserves its cached
+    // position rather than overwriting with zeros from a bad read.
+    // Do NOT return null when the balance is a legitimate 0 (e.g. after a full withdrawal) —
+    // in that case fall through and return a proper zero position so the UI shows 0s.
+    if (balanceResult.status === 'rejected') {
+      console.warn('[user-position] getVaultBalance failed, preserving client cache for', userAddress);
       return NextResponse.json({ success: true, userPosition: null });
     }
 
     const effectiveCurrentValue = underlyingValue > 0 ? underlyingValue : totalDeposited;
+
+    // earnings: always derived from current position so it resets to 0 after a full withdrawal.
+    // lifetimeEarnings (totalInterestEarned) is the all-time cumulative figure and is kept
+    // separate — it survives withdrawals and is used for the "All Time Earnings" display.
     const earnings = Math.max(effectiveCurrentValue - totalDeposited, 0);
 
     const userPosition = {
@@ -195,6 +239,7 @@ export async function GET(request: NextRequest) {
       currentValue: effectiveCurrentValue.toString(),
       totalDeposited: totalDeposited.toString(),
       earnings: earnings.toString(),
+      ...(lifetimeEarnings != null && { lifetimeEarnings: lifetimeEarnings.toString() }),
     };
 
     console.log('[user-position] computed:', userPosition);

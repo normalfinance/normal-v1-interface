@@ -22,6 +22,8 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 
+import { NetworkBadge, getAssetNetwork } from './network-badge';
+
 export interface PickTokenProps {
   open: boolean;
   onClose: () => void;
@@ -170,15 +172,18 @@ const PickToken: React.FC<PickTokenProps> = ({
                         justifyContent: 'center',
                       }}
                     >
-                      <Typography
-                        variant="body2"
-                        sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                      >
-                        {token.name.includes('Short') && (
-                          <Chip label="Short" color="error" size="small" variant="soft" />
-                        )}
-                        {token.name.replace('Short', '')}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 500, color: theme.palette.text.primary }}
+                        >
+                          {token.name.includes('Short') && (
+                            <Chip label="Short" color="error" size="small" variant="soft" />
+                          )}
+                          {token.name.replace('Short', '')}
+                        </Typography>
+                        <NetworkBadge network={getAssetNetwork(token)} />
+                      </Box>
                     </Box>
                   </Box>
                   <Box>
@@ -317,15 +322,18 @@ const PickToken: React.FC<PickTokenProps> = ({
                               justifyContent: 'center',
                             }}
                           >
-                            <Typography
-                              variant="body2"
-                              sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                            >
-                              {token.name.includes('Short') && (
-                                <Chip label="Short" color="error" size="small" variant="soft" />
-                              )}
-                              {token.name.replace('Short', '')}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Typography
+                                variant="body2"
+                                sx={{ fontWeight: 500, color: theme.palette.text.primary }}
+                              >
+                                {token.name.includes('Short') && (
+                                  <Chip label="Short" color="error" size="small" variant="soft" />
+                                )}
+                                {token.name.replace('Short', '')}
+                              </Typography>
+                              <NetworkBadge network={getAssetNetwork(token)} />
+                            </Box>
                           </Box>
                         </Box>
                         <Box>
@@ -398,15 +406,18 @@ const PickToken: React.FC<PickTokenProps> = ({
                             justifyContent: 'center',
                           }}
                         >
-                          <Typography
-                            variant="body2"
-                            sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                          >
-                            {token.name.includes('Short') && (
-                              <Chip label="Short" color="error" size="small" variant="soft" />
-                            )}
-                            {token.name.replace('Short', '')}
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 500, color: theme.palette.text.primary }}
+                            >
+                              {token.name.includes('Short') && (
+                                <Chip label="Short" color="error" size="small" variant="soft" />
+                              )}
+                              {token.name.replace('Short', '')}
+                            </Typography>
+                            <NetworkBadge network={getAssetNetwork(token)} />
+                          </Box>
                         </Box>
                       </Box>
                       <Box>

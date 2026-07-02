@@ -2,12 +2,13 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { m } from 'framer-motion';
 
+import Box from '@mui/material/Box';
 import NoSsr from '@mui/material/NoSsr';
 import Avatar from '@mui/material/Avatar';
 import SvgIcon from '@mui/material/SvgIcon';
 import IconButton from '@mui/material/IconButton';
 
-import { varTap, varHover, AnimateBorder, transitionTap } from '@/components/template/animate';
+import { varTap, varHover, transitionTap } from '@/components/template/animate';
 
 // ----------------------------------------------------------------------
 
@@ -49,17 +50,23 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
       {...other}
     >
       <NoSsr fallback={renderFallback()}>
-        <AnimateBorder
-          sx={{ p: '3px', borderRadius: '50%', width: 40, height: 40 }}
-          slotProps={{
-            primaryBorder: { size: 60, width: '1px', sx: { color: 'primary.main' } },
-            secondaryBorder: { sx: { color: 'warning.main' } },
+        <Box
+          sx={{
+            p: '3px',
+            borderRadius: '50%',
+            width: 40,
+            height: 40,
+            background: 'rgba(255,255,255,0.85)',
+            backdropFilter: 'blur(16px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(160%)',
+            border: '1px solid rgba(10,10,15,0.08)',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 32px rgba(10,10,15,0.07), 0 2px 6px rgba(10,10,15,0.04)',
           }}
         >
           <Avatar src={photoURL} alt={displayName} sx={{ width: 1, height: 1 }}>
             {displayName?.charAt(0).toUpperCase()}
           </Avatar>
-        </AnimateBorder>
+        </Box>
       </NoSsr>
     </IconButton>
   );

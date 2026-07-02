@@ -6,55 +6,54 @@ import { paths } from '@/routes/paths';
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useUserActivity } from '@/hooks';
 import { useBoolean } from 'minimal-shared/hooks';
-import { cdn, format, logger } from '@normalfinance/utils';
-import { useUserActivity, useStellarConfig } from '@/hooks';
+import { cdn, logger } from '@normalfinance/utils';
+import { usePortfolio } from '@/hooks/use-portfolio';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { getLinkedWallets } from '@/services/linked-wallets';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
+import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
-import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
-import {
-  getLinkedWallets,
-  type LinkedWallet,
-} from '@/services/linked-wallets';
-import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import {
   useNormalWallet,
-  hasStoredNormalWalletKey,
-  NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,
 } from '@/hooks/stellar/use-normal-wallet';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
-import { alpha, useTheme } from '@mui/material/styles';
+import AddOutlined from '@mui/icons-material/AddOutlined';
+import SyncOutlined from '@mui/icons-material/SyncOutlined';
+import CloseOutlined from '@mui/icons-material/CloseOutlined';
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import {
   Box,
   Stack,
   Avatar,
   Button,
+  Dialog,
   Drawer,
   Tooltip,
   IconButton,
   Typography,
+  DialogTitle,
+  DialogActions,
+  DialogContent,
   CircularProgress,
 } from '@mui/material';
 
-import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
+import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
-import WalletSelectionModal, {
-  hasSeenWalletSelectionModal,
-} from '@/components/_common/wallet-selection-modal';
 
 import { AccountButton } from './account-button';
 
-function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen: boolean }) {
+function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress, solanaAddress }: { address: string; drawerOpen: boolean; bitcoinAddress: string | null; ethereumAddress: string | null; solanaAddress: string | null }) {
   const { setGlobalIsLoading } = useAppStore();
 
   const {
@@ -62,20 +61,25 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
     getAllTokens,
   } = usePersistStore();
   const network = useNetworkStore((s) => s.network);
+  const [tokensFetching, setTokensFetching] = useState(true);
 
-  const { recentActivity } = useUserActivity(address);
-  const {
-    userPosition,
-    fetching: savingsFetching,
-    refreshVaultInfo,
-    refreshUserPosition,
-  } = useDefindexSavings();
+  const { recentActivity } = useUserActivity(address, bitcoinAddress, ethereumAddress, solanaAddress);
+
+  // Unified, deduped source: native balances + savings from one place.
+  const { getAsset, savings } = usePortfolio(true);
+  const userPosition = savings.position;
+  const savingsFetching = savings.positionLoading;
+  const savingsRef = useRef(savings);
+  useEffect(() => {
+    savingsRef.current = savings;
+  });
 
   // Effect hook to fetch all tokens when the component mounts, address changes, or network toggles
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       if (!address) return;
 
+      setTokensFetching(true);
       setGlobalIsLoading(true);
       try {
         await getAllTokens(true);
@@ -83,6 +87,7 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
         logger.error(e);
       } finally {
         setGlobalIsLoading(false);
+        setTokensFetching(false);
       }
     };
 
@@ -93,23 +98,49 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
     return () => clearTimeout(timer);
   }, [address, getAllTokens, network, setGlobalIsLoading]);
 
-  // Refresh both vault info and user position every time the drawer opens
+  // Refresh savings when the drawer opens.
   useEffect(() => {
-    if (drawerOpen && address) {
-      refreshVaultInfo();
-      refreshUserPosition();
-    }
-  }, [drawerOpen, address, refreshVaultInfo, refreshUserPosition]);  
+    if (drawerOpen && address) savingsRef.current.refresh();
+  }, [drawerOpen, address]);
 
-  const assetsBalance = tokens.reduce((acc, tkn) => {
-    const holdings = BigNumber(tkn.balance).multipliedBy(tkn.price);
-    return acc.plus(holdings);
-  }, BigNumber(0));
+  const btcToken = useMemo(() => {
+    const a = getAsset('BTC');
+    return a ? portfolioAssetToToken(a) : null;
+  }, [getAsset]);
+  const ethToken = useMemo(() => {
+    const a = getAsset('ETH');
+    return a ? portfolioAssetToToken(a) : null;
+  }, [getAsset]);
+  const solToken = useMemo(() => {
+    const a = getAsset('SOL');
+    return a ? portfolioAssetToToken(a) : null;
+  }, [getAsset]);
+
+  const allTokens = useMemo(
+    () =>
+      [...tokens, btcToken, ethToken, solToken]
+        .filter((tkn): tkn is NonNullable<typeof tkn> => !!tkn)
+        // Only assets the user actually holds. The portfolio aggregator always
+        // emits a BTC/ETH/SOL/XLM/USDC entry (0 when there's no address/balance),
+        // so without this a Stellar-only user sees a phantom "BTC $0". Mirrors the
+        // balance>0 filtering the holdings/hero views already use.
+        .filter((tkn) => BigNumber(tkn.balance).gt(0)),
+    [tokens, btcToken, ethToken, solToken]
+  );
+
+  const assetsBalance = useMemo(
+    () => allTokens.reduce((acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)), BigNumber(0)),
+    [allTokens]
+  );
 
   const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
   const savingsLoaded = userPosition !== null;
 
-  if (!address) {
+  // Render whenever the user has ANY wallet — a Turnkey-only (e.g. BTC-first)
+  // user has no Stellar `address` but should still see their real drawer.
+  // ConnectedWallet ignores `address`; balances come from the portfolio.
+  const hasWallet = !!address || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
+  if (!hasWallet) {
     return null;
   }
 
@@ -128,9 +159,11 @@ function WalletConnected({ address, drawerOpen }: { address: string; drawerOpen:
         balance={assetsBalance.toNumber()}
         savingsValue={savingsValue}
         savingsFetching={savingsFetching && !savingsLoaded}
+        tokensFetching={tokensFetching}
         percentageChange={0}
-        tokens={tokens}
+        tokens={allTokens}
         activity={recentActivity}
+        bitcoinAddress={bitcoinAddress}
       />
     </Box>
   );
@@ -144,16 +177,12 @@ export type AccountDrawerProps = IconButtonProps;
 export function AccountDrawer(props: AccountDrawerProps) {
   /*  stores ------------------------------------------------------ */
   const persist = usePersistStore();
-  const theme = useTheme();
   const { t } = useTranslate();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const config = useStellarConfig();
-  const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
     connectWallet: connectNormalWallet,
-    connectWalletWithoutKeypair,
     publicKey: normalPublicKey,
     isConnected: isNormalConnected,
     disconnectWallet: disconnectNormalWallet,
@@ -182,17 +211,18 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const connectedAddress = persist.wallet.address || publicKey || normalPublicKey;
   const isWalletConnected = !!connectedAddress || isConnected || isNormalConnected;
 
-  // Only fetch account status while the drawer is open and a wallet is connected
-  const { isLoading: isCheckingSetup, accountExists, hasUsdcTrustline } = useAccountStatus(
-    open && connectedAddress ? connectedAddress : '',
-    { assetIssuer: savingsUsdcIssuer }
-  );
-  const isSetupIncomplete =
-    !!connectedAddress &&
-    !isCheckingSetup &&
-    (!accountExists || !!(savingsUsdcIssuer && !hasUsdcTrustline));
+  const { addresses: turnkeyAddresses } = useTurnkeyWallet(open && !!session);
+  const bitcoinAddress = turnkeyAddresses?.bitcoinAddress ?? null;
+  const ethereumAddress = turnkeyAddresses?.ethereumAddress ?? null;
+  const solanaAddress = turnkeyAddresses?.solanaAddress ?? null;
+
+  // Has ANY wallet — a Stellar wallet OR a Turnkey chain wallet (BTC/ETH/SOL).
+  // Asset-first users may have e.g. only BTC and no Stellar address yet.
+  const hasAnyWallet =
+    isWalletConnected || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [wizardInitialStep, setWizardInitialStep] = useState<WizardStep | undefined>(undefined);
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
@@ -254,100 +284,30 @@ export function AccountDrawer(props: AccountDrawerProps) {
     }
   }, [connectWallet, onClose]);
 
-  const attemptAutoConnect = useCallback(
-    async (wallet: LinkedWallet): Promise<'connected' | 'requires-reimport' | 'failed'> => {
-      try {
-        if (!hasStoredNormalWalletKey()) {
-          return 'requires-reimport';
-        }
-
-        // Self-custody only: connect address-only. The restoreWallet useEffect
-        // in use-normal-wallet handles the password prompt and keypair restoration.
-        await connectWalletWithoutKeypair(wallet.walletAddress);
-        logger.log('[AccountDrawer] Auto-connected wallet in address-only mode');
-        return 'connected';
-      } catch (error) {
-        logger.error('[AccountDrawer] Error during auto-connect:', error);
-        return 'failed';
-      }
-    },
-    [connectWalletWithoutKeypair]
-  );
-
   const handlePostAuthFlow = useCallback(async () => {
     if (!session) {
       return;
     }
 
+    // Clear any stale local wallet state if the DB record was removed
     if (normalPublicKey && isNormalConnected) {
-      await connectNormalWallet();
-      onClose();
-      return;
-    }
-
-    if (isAutoConnecting) {
-      return;
-    }
-
-    setIsAutoConnecting(true);
-
-    try {
       const linkedWallets = await getLinkedWallets();
-
-      if (linkedWallets.length === 0) {
-        if (!hasSeenWalletSelectionModal()) {
-          setShowImportOptionInSelection(false);
-          setShowWalletSelection(true);
-        } else {
-          await handleConnectStellarWallet();
-        }
-        return;
+      const isStillLinked = linkedWallets.some((w) => w.walletAddress === normalPublicKey);
+      if (!isStillLinked) {
+        await disconnectNormalWallet();
+        persist.disconnectWallet();
       }
-
-      const mostRecentWallet = linkedWallets[0];
-
-      const autoConnected = await attemptAutoConnect(mostRecentWallet);
-
-      if (autoConnected === 'connected') {
-        enqueueSnackbar(t('Wallet connected successfully'), { variant: 'success' });
-        return;
-      }
-
-      if (autoConnected === 'requires-reimport') {
-        enqueueSnackbar(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE, {
-          variant: 'info',
-          autoHideDuration: 8000,
-        });
-        setShowImportNormalWallet(true);
-        return;
-      }
-
-      logger.warn(
-        '[AccountDrawer] Auto-connect failed for wallet:',
-        mostRecentWallet.walletAddress
-      );
-      enqueueSnackbar(t('Could not auto-connect wallet. Use Switch Wallets to reconnect.'), {
-        variant: 'warning',
-      });
-    } catch (error) {
-      logger.error('[AccountDrawer] Error in handlePostAuthFlow:', error);
-      enqueueSnackbar(t('Could not connect wallet. Use Switch Wallets to try again.'), {
-        variant: 'error',
-      });
-    } finally {
-      setIsAutoConnecting(false);
     }
+
+    // Open the wizard so the user can pick their wallet
+    setWizardInitialStep('linked-accounts');
+    setShowLoginModal(true);
   }, [
     session,
     normalPublicKey,
     isNormalConnected,
-    connectNormalWallet,
-    onClose,
-    isAutoConnecting,
-    attemptAutoConnect,
-    handleConnectStellarWallet,
-    enqueueSnackbar,
-    t,
+    disconnectNormalWallet,
+    persist,
   ]);
 
   /** Handle Normal wallet creation success */
@@ -405,12 +365,32 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [searchParams, router]);
 
   useEffect(() => {
-    if (searchParams.get('setup') === 'continue') {
-      setWizardInitialStep('fund-xlm');
-      setShowLoginModal(true);
-      router.replace(paths.savings, { scroll: false });
-    }
+    if (searchParams.get('setup') !== 'continue') return;
+    // Legacy onramp return: savings setup (activation + trustline) now completes
+    // on /savings itself, so just land the user there — the savings card guides
+    // the next step based on real account state.
+    router.replace(paths.savings, { scroll: false });
+     
   }, [searchParams, router]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (!session) {
+        rememberLoginIntent();
+        setShowLoginModal(true);
+      }
+    };
+    window.addEventListener('nf:open-login', handler);
+    return () => window.removeEventListener('nf:open-login', handler);
+  }, [session]);
+
+  // Opens the wizard regardless of session — used when a logged-in user
+  // starts an action that needs a wallet they don't have yet (lazy setup).
+  useEffect(() => {
+    const handler = () => setShowLoginModal(true);
+    window.addEventListener('nf:open-wallet-setup', handler);
+    return () => window.removeEventListener('nf:open-wallet-setup', handler);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -428,20 +408,22 @@ export function AccountDrawer(props: AccountDrawerProps) {
       return;
     }
 
-    if (isWalletConnected) {
-      setIsAutoConnecting(false);
-      return;
-    }
-
+    // Check loginIntent BEFORE the isWalletConnected guard.
+    // If the user explicitly clicked Login, always open the wizard so they
+    // can pick a wallet — even if the old wallet was auto-restored from
+    // localStorage after an expired session.
     const hadIntent = consumeLoginIntent();
     if (hadIntent && !hasHandledAuthRef.current) {
       hasHandledAuthRef.current = true;
-      // Always use the wizard for post-auth wallet setup (covers OAuth redirects
-      // where the wizard was closed by the page reload).
-      // If it's already open it handles itself; if not, open it now.
       if (!showLoginModalRef.current) {
         setShowLoginModal(true);
       }
+      return;
+    }
+
+    if (isWalletConnected) {
+      setIsAutoConnecting(false);
+      return;
     }
   }, [authLoading, session, passwordResetSuccess, isWalletConnected]);
 
@@ -458,9 +440,21 @@ export function AccountDrawer(props: AccountDrawerProps) {
       ) : (
         <Button
           variant="contained"
-          color="info"
           onClick={handleMainButtonClick}
           data-testid="connect-wallet-button"
+          sx={{
+            bgcolor: '#0A0A0F',
+            color: '#fff',
+            borderRadius: '999px',
+            textTransform: 'none',
+            fontWeight: 500,
+            px: '12px',
+            py: '6px',
+            fontSize: '14px',
+            minWidth: 'unset',
+            boxShadow: 'none',
+            '&:hover': { bgcolor: '#1a1a2e', boxShadow: 'none' },
+          }}
         >
           {t('Login')}
         </Button>
@@ -494,8 +488,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
           }}
         >
           <Tooltip title="Close">
-            <IconButton onClick={onClose} data-testid="close-drawer-button">
-              <Iconify icon="mingcute:close-line" />
+            <IconButton
+              onClick={onClose}
+              data-testid="close-drawer-button"
+              sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
+            >
+              <CloseOutlined sx={{ fontSize: 20 }} />
             </IconButton>
           </Tooltip>
 
@@ -512,10 +510,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       stopNavigatingToSettings();
                       onClose();
                     }}
+                    sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
                   >
                     {isNavigatingToSettings
                       ? <CircularProgress size={18} color="inherit" />
-                      : <Iconify icon="solar:settings-bold" />}
+                      : <SettingsOutlined sx={{ fontSize: 20 }} />}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -528,8 +527,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     setShowLoginModal(true);
                     onClose();
                   }}
+                  sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
                 >
-                  <Iconify icon="mingcute:add-line" />
+                  <AddOutlined sx={{ fontSize: 20 }} />
                 </IconButton>
               </Tooltip>
 
@@ -541,8 +541,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     setShowLoginModal(true);
                     onClose();
                   }}
+                  sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
                 >
-                  <Iconify icon="solar:refresh-bold" />
+                  <SyncOutlined sx={{ fontSize: 20 }} />
                 </IconButton>
               </Tooltip>
             </Stack>
@@ -551,13 +552,24 @@ export function AccountDrawer(props: AccountDrawerProps) {
           {session && (
             <Tooltip title={isDisconnecting ? 'Logging out...' : 'Logout'}>
               <Button
-                variant="soft"
-                color="error"
                 size="small"
-                onClick={handleDisconnect}
+                onClick={() => setShowLogoutConfirm(true)}
                 disabled={isDisconnecting}
                 data-testid="logout-button"
-                startIcon={<Iconify icon="solar:logout-2-bold" />}
+                sx={{
+                  bgcolor: '#0A0A0F',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  fontSize: '13px',
+                  px: '12px',
+                  py: '7px',
+                  minWidth: 'unset',
+                  boxShadow: 'none',
+                  '&:hover': { bgcolor: '#1a1a22', boxShadow: 'none' },
+                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.4)', color: 'rgba(255,255,255,0.6)' },
+                }}
               >
                 {t('Logout')}
               </Button>
@@ -567,28 +579,67 @@ export function AccountDrawer(props: AccountDrawerProps) {
         {session && (
           <Scrollbar sx={{ flexGrow: 1 }}>
             <Stack spacing={2} sx={{ px: 2, pt: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar src={userAvatar} alt={displayName} />
-                <Box>
-                  <Typography variant="subtitle1">{displayName}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {userEmail}
-                  </Typography>
-                  {connectedAddress && (
-                    <Stack
-                      direction="row"
-                      width={1}
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography variant="subtitle2">
-                        {format.fTruncate(connectedAddress, 25)}
-                      </Typography>
-                      <CopyIconButton value={connectedAddress} alert="Account ID copied" />
-                    </Stack>
-                  )}
-                </Box>
-              </Stack>
+              <Box sx={{ pb: '2px' }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Avatar
+                    src={userAvatar}
+                    alt={displayName}
+                    sx={{ width: 44, height: 44, flexShrink: 0 }}
+                  />
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{ fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: '#0A0A0F' }}>
+                      {displayName}
+                    </Typography>
+                    <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
+                      {userEmail}
+                    </Typography>
+                  </Box>
+                </Stack>
+                {(connectedAddress || bitcoinAddress || ethereumAddress || solanaAddress) && (
+                  <Box sx={{ mt: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {connectedAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#14B8A6', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Stellar</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${connectedAddress.slice(0, 8)}...${connectedAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={connectedAddress} alert="Stellar address copied" />
+                      </Stack>
+                    )}
+                    {bitcoinAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#F7931A', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Bitcoin</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${bitcoinAddress.slice(0, 8)}...${bitcoinAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={bitcoinAddress} alert="Bitcoin address copied" />
+                      </Stack>
+                    )}
+                    {ethereumAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#627EEA', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Ethereum</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${ethereumAddress.slice(0, 8)}...${ethereumAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={ethereumAddress} alert="Ethereum address copied" />
+                      </Stack>
+                    )}
+                    {solanaAddress && (
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#9945FF', flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Solana</Box>
+                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {`${solanaAddress.slice(0, 8)}...${solanaAddress.slice(-6)}`}
+                        </Box>
+                        <CopyIconButton value={solanaAddress} alert="Solana address copied" />
+                      </Stack>
+                    )}
+                  </Box>
+                )}
+              </Box>
               {isAutoConnecting ? (
                 <Box
                   sx={{
@@ -604,130 +655,112 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     {t('Connecting to your wallet...')}
                   </Typography>
                 </Box>
-              ) : isWalletConnected && connectedAddress ? (
-                <>
-                  {isSetupIncomplete && (
-                    <Box
+              ) : hasAnyWallet ? (
+                // Any wallet (incl. a Turnkey-only BTC/ETH/SOL user with no
+                // Stellar address yet) → the real drawer. Savings-specific setup
+                // is no longer nagged here; it lives on /savings, on demand.
+                <WalletConnected address={connectedAddress ?? ''} drawerOpen={open} bitcoinAddress={bitcoinAddress} ethereumAddress={ethereumAddress} solanaAddress={solanaAddress} />
+              ) : (
+                // No wallet yet — a calm $0 empty state. The pick-an-asset prompt
+                // only shows here (never once the user has created any wallet).
+                <Box sx={{ px: 2, py: 5 }}>
+                  <Stack spacing={2.5} alignItems="center" textAlign="center">
+                    <Typography
                       sx={{
-                        mx: 1,
-                        mb: 0.5,
-                        p: 2,
-                        borderRadius: 2,
-                        bgcolor: alpha(theme.palette.warning.main, 0.08),
-                        border: `1px solid ${alpha(theme.palette.warning.main, 0.25)}`,
+                        fontFamily: '"Geist Mono", ui-monospace, monospace',
+                        fontFeatureSettings: '"ss01","ss02","zero"',
+                        fontSize: '30px',
+                        fontWeight: 500,
+                        color: 'text.primary',
+                        letterSpacing: '-0.02em',
                       }}
                     >
-                      <Stack spacing={1.5}>
-                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                          <Iconify
-                            icon="solar:info-circle-bold"
-                            width={18}
-                            sx={{ color: 'warning.main', flexShrink: 0, mt: 0.15 }}
-                          />
-                          <Box>
-                            <Typography variant="subtitle2" sx={{ mb: 0.25 }}>
-                              {!accountExists ? t('Activate your wallet') : t('Add USDC trustline')}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {!accountExists
-                                ? t('Send 1+ XLM to activate your wallet on Stellar.')
-                                : t('One quick step to hold and earn USDC.')}
-                            </Typography>
-                          </Box>
-                        </Stack>
+                      $0.00
+                    </Typography>
+                    {session ? (
+                      <>
+                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
+                          {t('Pick an asset to get started — we’ll set up your wallet for it in one tap.')}
+                        </Typography>
                         <Button
                           variant="contained"
-                          size="small"
                           onClick={() => {
-                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
+                            setWizardInitialStep(undefined);
                             setShowLoginModal(true);
-                            onClose();
                           }}
                           sx={{
+                            bgcolor: '#0A0A0F',
+                            color: '#fff',
                             borderRadius: 1.5,
-                            bgcolor: 'warning.main',
-                            color: 'warning.contrastText',
-                            '&:hover': { bgcolor: 'warning.dark' },
-                            alignSelf: 'flex-start',
-                            fontSize: '0.8rem',
-                            px: 1.75,
+                            px: 3,
+                            '&:hover': { bgcolor: '#1a1a25' },
                           }}
                         >
-                          {t('Continue setup')}
+                          {t('Pick an asset')}
                         </Button>
-                      </Stack>
-                    </Box>
-                  )}
-                  <WalletConnected address={connectedAddress} drawerOpen={open} />
-                </>
-              ) : (
-                <Box sx={{ px: 1, py: 3 }}>
-                  <Box
-                    sx={{
-                      border: 1,
-                      borderColor: 'warning.light',
-                      borderRadius: 2,
-                      p: 2.5,
-                      bgcolor: alpha(theme.palette.warning.main, 0.04),
-                    }}
-                  >
-                    <Stack spacing={2}>
-                      <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Box
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 1.5,
-                            bgcolor: alpha(theme.palette.warning.main, 0.12),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
+                      </>
+                    ) : (
+                      <>
+                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
+                          {t('Sign in to start buying, earning, and holding crypto.')}
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          onClick={handleConnectClick}
+                          sx={{ borderRadius: 1.5, px: 3 }}
                         >
-                          <Iconify
-                            icon="solar:rocket-bold"
-                            width={22}
-                            sx={{ color: 'warning.dark' }}
-                          />
-                        </Box>
-                        <Box>
-                          <Typography variant="subtitle1" fontWeight={600}>
-                            {t('Account Setup')}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {t('Complete your setup to start investing')}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        onClick={() => {
-                          if (session) {
-                            setWizardInitialStep(accountExists ? 'add-trustline' : 'fund-xlm');
-                            setShowLoginModal(true);
-                          } else {
-                            handleConnectClick();
-                          }
-                        }}
-                        sx={{
-                          bgcolor: 'warning.main',
-                          color: 'warning.contrastText',
-                          '&:hover': { bgcolor: 'warning.dark' },
-                          borderRadius: 1.5,
-                        }}
-                      >
-                        {t('Continue setup')}
-                      </Button>
-                    </Stack>
-                  </Box>
+                          {t('Sign in')}
+                        </Button>
+                      </>
+                    )}
+                  </Stack>
                 </Box>
               )}
             </Stack>
           </Scrollbar>
         )}
       </Drawer>
+
+      {/* Logout confirmation — an extra, deliberate step so a wallet can't be
+          disconnected (and an unbacked-up wallet effectively lost) in one tap. */}
+      <Dialog
+        open={showLogoutConfirm}
+        onClose={() => !isDisconnecting && setShowLogoutConfirm(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>{t('Log out of this device?')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {t(
+              "You'll be signed out and your wallet disconnected from this device. Make sure you've backed up your recovery phrase — without it, an imported wallet can't be restored."
+            )}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            onClick={() => setShowLogoutConfirm(false)}
+            disabled={isDisconnecting}
+            sx={{ textTransform: 'none', color: 'text.secondary' }}
+          >
+            {t('Cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={isDisconnecting}
+            startIcon={isDisconnecting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            onClick={async () => {
+              await handleDisconnect();
+              setShowLogoutConfirm(false);
+            }}
+            sx={{ textTransform: 'none', borderRadius: '999px' }}
+          >
+            {isDisconnecting ? t('Logging out…') : t('Log out')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <OnboardingWizard
         open={showLoginModal}
         initialStep={wizardInitialStep}

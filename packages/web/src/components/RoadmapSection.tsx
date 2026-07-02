@@ -56,24 +56,28 @@ const PHASES: Phase[] = [
   },
 ];
 
-const BULLET = '●';
 
 // ----------------------------------------------------------------------
 
-const statusStyles: Record<Status, { bg: string; color: string; border: string; dot: string }> = {
-  live: { bg: '#eafff4', color: '#047a3a', border: '#cdf2dc', dot: '#047a3a' },
-  soon: { bg: '#fff4e6', color: '#b25500', border: '#ffe1bd', dot: '#b25500' },
-  plan: { bg: '#fafafa', color: '#6b6b76', border: '#e8e8ec', dot: '#9a9aa3' },
+const statusStyles: Record<Status, { bg: string; color: string }> = {
+  live: { bg: 'rgba(26,179,125,0.12)', color: '#0E8A5B' },
+  soon: { bg: 'rgba(255,176,96,0.16)', color: '#B26412' },
+  plan: { bg: 'rgba(110,139,255,0.14)', color: '#3E51B1' },
 };
 
 const PhaseCard = styled('article')({
   backgroundColor: '#fff',
-  border: '1px solid #e8e8ec',
+  border: '1px solid rgba(10,10,15,0.08)',
   borderRadius: 22,
   padding: 28,
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
+  transition: 'border-color 200ms, background 200ms',
+  '&:hover': {
+    borderColor: 'rgba(10,10,15,0.12)',
+    background: '#fdfdfd',
+  },
 });
 
 // ----------------------------------------------------------------------
@@ -85,25 +89,23 @@ export default function RoadmapSection() {
     <Box
       component="section"
       aria-labelledby="roadmap-heading"
-      sx={(theme) => ({
-        bgcolor: theme.palette.grey[50],
-        borderTop: `1px solid ${theme.palette.divider}`,
-        borderBottom: `1px solid ${theme.palette.divider}`,
-        py: 12,
-      })}
+      sx={{
+        bgcolor: '#FAFAFB',
+        pt: { xs: '80px', md: '110px' }, pb: { xs: '40px', md: '56px' }
+      }}
     >
       <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
         {/* Header */}
-        <Box>
+        <Box sx={{ textAlign: 'center' }}>
           <Box
             component="p"
             sx={{
               m: 0,
               mb: '14px',
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 500,
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.16em',
               color: '#6b6b76',
             }}
           >
@@ -116,11 +118,10 @@ export default function RoadmapSection() {
             sx={{
               m: 0,
               fontSize: 'clamp(34px, 4.4vw, 56px)',
-              fontWeight: 600,
+              fontWeight: 500,
               letterSpacing: '-0.03em',
               lineHeight: 1.04,
               color: '#0a0a0b',
-              maxWidth: '22ch',
             }}
           >
             {t("Where we're going.")}
@@ -131,10 +132,11 @@ export default function RoadmapSection() {
             sx={{
               m: 0,
               mt: '14px',
-              fontSize: 17,
+              fontSize: '15px',
               color: '#6b6b76',
               maxWidth: '60ch',
-              lineHeight: 1.5,
+              lineHeight: 1.6,
+              mx: 'auto',
             }}
           >
             {t(
@@ -146,10 +148,10 @@ export default function RoadmapSection() {
         {/* Phase grid */}
         <Box
           sx={{
-            mt: 7,
+            mt: '56px',
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-            gap: 2,
+            gap: '14px',
             alignItems: 'stretch',
           }}
         >
@@ -158,6 +160,7 @@ export default function RoadmapSection() {
             return (
               <PhaseCard key={phase.title}>
                 {/* Status tag */}
+                {/* Status tag */}
                 <Box
                   component="span"
                   sx={{
@@ -165,19 +168,40 @@ export default function RoadmapSection() {
                     alignItems: 'center',
                     gap: '6px',
                     alignSelf: 'flex-start',
-                    height: 26,
-                    px: '10px',
+                    pl: phase.status === 'live' ? '10px' : '10px',
+                    pr: '12px',
+                    py: '5px',
                     borderRadius: '999px',
-                    fontSize: 11.5,
+                    fontSize: '11px',
                     fontWeight: 500,
                     bgcolor: s.bg,
                     color: s.color,
-                    border: `1px solid ${s.border}`,
                   }}
                 >
-                  <Box component="span" sx={{ color: s.dot, fontSize: 8, lineHeight: 1 }}>
-                    {BULLET}
-                  </Box>
+                  {phase.status === 'live' ? (
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: '#1AB37D',
+                        boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: s.color,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
                   {t(phase.statusLabel)}
                 </Box>
 
@@ -186,10 +210,10 @@ export default function RoadmapSection() {
                   component="h3"
                   sx={{
                     m: 0,
-                    mt: '18px',
+                    mt: '16px',
                     mb: '4px',
-                    fontSize: 22,
-                    fontWeight: 600,
+                    fontSize: '20px',
+                    fontWeight: 500,
                     letterSpacing: '-0.02em',
                     color: '#0a0a0b',
                   }}
@@ -201,11 +225,8 @@ export default function RoadmapSection() {
                 <Box
                   component="span"
                   sx={{
-                    fontSize: 11.5,
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    color: '#9a9aa3',
+                    fontSize: '13px',
+                    color: '#6B6B76',
                   }}
                 >
                   {phase.when}
@@ -214,7 +235,7 @@ export default function RoadmapSection() {
                 {/* Bullets */}
                 <Box
                   component="ul"
-                  sx={{ m: 0, mt: '18px', p: 0, listStyle: 'none', flex: 1 }}
+                  sx={{ m: 0, mt: '20px', p: 0, listStyle: 'none', flex: 1, display: 'grid', gap: '10px' }}
                 >
                   {phase.bullets.map((bullet) => (
                     <Box
@@ -224,20 +245,23 @@ export default function RoadmapSection() {
                         display: 'flex',
                         gap: '10px',
                         alignItems: 'flex-start',
-                        py: '10px',
-                        borderTop: '1px solid #e8e8ec',
-                        fontSize: 14,
-                        color: '#3a3a44',
+                        fontSize: '14.5px',
+                        color: '#2A2A33',
                         lineHeight: 1.5,
                       }}
                     >
                       <Box
                         component="span"
                         aria-hidden="true"
-                        sx={{ color: s.dot, flexShrink: 0, fontSize: 10, mt: '4px' }}
-                      >
-                        {BULLET}
-                      </Box>
+                        sx={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          background: '#0A0A0F',
+                          flexShrink: 0,
+                          mt: '8px',
+                        }}
+                      />
                       {t(bullet)}
                     </Box>
                   ))}

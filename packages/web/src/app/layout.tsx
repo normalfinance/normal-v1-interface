@@ -2,14 +2,6 @@ import '@/global.css';
 
 import type { Metadata, Viewport } from 'next';
 
-import { Instrument_Sans } from 'next/font/google';
-
-const instrumentSans = Instrument_Sans({
-  subsets: ['latin'],
-  variable: '--font-instrument-sans',
-  display: 'swap',
-});
-
 import { CONFIG } from '@/global-config';
 import { primary } from '@/theme/core/palette';
 import { LocalizationProvider } from '@/locales';
@@ -21,6 +13,7 @@ import { I18nProvider } from '@/locales/i18n-provider';
 import { ModalProvider } from '@/providers/ModalProvider';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
+import { AssetActionsProvider } from '@/providers/AssetActionsProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 import { SupabaseAuthProvider } from '@/providers/SupabaseAuthProvider';
 import { WalletPasswordProvider } from '@/providers/WalletPasswordProvider';
@@ -48,8 +41,8 @@ export const metadata: Metadata = {
     default: 'Normal',
     template: '%s · Normal',
   },
-  description: 'Invest in diversified crypto indices and synthetic assets with Normal.',
-  keywords: 'crypto, investing, crypto index, defi',
+  description: 'Earn yield on your USDC with Normal — self-custody savings powered by DeFindex and Blend on Stellar.',
+  keywords: 'crypto savings, USDC yield, DeFi, Stellar, Blend, DeFindex, Normal Finance',
   openGraph: {
     siteName: 'Normal',
     images: [
@@ -106,7 +99,23 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   const appConfig = await getAppConfig();
 
   return (
-    <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning className={instrumentSans.variable}>
+    <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
+        {/* Non-blocking font load — does not delay first paint */}
+        <link
+          rel="preload"
+          as="style"
+          href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap"
+        />
+        <link
+          rel="stylesheet"
+          href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap"
+          media="print"
+          // @ts-expect-error — onLoad on link is valid HTML but not in React types
+          onLoad="this.media='all'"
+        />
+      </head>
       <body>
         <InitColorSchemeScript
             defaultMode={themeConfig.defaultMode}
@@ -136,7 +145,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                               <AnnouncementProvider>
                                 <WalletPasswordProvider>
                                   <ModalProvider>
-                                    <DashboardLayout>{children}</DashboardLayout>
+                                    <AssetActionsProvider>
+                                      <DashboardLayout>{children}</DashboardLayout>
+                                    </AssetActionsProvider>
                                   </ModalProvider>
                                 </WalletPasswordProvider>
                               </AnnouncementProvider>

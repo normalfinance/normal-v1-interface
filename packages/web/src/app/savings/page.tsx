@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png',
+        url: '/og/savings.png',
         width: 1200,
         height: 630,
         alt: 'Normal Savings',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Savings | Normal',
     description: 'Earn yield on your USDC savings with Normal.',
-    images: ['/og/home.png'],
+    images: ['/og/savings.png'],
   },
   robots: {
     index: true,

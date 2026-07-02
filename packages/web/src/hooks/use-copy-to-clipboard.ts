@@ -18,21 +18,37 @@ export function useCopyToClipboard(): ReturnType {
   const [copiedText, setCopiedText] = useState<CopiedValue>(null);
 
   const copy: CopyFn = async (text) => {
-    if (!navigator?.clipboard) {
-      logger.warn('Clipboard not supported');
-      return false;
+    // Primary: Clipboard API (requires HTTPS / user gesture)
+    if (navigator?.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopiedText(text);
+        return true;
+      } catch (error) {
+        logger.warn('Clipboard API failed, trying execCommand fallback', error);
+      }
     }
 
-    // Try to save to clipboard then save it in the state if worked
+    // Fallback: execCommand (works on HTTP, older browsers, some mobile)
     try {
-      await navigator.clipboard.writeText(text);
-      setCopiedText(text);
-      return true;
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(el);
+      if (ok) {
+        setCopiedText(text);
+        return true;
+      }
     } catch (error) {
-      logger.warn('Copy failed', error);
-      setCopiedText(null);
-      return false;
+      logger.warn('execCommand copy failed', error);
     }
+
+    setCopiedText(null);
+    return false;
   };
 
   return { copiedText, copy };

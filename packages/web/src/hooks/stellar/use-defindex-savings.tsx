@@ -4,69 +4,10 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { OptionsObject, SnackbarMessage } from 'notistack';
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
-// ---------------------------------------------------------------------------
-// Module-level position cache — survives React remounts and page refreshes.
-// Keyed by wallet address so multiple accounts never bleed data into each other.
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// Position cache
-// ---------------------------------------------------------------------------
-const POSITION_CACHE_KEY = 'nf_savings_position_cache';
-const CACHE_KEY = POSITION_CACHE_KEY; // alias used below
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-interface CacheEntry {
-  position: SavingsPosition;
-  cachedAt: number;
-}
-
-function readCache(): Record<string, CacheEntry> {
-  if (typeof window === 'undefined') return {};
-  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { return {}; }
-}
-
-function getCachedPosition(address: string | undefined): SavingsPosition | null {
-  if (!address) return null;
-  const entry = readCache()[address];
-  if (!entry?.cachedAt || Date.now() - entry.cachedAt > CACHE_TTL_MS) return null;
-  return entry.position;
-}
-
-function setCachedPosition(address: string | undefined, position: SavingsPosition): void {
-  if (!address || typeof window === 'undefined') return;
-  try {
-    const cache = readCache();
-    cache[address] = { position, cachedAt: Date.now() };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-  } catch { /* storage full */ }
-}
-
-// ---------------------------------------------------------------------------
-// Vault info cache — keyed by network so mainnet/testnet never bleed.
-// TTL is 5 minutes; address never changes but APY/deposits update.
-// ---------------------------------------------------------------------------
-const VAULT_CACHE_KEY = 'nf_vault_info_cache';
-const VAULT_CACHE_TTL_MS = 5 * 60 * 1000;
-
-function getCachedVaultInfo(network: string): VaultInfo | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(VAULT_CACHE_KEY);
-    if (!raw) return null;
-    const entry: { vault: VaultInfo; network: string; cachedAt: number } = JSON.parse(raw);
-    if (entry.network !== network) return null;
-    if (!entry.cachedAt || Date.now() - entry.cachedAt > VAULT_CACHE_TTL_MS) return null;
-    return entry.vault;
-  } catch { return null; }
-}
-
-function setCachedVaultInfo(network: string, vault: VaultInfo): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(VAULT_CACHE_KEY, JSON.stringify({ vault, network, cachedAt: Date.now() }));
-  } catch { /* storage full */ }
-}
-
+// The savings read (vault metadata + user position), its localStorage cache,
+// and the indexer-lag merge now live in `useSavingsPosition` — one deduped SWR
+// shared across all views. This hook consumes it for the read and keeps the
+// deposit/withdraw transaction engine.
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
@@ -94,6 +35,7 @@ import Button from '@mui/material/Button';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
+import { useSavingsPosition, POSITION_SYNC_EVENT } from '../use-savings-position';
 import { useWalletReconnect, WalletSessionExpiredError } from './use-wallet-reconnect';
 import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
 
@@ -110,6 +52,7 @@ interface UseDefindexSavingsReturn {
   userPosition: SavingsPosition | null;
   needsTrustline: boolean;
   setNeedsTrustline: Dispatch<SetStateAction<boolean>>;
+  txStep: string | null;
   deposit: (amount: string) => Promise<string>;
   withdraw: (amount: string) => Promise<string>;
   refreshVaultInfo: () => Promise<void>;
@@ -156,7 +99,7 @@ function enqueueSuccessWithStellarExpert(
 export function useDefindexSavings(): UseDefindexSavingsReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { wallet } = usePersistStore();
+  const { wallet, getAllTokens } = usePersistStore();
   const config = useStellarConfig();
 
   const { publicKey: stellarPublicKey } = useStellarWalletsKit();
@@ -168,181 +111,41 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   } = useNormalWallet();
 
   const [error, setError] = useState<string | null>(null);
-  const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
   const [needsTrustline, setNeedsTrustline] = useState(false);
-  const networkKey = config.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet';
-  const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(
-    () => getCachedVaultInfo(config.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet')
-  );
-  // Read cache once so positionFetching and userPosition are consistent on the first render.
-  // If there is no cached position, positionFetching starts true so the skeleton shows
-  // immediately instead of briefly flashing 0.00 before the fetch effect fires.
-  const [userPosition, setUserPosition] = useState<SavingsPosition | null>(
-    () => getCachedPosition(wallet.address)
-  );
-  const [positionFetching, setPositionFetching] = useState(
-    () => !getCachedPosition(wallet.address)
-  );
+  const [txStep, setTxStep] = useState<string | null>(null);
 
-  // Separate tokens for vault-info and user-position fetches so they can run
-  // concurrently without cancelling each other.
-  const vaultTokenRef = useRef(0);
-  const positionTokenRef = useRef(0);
-  // Mirror of userPosition so callbacks can read the latest value without
-  // needing it as a dependency.
-  const userPositionRef = useRef(userPosition);
-  useEffect(() => { userPositionRef.current = userPosition; }, [userPosition]);
+  // Read (vault metadata + user position) from the shared, deduped savings hook
+  // — one fetch across all views instead of one per mount.
+  const savings = useSavingsPosition();
+  const vaultInfo = savings.vaultInfo;
+  const userPosition = savings.position;
+  const fetching = savings.vaultLoading;
+  const positionFetching = savings.positionLoading;
+  const fetchError = savings.vaultError
+    ? ((savings.vaultError as Error)?.message ?? 'Failed to fetch vault info')
+    : null;
 
-  // ── Phase 1: vault metadata (fast, ~3-5 s, no user address needed) ──────
+  // Latest savings handle + position, read by the tx callbacks without being deps.
+  const savingsRef = useRef(savings);
+  useEffect(() => {
+    savingsRef.current = savings;
+  });
+  const userPositionRef = useRef(savings.position);
+  useEffect(() => {
+    userPositionRef.current = savings.position;
+  }, [savings.position]);
+
+  // Post-operation refresh timeouts (cancelled before a new op starts).
+  const refreshTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Refreshes delegate to the shared savings hook (deduped + cached).
   const refreshVaultInfo = useCallback(async () => {
-    const myToken = ++vaultTokenRef.current;
-    setFetchError(null);
-    setFetching(true);
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        if (attempt > 0) {
-          await new Promise((r) => setTimeout(r, 600 * 2 ** (attempt - 1)));
-          if (myToken !== vaultTokenRef.current) return;
-        }
-
-        const controller = new AbortController();
-        const tid = setTimeout(() => controller.abort(), 12_000);
-        let response: Response;
-        try {
-          response = await fetch('/api/savings/vault-info', { signal: controller.signal });
-        } finally {
-          clearTimeout(tid);
-        }
-
-        if (myToken !== vaultTokenRef.current) return;
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body?.error || `Request failed (${response.status})`);
-        }
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error || 'Failed to fetch vault info');
-
-        if (myToken !== vaultTokenRef.current) return;
-
-        setCachedVaultInfo(networkKey, data.vault);
-        setVaultInfo(data.vault);
-        setFetchError(null);
-        setFetching(false);
-        return;
-      } catch (err: any) {
-        if (myToken !== vaultTokenRef.current) return;
-        // Always retry — set error only after the final attempt
-        if (attempt < 2) continue;
-        console.error('[useDefindexSavings] vault-info fetch failed:', err);
-        setFetchError(err.message || 'Failed to fetch vault info');
-        setFetching(false);
-        return;
-      }
-    }
-
-    if (myToken !== vaultTokenRef.current) return;
-    setFetchError('Failed to fetch vault info');
-    setFetching(false);
+    savingsRef.current.refreshVault();
   }, []);
-
-  // ── Phase 2: user position (slow, up to 30 s for Soroban RPC on mainnet) ─
   const refreshUserPosition = useCallback(async () => {
-    if (!wallet.address) return;
-
-    const myToken = ++positionTokenRef.current;
-    setPositionFetching(true);
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        if (attempt > 0) {
-          await new Promise((r) => setTimeout(r, 2_000 * attempt));
-          if (myToken !== positionTokenRef.current) return;
-        }
-
-        const controller = new AbortController();
-        // 30 s — Soroban RPC calls on mainnet can take 15-25 s
-        const tid = setTimeout(() => controller.abort(), 30_000);
-        let response: Response;
-        try {
-          response = await fetch(`/api/savings/user-position?user=${wallet.address}`, {
-            signal: controller.signal,
-          });
-        } finally {
-          clearTimeout(tid);
-        }
-
-        if (myToken !== positionTokenRef.current) return;
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body?.error || `Request failed (${response.status})`);
-        }
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error || 'Failed to fetch user position');
-
-        if (myToken !== positionTokenRef.current) return;
-
-        if (data.userPosition) {
-          const apiPos = data.userPosition;
-          const prev = userPositionRef.current;
-          if (prev) {
-            const apiTD = parseFloat(apiPos.totalDeposited);
-            const prevTD = parseFloat(prev.totalDeposited);
-            const currentValue = parseFloat(apiPos.currentValue);
-            // The DeFindex events indexer lags 30-120 s behind on-chain state.
-            // Two stale-events signals:
-            //   1. apiTD > currentValue — impossible for a yield vault (deposited > held)
-            //   2. apiTD < prevTD — indexer hasn't caught up to a recent deposit
-            // In either case keep prevTD (our best known value) and only accept
-            // Soroban's up-to-date currentValue.
-            const stale =
-              apiTD > currentValue + 0.001 ||
-              apiTD < prevTD - 0.001;
-            if (stale) {
-              const merged = {
-                ...apiPos,
-                totalDeposited: prev.totalDeposited,
-                earnings: Math.max(currentValue - prevTD, 0).toFixed(7),
-              };
-              setCachedPosition(wallet.address, merged);
-              setUserPosition(merged);
-            } else {
-              setCachedPosition(wallet.address, apiPos);
-              setUserPosition(apiPos);
-            }
-          } else {
-            setCachedPosition(wallet.address, apiPos);
-            setUserPosition(apiPos);
-          }
-        }
-        setPositionFetching(false);
-        return;
-      } catch (err: any) {
-        if (myToken !== positionTokenRef.current) return;
-        // Retry on all errors (AbortError = timeout; others = network/API issues)
-        if (attempt < 2) continue;
-        console.error('[useDefindexSavings] user-position fetch failed after retries:', err);
-        setPositionFetching(false);
-        return;
-      }
-    }
-  }, [wallet.address]);
-
-  // Phase 1: vault metadata on mount (no dependency on wallet address)
-  useEffect(() => {
-    refreshVaultInfo();
-  }, [refreshVaultInfo]);
-
-  // Phase 2: user position when wallet address is available
-  useEffect(() => {
-    refreshUserPosition();
-  }, [refreshUserPosition]);
+    savingsRef.current.refreshPosition();
+  }, []);
 
   // Deposit to vault — two transactions: (1) classic USDC fee payment,
   // (2) DeFindex deposit for the net amount. Fee goes first so if the
@@ -387,8 +190,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
 
-        const signAndSubmit = async (xdr: string) => {
+        const signAndSubmit = async (xdr: string, onSigned?: () => void) => {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
+          onSigned?.();
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           const signedTx = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
@@ -403,6 +207,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         }
         const usdcAsset = new Asset('USDC', usdcIssuer);
         const usdcAssetId = usdcAsset.toString(); // "USDC:G..."
+        setTxStep('checking');
         try {
           const account = await horizonServer.loadAccount(walletAddress);
           const usdcBalance = account.balances.find(
@@ -467,9 +272,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           throw new Error(feeData.error || 'Failed to build Normal fee transaction');
         }
 
+        setTxStep('fee_sign');
         let feeResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
         try {
-          feeResult = await signAndSubmit(feeData.xdr);
+          feeResult = await signAndSubmit(feeData.xdr, () => setTxStep('fee_broadcast'));
         } catch (feeErr: any) {
           throw new Error(`Fee payment failed: ${parseHorizonError(feeErr)}`);
         }
@@ -490,10 +296,11 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           throw new Error('No transaction XDR returned from DeFindex');
         }
 
+        setTxStep('deposit_sign');
         // 3. Sign + submit the deposit
         let depositResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
         try {
-          depositResult = await signAndSubmit(depositData.xdr);
+          depositResult = await signAndSubmit(depositData.xdr, () => setTxStep('deposit_broadcast'));
         } catch (depositErr: any) {
           throw new Error(
             `${parseHorizonError(depositErr)} (Normal fee already charged — tx ${feeResult.hash})`
@@ -522,27 +329,33 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           depositResult.hash
         );
 
-        // Optimistic position update — show correct value immediately and persist to
-        // cache so a refresh before the events indexer catches up still shows the right values.
-        // refreshUserPosition's stale-detection heuristic will protect this cached value
-        // from being overwritten by stale API data.
-        setUserPosition((prev) => {
-          const base = prev ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
-          const updated = {
+        // Optimistically update the shared savings cache so every view reflects
+        // the deposit immediately (the events indexer lags 30-120s behind).
+        {
+          const base = userPositionRef.current ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
+          savingsRef.current.setPosition({
             ...base,
             currentValue: (parseFloat(base.currentValue) + netAmount).toFixed(7),
             totalDeposited: (parseFloat(base.totalDeposited) + netAmount).toFixed(7),
-          };
-          setCachedPosition(wallet.address, updated);
-          return updated;
-        });
+          });
+          window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
+        }
 
-        // Refresh vault info, then position. Retry at 3 s, 15 s, 45 s so that
-        // totalDeposited settles once the events indexer catches up.
+        // Cancel any pending post-operation refreshes from a previous operation
+        // before scheduling new ones, so stale API responses don't overwrite
+        // the optimistic state we just wrote.
+        refreshTimeoutsRef.current.forEach(clearTimeout);
+        refreshTimeoutsRef.current = [];
+
+        // Refresh token balances so wallet USDC reflects the deposit immediately.
+        getAllTokens().catch(() => {});
+
         await refreshVaultInfo();
-        setTimeout(() => refreshUserPosition(), 3_000);
-        setTimeout(() => refreshUserPosition(), 15_000);
-        setTimeout(() => refreshUserPosition(), 45_000);
+        refreshTimeoutsRef.current = [
+          setTimeout(() => refreshUserPosition(), 3_000),
+          setTimeout(() => refreshUserPosition(), 15_000),
+          setTimeout(() => refreshUserPosition(), 45_000),
+        ];
 
         return depositResult.hash;
       } catch (err: any) {
@@ -557,6 +370,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         return '';
       } finally {
         setLoading(false);
+        setTxStep(null);
       }
     },
     [
@@ -571,6 +385,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       signOrReconnect,
       enqueueSnackbar,
       t,
+      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]
@@ -624,16 +439,42 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
 
-        const signAndSubmit = async (xdr: string) => {
+        const signAndSubmit = async (xdr: string, onSigned?: () => void) => {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
+          onSigned?.();
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           const signedTx = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
           return horizonServer.submitTransaction(signedTx);
         };
 
-        // 1. Build + sign + submit the yield commission fee first.
-        // If this fails the withdrawal is aborted entirely.
+        // 1. Build + sign + submit the DeFindex withdraw first so the user
+        // always has USDC in their wallet to cover the commission — even if
+        // they deposited their entire balance.
+        const withdrawResponse = await fetch('/api/savings/withdraw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, caller: walletAddress }),
+        });
+        const withdrawData = await withdrawResponse.json();
+        if (!withdrawData.success) {
+          throw new Error(withdrawData.error || 'Failed to build withdraw transaction');
+        }
+        if (!withdrawData.xdr) {
+          throw new Error('No transaction XDR returned from DeFindex');
+        }
+
+        setTxStep('withdraw_sign');
+        let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
+        try {
+          withdrawResult = await signAndSubmit(withdrawData.xdr, () => setTxStep('withdraw_broadcast'));
+        } catch (withdrawErr: any) {
+          throw new Error(parseSigningError(withdrawErr));
+        }
+
+        // 2. Build + sign + submit the yield commission fee from the funds
+        // just received. Runs after the withdrawal so an empty wallet never
+        // blocks the user from accessing their savings.
         let commissionTxHash: string | null = null;
         if (commissionAmount > 0) {
           const commissionResponse = await fetch('/api/fees/build-payment', {
@@ -651,40 +492,14 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             throw new Error(commissionData.error || 'Failed to build commission transaction');
           }
 
+          setTxStep('commission_sign');
           let commissionResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
           try {
-            commissionResult = await signAndSubmit(commissionData.xdr);
+            commissionResult = await signAndSubmit(commissionData.xdr, () => setTxStep('commission_broadcast'));
           } catch (commissionErr: any) {
             throw new Error(`Yield commission payment failed: ${parseSigningError(commissionErr)}`);
           }
           commissionTxHash = commissionResult.hash;
-        }
-
-        // 2. Build + sign + submit the DeFindex withdraw.
-        const withdrawResponse = await fetch('/api/savings/withdraw', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, caller: walletAddress }),
-        });
-        const withdrawData = await withdrawResponse.json();
-        if (!withdrawData.success) {
-          throw new Error(
-            `${withdrawData.error || 'Failed to build withdraw transaction'}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
-          );
-        }
-        if (!withdrawData.xdr) {
-          throw new Error(
-            `No transaction XDR returned from DeFindex${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
-          );
-        }
-
-        let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          withdrawResult = await signAndSubmit(withdrawData.xdr);
-        } catch (withdrawErr: any) {
-          throw new Error(
-            `${parseSigningError(withdrawErr)}${commissionTxHash ? ` (Normal fee already charged — tx ${commissionTxHash})` : ''}`
-          );
         }
 
         // Log withdrawal to DB (fire-and-forget)
@@ -709,26 +524,32 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           withdrawResult.hash
         );
 
-        // Optimistic position update — reflect withdrawal immediately and persist to
-        // cache so a refresh before the events indexer catches up still shows the right values.
-        setUserPosition((prev) => {
-          if (!prev) return prev;
-          const newCurrentValue = Math.max(parseFloat(prev.currentValue) - parsedAmount, 0);
-          const newTotalDeposited = Math.max(parseFloat(prev.totalDeposited) - parsedAmount, 0);
-          const updated = {
-            ...prev,
-            currentValue: newCurrentValue.toFixed(7),
-            totalDeposited: newTotalDeposited.toFixed(7),
-            earnings: Math.max(newCurrentValue - newTotalDeposited, 0).toFixed(7),
-          };
-          setCachedPosition(wallet.address, updated);
-          return updated;
-        });
+        // Optimistically update the shared savings cache.
+        if (userPositionRef.current) {
+          const base = userPositionRef.current;
+          const preCV = Math.max(parseFloat(base.currentValue) - parsedAmount, 0);
+          const preTD = Math.max(parseFloat(base.totalDeposited) - parsedAmount, 0);
+          savingsRef.current.setPosition({
+            ...base,
+            currentValue: preCV.toFixed(7),
+            totalDeposited: preTD.toFixed(7),
+            earnings: Math.max(preCV - preTD, 0).toFixed(7),
+          });
+          window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
+        }
+
+        refreshTimeoutsRef.current.forEach(clearTimeout);
+        refreshTimeoutsRef.current = [];
+
+        // Refresh token balances so wallet USDC reflects the withdrawal immediately.
+        getAllTokens().catch(() => {});
 
         await refreshVaultInfo();
-        setTimeout(() => refreshUserPosition(), 3_000);
-        setTimeout(() => refreshUserPosition(), 15_000);
-        setTimeout(() => refreshUserPosition(), 45_000);
+        refreshTimeoutsRef.current = [
+          setTimeout(() => refreshUserPosition(), 3_000),
+          setTimeout(() => refreshUserPosition(), 15_000),
+          setTimeout(() => refreshUserPosition(), 45_000),
+        ];
 
         return withdrawResult.hash;
       } catch (err: any) {
@@ -743,6 +564,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         return '';
       } finally {
         setLoading(false);
+        setTxStep(null);
       }
     },
     [
@@ -758,6 +580,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       signOrReconnect,
       enqueueSnackbar,
       t,
+      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]
@@ -774,6 +597,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
     userPosition,
     needsTrustline,
     setNeedsTrustline,
+    txStep,
     deposit,
     withdraw,
     refreshVaultInfo,

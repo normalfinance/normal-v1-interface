@@ -16,6 +16,9 @@ const BRANDS = [
   'Coinbase',
   'MoonPay',
   'Visa',
+  'MoneyGram',
+  'Turnkey',
+  'LI.FI',
 ] as const;
 
 const MarqueeWrapper = styled('div')({
@@ -26,17 +29,17 @@ const MarqueeWrapper = styled('div')({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    width: 120,
+    width: 80,
     pointerEvents: 'none',
     zIndex: 2,
   },
   '&::before': {
     left: 0,
-    background: 'linear-gradient(90deg, rgb(234,250,254), transparent)',
+    background: 'linear-gradient(90deg, #ffffff, transparent)',
   },
   '&::after': {
     right: 0,
-    background: 'linear-gradient(-90deg, rgb(245,240,255), transparent)',
+    background: 'linear-gradient(-90deg, #ffffff, transparent)',
   },
   '&:hover .marquee-row': {
     animationPlayState: 'paused',
@@ -71,10 +74,10 @@ export default function BrandMarquee() {
       component="section"
       aria-label="Backed by and partnered with"
       sx={(theme) => ({
-        background: 'linear-gradient(180deg, rgb(234,250,254) 0%, rgb(245,240,255) 100%)',
+        background: '#ffffff',
         borderTop: `1px solid ${theme.palette.divider}`,
         borderBottom: `1px solid ${theme.palette.divider}`,
-        py: 3,
+        py: 1.75,
       })}
     >
       <MarqueeWrapper>
@@ -84,11 +87,11 @@ export default function BrandMarquee() {
               <Box
                 component="span"
                 sx={{
-                  fontFamily: 'Instrument Sans, sans-serif',
-                  fontWeight: 700,
-                  fontSize: '0.9375rem',
-                  letterSpacing: '-0.01em',
-                  color: '#8a8a93',
+                  fontFamily: 'Satoshi, sans-serif',
+                  fontWeight: 600,
+                  fontSize: '0.8125rem',
+                  letterSpacing: '0.01em',
+                  color: '#9A9AA3',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
                   transition: 'color 200ms',

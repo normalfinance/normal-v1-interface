@@ -1,3 +1,7 @@
+'use client';
+
+import { useNetworkStore } from '@normalfinance/state';
+
 export type WalletEnvInfo = {
   network?: 'PUBLIC' | 'TESTNET' | string;
   publicKey?: string;
@@ -101,11 +105,27 @@ export async function detectWalletEnv(): Promise<WalletEnvInfo> {
   return info;
 }
 
+/**
+ * Asserts the external wallet is on the SAME network as the app (mainnet→PUBLIC,
+ * testnet→TESTNET) and the selected account matches. Normal (custodial) wallets
+ * expose no injected provider, so `walletEnv.network` is empty and this is a
+ * no-op for them — it only constrains external wallets (Freighter/Lobstr/…).
+ */
 export function assertTestnetAndAccountMatch(walletEnv: WalletEnvInfo, expectedPublicKey: string) {
+  let activeNetwork = 'mainnet';
+  try {
+    activeNetwork = useNetworkStore.getState().network;
+  } catch {
+    /* default mainnet */
+  }
+  const expectedNet = activeNetwork === 'testnet' ? 'TESTNET' : 'PUBLIC';
+
   const net = (walletEnv.network || '').toUpperCase();
-  if (net && net !== 'TESTNET') {
+  if (net && net !== expectedNet) {
     throw new Error(
-      `Your wallet is on ${walletEnv.network}. Please switch it to TESTNET in the wallet UI and try again.`
+      `Your wallet is on ${walletEnv.network}. Please switch it to ${
+        expectedNet === 'PUBLIC' ? 'MAINNET (PUBLIC)' : 'TESTNET'
+      } in the wallet UI and try again.`
     );
   }
   if (walletEnv.publicKey && walletEnv.publicKey !== expectedPublicKey) {

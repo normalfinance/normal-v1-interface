@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'crypto index', 'crypto investing', 'web3 portfolio'],
+  keywords: ['Normal', 'Normal Finance', 'crypto assets', 'USDC', 'Stellar', 'DeFi'],
 };
 
 export default function Page() {

@@ -2,22 +2,24 @@
 
 import type { Token } from '@normalfinance/types';
 
-import { useEffect } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
+import { useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { cdn, logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
-import { fNumber, fCurrency } from '@/utils/format-number';
-import { logger, getCryptoIconUrl } from '@normalfinance/utils';
+import { useUsdPrice } from '@/hooks/use-price-history';
+import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { fCurrency, fTokenAmount } from '@/utils/format-number';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
 import {
   Box,
   Card,
   Stack,
   Table,
-  Avatar,
   TableRow,
   TableBody,
   TableCell,
@@ -26,6 +28,8 @@ import {
   CardContent,
   TableContainer,
 } from '@mui/material';
+
+import { AssetAvatar } from '@/components/_common/asset-avatar';
 
 export default function AssetsView() {
   const { t } = useTranslate();
@@ -53,17 +57,59 @@ export default function AssetsView() {
     refreshTokens();
   }, [wallet.address]);
 
-  // Filter tokens with balance > 0 and sort by value (descending)
-  const tokensWithBalance = tokens
-    .filter((token) => BigNumber(token.balance).gt(0))
-    .sort((a, b) => {
+  const { btcToken } = useBtcPortfolio(true);
+  const { ethToken } = useEthPortfolio(true);
+  const { solToken } = useSolPortfolio(true);
+
+  // Live prices for natives the user has no address for yet (their
+  // synthesized rows would otherwise show $0.00)
+  const btcUsd = useUsdPrice('BTC', !btcToken);
+  const ethUsd = useUsdPrice('ETH', !ethToken);
+  const solUsd = useUsdPrice('SOL', !solToken);
+
+  // Core assets (BTC, ETH, SOL, XLM, USDC) are always listed so they can be
+  // picked even at zero balance; other Stellar tokens appear once the user
+  // holds them. Native chains aren't in the Stellar token store, so they're
+  // synthesized here when the user has no address for them yet.
+  const displayTokens = useMemo(() => {
+    const nativeSymbols = ['BTC', 'ETH', 'SOL'];
+    const stellar = tokens.filter(
+      (token) =>
+        !nativeSymbols.includes(token.symbol) &&
+        (BigNumber(token.balance).gt(0) || token.featured || token.symbol === 'XLM' || token.symbol === 'USDC')
+    );
+
+    const synthesize = (symbol: string, name: string, contract: string, icon: string, decimals: number, usdPrice: number): Token =>
+      ({
+        symbol,
+        contract,
+        name,
+        issuer: '',
+        org: '',
+        domain: '',
+        icon,
+        decimals,
+        featured: false,
+        balance: '0',
+        price: String(usdPrice),
+        percentageChange: 0,
+      } as Token);
+
+    const natives = [
+      btcToken ?? synthesize('BTC', 'Bitcoin', '__btc__', cdn('tokens/bitcoin.webp'), 8, btcUsd),
+      ethToken ?? synthesize('ETH', 'Ethereum', '__eth__', cdn('tokens/ethereum.webp'), 18, ethUsd),
+      solToken ?? synthesize('SOL', 'Solana', '__sol__', cdn('tokens/solana.webp'), 9, solUsd),
+    ];
+
+    return [...natives, ...stellar].sort((a, b) => {
       const aValue = BigNumber(a.balance).multipliedBy(a.price);
       const bValue = BigNumber(b.balance).multipliedBy(b.price);
       return bValue.minus(aValue).toNumber();
     });
+  }, [tokens, btcToken, ethToken, solToken, btcUsd, ethUsd, solUsd]);
 
   // Calculate total value
-  const totalValue = tokensWithBalance.reduce((acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)), BigNumber(0));
+  const totalValue = displayTokens.reduce((acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)), BigNumber(0));
 
   const handleRowClick = (token: Token) => {
     router.push(paths.assets.details(token.symbol));
@@ -116,19 +162,17 @@ export default function AssetsView() {
                       <Typography color="text.secondary">{t('Loading...')}</Typography>
                     </TableCell>
                   </TableRow>
-                ) : tokensWithBalance.length === 0 ? (
+                ) : displayTokens.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} align="center">
                       <Typography color="text.secondary">{t('No assets found')}</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  tokensWithBalance.map((token) => {
+                  displayTokens.map((token) => {
                     const balance = BigNumber(token.balance);
                     const value = balance.multipliedBy(token.price);
-                    const balanceDisplay = balance.toFixed(
-                      token.decimals > 4 ? 4 : token.decimals
-                    );
+                    const balanceDisplay = fTokenAmount(token.balance);
 
                     return (
                       <TableRow
@@ -139,11 +183,7 @@ export default function AssetsView() {
                       >
                         <TableCell>
                           <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Avatar
-                              src={token.icon || getCryptoIconUrl(token.symbol)}
-                              alt={token.name}
-                              sx={{ width: 32, height: 32 }}
-                            />
+                            <AssetAvatar token={token} size={32} />
                             <Stack>
                               <Typography variant="subtitle2">{token.symbol}</Typography>
                               <Typography variant="caption" color="text.secondary" noWrap>
@@ -153,7 +193,7 @@ export default function AssetsView() {
                           </Stack>
                         </TableCell>
                         <TableCell align="right">
-                          <Typography variant="body2">{fNumber(balanceDisplay)}</Typography>
+                          <Typography variant="body2">{balanceDisplay}</Typography>
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2">{fCurrency(token.price)}</Typography>
