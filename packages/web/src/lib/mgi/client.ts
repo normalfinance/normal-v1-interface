@@ -159,11 +159,17 @@ export async function startMgiDeposit(token: string, userAccount: string, amount
 export async function runDepositFlow(
   userAccount: string,
   amount: string | number,
-  onReady?: (tx: any) => void
+  onReady?: (tx: any) => void,
+  popup?: Window | null
 ) {
-  const token = await getMgiAuthToken(userAccount);
-  const { url } = await startMgiDeposit(token, userAccount, Number(amount));
-  openMoneyGram(url, (tx) => onReady?.(tx));
+  try {
+    const token = await getMgiAuthToken(userAccount);
+    const { url } = await startMgiDeposit(token, userAccount, Number(amount));
+    openMoneyGram(url, (tx) => onReady?.(tx), popup);
+  } catch (e) {
+    popup?.close();
+    throw e;
+  }
 }
 
 export async function startMgiWithdraw(token: string, userAccount: string, amount: number) {
@@ -194,11 +200,17 @@ export async function startMgiWithdraw(token: string, userAccount: string, amoun
 export async function runWithdrawFlow(
   userAccount: string,
   amount: string | number,
-  onReady?: (tx: any) => void
+  onReady?: (tx: any) => void,
+  popup?: Window | null
 ) {
-  const token = await getMgiAuthToken(userAccount);
-  const { url } = await startMgiWithdraw(token, userAccount, Number(amount));
-  openMoneyGram(url, (tx) => onReady?.(tx));
+  try {
+    const token = await getMgiAuthToken(userAccount);
+    const { url } = await startMgiWithdraw(token, userAccount, Number(amount));
+    openMoneyGram(url, (tx) => onReady?.(tx), popup);
+  } catch (e) {
+    popup?.close();
+    throw e;
+  }
 }
 
 export async function startWithdrawCancel(token: string, txId: string) {

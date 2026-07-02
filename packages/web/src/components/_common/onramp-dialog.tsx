@@ -6,6 +6,7 @@ import { runDepositFlow } from '@/lib/mgi/client';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import { useBoolean , useStellarConfig } from '@/hooks';
+import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
@@ -234,6 +235,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       return;
     }
 
+    // Open the popup synchronously (same reason as handleCoinbaseClick): after
+    // the SEP-10 passkey prompt + network calls the user activation is gone and
+    // window.open would be blocked. We navigate this window once MGI's URL is ready.
+    const popup = openMoneyGramPlaceholder();
+
     try {
       setMgiLoading(true);
 
@@ -241,10 +247,16 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       const env = await detectWalletEnv();
       assertTestnetAndAccountMatch(env, userAddress!);
 
-      await runDepositFlow(userAddress!, usdcAmount, () => {
-        enqueueSnackbar('MoneyGram ready — awaiting USDC deposit', { variant: 'info' });
-      });
+      await runDepositFlow(
+        userAddress!,
+        usdcAmount,
+        () => {
+          enqueueSnackbar('MoneyGram ready — awaiting USDC deposit', { variant: 'info' });
+        },
+        popup
+      );
     } catch (e: any) {
+      popup?.close();
       enqueueSnackbar(e?.message || 'MoneyGram deposit failed', { variant: 'error' });
     } finally {
       setMgiLoading(false);
@@ -449,8 +461,9 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
           moneyGramAmountDialog.onFalse();
           startMgiAfterAmount(val);
         }}
+        // MGI production SEP-24 /info: deposit USDC min 1 / max 950, no fees.
         min={1}
-        max={900}
+        max={950}
       />
       <NormalWalletCreate
         open={showCreateNormalWallet}
