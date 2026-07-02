@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { runWithdrawFlow } from '@/lib/mgi/client';
 import { useBoolean, useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
+import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { cdn, isTestnet, createCoinbasePayOfframpURL } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
@@ -261,6 +262,10 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
 
   /** MoneyGram */
   async function startMgiWithdraw(addr: string, amountStr: string) {
+    // Open the popup synchronously, inside the click's user activation — after
+    // the SEP-10 passkey prompt + network calls, window.open would be blocked.
+    // We navigate this window once MGI's interactive URL is ready.
+    const popup = openMoneyGramPlaceholder();
     setMgiLoading(true);
     try {
       const env = await detectWalletEnv();
@@ -268,14 +273,21 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
 
       const withdrawAmount = Number(amountStr);
       if (!Number.isFinite(withdrawAmount) || withdrawAmount <= 0) {
+        popup?.close();
         enqueueSnackbar(t('Enter a valid USDC amount'), { variant: 'warning' });
         return;
       }
 
-      await runWithdrawFlow(addr, withdrawAmount, () => {
-        enqueueSnackbar(t('MoneyGram ready — send USDC when prompted'), { variant: 'info' });
-      });
+      await runWithdrawFlow(
+        addr,
+        withdrawAmount,
+        () => {
+          enqueueSnackbar(t('MoneyGram ready — send USDC when prompted'), { variant: 'info' });
+        },
+        popup
+      );
     } catch (e: any) {
+      popup?.close();
       enqueueSnackbar(t('MoneyGram withdrawal failed'), { variant: 'error' });
     } finally {
       setMgiLoading(false);
@@ -448,8 +460,9 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           moneyGramAmountDialog.onFalse();
           startMgiWithdraw(userAddress ?? '', val);
         }}
+        // MGI production SEP-24 /info: withdraw USDC min 1 / max 2500, no fees.
         min={1}
-        max={900}
+        max={2500}
         kind="withdraw"
       />
     </>
