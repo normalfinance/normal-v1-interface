@@ -1,9 +1,11 @@
 'use client';
 
 // Step-by-step progress for a cross-ecosystem (CCTP) swap — same visual
-// language as the savings deposit steps. Stages map 1:1 to the engine's
-// orchestration; everything from 'bridging' onward also completes server-side,
-// so closing this dialog after the burn is always safe (and we say so).
+// language as the savings deposit steps. The step list depends on direction:
+//   in   (BTC/ETH/SOL → Stellar): lifi → arriving → topup → burn → bridging → [final-swap] → done
+//   out  (USDC → BTC/ETH/SOL):    burn → bridging → topup → pivot-swap → done
+// Everything after the burn also completes/recovers server-side, so closing
+// during 'bridging' is always safe (and we say so).
 
 import { useTranslate } from '@/locales';
 
@@ -15,12 +17,19 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from '@/components/template/iconify';
 
-export type CctpStage = 'lifi' | 'arriving' | 'topup' | 'burn' | 'bridging' | 'final-swap' | 'done';
-
-const ORDER: CctpStage[] = ['lifi', 'arriving', 'topup', 'burn', 'bridging', 'final-swap', 'done'];
+export type CctpStage =
+  | 'lifi'
+  | 'arriving'
+  | 'topup'
+  | 'burn'
+  | 'bridging'
+  | 'pivot-swap'
+  | 'final-swap'
+  | 'done';
 
 interface Props {
   open: boolean;
+  direction: 'in' | 'out';
   stage: CctpStage | null;
   error: string | null;
   fromSymbol: string;
@@ -28,22 +37,31 @@ interface Props {
   onClose: () => void;
 }
 
-export function CctpProgressModal({ open, stage, error, fromSymbol, toSymbol, onClose }: Props) {
+export function CctpProgressModal({ open, direction, stage, error, fromSymbol, toSymbol, onClose }: Props) {
   const { t } = useTranslate();
 
-  const steps: { id: CctpStage; label: string; sub: string }[] = [
-    { id: 'lifi', label: t('Swapping {{sym}} to USDC', { sym: fromSymbol }), sub: t('Via LI.FI · approve in your wallet') },
-    { id: 'arriving', label: t('USDC arriving on Base'), sub: t('Cross-chain delivery — a few minutes') },
-    { id: 'topup', label: t('Covering network fees'), sub: t('Normal sends gas to your address') },
-    { id: 'burn', label: t('Starting the Circle bridge'), sub: t('Approve in your wallet · 2 signatures') },
-    { id: 'bridging', label: t('Bridging to Stellar'), sub: t('Circle attestation ~20 min — safe to close') },
-    ...(toSymbol === 'XLM'
-      ? [{ id: 'final-swap' as CctpStage, label: t('Converting USDC to XLM'), sub: t('Via Soroswap · approve in your wallet') }]
-      : []),
-    { id: 'done', label: t('Done'), sub: t('{{sym}} delivered', { sym: toSymbol }) },
-  ];
+  const steps: { id: CctpStage; label: string; sub: string }[] =
+    direction === 'in'
+      ? [
+          { id: 'lifi', label: t('Swapping {{sym}} to USDC', { sym: fromSymbol }), sub: t('Via LI.FI · approve in your wallet') },
+          { id: 'arriving', label: t('USDC arriving on Base'), sub: t('Cross-chain delivery — a few minutes') },
+          { id: 'topup', label: t('Covering network fees'), sub: t('Normal sends gas to your address') },
+          { id: 'burn', label: t('Starting the Circle bridge'), sub: t('Approve in your wallet · 2 signatures') },
+          { id: 'bridging', label: t('Bridging to Stellar'), sub: t('Circle attestation ~20 min — safe to close') },
+          ...(toSymbol === 'XLM'
+            ? [{ id: 'final-swap' as CctpStage, label: t('Converting USDC to XLM'), sub: t('Via Soroswap · approve in your wallet') }]
+            : []),
+          { id: 'done', label: t('Done'), sub: t('{{sym}} delivered', { sym: toSymbol }) },
+        ]
+      : [
+          { id: 'burn', label: t('Starting the Circle bridge'), sub: t('Approve in your wallet · 2 signatures') },
+          { id: 'bridging', label: t('Bridging to Base'), sub: t('Circle attestation — about a minute') },
+          { id: 'topup', label: t('Covering network fees'), sub: t('Normal sends gas to your address') },
+          { id: 'pivot-swap', label: t('Swapping USDC to {{sym}}', { sym: toSymbol }), sub: t('Via LI.FI · approve in your wallet') },
+          { id: 'done', label: t('Done'), sub: t('{{sym}} on its way to your wallet', { sym: toSymbol }) },
+        ];
 
-  const activeIdx = stage ? ORDER.indexOf(stage) : -1;
+  const activeIdx = stage ? steps.findIndex((s) => s.id === stage) : -1;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" PaperProps={{ sx: { borderRadius: '24px', p: '22px', maxWidth: 400 } }}>
@@ -57,14 +75,14 @@ export function CctpProgressModal({ open, stage, error, fromSymbol, toSymbol, on
       </Stack>
 
       <Stack spacing={0}>
-        {steps.map((s) => {
-          const idx = ORDER.indexOf(s.id);
-          const isDone = activeIdx > idx || stage === 'done';
+        {steps.map((s, idx) => {
+          const isDone = stage === 'done' ? s.id !== 'done' || true : idx < activeIdx;
           const isActive = stage === s.id && stage !== 'done';
+          const isFinalDone = stage === 'done' && s.id === 'done';
           return (
-            <Stack key={s.id} direction="row" spacing={1.5} alignItems="flex-start" sx={{ py: '9px', opacity: isDone || isActive ? 1 : 0.45 }}>
+            <Stack key={s.id} direction="row" spacing={1.5} alignItems="flex-start" sx={{ py: '9px', opacity: isDone || isActive || isFinalDone ? 1 : 0.45 }}>
               <Box sx={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', mt: '1px' }}>
-                {isDone ? (
+                {isDone || isFinalDone ? (
                   <Iconify icon="lets-icons:check-fill" width={20} sx={{ color: '#1AB37D' }} />
                 ) : isActive && !error ? (
                   <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
@@ -98,9 +116,14 @@ export function CctpProgressModal({ open, stage, error, fromSymbol, toSymbol, on
         </Box>
       )}
 
-      {stage === 'bridging' && !error && (
+      {stage === 'bridging' && !error && direction === 'in' && (
         <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '10px', textAlign: 'center', lineHeight: 1.5 }}>
           {t('This step runs on our servers — you can safely close this window.')}
+        </Typography>
+      )}
+      {direction === 'out' && stage && stage !== 'done' && !error && (
+        <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '10px', textAlign: 'center', lineHeight: 1.5 }}>
+          {t('Please keep this window open until the last signature.')}
         </Typography>
       )}
     </Dialog>

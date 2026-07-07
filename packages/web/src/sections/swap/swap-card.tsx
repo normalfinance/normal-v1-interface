@@ -158,8 +158,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     refetchChain,
   });
   const cctp = useCctpEngine({
-    fromSymbol: (pairType === 'cctp' ? fromSymbol : 'ETH') as CrosschainSymbol,
-    toSymbol: (pairType === 'cctp' ? toSymbol : 'USDC') as StellarSymbol,
+    fromSymbol: pairType === 'cctp' ? fromSymbol : 'ETH',
+    toSymbol: pairType === 'cctp' ? toSymbol : 'USDC',
     addresses,
     amount: pairType === 'cctp' ? amount : ZERO,
     fromBalance: pairType === 'cctp' ? fromBalance : ZERO,

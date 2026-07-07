@@ -1,15 +1,21 @@
 'use client';
 
-// Composite cross-ecosystem engine: BTC/ETH/SOL → XLM/USDC on Stellar.
-//   leg 1  LI.FI: native asset → USDC on Base (delivered to the USER's own
-//          Base address — never custodial)
-//   leg 2  CCTP: burn on Base (user-signed, relayer gas top-up) → attestation
-//          → relayer mint_and_forward on Stellar (server state machine)
-//   leg 3  optional Soroswap: USDC → XLM (user-signed)
-// The transfer row is created BEFORE anything moves; every completed leg is
-// PATCHed onto it, so a closed tab is resumable (banner) and everything after
-// the burn completes server-side even with the app closed.
-// Outbound (Stellar → BTC/ETH/SOL) ships in the next iteration.
+// Composite cross-ecosystem engine (Circle CCTP + LI.FI + Soroswap).
+//
+//   INBOUND   BTC/ETH/SOL → XLM/USDC on Stellar
+//     LI.FI (native → USDC on the user's own Base address) → relayer gas
+//     top-up → user-signed burn → attestation → relayer mint_and_forward on
+//     Stellar → optional Soroswap USDC→XLM.
+//   OUTBOUND  USDC (Stellar) → BTC/ETH/SOL
+//     user-signed approve+deposit_for_burn on Soroban → attestation (~seconds,
+//     Stellar finality) → relayer mint on Base → relayer gas top-up →
+//     user-signed LI.FI pivot swap (USDC on Base → target asset, delivered to
+//     the user's own address on the target chain).
+//
+// The transfer row is created BEFORE anything moves; each completed leg is
+// PATCHed onto it. Post-burn CCTP stages self-complete server-side (cron), so
+// a closed tab never loses funds; pre-burn/pivot legs live at the user's own
+// addresses at every step.
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -20,10 +26,13 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { useSwap } from '@/hooks/stellar/use-swap';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
+import { executePivotSwap } from '@/lib/cctp/pivot-swap';
+import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
+import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import { usePersistStore , useNetworkStore } from '@normalfinance/state';
+import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import Stack from '@mui/material/Stack';
@@ -31,15 +40,16 @@ import Typography from '@mui/material/Typography';
 
 import { useSnackbar } from '@/components/template/snackbar';
 
+import { groupOf } from './types';
 import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
 
-import type { StellarSymbol, SwapEngineResult, CrosschainSymbol } from './types';
+import type { SwapSymbol, SwapEngineResult, CrosschainSymbol } from './types';
 
 const MONO = { fontFamily: '"Geist Mono", "Courier New", monospace' } as const;
 
 export interface CctpEngineProps {
-  fromSymbol: CrosschainSymbol;
-  toSymbol: StellarSymbol;
+  fromSymbol: SwapSymbol;
+  toSymbol: SwapSymbol;
   addresses: { BTC: string | null; ETH: string | null; SOL: string | null };
   amount: BigNumber;
   fromBalance: BigNumber;
@@ -48,7 +58,7 @@ export interface CctpEngineProps {
   resetInput: () => void;
 }
 
-const FROM_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
+const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
 
 async function readBaseUsdc(address: string): Promise<bigint> {
   const { http, erc20Abi, createPublicClient } = await import('viem');
@@ -79,6 +89,9 @@ export function useCctpEngine({
   const config = useStellarConfig();
   const soroswap = useSwap();
 
+  // 'in': crosschain → stellar; 'out': USDC(stellar) → crosschain.
+  const direction: 'in' | 'out' = groupOf(fromSymbol) === 'stellar' ? 'out' : 'in';
+
   const stellarAddress = wallet.address;
   const {
     isLoading: isCheckingAccount,
@@ -95,19 +108,25 @@ export function useCctpEngine({
   const [modalOpen, setModalOpen] = useState(false);
   const cancelled = useRef(false);
 
-  const fromAddress = addresses[fromSymbol];
-  const evmAddress = addresses.ETH; // pivot custodian: user's own Base address
+  const evmAddress = addresses.ETH; // the Base pivot is always the user's own EVM address
+  const nativeAddress = direction === 'in' ? addresses[fromSymbol as CrosschainSymbol] : addresses[toSymbol as CrosschainSymbol];
+
   const xlmPrice = useMemo(() => {
     const xlm = tokenState.tokens.find((tk) => tk.symbol === 'XLM');
     return BigNumber(xlm?.price || 0);
   }, [tokenState.tokens]);
 
-  // ---- quote: LI.FI leg (asset → USDC on Base) + estimated Stellar leg ------
+  // ---- quote ------------------------------------------------------------------
+  // in : LI.FI native → USDC_BASE (leg 1); CCTP + optional XLM leg estimated.
+  // out: LI.FI USDC_BASE → target (leg 3) quoted directly — CCTP is 1:1/$0, so
+  //      the pivot quote IS the swap quote.
   const debouncedAmount = useDebounce(enabled ? amount.toFixed() : '', 600);
 
   useEffect(() => {
     const value = BigNumber(debouncedAmount || 0);
-    if (!enabled || !fromAddress || !evmAddress || value.lte(0)) {
+    const ready =
+      enabled && evmAddress && value.gt(0) && (direction === 'in' ? !!nativeAddress : !!nativeAddress);
+    if (!ready) {
       setQuote(null);
       setQuoteError(null);
       setQuoteLoading(false);
@@ -120,17 +139,29 @@ export function useCctpEngine({
     setQuoteLoading(true);
     (async () => {
       try {
+        const body =
+          direction === 'in'
+            ? {
+                fromSymbol,
+                toSymbol: 'USDC_BASE',
+                fromAmount: value
+                  .multipliedBy(BigNumber(10).pow(NATIVE_DECIMALS[fromSymbol as CrosschainSymbol]))
+                  .toFixed(0),
+                fromAddress: nativeAddress,
+                toAddress: evmAddress,
+              }
+            : {
+                fromSymbol: 'USDC_BASE',
+                toSymbol,
+                fromAmount: usdcToWire(value.toFixed(6, BigNumber.ROUND_DOWN)).toString(),
+                fromAddress: evmAddress,
+                toAddress: nativeAddress,
+              };
         const res = await fetch('/api/lifi/quote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
-          body: JSON.stringify({
-            fromSymbol,
-            toSymbol: 'USDC_BASE',
-            fromAmount: value.multipliedBy(BigNumber(10).pow(FROM_DECIMALS[fromSymbol])).toFixed(0),
-            fromAddress,
-            toAddress: evmAddress,
-          }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         if (stale) return;
@@ -150,52 +181,105 @@ export function useCctpEngine({
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, debouncedAmount, fromSymbol, fromAddress, evmAddress]);
+  }, [enabled, debouncedAmount, direction, fromSymbol, toSymbol, nativeAddress, evmAddress]);
 
-  // USDC that lands on Base (worst case), then on Stellar (CCTP is 1:1, $0).
-  const usdcOutMin = quote ? BigNumber(quote.estimate.toAmountMin).dividedBy(1e6) : null;
-  const toAmount = usdcOutMin
-    ? toSymbol === 'USDC'
+  const usdcOutMin = quote && direction === 'in' ? BigNumber(quote.estimate.toAmountMin).dividedBy(1e6) : null;
+  const toAmount =
+    direction === 'in'
       ? usdcOutMin
-      : xlmPrice.gt(0)
-        ? usdcOutMin.dividedBy(xlmPrice)
+        ? toSymbol === 'USDC'
+          ? usdcOutMin
+          : xlmPrice.gt(0)
+            ? usdcOutMin.dividedBy(xlmPrice)
+            : null
         : null
-    : null;
+      : quote
+        ? BigNumber(quote.estimate.toAmountMin).dividedBy(
+            BigNumber(10).pow(NATIVE_DECIMALS[toSymbol as CrosschainSymbol])
+          )
+        : null;
 
   const insufficient = amount.gt(0) && amount.gt(fromBalance);
-  const needsTrustline = !isCheckingAccount && accountExists && !hasUsdcTrustline;
+  const needsTrustline = direction === 'in' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
   const missingStellar = !stellarAddress || (!isCheckingAccount && !accountExists);
 
-  const getMaxToken = async (): Promise<BigNumber> => fromBalance; // shell reserves handled per-asset in Phase 2b
+  // MAX leaves the source chain's network fee behind. Outbound USDC needs no
+  // reserve (Soroban fees are paid in XLM); inbound mirrors the LI.FI engine,
+  // with BTC resolved live from the mempool rate.
+  const getMaxToken = async (): Promise<BigNumber> => {
+    if (direction === 'out') return fromBalance;
+    let reserve = { BTC: 0.00003, ETH: 0.003, SOL: 0.01 }[fromSymbol as CrosschainSymbol];
+    if (fromSymbol === 'BTC') {
+      try {
+        const r = await fetch('https://mempool.space/api/v1/fees/recommended');
+        const f = await r.json();
+        const feeSat = (f.halfHourFee || 15) * 210 * 1.4;
+        reserve = Math.min(Math.max(feeSat / 1e8, 0.00003), 0.0005);
+      } catch {
+        reserve = 0.0001;
+      }
+    }
+    return BigNumber.max(fromBalance.minus(reserve), 0);
+  };
 
-  // ---- orchestration ---------------------------------------------------------
-  const runFromStage = useCallback(
-    async (transferId: string, startAt: CctpStage, lifiQuote: any) => {
-      cancelled.current = false;
-      const headers = await buildAuthHeaders();
-      const patch = (body: Record<string, string>) =>
+  // ---- shared helpers -----------------------------------------------------------
+  const makePatcher = useCallback(async (transferId: string) => {
+    const headers = await buildAuthHeaders();
+    return {
+      headers,
+      patch: (body: Record<string, string>) =>
         fetch(`/api/cctp/transfers/${transferId}`, {
           method: 'PATCH',
           headers,
           credentials: 'include',
           body: JSON.stringify(body),
-        }).catch(() => {});
+        }).catch(() => {}),
+      pollStatus: async (target: string, intervalMs: number) => {
+        for (;;) {
+          if (cancelled.current) throw new Error('cancelled');
+          const res = await fetch(`/api/cctp/transfers/${transferId}`, { headers, credentials: 'include' });
+          const data = await res.json();
+          if (data?.transfer?.status === target) return;
+          if (data?.transfer?.status === 'FAILED') throw new Error(data.transfer.errorDetail ?? 'transfer failed');
+          await new Promise((r) => setTimeout(r, intervalMs));
+        }
+      },
+      topUp: async () => {
+        const res = await fetch('/api/cctp/gas-topup', {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ transferId }),
+        });
+        if (!res.ok && res.status !== 409) throw new Error(t('Gas top-up failed — try again in a moment.'));
+        await new Promise((r) => setTimeout(r, 8_000));
+      },
+    };
+  }, [t]);
 
-      const order: CctpStage[] = ['lifi', 'arriving', 'topup', 'burn', 'bridging', 'final-swap', 'done'];
-      const from = order.indexOf(startAt);
+  const finish = useCallback(() => {
+    setStage('done');
+    resetInput();
+    getAllTokens(true).catch(() => {});
+    window.dispatchEvent(new Event('nf:activity-updated'));
+  }, [resetInput, getAllTokens]);
+
+  // ---- INBOUND orchestration -----------------------------------------------------
+  const runInbound = useCallback(
+    async (transferId: string, lifiQuote: any) => {
+      cancelled.current = false;
+      const { patch, pollStatus, topUp } = await makePatcher(transferId);
       const baseline = await readBaseUsdc(evmAddress!);
-      let arrivedWire: bigint = 0n;
+      let arrivedWire = 0n;
 
       try {
-        if (from <= order.indexOf('lifi')) {
-          setStage('lifi');
-          const txHash = await executeLifiSwap(lifiQuote, {
-            bitcoinAddress: addresses.BTC,
-            ethereumAddress: addresses.ETH,
-            solanaAddress: addresses.SOL,
-          });
-          await patch({ srcSwapTxHash: txHash });
-        }
+        setStage('lifi');
+        const srcTx = await executeLifiSwap(lifiQuote, {
+          bitcoinAddress: addresses.BTC,
+          ethereumAddress: addresses.ETH,
+          solanaAddress: addresses.SOL,
+        });
+        await patch({ srcSwapTxHash: srcTx });
 
         setStage('arriving');
         const target = BigInt(lifiQuote.estimate.toAmountMin);
@@ -207,25 +291,15 @@ export function useCctpEngine({
             arrivedWire = bal - baseline > target ? target : bal - baseline;
             break;
           }
-          if (Date.now() - started > 45 * 60_000) throw new Error(t('Bridge leg timed out — funds will arrive; resume from the banner.'));
+          if (Date.now() - started > 45 * 60_000)
+            throw new Error(t('Bridge leg timed out — funds will arrive; resume from the banner.'));
           await new Promise((res) => setTimeout(res, 10_000));
         }
 
         setStage('topup');
-        const topup = await fetch('/api/cctp/gas-topup', {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify({ transferId }),
-        });
-        if (!topup.ok && topup.status !== 409) throw new Error(t('Gas top-up failed — try again in a moment.'));
-        await new Promise((res) => setTimeout(res, 8_000)); // let the dust confirm
+        await topUp();
 
         setStage('burn');
-        if (arrivedWire === 0n) {
-          const bal = await readBaseUsdc(evmAddress!);
-          arrivedWire = bal - baseline > 0n ? bal - baseline : BigInt(lifiQuote.estimate.toAmountMin);
-        }
         const { burnTxHash } = await burnUsdcOnEvm({
           network,
           chain: 'base',
@@ -236,21 +310,13 @@ export function useCctpEngine({
         await patch({ burnTxHash });
 
         setStage('bridging');
-        for (;;) {
-          if (cancelled.current) return;
-          const res = await fetch(`/api/cctp/transfers/${transferId}`, { headers, credentials: 'include' });
-          const data = await res.json();
-          if (data?.transfer?.status === 'COMPLETED') break;
-          await new Promise((r) => setTimeout(r, 15_000));
-        }
+        await pollStatus('COMPLETED', 15_000);
 
         if (toSymbol === 'XLM') {
           setStage('final-swap');
           const usdcAmount = wireToUsdc(arrivedWire);
           const q = await new Promise<any>((resolve) => {
-            // useSwap.getQuote stores state; call the API-style helper directly.
             soroswap.getQuote(config.USDC_ADDRESS, config.XLM_ADDRESS || 'native', usdcAmount);
-            // getQuote is async via state — poll the hook's quote briefly.
             const t0 = Date.now();
             const iv = setInterval(() => {
               if (soroswap.quote) {
@@ -269,93 +335,162 @@ export function useCctpEngine({
             enqueueSnackbar(t('USDC arrived on Stellar — the XLM conversion can be done from the swap tab.'), { variant: 'info' });
           }
         }
-
-        setStage('done');
-        resetInput();
-        getAllTokens(true).catch(() => {});
-        window.dispatchEvent(new Event('nf:activity-updated'));
+        finish();
       } catch (e: any) {
-        setStageError(String(e?.message ?? e));
+        if (String(e?.message) !== 'cancelled') setStageError(String(e?.message ?? e));
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [evmAddress, stellarAddress, network, addresses, toSymbol, executeLifiSwap, soroswap, config, t]
+    [evmAddress, stellarAddress, network, addresses, toSymbol, soroswap, config, makePatcher, finish, t]
+  );
+
+  // ---- OUTBOUND orchestration -----------------------------------------------------
+  const runOutbound = useCallback(
+    async (transferId: string, amountWire: bigint) => {
+      cancelled.current = false;
+      const { patch, pollStatus, topUp } = await makePatcher(transferId);
+
+      try {
+        setStage('burn');
+        const { burnTxHash } = await burnUsdcOnStellar({
+          network,
+          stellarAddress: stellarAddress!,
+          amountWire,
+          destinationDomain: CCTP_DOMAIN.base,
+          mintRecipient: evmAddressToBytes(evmAddress!),
+        });
+        await patch({ burnTxHash });
+
+        setStage('bridging');
+        await pollStatus('COMPLETED', 5_000); // Stellar-source attestation ≈ seconds
+
+        setStage('topup');
+        await topUp();
+
+        setStage('pivot-swap');
+        const result = await executePivotSwap({
+          evmAddress: evmAddress!,
+          toSymbol: toSymbol as CrosschainSymbol,
+          toAddress: nativeAddress!,
+          amountWire,
+        });
+        await patch({ dstSwapTxHash: result.txHash });
+        if (toSymbol === 'BTC') {
+          enqueueSnackbar(t('BTC is on its way — delivery takes a few minutes.'), { variant: 'info' });
+        }
+        finish();
+      } catch (e: any) {
+        if (String(e?.message) !== 'cancelled') setStageError(String(e?.message ?? e));
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [evmAddress, stellarAddress, nativeAddress, network, toSymbol, makePatcher, finish, t]
   );
 
   const handleExecute = useCallback(async () => {
-    if (!quote || !evmAddress || !stellarAddress || !usdcOutMin) return;
+    if (!quote || !evmAddress || !stellarAddress || !nativeAddress) return;
     setStageError(null);
     setModalOpen(true);
-    setStage('lifi');
     try {
       const headers = await buildAuthHeaders();
+      const amountWire =
+        direction === 'in'
+          ? BigInt(quote.estimate.toAmountMin) // USDC that will reach Base
+          : usdcToWire(amount.toFixed(6, BigNumber.ROUND_DOWN));
       const res = await fetch('/api/cctp/transfers', {
         method: 'POST',
         headers,
         credentials: 'include',
         body: JSON.stringify({
-          direction: 'crosschain_to_stellar',
-          sourceDomain: CCTP_DOMAIN.base,
-          destDomain: CCTP_DOMAIN.stellar,
-          amountWire: usdcToWire(usdcOutMin.toFixed(6, BigNumber.ROUND_DOWN)).toString(),
+          direction: direction === 'in' ? 'crosschain_to_stellar' : 'stellar_to_crosschain',
+          sourceDomain: direction === 'in' ? CCTP_DOMAIN.base : CCTP_DOMAIN.stellar,
+          destDomain: direction === 'in' ? CCTP_DOMAIN.stellar : CCTP_DOMAIN.base,
+          amountWire: amountWire.toString(),
           srcAsset: fromSymbol,
           dstAsset: toSymbol,
-          srcAddress: evmAddress,
-          destAddress: stellarAddress,
+          // The EVM pivot address is what the gas top-up route needs to reach:
+          // inbound it's the (EVM) source, outbound the (EVM) destination.
+          srcAddress: direction === 'in' ? evmAddress : stellarAddress,
+          destAddress: direction === 'in' ? stellarAddress : evmAddress,
           quoteJson: { feePercent, lifiTool: quote?.tool ?? null },
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.id) throw new Error(data.error ?? t('Could not start the swap'));
-      await runFromStage(data.id, 'lifi', quote);
+      if (direction === 'in') await runInbound(data.id, quote);
+      else await runOutbound(data.id, amountWire);
     } catch (e: any) {
       setStageError(String(e?.message ?? e));
     }
-  }, [quote, evmAddress, stellarAddress, usdcOutMin, fromSymbol, toSymbol, feePercent, runFromStage, t]);
+  }, [quote, direction, amount, evmAddress, stellarAddress, nativeAddress, fromSymbol, toSymbol, feePercent, runInbound, runOutbound, t]);
 
-  // ---- UI contract -------------------------------------------------------------
+  // ---- UI contract ------------------------------------------------------------------
   const etaMinutes = quote
-    ? Math.max(1, Math.round(quote.estimate.executionDuration / 60)) + 20 // + Base finality
+    ? direction === 'in'
+      ? Math.max(1, Math.round(quote.estimate.executionDuration / 60)) + 20 // + Base finality
+      : Math.max(2, Math.round(quote.estimate.executionDuration / 60)) + 2 // Stellar attests in seconds
     : null;
 
   const button = useMemo(() => {
     if (!enabled) return { label: t('Enter an amount'), action: null, loading: false };
     if (network !== 'mainnet')
-      return { label: t('Mainnet only'), action: null, loading: false, helper: (
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
-          {t('Cross-ecosystem swaps route through LI.FI, which has no testnet liquidity.')}
-        </Typography>
-      ) };
-    if (!fromAddress)
-      return { label: t('Set up {{sym}} wallet first', { sym: fromSymbol }), action: null, loading: false };
+      return {
+        label: t('Mainnet only'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('Cross-ecosystem swaps route through LI.FI, which has no testnet liquidity.')}
+          </Typography>
+        ),
+      };
+    if (!nativeAddress)
+      return {
+        label: t('Set up {{sym}} wallet first', { sym: direction === 'in' ? fromSymbol : toSymbol }),
+        action: null,
+        loading: false,
+      };
     if (!evmAddress)
-      return { label: t('Set up Ethereum wallet first', {}), action: null, loading: false, helper: (
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
-          {t('The route travels via your own Base address — create your Ethereum wallet from the Receive menu once.')}
-        </Typography>
-      ) };
-    if (missingStellar)
-      return { label: t('Set up Stellar wallet first'), action: null, loading: false };
+      return {
+        label: t('Set up Ethereum wallet first'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('The route travels via your own Base address — create your Ethereum wallet from the Receive menu once.')}
+          </Typography>
+        ),
+      };
+    if (missingStellar) return { label: t('Set up Stellar wallet first'), action: null, loading: false };
     if (needsTrustline)
-      return { label: t('Add USDC Trustline first'), action: null, loading: false, helper: (
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
-          {t('Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.')}
-        </Typography>
-      ) };
+      return {
+        label: t('Add USDC Trustline first'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.')}
+          </Typography>
+        ),
+      };
     if (amount.lte(0)) return { label: t('Enter an amount'), action: null, loading: false };
     if (insufficient) return { label: t('Insufficient balance'), action: null, loading: false };
     if (stage && stage !== 'done') return { label: t('Swap in progress…'), action: null, loading: true };
+    if (quoteError) return { label: t('Try a different amount'), action: null, loading: false };
     if (quoteLoading || !quote) return { label: t('Fetching quote…'), action: null, loading: false };
     return { label: t('Swap'), action: handleExecute, loading: false };
-  }, [enabled, network, fromAddress, evmAddress, missingStellar, needsTrustline, amount, insufficient, stage, quoteLoading, quote, handleExecute, t, fromSymbol]);
+  }, [enabled, network, nativeAddress, evmAddress, missingStellar, needsTrustline, amount, insufficient, stage, quoteError, quoteLoading, quote, handleExecute, t, direction, fromSymbol, toSymbol]);
+
+  const routeLabel =
+    direction === 'in'
+      ? `${fromSymbol} → USDC (Base) → Stellar${toSymbol === 'XLM' ? ' → XLM' : ''}`
+      : `USDC → Base (Circle) → ${toSymbol}`;
 
   const details = quote ? (
     <Stack spacing={0.75}>
       <Stack direction="row" justifyContent="space-between">
         <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Route')}</Typography>
-        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
-          {fromSymbol} → USDC (Base) → Stellar{toSymbol === 'XLM' ? ' → XLM' : ''}
-        </Typography>
+        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>{routeLabel}</Typography>
       </Stack>
       <Stack direction="row" justifyContent="space-between">
         <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Bridge (Circle CCTP)')}</Typography>
@@ -381,7 +516,7 @@ export function useCctpEngine({
         </Stack>
       )}
       <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.5 }}>
-        {t('Funds travel via your own addresses at every step. You can close the app after the burn step — delivery completes automatically.')}
+        {t('Funds travel via your own addresses at every step.')}
       </Typography>
     </Stack>
   ) : null;
@@ -396,12 +531,12 @@ export function useCctpEngine({
     modals: (
       <CctpProgressModal
         open={modalOpen}
+        direction={direction}
         stage={stage}
         error={stageError}
         fromSymbol={fromSymbol}
         toSymbol={toSymbol}
         onClose={() => {
-          // Post-burn stages complete server-side; pre-burn shows the resume banner.
           cancelled.current = true;
           setModalOpen(false);
           if (stage === 'done') setStage(null);

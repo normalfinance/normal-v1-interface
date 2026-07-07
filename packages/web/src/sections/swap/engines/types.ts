@@ -40,15 +40,20 @@ export const counterpartOf = (symbol: SwapSymbol): SwapSymbol =>
   SWAP_ASSETS.find((a) => a.group === groupOf(symbol) && a.symbol !== symbol)!.symbol;
 
 // ---------------------------------------------------------------------------
-// Cross-group routing (Circle CCTP + LI.FI composite). v1 supports the inbound
-// direction only: BTC/ETH/SOL → XLM/USDC via LI.FI→Base-USDC→CCTP→Stellar.
-// Outbound (stellar → crosschain) needs pivot-side swap execution — next slice.
+// Cross-group routing (Circle CCTP + LI.FI composite).
+//   inbound   BTC/ETH/SOL → XLM/USDC   (LI.FI → USDC on Base → CCTP → Stellar)
+//   outbound  USDC → BTC/ETH/SOL       (CCTP → USDC on Base → LI.FI)
+// XLM as a direct outbound source is excluded for now: the Soroswap leg would
+// stack a second 0.5% fee on top of the LI.FI one — swap XLM→USDC first
+// (identical total cost) until the composite can run that leg fee-exempt.
 // ---------------------------------------------------------------------------
 
 export type PairType = SwapGroup | 'cctp';
 
 export const canPair = (from: SwapSymbol, to: SwapSymbol): boolean =>
-  groupOf(from) === groupOf(to) || (groupOf(from) === 'crosschain' && groupOf(to) === 'stellar');
+  groupOf(from) === groupOf(to) ||
+  (groupOf(from) === 'crosschain' && groupOf(to) === 'stellar') ||
+  (from === 'USDC' && groupOf(to) === 'crosschain');
 
 export const pairTypeOf = (from: SwapSymbol, to: SwapSymbol): PairType =>
   groupOf(from) === groupOf(to) ? groupOf(from) : 'cctp';

@@ -28,12 +28,20 @@ export async function POST(req: Request) {
   if (transfer.gasTopUpTxHash) {
     return NextResponse.json({ txHash: transfer.gasTopUpTxHash, alreadySent: true });
   }
-  if (transfer.burnTxHash) {
+
+  // Which address needs gas depends on direction: inbound tops up the EVM
+  // source BEFORE its burn; outbound tops up the EVM destination AFTER the
+  // mint (so the user can sign the pivot swap).
+  const outbound = transfer.direction.startsWith('stellar');
+  const evmTarget = outbound ? transfer.destAddress : transfer.srcAddress;
+  if (outbound && !transfer.mintTxHash) {
+    return NextResponse.json({ error: 'mint not yet executed' }, { status: 400 });
+  }
+  if (!outbound && transfer.burnTxHash) {
     return NextResponse.json({ error: 'burn already executed' }, { status: 400 });
   }
-  // Only the EVM-side burn needs a top-up, and only from the recorded source.
-  if (!/^0x[a-fA-F0-9]{40}$/.test(transfer.srcAddress)) {
-    return NextResponse.json({ error: 'transfer has no EVM source' }, { status: 400 });
+  if (!/^0x[a-fA-F0-9]{40}$/.test(evmTarget)) {
+    return NextResponse.json({ error: 'transfer has no EVM leg' }, { status: 400 });
   }
 
   // Claim before sending so concurrent calls can't double-spend the float.
@@ -49,7 +57,7 @@ export async function POST(req: Request) {
     const txHash = await sendGasTopUp({
       network: transfer.network as NetworkType,
       chain: 'base',
-      to: transfer.srcAddress as `0x${string}`,
+      to: evmTarget as `0x${string}`,
       amountWei: TOP_UP_WEI,
     });
     await prisma.cctpTransfer.update({ where: { id: transfer.id }, data: { gasTopUpTxHash: txHash } });
