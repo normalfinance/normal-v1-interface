@@ -111,6 +111,7 @@ model SwapLog {
 model CctpTransfer {
   id             String   @id @default(cuid())
   userId         String   // supabase uid
+  network        String   @default("mainnet") // 'mainnet' | 'testnet' — cron advances rows without request context
   direction      String   // 'stellar_to_evm' | 'evm_to_stellar' | 'stellar_to_solana' | ...
   status         String   @default("CREATED")
   sourceDomain   Int      // CCTP domain id of the burn chain
