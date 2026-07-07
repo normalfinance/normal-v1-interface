@@ -34,6 +34,24 @@ export async function POST(req: Request) {
   const cookieStore = await cookies();
   const network = (cookieStore.get('normal-network')?.value ?? 'mainnet') as NetworkType;
 
+  // Product limits (authoritative here — quotes are advisory): min keeps the
+  // fixed costs sane; the mainnet pilot cap bounds blast radius until the
+  // rollout week is clean, then is raised via env without a code change.
+  const amount = BigInt(amountWire);
+  const MIN_WIRE = 10_000_000n; // $10
+  if (amount < MIN_WIRE) {
+    return NextResponse.json({ error: 'Minimum swap is $10' }, { status: 400 });
+  }
+  if (network === 'mainnet') {
+    const capUsd = Number(process.env.CCTP_PILOT_MAX_USD ?? 50);
+    if (amount > BigInt(Math.round(capUsd * 1_000_000))) {
+      return NextResponse.json(
+        { error: `During the pilot, swaps are capped at $${capUsd}` },
+        { status: 400 }
+      );
+    }
+  }
+
   const transfer = await prisma.cctpTransfer.create({
     data: {
       userId: user.id,

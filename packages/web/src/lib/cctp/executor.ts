@@ -39,6 +39,17 @@ function evmChain(network: NetworkType, chain: 'base' | 'ethereum') {
   return EVM_CHAINS[network][chain];
 }
 
+/** MetaMask & co. export private keys without the 0x prefix — accept both. */
+function relayerEvmKey(): `0x${string}` {
+  const pk = process.env.CCTP_RELAYER_EVM_PRIVATE_KEY?.trim();
+  if (!pk) throw new Error('CCTP_RELAYER_EVM_PRIVATE_KEY not configured');
+  const normalized = pk.startsWith('0x') ? pk : `0x${pk}`;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(normalized)) {
+    throw new Error('CCTP_RELAYER_EVM_PRIVATE_KEY is not a valid EVM private key');
+  }
+  return normalized as `0x${string}`;
+}
+
 /** Submit receiveMessage on an EVM chain. Returns the mint tx hash. Throws
  *  "nonce already used" style errors if someone already executed it — callers
  *  treat that as success (the mint recipient got their USDC either way). */
@@ -48,11 +59,8 @@ export async function executeEvmMint(params: {
   message: `0x${string}`;
   attestation: `0x${string}`;
 }): Promise<`0x${string}`> {
-  const pk = process.env.CCTP_RELAYER_EVM_PRIVATE_KEY;
-  if (!pk) throw new Error('CCTP_RELAYER_EVM_PRIVATE_KEY not configured');
-
   const chain = evmChain(params.network, params.chain);
-  const account = privateKeyToAccount(pk as `0x${string}`);
+  const account = privateKeyToAccount(relayerEvmKey());
   const wallet = createWalletClient({ account, chain, transport: http() });
 
   return wallet.writeContract({
@@ -88,9 +96,7 @@ export async function sendGasTopUp(params: {
   to: `0x${string}`;
   amountWei: bigint;
 }): Promise<`0x${string}`> {
-  const pk = process.env.CCTP_RELAYER_EVM_PRIVATE_KEY;
-  if (!pk) throw new Error('CCTP_RELAYER_EVM_PRIVATE_KEY not configured');
-  const account = privateKeyToAccount(pk as `0x${string}`);
+  const account = privateKeyToAccount(relayerEvmKey());
   const wallet = createWalletClient({
     account,
     chain: evmChain(params.network, params.chain),
