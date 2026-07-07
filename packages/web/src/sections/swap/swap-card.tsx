@@ -26,9 +26,11 @@ import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import PickToken from '@/components/_common/pick-token';
 import { Iconify } from '@/components/template/iconify';
 
+import { CctpResumeBanner } from './cctp-resume-banner';
 import { useLifiEngine } from './engines/use-lifi-engine';
+import { useCctpEngine } from './engines/use-cctp-engine';
 import { useSoroswapEngine } from './engines/use-soroswap-engine';
-import { groupOf, SWAP_ASSETS, assetBySymbol, counterpartOf } from './engines/types';
+import { canPair, pairTypeOf, SWAP_ASSETS, assetBySymbol, counterpartOf } from './engines/types';
 
 import type { SwapSymbol, StellarSymbol, CrosschainSymbol } from './engines/types';
 
@@ -105,7 +107,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     >
   )[fromSymbol];
 
-  const activeGroup = groupOf(fromSymbol);
+  // 'stellar' | 'crosschain' (same-group) or 'cctp' (cross-ecosystem composite).
+  const pairType = pairTypeOf(fromSymbol, toSymbol);
 
   // `amount` is always the canonical token amount; in fiat mode the typed value
   // is USD, divided by the live price (0 until the price loads).
@@ -132,45 +135,58 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   );
   const resetInput = useCallback(() => setAmountIn(''), []);
 
-  // Both engines are always mounted (React hook rules); only the active one is
-  // fed the live amount, so the other never fetches a quote.
+  // All engines are always mounted (React hook rules); only the active one is
+  // fed the live amount, so the others never fetch a quote.
   const soroswap = useSoroswapEngine({
-    fromSymbol: (activeGroup === 'stellar' ? fromSymbol : 'XLM') as StellarSymbol,
-    toSymbol: (activeGroup === 'stellar' ? toSymbol : 'USDC') as StellarSymbol,
-    amount: activeGroup === 'stellar' ? amount : ZERO,
-    fromBalance: activeGroup === 'stellar' ? fromBalance : ZERO,
-    fromPrice: activeGroup === 'stellar' ? fromPrice : ZERO,
-    enabled: activeGroup === 'stellar',
+    fromSymbol: (pairType === 'stellar' ? fromSymbol : 'XLM') as StellarSymbol,
+    toSymbol: (pairType === 'stellar' ? toSymbol : 'USDC') as StellarSymbol,
+    amount: pairType === 'stellar' ? amount : ZERO,
+    fromBalance: pairType === 'stellar' ? fromBalance : ZERO,
+    fromPrice: pairType === 'stellar' ? fromPrice : ZERO,
+    enabled: pairType === 'stellar',
     resetInput,
   });
   const lifi = useLifiEngine({
-    fromSymbol: (activeGroup === 'crosschain' ? fromSymbol : 'ETH') as CrosschainSymbol,
-    toSymbol: (activeGroup === 'crosschain' ? toSymbol : 'BTC') as CrosschainSymbol,
+    fromSymbol: (pairType === 'crosschain' ? fromSymbol : 'ETH') as CrosschainSymbol,
+    toSymbol: (pairType === 'crosschain' ? toSymbol : 'BTC') as CrosschainSymbol,
     addresses,
-    amount: activeGroup === 'crosschain' ? amount : ZERO,
-    fromBalance: activeGroup === 'crosschain' ? fromBalance : ZERO,
-    fromPrice: activeGroup === 'crosschain' ? fromPrice : ZERO,
-    enabled: activeGroup === 'crosschain',
+    amount: pairType === 'crosschain' ? amount : ZERO,
+    fromBalance: pairType === 'crosschain' ? fromBalance : ZERO,
+    fromPrice: pairType === 'crosschain' ? fromPrice : ZERO,
+    enabled: pairType === 'crosschain',
     resetInput,
     refetchChain,
   });
-  const engine = activeGroup === 'stellar' ? soroswap : lifi;
+  const cctp = useCctpEngine({
+    fromSymbol: (pairType === 'cctp' ? fromSymbol : 'ETH') as CrosschainSymbol,
+    toSymbol: (pairType === 'cctp' ? toSymbol : 'USDC') as StellarSymbol,
+    addresses,
+    amount: pairType === 'cctp' ? amount : ZERO,
+    fromBalance: pairType === 'cctp' ? fromBalance : ZERO,
+    fromPrice: pairType === 'cctp' ? fromPrice : ZERO,
+    enabled: pairType === 'cctp',
+    resetInput,
+  });
+  const engine = pairType === 'stellar' ? soroswap : pairType === 'crosschain' ? lifi : cctp;
   const { toAmount, quoteLoading, quoteError } = engine;
 
-  // --- selection (keeps source + destination in the same routing group) ---
+  // --- selection (destination constrained to pairable assets) ---
   const selectFrom = (sym: SwapSymbol) => {
     if (sym === fromSymbol) return;
-    if (groupOf(sym) !== groupOf(toSymbol)) setToSymbol(counterpartOf(sym));
-    else if (sym === toSymbol) setToSymbol(fromSymbol);
+    if (!canPair(sym, toSymbol) || sym === toSymbol) {
+      setToSymbol(sym === toSymbol ? fromSymbol : counterpartOf(sym));
+    }
     setFromSymbol(sym);
     setAmountIn('');
   };
   const selectTo = (sym: SwapSymbol) => {
     if (sym === toSymbol) return;
-    if (sym === fromSymbol) setFromSymbol(toSymbol); // picker is group-filtered, so swap is safe
+    if (sym === fromSymbol) setFromSymbol(toSymbol); // picker is pair-filtered, so swap is safe
     setToSymbol(sym);
   };
   const handleFlip = () => {
+    // Cross-ecosystem pairs only run inbound (crosschain → stellar) for now.
+    if (!canPair(toSymbol, fromSymbol)) return;
     setFromSymbol(toSymbol);
     setToSymbol(fromSymbol);
     setAmountIn('');
@@ -202,8 +218,11 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     [tokenBySymbol]
   );
   const toPickerTokens = useMemo(
-    () => SWAP_ASSETS.filter((a) => a.group === activeGroup).map((a) => tokenBySymbol[a.symbol]),
-    [tokenBySymbol, activeGroup]
+    () =>
+      SWAP_ASSETS.filter((a) => a.symbol !== fromSymbol && canPair(fromSymbol, a.symbol)).map(
+        (a) => tokenBySymbol[a.symbol]
+      ),
+    [tokenBySymbol, fromSymbol]
   );
 
   const AssetSelector = ({ side }: { side: 'from' | 'to' }) => {
@@ -242,7 +261,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   };
 
   return (
-    <Box sx={{ ...CARD_SX, minWidth: 0 }}>
+    <Box sx={{ minWidth: 0 }}>
+      <CctpResumeBanner />
+      <Box sx={{ ...CARD_SX, minWidth: 0 }}>
       {/* From */}
       <Box sx={{ p: '16px', borderRadius: '16px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.08)' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '12px', flexWrap: 'wrap', gap: '8px' }}>
@@ -471,6 +492,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       />
 
       {engine.modals}
+      </Box>
     </Box>
   );
 }

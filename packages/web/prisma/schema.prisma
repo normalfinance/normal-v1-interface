@@ -128,6 +128,7 @@ model CctpTransfer {
   attestationHex String?
   mintTxHash     String?
   dstSwapTxHash  String?  // LI.FI/Soroswap leg after the mint
+  gasTopUpTxHash String?  // relayer dust-gas send on the burn chain (once)
   quoteJson      String?  // full quote snapshot incl. fee breakdown
   errorDetail    String?
   retryCount     Int      @default(0)

@@ -40,6 +40,20 @@ export const counterpartOf = (symbol: SwapSymbol): SwapSymbol =>
   SWAP_ASSETS.find((a) => a.group === groupOf(symbol) && a.symbol !== symbol)!.symbol;
 
 // ---------------------------------------------------------------------------
+// Cross-group routing (Circle CCTP + LI.FI composite). v1 supports the inbound
+// direction only: BTC/ETH/SOL → XLM/USDC via LI.FI→Base-USDC→CCTP→Stellar.
+// Outbound (stellar → crosschain) needs pivot-side swap execution — next slice.
+// ---------------------------------------------------------------------------
+
+export type PairType = SwapGroup | 'cctp';
+
+export const canPair = (from: SwapSymbol, to: SwapSymbol): boolean =>
+  groupOf(from) === groupOf(to) || (groupOf(from) === 'crosschain' && groupOf(to) === 'stellar');
+
+export const pairTypeOf = (from: SwapSymbol, to: SwapSymbol): PairType =>
+  groupOf(from) === groupOf(to) ? groupOf(from) : 'cctp';
+
+// ---------------------------------------------------------------------------
 // Normalised contract every engine fulfils so the shell renders one chrome and
 // never branches on the routing provider. The shell owns the amount input,
 // USD/token toggle, balances, prices and the asset picker; the engine owns the
