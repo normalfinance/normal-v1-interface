@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { direction, sourceDomain, destDomain, amountWire, srcAsset, dstAsset, srcAddress, destAddress, quoteJson } = body ?? {};
+  const { direction, sourceDomain, destDomain, amountWire, srcAsset, dstAsset, srcAmount, srcAddress, destAddress, quoteJson } = body ?? {};
 
   if (!VALID_DOMAINS.has(sourceDomain) || !VALID_DOMAINS.has(destDomain) || sourceDomain === destDomain) {
     return NextResponse.json({ error: 'invalid domains' }, { status: 400 });
@@ -62,6 +62,7 @@ export async function POST(req: Request) {
       amountWire,
       srcAsset: srcAsset ?? 'USDC',
       dstAsset: dstAsset ?? 'USDC',
+      srcAmount: typeof srcAmount === 'string' ? srcAmount : null,
       srcAddress,
       destAddress,
       quoteJson: quoteJson ? JSON.stringify(quoteJson) : null,
@@ -75,10 +76,15 @@ export async function GET(req: Request) {
   const user = await getAuthenticatedUser(getAccessToken(req));
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // ?history=1 → all recent transfers (every status) for the Activity feed;
+  // default → in-flight only, for the resume banner.
+  const history = new URL(req.url).searchParams.get('history') === '1';
   const transfers = await prisma.cctpTransfer.findMany({
-    where: { userId: user.id, status: { in: [...PENDING_STATUSES, 'CREATED'] } },
+    where: history
+      ? { userId: user.id }
+      : { userId: user.id, status: { in: [...PENDING_STATUSES, 'CREATED'] } },
     orderBy: { createdAt: 'desc' },
-    take: 20,
+    take: history ? 30 : 20,
   });
   return NextResponse.json({ transfers });
 }

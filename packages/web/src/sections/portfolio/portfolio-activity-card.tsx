@@ -53,6 +53,11 @@ function getExplorerUrl(a: Activity): string | null {
   if (a.type === 'Swap' && a.txHash && a.tokenIn.address?.startsWith('lifi:')) {
     return `https://scan.li.fi/tx/${a.txHash}`;
   }
+  // CCTP composite swap spans Stellar + Circle + a chain leg — no single tx
+  // explorer captures the whole journey, so we omit the link.
+  if (a.type === 'Swap' && a.tokenIn.address?.startsWith('cctp:')) {
+    return null;
+  }
   switch (a.type) {
     case 'Savings Deposit':
     case 'Savings Withdraw':

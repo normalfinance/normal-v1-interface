@@ -119,6 +119,8 @@ model CctpTransfer {
   amountWire     String   // canonical 6-dp integer units, as string
   srcAsset       String   // user-facing source asset symbol (e.g. 'XLM')
   dstAsset       String   // user-facing destination asset symbol (e.g. 'BTC')
+  srcAmount      String?  // human source amount for the activity feed (e.g. '0.5')
+  dstAmount      String?  // human delivered amount, set on completion
   srcAddress     String
   destAddress    String
   srcSwapTxHash  String?  // Soroswap/LI.FI leg before the burn

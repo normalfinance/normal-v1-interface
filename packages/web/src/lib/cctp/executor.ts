@@ -105,6 +105,31 @@ export async function sendGasTopUp(params: {
   return wallet.sendTransaction({ to: params.to, value: params.amountWei });
 }
 
+// Hard ceiling on a single top-up so an extreme gas spike can't drain the float.
+const TOP_UP_MAX_WEI = 1_000_000_000_000_000n; // 0.001 ETH
+
+/** How much gas the recipient actually needs RIGHT NOW, minus what they already
+ *  hold. Dynamic (live gas price) so we send cents at low gas and enough at a
+ *  spike, and 0 when they're already funded (e.g. leftover from a prior swap).
+ *  `gasEstimate` = expected gas for their upcoming txs (approve + swap/burn). */
+export async function computeTopUpShortfall(params: {
+  network: NetworkType;
+  chain: 'base' | 'ethereum';
+  to: `0x${string}`;
+  gasEstimate: bigint;
+}): Promise<bigint> {
+  const pub = createPublicClient({ chain: evmChain(params.network, params.chain), transport: http() });
+  const [balance, fees] = await Promise.all([
+    pub.getBalance({ address: params.to }),
+    pub.estimateFeesPerGas(),
+  ]);
+  // 2× the estimated fee guards against price drift between now and the user's
+  // signature a few seconds later.
+  const needed = params.gasEstimate * fees.maxFeePerGas * 2n;
+  const capped = needed > TOP_UP_MAX_WEI ? TOP_UP_MAX_WEI : needed;
+  return capped > balance ? capped - balance : 0n;
+}
+
 /** Execute CctpForwarder.mint_and_forward on Stellar (inbound direction).
  *  Anyone may call it; the recipient comes from the message's hook data.
  *  Costs dust XLM. Returns the Stellar tx hash. */

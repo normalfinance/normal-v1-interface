@@ -312,6 +312,10 @@ export function useCctpEngine({
         setStage('bridging');
         await pollStatus('COMPLETED', 15_000);
 
+        // Delivered amount for the activity feed — the USDC that landed, or the
+        // XLM out if the optional Soroswap leg runs.
+        let dstAmount = wireToUsdc(arrivedWire);
+
         if (toSymbol === 'XLM') {
           setStage('final-swap');
           const usdcAmount = wireToUsdc(arrivedWire);
@@ -331,10 +335,12 @@ export function useCctpEngine({
           if (q) {
             const hash = await soroswap.executeSwap(q, { tokenInSymbol: 'USDC', tokenOutSymbol: 'XLM' });
             if (hash) await patch({ dstSwapTxHash: hash });
+            if (q.amountOut) dstAmount = String(q.amountOut);
           } else {
             enqueueSnackbar(t('USDC arrived on Stellar — the XLM conversion can be done from the swap tab.'), { variant: 'info' });
           }
         }
+        await patch({ dstAmount });
         finish();
       } catch (e: any) {
         if (String(e?.message) !== 'cancelled') setStageError(String(e?.message ?? e));
@@ -375,6 +381,11 @@ export function useCctpEngine({
           amountWire,
         });
         await patch({ dstSwapTxHash: result.txHash });
+        // human delivered amount for the activity feed
+        const dstAmount = BigNumber(result.toAmountMin)
+          .dividedBy(BigNumber(10).pow(NATIVE_DECIMALS[toSymbol as CrosschainSymbol]))
+          .toFixed();
+        await patch({ dstAmount });
         if (toSymbol === 'BTC') {
           enqueueSnackbar(t('BTC is on its way — delivery takes a few minutes.'), { variant: 'info' });
         }
@@ -408,6 +419,7 @@ export function useCctpEngine({
           amountWire: amountWire.toString(),
           srcAsset: fromSymbol,
           dstAsset: toSymbol,
+          srcAmount: amount.toFixed(), // human input amount for the activity feed
           // The EVM pivot address is what the gas top-up route needs to reach:
           // inbound it's the (EVM) source, outbound the (EVM) destination.
           srcAddress: direction === 'in' ? evmAddress : stellarAddress,

@@ -47,6 +47,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.dstSwapTxHash && !transfer!.dstSwapTxHash) {
     data.dstSwapTxHash = String(body.dstSwapTxHash);
   }
+  // Delivered amount for the activity feed (set once, when the final leg lands).
+  if (body.dstAmount && !transfer!.dstAmount) {
+    data.dstAmount = String(body.dstAmount);
+  }
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
   }

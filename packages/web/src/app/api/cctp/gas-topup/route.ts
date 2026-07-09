@@ -7,14 +7,18 @@ import { prisma } from '@/lib/prisma';
 // per transfer (gasTopUpTxHash guard); cost is priced into the quote.
 import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/utils/http';
-import { sendGasTopUp } from '@/lib/cctp/executor';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { sendGasTopUp, computeTopUpShortfall } from '@/lib/cctp/executor';
 
 export const dynamic = 'force-dynamic';
 
-// Approve (~60k) + depositForBurnWithHook (~180k) at Base's sub-gwei prices is
-// well under 0.00003 ETH; 0.0001 leaves generous headroom for fee spikes.
-const TOP_UP_WEI = 100_000_000_000_000n; // 0.0001 ETH
+// Gas the recipient's upcoming txs will burn on Base:
+//  outbound → approve + LI.FI pivot swap (the swap dominates, ~400k)
+//  inbound  → approve + depositForBurnWithHook (~240k)
+// The top-up is priced LIVE from these against the current gas price, minus what
+// the address already holds — so it's cents at low gas and 0 for repeat users.
+const OUTBOUND_GAS_ESTIMATE = 700_000n;
+const INBOUND_GAS_ESTIMATE = 300_000n;
 
 export async function POST(req: Request) {
   const user = await getAuthenticatedUser(getAccessToken(req));
@@ -54,14 +58,31 @@ export async function POST(req: Request) {
   }
 
   try {
-    const txHash = await sendGasTopUp({
-      network: transfer.network as NetworkType,
+    const network = transfer.network as NetworkType;
+    const shortfall = await computeTopUpShortfall({
+      network,
       chain: 'base',
       to: evmTarget as `0x${string}`,
-      amountWei: TOP_UP_WEI,
+      gasEstimate: outbound ? OUTBOUND_GAS_ESTIMATE : INBOUND_GAS_ESTIMATE,
+    });
+
+    // Already funded (e.g. leftover from a prior swap) → send nothing.
+    if (shortfall === 0n) {
+      await prisma.cctpTransfer.update({
+        where: { id: transfer.id },
+        data: { gasTopUpTxHash: 'skipped' },
+      });
+      return NextResponse.json({ skipped: true, reason: 'recipient already has enough gas' });
+    }
+
+    const txHash = await sendGasTopUp({
+      network,
+      chain: 'base',
+      to: evmTarget as `0x${string}`,
+      amountWei: shortfall,
     });
     await prisma.cctpTransfer.update({ where: { id: transfer.id }, data: { gasTopUpTxHash: txHash } });
-    return NextResponse.json({ txHash });
+    return NextResponse.json({ txHash, amountWei: shortfall.toString() });
   } catch (e: any) {
     await prisma.cctpTransfer.update({
       where: { id: transfer.id },
