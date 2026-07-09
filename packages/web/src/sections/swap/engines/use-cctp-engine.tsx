@@ -222,10 +222,22 @@ export function useCctpEngine({
       pollStatus: async (target: string, intervalMs: number) => {
         for (;;) {
           if (cancelled.current) throw new Error('cancelled');
-          const res = await fetch(`/api/cctp/transfers/${transferId}`, { headers, credentials: 'include' });
-          const data = await res.json();
-          if (data?.transfer?.status === target) return;
-          if (data?.transfer?.status === 'FAILED') throw new Error(data.transfer.errorDetail ?? 'transfer failed');
+          let status: string | undefined;
+          let detail: string | undefined;
+          try {
+            const res = await fetch(`/api/cctp/transfers/${transferId}`, {
+              headers,
+              credentials: 'include',
+              signal: AbortSignal.timeout(20_000),
+            });
+            const data = await res.json();
+            status = data?.transfer?.status;
+            detail = data?.transfer?.errorDetail;
+          } catch {
+            /* transient (timeout / hung server) — the cron keeps advancing it; just retry */
+          }
+          if (status === target) return;
+          if (status === 'FAILED') throw new Error(detail ?? 'transfer failed');
           await new Promise((r) => setTimeout(r, intervalMs));
         }
       },
@@ -235,6 +247,7 @@ export function useCctpEngine({
           headers,
           credentials: 'include',
           body: JSON.stringify({ transferId }),
+          signal: AbortSignal.timeout(30_000),
         });
         if (!res.ok && res.status !== 409) throw new Error(t('Gas top-up failed — try again in a moment.'));
         await new Promise((r) => setTimeout(r, 8_000));
@@ -271,7 +284,12 @@ export function useCctpEngine({
         const started = Date.now();
         for (;;) {
           if (cancelled.current) return;
-          const bal = await readBaseUsdc(evmAddress!);
+          let bal = baseline;
+          try {
+            bal = await readBaseUsdc(evmAddress!);
+          } catch {
+            /* transient RPC hiccup — retry next interval */
+          }
           if (bal >= baseline + (target * 95n) / 100n) {
             arrivedWire = bal - baseline > target ? target : bal - baseline;
             break;
