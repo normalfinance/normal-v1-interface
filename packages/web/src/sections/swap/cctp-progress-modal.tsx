@@ -45,12 +45,12 @@ export function CctpProgressModal({ open, direction, stage, error, fromSymbol, t
           { id: 'lifi', label: t('Swapping {{sym}} to USDC', { sym: fromSymbol }), sub: t('Via LI.FI · approve in your wallet') },
           { id: 'arriving', label: t('USDC arriving on Base'), sub: t('Cross-chain delivery — a few minutes') },
           { id: 'topup', label: t('Covering network fees'), sub: t('Normal sends gas to your address') },
-          { id: 'burn', label: t('Starting the Circle bridge'), sub: t('Approve in your wallet · 2 signatures') },
+          { id: 'burn', label: t('Starting the Circle bridge'), sub: t('Approve in your wallet · 1–2 signatures') },
           { id: 'bridging', label: t('Bridging to Stellar'), sub: t('Circle attestation ~20 min — safe to close') },
           { id: 'done', label: t('Done'), sub: t('{{sym}} delivered', { sym: toSymbol }) },
         ]
       : [
-          { id: 'burn', label: t('Starting the Circle bridge'), sub: t('Approve in your wallet · 2 signatures') },
+          { id: 'burn', label: t('Starting the Circle bridge'), sub: t('Approve in your wallet · 1–2 signatures') },
           { id: 'bridging', label: t('Bridging to Base'), sub: t('Circle attestation — about a minute') },
           { id: 'topup', label: t('Covering network fees'), sub: t('Normal sends gas to your address') },
           { id: 'pivot-swap', label: t('Swapping USDC to {{sym}}', { sym: toSymbol }), sub: t('Via LI.FI · approve in your wallet') },

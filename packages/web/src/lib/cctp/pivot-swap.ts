@@ -13,6 +13,10 @@ import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 
 import { EVM_USDC } from './config';
 
+// Approve MAX once so repeat swaps skip the approval signature. (`**` transpiles
+// to Math.pow, which throws on BigInt — build the constant from a hex literal.)
+const MAX_UINT256 = BigInt(`0x${'f'.repeat(64)}`);
+
 export interface PivotSwapResult {
   txHash: `0x${string}`;
   /** minimum target-asset amount (base units) LI.FI guarantees */
@@ -96,12 +100,14 @@ export async function executePivotSwap(params: {
     });
     if (allowance < params.amountWire) {
       params.onStep?.('approve');
+      // Approve MAX (not the exact amount) so subsequent pivots to the same
+      // router skip this signature entirely.
       await signAndSend(
         usdc,
         encodeFunctionData({
           abi: erc20Abi,
           functionName: 'approve',
-          args: [approvalAddress, params.amountWire],
+          args: [approvalAddress, MAX_UINT256],
         }),
         0n
       );

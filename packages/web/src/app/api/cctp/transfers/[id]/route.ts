@@ -51,6 +51,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.dstAmount && !transfer!.dstAmount) {
     data.dstAmount = String(body.dstAmount);
   }
+  // Retire an outbound swap as refunded — its minted USDC was re-bridged to Stellar.
+  if (body.markRefunded && transfer!.status !== 'REFUNDED') {
+    data.status = 'REFUNDED';
+    if (!transfer!.errorDetail) data.errorDetail = 'Refunded — USDC returned to your Stellar account';
+  }
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
   }

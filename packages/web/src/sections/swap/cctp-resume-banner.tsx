@@ -22,12 +22,12 @@ import type { NetworkType } from '@normalfinance/utils';
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { EVM_USDC } from '@/lib/cctp/config';
 import { buildAuthHeaders } from '@/utils/http';
 import { wireToUsdc } from '@/lib/cctp/decimals';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { useState, useEffect, useCallback } from 'react';
+import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import Box from '@mui/material/Box';
@@ -198,6 +198,71 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     [t, addresses, enqueueSnackbar, patch, refresh]
   );
 
+  // OUTBOUND escape hatch: when the pivot to the target asset has no route, bring
+  // the minted USDC back to Stellar via a fresh CCTP bridge (Base → Stellar), then
+  // retire the original swap as refunded. Forward ("Finish") stays the default;
+  // this is the fallback so funds are never stranded on Base.
+  const refundToStellar = useCallback(
+    async (tr: TransferRow) => {
+      setBusyId(tr.id);
+      try {
+        const network = tr.network as NetworkType;
+        const headers = await buildAuthHeaders();
+        // The user's own Base address (outbound destAddress) holds the minted USDC.
+        const bal = await readBaseUsdc(network, tr.destAddress);
+        if (bal === 0n) throw new Error(t('No USDC found on Base — it may already be moving.'));
+        // Fresh Base→Stellar bridge to the user's own Stellar account. `refund`
+        // bypasses the $10 min / cap — this recovers existing funds, not a new swap.
+        const createRes = await fetch('/api/cctp/transfers', {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({
+            direction: 'crosschain_to_stellar',
+            sourceDomain: CCTP_DOMAIN.base,
+            destDomain: CCTP_DOMAIN.stellar,
+            amountWire: bal.toString(),
+            srcAsset: 'USDC',
+            dstAsset: 'USDC',
+            srcAmount: wireToUsdc(bal),
+            srcAddress: tr.destAddress, // user's Base (source of the re-bridge)
+            destAddress: tr.srcAddress, // user's Stellar (outbound srcAddress = Stellar)
+            refund: true,
+          }),
+        });
+        const createData = await createRes.json();
+        if (!createRes.ok || !createData.id) throw new Error(createData.error ?? t('Could not start the refund.'));
+        const newId: string = createData.id;
+        // Relayer gas for the new burn (route tops up the Base address), then burn.
+        await fetch('/api/cctp/gas-topup', {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ transferId: newId }),
+        });
+        await new Promise((r) => setTimeout(r, 6000));
+        const { burnTxHash } = await burnUsdcOnEvm({
+          network,
+          chain: 'base',
+          evmAddress: tr.destAddress,
+          amountWire: bal,
+          stellarRecipient: tr.srcAddress,
+        });
+        await patch(newId, headers, { burnTxHash, dstAmount: wireToUsdc(bal) });
+        // Retire the original outbound swap as refunded.
+        await patch(tr.id, headers, { markRefunded: 'true' });
+        enqueueSnackbar(t('Bringing your USDC back to Stellar — completes automatically (~20 min).'), { variant: 'info' });
+        refresh();
+      } catch (e: any) {
+        console.error('[cctp refund] failed:', e); // surface stack
+        enqueueSnackbar(e?.message ?? t('Refund failed — your funds are safe; please try again.'), { variant: 'error' });
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [t, enqueueSnackbar, patch, refresh]
+  );
+
   if (!transfers.length) return null;
   const now = Date.now();
 
@@ -227,29 +292,51 @@ export function CctpRecoveryBanner({ addresses }: Props) {
               </Typography>
             </Box>
             {isHalt && (
-              <Button
-                onClick={() => recover(tr, phase)}
-                disabled={busyId === tr.id}
-                size="small"
-                sx={{
-                  flexShrink: 0,
-                  bgcolor: '#0A0A0F',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  borderRadius: '10px',
-                  px: '12px',
-                  '&:hover': { bgcolor: '#1A1A28' },
-                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.3)', color: '#fff' },
-                }}
-              >
-                {busyId === tr.id
-                  ? t('Working…')
-                  : phase === 'halt-receive'
-                    ? t('Receive USDC')
-                    : t('Finish')}
-              </Button>
+              <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0 }}>
+                <Button
+                  onClick={() => recover(tr, phase)}
+                  disabled={busyId === tr.id}
+                  size="small"
+                  sx={{
+                    bgcolor: '#0A0A0F',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    borderRadius: '10px',
+                    px: '12px',
+                    '&:hover': { bgcolor: '#1A1A28' },
+                    '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.3)', color: '#fff' },
+                  }}
+                >
+                  {busyId === tr.id
+                    ? t('Working…')
+                    : phase === 'halt-receive'
+                      ? t('Receive USDC')
+                      : t('Finish')}
+                </Button>
+                {phase === 'halt-finish' && (
+                  <Button
+                    onClick={() => refundToStellar(tr)}
+                    disabled={busyId === tr.id}
+                    size="small"
+                    sx={{
+                      bgcolor: 'transparent',
+                      color: '#0A0A0F',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      borderRadius: '10px',
+                      px: '10px',
+                      border: '1px solid rgba(10,10,15,0.2)',
+                      '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
+                      '&.Mui-disabled': { color: 'rgba(10,10,15,0.3)', borderColor: 'rgba(10,10,15,0.1)' },
+                    }}
+                  >
+                    {t('Bring back as USDC')}
+                  </Button>
+                )}
+              </Stack>
             )}
           </Stack>
         );

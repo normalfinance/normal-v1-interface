@@ -16,15 +16,53 @@ import {
   rpc,
   xdr,
   Asset,
+  Account,
   Address,
   Contract,
   Networks,
   nativeToScVal,
+  scValToNative,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 
 import { wireToStellar7 } from './decimals';
 import { STELLAR_CCTP, CCTP_MAX_FEE, CCTP_MIN_FINALITY_THRESHOLD } from './config';
+
+// Persist the burn approval so repeat swaps skip its extra signature: approve a
+// large amount with a long (but finite) expiry, and skip re-approving while the
+// on-chain allowance still covers this burn. The allowance is only a ceiling —
+// transfer_from can never pull more than the user's actual USDC balance — so a
+// large value adds no custody risk.
+const APPROVE_AMOUNT_7 = 10_000_000_000_000_000n; // 1e16 in 7-dp SAC units (~$1B ceiling)
+const APPROVE_EXPIRY_LEDGERS = 500_000; // ≈ 1 month; well under mainnet max_entry_ttl
+
+/** Read the current SAC allowance (0 if none/expired) via a read-only simulate. */
+async function readSacAllowance(
+  server: rpc.Server,
+  usdcSac: string,
+  from: string,
+  spender: string,
+  passphrase: string
+): Promise<bigint> {
+  try {
+    const tx = new TransactionBuilder(new Account(from, '0'), {
+      fee: '1000',
+      networkPassphrase: passphrase,
+      timebounds: { minTime: 0, maxTime: 0 },
+    })
+      .addOperation(
+        new Contract(usdcSac).call('allowance', new Address(from).toScVal(), new Address(spender).toScVal())
+      )
+      .build();
+    const sim = await server.simulateTransaction(tx);
+    if (rpc.Api.isSimulationSuccess(sim) && sim.result?.retval) {
+      return BigInt(scValToNative(sim.result.retval));
+    }
+  } catch {
+    /* treat as no allowance → approve */
+  }
+  return 0n;
+}
 
 export interface StellarBurnParams {
   network: NetworkType;
@@ -105,23 +143,35 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
   const usdcSac = new Asset('USDC', cfg.usdcIssuer).contractId(passphrase);
   const amount7 = wireToStellar7(params.amountWire); // SAC amounts are 7-dp
 
-  // 1) approve — TokenMessengerMinter pulls the USDC via transfer_from.
-  params.onStep?.('approve');
-  const { sequence } = await server.getLatestLedger();
-  const approveTxHash = await invokeAsUser({
+  // 1) approve — TokenMessengerMinter pulls the USDC via transfer_from. Skip the
+  // signature when a prior large, still-valid allowance already covers this burn
+  // (transfer_from decrements it, so one approval lasts many swaps).
+  let approveTxHash = 'skipped';
+  const currentAllowance = await readSacAllowance(
     server,
-    passphrase,
-    source: params.stellarAddress,
-    contractId: usdcSac,
-    method: 'approve',
-    args: [
-      new Address(params.stellarAddress).toScVal(),
-      new Address(cfg.tokenMessengerMinter).toScVal(),
-      nativeToScVal(amount7, { type: 'i128' }),
-      nativeToScVal(sequence + 1000, { type: 'u32' }), // ~1.4h expiry
-    ],
-    label: 'approve',
-  });
+    usdcSac,
+    params.stellarAddress,
+    cfg.tokenMessengerMinter,
+    passphrase
+  );
+  if (currentAllowance < amount7) {
+    params.onStep?.('approve');
+    const { sequence } = await server.getLatestLedger();
+    approveTxHash = await invokeAsUser({
+      server,
+      passphrase,
+      source: params.stellarAddress,
+      contractId: usdcSac,
+      method: 'approve',
+      args: [
+        new Address(params.stellarAddress).toScVal(),
+        new Address(cfg.tokenMessengerMinter).toScVal(),
+        nativeToScVal(APPROVE_AMOUNT_7, { type: 'i128' }),
+        nativeToScVal(sequence + APPROVE_EXPIRY_LEDGERS, { type: 'u32' }),
+      ],
+      label: 'approve',
+    });
+  }
 
   // 2) deposit_for_burn — destinationCaller = 0 (open execution, no lock-in).
   params.onStep?.('burn');

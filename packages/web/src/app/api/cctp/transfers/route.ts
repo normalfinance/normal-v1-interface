@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { direction, sourceDomain, destDomain, amountWire, srcAsset, dstAsset, srcAmount, srcAddress, destAddress, quoteJson } = body ?? {};
+  const { direction, sourceDomain, destDomain, amountWire, srcAsset, dstAsset, srcAmount, srcAddress, destAddress, quoteJson, refund } = body ?? {};
 
   if (!VALID_DOMAINS.has(sourceDomain) || !VALID_DOMAINS.has(destDomain) || sourceDomain === destDomain) {
     return NextResponse.json({ error: 'invalid domains' }, { status: 400 });
@@ -37,18 +37,22 @@ export async function POST(req: Request) {
   // Product limits (authoritative here — quotes are advisory): min keeps the
   // fixed costs sane; the mainnet pilot cap bounds blast radius until the
   // rollout week is clean, then is raised via env without a code change.
+  // Refunds (recovering already-bridged funds back to Stellar) bypass both —
+  // they're not new swaps, and blocking a small refund would strand the funds.
   const amount = BigInt(amountWire);
-  const MIN_WIRE = 10_000_000n; // $10
-  if (amount < MIN_WIRE) {
-    return NextResponse.json({ error: 'Minimum swap is $10' }, { status: 400 });
-  }
-  if (network === 'mainnet') {
-    const capUsd = Number(process.env.CCTP_PILOT_MAX_USD ?? 50);
-    if (amount > BigInt(Math.round(capUsd * 1_000_000))) {
-      return NextResponse.json(
-        { error: `During the pilot, swaps are capped at $${capUsd}` },
-        { status: 400 }
-      );
+  if (!refund) {
+    const MIN_WIRE = 10_000_000n; // $10
+    if (amount < MIN_WIRE) {
+      return NextResponse.json({ error: 'Minimum swap is $10' }, { status: 400 });
+    }
+    if (network === 'mainnet') {
+      const capUsd = Number(process.env.CCTP_PILOT_MAX_USD ?? 50);
+      if (amount > BigInt(Math.round(capUsd * 1_000_000))) {
+        return NextResponse.json(
+          { error: `During the pilot, swaps are capped at $${capUsd}` },
+          { status: 400 }
+        );
+      }
     }
   }
 
