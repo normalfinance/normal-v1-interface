@@ -19,11 +19,9 @@
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
-import { useSwap } from '@/hooks/stellar/use-swap';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
@@ -84,10 +82,8 @@ export function useCctpEngine({
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { wallet, tokenState, getAllTokens } = usePersistStore();
+  const { wallet, getAllTokens } = usePersistStore();
   const network = useNetworkStore((s) => s.network);
-  const config = useStellarConfig();
-  const soroswap = useSwap();
 
   // 'in': crosschain → stellar; 'out': USDC(stellar) → crosschain.
   const direction: 'in' | 'out' = groupOf(fromSymbol) === 'stellar' ? 'out' : 'in';
@@ -110,11 +106,6 @@ export function useCctpEngine({
 
   const evmAddress = addresses.ETH; // the Base pivot is always the user's own EVM address
   const nativeAddress = direction === 'in' ? addresses[fromSymbol as CrosschainSymbol] : addresses[toSymbol as CrosschainSymbol];
-
-  const xlmPrice = useMemo(() => {
-    const xlm = tokenState.tokens.find((tk) => tk.symbol === 'XLM');
-    return BigNumber(xlm?.price || 0);
-  }, [tokenState.tokens]);
 
   // ---- quote ------------------------------------------------------------------
   // in : LI.FI native → USDC_BASE (leg 1); CCTP + optional XLM leg estimated.
@@ -186,13 +177,7 @@ export function useCctpEngine({
   const usdcOutMin = quote && direction === 'in' ? BigNumber(quote.estimate.toAmountMin).dividedBy(1e6) : null;
   const toAmount =
     direction === 'in'
-      ? usdcOutMin
-        ? toSymbol === 'USDC'
-          ? usdcOutMin
-          : xlmPrice.gt(0)
-            ? usdcOutMin.dividedBy(xlmPrice)
-            : null
-        : null
+      ? usdcOutMin // inbound always delivers USDC on Stellar
       : quote
         ? BigNumber(quote.estimate.toAmountMin).dividedBy(
             BigNumber(10).pow(NATIVE_DECIMALS[toSymbol as CrosschainSymbol])
@@ -312,42 +297,18 @@ export function useCctpEngine({
         setStage('bridging');
         await pollStatus('COMPLETED', 15_000);
 
-        // Delivered amount for the activity feed — the USDC that landed, or the
-        // XLM out if the optional Soroswap leg runs.
-        let dstAmount = wireToUsdc(arrivedWire);
-
-        if (toSymbol === 'XLM') {
-          setStage('final-swap');
-          const usdcAmount = wireToUsdc(arrivedWire);
-          const q = await new Promise<any>((resolve) => {
-            soroswap.getQuote(config.USDC_ADDRESS, config.XLM_ADDRESS || 'native', usdcAmount);
-            const t0 = Date.now();
-            const iv = setInterval(() => {
-              if (soroswap.quote) {
-                clearInterval(iv);
-                resolve(soroswap.quote);
-              } else if (Date.now() - t0 > 20_000) {
-                clearInterval(iv);
-                resolve(null);
-              }
-            }, 500);
-          });
-          if (q) {
-            const hash = await soroswap.executeSwap(q, { tokenInSymbol: 'USDC', tokenOutSymbol: 'XLM' });
-            if (hash) await patch({ dstSwapTxHash: hash });
-            if (q.amountOut) dstAmount = String(q.amountOut);
-          } else {
-            enqueueSnackbar(t('USDC arrived on Stellar — the XLM conversion can be done from the swap tab.'), { variant: 'info' });
-          }
-        }
+        // Delivered amount for the activity feed — the USDC that landed on Stellar.
+        const dstAmount = wireToUsdc(arrivedWire);
         await patch({ dstAmount });
         finish();
       } catch (e: any) {
-        if (String(e?.message) !== 'cancelled') setStageError(String(e?.message ?? e));
+        if (String(e?.message) !== 'cancelled') {
+          console.error('[cctp engine] stage failed:', e); // surface stack
+          setStageError(String(e?.message ?? e));
+        }
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [evmAddress, stellarAddress, network, addresses, toSymbol, soroswap, config, makePatcher, finish, t]
+    [evmAddress, stellarAddress, network, addresses, makePatcher, finish, t]
   );
 
   // ---- OUTBOUND orchestration -----------------------------------------------------
@@ -391,7 +352,10 @@ export function useCctpEngine({
         }
         finish();
       } catch (e: any) {
-        if (String(e?.message) !== 'cancelled') setStageError(String(e?.message ?? e));
+        if (String(e?.message) !== 'cancelled') {
+          console.error('[cctp engine] stage failed:', e); // surface stack
+          setStageError(String(e?.message ?? e));
+        }
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -432,6 +396,7 @@ export function useCctpEngine({
       if (direction === 'in') await runInbound(data.id, quote);
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {
+      console.error('[cctp engine] execute failed:', e); // surface stack
       setStageError(String(e?.message ?? e));
     }
   }, [quote, direction, amount, evmAddress, stellarAddress, nativeAddress, fromSymbol, toSymbol, feePercent, runInbound, runOutbound, t]);
@@ -495,7 +460,7 @@ export function useCctpEngine({
 
   const routeLabel =
     direction === 'in'
-      ? `${fromSymbol} → USDC (Base) → Stellar${toSymbol === 'XLM' ? ' → XLM' : ''}`
+      ? `${fromSymbol} → USDC (Base) → Stellar`
       : `USDC → Base (Circle) → ${toSymbol}`;
 
   const details = quote ? (

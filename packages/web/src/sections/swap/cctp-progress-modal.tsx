@@ -2,8 +2,8 @@
 
 // Step-by-step progress for a cross-ecosystem (CCTP) swap — same visual
 // language as the savings deposit steps. The step list depends on direction:
-//   in   (BTC/ETH/SOL → Stellar): lifi → arriving → topup → burn → bridging → [final-swap] → done
-//   out  (USDC → BTC/ETH/SOL):    burn → bridging → topup → pivot-swap → done
+//   in   (BTC/ETH/SOL → USDC on Stellar): lifi → arriving → topup → burn → bridging → done
+//   out  (USDC → BTC/ETH/SOL):            burn → bridging → topup → pivot-swap → done
 // Everything after the burn also completes/recovers server-side, so closing
 // during 'bridging' is always safe (and we say so).
 
@@ -24,7 +24,6 @@ export type CctpStage =
   | 'burn'
   | 'bridging'
   | 'pivot-swap'
-  | 'final-swap'
   | 'done';
 
 interface Props {
@@ -48,9 +47,6 @@ export function CctpProgressModal({ open, direction, stage, error, fromSymbol, t
           { id: 'topup', label: t('Covering network fees'), sub: t('Normal sends gas to your address') },
           { id: 'burn', label: t('Starting the Circle bridge'), sub: t('Approve in your wallet · 2 signatures') },
           { id: 'bridging', label: t('Bridging to Stellar'), sub: t('Circle attestation ~20 min — safe to close') },
-          ...(toSymbol === 'XLM'
-            ? [{ id: 'final-swap' as CctpStage, label: t('Converting USDC to XLM'), sub: t('Via Soroswap · approve in your wallet') }]
-            : []),
           { id: 'done', label: t('Done'), sub: t('{{sym}} delivered', { sym: toSymbol }) },
         ]
       : [
@@ -111,7 +107,7 @@ export function CctpProgressModal({ open, direction, stage, error, fromSymbol, t
             {error}
           </Typography>
           <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '4px', lineHeight: 1.5 }}>
-            {t('Nothing is lost — in-flight transfers appear above the swap card and can be resumed any time.')}
+            {t('Nothing is lost — your funds stay in your own account. Any transfer needing a nudge appears above the swap card with a one-tap recovery.')}
           </Typography>
         </Box>
       )}

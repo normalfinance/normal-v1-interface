@@ -14,6 +14,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import MonetizationOnOutlined from '@mui/icons-material/MonetizationOnOutlined';
 
+import { SwapDetailModal, cctpTransferIdOf } from '@/components/_common/swap-detail-modal';
+
 const ICON_BOX_SX = {
   display: 'flex',
   alignItems: 'center',
@@ -133,6 +135,8 @@ function fmtUsd(amount: number): string {
 /* ------------------------------------------------------------------ */
 export function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslate();
+  const cctpId = cctpTransferIdOf(activity);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const createdAtSec = Number.isFinite(activity.timestamp)
     ? Math.floor(activity.timestamp / 1000)
@@ -263,11 +267,13 @@ export function ActivityRow({ activity }: { activity: Activity }) {
 
   /* ---------- UI ------------------------------------------------ */
   return (
+    <>
     <Stack
       direction="row"
       spacing={1.5}
       alignItems="center"
-      sx={{ borderRadius: '12px', padding: '4px 8px', mx: '-8px', transition: 'background .15s ease', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
+      onClick={cctpId ? () => setDetailOpen(true) : undefined}
+      sx={{ borderRadius: '12px', padding: '4px 8px', mx: '-8px', transition: 'background .15s ease', cursor: cctpId ? 'pointer' : 'default', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
     >
       {icon}
 
@@ -374,5 +380,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
         </Stack>
       </Stack>
     </Stack>
+    {cctpId && <SwapDetailModal transferId={detailOpen ? cctpId : null} onClose={() => setDetailOpen(false)} />}
+    </>
   );
 }

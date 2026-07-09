@@ -130,6 +130,7 @@ function mapWalletActivityItem(item: WalletActivityItem): Activity {
 // and UI render it exactly like a LI.FI cross-chain swap — no UI changes.
 interface CctpTransferRow {
   id: string;
+  direction: string;
   status: string;
   srcAsset: string;
   dstAsset: string;
@@ -143,6 +144,13 @@ interface CctpTransferRow {
 }
 
 function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' }> {
+  // Outbound (USDC → BTC/ETH/SOL) isn't truly done at COMPLETED — that only marks
+  // the CCTP bridge (mint on Base); the target asset arrives after the LI.FI
+  // pivot (dstSwapTxHash). Inbound (→ USDC on Stellar) is done at COMPLETED.
+  const outbound = tr.direction === 'stellar_to_crosschain';
+  const refunded = tr.status === 'REFUNDED';
+  const failed = tr.status === 'FAILED';
+  const succeeded = outbound ? tr.status === 'COMPLETED' && !!tr.dstSwapTxHash : tr.status === 'COMPLETED';
   return {
     id: `cctp:${tr.id}`,
     timestamp: Date.parse(tr.createdAt),
@@ -160,8 +168,9 @@ function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' 
       iconUrl: getCryptoIconUrl(tr.dstAsset),
       amount: parseFloat(tr.dstAmount ?? '0'),
     },
-    pending: tr.status !== 'COMPLETED' && tr.status !== 'FAILED',
-    failed: tr.status === 'FAILED',
+    pending: !succeeded && !failed && !refunded,
+    failed,
+    refunded,
   };
 }
 

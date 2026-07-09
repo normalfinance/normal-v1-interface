@@ -87,6 +87,14 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
   approveTxHash: string;
   burnTxHash: string;
 }> {
+  // Custody invariant: the destination recipient (32-byte EVM address) is fixed
+  // HERE, inside the user-signed burn. The relayer only replays this signed
+  // message on the destination chain — it can never redirect the funds. Refuse
+  // to burn to a zero/invalid recipient (an unrecoverable burn to nowhere).
+  if (params.mintRecipient.length !== 32 || params.mintRecipient.every((b) => b === 0)) {
+    throw new Error('refusing to burn: invalid mint recipient');
+  }
+
   const cfg = STELLAR_CCTP[params.network];
   const stellarCfg = getStellarConfigForNetwork(params.network);
   const passphrase = params.network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;

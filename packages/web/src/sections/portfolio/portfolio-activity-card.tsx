@@ -10,6 +10,8 @@ import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 
+import { SwapDetailModal, cctpTransferIdOf } from '@/components/_common/swap-detail-modal';
+
 import { MONO, CARD_SX, PAGE_SIZE, TAG_STYLES } from './_shared';
 
 import type { ActivityTab } from './_shared';
@@ -351,6 +353,7 @@ export function ActivityCard({
   const { t } = useTranslate();
   const [tab, setTab] = useState<ActivityTab>(defaultTab);
   const [page, setPage] = useState(1);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const { recentActivity, isLoading, mutate } = useUserActivity(
     walletAddress,
@@ -490,10 +493,17 @@ export function ActivityCard({
               const tagKey = activityTagKey(activity);
               const row = activityToRow(activity);
               const expertUrl = getExplorerUrl(activity);
+              const cctpId = cctpTransferIdOf(activity);
               return (
                 <Box
                   key={activity.id}
-                  onClick={expertUrl ? () => window.open(expertUrl, '_blank', 'noopener,noreferrer') : undefined}
+                  onClick={
+                    cctpId
+                      ? () => setDetailId(cctpId)
+                      : expertUrl
+                        ? () => window.open(expertUrl, '_blank', 'noopener,noreferrer')
+                        : undefined
+                  }
                   sx={{
                     display: 'grid',
                     gridTemplateColumns: ACTIVITY_COLS,
@@ -502,7 +512,7 @@ export function ActivityCard({
                     px: '8px',
                     py: '12px',
                     borderRadius: '10px',
-                    cursor: expertUrl ? 'pointer' : 'default',
+                    cursor: cctpId || expertUrl ? 'pointer' : 'default',
                     '&:hover': { bgcolor: 'rgba(10,10,15,0.025)' },
                   }}
                 >
@@ -601,7 +611,24 @@ export function ActivityCard({
                   </Box>
 
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    {expertUrl ? (
+                    {cctpId ? (
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px',
+                          fontWeight: 400,
+                          color: 'rgba(10,10,15,0.35)',
+                          ...MONO,
+                        }}
+                      >
+                        {t('Details')}
+                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                          <path d="M4.5 2.5L8 6L4.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </Box>
+                    ) : expertUrl ? (
                       <Box
                         sx={{
                           display: 'inline-flex',
@@ -639,6 +666,8 @@ export function ActivityCard({
           onPage={setPage}
         />
       )}
+
+      <SwapDetailModal transferId={detailId} onClose={() => setDetailId(null)} />
     </Box>
   );
 }

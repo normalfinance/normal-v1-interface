@@ -251,6 +251,7 @@ export function useLifiEngine({
       resetInput();
       setQuote(null);
     } catch (err: any) {
+      console.error('[lifi engine] execute failed:', err); // surface stack
       enqueueSnackbar(err?.message ?? t('Swap failed'), { variant: 'error' });
     } finally {
       setExecuting(false);

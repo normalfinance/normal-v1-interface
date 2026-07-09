@@ -26,7 +26,7 @@ import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import PickToken from '@/components/_common/pick-token';
 import { Iconify } from '@/components/template/iconify';
 
-import { CctpResumeBanner } from './cctp-resume-banner';
+import { CctpRecoveryBanner } from './cctp-resume-banner';
 import { useLifiEngine } from './engines/use-lifi-engine';
 import { useCctpEngine } from './engines/use-cctp-engine';
 import { useSoroswapEngine } from './engines/use-soroswap-engine';
@@ -262,7 +262,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
 
   return (
     <Box sx={{ minWidth: 0 }}>
-      <CctpResumeBanner />
+      <CctpRecoveryBanner addresses={addresses} />
       <Box sx={{ ...CARD_SX, minWidth: 0 }}>
       {/* From */}
       <Box sx={{ p: '16px', borderRadius: '16px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.08)' }}>
