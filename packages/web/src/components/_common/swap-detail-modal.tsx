@@ -119,7 +119,13 @@ export function SwapDetailModal({ transferId, onClose }: { transferId: string | 
     (async () => {
       try {
         const headers = await buildAuthHeaders();
-        const res = await fetch(`/api/cctp/transfers/${transferId}`, { headers, credentials: 'include' });
+        // noAdvance = fast read (don't block on the state machine); timeout so a
+        // slow/hung server surfaces as an error instead of an endless spinner.
+        const res = await fetch(`/api/cctp/transfers/${transferId}?noAdvance=1`, {
+          headers,
+          credentials: 'include',
+          signal: AbortSignal.timeout(12_000),
+        });
         const data = await res.json();
         if (!cancelled) setTransfer(res.ok ? (data.transfer ?? null) : null);
       } catch {

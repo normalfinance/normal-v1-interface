@@ -24,7 +24,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { transfer, error } = await loadOwned(req, id);
   if (error) return error;
 
-  const fresh = await advanceTransfer(transfer!);
+  // Detail views pass ?noAdvance=1 for a fast read: advancing the state machine
+  // makes external calls (Iris / Stellar RPC / mint submit) that can be slow and
+  // would hang the modal (and pile up on the dev server). The banner + cron still
+  // advance normally, so progress is unaffected.
+  const noAdvance = new URL(req.url).searchParams.get('noAdvance') === '1';
+  const fresh = noAdvance ? transfer! : await advanceTransfer(transfer!);
   return NextResponse.json({ transfer: fresh });
 }
 
