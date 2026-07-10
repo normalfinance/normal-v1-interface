@@ -39,6 +39,7 @@ import Typography from '@mui/material/Typography';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import { groupOf } from './types';
+import { ethGasReserve } from './gas-reserve';
 import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
 
 import type { SwapSymbol, SwapEngineResult, CrosschainSymbol } from './types';
@@ -54,6 +55,8 @@ export interface CctpEngineProps {
   fromPrice: BigNumber;
   enabled: boolean;
   resetInput: () => void;
+  /** Refresh a target chain's balance right after delivery (outbound). */
+  refetchChain?: (chain: 'bitcoin' | 'ethereum' | 'solana') => Promise<void>;
 }
 
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
@@ -79,6 +82,7 @@ export function useCctpEngine({
   fromPrice,
   enabled,
   resetInput,
+  refetchChain,
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -193,10 +197,18 @@ export function useCctpEngine({
   // with BTC resolved live from the mempool rate.
   const getMaxToken = async (): Promise<BigNumber> => {
     if (direction === 'out') return fromBalance;
-    let reserve = { BTC: 0.00003, ETH: 0.003, SOL: 0.01 }[fromSymbol as CrosschainSymbol];
-    if (fromSymbol === 'BTC') {
+    // Leave the source-chain swap's gas behind. ETH: sized to live gas via the
+    // shared helper, with a generous 400k bridge gas limit — the CCTP ETH leg is
+    // a bridge, and under-reserving would fail the swap for gas. BTC: live from
+    // mempool. SOL: a small static reserve (Solana fees + ATA rent).
+    let reserve = 0.01; // SOL
+    if (fromSymbol === 'ETH') {
+      reserve = await ethGasReserve(400_000n);
+    } else if (fromSymbol === 'BTC') {
       try {
-        const r = await fetch('https://mempool.space/api/v1/fees/recommended');
+        const r = await fetch('https://mempool.space/api/v1/fees/recommended', {
+          signal: AbortSignal.timeout(6000),
+        });
         const f = await r.json();
         const feeSat = (f.halfHourFee || 15) * 210 * 1.4;
         reserve = Math.min(Math.max(feeSat / 1e8, 0.00003), 0.0005);
@@ -259,8 +271,15 @@ export function useCctpEngine({
     setStage('done');
     resetInput();
     getAllTokens(true).catch(() => {});
+    // Outbound delivers a chain asset (BTC/ETH/SOL) whose balance lives in a
+    // separate portfolio hook — refresh that chain now so the received amount
+    // shows promptly instead of on its next poll cycle.
+    if (direction === 'out') {
+      const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[toSymbol as CrosschainSymbol];
+      if (chain) refetchChain?.(chain).catch(() => {});
+    }
     window.dispatchEvent(new Event('nf:activity-updated'));
-  }, [resetInput, getAllTokens]);
+  }, [direction, toSymbol, resetInput, getAllTokens, refetchChain]);
 
   // ---- INBOUND orchestration -----------------------------------------------------
   const runInbound = useCallback(

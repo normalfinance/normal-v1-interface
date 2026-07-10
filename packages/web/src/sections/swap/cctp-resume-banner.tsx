@@ -8,8 +8,10 @@
 // on their own Base account, one signature from moving forward.
 //
 // Phases per transfer:
-//   auto          — burn done, bridge/mint completing server-side (cron). Passive
-//                   spinner, no action; closing the tab is safe.
+//   auto          — INBOUND post-burn only: the bridge/mint completes server-side
+//                   (cron). Passive spinner, no action; closing the tab is safe.
+//                   (Outbound bridging is NOT auto — its pivot signature still
+//                   follows — so it's hidden here and owned by the progress modal.)
 //   halt-receive  — INBOUND: LI.FI delivered USDC to the user's Base address but
 //                   the burn never fired. One tap finishes it → USDC on Stellar.
 //   halt-finish   — OUTBOUND: CCTP minted USDC to the user's Base address but the
@@ -68,8 +70,11 @@ function rawPhase(tr: TransferRow): Phase {
   if (outbound) {
     if (tr.dstSwapTxHash) return 'hidden'; // pivot done → settled
     if (!tr.burnTxHash) return 'hidden'; // pre-burn, still in-session
-    if (tr.mintTxHash || tr.status === 'COMPLETED') return 'halt-finish'; // USDC on Base
-    return 'auto'; // bridging Stellar → Base
+    if (tr.mintTxHash || tr.status === 'COMPLETED') return 'halt-finish'; // USDC on Base → pivot needed
+    // Bridging Stellar→Base: the pivot signature still follows, so this is NOT
+    // "no action needed". The progress modal owns it in-session; an orphaned one
+    // resurfaces as halt-finish (after grace) once the mint lands.
+    return 'hidden';
   }
   // inbound
   if (tr.status === 'COMPLETED') return 'hidden'; // USDC delivered to Stellar

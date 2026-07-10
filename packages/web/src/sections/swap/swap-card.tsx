@@ -166,6 +166,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     fromPrice: pairType === 'cctp' ? fromPrice : ZERO,
     enabled: pairType === 'cctp',
     resetInput,
+    refetchChain,
   });
   const engine = pairType === 'stellar' ? soroswap : pairType === 'crosschain' ? lifi : cctp;
   const { toAmount, quoteLoading, quoteError } = engine;

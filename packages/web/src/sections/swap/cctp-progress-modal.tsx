@@ -61,11 +61,20 @@ export function CctpProgressModal({ open, direction, stage, error, fromSymbol, t
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" PaperProps={{ sx: { borderRadius: '24px', p: '22px', maxWidth: 400 } }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '14px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F' }}>
-          {t('Swapping {{from}} → {{to}}', { from: fromSymbol, to: toSymbol })}
-        </Typography>
-        <Box component="button" onClick={onClose} sx={{ all: 'unset', cursor: 'pointer', color: 'rgba(10,10,15,0.4)', display: 'flex' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: '14px' }}>
+        <Box sx={{ pr: 1 }}>
+          <Typography sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F' }}>
+            {t('Swapping {{from}} → {{to}}', { from: fromSymbol, to: toSymbol })}
+          </Typography>
+          {stage && stage !== 'done' && (
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', mt: '3px', lineHeight: 1.4 }}>
+              {direction === 'out'
+                ? t('Two signing steps: Stellar now, then Base after the bridge — keep this open.')
+                : t('Two signing steps: {{sym}} now, then Base after the bridge — keep this open.', { sym: fromSymbol })}
+            </Typography>
+          )}
+        </Box>
+        <Box component="button" onClick={onClose} sx={{ all: 'unset', cursor: 'pointer', color: 'rgba(10,10,15,0.4)', display: 'flex', flexShrink: 0, mt: '2px' }}>
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
       </Stack>
@@ -115,11 +124,6 @@ export function CctpProgressModal({ open, direction, stage, error, fromSymbol, t
       {stage === 'bridging' && !error && direction === 'in' && (
         <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '10px', textAlign: 'center', lineHeight: 1.5 }}>
           {t('This step runs on our servers — you can safely close this window.')}
-        </Typography>
-      )}
-      {direction === 'out' && stage && stage !== 'done' && !error && (
-        <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '10px', textAlign: 'center', lineHeight: 1.5 }}>
-          {t('Please keep this window open until the last signature.')}
         </Typography>
       )}
     </Dialog>
