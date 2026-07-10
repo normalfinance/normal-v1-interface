@@ -105,13 +105,18 @@ export async function sendGasTopUp(params: {
   return wallet.sendTransaction({ to: params.to, value: params.amountWei });
 }
 
-// Hard ceiling on a single top-up so an extreme gas spike can't drain the float.
-const TOP_UP_MAX_WEI = 1_000_000_000_000_000n; // 0.001 ETH
+// Ceiling so an extreme gas spike can't drain the float; floor so a too-low
+// estimate or a noisy gas read can never under-fund a gas-heavy route (a Mayan
+// USDC→SOL pivot burns ~1.5M gas). Base gas is ~free, so over-shooting is cents
+// and the leftover pre-funds the user's next swap — and the balance check below
+// keeps already-funded ("seasoned") wallets at a 0 top-up.
+const TOP_UP_MAX_WEI = 3_000_000_000_000_000n; // 0.003 ETH
+const TOP_UP_MIN_WEI = 50_000_000_000_000n; // 0.00005 ETH — covers a ~1.5M-gas pivot with margin
 
 /** How much gas the recipient actually needs RIGHT NOW, minus what they already
- *  hold. Dynamic (live gas price) so we send cents at low gas and enough at a
- *  spike, and 0 when they're already funded (e.g. leftover from a prior swap).
- *  `gasEstimate` = expected gas for their upcoming txs (approve + swap/burn). */
+ *  hold. Live gas price × generous estimate, floored/capped, so we never
+ *  under-fund a gas-heavy tx and send 0 when they're already funded (leftover
+ *  from a prior swap). `gasEstimate` = expected gas for their upcoming txs. */
 export async function computeTopUpShortfall(params: {
   network: NetworkType;
   chain: 'base' | 'ethereum';
@@ -124,10 +129,12 @@ export async function computeTopUpShortfall(params: {
     pub.estimateFeesPerGas(),
   ]);
   // 2× the estimated fee guards against price drift between now and the user's
-  // signature a few seconds later.
-  const needed = params.gasEstimate * fees.maxFeePerGas * 2n;
-  const capped = needed > TOP_UP_MAX_WEI ? TOP_UP_MAX_WEI : needed;
-  return capped > balance ? capped - balance : 0n;
+  // signature a few seconds later; the floor guards against the estimate itself
+  // being too low for the actual route.
+  const dynamic = params.gasEstimate * fees.maxFeePerGas * 2n;
+  const floored = dynamic > TOP_UP_MIN_WEI ? dynamic : TOP_UP_MIN_WEI;
+  const target = floored > TOP_UP_MAX_WEI ? TOP_UP_MAX_WEI : floored;
+  return target > balance ? target - balance : 0n;
 }
 
 /** Execute CctpForwarder.mint_and_forward on Stellar (inbound direction).
