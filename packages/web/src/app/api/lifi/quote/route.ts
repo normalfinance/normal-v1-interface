@@ -17,6 +17,9 @@ const LIFI_ASSETS: Record<string, { chainId: number; token: string }> = {
   BTC: { chainId: 20000000000001, token: 'bitcoin' },
   ETH: { chainId: 1, token: '0x0000000000000000000000000000000000000000' },
   SOL: { chainId: 1151111081099710, token: '11111111111111111111111111111111' },
+  // Native USDC on Base — the CCTP pivot leg (crosschain asset → USDC on Base →
+  // CCTP → Stellar). Mainnet only: LI.FI has no meaningful testnet liquidity.
+  USDC_BASE: { chainId: 8453, token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' },
 };
 
 async function fetchQuote(params: URLSearchParams): Promise<Response> {

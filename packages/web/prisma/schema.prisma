@@ -101,6 +101,48 @@ model SwapLog {
   @@map("swap_logs")
 }
 
+// Cross-ecosystem swap via CCTP (Soroswap → CCTP → LI.FI composite). One row
+// per transfer, driving a resumable state machine — the row is created and the
+// burn intent persisted BEFORE the burn tx is broadcast, so a crashed process
+// can always be recovered (attestations are re-fetchable from Iris forever).
+// status: CREATED | SRC_SWAP_DONE | BURN_SUBMITTED | BURN_CONFIRMED | ATTESTED
+//       | MINT_SUBMITTED | MINT_CONFIRMED | DST_SWAP_PENDING | COMPLETED
+//       | NEEDS_REATTEST | FAILED
+model CctpTransfer {
+  id             String   @id @default(cuid())
+  userId         String   // supabase uid
+  network        String   @default("mainnet") // 'mainnet' | 'testnet' — cron advances rows without request context
+  direction      String   // 'stellar_to_evm' | 'evm_to_stellar' | 'stellar_to_solana' | ...
+  status         String   @default("CREATED")
+  sourceDomain   Int      // CCTP domain id of the burn chain
+  destDomain     Int      // CCTP domain id of the mint chain
+  amountWire     String   // canonical 6-dp integer units, as string
+  srcAsset       String   // user-facing source asset symbol (e.g. 'XLM')
+  dstAsset       String   // user-facing destination asset symbol (e.g. 'BTC')
+  srcAmount      String?  // human source amount for the activity feed (e.g. '0.5')
+  dstAmount      String?  // human delivered amount, set on completion
+  srcAddress     String
+  destAddress    String
+  srcSwapTxHash  String?  // Soroswap/LI.FI leg before the burn
+  burnTxHash     String?
+  eventNonce     String?
+  messageHex     String?
+  attestationHex String?
+  mintTxHash     String?
+  dstSwapTxHash  String?  // LI.FI/Soroswap leg after the mint
+  gasTopUpTxHash String?  // relayer dust-gas send on the burn chain (once)
+  quoteJson      String?  // full quote snapshot incl. fee breakdown
+  errorDetail    String?
+  retryCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([burnTxHash])
+  @@map("cctp_transfers")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model TurnkeyWallet {
   id              String   @id @default(cuid())

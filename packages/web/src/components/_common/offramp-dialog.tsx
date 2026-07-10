@@ -186,42 +186,62 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
       enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
       return;
     }
-    const headers = await buildAuthHeaders();
-    const r = await fetch('/api/coinbase/session', {
-      method: 'POST',
-      headers,
-      credentials: 'include',
-      body: JSON.stringify({
-        address: walletAddress,
-        asset: asset.symbol,
-        blockchain: asset.blockchain,
-      }),
-    });
-    const { token: sessionToken, error } = await r.json();
-    if (error || !sessionToken) {
+
+    // Open the tab synchronously (survives popup blockers) and navigate it only
+    // once the tokenized URL is ready. Critically, we NEVER expose the single-use
+    // Coinbase session URL as a window.open target: link prefetchers, corporate
+    // link scanners, or a reopened tab that pre-visit such targets consume the
+    // one-time sessionToken first, producing Coinbase's "sessionToken already
+    // used" error. Blank-then-navigate (matching the on-ramp flow) avoids that.
+    const win = window.open('', '_blank');
+    try {
+      const headers = await buildAuthHeaders();
+      const r = await fetch('/api/coinbase/session', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          address: walletAddress,
+          asset: asset.symbol,
+          blockchain: asset.blockchain,
+        }),
+      });
+      const { token: sessionToken, error } = await r.json();
+      if (error || !sessionToken) {
+        win?.close();
+        enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
+        return;
+      }
+      const url = createCoinbasePayOfframpURL({
+        sessionToken,
+        // Return to the current page with markers so the GLOBAL resume handler
+        // (mounted in ModalProvider) can complete the on-chain send — Coinbase
+        // can't pull funds from a self-custody wallet.
+        redirectUrl: `${window.location.origin}${window.location.pathname}?offramp=coinbase&sym=${asset.symbol}&chain=${asset.blockchain}`,
+        // URL-safe, stable identifier — the status API path includes this verbatim,
+        // so an email (with an encoded '@') would break the JWT path match (401).
+        partnerUserRef: user.id,
+        fiat: 'USD',
+        sandbox: isTestnet(),
+        defaultAsset: asset.symbol,
+        defaultNetwork: asset.blockchain,
+        // Pre-fill our spendable-capped amount, but leave the order EDITABLE so the
+        // user can still choose their cash-out destination (bank, EUR/USD balance…).
+        // We don't lock it (disableEdit) because that also removes the destination
+        // choice — the modal's pre-flight still guards against an over-Max amount.
+        ...(cryptoAmount ? { presetCryptoAmount: cryptoAmount } : {}),
+      });
+      if (win) {
+        win.opener = null;
+        win.location.href = url;
+      } else {
+        // Popup was blocked outright — best-effort direct open.
+        openExternal(url);
+      }
+    } catch {
+      win?.close();
       enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
-      return;
     }
-    const url = createCoinbasePayOfframpURL({
-      sessionToken,
-      // Return to the current page with markers so the GLOBAL resume handler
-      // (mounted in ModalProvider) can complete the on-chain send — Coinbase
-      // can't pull funds from a self-custody wallet.
-      redirectUrl: `${window.location.origin}${window.location.pathname}?offramp=coinbase&sym=${asset.symbol}&chain=${asset.blockchain}`,
-      // URL-safe, stable identifier — the status API path includes this verbatim,
-      // so an email (with an encoded '@') would break the JWT path match (401).
-      partnerUserRef: user.id,
-      fiat: 'USD',
-      sandbox: isTestnet(),
-      defaultAsset: asset.symbol,
-      defaultNetwork: asset.blockchain,
-      // Pre-fill our spendable-capped amount, but leave the order EDITABLE so the
-      // user can still choose their cash-out destination (bank, EUR/USD balance…).
-      // We don't lock it (disableEdit) because that also removes the destination
-      // choice — the modal's pre-flight still guards against an over-Max amount.
-      ...(cryptoAmount ? { presetCryptoAmount: cryptoAmount } : {}),
-    });
-    openExternal(url);
   };
 
   // Coinbase row: native off-ramp goes through our amount step first; otherwise

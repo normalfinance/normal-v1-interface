@@ -124,6 +124,68 @@ function mapWalletActivityItem(item: WalletActivityItem): Activity {
   }
 }
 
+// --- CCTP cross-ecosystem swaps ---------------------------------------------
+// One CctpTransfer row = one coherent "Swap" entry (BTC/ETH/SOL ⇄ XLM/USDC via
+// Circle CCTP + LI.FI). Reuses SwapActivity's pending/failed flags, so the feed
+// and UI render it exactly like a LI.FI cross-chain swap — no UI changes.
+interface CctpTransferRow {
+  id: string;
+  direction: string;
+  status: string;
+  srcAsset: string;
+  dstAsset: string;
+  srcAmount: string | null;
+  dstAmount: string | null;
+  burnTxHash: string | null;
+  mintTxHash: string | null;
+  srcSwapTxHash: string | null;
+  dstSwapTxHash: string | null;
+  createdAt: string;
+}
+
+function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' }> {
+  // Outbound (USDC → BTC/ETH/SOL) isn't truly done at COMPLETED — that only marks
+  // the CCTP bridge (mint on Base); the target asset arrives after the LI.FI
+  // pivot (dstSwapTxHash). Inbound (→ USDC on Stellar) is done at COMPLETED.
+  const outbound = tr.direction === 'stellar_to_crosschain';
+  const refunded = tr.status === 'REFUNDED';
+  const failed = tr.status === 'FAILED';
+  const succeeded = outbound ? tr.status === 'COMPLETED' && !!tr.dstSwapTxHash : tr.status === 'COMPLETED';
+  return {
+    id: `cctp:${tr.id}`,
+    timestamp: Date.parse(tr.createdAt),
+    type: 'Swap',
+    txHash: tr.burnTxHash ?? null,
+    tokenIn: {
+      address: `cctp:${tr.srcAsset}`,
+      symbol: tr.srcAsset,
+      iconUrl: getCryptoIconUrl(tr.srcAsset),
+      amount: parseFloat(tr.srcAmount ?? '0'),
+    },
+    tokenOut: {
+      address: `cctp:${tr.dstAsset}`,
+      symbol: tr.dstAsset,
+      iconUrl: getCryptoIconUrl(tr.dstAsset),
+      amount: parseFloat(tr.dstAmount ?? '0'),
+    },
+    pending: !succeeded && !failed && !refunded,
+    failed,
+    refunded,
+  };
+}
+
+async function fetchCctpTransfers(): Promise<CctpTransferRow[]> {
+  try {
+    const headers = await buildAuthHeaders();
+    const res = await fetch('/api/cctp/transfers?history=1', { headers });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.transfers ?? []) as CctpTransferRow[];
+  } catch {
+    return [];
+  }
+}
+
 const EXCLUDED_MGI_STATUSES = new Set(['incomplete', 'error', 'no_market', 'too_small', 'too_large', 'expired']);
 const FEES_WALLET = 'GCVCVOJMNDX7DBYEN3YAJ2VWIHT4ZDUNSUFIRLHRQBKS7PXSTDRB4MWE';
 
@@ -389,6 +451,19 @@ export function useUserActivity(
     { revalidateOnFocus: true, dedupingInterval: 30_000 }
   );
 
+  // CCTP cross-ecosystem swaps (any signed-in user with a wallet). Refetches on
+  // focus/interval so an in-flight swap flips from Pending to done on its own.
+  const { data: cctpTransfers, mutate: mutateCctp } = useSWR<CctpTransferRow[]>(
+    walletAddress || solanaAddress || ethereumAddress || bitcoinAddress ? 'cctp-activity' : null,
+    fetchCctpTransfers,
+    { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
+  );
+  useEffect(() => {
+    const handler = () => setTimeout(() => mutateCctp(), 800);
+    window.addEventListener('nf:activity-updated', handler);
+    return () => window.removeEventListener('nf:activity-updated', handler);
+  }, [mutateCctp]);
+
   // Coinbase off-ramp statuses: keyed by our on-chain txHash so we can re-label
   // the matching native Sent row as an off-ramp with its real status.
   const { data: offrampStatuses, mutate: mutateOfframp } = useSWR<Record<string, OfframpInfo>>(
@@ -493,8 +568,43 @@ export function useUserActivity(
     return a;
   };
 
+  // CCTP swaps become coherent Swap rows; the raw on-chain delivery leg is
+  // suppressed so each swap shows once. Two tiers:
+  //  1. hashes we signed (burn / mint / src+dst swap) → exact txHash match.
+  //  2. the destination-chain receive delivered by LI.FI's bridge (we have no
+  //     hash for it) → heuristic: same asset + amount≈dstAmount within a window.
+  // Skip transfers created before amount-tracking existed (null srcAmount) —
+  // they'd render as a "0 → 0" swap; they remain as their historical raw leg.
+  const cctpActivities = (cctpTransfers ?? []).filter((tr) => tr.srcAmount).map(mapCctpTransfer);
+  const cctpLegHashes = new Set<string>();
+  for (const tr of cctpTransfers ?? []) {
+    for (const h of [tr.burnTxHash, tr.mintTxHash, tr.srcSwapTxHash, tr.dstSwapTxHash]) {
+      if (h) cctpLegHashes.add(h);
+    }
+  }
+  const cctpDeliveries = (cctpTransfers ?? [])
+    .filter((tr) => tr.dstAmount)
+    .map((tr) => ({
+      symbol: tr.dstAsset.toUpperCase(),
+      amount: parseFloat(tr.dstAmount as string),
+      start: Date.parse(tr.createdAt),
+    }));
+  const isCctpDelivery = (a: Activity): boolean => {
+    if (a.type !== 'Receive') return false;
+    const sym = a.token.symbol.toUpperCase();
+    const amt = a.token.amount;
+    return cctpDeliveries.some(
+      (d) =>
+        d.symbol === sym &&
+        Math.abs(d.amount - amt) <= Math.max(d.amount * 0.02, 1e-6) &&
+        a.timestamp >= d.start - 5 * 60_000 &&
+        a.timestamp <= d.start + 60 * 60_000
+    );
+  };
+
   const recentActivity = [
     ...(data ?? []),
+    ...cctpActivities,
     ...(mgiData ?? []),
     ...(stellarData ?? []),
     ...(btcData ?? []),
@@ -506,9 +616,10 @@ export function useUserActivity(
         !(
           (a.type === 'Sent' || a.type === 'Receive') &&
           a.txHash &&
-          swapTxHashes.has(a.txHash)
+          (swapTxHashes.has(a.txHash) || cctpLegHashes.has(a.txHash))
         )
     )
+    .filter((a) => !isCctpDelivery(a))
     .map(enrich)
     .map(enrichOfframp)
     .sort((a, b) => b.timestamp - a.timestamp);

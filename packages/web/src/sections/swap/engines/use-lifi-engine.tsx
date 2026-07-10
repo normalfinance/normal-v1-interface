@@ -9,7 +9,6 @@ import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
 import { MONO } from '@/sections/portfolio/_shared';
 import { executeLifiSwap } from '@/lib/lifi/execute';
-import { ETH_RPC_URL } from '@/hooks/use-chain-portfolio';
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
@@ -21,6 +20,7 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
+import { ethGasReserve } from './gas-reserve';
 import { LifiStatusModal } from '../lifi-status-modal';
 import { isTerminal, useLifiTracker } from './lifi-tracker';
 
@@ -199,25 +199,12 @@ export function useLifiEngine({
   const feeLabel = t('Normal fee ({{pct}}%)', { pct: +(feePercent * 100).toFixed(2) });
 
   // Reserve only what gas actually costs right now for ETH (live gas price ×
-  // limit × buffer); a flat reserve is either far too large in USD or too small
-  // when gas spikes. Returns the max in *token* units; the shell formats it.
+  // limit × buffer) — a flat reserve is either far too large in USD or too small
+  // when gas spikes. Shared with the CCTP engine (gas-reserve.ts) so the two
+  // can't drift. Returns the max in *token* units; the shell formats it.
   const getMaxToken = async (): Promise<BigNumber> => {
     let reserve = from.feeReserve;
-    if (fromSymbol === 'ETH') {
-      try {
-        const res = await fetch(ETH_RPC_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_gasPrice', params: [] }),
-        });
-        const data = await res.json();
-        const gasPriceWei = BigInt(data.result);
-        const gasCostEth = Number((gasPriceWei * 250_000n * 16n) / 10n) / 1e18;
-        reserve = Math.min(Math.max(gasCostEth, 0.0005), 0.02);
-      } catch {
-        reserve = 0.003;
-      }
-    }
+    if (fromSymbol === 'ETH') reserve = await ethGasReserve(); // default 250k (same-group swap)
     return BigNumber.max(fromBalance.minus(reserve), 0);
   };
 
@@ -251,6 +238,7 @@ export function useLifiEngine({
       resetInput();
       setQuote(null);
     } catch (err: any) {
+      console.error('[lifi engine] execute failed:', err); // surface stack
       enqueueSnackbar(err?.message ?? t('Swap failed'), { variant: 'error' });
     } finally {
       setExecuting(false);
