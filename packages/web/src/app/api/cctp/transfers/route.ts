@@ -2,7 +2,7 @@ import type { NetworkType } from '@normalfinance/utils';
 
 import { prisma } from '@/lib/prisma';
 // CCTP transfers — create (persist burn intent BEFORE broadcasting the burn)
-// and list the caller's in-flight transfers (drives the resume banner).
+// and list the caller's in-flight transfers (drives the recovery banner).
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/utils/http';
