@@ -32,7 +32,7 @@ import { useCctpEngine } from './engines/use-cctp-engine';
 import { useSoroswapEngine } from './engines/use-soroswap-engine';
 import { canPair, pairTypeOf, SWAP_ASSETS, assetBySymbol, counterpartOf } from './engines/types';
 
-import type { SwapSymbol, StellarSymbol, CrosschainSymbol } from './engines/types';
+import type { SwapSymbol, StellarSymbol, CrosschainSymbol, SwapEngineButton } from './engines/types';
 
 // ---------------------------------------------------------------------------
 // Unified swap card. One asset picker over all five assets; the source's group
@@ -47,7 +47,7 @@ const ZERO = BigNumber(0);
 
 export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const { t } = useTranslate();
-  const { tokenState } = usePersistStore();
+  const { tokenState, wallet } = usePersistStore();
   const config = useStellarConfig();
   const btc = useBtcPortfolio(true);
   const eth = useEthPortfolio(true);
@@ -170,6 +170,29 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   });
   const engine = pairType === 'stellar' ? soroswap : pairType === 'crosschain' ? lifi : cctp;
   const { toAmount, quoteLoading, quoteError } = engine;
+
+  // External Stellar wallets (Lobstr/Freighter/…) can only sign Stellar; LI.FI
+  // and CCTP need Base/EVM signing, which only the Normal (Turnkey passkey)
+  // wallet can do. Block those pairs BEFORE any signature — a Lobstr session
+  // whose Supabase user has a Turnkey row otherwise sails past the address gates
+  // and dies at the passkey (CREDENTIAL_NOT_FOUND). XLM↔USDC stays enabled, and
+  // action:null means no signature fires (so no funds can strand mid-CCTP).
+  const isExternalWallet = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+  const needsNormalWallet = isExternalWallet && pairType !== 'stellar';
+  const button: SwapEngineButton = needsNormalWallet
+    ? {
+        label: t('Cross-chain swaps need your Normal wallet'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', lineHeight: 1.5 }}>
+            {t(
+              'Your connected wallet can only swap XLM ↔ USDC. Swapping BTC, ETH or SOL signs on other chains, which needs your Normal passkey wallet.'
+            )}
+          </Typography>
+        ),
+      }
+    : engine.button;
 
   // --- selection (destination constrained to pairable assets) ---
   const selectFrom = (sym: SwapSymbol) => {
@@ -451,18 +474,18 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       )}
 
       {/* Gating notice (trustline / activation) */}
-      {engine.button.helper && <Box sx={{ mt: '14px' }}>{engine.button.helper}</Box>}
+      {button.helper && <Box sx={{ mt: '14px' }}>{button.helper}</Box>}
 
       {/* CTA */}
       <Button
         fullWidth
         variant="contained"
         size="large"
-        disabled={!engine.button.action || engine.button.loading}
-        onClick={() => engine.button.action?.()}
-        startIcon={engine.button.loading ? <CircularProgress size={16} color="inherit" /> : undefined}
+        disabled={!button.action || button.loading}
+        onClick={() => button.action?.()}
+        startIcon={button.loading ? <CircularProgress size={16} color="inherit" /> : undefined}
         sx={{
-          mt: engine.button.helper ? '10px' : '14px',
+          mt: button.helper ? '10px' : '14px',
           borderRadius: '12px',
           bgcolor: '#0A0A0F',
           fontWeight: 700,
@@ -474,7 +497,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
         }}
       >
-        {engine.button.label}
+        {button.label}
       </Button>
 
       {engine.footer}
