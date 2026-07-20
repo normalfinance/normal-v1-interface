@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * POST /api/mgi/sep24/withdraw/cancel
  * Body: { token: string; id: string; lang?: string }
  *
- * This calls MoneyGram adapterservice to start the "cancel/refund" interactive flow
- * for an existing *withdrawal* (cash-out) transaction.
- *
+ * Starts MoneyGram's "cancel/refund" interactive flow for an existing
+ * *withdrawal* (cash-out) transaction. NOTE: this endpoint is a MoneyGram
+ * custom extension, not standard SEP-24 — confirmed still needed on their
+ * Anchor Platform, but re-test it after any platform change on their side.
  */
 export async function POST(req: Request) {
   try {
@@ -33,11 +35,10 @@ export async function POST(req: Request) {
     if (!token) return j(400, { error: 'Missing token' });
     if (!id) return j(400, { error: 'Missing transaction id' });
 
-    const host = process.env.MGI_ACCESS_HOST;
-    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
+    const base = mgiApiBase();
+    if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
-    // Primary (adapterservice) endpoint for interactive cancel
-    const endpoint = `https://${host}/stellaradapterservice/sep24/transactions/withdraw/cancel/interactive`;
+    const endpoint = `${base}/sep24/transactions/withdraw/cancel/interactive`;
 
     const payload = { id, lang };
 
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
       sentTo: endpoint,
       sentBody: payload,
       note:
-        'Adapterservice should return JSON or a 302/303 redirect to the interactive UI. ' +
+        'The anchor should return JSON or a 302/303 redirect to the interactive UI. ' +
         'If HTML persists, re-check allowlisted client_domain and token scope.',
     });
   } catch (e: any) {

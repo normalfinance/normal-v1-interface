@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // We send only `asset_code: 'USDC'`; MoneyGram resolves the issuer for its
@@ -38,10 +39,10 @@ export async function POST(req: Request) {
       return j(400, { error: 'Missing or invalid amount (number required)' });
     }
 
-    const host = process.env.MGI_ACCESS_HOST; // extstellar.moneygram.com for sandbox
-    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
+    const base = mgiApiBase(); // extmgxanchor.moneygram.com in test, mgxanchor.moneygram.com in prod
+    if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
-    const endpoint = `https://${host}/stellaradapterservice/sep24/transactions/deposit/interactive`;
+    const endpoint = `${base}/sep24/transactions/deposit/interactive`;
 
     const payload: Record<string, any> = {
       asset_code: 'USDC',
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
       bodySnippet: text.slice(0, 2000),
       sentTo: endpoint,
       sentBody: payload,
-      note: 'Adapterservice should return JSON or a 302/303 redirect to the interactive UI. If HTML persists, re-check allowlisted client_domain and SEP-10 token scope.',
+      note: 'The anchor should return JSON or a 302/303 redirect to the interactive UI. If HTML persists, re-check allowlisted client_domain and SEP-10 token scope.',
     });
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep24/deposit crashed:', e);

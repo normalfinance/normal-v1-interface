@@ -8,7 +8,10 @@ import { getTransaction } from './history';
 import { signStellarTxForMgi } from './kit-signer';
 
 const DEFAULT_TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
-const LS_KEY = 'mgiAuth.v1';
+// v2: invalidates tokens issued by the legacy adapter platform (retired
+// 2026-07-19) — the new Anchor Platform rejects them, and we trust the cache
+// before hitting the server, so stale v1 tokens would strand users in errors.
+const LS_KEY = 'mgiAuth.v2';
 type CacheShape = Record<string, { token: string; exp: number }>;
 const NOOP = () => {};
 

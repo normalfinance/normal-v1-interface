@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { Keypair, Transaction } from '@stellar/stellar-sdk';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { type NetworkType, getCurrentNetwork, getStellarConfigForNetwork } from '@normalfinance/utils';
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     }
 
     const authSecret = process.env.AUTH_SECRET_KEY;
-    const mgiHost = process.env.MGI_ACCESS_HOST;
+    const mgiBase = mgiApiBase();
     const cookieStore = await cookies();
     // Prefer the user's cookie, but fall back to the build's NEXT_PUBLIC_NETWORK
     // (not a hardcoded testnet) so a missing cookie can't downgrade a mainnet
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     if (!authSecret) {
       return NextResponse.json({ error: 'Server missing AUTH_SECRET_KEY' }, { status: 500 });
     }
-    if (!mgiHost) {
+    if (!mgiBase) {
       return NextResponse.json({ error: 'Server missing MGI_ACCESS_HOST' }, { status: 500 });
     }
 
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
     tx.sign(appKey);
     const appSignedXDR = tx.toXDR();
 
-    const url = `https://${mgiHost}/stellaradapterservice/auth`;
+    const url = `${mgiBase}/auth`;
     const body = new URLSearchParams({ transaction: appSignedXDR }).toString();
 
     const r = await fetch(url, {
