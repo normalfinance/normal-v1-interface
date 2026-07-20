@@ -2,13 +2,13 @@ import { paths } from '@/routes/paths';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
-import { runDepositFlow } from '@/lib/mgi/client';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import { useBoolean , useStellarConfig } from '@/hooks';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { runDepositFlow, hasCachedMgiToken } from '@/lib/mgi/client';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
@@ -236,10 +236,13 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       return;
     }
 
-    // Open the popup synchronously (same reason as handleCoinbaseClick): after
-    // the SEP-10 passkey prompt + network calls the user activation is gone and
-    // window.open would be blocked. We navigate this window once MGI's URL is ready.
-    const popup = openMoneyGramPlaceholder();
+    // Pre-open the popup synchronously ONLY when a cached SEP-10 token means no
+    // signature is coming. A fresh signature runs a WebAuthn passkey ceremony,
+    // which requires the document to stay focused — a pre-opened popup steals
+    // focus and the ceremony dies with "The document is not focused." Without a
+    // cached token we sign first (page focused), then openMoneyGramWindow's
+    // snackbar fallback opens MoneyGram from an explicit click.
+    const popup = hasCachedMgiToken(userAddress!, isTestnet()) ? openMoneyGramPlaceholder() : null;
 
     try {
       setMgiLoading(true);
