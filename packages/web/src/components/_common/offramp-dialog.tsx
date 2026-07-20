@@ -6,6 +6,7 @@ import { useBoolean, useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import { cdn, isTestnet, createCoinbasePayOfframpURL } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
@@ -288,7 +289,10 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
       );
     } catch (e: any) {
       popup?.close();
-      enqueueSnackbar(t('MoneyGram withdrawal failed'), { variant: 'error' });
+      // Session expiry already surfaced its own reconnect snackbar.
+      if (!(e instanceof WalletSessionExpiredError)) {
+        enqueueSnackbar(t('MoneyGram withdrawal failed'), { variant: 'error' });
+      }
     } finally {
       setMgiLoading(false);
     }

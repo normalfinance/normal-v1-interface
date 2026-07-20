@@ -7,6 +7,7 @@ import { useTranslate } from '@/locales';
 import { enqueueSnackbar } from 'notistack';
 import { openTxInAnchorUI } from '@/lib/mgi/client';
 import { usePersistStore } from '@normalfinance/state';
+import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Chip, Link, Stack, Button, Tooltip, Typography } from '@mui/material';
@@ -233,9 +234,12 @@ function buildColumns(t: (k: string) => string): GridColDef<Sep24Row>[] {
                     });
                   });
                 } catch (e: any) {
-                  enqueueSnackbar(e?.message || t('Failed to open MoneyGram UI'), {
-                    variant: 'error',
-                  });
+                  // Session expiry already surfaced its own reconnect snackbar.
+                  if (!(e instanceof WalletSessionExpiredError)) {
+                    enqueueSnackbar(e?.message || t('Failed to open MoneyGram UI'), {
+                      variant: 'error',
+                    });
+                  }
                 }
               }}
             >
