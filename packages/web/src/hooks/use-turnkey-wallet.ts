@@ -21,12 +21,20 @@ export interface TurnkeyAddresses {
 export function useTurnkeyWallet(enabled = true) {
   const { user } = useSupabaseAuth();
 
-  const { data, isLoading, mutate } = useSWR<TurnkeyAddresses | null>(
+  const { data, error, isLoading, mutate } = useSWR<TurnkeyAddresses | null>(
     enabled && user ? ['turnkey-wallet', user.id] : null,
     async () => {
       const headers = await buildAuthHeaders();
       const res = await fetch('/api/turnkey/wallet', { headers });
-      if (!res.ok) throw new Error('fetch failed');
+      if (!res.ok) {
+        // Carry the status so consumers can tell an auth failure apart from
+        // "user has no wallet" — a 401 must never render as an empty account.
+        const err = new Error(`turnkey wallet fetch failed: ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
+      }
       const d = await res.json();
       return (d.wallet ?? null) as TurnkeyAddresses | null;
     },
@@ -36,8 +44,13 @@ export function useTurnkeyWallet(enabled = true) {
   return {
     addresses: data ?? null,
     loading: isLoading,
-    // null = not checked yet; false = no wallet; truthy object = has wallet
+    // null = not checked yet (loading or errored); false = no wallet; true = has wallet.
+    // On error SWR keeps the last successful data, so a transient failure
+    // doesn't flip an already-known wallet back to "unknown".
     hasWallet: data === undefined ? null : !!data,
+    // The session token was rejected (e.g. revoked by a logout elsewhere) —
+    // the user must re-authenticate; their wallets are NOT gone.
+    authFailed: (error as (Error & { status?: number }) | undefined)?.status === 401,
     refetch: () => mutate(),
   };
 }

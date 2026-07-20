@@ -211,7 +211,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const connectedAddress = persist.wallet.address || publicKey || normalPublicKey;
   const isWalletConnected = !!connectedAddress || isConnected || isNormalConnected;
 
-  const { addresses: turnkeyAddresses } = useTurnkeyWallet(open && !!session);
+  const {
+    addresses: turnkeyAddresses,
+    hasWallet: turnkeyHasWallet,
+    authFailed: turnkeyAuthFailed,
+  } = useTurnkeyWallet(open && !!session);
   const bitcoinAddress = turnkeyAddresses?.bitcoinAddress ?? null;
   const ethereumAddress = turnkeyAddresses?.ethereumAddress ?? null;
   const solanaAddress = turnkeyAddresses?.solanaAddress ?? null;
@@ -220,6 +224,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
   // Asset-first users may have e.g. only BTC and no Stellar address yet.
   const hasAnyWallet =
     isWalletConnected || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
+
+  // Turnkey lookup not resolved yet (still loading, or the API errored — e.g.
+  // a revoked session returning 401). While unresolved we must NOT claim the
+  // user has no wallets: that renders a false "$0 — pick an asset" account.
+  const turnkeyUnknown = !!session && turnkeyHasWallet === null;
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -660,6 +669,46 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 // Stellar address yet) → the real drawer. Savings-specific setup
                 // is no longer nagged here; it lives on /savings, on demand.
                 <WalletConnected address={connectedAddress ?? ''} drawerOpen={open} bitcoinAddress={bitcoinAddress} ethereumAddress={ethereumAddress} solanaAddress={solanaAddress} />
+              ) : turnkeyAuthFailed ? (
+                // The server rejected our session token (revoked elsewhere, or
+                // expired) — the wallets are NOT gone, so never show the $0
+                // empty state here. Prompt a clean re-auth instead.
+                <Box sx={{ px: 2, py: 5 }}>
+                  <Stack spacing={2.5} alignItems="center" textAlign="center">
+                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
+                      {t('Your session has expired. Sign in again to see your wallets.')}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      onClick={async () => {
+                        try {
+                          await signOut();
+                        } catch {
+                          /* stale session — nothing to clear */
+                        }
+                        setWizardInitialStep(undefined);
+                        setShowLoginModal(true);
+                      }}
+                      sx={{ borderRadius: 1.5, px: 3 }}
+                    >
+                      {t('Sign in again')}
+                    </Button>
+                  </Stack>
+                </Box>
+              ) : turnkeyUnknown ? (
+                // Wallet lookup still in flight (or transiently failing) —
+                // show progress, not a false "$0" account.
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 4,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                  }}
+                >
+                  <CircularProgress sx={{ mb: 2 }} />
+                </Box>
               ) : (
                 // No wallet yet — a calm $0 empty state. The pick-an-asset prompt
                 // only shows here (never once the user has created any wallet).
