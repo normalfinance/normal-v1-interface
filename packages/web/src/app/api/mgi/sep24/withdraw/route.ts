@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
@@ -34,10 +35,10 @@ export async function POST(req: Request) {
     const n = Number(amount);
     if (!Number.isFinite(n)) return j(400, { error: 'Amount must be a valid number' });
 
-    const host = process.env.MGI_ACCESS_HOST;
-    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
+    const base = mgiApiBase();
+    if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
-    const endpoint = `https://${host}/stellaradapterservice/sep24/transactions/withdraw/interactive`;
+    const endpoint = `${base}/sep24/transactions/withdraw/interactive`;
 
     const payload = {
       asset_code: 'USDC',

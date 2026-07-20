@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export const dynamic = 'force-dynamic';
@@ -9,8 +10,8 @@ export const dynamic = 'force-dynamic';
  * Query: account? kind? status? asset_code? order? limit?
  * Requires: Authorization: Bearer <SEP10 token> (from your /api/mgi/sep10/complete)
  *
- * We forward to MoneyGram adapterservice:
- *   https://{MGI_ACCESS_HOST}/stellaradapterservice/sep24/transactions
+ * We forward to MoneyGram's anchor:
+ *   https://{MGI_ACCESS_HOST}/stellarsepservice/sep24/transactions
  */
 export async function GET(req: Request) {
   const t0 = Date.now();
@@ -23,8 +24,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const host = process.env.MGI_ACCESS_HOST;
-    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
+    const base = mgiApiBase();
+    if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
     const auth = req.headers.get('authorization') || '';
     if (!auth.toLowerCase().startsWith('bearer ')) {
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
     if (!searchParams.get('asset_code')) searchParams.set('asset_code', 'USDC');
 
     // You can also pass `account`, `kind`, `status`, `limit`, `order`, etc.
-    const endpoint = `https://${host}/stellaradapterservice/sep24/transactions?${searchParams.toString()}`;
+    const endpoint = `${base}/sep24/transactions?${searchParams.toString()}`;
 
     const r = await fetch(endpoint, {
       method: 'GET',

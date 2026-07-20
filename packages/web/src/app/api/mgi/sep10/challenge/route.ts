@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { logWithConfig } from '@/lib/edge-config-middleware';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
@@ -21,15 +22,18 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Missing account' }, { status: 400 });
     }
 
-    const host = process.env.MGI_ACCESS_HOST!;
+    const base = mgiApiBase();
+    if (!base) {
+      return NextResponse.json({ error: 'Server missing MGI_ACCESS_HOST' }, { status: 500 });
+    }
     const clientDomain = process.env.CLIENT_DOMAIN!;
 
     await logWithConfig('info', 'MoneyGram client info', {
-      host,
+      base,
       clientDomain,
     });
 
-    const url = `https://${host}/stellaradapterservice/auth?account=${encodeURIComponent(
+    const url = `${base}/auth?account=${encodeURIComponent(
       account
     )}&client_domain=${encodeURIComponent(clientDomain)}`;
 
