@@ -10,6 +10,7 @@ import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 import {
   cdn,
@@ -257,7 +258,10 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       );
     } catch (e: any) {
       popup?.close();
-      enqueueSnackbar(e?.message || 'MoneyGram deposit failed', { variant: 'error' });
+      // Session expiry already surfaced its own reconnect snackbar.
+      if (!(e instanceof WalletSessionExpiredError)) {
+        enqueueSnackbar(e?.message || 'MoneyGram deposit failed', { variant: 'error' });
+      }
     } finally {
       setMgiLoading(false);
     }

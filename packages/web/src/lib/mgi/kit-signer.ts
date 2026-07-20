@@ -1,6 +1,12 @@
 'use client';
 
-import { useNormalWalletStore, useStellarWalletKitStore } from '@normalfinance/state';
+import { SESSION_BASED_WALLET_TYPES } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { usePersistStore, useNormalWalletStore, useStellarWalletKitStore } from '@normalfinance/state';
+import {
+  isSessionError,
+  WalletSessionExpiredError,
+  showWalletReconnectSnackbar,
+} from '@/hooks/stellar/use-wallet-reconnect';
 
 /**
  * Sign a Stellar XDR for the MoneyGram flow (SEP-10 challenge or USDC
@@ -73,7 +79,22 @@ export async function signXDRWithWalletKit(
     networkPassphrase?: string
   ) => Promise<string | { xdr?: string; signedXDR?: string }>;
 
-  const res = await sign(xdr, networkPassphrase);
+  let res: string | { xdr?: string; signedXDR?: string };
+  try {
+    res = await sign(xdr, networkPassphrase);
+  } catch (err) {
+    // Lobstr/WalletConnect sessions don't survive page reloads; signing then
+    // fails with "connection key is missing". Surface the same reconnect UX
+    // the savings flow uses instead of the kit's raw error.
+    const walletType = usePersistStore.getState().wallet.walletType ?? '';
+    if (SESSION_BASED_WALLET_TYPES.has(walletType) && isSessionError(err)) {
+      showWalletReconnectSnackbar(() =>
+        useStellarWalletKitStore.getState().connectWallet(usePersistStore.getState())
+      );
+      throw new WalletSessionExpiredError();
+    }
+    throw err;
+  }
 
   // Normalize return shape to a string XDR
   if (typeof res === 'string') return res;
