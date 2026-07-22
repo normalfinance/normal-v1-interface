@@ -1,30 +1,11 @@
 import { buildAuthHeaders } from '@/utils/http';
 
-import type { Sep24ListResponse, Sep24SingleResponse } from './types';
+import type { Sep24SingleResponse } from './types';
 
-export async function listTransactions(opts?: {
-  account?: string;
-  kind?: 'deposit' | 'withdrawal';
-  status?: string;
-  authToken?: string;
-}) {
-  const params = new URLSearchParams();
-  if (opts?.account) params.set('account', opts.account);
-  if (opts?.kind) params.set('kind', opts.kind);
-  if (opts?.status) params.set('status', opts.status);
-
-  const url = `/api/mgi/sep24/transactions/proxy?${params.toString()}`;
-
-  const headers = await buildAuthHeaders();
-  const r = await fetch(url, {
-    headers,
-    credentials: 'include',
-    cache: 'no-store',
-  });
-  if (!r.ok) throw new Error(`history list failed: ${r.status}`);
-  const data = (await r.json()) as Sep24ListResponse;
-  return data.transactions;
-}
+// Single-transaction lookup against MoneyGram (via our [id] proxy). History
+// LISTS render from our own DB (/api/mgi/transactions) — MoneyGram's list API
+// returns every abandoned 'incomplete' attempt and needs a SEP-10 ceremony,
+// so we stopped consuming it when the /rewards page was removed.
 
 export async function getTransaction(id: string, authToken?: string) {
   const url = `/api/mgi/sep24/transactions/proxy/${encodeURIComponent(id)}`;

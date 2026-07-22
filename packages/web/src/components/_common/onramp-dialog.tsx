@@ -1,17 +1,19 @@
 import { paths } from '@/routes/paths';
-import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
 import { useBoolean , useStellarConfig } from '@/hooks';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
+import { reportMgiStatus, refreshMgiStatus } from '@/lib/mgi/db';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
-import { runDepositFlow, hasCachedMgiToken } from '@/lib/mgi/client';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { FAILED_MGI_STATUSES, TERMINAL_MGI_STATUSES } from '@/lib/mgi/statuses';
 import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
+import { runDepositFlow, openTxInAnchorUI, hasCachedMgiToken } from '@/lib/mgi/client';
 import {
   cdn,
   logger,
@@ -97,6 +99,13 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
   const moneyGramAmountDialog = useBoolean();
 
   const [mgiLoading, setMgiLoading] = useState(false);
+  // Set once the user commits inside MoneyGram's UI — the dialog then shows
+  // the "complete your cash deposit" state instead of the provider list.
+  const [mgiCommitted, setMgiCommitted] = useState<{
+    id: string | null;
+    amount: string;
+    status: string;
+  } | null>(null);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
 
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
@@ -136,6 +145,41 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
     await connectNormalWallet();
     await refetchAccountStatus();
   };
+
+  // Closing the dialog leaves the committed state behind — the pending banner
+  // and activity feed on the USDC page take over from there.
+  const handleDialogClose = () => {
+    setMgiCommitted(null);
+    onClose();
+  };
+
+  // While the post-commit screen is open, watch the deposit: status checks
+  // against MoneyGram using the cached SEP-10 token ONLY (never a background
+  // passkey prompt), mirrored into our DB so every other view updates too.
+  useEffect(() => {
+    const id = mgiCommitted?.id;
+    if (!open || !id || !userAddress) return undefined;
+    if (TERMINAL_MGI_STATUSES.has(mgiCommitted.status)) return undefined;
+    const iv = setInterval(async () => {
+      if (!hasCachedMgiToken(userAddress, isTestnet())) return;
+      try {
+        const tx = await refreshMgiStatus(userAddress, id);
+        const status = tx?.status ? String(tx.status) : '';
+        if (!status) return;
+        setMgiCommitted((prev) => (prev && prev.id === id ? { ...prev, status } : prev));
+        if (status === 'completed') {
+          enqueueSnackbar(t('MoneyGram deposit completed — USDC received'), {
+            variant: 'success',
+          });
+          window.dispatchEvent(new Event('nf:activity-updated'));
+        }
+      } catch {
+        /* transient — next tick retries */
+      }
+    }, 15_000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mgiCommitted?.id, mgiCommitted?.status, userAddress]);
 
   // Handle adding USDC trustline
   const handleAddTrustline = async () => {
@@ -254,8 +298,14 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       await runDepositFlow(
         userAddress!,
         usdcAmount,
-        () => {
-          enqueueSnackbar('MoneyGram ready — awaiting USDC deposit', { variant: 'info' });
+        (tx) => {
+          // Committed in MoneyGram's UI. For a cash DEPOSIT there is no
+          // reference number yet (it's generated after the cash handoff) —
+          // what the user needs now is instructions, not a code.
+          const txId = tx?.id ? String(tx.id) : null;
+          const status = String(tx?.status ?? 'pending_user_transfer_start');
+          if (txId) reportMgiStatus(txId, { status });
+          setMgiCommitted({ id: txId, amount: usdcAmount, status });
         },
         popup
       );
@@ -304,7 +354,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
     <>
       <Dialog
         open={open}
-        onClose={onClose}
+        onClose={handleDialogClose}
         slotProps={{
           paper: {
             sx: {
@@ -321,12 +371,14 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
         <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" color="text.primary">
-              {isStellarAsset && asset.symbol === 'USDC'
-                ? t('Deposit Cash')
-                : t('Buy {{symbol}}', { symbol: asset.symbol })}
+              {mgiCommitted
+                ? t('Complete your cash deposit')
+                : isStellarAsset && asset.symbol === 'USDC'
+                  ? t('Deposit Cash')
+                  : t('Buy {{symbol}}', { symbol: asset.symbol })}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton onClick={onClose} aria-label="close dialog">
+              <IconButton onClick={handleDialogClose} aria-label="close dialog">
                 <Iconify icon="mingcute:close-line" width={24} />
               </IconButton>
             </Box>
@@ -344,6 +396,65 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
             },
           }}
         >
+          {mgiCommitted ? (
+            <Stack spacing={2} sx={{ py: 1 }}>
+              <Alert
+                severity={
+                  mgiCommitted.status === 'completed'
+                    ? 'success'
+                    : FAILED_MGI_STATUSES.has(mgiCommitted.status)
+                      ? 'warning'
+                      : 'info'
+                }
+                icon={<Iconify icon="solar:hand-money-bold" width={22} />}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                  {mgiCommitted.status === 'completed'
+                    ? t('Cash received — USDC delivered')
+                    : FAILED_MGI_STATUSES.has(mgiCommitted.status)
+                      ? t('This deposit is no longer active')
+                      : t('Drop off your cash')}
+                </Typography>
+                <Typography variant="body2">
+                  {mgiCommitted.status === 'completed'
+                    ? t('MoneyGram received your cash and the USDC has been sent to your wallet.')
+                    : FAILED_MGI_STATUSES.has(mgiCommitted.status)
+                      ? t('MoneyGram reports this deposit as {{status}}. Start a new deposit if needed.', {
+                          status: mgiCommitted.status,
+                        })
+                      : t(
+                          'Bring ${{amount}} in cash to the MoneyGram location you selected. No code is needed — the agent finds your transaction by your name and phone number, and your receipt with a reference number comes after paying. Your USDC arrives here shortly after.',
+                          { amount: mgiCommitted.amount }
+                        )}
+                </Typography>
+              </Alert>
+
+              {mgiCommitted.id &&
+                mgiCommitted.status !== 'completed' &&
+                !FAILED_MGI_STATUSES.has(mgiCommitted.status) && (
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    size="large"
+                    startIcon={<Iconify icon="solar:document-text-bold" />}
+                    onClick={() => openTxInAnchorUI(userAddress!, mgiCommitted.id!)}
+                  >
+                    {t('View drop-off details')}
+                  </Button>
+                )}
+
+              <Button variant="contained" fullWidth size="large" onClick={handleDialogClose}>
+                {mgiCommitted.status === 'completed' ? t('Done') : t("Done — I'll drop off the cash")}
+              </Button>
+
+              {mgiCommitted.status !== 'completed' && (
+                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                  {t('You can close this — the deposit stays visible under Activity on your USDC page.')}
+                </Typography>
+              )}
+            </Stack>
+          ) : (
+            <>
           {!isConnected && isStellarAsset && (
             <Stack spacing={2} sx={{ mb: 2 }}>
               <Alert severity="info" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
@@ -447,9 +558,11 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
               ))}
             </List>
           )}
+            </>
+          )}
         </DialogContent>
 
-        {!checkingAccount && isConnected && prerequisitesMet && (
+        {!mgiCommitted && !checkingAccount && isConnected && prerequisitesMet && (
           <Box sx={{ px: 4, pb: 4, width: '100%' }}>
             <Typography
               variant="body2"

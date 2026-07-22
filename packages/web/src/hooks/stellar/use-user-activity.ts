@@ -1,12 +1,14 @@
 import type { Activity } from '@/types/activity';
+import type { MgiDbTransaction } from '@/lib/mgi/statuses';
 import type { WalletActivityItem, WalletActivityResponse } from '@/types/wallet-activity';
 
 import useSWR from 'swr';
-import { useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import { Horizon } from '@stellar/stellar-sdk';
 import { buildAuthHeaders } from '@/utils/http';
-import { listTransactions } from '@/lib/mgi/history';
+import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
 import { cdn, constants, getCryptoIconUrl } from '@normalfinance/utils';
+import { FAILED_MGI_STATUSES, PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
 
 // Coinbase off-ramp sends are recorded client-side as { coinbaseTxnId: ourTxHash }
 // when we broadcast the on-chain transfer (see coinbase-offramp-modal). We join
@@ -124,41 +126,30 @@ function mapWalletActivityItem(item: WalletActivityItem): Activity {
   }
 }
 
-const EXCLUDED_MGI_STATUSES = new Set(['incomplete', 'error', 'no_market', 'too_small', 'too_large', 'expired']);
 const FEES_WALLET = 'GCVCVOJMNDX7DBYEN3YAJ2VWIHT4ZDUNSUFIRLHRQBKS7PXSTDRB4MWE';
 
-async function fetchMgiActivity(): Promise<Activity[]> {
-  try {
-    const transactions = await listTransactions();
-    return transactions
-      .filter((tx) => !EXCLUDED_MGI_STATUSES.has(tx.status))
-      .map((tx): Activity => {
-        const timestamp = Date.parse(tx.completed_at ?? tx.updated_at ?? tx.started_at);
-        const amount = parseFloat(tx.amount_out?.amount ?? tx.amount_in?.amount ?? '0');
-        if (tx.kind === 'deposit') {
-          return {
-            id: `mgi:${tx.id}`,
-            timestamp,
-            type: 'Buy',
-            symbol: 'USDC',
-            iconUrl: getCryptoIconUrl('USDC'),
-            amount,
-            provider: 'MoneyGram',
-          };
-        }
-        return {
-          id: `mgi:${tx.id}`,
-          timestamp,
-          type: 'Sell',
-          symbol: 'USDC',
-          iconUrl: getCryptoIconUrl('USDC'),
-          amount,
-          provider: 'MoneyGram',
-        };
-      });
-  } catch {
-    return [];
-  }
+// MoneyGram rows come from OUR database (written at initiation, statuses
+// reported back after clients fetch them) — never from MoneyGram's SEP-24 API
+// here, which would need a SEP-10 passkey ceremony just to render history.
+// 'incomplete' = the user never committed in MoneyGram's UI; hide those.
+function mapMgiDbToActivity(rows: MgiDbTransaction[]): Activity[] {
+  return rows
+    .filter((tx) => tx.status !== 'incomplete')
+    .map((tx): Activity => {
+      const base = {
+        id: `mgi:${tx.id}`,
+        timestamp: Date.parse(tx.createdAt),
+        symbol: 'USDC',
+        iconUrl: getCryptoIconUrl('USDC'),
+        amount: parseFloat(tx.amount ?? '0'),
+        provider: 'MoneyGram',
+        pending: PENDING_MGI_STATUSES.has(tx.status),
+        failed: FAILED_MGI_STATUSES.has(tx.status),
+      };
+      return tx.kind === 'deposit'
+        ? { ...base, type: 'Buy' }
+        : { ...base, type: 'Sell' };
+    });
 }
 
 async function fetchStellarPayments(walletAddress: string): Promise<Activity[]> {
@@ -359,11 +350,8 @@ export function useUserActivity(
     return () => window.removeEventListener('nf:activity-updated', handler);
   }, [mutate]);
 
-  const { data: mgiData } = useSWR<Activity[]>(
-    walletAddress ? 'mgi-activity' : null,
-    fetchMgiActivity,
-    { revalidateOnFocus: true, dedupingInterval: 30_000 }
-  );
+  const { transactions: mgiTxs } = useMgiTransactions(!!walletAddress);
+  const mgiData = useMemo(() => mapMgiDbToActivity(mgiTxs), [mgiTxs]);
 
   const { data: stellarData } = useSWR<Activity[]>(
     walletAddress ? ['stellar-payments', walletAddress] : null,

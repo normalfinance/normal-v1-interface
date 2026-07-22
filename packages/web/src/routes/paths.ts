@@ -32,7 +32,6 @@ export const paths = {
     root: '/assets',
     details: (symbol: string) => `/assets/${symbol}`,
   },
-  rewards: '/rewards',
   settings: '/settings',
   transaction: {
     root: '/trx',

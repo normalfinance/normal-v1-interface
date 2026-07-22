@@ -1,3 +1,4 @@
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
 import { mgiApiBase } from '@/lib/mgi/server-base';
@@ -72,6 +73,26 @@ export async function POST(req: Request) {
       const url = data?.url ?? data?.location ?? null;
       const id = data?.id ?? data?.transaction_id ?? null;
       if (!url) return j(502, { error: 'JSON response lacked url', details: data });
+      // Record the transaction so the activity feed can render it without a
+      // SEP-10 ceremony. Best-effort — a logging failure must not break the ramp.
+      if (id) {
+        try {
+          await prisma.moneyGramTransaction.upsert({
+            where: { id: String(id) },
+            create: {
+              id: String(id),
+              supabaseUid: user.id,
+              walletAddress: account,
+              kind: 'withdrawal',
+              amount: String(n),
+              status: 'incomplete',
+            },
+            update: {},
+          });
+        } catch (dbErr) {
+          console.error('[MGI] failed to record withdraw tx', dbErr);
+        }
+      }
       return NextResponse.json({ url, id });
     }
 
