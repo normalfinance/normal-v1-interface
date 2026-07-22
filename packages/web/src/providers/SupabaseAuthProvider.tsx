@@ -65,7 +65,11 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
 
   const signOut = useCallback(async () => {
     setSession(null);
-    await supabase.auth.signOut();
+    // scope 'local' signs out THIS browser only. The default ('global')
+    // deletes every session the user has — logging out on one device killed
+    // prod/localhost/mobile sessions everywhere, and tabs holding the dead
+    // token then 401'd on every API call.
+    await supabase.auth.signOut({ scope: 'local' });
     clearLoginIntent();
   }, []);
 

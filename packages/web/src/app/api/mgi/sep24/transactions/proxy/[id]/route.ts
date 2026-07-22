@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
@@ -7,7 +8,7 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
  * Requires: Authorization: Bearer <SEP10 token>
  *
  * Forwards to:
- *   https://{MGI_ACCESS_HOST}/stellaradapterservice/sep24/transaction?id=<id>
+ *   https://{MGI_ACCESS_HOST}/stellarsepservice/sep24/transaction?id=<id>
  */
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const t0 = Date.now();
@@ -20,8 +21,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const host = process.env.MGI_ACCESS_HOST;
-    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
+    const base = mgiApiBase();
+    if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
     // The SEP-10 token comes via x-mgi-token (Authorization carries the Supabase
     // session used to authenticate the user above).
@@ -33,7 +34,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const id = params.id;
     if (!id) return j(400, { error: 'Missing transaction id' });
 
-    const endpoint = `https://${host}/stellaradapterservice/sep24/transaction?id=${encodeURIComponent(id)}`;
+    const endpoint = `${base}/sep24/transaction?id=${encodeURIComponent(id)}`;
 
     const r = await fetch(endpoint, {
       method: 'GET',

@@ -3,12 +3,15 @@
 import { enqueueSnackbar } from 'notistack';
 import { buildAuthHeaders } from '@/utils/http';
 
-import { openMoneyGram } from './flow';
 import { getTransaction } from './history';
 import { signStellarTxForMgi } from './kit-signer';
+import { openMoneyGram, openMoneyGramWindow } from './flow';
 
 const DEFAULT_TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
-const LS_KEY = 'mgiAuth.v1';
+// v2: invalidates tokens issued by the legacy adapter platform (retired
+// 2026-07-19) — the new Anchor Platform rejects them, and we trust the cache
+// before hitting the server, so stale v1 tokens would strand users in errors.
+const LS_KEY = 'mgiAuth.v2';
 type CacheShape = Record<string, { token: string; exp: number }>;
 const NOOP = () => {};
 
@@ -46,6 +49,14 @@ function getValidToken(key: string): string | undefined {
     return undefined; // expired
   }
   return entry.token;
+}
+
+/** True when a still-valid SEP-10 token is cached for this account — the next
+ *  MGI call won't need a wallet signature. Callers use this to decide whether
+ *  it's safe to pre-open the popup: a passkey ceremony (WebAuthn) requires the
+ *  document to stay focused, which a pre-opened popup breaks. */
+export function hasCachedMgiToken(account: string, testnet: boolean): boolean {
+  return !!getValidToken(`${account}:${testnet ? 'testnet' : 'public'}`);
 }
 
 export function clearMgiToken(account?: string) {
@@ -286,13 +297,10 @@ export async function openTxInAnchorUI(
   const token = await getMgiAuthToken(userAccount);
   const url = await fetchMoreInfoUrlWithSep10(token, txId);
 
-  const w = window.open(url, '_blank', 'width=420,height=800');
-  try {
-    w?.focus();
-  } catch (_e) {
-    // Some browsers block programmatic focus; safe to ignore.
-    NOOP();
-  }
+  // The token fetch above may have run a passkey ceremony, consuming the user
+  // activation — openMoneyGramWindow recovers from a blocked popup via its
+  // snackbar fallback.
+  openMoneyGramWindow(url);
 
   const terminal: string[] = [
     'completed',

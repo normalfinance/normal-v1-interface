@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * POST /api/mgi/sep24/transaction/moreinfo
  * Body: { token: string; id: string }
  *
- * Uses adapterservice `GET /sep24/transaction?id=...` with SEP-10 Bearer token
+ * Uses the anchor's `GET /sep24/transaction?id=...` with SEP-10 Bearer token
  * and returns a fresh more_info_url (these JWT URLs can expire quickly).
  */
 export async function POST(req: Request) {
@@ -23,11 +24,10 @@ export async function POST(req: Request) {
     if (!token) return j(400, { error: 'Missing token' });
     if (!id) return j(400, { error: 'Missing transaction id' });
 
-    const host = process.env.MGI_ACCESS_HOST;
-    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
+    const base = mgiApiBase();
+    if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
-    // Adapterservice transaction details
-    const url = `https://${host}/stellaradapterservice/sep24/transaction?id=${encodeURIComponent(id)}`;
+    const url = `${base}/sep24/transaction?id=${encodeURIComponent(id)}`;
 
     const r = await fetch(url, {
       method: 'GET',
