@@ -1,6 +1,7 @@
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
 import React, { useState, useEffect } from 'react';
+import { useMgiLimits } from '@/hooks/use-mgi-limits';
 import { useBoolean, useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
@@ -93,6 +94,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   const { user, session } = useSupabaseAuth();
 
   const moneyGramAmountDialog = useBoolean();
+  const mgiLimits = useMgiLimits();
 
   const [mgiLoading, setMgiLoading] = useState(false);
   // Coinbase amount-entry step (only when assetBalance is provided)
@@ -467,8 +469,10 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           startMgiWithdraw(userAddress ?? '', val);
         }}
         // MGI production SEP-24 /info: withdraw USDC min 1 / max 2500, no fees.
-        min={1}
-        max={2500}
+        // MoneyGram's LIVE SEP-24 /info limits — hardcoding went stale once
+        // already (min moved 1 → 15) and users got raw anchor rejections.
+        min={mgiLimits.withdraw.min}
+        max={mgiLimits.withdraw.max}
         kind="withdraw"
       />
     </>
