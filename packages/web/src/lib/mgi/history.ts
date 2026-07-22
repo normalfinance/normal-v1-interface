@@ -15,7 +15,11 @@ export async function listTransactions(opts?: {
 
   const url = `/api/mgi/sep24/transactions/proxy?${params.toString()}`;
 
-  const headers = await buildAuthHeaders();
+  const headers = { ...(await buildAuthHeaders()) } as Record<string, string>;
+  // SEP-10 token rides in its own header — Authorization stays the Supabase
+  // token. (This was missing: the proxy used to forward the Supabase JWT to
+  // MoneyGram as the SEP-10 Bearer, so every list call 502'd.)
+  if (opts?.authToken) headers['x-mgi-token'] = opts.authToken;
   const r = await fetch(url, {
     headers,
     credentials: 'include',

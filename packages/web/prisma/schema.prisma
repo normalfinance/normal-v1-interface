@@ -101,6 +101,26 @@ model SwapLog {
   @@map("swap_logs")
 }
 
+// Our record of a MoneyGram SEP-24 transaction, written when our server
+// initiates it. MoneyGram stays the source of truth for status — this row is a
+// cache so the activity feed can render MGI history without a SEP-10 passkey
+// ceremony; clients report fresh statuses back after fetching them.
+model MoneyGramTransaction {
+  id                    String   @id // MoneyGram's SEP-24 transaction id
+  supabaseUid           String
+  walletAddress         String
+  kind                  String // "deposit" | "withdrawal"
+  status                String   @default("incomplete")
+  amount                String? // expected USDC amount (human-readable)
+  externalTransactionId String? // MoneyGram reference number (withdrawals, once available)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([supabaseUid])
+  @@index([walletAddress])
+  @@map("moneygram_transactions")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model TurnkeyWallet {
   id              String   @id @default(cuid())

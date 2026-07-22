@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/mgi/sep24/transactions/proxy
  * Query: account? kind? status? asset_code? order? limit?
- * Requires: Authorization: Bearer <SEP10 token> (from your /api/mgi/sep10/complete)
+ * Requires: Authorization: Bearer <Supabase token> + x-mgi-token: <SEP-10 token>
  *
  * We forward to MoneyGram's anchor:
  *   https://{MGI_ACCESS_HOST}/stellarsepservice/sep24/transactions
@@ -27,10 +27,12 @@ export async function GET(req: Request) {
     const base = mgiApiBase();
     if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
-    const auth = req.headers.get('authorization') || '';
-    if (!auth.toLowerCase().startsWith('bearer ')) {
-      // IMPORTANT: history calls must include the token (your client gets it via getMgiAuthToken)
-      return j(401, { error: 'Missing or invalid Authorization (Bearer token required)' });
+    // The SEP-10 token comes via x-mgi-token (Authorization carries the
+    // Supabase session used to authenticate the user above). Forwarding the
+    // Supabase JWT to MoneyGram was the old bug — the anchor rejects it.
+    const sep10 = req.headers.get('x-mgi-token') || '';
+    if (!sep10) {
+      return j(401, { error: 'Missing MoneyGram SEP-10 token (x-mgi-token header required)' });
     }
 
     const { searchParams } = new URL(req.url);
@@ -45,7 +47,7 @@ export async function GET(req: Request) {
       method: 'GET',
       headers: {
         Accept: 'application/json, text/plain, */*',
-        Authorization: auth,
+        Authorization: `Bearer ${sep10}`,
       },
       redirect: 'manual',
     });
@@ -77,7 +79,7 @@ export async function GET(req: Request) {
       bodySnippet: text.slice(0, 2000),
       sentTo: endpoint,
       note:
-        'List should return JSON. If you see 401, ensure you passed Authorization: Bearer <SEP10 token>. ' +
+        'List should return JSON. If you see 401, ensure the x-mgi-token header carried a valid SEP-10 token. ' +
         'If you get HTML, re-check allowlisted client_domain and token scope.',
     });
   } catch (e: any) {
