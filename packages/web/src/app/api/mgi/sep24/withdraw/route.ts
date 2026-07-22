@@ -97,6 +97,19 @@ export async function POST(req: Request) {
     }
 
     const text = await r.text();
+    // A JSON error body from the anchor is a clean user-facing rejection
+    // (e.g. "amount is less than asset's minimum limit") — pass the message
+    // through instead of dumping diagnostics at the user.
+    if (ct.includes('application/json')) {
+      try {
+        const errBody = JSON.parse(text);
+        if (typeof errBody?.error === 'string' && errBody.error) {
+          return j(400, { error: `MoneyGram: ${errBody.error}` });
+        }
+      } catch {
+        /* not JSON after all — fall through to diagnostics */
+      }
+    }
     return j(502, {
       error: 'Unexpected response from anchor',
       status: r.status,

@@ -3,6 +3,7 @@ import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
+import { useMgiLimits } from '@/hooks/use-mgi-limits';
 import { usePersistStore } from '@normalfinance/state';
 import { useBoolean , useStellarConfig } from '@/hooks';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
@@ -97,6 +98,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
   const { connectWallet: connectNormalWallet } = useNormalWallet();
 
   const moneyGramAmountDialog = useBoolean();
+  const mgiLimits = useMgiLimits();
 
   const [mgiLoading, setMgiLoading] = useState(false);
   // Set once the user commits inside MoneyGram's UI — the dialog then shows
@@ -581,9 +583,10 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
           moneyGramAmountDialog.onFalse();
           startMgiAfterAmount(val);
         }}
-        // MGI production SEP-24 /info: deposit USDC min 1 / max 950, no fees.
-        min={1}
-        max={950}
+        // MoneyGram's LIVE SEP-24 /info limits — hardcoding these went stale
+        // once already (min moved 1 → 15) and users got raw anchor rejections.
+        min={mgiLimits.deposit.min}
+        max={mgiLimits.deposit.max}
       />
       <NormalWalletCreate
         open={showCreateNormalWallet}

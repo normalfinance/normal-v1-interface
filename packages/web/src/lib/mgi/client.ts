@@ -160,6 +160,9 @@ export async function startMgiDeposit(token: string, userAccount: string, amount
   }
 
   if (!r.ok || !data?.url) {
+    // Clean anchor rejection (e.g. amount below MoneyGram's minimum) — show
+    // the message, not a JSON diagnostics dump.
+    if (typeof data?.error === 'string' && data.error) throw new Error(data.error);
     const pretty = JSON.stringify(data ?? { raw }, null, 2);
     throw new Error(`Deposit start failed (HTTP ${r.status}): ${pretty}`);
   }
@@ -201,6 +204,9 @@ export async function startMgiWithdraw(token: string, userAccount: string, amoun
   }
 
   if (!r.ok || !data?.url) {
+    // Clean anchor rejection (e.g. amount below MoneyGram's minimum) — show
+    // the message, not a JSON diagnostics dump.
+    if (typeof data?.error === 'string' && data.error) throw new Error(data.error);
     const pretty = JSON.stringify(data ?? { raw }, null, 2);
     throw new Error(`Withdraw start failed (HTTP ${r.status}): ${pretty}`);
   }
