@@ -10,6 +10,7 @@ import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 
+import MoneyGramDetailModal from '@/components/_common/moneygram-detail-modal';
 import { SwapDetailModal, cctpTransferIdOf } from '@/components/_common/swap-detail-modal';
 
 import { MONO, CARD_SX, PAGE_SIZE, TAG_STYLES } from './_shared';
@@ -354,6 +355,8 @@ export function ActivityCard({
   const [tab, setTab] = useState<ActivityTab>(defaultTab);
   const [page, setPage] = useState(1);
   const [detailId, setDetailId] = useState<string | null>(null);
+  // MoneyGram rows (id `mgi:<id>`) open our detail modal instead of an explorer.
+  const [mgiDetailId, setMgiDetailId] = useState<string | null>(null);
 
   const { recentActivity, isLoading, mutate } = useUserActivity(
     walletAddress,
@@ -494,16 +497,18 @@ export function ActivityCard({
               const row = activityToRow(activity);
               const expertUrl = getExplorerUrl(activity);
               const cctpId = cctpTransferIdOf(activity);
+              const mgiId = activity.id.startsWith('mgi:') ? activity.id.slice(4) : null;
+              const handleRowClick = cctpId
+                ? () => setDetailId(cctpId)
+                : mgiId
+                  ? () => setMgiDetailId(mgiId)
+                  : expertUrl
+                    ? () => window.open(expertUrl, '_blank', 'noopener,noreferrer')
+                    : undefined;
               return (
                 <Box
                   key={activity.id}
-                  onClick={
-                    cctpId
-                      ? () => setDetailId(cctpId)
-                      : expertUrl
-                        ? () => window.open(expertUrl, '_blank', 'noopener,noreferrer')
-                        : undefined
-                  }
+                  onClick={handleRowClick}
                   sx={{
                     display: 'grid',
                     gridTemplateColumns: ACTIVITY_COLS,
@@ -512,7 +517,7 @@ export function ActivityCard({
                     px: '8px',
                     py: '12px',
                     borderRadius: '10px',
-                    cursor: cctpId || expertUrl ? 'pointer' : 'default',
+                    cursor: handleRowClick ? 'pointer' : 'default',
                     '&:hover': { bgcolor: 'rgba(10,10,15,0.025)' },
                   }}
                 >
@@ -521,6 +526,8 @@ export function ActivityCard({
                     {(((activity.type === 'Sent' || activity.type === 'Receive') &&
                       activity.confirmed === false) ||
                       (activity.type === 'Swap' && activity.pending) ||
+                      ((activity.type === 'Buy' || activity.type === 'Sell') &&
+                        activity.pending) ||
                       (activity.type === 'Sent' &&
                         activity.offramp &&
                         activity.offrampStatus === 'pending')) && (
@@ -543,6 +550,8 @@ export function ActivityCard({
                       </Box>
                     )}
                     {((activity.type === 'Swap' && activity.failed) ||
+                      ((activity.type === 'Buy' || activity.type === 'Sell') &&
+                        activity.failed) ||
                       (activity.type === 'Sent' &&
                         activity.offramp &&
                         activity.offrampStatus === 'failed')) && (
@@ -645,6 +654,10 @@ export function ActivityCard({
                           <path d="M2.5 9.5L9.5 2.5M9.5 2.5H5M9.5 2.5V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </Box>
+                    ) : mgiId ? (
+                      <Box sx={{ fontSize: '12px', fontWeight: 400, color: 'rgba(10,10,15,0.35)', ...MONO }}>
+                        Details
+                      </Box>
                     ) : (
                       <Box sx={{ fontSize: '12px', fontWeight: 400, color: 'rgba(10,10,15,0.2)', ...MONO }}>—</Box>
                     )}
@@ -668,6 +681,12 @@ export function ActivityCard({
       )}
 
       <SwapDetailModal transferId={detailId} onClose={() => setDetailId(null)} />
+
+      <MoneyGramDetailModal
+        open={!!mgiDetailId}
+        txId={mgiDetailId}
+        onClose={() => setMgiDetailId(null)}
+      />
     </Box>
   );
 }

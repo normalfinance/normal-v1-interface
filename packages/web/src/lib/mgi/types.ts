@@ -44,10 +44,6 @@ export interface Sep24Transaction {
   message?: string;
 }
 
-export interface Sep24ListResponse {
-  transactions: Sep24Transaction[];
-}
-
 export interface Sep24SingleResponse {
   transaction: Sep24Transaction;
 }

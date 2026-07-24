@@ -1,3 +1,4 @@
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
 import { mgiApiBase } from '@/lib/mgi/server-base';
@@ -83,11 +84,44 @@ export async function POST(req: Request) {
       if (!url) {
         return j(502, { error: 'Interactive JSON lacked url', details: data, status: r.status });
       }
+      // Record the transaction so the activity feed can render it without a
+      // SEP-10 ceremony. Best-effort — a logging failure must not break the ramp.
+      if (id) {
+        try {
+          await prisma.moneyGramTransaction.upsert({
+            where: { id: String(id) },
+            create: {
+              id: String(id),
+              supabaseUid: user.id,
+              walletAddress: account,
+              kind: 'deposit',
+              amount: String(n),
+              status: 'incomplete',
+            },
+            update: {},
+          });
+        } catch (dbErr) {
+          console.error('[MGI] failed to record deposit tx', dbErr);
+        }
+      }
       console.log('[MGI] deposit interactive JSON', r.status, 'in', dur, 'ms ->', url);
       return NextResponse.json({ url, id });
     }
 
     const text = await r.text();
+    // A JSON error body from the anchor is a clean user-facing rejection
+    // (e.g. "amount is less than asset's minimum limit") — pass the message
+    // through instead of dumping diagnostics at the user.
+    if (ct.includes('application/json')) {
+      try {
+        const errBody = JSON.parse(text);
+        if (typeof errBody?.error === 'string' && errBody.error) {
+          return j(400, { error: `MoneyGram: ${errBody.error}` });
+        }
+      } catch {
+        /* not JSON after all — fall through to diagnostics */
+      }
+    }
     return j(502, {
       error: 'Unexpected response from anchor',
       status: r.status,
