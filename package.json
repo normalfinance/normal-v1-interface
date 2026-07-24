@@ -68,6 +68,7 @@
     "@upstash/ratelimit": "^2.0.5",
     "@upstash/redis": "^1.35.1",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "@walletconnect/modal": "^2.6.2",
     "@walletconnect/sign-client": "^2.13.1",
     "@walletconnect/types": "^2.13.1",
