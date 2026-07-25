@@ -55,12 +55,15 @@ architecture (workstream B) is *required*, not optional. Decision in Phase 3.
 
 ## Users & database (added 2026-07-24 evening)
 
-- **Registered users: 659** (Dune). Correction 2026-07-25: most are from the
-  OLD architecture (legacy local-key Normal wallets) — the Turnkey sub-org
-  wallet count is much lower. Input needed: Turnkey dashboard → current plan
-  tier + wallet count. Consequence: Turnkey Enterprise negotiation stays a
-  before-the-10k-push item, not an immediate one; balance webhooks are a
-  later bolt-on (Layer 2), not part of the first cache build (Layer 1).
+- **Registered users: 659** (Dune); of those, **34 are Turnkey wallets**
+  (2026-07-25) — the rest are legacy local-key wallets. Consequence: Turnkey
+  Enterprise negotiation stays a before-the-10k-push item; balance webhooks
+  are a later bolt-on (Layer 2), not part of the first cache build (Layer 1).
+- **Pending-receive watchers exist for BTC, ETH *and* SOL** (2026-07-25) —
+  the ETH/SOL watchers poll the PAID providers (Alchemy/Helius) per client;
+  likely the main driver of Helius "Enhanced API = 94 %" usage. Layer-1 fix:
+  watchers keep the feature but poll our cached server route, modal-open
+  only, auto-stop ~30 min. Exact current intervals: pin in Phase 1 map.
 - Supabase Query Performance (production `normal-stellar`, FREE plan): 97 slow
   queries · 100 % cache hit rate · 4.4 avg rows/call.
 - **Finding P0-2 — Supabase Realtime churn:** the top FOUR queries by total

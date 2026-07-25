@@ -44,3 +44,6 @@ next-env.d.ts
 .notes/
 
 .notes
+# HAR captures contain live session tokens/cookies — never commit. Aggregated
+# counts go into docs/audit/02-baseline.md instead.
+docs/audit/har/
