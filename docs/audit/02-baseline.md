@@ -78,6 +78,62 @@ architecture (workstream B) is *required*, not optional. Decision in Phase 3.
 - Actual application queries (PostgREST `authenticated` role) are modest:
   ~12k calls, mean 19 ms, max 1.5 s — max latency worth a look in Phase 2.
 
+## HAR measurements (staging, 2026-07-25 — 6 flows captured; swap deferred to localhost)
+
+Per-flow request totals (browser → destination):
+
+| Flow | Total req | Own API | Direct Horizon | Direct mempool | Notes |
+|---|---|---|---|---|---|
+| 01 cold login→portfolio | 157 / 20 s | 20 | 10 | – | + 10 walletconnect-explorer, 9 cloudflare challenges, 6 Soroban RPC (rpc.lightsail.network) |
+| 02 warm home→drawer→portfolio | 326 / 20 s | **90** | **29** | 4 | `/api/turnkey/wallet` **44×** in 20 s |
+| 03 asset USDC | 34 | 14 | 8 | – | |
+| 05 receive watch (ETH,SOL,BTC ~2 min each) | 392 / 7.4 min | 192 (25.9/min) | 37 | 22 | + one 2-min websocket (mempool) |
+| 06 savings | 19 | 17 | – | – | |
+| 07 **idle tab, 11.2 min** | 159 | **137 (12.2/min)** | – | – | `/api/cctp/transfers` 44× · `/api/lifi/statuses` 34× · `/api/wallet/portfolio` 25× · `/api/mgi/transactions` 22× · `/api/mgi/info` 12× |
+
+**Findings from the captures:**
+
+- **P0-3 ROOT-CAUSE HYPOTHESIS (2026-07-25, code-verified mechanism, env
+  unconfirmed):** the route's internal work is hard-capped (~5 s source
+  timeouts, `allSettled`) — the only unbounded step is **Upstash Redis**. If
+  staging's Vercel env lacks/breaks the `UPSTASH_REDIS_MAINNET_*` vars, the
+  client boots with empty credentials by design (rateLimiter.ts keeps the app
+  alive) and every `redis.get` burns the client's ~5-retry backoff (~20 s)
+  before failing → ~20 s + ~2 s real work = the measured 22 s. Corroboration:
+  localhost (working Redis) serves the same route in 2–7 s; the ~9 s
+  `lifi/statuses`/`activity` routes are also Redis-touching. Consequence if
+  confirmed: staging runs with NO response cache and NO rate limiting.
+  Verify via: staging env-var screenshot + the `[RateLimiter] Upstash config
+  diagnostics` log line (prints hasUrl/hasToken).
+  Also noted: the 15 s response-cache TTL vs the client's 30 s poll means
+  even a healthy cache misses on every poll — TTL/poll mismatch to fix in
+  Layer 1.
+- **P0-3 — `/api/wallet/portfolio` takes ~22 s, consistently** (22.03–22.46 s
+  across every flow that calls it). A stable ~22 s smells like an internal
+  ~20 s timeout + retry inside the route. It is ALSO polled every ~30 s
+  (P0-4), meaning near-continuous overlapping 22-second serverless
+  executions per open tab. Likely the root of "portfolio/savings loads
+  last". Top Phase-2 investigation.
+- **P0-4 — idle tab burns 12.2 own-API requests/min (~730/hour/user)** with
+  nobody touching it. Each of those serverless invocations fans out to paid
+  providers server-side. This is the users × time leak, measured.
+- **P0-5 — `/api/turnkey/wallet` dedupe fails in practice**: 44 calls in a
+  20-second flow and 50 during receive-watch despite the shared-SWR design
+  (60 s dedupe). Investigate why (multiple caches? hard navigations? mutate
+  loops?).
+- **P0-6 — `/api/mgi/info` is fetched eagerly everywhere** (6–14× per flow,
+  incl. homepage) and produces trailing-slash duplicate calls (`info` +
+  failing `info/`) — check Next `trailingSlash` redirect behavior + mount
+  strategy of the on/off-ramp dialogs.
+- **P0-7 — a statuspage.io widget polls 2×/min forever** (even idle) —
+  identify which component embeds it; free but noisy.
+- Slowest calls: portfolio ~22 s (see P0-3); `/api/lifi/statuses` and
+  `/api/activity/solana|ethereum` ~9 s each on first hit.
+- Direct-from-browser provider calls confirmed: Horizon (up to 29/flow),
+  Soroban RPC (lightsail), mempool.space. Alchemy/Helius/CoinGecko are
+  already server-side only — the Layer-1 refactor completes a pattern that
+  is half-done, not greenfield.
+
 ## Governance flags (found during baselining)
 
 1. **Upstash account ownership unknown** — production rate limiting depends on
