@@ -53,6 +53,28 @@ architecture (every client fetches balances/prices per view from paid APIs)
 **cannot meet the $0-API-spend target at 10k users**. A shared-cache
 architecture (workstream B) is *required*, not optional. Decision in Phase 3.
 
+## Users & database (added 2026-07-24 evening)
+
+- **Registered users: 659** (Dune). Correction 2026-07-25: most are from the
+  OLD architecture (legacy local-key Normal wallets) — the Turnkey sub-org
+  wallet count is much lower. Input needed: Turnkey dashboard → current plan
+  tier + wallet count. Consequence: Turnkey Enterprise negotiation stays a
+  before-the-10k-push item, not an immediate one; balance webhooks are a
+  later bolt-on (Layer 2), not part of the first cache build (Layer 1).
+- Supabase Query Performance (production `normal-stellar`, FREE plan): 97 slow
+  queries · 100 % cache hit rate · 4.4 avg rows/call.
+- **Finding P0-2 — Supabase Realtime churn:** the top FOUR queries by total
+  time are the Realtime engine's WAL-polling internals (`SELECT wal->>… as
+  type…` 67.5 % + 22.7 %, `realtime.list_changes` 4.0 %, + 3.8 % — together
+  ≈ 98 % of all DB query time, 17M+ calls), yet **the app does not use
+  Supabase Realtime at all** (verified: only a coincidentally-named TS type).
+  This is the free tier's shared compute being burned polling for subscribers
+  that don't exist. Candidate fix (config-only, zero code): disable the
+  Realtime API in Supabase project settings. Verify nothing breaks on staging
+  first.
+- Actual application queries (PostgREST `authenticated` role) are modest:
+  ~12k calls, mean 19 ms, max 1.5 s — max latency worth a look in Phase 2.
+
 ## Governance flags (found during baselining)
 
 1. **Upstash account ownership unknown** — production rate limiting depends on
