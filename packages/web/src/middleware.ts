@@ -366,7 +366,6 @@ export const config = {
     '/assets/:path*',
     '/invest',
     '/earn',
-    '/rewards',
     '/indexes',
     '/indexes/:path*',
     '/indexes/create',

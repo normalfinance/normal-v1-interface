@@ -11,6 +11,7 @@ import { themeConfig, ThemeProvider } from '@/theme';
 import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
 import { ModalProvider } from '@/providers/ModalProvider';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ReferralProvider } from '@/providers/ReferralProvider';
 import { ExternalProvider } from '@/providers/ExternalProvider';
 import { AssetActionsProvider } from '@/providers/AssetActionsProvider';
@@ -140,6 +141,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                           <MotionLazy>
                             <SnackbarProvider>
                               <Analytics />
+                              {/* Collect-only real-user performance vitals (Phase 0
+                                  baseline — approved 2026-07-24). */}
+                              <SpeedInsights />
                               <ProgressBar />
                               <SettingsDrawer defaultSettings={defaultSettings} />
                               <AnnouncementProvider>

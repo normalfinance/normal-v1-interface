@@ -18,9 +18,36 @@ export class WalletSessionExpiredError extends Error {
   }
 }
 
-function isSessionError(err: any): boolean {
+export function isSessionError(err: any): boolean {
   const msg: string = (err?.message ?? '').toLowerCase();
   return msg.includes('connection key') || msg.includes('walletconnect') || msg.includes('session');
+}
+
+// Module-level (not a hook) so non-React code — e.g. the MGI kit signer — can
+// surface the same reconnect UX. Labels are parameters because t() only exists
+// inside hooks; callers without a translator get the English defaults.
+export function showWalletReconnectSnackbar(
+  connectWallet: () => void,
+  labels?: { message?: string; action?: string }
+) {
+  const key = enqueueSnackbar(labels?.message ?? 'Your wallet session has expired.', {
+    variant: 'warning',
+    persist: true,
+    action: () => (
+      <Button
+        size="small"
+        variant="contained"
+        color="warning"
+        onClick={() => {
+          closeSnackbar(key);
+          connectWallet();
+        }}
+        sx={{ ml: 1, fontWeight: 600 }}
+      >
+        {labels?.action ?? 'Reconnect'}
+      </Button>
+    ),
+  });
 }
 
 export function useWalletReconnect() {
@@ -36,27 +63,10 @@ export function useWalletReconnect() {
         return await kitSign(xdr, networkPassphrase);
       } catch (err: any) {
         if (isSessionBased && isSessionError(err)) {
-          const key = enqueueSnackbar(
-            t('Your wallet session has expired.'),
-            {
-              variant: 'warning',
-              persist: true,
-              action: () => (
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="warning"
-                  onClick={() => {
-                    closeSnackbar(key);
-                    connectWallet();
-                  }}
-                  sx={{ ml: 1, fontWeight: 600 }}
-                >
-                  {t('Reconnect')}
-                </Button>
-              ),
-            }
-          );
+          showWalletReconnectSnackbar(connectWallet, {
+            message: t('Your wallet session has expired.'),
+            action: t('Reconnect'),
+          });
           throw new WalletSessionExpiredError();
         }
         throw err;

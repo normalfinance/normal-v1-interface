@@ -1,5 +1,7 @@
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // We send only `asset_code: 'USDC'`; MoneyGram resolves the issuer for its
@@ -38,10 +40,10 @@ export async function POST(req: Request) {
       return j(400, { error: 'Missing or invalid amount (number required)' });
     }
 
-    const host = process.env.MGI_ACCESS_HOST; // extstellar.moneygram.com for sandbox
-    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
+    const base = mgiApiBase(); // extmgxanchor.moneygram.com in test, mgxanchor.moneygram.com in prod
+    if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
-    const endpoint = `https://${host}/stellaradapterservice/sep24/transactions/deposit/interactive`;
+    const endpoint = `${base}/sep24/transactions/deposit/interactive`;
 
     const payload: Record<string, any> = {
       asset_code: 'USDC',
@@ -82,11 +84,44 @@ export async function POST(req: Request) {
       if (!url) {
         return j(502, { error: 'Interactive JSON lacked url', details: data, status: r.status });
       }
+      // Record the transaction so the activity feed can render it without a
+      // SEP-10 ceremony. Best-effort — a logging failure must not break the ramp.
+      if (id) {
+        try {
+          await prisma.moneyGramTransaction.upsert({
+            where: { id: String(id) },
+            create: {
+              id: String(id),
+              supabaseUid: user.id,
+              walletAddress: account,
+              kind: 'deposit',
+              amount: String(n),
+              status: 'incomplete',
+            },
+            update: {},
+          });
+        } catch (dbErr) {
+          console.error('[MGI] failed to record deposit tx', dbErr);
+        }
+      }
       console.log('[MGI] deposit interactive JSON', r.status, 'in', dur, 'ms ->', url);
       return NextResponse.json({ url, id });
     }
 
     const text = await r.text();
+    // A JSON error body from the anchor is a clean user-facing rejection
+    // (e.g. "amount is less than asset's minimum limit") — pass the message
+    // through instead of dumping diagnostics at the user.
+    if (ct.includes('application/json')) {
+      try {
+        const errBody = JSON.parse(text);
+        if (typeof errBody?.error === 'string' && errBody.error) {
+          return j(400, { error: `MoneyGram: ${errBody.error}` });
+        }
+      } catch {
+        /* not JSON after all — fall through to diagnostics */
+      }
+    }
     return j(502, {
       error: 'Unexpected response from anchor',
       status: r.status,
@@ -94,7 +129,7 @@ export async function POST(req: Request) {
       bodySnippet: text.slice(0, 2000),
       sentTo: endpoint,
       sentBody: payload,
-      note: 'Adapterservice should return JSON or a 302/303 redirect to the interactive UI. If HTML persists, re-check allowlisted client_domain and SEP-10 token scope.',
+      note: 'The anchor should return JSON or a 302/303 redirect to the interactive UI. If HTML persists, re-check allowlisted client_domain and SEP-10 token scope.',
     });
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep24/deposit crashed:', e);

@@ -43,6 +43,7 @@ import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
 import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
+import MoneyGramPendingBanner from '@/components/_common/moneygram-pending-banner';
 import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
 
 import { AssetPriceChart } from './asset-price-chart';
@@ -514,6 +515,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
 
       {/* Asset-scoped activity */}
       <Box sx={{ mt: '20px' }}>
+        {/* In-flight MoneyGram cash deposits/outs — USDC (Stellar) is the only
+            asset MoneyGram ramps, so the banner only belongs here. */}
+        {token.symbol === 'USDC' && <MoneyGramPendingBanner />}
         <ActivityCard
           walletAddress={wallet.address}
           bitcoinAddress={isBtc ? btc.bitcoinAddress : undefined}

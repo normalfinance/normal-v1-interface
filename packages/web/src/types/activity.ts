@@ -58,6 +58,10 @@ export interface BuyActivity extends ActivityBase {
   iconUrl: string;
   amount: number;
   provider?: string;
+  /** On/off-ramp still in flight (e.g. MoneyGram awaiting the cash drop-off). */
+  pending?: boolean;
+  /** Ramp ended unsuccessfully (expired, error, no market…). */
+  failed?: boolean;
 }
 
 export interface SellActivity extends ActivityBase {
@@ -66,6 +70,10 @@ export interface SellActivity extends ActivityBase {
   iconUrl: string;
   amount: number;
   provider?: string;
+  /** On/off-ramp still in flight (e.g. MoneyGram cash pickup not collected). */
+  pending?: boolean;
+  /** Ramp ended unsuccessfully (expired, error, no market…). */
+  failed?: boolean;
 }
 
 export interface AddLiquidityActivity extends ActivityBase {

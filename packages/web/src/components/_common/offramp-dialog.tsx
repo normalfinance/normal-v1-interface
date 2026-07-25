@@ -1,11 +1,13 @@
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
 import React, { useState, useEffect } from 'react';
-import { runWithdrawFlow } from '@/lib/mgi/client';
+import { useMgiLimits } from '@/hooks/use-mgi-limits';
 import { useBoolean, useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { runWithdrawFlow, hasCachedMgiToken } from '@/lib/mgi/client';
+import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import { cdn, isTestnet, createCoinbasePayOfframpURL } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 
@@ -92,6 +94,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   const { user, session } = useSupabaseAuth();
 
   const moneyGramAmountDialog = useBoolean();
+  const mgiLimits = useMgiLimits();
 
   const [mgiLoading, setMgiLoading] = useState(false);
   // Coinbase amount-entry step (only when assetBalance is provided)
@@ -282,10 +285,12 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
 
   /** MoneyGram */
   async function startMgiWithdraw(addr: string, amountStr: string) {
-    // Open the popup synchronously, inside the click's user activation — after
-    // the SEP-10 passkey prompt + network calls, window.open would be blocked.
-    // We navigate this window once MGI's interactive URL is ready.
-    const popup = openMoneyGramPlaceholder();
+    // Pre-open the popup ONLY when a cached SEP-10 token means no signature is
+    // coming — a fresh passkey (WebAuthn) ceremony requires document focus,
+    // which a pre-opened popup steals ("The document is not focused."). Without
+    // a cached token we sign first, then openMoneyGramWindow's snackbar
+    // fallback opens MoneyGram from an explicit click.
+    const popup = hasCachedMgiToken(addr, isTestnet()) ? openMoneyGramPlaceholder() : null;
     setMgiLoading(true);
     try {
       const env = await detectWalletEnv();
@@ -308,7 +313,10 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
       );
     } catch (e: any) {
       popup?.close();
-      enqueueSnackbar(t('MoneyGram withdrawal failed'), { variant: 'error' });
+      // Session expiry already surfaced its own reconnect snackbar.
+      if (!(e instanceof WalletSessionExpiredError)) {
+        enqueueSnackbar(t('MoneyGram withdrawal failed'), { variant: 'error' });
+      }
     } finally {
       setMgiLoading(false);
     }
@@ -481,8 +489,10 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           startMgiWithdraw(userAddress ?? '', val);
         }}
         // MGI production SEP-24 /info: withdraw USDC min 1 / max 2500, no fees.
-        min={1}
-        max={2500}
+        // MoneyGram's LIVE SEP-24 /info limits — hardcoding went stale once
+        // already (min moved 1 → 15) and users got raw anchor rejections.
+        min={mgiLimits.withdraw.min}
+        max={mgiLimits.withdraw.max}
         kind="withdraw"
       />
     </>

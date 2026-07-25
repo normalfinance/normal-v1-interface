@@ -1,5 +1,7 @@
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { j, getAccessToken } from '@/utils/http';
+import { mgiApiBase } from '@/lib/mgi/server-base';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
@@ -34,10 +36,10 @@ export async function POST(req: Request) {
     const n = Number(amount);
     if (!Number.isFinite(n)) return j(400, { error: 'Amount must be a valid number' });
 
-    const host = process.env.MGI_ACCESS_HOST;
-    if (!host) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
+    const base = mgiApiBase();
+    if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
 
-    const endpoint = `https://${host}/stellaradapterservice/sep24/transactions/withdraw/interactive`;
+    const endpoint = `${base}/sep24/transactions/withdraw/interactive`;
 
     const payload = {
       asset_code: 'USDC',
@@ -71,10 +73,43 @@ export async function POST(req: Request) {
       const url = data?.url ?? data?.location ?? null;
       const id = data?.id ?? data?.transaction_id ?? null;
       if (!url) return j(502, { error: 'JSON response lacked url', details: data });
+      // Record the transaction so the activity feed can render it without a
+      // SEP-10 ceremony. Best-effort — a logging failure must not break the ramp.
+      if (id) {
+        try {
+          await prisma.moneyGramTransaction.upsert({
+            where: { id: String(id) },
+            create: {
+              id: String(id),
+              supabaseUid: user.id,
+              walletAddress: account,
+              kind: 'withdrawal',
+              amount: String(n),
+              status: 'incomplete',
+            },
+            update: {},
+          });
+        } catch (dbErr) {
+          console.error('[MGI] failed to record withdraw tx', dbErr);
+        }
+      }
       return NextResponse.json({ url, id });
     }
 
     const text = await r.text();
+    // A JSON error body from the anchor is a clean user-facing rejection
+    // (e.g. "amount is less than asset's minimum limit") — pass the message
+    // through instead of dumping diagnostics at the user.
+    if (ct.includes('application/json')) {
+      try {
+        const errBody = JSON.parse(text);
+        if (typeof errBody?.error === 'string' && errBody.error) {
+          return j(400, { error: `MoneyGram: ${errBody.error}` });
+        }
+      } catch {
+        /* not JSON after all — fall through to diagnostics */
+      }
+    }
     return j(502, {
       error: 'Unexpected response from anchor',
       status: r.status,
