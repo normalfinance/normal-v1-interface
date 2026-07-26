@@ -60,5 +60,5 @@ Interpreted as ratifiable targets:
 
 ## Ratification
 
-- [ ] Numbers reviewed/edited by Niko
-- [ ] Ratified on: ____
+- [x] Numbers reviewed by Niko — accepted as proposed ("agree with all")
+- [x] Ratified on: 2026-07-25

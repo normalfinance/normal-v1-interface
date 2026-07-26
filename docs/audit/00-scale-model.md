@@ -46,7 +46,7 @@ table is pinned.
 | Provider | Limit | Today peak | 10k campaign | 10k spike | Headroom |
 |---|---|---|---|---|---|
 | Alchemy | 30M CU/mo · 500 CU/s | 2.3 CU/s · 111K CU/mo | ~800M CU/mo (today's arch) / ~12M (Layer 1) | | 0.04× today / 2.5× Layer 1 |
-| Helius | 1M credits/cycle | 15.3K/cycle | | | |
+| Helius | 1M credits/cycle · 10 req/s | 15.3K/cycle | ~60M/mo (today's arch: SOL history = **100 credits/call**, polled) / ~2M (Layer 1) | | 0.017× today / ~0.5× Layer 1 → SOL history caching is mandatory, maybe paid tier at 10k |
 | Etherscan | 100k/day · 5/s | 18/day | | | |
 | CoinGecko keyless | TBD (docs) | unmetered | | | |
 | Horizon public | TBD | unmetered | | | |

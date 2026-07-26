@@ -289,14 +289,18 @@ export default function OnboardingWizard({
         return;
       }
 
-      // When every linked wallet is Turnkey-managed there is nothing the
-      // user needs to do — connect silently and skip the wizard entirely.
+      // A Turnkey wallet is the user's primary — connect it silently and never
+      // block login with the account picker, even when old (pre-Turnkey)
+      // linked wallets exist. Those stay reachable from the drawer's wallet
+      // selection (the re-import flow) as an opt-in action, not a login toll.
+      // (Post-DB-consolidation, returning users have BOTH their Turnkey wallet
+      // and their old-architecture wallets linked — the picker here made every
+      // login start with a modal.)
       const tk = await getTurnkeyWalletInfo();
       const tkAddress = tk?.stellarAddress ?? null;
       setTurnkeyStellarAddress(tkAddress);
 
-      const allTurnkey = !!tkAddress && wallets.every((w) => w.walletAddress === tkAddress);
-      if (allTurnkey) {
+      if (tkAddress) {
         try {
           await connectWalletWithoutKeypair(tkAddress);
           onClose();
@@ -307,8 +311,8 @@ export default function OnboardingWizard({
         }
       }
 
-      // Mixed wallets (some outside Turnkey) — show the picker; it offers a
-      // one-click "Continue with Turnkey" when a Turnkey wallet exists.
+      // Legacy-only user (no Turnkey wallet yet) — show the picker so they can
+      // reconnect one of their old wallets or import it into Turnkey.
       setIsReturningUser(true);
       setStep('linked-accounts');
     } catch (err) {

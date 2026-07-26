@@ -53,6 +53,53 @@ architecture (every client fetches balances/prices per view from paid APIs)
 **cannot meet the $0-API-spend target at 10k users**. A shared-cache
 architecture (workstream B) is *required*, not optional. Decision in Phase 3.
 
+## Platform spend & on-chain actuals (added 2026-07-25)
+
+- **Vercel: Pro plan, upcoming invoice ≈ $40/mo** (seats + add-ons; $4.06 of
+  $20 included infra credit used; on-demand budget capped at $200, unused).
+- Supabase org billing: screenshot still pending (project badge says FREE).
+- **Dune (screenshots 2026-07-25):** 659 registered users · **15 wallets have
+  EVER transacted** · daily active wallets 0–5 (peak 5) · TVL $18,543 ·
+  all-time volume $22,607 · protocol fees $107.98 · savings yield generated
+  $227.28 · signup spike ~100/day (Mar 2026 campaign).
+- **Activation ratio: 15/659 ≈ 2.3 % ever-transacted, DAU/registered <1 %.**
+  Scale-model consequence: "10k registered" ≠ 10k load unless activation
+  improves — but the sponsor-spike scenario must still assume campaign
+  cohorts arriving all at once. (Also a product insight outside this audit's
+  scope: activation, not infra, is the current growth bottleneck.)
+
+## Supabase spend & quota risk (screenshots 2026-07-26)
+
+- **Free Plan, $0/mo, spend cap ENABLED** — at quota exhaustion projects
+  "become unresponsive or enter read-only mode": under a sponsor-post spike
+  the database would simply STOP rather than bill overage. Must flip to Pro
+  (or at minimum disable spend cap) before any push. NANO compute tier on
+  both projects (the P0-2 Realtime churn burns this tiny instance).
+- Usage: Egress 123 MB/5 GB · DB size 54 MB/500 MB · **MAU 35**/50,000 ·
+  storage 0. (MAU 35 corroborates the ~2 % activation picture.)
+- Projects: `normal-stellar` (us-east-2) = production auth+DB
+  (`vunxamog…`); `normal-testing` (us-west-2, `gnqjbvmx…`).
+
+- **P0-8 (RESOLVED to a naming/architecture finding, 2026-07-26):**
+  production, staging AND localhost all run Prisma against the SAME database
+  — the project **named `normal-testing`** (`gnqjbvmx…`, us-west-2, NANO,
+  free org). Verified two ways: Vercel's Production `DATABASE_MAINNET_URL`
+  shows the same ref, and a read-only count found the real production data
+  inside: **34 turnkey_wallets (exact match to the Turnkey dashboard),
+  45 swap_logs, 11 moneygram_transactions, 83 linked_wallets, incl. the
+  owner's own wallet row**. So: the MoneyGram migration DID hit the right
+  DB (recording works everywhere — earlier worst-case retracted), but:
+  (a) **production data lives in a project whose name says "testing"** — an
+  invitation for someone to delete it during cleanup; rename the project
+  (cosmetic, zero-risk) → e.g. `normal-app-db`;
+  (b) the P0-9 spend-cap/NANO risk applies to THIS database — the real one;
+  (c) auth (`normal-stellar`, us-east-2) and data (us-west-2) are in
+  different regions — every request pays a cross-region hop somewhere;
+  (d) `DATABASE_MAINNET_URL` and `DATABASE_TESTNET_URL` carry IDENTICAL
+  values — testnet mode writes into the production tables; the mainnet/
+  testnet DB split exists in variable names only.
+  Roadmap items, none require immediate action except (b).
+
 ## Users & database (added 2026-07-24 evening)
 
 - **Registered users: 659** (Dune); of those, **34 are Turnkey wallets**
@@ -93,8 +140,16 @@ Per-flow request totals (browser → destination):
 
 **Findings from the captures:**
 
-- **P0-3 ROOT-CAUSE HYPOTHESIS (2026-07-25, code-verified mechanism, env
-  unconfirmed):** the route's internal work is hard-capped (~5 s source
+- **P0-3 ROOT CAUSE CONFIRMED (2026-07-25, Vercel env screenshot):**
+  `UPSTASH_REDIS_MAINNET_REST_URL/TOKEN` are scoped to **Production only**;
+  staging deploys from develop as **Preview** in the same project → Preview
+  gets `undefined` for both → Redis client boots with empty credentials →
+  every `redis.get/set` burns the retry backoff (~20 s) → the measured 22 s
+  portfolio, the ~9 s Redis-touching routes, and NO rate limiting on
+  staging. FIX (folds into the planned account move): create the new
+  company-email Upstash account, two DBs, and set all four vars for **All
+  Environments**. Retest: staging portfolio should drop 22 s → ~2 s.
+  Original hypothesis for the record: the route's internal work is hard-capped (~5 s source
   timeouts, `allSettled`) — the only unbounded step is **Upstash Redis**. If
   staging's Vercel env lacks/breaks the `UPSTASH_REDIS_MAINNET_*` vars, the
   client boots with empty credentials by design (rateLimiter.ts keeps the app
