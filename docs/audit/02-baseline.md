@@ -53,14 +53,64 @@ architecture (every client fetches balances/prices per view from paid APIs)
 **cannot meet the $0-API-spend target at 10k users**. A shared-cache
 architecture (workstream B) is *required*, not optional. Decision in Phase 3.
 
+## Platform spend & on-chain actuals (added 2026-07-25)
+
+- **Vercel: Pro plan, upcoming invoice ≈ $40/mo** (seats + add-ons; $4.06 of
+  $20 included infra credit used; on-demand budget capped at $200, unused).
+- Supabase org billing: screenshot still pending (project badge says FREE).
+- **Dune (screenshots 2026-07-25):** 659 registered users · **15 wallets have
+  EVER transacted** · daily active wallets 0–5 (peak 5) · TVL $18,543 ·
+  all-time volume $22,607 · protocol fees $107.98 · savings yield generated
+  $227.28 · signup spike ~100/day (Mar 2026 campaign).
+- **Activation ratio: 15/659 ≈ 2.3 % ever-transacted, DAU/registered <1 %.**
+  Scale-model consequence: "10k registered" ≠ 10k load unless activation
+  improves — but the sponsor-spike scenario must still assume campaign
+  cohorts arriving all at once. (Also a product insight outside this audit's
+  scope: activation, not infra, is the current growth bottleneck.)
+
+## Supabase spend & quota risk (screenshots 2026-07-26)
+
+- **Free Plan, $0/mo, spend cap ENABLED** — at quota exhaustion projects
+  "become unresponsive or enter read-only mode": under a sponsor-post spike
+  the database would simply STOP rather than bill overage. Must flip to Pro
+  (or at minimum disable spend cap) before any push. NANO compute tier on
+  both projects (the P0-2 Realtime churn burns this tiny instance).
+- Usage: Egress 123 MB/5 GB · DB size 54 MB/500 MB · **MAU 35**/50,000 ·
+  storage 0. (MAU 35 corroborates the ~2 % activation picture.)
+- Projects: `normal-stellar` (us-east-2) = production auth+DB
+  (`vunxamog…`); `normal-testing` (us-west-2, `gnqjbvmx…`).
+
+- **P0-8 (RESOLVED to a naming/architecture finding, 2026-07-26):**
+  production, staging AND localhost all run Prisma against the SAME database
+  — the project **named `normal-testing`** (`gnqjbvmx…`, us-west-2, NANO,
+  free org). Verified two ways: Vercel's Production `DATABASE_MAINNET_URL`
+  shows the same ref, and a read-only count found the real production data
+  inside: **34 turnkey_wallets (exact match to the Turnkey dashboard),
+  45 swap_logs, 11 moneygram_transactions, 83 linked_wallets, incl. the
+  owner's own wallet row**. So: the MoneyGram migration DID hit the right
+  DB (recording works everywhere — earlier worst-case retracted), but:
+  (a) **production data lives in a project whose name says "testing"** — an
+  invitation for someone to delete it during cleanup; rename the project
+  (cosmetic, zero-risk) → e.g. `normal-app-db`;
+  (b) the P0-9 spend-cap/NANO risk applies to THIS database — the real one;
+  (c) auth (`normal-stellar`, us-east-2) and data (us-west-2) are in
+  different regions — every request pays a cross-region hop somewhere;
+  (d) `DATABASE_MAINNET_URL` and `DATABASE_TESTNET_URL` carry IDENTICAL
+  values — testnet mode writes into the production tables; the mainnet/
+  testnet DB split exists in variable names only.
+  Roadmap items, none require immediate action except (b).
+
 ## Users & database (added 2026-07-24 evening)
 
-- **Registered users: 659** (Dune). Correction 2026-07-25: most are from the
-  OLD architecture (legacy local-key Normal wallets) — the Turnkey sub-org
-  wallet count is much lower. Input needed: Turnkey dashboard → current plan
-  tier + wallet count. Consequence: Turnkey Enterprise negotiation stays a
-  before-the-10k-push item, not an immediate one; balance webhooks are a
-  later bolt-on (Layer 2), not part of the first cache build (Layer 1).
+- **Registered users: 659** (Dune); of those, **34 are Turnkey wallets**
+  (2026-07-25) — the rest are legacy local-key wallets. Consequence: Turnkey
+  Enterprise negotiation stays a before-the-10k-push item; balance webhooks
+  are a later bolt-on (Layer 2), not part of the first cache build (Layer 1).
+- **Pending-receive watchers exist for BTC, ETH *and* SOL** (2026-07-25) —
+  the ETH/SOL watchers poll the PAID providers (Alchemy/Helius) per client;
+  likely the main driver of Helius "Enhanced API = 94 %" usage. Layer-1 fix:
+  watchers keep the feature but poll our cached server route, modal-open
+  only, auto-stop ~30 min. Exact current intervals: pin in Phase 1 map.
 - Supabase Query Performance (production `normal-stellar`, FREE plan): 97 slow
   queries · 100 % cache hit rate · 4.4 avg rows/call.
 - **Finding P0-2 — Supabase Realtime churn:** the top FOUR queries by total
@@ -74,6 +124,70 @@ architecture (workstream B) is *required*, not optional. Decision in Phase 3.
   first.
 - Actual application queries (PostgREST `authenticated` role) are modest:
   ~12k calls, mean 19 ms, max 1.5 s — max latency worth a look in Phase 2.
+
+## HAR measurements (staging, 2026-07-25 — 6 flows captured; swap deferred to localhost)
+
+Per-flow request totals (browser → destination):
+
+| Flow | Total req | Own API | Direct Horizon | Direct mempool | Notes |
+|---|---|---|---|---|---|
+| 01 cold login→portfolio | 157 / 20 s | 20 | 10 | – | + 10 walletconnect-explorer, 9 cloudflare challenges, 6 Soroban RPC (rpc.lightsail.network) |
+| 02 warm home→drawer→portfolio | 326 / 20 s | **90** | **29** | 4 | `/api/turnkey/wallet` **44×** in 20 s |
+| 03 asset USDC | 34 | 14 | 8 | – | |
+| 05 receive watch (ETH,SOL,BTC ~2 min each) | 392 / 7.4 min | 192 (25.9/min) | 37 | 22 | + one 2-min websocket (mempool) |
+| 06 savings | 19 | 17 | – | – | |
+| 07 **idle tab, 11.2 min** | 159 | **137 (12.2/min)** | – | – | `/api/cctp/transfers` 44× · `/api/lifi/statuses` 34× · `/api/wallet/portfolio` 25× · `/api/mgi/transactions` 22× · `/api/mgi/info` 12× |
+
+**Findings from the captures:**
+
+- **P0-3 ROOT CAUSE CONFIRMED (2026-07-25, Vercel env screenshot):**
+  `UPSTASH_REDIS_MAINNET_REST_URL/TOKEN` are scoped to **Production only**;
+  staging deploys from develop as **Preview** in the same project → Preview
+  gets `undefined` for both → Redis client boots with empty credentials →
+  every `redis.get/set` burns the retry backoff (~20 s) → the measured 22 s
+  portfolio, the ~9 s Redis-touching routes, and NO rate limiting on
+  staging. FIX (folds into the planned account move): create the new
+  company-email Upstash account, two DBs, and set all four vars for **All
+  Environments**. Retest: staging portfolio should drop 22 s → ~2 s.
+  Original hypothesis for the record: the route's internal work is hard-capped (~5 s source
+  timeouts, `allSettled`) — the only unbounded step is **Upstash Redis**. If
+  staging's Vercel env lacks/breaks the `UPSTASH_REDIS_MAINNET_*` vars, the
+  client boots with empty credentials by design (rateLimiter.ts keeps the app
+  alive) and every `redis.get` burns the client's ~5-retry backoff (~20 s)
+  before failing → ~20 s + ~2 s real work = the measured 22 s. Corroboration:
+  localhost (working Redis) serves the same route in 2–7 s; the ~9 s
+  `lifi/statuses`/`activity` routes are also Redis-touching. Consequence if
+  confirmed: staging runs with NO response cache and NO rate limiting.
+  Verify via: staging env-var screenshot + the `[RateLimiter] Upstash config
+  diagnostics` log line (prints hasUrl/hasToken).
+  Also noted: the 15 s response-cache TTL vs the client's 30 s poll means
+  even a healthy cache misses on every poll — TTL/poll mismatch to fix in
+  Layer 1.
+- **P0-3 — `/api/wallet/portfolio` takes ~22 s, consistently** (22.03–22.46 s
+  across every flow that calls it). A stable ~22 s smells like an internal
+  ~20 s timeout + retry inside the route. It is ALSO polled every ~30 s
+  (P0-4), meaning near-continuous overlapping 22-second serverless
+  executions per open tab. Likely the root of "portfolio/savings loads
+  last". Top Phase-2 investigation.
+- **P0-4 — idle tab burns 12.2 own-API requests/min (~730/hour/user)** with
+  nobody touching it. Each of those serverless invocations fans out to paid
+  providers server-side. This is the users × time leak, measured.
+- **P0-5 — `/api/turnkey/wallet` dedupe fails in practice**: 44 calls in a
+  20-second flow and 50 during receive-watch despite the shared-SWR design
+  (60 s dedupe). Investigate why (multiple caches? hard navigations? mutate
+  loops?).
+- **P0-6 — `/api/mgi/info` is fetched eagerly everywhere** (6–14× per flow,
+  incl. homepage) and produces trailing-slash duplicate calls (`info` +
+  failing `info/`) — check Next `trailingSlash` redirect behavior + mount
+  strategy of the on/off-ramp dialogs.
+- **P0-7 — a statuspage.io widget polls 2×/min forever** (even idle) —
+  identify which component embeds it; free but noisy.
+- Slowest calls: portfolio ~22 s (see P0-3); `/api/lifi/statuses` and
+  `/api/activity/solana|ethereum` ~9 s each on first hit.
+- Direct-from-browser provider calls confirmed: Horizon (up to 29/flow),
+  Soroban RPC (lightsail), mempool.space. Alchemy/Helius/CoinGecko are
+  already server-side only — the Layer-1 refactor completes a pattern that
+  is half-done, not greenfield.
 
 ## Governance flags (found during baselining)
 

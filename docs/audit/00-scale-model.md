@@ -33,10 +33,20 @@ replaced by measurement.
 
 ## Capacity table (fills as measurements land)
 
+**First real arithmetic (2026-07-25, from HAR + Alchemy CU table
+[eth_getBalance = 20 CU], free tier 30M CU/mo):** an idle tab full-aggregates
+the portfolio ~134×/hour (25 calls/11.2 min, each missing the 15 s cache) →
+~2,680 CU/hour/tab on Alchemy alone. At 10k users × 1 idle-tab-hour/day ≈
+**800M CU/mo ≈ 27× the free tier — from one hook.** Under Layer 1
+(visit+action refresh, ~2 aggregates/user/day): 10k users ≈ **12M CU/mo —
+comfortably inside the free tier.** The architecture decision is therefore
+load-bearing, not optional; matching Helius arithmetic lands when its credit
+table is pinned.
+
 | Provider | Limit | Today peak | 10k campaign | 10k spike | Headroom |
 |---|---|---|---|---|---|
-| Alchemy | 30M CU/mo · 500 CU/s | 2.3 CU/s · 111K CU/mo | | | |
-| Helius | 1M credits/cycle | 15.3K/cycle | | | |
+| Alchemy | 30M CU/mo · 500 CU/s | 2.3 CU/s · 111K CU/mo | ~800M CU/mo (today's arch) / ~12M (Layer 1) | | 0.04× today / 2.5× Layer 1 |
+| Helius | 1M credits/cycle · 10 req/s | 15.3K/cycle | ~60M/mo (today's arch: SOL history = **100 credits/call**, polled) / ~2M (Layer 1) | | 0.017× today / ~0.5× Layer 1 → SOL history caching is mandatory, maybe paid tier at 10k |
 | Etherscan | 100k/day · 5/s | 18/day | | | |
 | CoinGecko keyless | TBD (docs) | unmetered | | | |
 | Horizon public | TBD | unmetered | | | |
