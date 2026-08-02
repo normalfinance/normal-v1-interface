@@ -210,7 +210,7 @@ export default function ConnectedWallet({
 
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'assets' && (
-        <TokensTab tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__')} />
+        <TokensTab loading={tokensFetching} tokens={tokens?.filter((tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__')} />
       )}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
     </Stack>

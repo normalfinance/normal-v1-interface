@@ -4,10 +4,9 @@ import type { WalletActivityItem, WalletActivityResponse } from '@/types/wallet-
 
 import useSWR from 'swr';
 import { useMemo, useEffect } from 'react';
-import { Horizon } from '@stellar/stellar-sdk';
 import { buildAuthHeaders } from '@/utils/http';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
-import { cdn, constants, getCryptoIconUrl } from '@normalfinance/utils';
 import { FAILED_MGI_STATUSES, PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
 
 // Coinbase off-ramp sends are recorded client-side as { coinbaseTxnId: ourTxHash }
@@ -188,8 +187,6 @@ async function fetchCctpTransfers(): Promise<CctpTransferRow[]> {
   }
 }
 
-const FEES_WALLET = 'GCVCVOJMNDX7DBYEN3YAJ2VWIHT4ZDUNSUFIRLHRQBKS7PXSTDRB4MWE';
-
 // MoneyGram rows come from OUR database (written at initiation, statuses
 // reported back after clients fetch them) — never from MoneyGram's SEP-24 API
 // here, which would need a SEP-10 passkey ceremony just to render history.
@@ -214,148 +211,6 @@ function mapMgiDbToActivity(rows: MgiDbTransaction[]): Activity[] {
     });
 }
 
-async function fetchStellarPayments(walletAddress: string): Promise<Activity[]> {
-  try {
-    const config = constants.StellarConfig;
-    const server = new Horizon.Server(config.HORIZON_URL, {
-      allowHttp: config.HORIZON_URL.startsWith('http://'),
-    });
-
-    const payments = await server
-      .payments()
-      .forAccount(walletAddress)
-      .order('desc')
-      .limit(100)
-      .call();
-
-    const activities: Activity[] = [];
-
-    for (const record of payments.records) {
-      if (record.type !== 'payment') continue;
-      const p = record as Horizon.ServerApi.PaymentOperationRecord;
-
-      const isNative = p.asset_type === 'native';
-      const isUsdc = p.asset_code === 'USDC' && p.asset_issuer === config.USDC_ISSUER;
-      if (!isNative && !isUsdc) continue;
-      if (p.to === FEES_WALLET) continue;
-
-      const symbol = isNative ? 'XLM' : 'USDC';
-      const timestamp = Date.parse(p.created_at);
-      const amount = parseFloat(p.amount);
-      const isReceive = p.to === walletAddress;
-
-      activities.push({
-        id: `horizon:${p.id}`,
-        timestamp,
-        type: isReceive ? 'Receive' : 'Sent',
-        address: isReceive ? p.from : p.to,
-        txHash: (p as any).transaction_hash ?? null,
-        token: {
-          address: isNative ? 'native' : (p.asset_code ?? 'USDC'),
-          symbol,
-          iconUrl: getCryptoIconUrl(symbol),
-          amount,
-        },
-      });
-    }
-
-    return activities;
-  } catch {
-    return [];
-  }
-}
-
-async function fetchBtcActivity(bitcoinAddress: string): Promise<Activity[]> {
-  try {
-    // Fetch confirmed+recent txs AND mempool-only txs in parallel.
-    // /txs returns up to 25 recent transactions and can drop older unconfirmed
-    // ones as new confirmed txs come in. /txs/mempool always contains every
-    // current unconfirmed tx — use it as the authoritative pending source.
-    const [txsRes, mempoolRes] = await Promise.all([
-      fetch(`https://mempool.space/api/address/${bitcoinAddress}/txs`),
-      fetch(`https://mempool.space/api/address/${bitcoinAddress}/txs/mempool`),
-    ]);
-    if (!txsRes.ok) return [];
-    const txs: any[] = await txsRes.json();
-    const mempoolTxs: any[] = mempoolRes.ok ? await mempoolRes.json() : [];
-
-    // Authoritative set of txids that are currently unconfirmed
-    const mempoolIds = new Set<string>(mempoolTxs.map((t: any) => t.txid as string));
-
-    // Merge: /txs results first, then any mempool txs not already included
-    const txMap = new Map<string, any>();
-    for (const tx of txs) txMap.set(tx.txid, tx);
-    for (const tx of mempoolTxs) {
-      if (!txMap.has(tx.txid)) txMap.set(tx.txid, tx);
-    }
-    const allTxs = Array.from(txMap.values());
-
-    const activities: Activity[] = [];
-
-    for (const tx of allTxs) {
-      const txid: string = tx.txid;
-      // Use mempool endpoint as ground-truth for unconfirmed status
-      const isConfirmed = mempoolIds.has(txid) ? false : (tx.status?.confirmed ?? false);
-      const timestamp: number = isConfirmed
-        ? (tx.status?.block_time as number) * 1000
-        : Date.now();
-
-      const userInputs: any[] = tx.vin.filter(
-        (v: any) => v.prevout?.scriptpubkey_address === bitcoinAddress
-      );
-      const nonUserOutputs: any[] = tx.vout.filter(
-        (v: any) => v.scriptpubkey_address !== bitcoinAddress
-      );
-      const userOutputs: any[] = tx.vout.filter(
-        (v: any) => v.scriptpubkey_address === bitcoinAddress
-      );
-
-      const isFromUser = userInputs.length > 0;
-      const sentToOthers: number = nonUserOutputs.reduce((s: number, v: any) => s + v.value, 0);
-      const receivedByUser: number = userOutputs.reduce((s: number, v: any) => s + v.value, 0);
-      const btcIcon = cdn('tokens/bitcoin.webp');
-
-      if (isFromUser && sentToOthers > 0) {
-        activities.push({
-          id: `btc:${txid}`,
-          timestamp,
-          type: 'Sent',
-          address: nonUserOutputs[0]?.scriptpubkey_address ?? txid,
-          txHash: txid,
-          confirmed: isConfirmed,
-          token: {
-            address: '__btc__',
-            symbol: 'BTC',
-            iconUrl: btcIcon,
-            amount: sentToOthers / 1e8,
-          },
-        });
-      } else if (receivedByUser > 0) {
-        const senderAddress = isFromUser
-          ? bitcoinAddress
-          : (tx.vin[0]?.prevout?.scriptpubkey_address ?? txid);
-        activities.push({
-          id: `btc:${txid}`,
-          timestamp,
-          type: 'Receive',
-          address: senderAddress,
-          txHash: txid,
-          confirmed: isConfirmed,
-          token: {
-            address: '__btc__',
-            symbol: 'BTC',
-            iconUrl: btcIcon,
-            amount: receivedByUser / 1e8,
-          },
-        });
-      }
-    }
-
-    return activities;
-  } catch {
-    return [];
-  }
-}
 
 async function fetchWalletActivity(url: string): Promise<Activity[]> {
   const res = await fetch(url);
@@ -415,16 +270,20 @@ export function useUserActivity(
   const { transactions: mgiTxs } = useMgiTransactions(!!walletAddress);
   const mgiData = useMemo(() => mapMgiDbToActivity(mgiTxs), [mgiTxs]);
 
-  const { data: stellarData } = useSWR<Activity[]>(
-    walletAddress ? ['stellar-payments', walletAddress] : null,
-    ([, addr]) => fetchStellarPayments(addr as string),
+  // XLM (incl. USDC) and BTC now come through our own routes, so they share a
+  // cache across tabs and — critically — have a server-side timeout. The
+  // dedupe windows match each route's TTL: 60s for Stellar, 45s for Bitcoin
+  // (shorter because that feed carries pending transactions).
+  const { data: stellarData, isLoading: stellarLoading, mutate: mutateStellar } = useSWR<Activity[]>(
+    walletAddress ? `/api/activity/stellar?address=${walletAddress}` : null,
+    fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 60_000 }
   );
 
-  const { data: btcData } = useSWR<Activity[]>(
-    bitcoinAddress ? ['btc-activity', bitcoinAddress] : null,
-    ([, addr]) => fetchBtcActivity(addr as string),
-    { revalidateOnFocus: true, dedupingInterval: 15_000 }
+  const { data: btcData, isLoading: btcLoading, mutate: mutateBtc } = useSWR<Activity[]>(
+    bitcoinAddress ? `/api/activity/bitcoin?address=${bitcoinAddress}` : null,
+    fetchChainActivity,
+    { revalidateOnFocus: true, dedupingInterval: 45_000 }
   );
 
   // ETH/SOL history is served from a 5-minute server-side cache (each miss
@@ -432,13 +291,13 @@ export function useUserActivity(
   // that only produces round-trips that return the same bytes. The dedupe
   // window matches the TTL; freshness after a user action comes from the
   // `nf:activity-updated` handler below, which re-fetches with `refresh=1`.
-  const { data: ethData, mutate: mutateEth } = useSWR<Activity[]>(
+  const { data: ethData, isLoading: ethLoading, mutate: mutateEth } = useSWR<Activity[]>(
     ethereumAddress ? `/api/activity/ethereum?address=${ethereumAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 300_000 }
   );
 
-  const { data: solData, mutate: mutateSol } = useSWR<Activity[]>(
+  const { data: solData, isLoading: solLoading, mutate: mutateSol } = useSWR<Activity[]>(
     solanaAddress ? `/api/activity/solana?address=${solanaAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 300_000 }
@@ -446,29 +305,39 @@ export function useUserActivity(
 
   // A send/swap the user just made must appear at once. Bypass both caches
   // (SWR's and the server's) for that one fetch, then seed the result back
-  // into SWR so the longer dedupe window applies again from here.
+  // into SWR so the longer dedupe window applies again from here. Covers all
+  // four chains that are served through our routes.
   useEffect(() => {
+    const refresh = (
+      url: string,
+      mutateFn: (data: Promise<Activity[]>, opts: { revalidate: boolean }) => unknown
+    ) => mutateFn(fetchChainActivity(`${url}&refresh=1`), { revalidate: false });
+
     const handler = () => {
       setTimeout(() => {
-        if (ethereumAddress) {
-          mutateEth(fetchChainActivity(`/api/activity/ethereum?address=${ethereumAddress}&refresh=1`), {
-            revalidate: false,
-          });
-        }
-        if (solanaAddress) {
-          mutateSol(fetchChainActivity(`/api/activity/solana?address=${solanaAddress}&refresh=1`), {
-            revalidate: false,
-          });
-        }
+        if (ethereumAddress)
+          refresh(`/api/activity/ethereum?address=${ethereumAddress}`, mutateEth);
+        if (solanaAddress) refresh(`/api/activity/solana?address=${solanaAddress}`, mutateSol);
+        if (walletAddress) refresh(`/api/activity/stellar?address=${walletAddress}`, mutateStellar);
+        if (bitcoinAddress) refresh(`/api/activity/bitcoin?address=${bitcoinAddress}`, mutateBtc);
       }, 800);
     };
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);
-  }, [ethereumAddress, solanaAddress, mutateEth, mutateSol]);
+  }, [
+    ethereumAddress,
+    solanaAddress,
+    walletAddress,
+    bitcoinAddress,
+    mutateEth,
+    mutateSol,
+    mutateStellar,
+    mutateBtc,
+  ]);
 
   // CCTP cross-ecosystem swaps (any signed-in user with a wallet). Refetches on
   // focus/interval so an in-flight swap flips from Pending to done on its own.
-  const { data: cctpTransfers, mutate: mutateCctp } = useSWR<CctpTransferRow[]>(
+  const { data: cctpTransfers, isLoading: cctpLoading, mutate: mutateCctp } = useSWR<CctpTransferRow[]>(
     walletAddress || solanaAddress || ethereumAddress || bitcoinAddress ? 'cctp-activity' : null,
     fetchCctpTransfers,
     { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
@@ -639,9 +508,23 @@ export function useUserActivity(
     .map(enrichOfframp)
     .sort((a, b) => b.timestamp - a.timestamp);
 
+  // The feed merges eight sources that resolve independently. Reporting only
+  // the wallet-activity call as "loading" is what makes rows pop in one chain
+  // at a time (BTC/ETH/SOL first, XLM/USDC after) — consumers drop their
+  // skeleton while half the sources are still in flight. Report loading until
+  // every source we actually asked for has produced its first result; SWR also
+  // clears these on error, so a failing provider can't pin the skeleton open.
+  const anySourceLoading =
+    (Boolean(key) && isLoading) ||
+    stellarLoading ||
+    btcLoading ||
+    ethLoading ||
+    solLoading ||
+    cctpLoading;
+
   return {
     recentActivity,
-    isLoading: Boolean(key) && isLoading,
+    isLoading: anySourceLoading,
     error,
     mutate,
   };

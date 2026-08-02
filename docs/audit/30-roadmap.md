@@ -1,145 +1,112 @@
-# 30 — Phase 3: Ranked Roadmap (PROPOSAL for the decision session)
+# 30 — Roadmap (reordered 2026-07-27, v2)
 
-Status: **PROPOSED 2026-07-27 — needs Niko's decisions on the 6 questions at
-the end.** Built from `20-findings.md` (36 findings, scored). Sequenced into
-waves; each wave is independently shippable. Effort figures are estimates for
-one developer, including tests and verification, not just typing.
+Built from `20-findings.md` (39 findings). **No day estimates** — earlier ones
+were unreliable, so work is sized **S / M / L** and, more usefully, *ordered*:
+each block is chosen so it makes the next block cheaper or safer.
 
-**Target: ~1,000 users first, then grow toward 10k.** Everything in Waves 0–3
-is required for the 1k push. Wave 4 is required before 10k. Wave 5 is
-strategic.
+**Target: ~1,000 users first, then grow toward 10k.** Supabase Pro deferred by
+decision.
+
+### What changed in v2 and why
+- **User-visible quality moved up.** The staggered-loading fix (#37) and the
+  XLM/BTC routes (#38a) were sitting behind big projects. They're now Block B,
+  right after the work already in flight. Reason: they're what users actually
+  see, and they're small.
+- **#38 split.** #38a (two proxy routes) is S and no longer trapped inside the
+  L-sized P0-1. #38b (balances/prices) stays with P0-1 where it belongs.
+- **Chain registry (#39) promoted out of "strategic"** into its own block with
+  a trigger condition — it must land *before* Cardano/Avalanche, not after.
+- **Cleanups demoted.** #23/#18/#31/#36 were ordered first because they were
+  easy, which is a bad reason. They're now filler, done whenever convenient.
 
 ---
 
-## Wave 0 — Compliance, ship first (½ day)
+## ✅ Block A — Done, awaiting verification
 
-| # | Item | Why first |
+| # | Item | Note |
 |---|---|---|
-| 35 | Restore sanctioned-country blocking via Vercel edge geo | Legal exposure, live today, cheap to fix. Nothing else outranks a compliance gap. |
+| 22 | SOL/ETH activity cache TTL 30 s → 300 s + `?refresh=1` (30 s floor) | Helius was 3× over free tier at 1k users |
+| 16 | Single-flight guard on the Turnkey wallet lookup | ~22 requests/session → 1–2 |
+| ~~14~~ | *withdrawn — false positive, no code written* | |
 
-Approach: use `req.geo.country` (edge, free, no latency) + the existing
-`BLOCKED_COUNTRIES` list + `/blocked` page. Delete the dead IP-parsing and the
-commented external-API code. Verify with a VPN or a forced header on staging.
-**Blocked on one answer: was it disabled deliberately?** (Q1)
+## ▶ Block B — Loading & the two remaining chains (next)
 
-## Wave 1 — Quick wins (~1.5 days, 8 small PRs)
+Ordered so each step makes the following one smaller.
 
-Highest priority-per-hour in the register. Each is independently revertible.
+| Step | # | Item | Size | Why this position |
+|---|---|---|---|---|
+| B1 | **38a** | XLM + BTC activity behind our server (plan: `33-xlm-btc-plan.md`) | S | XLM is the primary chain and today it's browser-direct, 100 records, **no timeout**. Includes **XLM *and* USDC** payments (already supported — must not regress) |
+| B2 | 20 | Timeouts + fallback on provider calls | M | Far smaller after B1: bounding a server call is trivial, bounding a browser call is not |
+| B3 | 37 | One skeleton until user data is ready | S | Only *safe* after B2 — gating on an unbounded call would freeze the whole screen instead of one row |
 
-| # | Item | Est. | Impact |
+**Savings needs no work here.** `use-savings-position` is already the
+best-behaved hook in the app (5-min vault cache, 60 s position, real
+timeouts). It only needs to be *included* in B3's ready-state. Doing the
+skeleton after the rest isn't risky — doing it *before* B2 would be.
+
+## Block C — Close the open doors
+
+| # | Item | Size | Note |
 |---|---|---|---|
-| 22 | Solana activity: 100-credit Enhanced API → 1-credit RPC method | 3h | **3× over free tier → 20 % of it.** The single best cost fix we have |
-| 16 | `wallet-info.ts` single-flight guard (+ unify with the SWR path) | 2h | kills the ~22-call stampede on every session |
-| 14 | Emit the savings-updated event on deposit/withdraw success | 30m | fixes "savings looks stale" |
-| P0-2 | Disable unused Supabase Realtime | 30m | frees ~98 % of database time |
-| 23 | dune-sync: insert-then-swap instead of clear-then-insert | 1h | dashboard can't go blank for 4h |
-| 18 | Statuspage widget: remove (nobody owns it) | 30m | drops a global script + 2 polls/min for every visitor |
-| 31 | Delete Onramper key + config | 15m | dead code/secret removal |
-| 36 | Remove the unreachable ADMIN_SECRET bypass | 15m | before someone "fixes" it into a real one |
+| 1 | Auth on the two `log-transaction` write routes | S | proven exploitable on staging |
+| 3 | Auth/rate-limit `lifi/quote` + `swap/quote` | S | currently neither |
+| 6 | Rate-limit sweep across public routes | M | 14/55 covered today |
+| 2 | Scope per-user reads | S | **needs decision Q3** — chain data is public anyway |
+| 30 | Declare missing env vars in turbo.jsonc | S | removes the stale-build trap |
 
-**Recommendation: ship Wave 1 as one batch, reviewed as separate commits.**
-Measure before/after with a HAR capture + the provider dashboards, so we can
-prove the cost drop rather than assume it.
+## Block D — Compliance (decision-gated, then immediate)
 
-## Wave 2 — Close the open doors (~2 days)
-
-| # | Item | Est. | Note |
+| # | Item | Size | Note |
 |---|---|---|---|
-| 1 | Auth on the two `log-transaction` write routes | 4h | proven exploitable on staging |
-| 2 | Scope per-user reads to the session owner | 4h | **needs Q3** — is public-by-address intentional? |
-| 3 | Auth or rate-limit `lifi/quote` + `swap/quote` | 3h | currently neither |
-| 6 | Rate-limit sweep: bring coverage from 14/55 to all public routes | 4h | reuse the existing Upstash limiter |
-| 30 | Declare the ~55 missing env vars in turbo.jsonc | 1h | removes the stale-build trap |
+| 35 | Restore sanctioned-country blocking via Vercel edge geo | S | **The work is small; the decision isn't mine.** Kept out of Block B only because restoring it changes who can use the product. The moment Q1 is answered this jumps to the front |
 
-## Wave 2b — Loading UX (added 2026-07-27 at Niko's request, ~1.5 days)
+## Block E — Money-path correctness
 
-Pulled **forward from Wave 4** because #37 is visible to every user on every
-load, and it depends on #20.
-
-| # | Item | Est. | Note |
+| # | Item | Size | Note |
 |---|---|---|---|
-| 38a | **XLM + BTC activity behind our server** — two proxy routes mirroring the existing ETH/SOL ones, with the same 5-min cache | 1d | *moved up from Wave 5 (2026-07-27, Niko's challenge — it was wrongly bundled into the 1–2 week P0-1)*. XLM is our primary chain, fetches 100 records with no timeout, and is the hardest blocker for the skeleton |
-| 20 | Timeout + fallback on every browser-direct provider call | 1d | **must land first** — see below. #38a shrinks this: server-side calls are far easier to bound than browser-direct ones |
-| 37 | One skeleton until user data is ready (stop the BTC→XLM→savings pop-in) | 4h | gate on a combined ready-state |
+| 27 | Record-before-broadcast for swaps & savings | M | CCTP's proven pattern; prerequisite for #29 |
+| 29 | `estimateGas` + idempotent retry (ETH/SOL double-send) | M | real funds risk |
+| 28 | XLM fee preflight in savings | S | June TODO |
+| 26 | Fee-first: ratify or restructure | — | **decision Q2** |
 
-**Why this order and not just "add a skeleton".** Gating the screen on *all*
-sources makes the slowest one the whole page's critical path.
-`fetchStellarPayments` currently asks Horizon for **100 records with no
-timeout**, so a slow Horizon day would freeze the entire portfolio instead of
-one row. Sequence: bound every source (#20) → then gate the skeleton, with a
-deadline (~2–3 s) after which whatever has arrived renders anyway and the rest
-fills in. That gives one clean paint in the normal case and no hostage-taking
-in the bad case.
+## Block F — Before new assets (trigger-based, not date-based)
 
-## Wave 3 — Money-path correctness (~3 days)
-
-| # | Item | Est. | Note |
+| # | Item | Size | Trigger |
 |---|---|---|---|
-| 27 | Record-before-broadcast for swaps & savings (CCTP's pattern) | 1.5d | makes failures visible to support; prerequisite for #29 |
-| 29 | `estimateGas` for ETH sends + idempotent retry (no double-send) | 1d | real funds risk |
-| 28 | XLM fee preflight in savings | 3h | June TODO, still open |
-| 26 | Fee-first: **ratify or restructure** | — | **needs Q2** |
+| 39 | Chain registry + `Record<ChainId,…>` addresses + chain-parameterised EVM adapter | M | **Do this before adding Cardano/Avalanche.** Today each new chain = ~28 file edits (measured). After: an EVM chain ≈ one registry entry. Avalanche is EVM-compatible and would be nearly free; **Cardano needs Turnkey signing support verified first — do not assume it exists** |
 
-## Wave 4 — Performance & capacity (before 10k, ~4 days)
+## Block G — Capacity (before the 10k push)
 
-| # | Item | Est. | Note |
-|---|---|---|---|
-| 13 | Kill the double round-trip (trailingSlash) | 4h | **needs Q4** — was it set for SEO? |
-| 19 | Timeout + short-lived cache on session verification | 1d | removes the app-wide hang risk |
-| 10 | Transaction pooling (free) | 4h | test the prepared-statements caveat first |
-| 8 | Pin a dedicated RPC for the CCTP relayer | 2h | money-moving code shouldn't use free public infra |
-| 20 | Consistent timeout/fallback on browser-direct provider calls | 1d | apply the aggregator's pattern |
-| 24 | DB-back the Coinbase off-ramp tracking | 1d | survives device switch |
-| 7/12 | Consolidate the two activity systems | 1d | hygiene, reduces future bugs |
+| # | Item | Size |
+|---|---|---|
+| 10 | Transaction pooling (free tier compatible) | S |
+| 19 | Timeout + short cache on session verification | M |
+| 8 | Pin a dedicated RPC for the CCTP relayer | S |
+| 13 | Kill the double round-trip (trailingSlash) | S — **needs decision Q4** |
+| 24 | DB-back Coinbase off-ramp tracking | M |
+| 7/12 | Consolidate the two activity systems (+ move the misfiled `hooks/stellar/use-user-activity.ts`) | M |
 
-## Wave 5 — Strategic (scheduled by decision, not by score)
+## Block H — Strategic
 
-| # | Item | Est. | Note |
-|---|---|---|---|
-| P0-1 | Layer-1 server cache (fetch once, serve all) — balances, prices, portfolio, event-driven refresh. **#38b** = the remaining browser-direct calls beyond activity (swap-card balances, token prices) | 1–2 weeks | mandatory between 1k and 10k; Wave 1's #22 buys the runway. *#38a (XLM/BTC **activity** routes) was split out to Wave 2b — it's a 1-day job that shouldn't wait behind this* |
-| 34 | Separate staging database | 1d | **gates Phase 5 load testing** |
-| 32 | External wallets: create-Turnkey CTA (tactical) | 2d | full unblock needs #33 |
-| 33 | Signature reduction: fee-bundling → USDC-first → intent/hook | 1–3 weeks | 4 sigs → 1; also unblocks #32 |
-| 39 | Chain registry + `Record<ChainId,…>` addresses + chain-parameterised EVM adapter | 3–4d | **do this BEFORE adding Cardano/Avalanche**, not after — today each new chain costs ~28 file edits; after, an EVM chain is ~1 registry entry |
+| # | Item | Size |
+|---|---|---|
+| P0-1 | Layer-1 cache: balances, prices, portfolio, event-driven refresh (**includes #38b**) | L — mandatory between 1k and 10k |
+| 34 | Separate staging database | S — **gates load testing** |
+| 32 | External wallets: create-Turnkey CTA | M |
+| 33 | Signature reduction: fee-bundling → USDC-first → intent/hook | L — 4 sigs → 1 |
+
+## Filler — do whenever convenient
+
+#23 dune-sync insert-then-swap · #18 remove the unowned Statuspage widget ·
+#31 delete Onramper leftovers · #36 delete the unreachable admin bypass.
+*(Previously scheduled first purely because they were easy — a bad reason.)*
 
 ---
 
-## Proposed schedule against the mid-August deadline
+## Open decisions
 
-| When | What |
-|---|---|
-| Week 1 (now) | Wave 0 + Wave 1 + start Wave 2 |
-| Week 2 | Finish Wave 2 + Wave 3 |
-| Week 3 | Wave 4 + #34 staging DB |
-| Week 4 | **Phase 5**: load test to 1k-equivalent, dashboards, alerts |
-| After | Wave 5 strategic work, sized with the 10k push |
-
-Waves 0–3 done → **ready for the 1k push**. Wave 4 + P0-1 → ready for 10k.
-
----
-
-## Decisions needed (the 6 questions)
-
-1. **#35 geo-blocking — deliberate or forgotten revert?** If deliberate, who
-   decided and does it stand? If forgotten, I restore it in Wave 0.
-   *My recommendation: restore now regardless, since it's cheap; treat a
-   deliberate removal as a decision that needs to be re-made explicitly.*
-2. **#26 fee-first — ratify or restructure?** Today the user signs the fee
-   before the swap; if the swap fails they lose ~0.5 %.
-   *My recommendation: ratify short-term (bounded, rare, refundable by
-   support), and let #33's fee-bundling remove it structurally later. Cheap to
-   ratify, expensive to fix twice.*
-3. **#2 — is public activity-by-address intentional?** Blockchain data is
-   public anyway, so this may be by design rather than a leak.
-   *My recommendation: keep it public but rate-limit it; scope only the
-   endpoints that expose non-chain data.*
-4. **#13 — why is `trailingSlash: true` set?** If it was for SEO on marketing
-   pages, we keep the setting and make the API client slash-aware instead.
-   *My recommendation: assume SEO, fix the client — safer either way.*
-5. **Wave 1 as one batch, or one PR at a time?**
-   *My recommendation: one batch, separate commits — faster review, and the
-   before/after measurement is cleaner in a single window.*
-6. **Anything you want re-ordered?** The formula ranks by risk-per-effort; it
-   doesn't know your business calendar (a campaign date, a partner demo, the
-   Stellar relationship). If something must land first, say so and I'll
-   re-sequence.
+1. **#35** — was geo-blocking disabled deliberately or forgotten? *(gates Block D)*
+2. **#26** — ratify the fee-first risk or restructure it? *(recommend: ratify now, remove structurally via #33)*
+3. **#2** — is public activity-by-address intentional? *(recommend: keep public, rate-limit)*
+4. **#13** — is `trailingSlash: true` there for SEO? *(recommend: assume yes, fix the client instead)*
+5. **New assets** — are Cardano/Avalanche actually planned? If yes, Block F moves up.

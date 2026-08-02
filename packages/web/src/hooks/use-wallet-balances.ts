@@ -93,6 +93,17 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
 
   const assets = useMemo(() => data?.assets ?? [], [data]);
 
+  // We render from a localStorage cache, and cached data makes SWR report
+  // `isLoading: false` at once — so consumers drop their skeleton immediately.
+  // That is right when the cache is complete, and wrong when it was written
+  // while the Stellar address was missing: it holds only the chain assets the
+  // server reads from the DB row (BTC/ETH/SOL), so those paint instantly and
+  // XLM/USDC appear a beat later, with no skeleton in between. Treat a cached
+  // payload with no Stellar asset as "still loading" whenever we do have a
+  // Stellar address to ask about.
+  const cacheMissingStellar =
+    !!stellar && assets.length > 0 && !assets.some((a) => a.chain === 'stellar');
+
   const totalUsd = useMemo(
     () => assets.reduce((acc, a) => acc + (a.usdValue ? Number(a.usdValue) : 0), 0),
     [assets]
@@ -108,7 +119,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
     getAsset,
     totalUsd,
     updatedAt: data?.updatedAt ?? null,
-    isLoading: isLoading && !data,
+    isLoading: (isLoading && !data) || (cacheMissingStellar && isValidating),
     isValidating,
     error,
     refresh: () => {
