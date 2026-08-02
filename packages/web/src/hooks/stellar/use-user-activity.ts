@@ -427,17 +427,44 @@ export function useUserActivity(
     { revalidateOnFocus: true, dedupingInterval: 15_000 }
   );
 
-  const { data: ethData } = useSWR<Activity[]>(
+  // ETH/SOL history is served from a 5-minute server-side cache (each miss
+  // costs ~100 Helius credits / 2 Etherscan calls), so re-asking sooner than
+  // that only produces round-trips that return the same bytes. The dedupe
+  // window matches the TTL; freshness after a user action comes from the
+  // `nf:activity-updated` handler below, which re-fetches with `refresh=1`.
+  const { data: ethData, mutate: mutateEth } = useSWR<Activity[]>(
     ethereumAddress ? `/api/activity/ethereum?address=${ethereumAddress}` : null,
     fetchChainActivity,
-    { revalidateOnFocus: true, dedupingInterval: 30_000 }
+    { revalidateOnFocus: true, dedupingInterval: 300_000 }
   );
 
-  const { data: solData } = useSWR<Activity[]>(
+  const { data: solData, mutate: mutateSol } = useSWR<Activity[]>(
     solanaAddress ? `/api/activity/solana?address=${solanaAddress}` : null,
     fetchChainActivity,
-    { revalidateOnFocus: true, dedupingInterval: 30_000 }
+    { revalidateOnFocus: true, dedupingInterval: 300_000 }
   );
+
+  // A send/swap the user just made must appear at once. Bypass both caches
+  // (SWR's and the server's) for that one fetch, then seed the result back
+  // into SWR so the longer dedupe window applies again from here.
+  useEffect(() => {
+    const handler = () => {
+      setTimeout(() => {
+        if (ethereumAddress) {
+          mutateEth(fetchChainActivity(`/api/activity/ethereum?address=${ethereumAddress}&refresh=1`), {
+            revalidate: false,
+          });
+        }
+        if (solanaAddress) {
+          mutateSol(fetchChainActivity(`/api/activity/solana?address=${solanaAddress}&refresh=1`), {
+            revalidate: false,
+          });
+        }
+      }, 800);
+    };
+    window.addEventListener('nf:activity-updated', handler);
+    return () => window.removeEventListener('nf:activity-updated', handler);
+  }, [ethereumAddress, solanaAddress, mutateEth, mutateSol]);
 
   // CCTP cross-ecosystem swaps (any signed-in user with a wallet). Refetches on
   // focus/interval so an in-flight swap flips from Pending to done on its own.

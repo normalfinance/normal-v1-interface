@@ -51,6 +51,26 @@ prove the cost drop rather than assume it.
 | 6 | Rate-limit sweep: bring coverage from 14/55 to all public routes | 4h | reuse the existing Upstash limiter |
 | 30 | Declare the ~55 missing env vars in turbo.jsonc | 1h | removes the stale-build trap |
 
+## Wave 2b — Loading UX (added 2026-07-27 at Niko's request, ~1.5 days)
+
+Pulled **forward from Wave 4** because #37 is visible to every user on every
+load, and it depends on #20.
+
+| # | Item | Est. | Note |
+|---|---|---|---|
+| 38a | **XLM + BTC activity behind our server** — two proxy routes mirroring the existing ETH/SOL ones, with the same 5-min cache | 1d | *moved up from Wave 5 (2026-07-27, Niko's challenge — it was wrongly bundled into the 1–2 week P0-1)*. XLM is our primary chain, fetches 100 records with no timeout, and is the hardest blocker for the skeleton |
+| 20 | Timeout + fallback on every browser-direct provider call | 1d | **must land first** — see below. #38a shrinks this: server-side calls are far easier to bound than browser-direct ones |
+| 37 | One skeleton until user data is ready (stop the BTC→XLM→savings pop-in) | 4h | gate on a combined ready-state |
+
+**Why this order and not just "add a skeleton".** Gating the screen on *all*
+sources makes the slowest one the whole page's critical path.
+`fetchStellarPayments` currently asks Horizon for **100 records with no
+timeout**, so a slow Horizon day would freeze the entire portfolio instead of
+one row. Sequence: bound every source (#20) → then gate the skeleton, with a
+deadline (~2–3 s) after which whatever has arrived renders anyway and the rest
+fills in. That gives one clean paint in the normal case and no hostage-taking
+in the bad case.
+
 ## Wave 3 — Money-path correctness (~3 days)
 
 | # | Item | Est. | Note |
@@ -76,10 +96,11 @@ prove the cost drop rather than assume it.
 
 | # | Item | Est. | Note |
 |---|---|---|---|
-| P0-1 | Layer-1 server cache (fetch once, serve all) | 1–2 weeks | mandatory between 1k and 10k; Wave 1's #22 buys the runway |
+| P0-1 | Layer-1 server cache (fetch once, serve all) — balances, prices, portfolio, event-driven refresh. **#38b** = the remaining browser-direct calls beyond activity (swap-card balances, token prices) | 1–2 weeks | mandatory between 1k and 10k; Wave 1's #22 buys the runway. *#38a (XLM/BTC **activity** routes) was split out to Wave 2b — it's a 1-day job that shouldn't wait behind this* |
 | 34 | Separate staging database | 1d | **gates Phase 5 load testing** |
 | 32 | External wallets: create-Turnkey CTA (tactical) | 2d | full unblock needs #33 |
 | 33 | Signature reduction: fee-bundling → USDC-first → intent/hook | 1–3 weeks | 4 sigs → 1; also unblocks #32 |
+| 39 | Chain registry + `Record<ChainId,…>` addresses + chain-parameterised EVM adapter | 3–4d | **do this BEFORE adding Cardano/Avalanche**, not after — today each new chain costs ~28 file edits; after, an EVM chain is ~1 registry entry |
 
 ---
 

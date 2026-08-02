@@ -13,11 +13,11 @@ reproduction · `input?` = parked on an open question.
 |---|---|---|---|---|---|---|---|
 | **80** | **35** | 🔴 **Sanctioned-country blocking is commented out — every blocked country can use the app** | compliance | 5·4·2 | code | Vercel edge geo (`req.geo.country`) + existing list & `/blocked` page | ✅ |
 | 64 | 1 | Unauth DB-write routes (swap/savings log-transaction) → fake rows, Dune poisoning, bloat | security | 4·4·2 | code+POC? | require session OR signed-payload verify | ✅ |
-| 64 | 22 | SOL activity uses 100-credit Enhanced API where 1-credit RPC (`getSignaturesForAddress`) suffices | cost | 4·4·2 | code+math | swap method + cache; 100× cheaper at source | ✅ |
+| 64 | 22 | SOL/ETH activity: **server cache TTL (30 s) equalled the client dedupe window**, so nearly every revalidation missed and paid ~100 Helius credits | cost | 4·4·2 | code+math | **DONE 2026-07-27**: TTL→300 s + `?refresh=1` bypass (30 s floor) + client dedupe aligned. *Method-swap idea was wrong — see plan §corrections* | ✅ |
 | 48 | 10 | Serverless connection exhaustion at spike (session pooler) | reliability | 4·3·2 | math | transaction pooler (6543 + `pgbouncer=true`); test prepared-stmt caveat | ✅ |
 | 45 | P0-2 | Supabase Realtime engine burns ~98% DB time — feature UNUSED | cost/perf | 3·3·1 | code | disable Realtime in project settings; verify on staging | ✅ |
 | 40 | 13 | `trailingSlash:true` → every API call is 2 round-trips | perf/cost | 2·5·2 | code+HAR | trailing-slash-aware fetch OR drop setting (SEO check) | ✅ |
-| 40 | 14 | Savings-refresh event has NO emitter → stale savings after deposit | UX | 2·4·1 | code | dispatch `POSITION_SYNC_EVENT` on deposit/withdraw success | ✅ |
+| ~~40~~ | ~~14~~ | ~~Savings-refresh event has no emitter~~ — **FALSE POSITIVE, withdrawn 2026-07-27**: it *is* dispatched at `use-defindex-savings.tsx:341,538`. The Phase-1 grep searched the string literal; the dispatcher uses the `POSITION_SYNC_EVENT` constant. | — | — | code | none — no code written | — |
 | 36 | 2 | Unauth reads of per-user activity/position by address | privacy | 3·3·2 | code+POC? | require session; scope to own data | ✅ |
 | 36 | 3 | Unauth quote/price routes let outsiders burn our provider quotas | cost | 3·3·2 | code+POC? | auth or stricter RL on quote routes | ✅ |
 | 36 | 27 | Failed/abandoned swaps & deposits leave NO server record | integrity | 3·4·3 | code | CCTP's record-before-broadcast pattern | ✅ |
@@ -86,6 +86,54 @@ now-dead IP-parsing code left running on every request.
 **Recommend pulling this into the quick-wins batch.** Ask for Phase 3: was it
 disabled deliberately (a decision) or temporarily during debugging (a
 forgotten revert)? Either way it needs an explicit owner decision.
+
+## #37 — Staggered load: BTC → XLM → savings pop in one at a time (Niko, 2026-07-27)
+
+Each data source is its own SWR resolving independently, so the portfolio
+paints in waves instead of once. Wanted: **one skeleton until user data is
+ready.** Caveat that shapes the fix: "wait for everything" is only safe once
+the slowest source is *bounded* — `fetchStellarPayments` calls Horizon
+directly for **100 records with no timeout**, so gating on it today would make
+the whole screen hostage to the slowest provider. Correct order: bound the
+sources (#20 timeouts), then gate the skeleton on a combined ready-state, with
+a deadline after which partial data renders anyway.
+Sev 2 · Lik 5 · Eff 2 → **Priority 40.** Pairs with #20; schedule together.
+
+## #38 — BTC + XLM activity bypass our server entirely
+
+`fetchBtcActivity` → `mempool.space` and `fetchStellarPayments` → Horizon are
+**browser-direct**, so the Wave-1 cache fix cannot help them: no server cache,
+no timeout, no shared answer between tabs/users. XLM additionally pulls **100
+payment records** per call. These are the two remaining legs of P0-1 (Layer-1)
+— confirms that the re-architecture is where they get fixed, not a config
+tweak. Sev 3 · Lik 4 · Eff 4 → Priority 24 (rolls into P0-1).
+
+## #39 — Adding a new chain touches ~28 files (Niko's question, 2026-07-27)
+
+**Measured, not estimated.** `grep -rl bitcoinAddress src/` → **28 files**.
+The four chains are modelled as *named fields* (`bitcoinAddress`,
+`ethereumAddress`, `solanaAddress`, `stellarAddress`) rather than a keyed map,
+so every consumer — Turnkey wallet + import routes, send modal, onramp/offramp
+modals, account drawer, portfolio, assets index, asset-details, price history,
+CCTP pivot — hardcodes the list. `SendAdapter.network` is a closed union type.
+
+**What's already good:** `send-adapters/index.ts` defines an explicit
+`SendAdapter` contract ("add new networks by implementing this interface") —
+the right abstraction, just not carried through the rest of the app.
+
+**Cost today of adding Avalanche:** new adapter + activity route + ~28 file
+edits, even though Avalanche is **EVM-compatible** and could reuse the
+Ethereum adapter — except `ethereum.ts` hardcodes `chain: mainnet` /
+`chainId: mainnet.id`. **Cardano** is a bigger question: non-EVM, and Turnkey
+signing support for it is **unverified — do not assume**.
+
+**Fix sketch (structural):** (1) chain **registry** — one entry per chain
+(id, adapter, decimals, explorer, icon, activity provider, CCTP domain);
+(2) addresses as `Record<ChainId, string>` instead of named fields;
+(3) parameterise the EVM adapter by chain. Then a new EVM chain ≈ **one
+registry entry**, and a new non-EVM chain ≈ registry entry + one adapter.
+Sev 2 · Lik 4 · Eff 4 → Priority 16 — but this is a **velocity multiplier**:
+worth doing *before* the next 2 chains, not after.
 
 ## #36 — ADMIN_SECRET bypass is unreachable dead code
 

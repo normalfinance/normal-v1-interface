@@ -12,7 +12,14 @@ import { logger, getCryptoIconUrl } from '@normalfinance/utils';
 // share one upstream request.
 // ---------------------------------------------------------------------------
 
-const CACHE_TTL_SECONDS = 30;
+// Two Etherscan calls per miss (normal + internal txs), so the cache is what
+// bounds our rate-limit headroom: the ceiling is per address, however many
+// tabs or anonymous callers ask. A 30s TTL matched the client's dedupe window
+// exactly, so almost every revalidation missed.
+const CACHE_TTL_SECONDS = 300;
+// An explicit post-send refresh may skip the cached copy, but no faster than
+// the old TTL — the worst case for this public route stays where it was.
+const REFRESH_FLOOR_SECONDS = 30;
 const ETH_ICON = getCryptoIconUrl('ETH');
 
 interface EtherscanTx {
@@ -36,11 +43,20 @@ export async function GET(request: NextRequest) {
   }
 
   const cacheKey = `activity:eth:${address}`;
+  const floorKey = `activity:eth:floor:${address}`;
+  const wantsFresh = request.nextUrl.searchParams.get('refresh') === '1';
+
   try {
-    const cached = await redis.get<Activity[]>(cacheKey);
-    if (cached) return NextResponse.json({ success: true, items: cached });
+    // A refresh skips the cached copy unless this address was already
+    // refreshed within the floor window — the guard that keeps the public
+    // `?refresh=1` path from being used to burn our Etherscan quota.
+    const withinFloor = wantsFresh ? await redis.get(floorKey) : null;
+    if (!wantsFresh || withinFloor) {
+      const cached = await redis.get<Activity[]>(cacheKey);
+      if (cached) return NextResponse.json({ success: true, items: cached });
+    }
   } catch {
-    /* fall through */
+    /* cache unavailable — fall through to the upstream fetch */
   }
 
   const base = `https://api.etherscan.io/v2/api?chainid=1&module=account&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${apiKey}`;
@@ -82,6 +98,7 @@ export async function GET(request: NextRequest) {
 
     try {
       await redis.set(cacheKey, items, { ex: CACHE_TTL_SECONDS });
+      if (wantsFresh) await redis.set(floorKey, 1, { ex: REFRESH_FLOOR_SECONDS });
     } catch {
       /* non-fatal */
     }
