@@ -1,17 +1,24 @@
 import type { SavingsPosition } from '@/types/savings';
 import type { AssetStatus, PortfolioAsset, PortfolioChain } from '@/types/portfolio';
 
+import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
+
 // ---------------------------------------------------------------------------
 // Pure portfolio/savings normalization + reconciliation. NO I/O, no server-only
 // imports — so it's unit-testable in isolation (see normalize.test.ts) and
 // shared by the server aggregator and the client savings read.
 // ---------------------------------------------------------------------------
 
+// Native assets derive from the chain registry so this can't drift out of sync
+// with it; non-native assets (USDC on Stellar) are listed explicitly, since a
+// chain's registry entry describes the chain, not every token issued on it.
 export const ASSET_META: Record<string, { chain: PortfolioChain; decimals: number }> = {
-  BTC: { chain: 'bitcoin', decimals: 8 },
-  ETH: { chain: 'ethereum', decimals: 18 },
-  SOL: { chain: 'solana', decimals: 9 },
-  XLM: { chain: 'stellar', decimals: 7 },
+  ...Object.fromEntries(
+    CHAIN_IDS.map((id) => [
+      CHAINS[id].symbol,
+      { chain: CHAINS[id].id as PortfolioChain, decimals: CHAINS[id].decimals },
+    ])
+  ),
   USDC: { chain: 'stellar', decimals: 7 },
 };
 

@@ -1,5 +1,6 @@
 import type { BigNumber } from 'bignumber.js';
 import type { Token } from '@normalfinance/types';
+import type { ChainId } from '@/lib/chains/registry';
 
 // ----------------------------------------------------------------------
 
@@ -18,10 +19,14 @@ export interface AdapterFeeInfo {
 
 /**
  * Contract that every network must implement.
- * Add new networks (ETH, SOL, …) by implementing this interface.
+ *
+ * `network` is the registry's ChainId rather than a hand-written union, so a
+ * chain added to `lib/chains/registry.ts` is immediately expressible here
+ * instead of requiring this type — and everything switching on it — to be
+ * edited too.
  */
 export interface SendAdapter {
-  readonly network: 'stellar' | 'bitcoin' | 'ethereum' | 'solana';
+  readonly network: ChainId;
   readonly hasMemo: boolean;
   readonly addressPlaceholder: string;
   validateAddress(address: string): boolean;
