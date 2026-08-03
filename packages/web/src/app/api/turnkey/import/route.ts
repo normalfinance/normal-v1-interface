@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import type { ChainId, AddressField } from '@/lib/chains/registry';
 
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
@@ -6,6 +7,7 @@ import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
 import { turnkey } from '@/lib/turnkey/server';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { CHAINS, CHAIN_IDS, isChainId, pickAddresses } from '@/lib/chains/registry';
 
 // ---------------------------------------------------------------------------
 // POST /api/turnkey/import
@@ -52,10 +54,14 @@ export async function POST(request: NextRequest) {
     const byFormat = (format: string) =>
       accounts.find((a) => a.addressFormat === format)?.address ?? null;
 
-    const bitcoinAddress = byFormat('ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH');
-    const ethereumAddress = byFormat('ADDRESS_FORMAT_ETHEREUM');
-    const solanaAddress = byFormat('ADDRESS_FORMAT_SOLANA');
-    const stellarAddress = byFormat('ADDRESS_FORMAT_XLM');
+    // Address formats come from the registry, so a new chain is picked up here
+    // without another line being added.
+    const derived = Object.fromEntries(
+      CHAIN_IDS.map((id) => [id, byFormat(CHAINS[id].turnkeyAddressFormat)])
+    ) as Record<ChainId, string | null>;
+
+    const bitcoinAddress = derived.bitcoin;
+    const stellarAddress = derived.stellar;
 
     if (!stellarAddress && !bitcoinAddress) {
       return NextResponse.json(
@@ -87,34 +93,27 @@ export async function POST(request: NextRequest) {
     // reattached BTC address). Two modes:
     //   - chain provided (lazy add)  → write ONLY that chain's column
     //   - chain absent (first import) → fill only columns still empty
-    const columnFor: Record<string, 'bitcoinAddress' | 'ethereumAddress' | 'solanaAddress' | 'stellarAddress'> = {
-      bitcoin: 'bitcoinAddress',
-      ethereum: 'ethereumAddress',
-      solana: 'solanaAddress',
-      stellar: 'stellarAddress',
-    };
-    const derived: Record<string, string | null> = {
-      bitcoin: bitcoinAddress,
-      ethereum: ethereumAddress,
-      solana: solanaAddress,
-      stellar: stellarAddress,
-    };
+    const columnFor = Object.fromEntries(
+      CHAIN_IDS.map((id) => [id, CHAINS[id].addressField])
+    ) as Record<ChainId, AddressField>;
 
     const data: Record<string, string> = { walletId };
-    if (chain && columnFor[chain]) {
-      const addr = derived[chain];
+    // `chain` arrives from the request body as a plain string — narrow it
+    // through the registry before using it as a key.
+    const requestedChain = chain && isChainId(chain) ? chain : null;
+    if (requestedChain) {
+      const addr = derived[requestedChain];
       if (!addr) {
-        return NextResponse.json(
-          { error: `Wallet has no ${chain} account` },
-          { status: 422 }
-        );
+        return NextResponse.json({ error: `Wallet has no ${chain} account` }, { status: 422 });
       }
-      data[columnFor[chain]] = addr;
+      data[columnFor[requestedChain]] = addr;
     } else {
       // Genuine import — only fill empty columns, never overwrite an
       // already-linked (possibly reattached) address.
-      for (const [c, col] of Object.entries(columnFor)) {
-        if (derived[c] && !row[col]) data[col] = derived[c]!;
+      for (const id of CHAIN_IDS) {
+        const col = columnFor[id];
+        const addr = derived[id];
+        if (addr && !row[col]) data[col] = addr;
       }
     }
 
@@ -127,12 +126,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        wallet: {
-          bitcoinAddress: saved.bitcoinAddress,
-          ethereumAddress: saved.ethereumAddress,
-          solanaAddress: saved.solanaAddress,
-          stellarAddress: saved.stellarAddress,
-        },
+        wallet: pickAddresses(saved),
         stellarMatch,
       },
       { status: 201 }

@@ -44,6 +44,12 @@ export interface ChainDef {
   evmChainId?: number;
   /** Circle CCTP domain, when the chain is bridgeable. */
   cctpDomain?: number;
+  /**
+   * Turnkey's address format for this chain — the string its API returns and
+   * accepts. Kept here because it's per-chain knowledge that was otherwise
+   * spelled out in the import route; a new chain declares it once.
+   */
+  turnkeyAddressFormat: string;
   explorerTx: (hash: string) => string;
 }
 
@@ -56,6 +62,7 @@ export const CHAINS = {
     decimals: 8,
     addressField: 'bitcoinAddress',
     activityPath: '/api/activity/bitcoin',
+    turnkeyAddressFormat: 'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH',
     explorerTx: (h: string) => `https://mempool.space/tx/${h}`,
   },
   ethereum: {
@@ -66,6 +73,7 @@ export const CHAINS = {
     decimals: 18,
     addressField: 'ethereumAddress',
     activityPath: '/api/activity/ethereum',
+    turnkeyAddressFormat: 'ADDRESS_FORMAT_ETHEREUM',
     evmChainId: 1,
     cctpDomain: 0,
     explorerTx: (h: string) => `https://etherscan.io/tx/${h}`,
@@ -78,6 +86,7 @@ export const CHAINS = {
     decimals: 9,
     addressField: 'solanaAddress',
     activityPath: '/api/activity/solana',
+    turnkeyAddressFormat: 'ADDRESS_FORMAT_SOLANA',
     cctpDomain: 5,
     explorerTx: (h: string) => `https://solscan.io/tx/${h}`,
   },
@@ -89,6 +98,7 @@ export const CHAINS = {
     decimals: 7,
     addressField: 'stellarAddress',
     activityPath: '/api/activity/stellar',
+    turnkeyAddressFormat: 'ADDRESS_FORMAT_XLM',
     explorerTx: (h: string) => `https://stellar.expert/explorer/public/tx/${h}`,
   },
 } as const satisfies Record<string, ChainDef>;
