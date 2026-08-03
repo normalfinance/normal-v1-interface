@@ -155,18 +155,58 @@ async function executeEvm(
 
 // --- Bitcoin source ----------------------------------------------------------
 
+// Every PSBT starts with the magic bytes "psbt\xff" — 70736274ff in hex,
+// which is why a base64 PSBT always begins "cHNidP8".
+const PSBT_MAGIC_HEX = /^70736274ff/i;
+
+/**
+ * Turnkey wants the PSBT as HEX. LI.FI hands it over base64-encoded (the
+ * conventional PSBT transport, and the same encoding its Solana payload uses).
+ * Passing base64 straight through made Turnkey decode nonsense and fail with
+ * "failed to extract bitcoin address from script: UnrecognizedScript".
+ *
+ * Detect by magic bytes rather than guessing at the format, and fail loudly if
+ * it is neither — silently mangling a PSBT is the one thing we must not do
+ * here (see the Bitcoin warning at the top of this file).
+ */
+function psbtToHex(data: string): string {
+  const raw = data.startsWith('0x') ? data.slice(2) : data;
+  if (PSBT_MAGIC_HEX.test(raw)) return raw;
+
+  const hex = bytesToHex(Uint8Array.from(atob(raw), (c) => c.charCodeAt(0)));
+  if (PSBT_MAGIC_HEX.test(hex)) {
+    log('BTC: PSBT was base64, converted to hex');
+    return hex;
+  }
+
+  throw new Error('Unrecognised PSBT encoding from LI.FI — expected hex or base64');
+}
+
 async function executeBtc(
   quote: LifiQuote,
   bitcoinAddress: string,
   subOrgId: string
 ): Promise<string> {
-  // The PSBT from LI.FI — signed verbatim, never rebuilt or reordered.
-  const psbtHex = quote.transactionRequest.data.startsWith('0x')
-    ? quote.transactionRequest.data.slice(2)
-    : quote.transactionRequest.data;
+  // The PSBT from LI.FI — re-encoded if needed, but never rebuilt or reordered.
+  const psbtHex = psbtToHex(quote.transactionRequest.data);
 
   const turnkey = await getTurnkeyClient();
-  log('BTC: requesting passkey signature for PSBT');
+  // If Turnkey still rejects the script, these three facts identify why:
+  // which address we asked it to sign with (must be the P2WPKH bc1q… one),
+  // and the PSBT's size and opening bytes.
+  // Turnkey rejects this PSBT with "UnrecognizedScript". The prime suspect is
+  // the OP_RETURN memo output Chainflip includes (script starts 6a) — it has
+  // no address by definition, so an address-extraction pass over every output
+  // would fail on it. Surface the evidence rather than guessing again.
+  log('BTC: signing PSBT', {
+    signWith: bitcoinAddress,
+    psbtBytes: psbtHex.length / 2,
+    psbtHead: psbtHex.slice(0, 24),
+    hasOpReturn: /6a[0-9a-f]{2}/i.test(psbtHex),
+    // Script-type markers present anywhere in the PSBT: 0014 = P2WPKH,
+    // 0020 = P2WSH, 5120 = P2TR (taproot), 6a = OP_RETURN.
+    markers: ['0014', '0020', '5120'].filter((m) => psbtHex.includes(m)),
+  });
   const signResult = await turnkey.signTransaction({
     type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
     timestampMs: String(Date.now()),
