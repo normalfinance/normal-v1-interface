@@ -1,5 +1,7 @@
 'use client';
 
+import type { ChainAddresses } from '@/lib/chains/registry';
+
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 
@@ -245,11 +247,10 @@ async function executeSol(
 
 export async function executeLifiSwap(
   quote: LifiQuote,
-  addresses: {
-    bitcoinAddress: string | null;
-    ethereumAddress: string | null;
-    solanaAddress: string | null;
-  }
+  // One object from the registry rather than a field per chain, so a new chain
+  // doesn't change this signature. The per-chain signers below stay separate —
+  // each one speaks a different protocol.
+  addresses: ChainAddresses
 ): Promise<string> {
   const info = await getTurnkeyWalletInfo();
   if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
