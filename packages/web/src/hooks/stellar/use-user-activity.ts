@@ -1,11 +1,13 @@
 import type { Activity } from '@/types/activity';
 import type { MgiDbTransaction } from '@/lib/mgi/statuses';
+import type { ChainAddresses } from '@/lib/chains/registry';
 import type { WalletActivityItem, WalletActivityResponse } from '@/types/wallet-activity';
 
 import useSWR from 'swr';
 import { useMemo, useEffect } from 'react';
 import { buildAuthHeaders } from '@/utils/http';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { CHAINS, getChainAddress } from '@/lib/chains/registry';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
 import { FAILED_MGI_STATUSES, PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
 
@@ -234,17 +236,28 @@ async function fetchChainActivity(url: string): Promise<Activity[]> {
   }
 }
 
+/**
+ * Takes the user's chain addresses as one object rather than a positional
+ * argument per chain: adding a chain no longer changes this signature, and
+ * callers stop threading three separate props around just to reach it.
+ *
+ * Note the per-chain SWRs below stay written out one by one — React's rules of
+ * hooks forbid calling hooks in a loop, so this file keeps a block per chain by
+ * necessity, not by oversight.
+ */
 export function useUserActivity(
   walletAddress: string | null | undefined,
-  bitcoinAddress?: string | null,
-  ethereumAddress?: string | null,
-  solanaAddress?: string | null
+  addresses?: ChainAddresses | null
 ): {
   recentActivity: Activity[];
   isLoading: boolean;
   error: Error | undefined;
   mutate: () => void;
 } {
+  const bitcoinAddress = getChainAddress(addresses, 'bitcoin');
+  const ethereumAddress = getChainAddress(addresses, 'ethereum');
+  const solanaAddress = getChainAddress(addresses, 'solana');
+
   const key =
     walletAddress && /^[GC][A-Z2-7]{55}$/.test(walletAddress)
       ? `/api/wallet/activity?walletAddress=${encodeURIComponent(walletAddress)}&limit=50`
@@ -275,13 +288,13 @@ export function useUserActivity(
   // dedupe windows match each route's TTL: 60s for Stellar, 45s for Bitcoin
   // (shorter because that feed carries pending transactions).
   const { data: stellarData, isLoading: stellarLoading, mutate: mutateStellar } = useSWR<Activity[]>(
-    walletAddress ? `/api/activity/stellar?address=${walletAddress}` : null,
+    walletAddress ? `${CHAINS.stellar.activityPath}?address=${walletAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 60_000 }
   );
 
   const { data: btcData, isLoading: btcLoading, mutate: mutateBtc } = useSWR<Activity[]>(
-    bitcoinAddress ? `/api/activity/bitcoin?address=${bitcoinAddress}` : null,
+    bitcoinAddress ? `${CHAINS.bitcoin.activityPath}?address=${bitcoinAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 45_000 }
   );
@@ -292,13 +305,13 @@ export function useUserActivity(
   // window matches the TTL; freshness after a user action comes from the
   // `nf:activity-updated` handler below, which re-fetches with `refresh=1`.
   const { data: ethData, isLoading: ethLoading, mutate: mutateEth } = useSWR<Activity[]>(
-    ethereumAddress ? `/api/activity/ethereum?address=${ethereumAddress}` : null,
+    ethereumAddress ? `${CHAINS.ethereum.activityPath}?address=${ethereumAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 300_000 }
   );
 
   const { data: solData, isLoading: solLoading, mutate: mutateSol } = useSWR<Activity[]>(
-    solanaAddress ? `/api/activity/solana?address=${solanaAddress}` : null,
+    solanaAddress ? `${CHAINS.solana.activityPath}?address=${solanaAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 300_000 }
   );
@@ -316,10 +329,10 @@ export function useUserActivity(
     const handler = () => {
       setTimeout(() => {
         if (ethereumAddress)
-          refresh(`/api/activity/ethereum?address=${ethereumAddress}`, mutateEth);
-        if (solanaAddress) refresh(`/api/activity/solana?address=${solanaAddress}`, mutateSol);
-        if (walletAddress) refresh(`/api/activity/stellar?address=${walletAddress}`, mutateStellar);
-        if (bitcoinAddress) refresh(`/api/activity/bitcoin?address=${bitcoinAddress}`, mutateBtc);
+          refresh(`${CHAINS.ethereum.activityPath}?address=${ethereumAddress}`, mutateEth);
+        if (solanaAddress) refresh(`${CHAINS.solana.activityPath}?address=${solanaAddress}`, mutateSol);
+        if (walletAddress) refresh(`${CHAINS.stellar.activityPath}?address=${walletAddress}`, mutateStellar);
+        if (bitcoinAddress) refresh(`${CHAINS.bitcoin.activityPath}?address=${bitcoinAddress}`, mutateBtc);
       }, 800);
     };
     window.addEventListener('nf:activity-updated', handler);

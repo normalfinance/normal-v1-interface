@@ -1,5 +1,6 @@
 'use client';
 
+import type { ChainAddresses } from '@/lib/chains/registry';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { paths } from '@/routes/paths';
@@ -54,7 +55,7 @@ import OnboardingWizard, { type WizardStep } from '@/components/_common/onboardi
 
 import { AccountButton } from './account-button';
 
-function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress, solanaAddress }: { address: string; drawerOpen: boolean; bitcoinAddress: string | null; ethereumAddress: string | null; solanaAddress: string | null }) {
+function WalletConnected({ address, drawerOpen, addresses }: { address: string; drawerOpen: boolean; addresses: ChainAddresses | null | undefined }) {
   const { setGlobalIsLoading } = useAppStore();
 
   const {
@@ -64,7 +65,8 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
   const network = useNetworkStore((s) => s.network);
   const [tokensFetching, setTokensFetching] = useState(true);
 
-  const { recentActivity } = useUserActivity(address, bitcoinAddress, ethereumAddress, solanaAddress);
+  const { recentActivity } = useUserActivity(address, addresses);
+  const bitcoinAddress = getChainAddress(addresses, 'bitcoin');
 
   // Unified, deduped source: native balances + savings from one place.
   const { getAsset, savings } = usePortfolio(true);
@@ -140,7 +142,7 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
   // Render whenever the user has ANY wallet — a Turnkey-only (e.g. BTC-first)
   // user has no Stellar `address` but should still see their real drawer.
   // ConnectedWallet ignores `address`; balances come from the portfolio.
-  const hasWallet = !!address || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
+  const hasWallet = !!address || availableChains(addresses).length > 0;
   if (!hasWallet) {
     return null;
   }
@@ -217,10 +219,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     hasWallet: turnkeyHasWallet,
     authFailed: turnkeyAuthFailed,
   } = useTurnkeyWallet(open && !!session);
-  const bitcoinAddress = getChainAddress(turnkeyAddresses, 'bitcoin');
-  const ethereumAddress = getChainAddress(turnkeyAddresses, 'ethereum');
-  const solanaAddress = getChainAddress(turnkeyAddresses, 'solana');
-
   // Has ANY wallet — a Stellar wallet OR a Turnkey chain wallet (BTC/ETH/SOL).
   // Asset-first users may have e.g. only BTC and no Stellar address yet.
   const hasAnyWallet = isWalletConnected || availableChains(turnkeyAddresses).length > 0;
@@ -655,7 +653,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 // Any wallet (incl. a Turnkey-only BTC/ETH/SOL user with no
                 // Stellar address yet) → the real drawer. Savings-specific setup
                 // is no longer nagged here; it lives on /savings, on demand.
-                <WalletConnected address={connectedAddress ?? ''} drawerOpen={open} bitcoinAddress={bitcoinAddress} ethereumAddress={ethereumAddress} solanaAddress={solanaAddress} />
+                <WalletConnected address={connectedAddress ?? ''} drawerOpen={open} addresses={turnkeyAddresses} />
               ) : turnkeyAuthFailed ? (
                 // The server rejected our session token (revoked elsewhere, or
                 // expired) — the wallets are NOT gone, so never show the $0
