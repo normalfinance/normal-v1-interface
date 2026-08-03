@@ -136,3 +136,24 @@ export function getChainAddress(
 export function availableChains(addresses: ChainAddresses | null | undefined): ChainId[] {
   return CHAIN_IDS.filter((id) => !!getChainAddress(addresses, id));
 }
+
+/** Every address field the registry knows about (deduped — EVM chains share one). */
+export const ADDRESS_FIELDS = Array.from(
+  new Set(CHAIN_IDS.map((id) => CHAINS[id].addressField))
+) as AddressField[];
+
+/**
+ * Prisma `select` fragment for the address columns, so queries don't list them
+ * by hand: `select: { subOrgId: true, ...ADDRESS_SELECT }`.
+ */
+export const ADDRESS_SELECT = Object.fromEntries(
+  ADDRESS_FIELDS.map((f) => [f, true])
+) as Record<AddressField, true>;
+
+/** Pull just the address fields off a wallet row, for API responses. */
+export function pickAddresses(row: ChainAddresses | null | undefined): Record<AddressField, string | null> {
+  return Object.fromEntries(ADDRESS_FIELDS.map((f) => [f, row?.[f] ?? null])) as Record<
+    AddressField,
+    string | null
+  >;
+}
