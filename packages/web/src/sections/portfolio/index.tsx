@@ -72,6 +72,13 @@ export default function PortfolioView() {
   const earnings = savings.earnings;
   const savingsLoading = savings.vaultLoading || savings.positionLoading;
 
+  // True once balances AND savings have both resolved at least once. Used to
+  // gate first-paint skeletons without letting later refetches re-trigger them.
+  const [firstPaintDone, setFirstPaintDone] = useState(false);
+  useEffect(() => {
+    if (!balancesLoading && !savings.positionLoading) setFirstPaintDone(true);
+  }, [balancesLoading, savings.positionLoading]);
+
 
   // ONE source for every chain, including XLM/USDC.
   //
@@ -269,7 +276,12 @@ export default function PortfolioView() {
         <HoldingsCard
           holdingsData={holdingsData}
           totalBalance={totalBalance}
-          loading={balancesLoading || (savings.positionLoading && holdingsData.length === 0)}
+          // Savings is one of the holdings rows, so the card must wait for it
+          // too — otherwise the coins paint and the savings row drops in a
+          // couple of seconds later. Only on the FIRST paint: once real data
+          // has rendered, a background refetch must never flash the skeleton
+          // back, which would be worse than the late row.
+          loading={!firstPaintDone && (balancesLoading || savings.positionLoading)}
         />
         <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
       </Box>
