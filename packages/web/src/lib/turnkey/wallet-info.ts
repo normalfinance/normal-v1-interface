@@ -1,5 +1,7 @@
 'use client';
 
+import type { AddressField } from '@/lib/chains/registry';
+
 import { buildAuthHeaders } from '@/utils/http';
 
 // ---------------------------------------------------------------------------
@@ -8,15 +10,17 @@ import { buildAuthHeaders } from '@/utils/http';
 // Turnkey-managed (passkey signing) or locally keyed (password signing).
 // ---------------------------------------------------------------------------
 
-export interface TurnkeyWalletInfo {
+/**
+ * The address fields come from the chain registry rather than being listed
+ * here, so a chain added there is automatically part of this shape. Read them
+ * with `getChainAddress(info, chainId)` instead of naming a field — that's
+ * what keeps a new chain from rippling through every consumer.
+ */
+export type TurnkeyWalletInfo = {
   subOrgId: string;
   /** Empty string while an import is in progress (sub-org without wallet) */
   walletId: string;
-  bitcoinAddress: string | null;
-  ethereumAddress: string | null;
-  solanaAddress: string | null;
-  stellarAddress: string | null;
-}
+} & Record<AddressField, string | null>;
 
 const CACHE_TTL_MS = 60_000;
 // A shared in-flight promise MUST be bounded. Without a deadline, one stalled
