@@ -21,6 +21,7 @@ import {
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { CHAINS, CHAIN_IDS, getChainAddress, availableChains } from '@/lib/chains/registry';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
 import AddOutlined from '@mui/icons-material/AddOutlined';
@@ -216,14 +217,24 @@ export function AccountDrawer(props: AccountDrawerProps) {
     hasWallet: turnkeyHasWallet,
     authFailed: turnkeyAuthFailed,
   } = useTurnkeyWallet(open && !!session);
-  const bitcoinAddress = turnkeyAddresses?.bitcoinAddress ?? null;
-  const ethereumAddress = turnkeyAddresses?.ethereumAddress ?? null;
-  const solanaAddress = turnkeyAddresses?.solanaAddress ?? null;
+  const bitcoinAddress = getChainAddress(turnkeyAddresses, 'bitcoin');
+  const ethereumAddress = getChainAddress(turnkeyAddresses, 'ethereum');
+  const solanaAddress = getChainAddress(turnkeyAddresses, 'solana');
 
   // Has ANY wallet — a Stellar wallet OR a Turnkey chain wallet (BTC/ETH/SOL).
   // Asset-first users may have e.g. only BTC and no Stellar address yet.
-  const hasAnyWallet =
-    isWalletConnected || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
+  const hasAnyWallet = isWalletConnected || availableChains(turnkeyAddresses).length > 0;
+
+  // The address list rendered further down: one row per chain that has an
+  // address, built from the registry instead of four hand-written blocks.
+  const chainRows = CHAIN_IDS.flatMap((id) => {
+    const chain = CHAINS[id];
+    // Stellar shows the *connected* wallet, which may be an imported one
+    // rather than the Turnkey address (see finding #40).
+    const addr = id === 'stellar' ? connectedAddress : getChainAddress(turnkeyAddresses, id);
+    if (!addr) return [];
+    return [{ id: id as string, name: chain.name as string, color: chain.brandColor as string, addr }];
+  });
 
   // Turnkey lookup not resolved yet (still loading, or the API errored — e.g.
   // a revoked session returning 401). While unresolved we must NOT claim the
@@ -604,48 +615,24 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     </Typography>
                   </Box>
                 </Stack>
-                {(connectedAddress || bitcoinAddress || ethereumAddress || solanaAddress) && (
+                {/* One row per chain the user has an address for. Driven by the
+                    registry, so a new chain appears here without another copy
+                    of this block — these were four near-identical stanzas.
+                    Note the Stellar row prefers the *connected* address, which
+                    is why an imported wallet currently hides the Turnkey one
+                    (finding #40 — the list should eventually show both). */}
+                {chainRows.length > 0 && (
                   <Box sx={{ mt: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {connectedAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#14B8A6', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Stellar</Box>
+                    {chainRows.map(({ id, name, color, addr }) => (
+                      <Stack key={id} direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>{name}</Box>
                         <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${connectedAddress.slice(0, 8)}...${connectedAddress.slice(-6)}`}
+                          {`${addr.slice(0, 8)}...${addr.slice(-6)}`}
                         </Box>
-                        <CopyIconButton value={connectedAddress} alert="Stellar address copied" />
+                        <CopyIconButton value={addr} alert={`${name} address copied`} />
                       </Stack>
-                    )}
-                    {bitcoinAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#F7931A', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Bitcoin</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${bitcoinAddress.slice(0, 8)}...${bitcoinAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={bitcoinAddress} alert="Bitcoin address copied" />
-                      </Stack>
-                    )}
-                    {ethereumAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#627EEA', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Ethereum</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${ethereumAddress.slice(0, 8)}...${ethereumAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={ethereumAddress} alert="Ethereum address copied" />
-                      </Stack>
-                    )}
-                    {solanaAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#9945FF', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Solana</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${solanaAddress.slice(0, 8)}...${solanaAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={solanaAddress} alert="Solana address copied" />
-                      </Stack>
-                    )}
+                    ))}
                   </Box>
                 )}
               </Box>

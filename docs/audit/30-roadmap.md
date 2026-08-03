@@ -44,6 +44,12 @@ best-behaved hook in the app (5-min vault cache, 60 s position, real
 timeouts). It only needs to be *included* in B3's ready-state. Doing the
 skeleton after the rest isn't risky — doing it *before* B2 would be.
 
+## Block B3 — Wallet display (found during testing 2026-08-03)
+
+| # | Item | Size | Note |
+|---|---|---|---|
+| 40 | Importing a Normal Stellar wallet hides the Turnkey Stellar wallet in the drawer | S–M | **Check the DB row first.** If the Turnkey address is still stored, this is UI-only (the drawer renders one "connected wallet"). If it was overwritten, the chain-scoped write in `api/turnkey/import` needs the same never-clobber guard the genuine-import branch already has — that would be data loss, not display |
+
 ## Block C — Close the open doors
 
 | # | Item | Size | Note |

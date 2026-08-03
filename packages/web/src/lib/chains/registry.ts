@@ -50,6 +50,8 @@ export interface ChainDef {
    * spelled out in the import route; a new chain declares it once.
    */
   turnkeyAddressFormat: string;
+  /** Brand colour, for chain dots/badges in the UI. */
+  brandColor: string;
   explorerTx: (hash: string) => string;
 }
 
@@ -63,6 +65,7 @@ export const CHAINS = {
     addressField: 'bitcoinAddress',
     activityPath: '/api/activity/bitcoin',
     turnkeyAddressFormat: 'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH',
+    brandColor: '#F7931A',
     explorerTx: (h: string) => `https://mempool.space/tx/${h}`,
   },
   ethereum: {
@@ -74,6 +77,7 @@ export const CHAINS = {
     addressField: 'ethereumAddress',
     activityPath: '/api/activity/ethereum',
     turnkeyAddressFormat: 'ADDRESS_FORMAT_ETHEREUM',
+    brandColor: '#627EEA',
     evmChainId: 1,
     cctpDomain: 0,
     explorerTx: (h: string) => `https://etherscan.io/tx/${h}`,
@@ -87,6 +91,7 @@ export const CHAINS = {
     addressField: 'solanaAddress',
     activityPath: '/api/activity/solana',
     turnkeyAddressFormat: 'ADDRESS_FORMAT_SOLANA',
+    brandColor: '#9945FF',
     cctpDomain: 5,
     explorerTx: (h: string) => `https://solscan.io/tx/${h}`,
   },
@@ -99,6 +104,7 @@ export const CHAINS = {
     addressField: 'stellarAddress',
     activityPath: '/api/activity/stellar',
     turnkeyAddressFormat: 'ADDRESS_FORMAT_XLM',
+    brandColor: '#14B8A6',
     explorerTx: (h: string) => `https://stellar.expert/explorer/public/tx/${h}`,
   },
 } as const satisfies Record<string, ChainDef>;

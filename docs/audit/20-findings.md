@@ -135,6 +135,38 @@ registry entry**, and a new non-EVM chain ≈ registry entry + one adapter.
 Sev 2 · Lik 4 · Eff 4 → Priority 16 — but this is a **velocity multiplier**:
 worth doing *before* the next 2 chains, not after.
 
+## #40 — Importing a Normal Stellar wallet hides the Turnkey Stellar wallet (Niko, 2026-08-03)
+
+**Reported:** after importing an existing Normal Stellar wallet, the account
+drawer shows the imported wallet and the Turnkey XLM wallet no longer appears.
+Both should be visible — a user can legitimately hold each.
+
+**Two candidate causes; needs investigation before a fix:**
+
+1. **UI (likely).** The drawer renders a single "connected wallet" from
+   `persist.wallet.address`, which the import repoints at the imported wallet.
+   The Turnkey address still exists but has nowhere to render — the UI models
+   one active wallet where the data model allows several.
+2. **Data (must be ruled out first).** `api/turnkey/import` is additive on a
+   *genuine* import (`if (addr && !row[col])` — never overwrites), but the
+   chain-scoped branch writes unconditionally:
+   `data[columnFor[requestedChain]] = addr`. If an import is ever sent with
+   `chain: 'stellar'`, it would **overwrite the existing Turnkey stellarAddress**
+   — real data loss, not a display bug.
+
+**VERDICT (checked in Supabase 2026-08-03): cause (1) — UI only, no data loss.**
+The `turnkey_wallets` row still holds the Turnkey address (`GCBEKVQ…`) while
+the drawer displays the imported one (`GDVTNPA2…`). Different values, so the
+import did **not** overwrite the column; the chain-scoped write guard is not
+needed. Confirms the DB models several wallets per user while the drawer
+renders exactly one "connected" wallet.
+
+**Fix (deferred, agreed with Niko):** show both — the drawer needs a wallet
+*list* rather than a single `persist.wallet.address`. Pairs naturally with the
+`getChainAddress()` migration of `account-drawer.tsx` (19 refs), since that file
+is being touched anyway.
+Sev 2 (cosmetic, confirmed) · Lik 3 · Eff 3 → **Priority 18.**
+
 ## #36 — ADMIN_SECRET bypass is unreachable dead code
 
 `wallets/link` intends an admin rate-limit bypass, but auth rejects the secret
