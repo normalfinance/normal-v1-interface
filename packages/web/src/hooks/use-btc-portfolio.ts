@@ -7,11 +7,20 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
 
+// Every provider call the UI waits on needs a deadline — without one a slow
+// provider has no upper bound, which is what makes a shared loading state
+// unsafe to build (#20/#37).
+const MEMPOOL_TIMEOUT_MS = 8_000;
+
 async function fetchBtcData(address: string): Promise<{ btc: number; price: number } | null> {
   try {
     const [addrRes, priceRes] = await Promise.all([
-      fetch(`https://mempool.space/api/address/${address}`),
-      fetch('https://mempool.space/api/v1/prices'),
+      fetch(`https://mempool.space/api/address/${address}`, {
+        signal: AbortSignal.timeout(MEMPOOL_TIMEOUT_MS),
+      }),
+      fetch('https://mempool.space/api/v1/prices', {
+        signal: AbortSignal.timeout(MEMPOOL_TIMEOUT_MS),
+      }),
     ]);
     if (!addrRes.ok) return null;
     const addrData = await addrRes.json();
@@ -42,6 +51,13 @@ export function useBtcPortfolio(enabled = true) {
     }
     setBalanceLoading(true);
     const data = await fetchBtcData(address);
+    if (!data) {
+      // Provider failed or timed out. Keep whatever we last knew rather than
+      // rendering a confident "0 BTC" — a wrong balance reads as lost funds,
+      // and on a first load an absent card is honest where a zero is a lie.
+      setBalanceLoading(false);
+      return;
+    }
     setBtcToken({
       symbol: 'BTC',
       contract: '__btc__',
@@ -52,8 +68,8 @@ export function useBtcPortfolio(enabled = true) {
       icon: cdn('tokens/bitcoin.webp'),
       decimals: 8,
       featured: false,
-      balance: String(data?.btc ?? 0),
-      price: String(data?.price ?? 0),
+      balance: String(data.btc),
+      price: String(data.price),
       percentageChange: 0,
     } as Token);
     setBalanceLoading(false);

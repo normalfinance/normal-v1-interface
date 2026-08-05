@@ -358,12 +358,11 @@ export function ActivityCard({
   // MoneyGram rows (id `mgi:<id>`) open our detail modal instead of an explorer.
   const [mgiDetailId, setMgiDetailId] = useState<string | null>(null);
 
-  const { recentActivity, isLoading, mutate } = useUserActivity(
-    walletAddress,
+  const { recentActivity, isLoading, mutate } = useUserActivity(walletAddress, {
     bitcoinAddress,
     ethereumAddress,
-    solanaAddress
-  );
+    solanaAddress,
+  });
 
   // Re-fetch wallet activity after a deposit or withdrawal completes.
   useEffect(() => {

@@ -1,8 +1,10 @@
 'use client';
 
 import type { v1WalletAccountParams } from '@turnkey/sdk-types';
+import type { ChainId, ChainAddresses } from '@/lib/chains/registry';
 
 import { buildAuthHeaders } from '@/utils/http';
+import { pickAddresses, getChainAddress } from '@/lib/chains/registry';
 
 import { createPasskeyRegistration } from './passkey';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from './wallet-info';
@@ -59,15 +61,13 @@ export async function addWalletAccounts(
 
   invalidateTurnkeyWalletInfo();
 
-  return {
-    bitcoinAddress: data.wallet?.bitcoinAddress ?? null,
-    ethereumAddress: data.wallet?.ethereumAddress ?? null,
-    solanaAddress: data.wallet?.solanaAddress ?? null,
-    stellarAddress: data.wallet?.stellarAddress ?? null,
-  };
+  // Every address field the registry knows about — a chain added there is
+  // carried through here automatically.
+  return pickAddresses(data.wallet);
 }
 
-export type TurnkeyChain = 'bitcoin' | 'stellar' | 'ethereum' | 'solana';
+/** Registry chain ids — kept as an alias so existing call sites read the same. */
+export type TurnkeyChain = ChainId;
 
 export const CHAIN_ACCOUNT_SPECS: Record<TurnkeyChain, v1WalletAccountParams[]> = {
   bitcoin: BITCOIN_ACCOUNT,
@@ -76,21 +76,9 @@ export const CHAIN_ACCOUNT_SPECS: Record<TurnkeyChain, v1WalletAccountParams[]> 
   solana: SOLANA_ACCOUNT,
 };
 
-export interface ChainAddresses {
-  bitcoinAddress: string | null;
-  ethereumAddress: string | null;
-  solanaAddress: string | null;
-  stellarAddress: string | null;
-}
+export type { ChainAddresses };
 
-function chainAddress(addresses: ChainAddresses, chain: TurnkeyChain): string | null {
-  switch (chain) {
-    case 'bitcoin': return addresses.bitcoinAddress;
-    case 'ethereum': return addresses.ethereumAddress;
-    case 'solana': return addresses.solanaAddress;
-    default: return addresses.stellarAddress;
-  }
-}
+const chainAddress = getChainAddress;
 
 /**
  * Makes sure the user has a Turnkey address for `chain`, creating the
@@ -113,12 +101,7 @@ export async function ensureChainAccount(
   if (existing) {
     const current = chainAddress(existing, chain);
     if (current) {
-      return {
-        bitcoinAddress: existing.bitcoinAddress,
-        ethereumAddress: existing.ethereumAddress,
-        solanaAddress: existing.solanaAddress,
-        stellarAddress: existing.stellarAddress,
-      };
+      return pickAddresses(existing);
     }
   }
 
@@ -160,10 +143,7 @@ export async function ensureChainAccount(
     const data = await res.json();
     invalidateTurnkeyWalletInfo();
     return {
-      bitcoinAddress: data.wallet?.bitcoinAddress ?? null,
-      ethereumAddress: data.wallet?.ethereumAddress ?? null,
-      solanaAddress: data.wallet?.solanaAddress ?? null,
-      stellarAddress: data.wallet?.stellarAddress ?? null,
+      ...pickAddresses(data.wallet),
     };
   }
 

@@ -2,7 +2,11 @@ import type { NextRequest} from 'next/server';
 
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { getAccessToken } from '@/utils/http';
+import { rateLimiter } from '@/server/rateLimiter';
+import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ----------------------------------------------------------------------
 
@@ -10,6 +14,14 @@ const VALID_TYPES = ['deposit', 'withdraw'] as const;
 
 export async function POST(request: NextRequest) {
   try {
+    // This route writes vault_deposits, the fallback source for totalDeposited
+    // — the figure users read as their savings. It was open to anyone, so its
+    // integrity affects money on screen, not just analytics.
+    const user = await getAuthenticatedUser(getAccessToken(request));
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { walletAddress, vaultAddress, type, amount, txHash, feeAmount, feeTxHash } = body;
 
@@ -26,6 +38,23 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Invalid address format' },
         { status: 400 }
       );
+    }
+
+    // walletAddress comes from the body, so authentication alone would still
+    // let any logged-in user write rows against another person's address.
+    if (!(await userOwnsWallet(user.id, walletAddress))) {
+      return NextResponse.json(
+        { success: false, error: 'Wallet does not belong to this account' },
+        { status: 403 }
+      );
+    }
+
+    const { success: withinLimit } = await rateLimiter.limit(
+      walletAddress,
+      request.headers.get('x-forwarded-for') ?? undefined
+    );
+    if (!withinLimit) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
     }
 
     if (!VALID_TYPES.includes(type)) {

@@ -1,29 +1,51 @@
 'use client';
 
 import type { Token } from '@normalfinance/types';
+import type { ChainId } from '@/lib/chains/registry';
 
 import { BigNumber } from 'bignumber.js';
+import { getChain } from '@/lib/chains/registry';
 import { ETH_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 
 import type { SendParams, SendAdapter } from './index';
 
 // ----------------------------------------------------------------------
-// Native ETH transfers. The unsigned EIP-1559 transaction is built locally
-// with viem, signed by Turnkey via the user's passkey (Turnkey signs
-// Ethereum transactions natively), and broadcast over the public RPC.
+// Native transfers on any EVM chain. The unsigned EIP-1559 transaction is
+// built locally with viem, signed by Turnkey via the user's passkey (Turnkey
+// signs Ethereum transactions natively), and broadcast over the chain's RPC.
+//
+// Parameterised by chain rather than hardcoded to Ethereum mainnet: one
+// secp256k1 address is valid on every EVM chain, so adding Avalanche or Base
+// is a registry entry plus an RPC — no new address, no new adapter, no
+// database change. See docs/audit/34-chain-registry-plan.md.
 // ----------------------------------------------------------------------
 
-// Keep enough ETH back to cover gas for the send itself (21000 gas with
+// Keep enough native gas token back to cover the send itself (21000 gas with
 // generous fee headroom).
 const GAS_RESERVE_ETH = 0.0005;
+
+export interface EvmAdapterOptions {
+  /** Registry chain to send on. Defaults to Ethereum mainnet. */
+  chainId?: ChainId;
+  /** RPC endpoint override; falls back to the Ethereum default. */
+  rpcUrl?: string;
+}
 
 export function createEthereumAdapter(
   ethereumAddress: string,
   onError?: (msg: string) => void,
+  options: EvmAdapterOptions = {},
 ): SendAdapter {
+  const chainId: ChainId = options.chainId ?? 'ethereum';
+  const chainDef = getChain(chainId);
+  if (chainDef.kind !== 'evm') {
+    throw new Error(`createEthereumAdapter called with non-EVM chain: ${chainId}`);
+  }
+  const rpcUrl = options.rpcUrl ?? ETH_RPC_URL;
+
   return {
-    network: 'ethereum',
+    network: chainId,
     hasMemo: false,
     addressPlaceholder: '0x…',
     feeInfo: null,
@@ -44,9 +66,17 @@ export function createEthereumAdapter(
         const subOrgId = info.subOrgId;
 
         const { http, parseEther, createPublicClient, serializeTransaction } = await import('viem');
-        const { mainnet } = await import('viem/chains');
+        const chains = await import('viem/chains');
 
-        const client = createPublicClient({ chain: mainnet, transport: http(ETH_RPC_URL) });
+        // Resolve the viem chain from the registry's EVM id, so a new EVM
+        // chain needs no edit here.
+        const viemChain = Object.values(chains).find(
+          (c): c is (typeof chains)['mainnet'] =>
+            typeof c === 'object' && c !== null && 'id' in c && c.id === chainDef.evmChainId
+        );
+        if (!viemChain) throw new Error(`Unsupported EVM chain id: ${chainDef.evmChainId}`);
+
+        const client = createPublicClient({ chain: viemChain, transport: http(rpcUrl) });
         const from = ethereumAddress as `0x${string}`;
         const to = params.destination as `0x${string}`;
         const value = parseEther(params.amount);
@@ -57,7 +87,7 @@ export function createEthereumAdapter(
         ]);
 
         const unsigned = serializeTransaction({
-          chainId: mainnet.id,
+          chainId: viemChain.id,
           type: 'eip1559',
           nonce,
           to,

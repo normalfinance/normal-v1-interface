@@ -8,6 +8,7 @@ import { useStellarConfig } from '@/hooks';
 import { useState, useCallback } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { getSwapFeeAmount } from '@/utils/normal-fees';
+import { postTransactionLog } from '@/lib/log-transaction';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
@@ -259,22 +260,18 @@ export function useSwap(): UseSwapReturn {
           );
         }
 
-        fetch('/api/swap/log-transaction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            walletAddress,
-            tokenInAddress: swapQuote.tokenIn,
-            tokenOutAddress: swapQuote.tokenOut,
-            tokenInSymbol: display?.tokenInSymbol,
-            tokenOutSymbol: display?.tokenOutSymbol,
-            amountIn: netAmountIn.toFixed(7),
-            amountOut: swapQuote.amountOut,
-            txHash: result.hash,
-            feeAmount: feeAmount.toFixed(7),
-            feeTxHash: feeResult.hash,
-          }),
-        }).catch(console.error);
+        postTransactionLog('/api/swap/log-transaction', {
+          walletAddress,
+          tokenInAddress: swapQuote.tokenIn,
+          tokenOutAddress: swapQuote.tokenOut,
+          tokenInSymbol: display?.tokenInSymbol,
+          tokenOutSymbol: display?.tokenOutSymbol,
+          amountIn: netAmountIn.toFixed(7),
+          amountOut: swapQuote.amountOut,
+          txHash: result.hash,
+          feeAmount: feeAmount.toFixed(7),
+          feeTxHash: feeResult.hash,
+        });
 
         const stellarExpertUrl = createStellarExpertUrl('tx', result.hash);
 

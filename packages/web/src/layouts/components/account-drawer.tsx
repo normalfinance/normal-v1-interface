@@ -1,5 +1,6 @@
 'use client';
 
+import type { ChainAddresses } from '@/lib/chains/registry';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { paths } from '@/routes/paths';
@@ -21,6 +22,7 @@ import {
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { CHAINS, CHAIN_IDS, getChainAddress, availableChains } from '@/lib/chains/registry';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
 import AddOutlined from '@mui/icons-material/AddOutlined';
@@ -53,7 +55,7 @@ import OnboardingWizard, { type WizardStep } from '@/components/_common/onboardi
 
 import { AccountButton } from './account-button';
 
-function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress, solanaAddress }: { address: string; drawerOpen: boolean; bitcoinAddress: string | null; ethereumAddress: string | null; solanaAddress: string | null }) {
+function WalletConnected({ address, drawerOpen, addresses }: { address: string; drawerOpen: boolean; addresses: ChainAddresses | null | undefined }) {
   const { setGlobalIsLoading } = useAppStore();
 
   const {
@@ -63,7 +65,8 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
   const network = useNetworkStore((s) => s.network);
   const [tokensFetching, setTokensFetching] = useState(true);
 
-  const { recentActivity } = useUserActivity(address, bitcoinAddress, ethereumAddress, solanaAddress);
+  const { recentActivity } = useUserActivity(address, addresses);
+  const bitcoinAddress = getChainAddress(addresses, 'bitcoin');
 
   // Unified, deduped source: native balances + savings from one place.
   const { getAsset, savings } = usePortfolio(true);
@@ -139,7 +142,7 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
   // Render whenever the user has ANY wallet — a Turnkey-only (e.g. BTC-first)
   // user has no Stellar `address` but should still see their real drawer.
   // ConnectedWallet ignores `address`; balances come from the portfolio.
-  const hasWallet = !!address || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
+  const hasWallet = !!address || availableChains(addresses).length > 0;
   if (!hasWallet) {
     return null;
   }
@@ -216,14 +219,20 @@ export function AccountDrawer(props: AccountDrawerProps) {
     hasWallet: turnkeyHasWallet,
     authFailed: turnkeyAuthFailed,
   } = useTurnkeyWallet(open && !!session);
-  const bitcoinAddress = turnkeyAddresses?.bitcoinAddress ?? null;
-  const ethereumAddress = turnkeyAddresses?.ethereumAddress ?? null;
-  const solanaAddress = turnkeyAddresses?.solanaAddress ?? null;
-
   // Has ANY wallet — a Stellar wallet OR a Turnkey chain wallet (BTC/ETH/SOL).
   // Asset-first users may have e.g. only BTC and no Stellar address yet.
-  const hasAnyWallet =
-    isWalletConnected || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
+  const hasAnyWallet = isWalletConnected || availableChains(turnkeyAddresses).length > 0;
+
+  // The address list rendered further down: one row per chain that has an
+  // address, built from the registry instead of four hand-written blocks.
+  const chainRows = CHAIN_IDS.flatMap((id) => {
+    const chain = CHAINS[id];
+    // Stellar shows the *connected* wallet, which may be an imported one
+    // rather than the Turnkey address (see finding #40).
+    const addr = id === 'stellar' ? connectedAddress : getChainAddress(turnkeyAddresses, id);
+    if (!addr) return [];
+    return [{ id: id as string, name: chain.name as string, color: chain.brandColor as string, addr }];
+  });
 
   // Turnkey lookup not resolved yet (still loading, or the API errored — e.g.
   // a revoked session returning 401). While unresolved we must NOT claim the
@@ -604,48 +613,24 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     </Typography>
                   </Box>
                 </Stack>
-                {(connectedAddress || bitcoinAddress || ethereumAddress || solanaAddress) && (
+                {/* One row per chain the user has an address for. Driven by the
+                    registry, so a new chain appears here without another copy
+                    of this block — these were four near-identical stanzas.
+                    Note the Stellar row prefers the *connected* address, which
+                    is why an imported wallet currently hides the Turnkey one
+                    (finding #40 — the list should eventually show both). */}
+                {chainRows.length > 0 && (
                   <Box sx={{ mt: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {connectedAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#14B8A6', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Stellar</Box>
+                    {chainRows.map(({ id, name, color, addr }) => (
+                      <Stack key={id} direction="row" alignItems="center" gap="8px">
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>{name}</Box>
                         <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${connectedAddress.slice(0, 8)}...${connectedAddress.slice(-6)}`}
+                          {`${addr.slice(0, 8)}...${addr.slice(-6)}`}
                         </Box>
-                        <CopyIconButton value={connectedAddress} alert="Stellar address copied" />
+                        <CopyIconButton value={addr} alert={`${name} address copied`} />
                       </Stack>
-                    )}
-                    {bitcoinAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#F7931A', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Bitcoin</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${bitcoinAddress.slice(0, 8)}...${bitcoinAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={bitcoinAddress} alert="Bitcoin address copied" />
-                      </Stack>
-                    )}
-                    {ethereumAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#627EEA', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Ethereum</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${ethereumAddress.slice(0, 8)}...${ethereumAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={ethereumAddress} alert="Ethereum address copied" />
-                      </Stack>
-                    )}
-                    {solanaAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#9945FF', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Solana</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${solanaAddress.slice(0, 8)}...${solanaAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={solanaAddress} alert="Solana address copied" />
-                      </Stack>
-                    )}
+                    ))}
                   </Box>
                 )}
               </Box>
@@ -668,7 +653,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 // Any wallet (incl. a Turnkey-only BTC/ETH/SOL user with no
                 // Stellar address yet) → the real drawer. Savings-specific setup
                 // is no longer nagged here; it lives on /savings, on demand.
-                <WalletConnected address={connectedAddress ?? ''} drawerOpen={open} bitcoinAddress={bitcoinAddress} ethereumAddress={ethereumAddress} solanaAddress={solanaAddress} />
+                <WalletConnected address={connectedAddress ?? ''} drawerOpen={open} addresses={turnkeyAddresses} />
               ) : turnkeyAuthFailed ? (
                 // The server rejected our session token (revoked elsewhere, or
                 // expired) — the wallets are NOT gone, so never show the $0

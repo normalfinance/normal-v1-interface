@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import type { ChainId } from '@/lib/chains/registry';
 import type { NetworkType } from '@normalfinance/utils';
 import type { PortfolioAsset } from '@/types/portfolio';
 
@@ -8,6 +9,7 @@ import { redis } from '@/server/rateLimiter';
 import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { CHAIN_IDS, ADDRESS_SELECT, getChainAddress } from '@/lib/chains/registry';
 import { aggregatePortfolio, applyStaleFallback } from '@/lib/portfolio/aggregate';
 
 // ---------------------------------------------------------------------------
@@ -40,23 +42,21 @@ export async function GET(req: NextRequest) {
     // connected wallets), falling back to the DB stellarAddress.
     const wallet = await prisma.turnkeyWallet.findUnique({
       where: { supabaseUid: user.id },
-      select: {
-        bitcoinAddress: true,
-        ethereumAddress: true,
-        solanaAddress: true,
-        stellarAddress: true,
-      },
+      select: ADDRESS_SELECT,
     });
 
     const stellar =
       stellarParam && /^[GC][A-Z2-7]{55}$/.test(stellarParam)
         ? stellarParam
-        : wallet?.stellarAddress ?? null;
+        : getChainAddress(wallet, 'stellar');
 
+    // One entry per registry chain, so a new chain is aggregated without
+    // editing this map. Stellar keeps its override: the query param covers a
+    // connected (non-Turnkey) wallet, falling back to the stored address.
     const addresses = {
-      bitcoin: wallet?.bitcoinAddress ?? null,
-      ethereum: wallet?.ethereumAddress ?? null,
-      solana: wallet?.solanaAddress ?? null,
+      ...(Object.fromEntries(
+        CHAIN_IDS.map((id) => [id, getChainAddress(wallet, id)])
+      ) as Record<ChainId, string | null>),
       stellar,
     };
 

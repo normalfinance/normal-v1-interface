@@ -104,9 +104,13 @@ async function fetchVaultInfo(network: string): Promise<VaultInfo> {
   return data.vault;
 }
 
-async function fetchUserPosition(address: string, network: string): Promise<SavingsPosition> {
+async function fetchUserPosition(
+  address: string,
+  network: string,
+  fresh = false
+): Promise<SavingsPosition> {
   const res = await fetchWithTimeout(
-    `/api/savings/user-position?user=${address}&network=${network}`,
+    `/api/savings/user-position?user=${address}&network=${network}${fresh ? '&refresh=1' : ''}`,
     30_000 // Soroban RPC on mainnet can take 15-25s
   );
   if (!res.ok) {
@@ -116,9 +120,22 @@ async function fetchUserPosition(address: string, network: string): Promise<Savi
   const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Failed to fetch user position');
 
+  // The route returns `userPosition: null` when it could not read the balance
+  // (e.g. DeFindex rate-limits us), on the assumption the client still holds a
+  // previous value. On a cold browser there is no previous value, and treating
+  // null as "no position" rendered a confident 0.0 — a false statement about
+  // someone's money, which is exactly what this whole path exists to avoid.
+  // Throwing instead keeps SWR in its loading/retry state until a real answer
+  // arrives, so the UI shows a skeleton rather than a wrong number.
+  const cachedPosition = getCachedPosition(address);
+  if (data.userPosition == null && !cachedPosition) {
+    throw new Error('Position unavailable — upstream read failed and no cached value');
+  }
+
   // Reconcile against the cached value (never clobber a held position with a
-  // transient 0; handle indexer lag) — pure + unit-tested in ./normalize.
-  const result = reconcileSavingsPosition(data.userPosition, getCachedPosition(address));
+  // transient 0; handle indexer lag) — pure logic in ./normalize (not yet
+  // covered by tests; no runner is configured in this package).
+  const result = reconcileSavingsPosition(data.userPosition, cachedPosition);
   setCachedPosition(address, result);
   return result;
 }
@@ -163,7 +180,13 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     {
       fallbackData: getCachedPosition(address) ?? undefined,
       revalidateOnFocus: false,
-      dedupingInterval: 60_000,
+      // Deliberately SHORTER than the route's 30s cache. If the client waited
+      // longer than the server keeps its copy, every request would arrive after
+      // expiry and always miss — the trap from finding #22, with the numbers
+      // the other way round. Asking a little sooner means requests usually land
+      // while the server still has an answer, so the expensive DeFindex call
+      // stays capped while the data stays fresh.
+      dedupingInterval: 20_000,
       keepPreviousData: true,
       errorRetryCount: 3,
     }
@@ -173,12 +196,22 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
   // re-seed SWR from it so every consumer updates at once.
   useEffect(() => {
     const handler = () => {
+      // 1) Show the optimistic value instantly.
       const cached = getCachedPosition(address);
       if (cached) pos.mutate(cached, { revalidate: false });
+      // 2) Then confirm against the chain, bypassing the server cache. A
+      //    30s-old balance immediately after depositing would look like the
+      //    deposit never landed. The route floors this per address, so it
+      //    can't be used to hammer DeFindex.
+      if (address) {
+        pos
+          .mutate(fetchUserPosition(address, network, true), { revalidate: false })
+          .catch(() => {});
+      }
     };
     window.addEventListener(POSITION_SYNC_EVENT, handler);
     return () => window.removeEventListener(POSITION_SYNC_EVENT, handler);
-  }, [address, pos]);
+  }, [address, network, pos]);
 
   const value = useMemo(() => {
     const v = parseFloat(pos.data?.currentValue || '0');

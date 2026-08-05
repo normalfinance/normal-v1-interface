@@ -11,6 +11,7 @@ import type { VaultInfo, SavingsPosition } from '@/types/savings';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
+import { postTransactionLog } from '@/lib/log-transaction';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
@@ -168,6 +169,12 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         return '';
       }
 
+      // Snapshot the position BEFORE anything moves. The optimistic update at
+      // the end must be computed from this fixed point, never from the live
+      // ref: a background refresh landing mid-flow would already include this
+      // deposit, and applying the delta again would count it twice.
+      const positionBefore = userPositionRef.current;
+
       const feeAmount = getSavingsDepositFee(parsedAmount);
       const netAmount = +(parsedAmount - feeAmount).toFixed(7);
 
@@ -308,19 +315,15 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         }
 
         // Log deposit to DB (fire-and-forget)
-        fetch('/api/savings/log-transaction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            walletAddress,
-            vaultAddress: vaultInfo.address,
-            type: 'deposit',
-            amount: netAmount.toFixed(7),
-            txHash: depositResult.hash,
-            feeAmount: feeAmount.toFixed(2),
-            feeTxHash: feeResult.hash,
-          }),
-        }).catch(console.error);
+        postTransactionLog('/api/savings/log-transaction', {
+          walletAddress,
+          vaultAddress: vaultInfo.address,
+          type: 'deposit',
+          amount: netAmount.toFixed(7),
+          txHash: depositResult.hash,
+          feeAmount: feeAmount.toFixed(2),
+          feeTxHash: feeResult.hash,
+        });
 
         enqueueSuccessWithStellarExpert(
           enqueueSnackbar,
@@ -332,7 +335,12 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         // Optimistically update the shared savings cache so every view reflects
         // the deposit immediately (the events indexer lags 30-120s behind).
         {
-          const base = userPositionRef.current ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
+          // Computed from the pre-transaction snapshot, so the result is an
+          // absolute target rather than a delta applied to whatever the value
+          // happens to be now. If a refresh already landed with the deposit
+          // included, this writes the same number instead of adding it twice.
+          const base =
+            positionBefore ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
           savingsRef.current.setPosition({
             ...base,
             currentValue: (parseFloat(base.currentValue) + netAmount).toFixed(7),
@@ -411,6 +419,12 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         enqueueSnackbar(t('Enter a valid amount'), { variant: 'error' });
         return '';
       }
+
+      // Snapshot before anything moves — see the matching note in deposit().
+      // The optimistic update below must subtract from this fixed point, not
+      // from the live ref, or a refresh landing mid-withdrawal causes the
+      // amount to be deducted twice (observed: 20 -> 15 -> 10 -> 15).
+      const positionBefore = userPositionRef.current;
 
       // Compute yield commission up-front from the current userPosition.
       const currentValue = parseFloat(userPosition?.currentValue || '0');
@@ -503,19 +517,15 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         }
 
         // Log withdrawal to DB (fire-and-forget)
-        fetch('/api/savings/log-transaction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            walletAddress,
-            vaultAddress: vaultInfo.address,
-            type: 'withdraw',
-            amount,
-            txHash: withdrawResult.hash,
-            feeAmount: commissionAmount > 0 ? commissionAmount.toFixed(7) : null,
-            feeTxHash: commissionTxHash,
-          }),
-        }).catch(console.error);
+        postTransactionLog('/api/savings/log-transaction', {
+          walletAddress,
+          vaultAddress: vaultInfo.address,
+          type: 'withdraw',
+          amount,
+          txHash: withdrawResult.hash,
+          feeAmount: commissionAmount > 0 ? commissionAmount.toFixed(7) : null,
+          feeTxHash: commissionTxHash,
+        });
 
         enqueueSuccessWithStellarExpert(
           enqueueSnackbar,
@@ -525,8 +535,8 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         );
 
         // Optimistically update the shared savings cache.
-        if (userPositionRef.current) {
-          const base = userPositionRef.current;
+        if (positionBefore) {
+          const base = positionBefore;
           const preCV = Math.max(parseFloat(base.currentValue) - parsedAmount, 0);
           const preTD = Math.max(parseFloat(base.totalDeposited) - parsedAmount, 0);
           savingsRef.current.setPosition({

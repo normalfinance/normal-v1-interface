@@ -1,15 +1,17 @@
 'use client';
 
+import type { AddressField } from '@/lib/chains/registry';
+
 import useSWR from 'swr';
 import { buildAuthHeaders } from '@/utils/http';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
-export interface TurnkeyAddresses {
-  bitcoinAddress: string | null;
-  ethereumAddress: string | null;
-  solanaAddress: string | null;
-  stellarAddress: string | null;
-}
+/**
+ * Derived from the chain registry, so adding a chain there extends this shape
+ * automatically. Prefer `getChainAddress(addresses, chainId)` over reading a
+ * named field.
+ */
+export type TurnkeyAddresses = Record<AddressField, string | null>;
 
 // ---------------------------------------------------------------------------
 // The user's Turnkey wallet addresses, behind ONE shared SWR so every consumer

@@ -90,6 +90,21 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
 
   const rawDepositBalance = getTokenBalance(getSavingsDepositToken(tokenState.tokens, config));
   const rawDepositBalanceNum = parseFloat(rawDepositBalance);
+
+  // `spentOnDeposits` optimistically subtracts what the user just deposited, so
+  // the figure drops immediately instead of waiting for the chain. It only ever
+  // increased, and was never cleared — so once the real balance refreshed (and
+  // already reflected the deposit) the same amount was subtracted a SECOND
+  // time. The displayed wallet balance stayed wrong until a page reload threw
+  // the component state away. Clearing it the moment a fresh balance arrives
+  // keeps the optimistic update without letting it double-count.
+  const lastRawBalanceRef = useRef(rawDepositBalance);
+  useEffect(() => {
+    if (rawDepositBalance !== lastRawBalanceRef.current) {
+      lastRawBalanceRef.current = rawDepositBalance;
+      setSpentOnDeposits(0);
+    }
+  }, [rawDepositBalance]);
   const adjustedDepositBalance = Math.max(rawDepositBalanceNum - spentOnDeposits, 0).toFixed(7);
   const savingsDepositBalance = adjustedDepositBalance;
   const savingsDepositLabel = getSavingsDepositTokenLabel(config);

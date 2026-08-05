@@ -3,10 +3,38 @@ import type { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { redis } from '@/server/rateLimiter';
+import { withRateLimitRetry } from '@/server/defindex';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 export const dynamic = 'force-dynamic';
+
+// Deliberately shorter than the vault cache (120s) and with the opposite
+// failure rule. Vault figures are the same for everyone and an old APY beats a
+// broken card; a savings BALANCE is the number a user checks to confirm their
+// money is still there, so we never serve a stale one. On failure this route
+// already returns `userPosition: null` so the client keeps its own last value
+// rather than us asserting something out of date.
+const CACHE_TTL_SECONDS = 30;
+// A just-deposited user must see the change immediately, so the client may ask
+// for a bypass. That bypass makes our server call DeFindex on demand, so it is
+// floored: at most one forced refresh per address per window, the same guard
+// used on the activity routes.
+const REFRESH_FLOOR_SECONDS = 30;
+// The events history is append-only and only moves when the user transacts, so
+// it lives far longer than the position itself. This is the single biggest
+// reduction in upstream calls: fetchAllEvents is a PAGINATED LOOP, so one
+// logical call can be several HTTP requests.
+const EVENTS_TTL_SECONDS = 300;
+
+interface UserPositionPayload {
+  shares: string;
+  currentValue: string;
+  totalDeposited: string;
+  earnings: string;
+  lifetimeEarnings?: string;
+}
 
 const DECIMALS = 1e7;
 const DEFINDEX_API_BASE = 'https://api.defindex.io';
@@ -98,6 +126,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Per address AND network: a testnet position must never be served to a
+    // mainnet user.
+    const cacheKey = `savings:pos:${userAddress}:${network}`;
+    const floorKey = `savings:pos:floor:${userAddress}:${network}`;
+    const wantsFresh = searchParams.get('refresh') === '1';
+
+    try {
+      const withinFloor = wantsFresh ? await redis.get(floorKey) : null;
+      if (!wantsFresh || withinFloor) {
+        const cached = await redis.get<UserPositionPayload>(cacheKey);
+        if (cached) return NextResponse.json({ success: true, userPosition: cached });
+      }
+    } catch {
+      /* cache unavailable — fall through to a live read */
+    }
+
     const sdk = new DefindexSDK({
       apiKey: process.env.DEFINDEX_API_KEY,
       defaultNetwork: isMainnet ? SupportedNetworks.MAINNET : SupportedNetworks.TESTNET,
@@ -116,14 +160,38 @@ export async function GET(request: NextRequest) {
 
     const networkParam = isMainnet ? 'mainnet' : 'testnet';
 
+    // The events history is append-only: it changes only when the user deposits
+    // or withdraws, and `?refresh=1` forces a fresh read on exactly those
+    // events. Re-fetching the whole paginated history on every cold read was
+    // the heaviest part of the burst that trips DeFindex's per-second limit, so
+    // it gets its own, much longer cache.
+    const eventsCacheKey = `savings:events:${userAddress}:${network}`;
+    let cachedEventsTotal: number | null = null;
+    if (!wantsFresh) {
+      try {
+        cachedEventsTotal = await redis.get<number>(eventsCacheKey);
+      } catch {
+        /* cache unavailable — fetch the history */
+      }
+    }
+
     // Fetch on-chain balance, events, DB records, and account position (lifetime earnings) in parallel.
     const [balanceResult, eventsResult, depositRecords, accountPositionResult] = await Promise.allSettled([
-      withTimeout(sdk.getVaultBalance(VAULT_ADDRESS, userAddress), 25_000, 'getVaultBalance'),
-      withTimeout(
-        fetchAllEvents(userAddress, VAULT_ADDRESS, networkParam, process.env.DEFINDEX_API_KEY),
-        15_000,
-        'fetchAllEvents'
+      withRateLimitRetry(
+        () => withTimeout(sdk.getVaultBalance(VAULT_ADDRESS, userAddress), 25_000, 'getVaultBalance'),
+        'getVaultBalance'
       ),
+      cachedEventsTotal != null
+        ? Promise.resolve([] as any[])
+        : withRateLimitRetry(
+            () =>
+              withTimeout(
+                fetchAllEvents(userAddress, VAULT_ADDRESS, networkParam, process.env.DEFINDEX_API_KEY),
+                15_000,
+                'fetchAllEvents'
+              ),
+            'fetchAllEvents'
+          ),
       prisma.vaultDeposit.findMany({
         where: { walletAddress: userAddress, vaultAddress: VAULT_ADDRESS },
         select: { type: true, amount: true },
@@ -200,9 +268,19 @@ export async function GET(request: NextRequest) {
     const totalDepositedFromEvents = computeTotalDepositedFromEvents(events);
 
     let totalDeposited: number;
-    if (totalDepositedFromEvents !== null) {
+    if (cachedEventsTotal != null) {
+      // Skipped the history fetch entirely — this is the value it produced last
+      // time, and it only changes on a deposit/withdraw, which bypass the cache.
+      totalDeposited = cachedEventsTotal;
+      console.log('[user-position] totalDeposited from cached events:', totalDeposited);
+    } else if (totalDepositedFromEvents !== null) {
       totalDeposited = totalDepositedFromEvents;
       console.log('[user-position] totalDeposited from events:', totalDeposited);
+      try {
+        await redis.set(eventsCacheKey, totalDepositedFromEvents, { ex: EVENTS_TTL_SECONDS });
+      } catch {
+        /* non-fatal */
+      }
     } else {
       // Fall back to DB when events API returns nothing
       if (records.length === 0) {
@@ -243,6 +321,16 @@ export async function GET(request: NextRequest) {
     };
 
     console.log('[user-position] computed:', userPosition);
+
+    // Only a genuinely computed position is cached. The `userPosition: null`
+    // path above is deliberately NOT cached — that would turn one failed read
+    // into 30 seconds of "no position" for the user.
+    try {
+      await redis.set(cacheKey, userPosition, { ex: CACHE_TTL_SECONDS });
+      if (wantsFresh) await redis.set(floorKey, 1, { ex: REFRESH_FLOOR_SECONDS });
+    } catch {
+      /* non-fatal */
+    }
 
     return NextResponse.json({ success: true, userPosition });
   } catch (error) {

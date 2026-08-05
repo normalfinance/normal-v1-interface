@@ -3,10 +3,10 @@
 import type { AssetActionKey } from '@/hooks/use-asset-actions';
 
 import { paths } from '@/routes/paths';
-import { useMemo, useState } from 'react';
 import { cdn } from '@normalfinance/utils';
 import { useRouter } from 'next/navigation';
 import { useVaultApy } from '@/hooks/use-vault-apy';
+import { useMemo, useState, useEffect } from 'react';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { assetDisplay } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
@@ -144,8 +144,19 @@ export function HeroPortfolioCard() {
   // Same loader technique as the portfolio Holdings card: skeleton on first load
   // (no cache), and kept while savings is still resolving with nothing to show
   // yet — so all assets paint together, never one-by-one or an empty flash.
+  // Savings is one of the rows, so waiting only "while there are no rows yet"
+  // let the coins paint and dropped savings in a couple of seconds later.
+  // Wait for both, but only on the first paint — once real data has rendered a
+  // background refetch must never flash the skeleton back.
+  const [firstPaintDone, setFirstPaintDone] = useState(false);
+  useEffect(() => {
+    if (!portfolio.isLoading && !portfolio.savings.positionLoading) setFirstPaintDone(true);
+  }, [portfolio.isLoading, portfolio.savings.positionLoading]);
+
   const loading =
-    isAuthed && (portfolio.isLoading || (portfolio.savings.positionLoading && rows.length === 0));
+    isAuthed &&
+    !firstPaintDone &&
+    (portfolio.isLoading || portfolio.savings.positionLoading);
 
   const changeColor = overallChange >= 0 ? UP : DOWN;
 

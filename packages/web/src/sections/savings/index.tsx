@@ -46,6 +46,15 @@ export default function SavingsView() {
   const apy = vaultInfo ? Number(vaultInfo.apy) : null;
   const heroLoading = fetching || positionFetching;
 
+  // Hold the page skeleton until the savings figures are actually in, instead
+  // of dropping it at hydration and letting the numbers arrive seconds later.
+  // First paint only: once real data has rendered, background refetches must
+  // never send the page back to a skeleton.
+  const [firstPaintDone, setFirstPaintDone] = useState(false);
+  useEffect(() => {
+    if (!heroLoading) setFirstPaintDone(true);
+  }, [heroLoading]);
+
   useEffect(() => {
     if (!wallet.address) return undefined;
 
@@ -64,7 +73,7 @@ export default function SavingsView() {
     return () => clearTimeout(timer);
   }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
-  if (!mounted) {
+  if (!mounted || (!firstPaintDone && heroLoading)) {
     return (
       <DashboardContent maxWidth="xl">
         <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }} />

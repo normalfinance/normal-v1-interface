@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { quoteRateLimiter } from '@/server/rateLimiter';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 const DEFAULT_SOROSWAP_API_BASE_URL = 'https://api.soroswap.finance';
@@ -16,6 +17,14 @@ const XLM_CONTRACT: Record<'mainnet' | 'testnet', string> = {
 
 export async function POST(request: NextRequest) {
   try {
+    // Unauthenticated by design, but this proxies a service we pay for, so it
+    // needs a ceiling. Keyed on IP — the only identity available here.
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
+    const { success: withinLimit } = await quoteRateLimiter.limit(ip);
+    if (!withinLimit) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
+
     const body = await request.json();
     const { token_in_address, token_out_address, amount, mode = 'strict-send', sender } = body;
 

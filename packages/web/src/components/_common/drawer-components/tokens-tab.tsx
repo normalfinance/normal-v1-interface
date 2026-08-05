@@ -10,17 +10,46 @@ import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fNumber, fCurrency } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
-import { Chip, Typography } from '@mui/material';
+import { Chip, Skeleton, Typography } from '@mui/material';
 
 export interface ToeknsTabsProps {
   tokens?: Token[];
+  loading?: boolean;
 }
 
 const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' } as const;
 
-export default function TokensTab({ tokens = [] }: { tokens?: Token[] }) {
+export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsProps) {
   const { t } = useTranslate('auto');
   const router = useRouter();
+
+  // Stellar tokens (XLM/USDC) arrive on a different path than the native-chain
+  // assets, so without this the list renders BTC/ETH/SOL immediately and the
+  // rest appear a beat later. Show rows as loading until the whole set is in.
+  if (loading) {
+    return (
+      <Box sx={{ pb: 2, bgcolor: 'background.paper' }}>
+        {[0, 1, 2].map((i) => (
+          <Box
+            key={i}
+            sx={{ display: 'flex', padding: '12px 8px', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Box display="flex" alignItems="center" gap="12px">
+              <Skeleton variant="circular" width={32} height={32} />
+              <Box>
+                <Skeleton variant="text" width={64} height={18} />
+                <Skeleton variant="text" width={44} height={14} />
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <Skeleton variant="text" width={58} height={18} />
+              <Skeleton variant="text" width={40} height={14} />
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ pb: 2, bgcolor: 'background.paper' }}>

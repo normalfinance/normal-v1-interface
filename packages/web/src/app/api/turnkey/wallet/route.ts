@@ -6,6 +6,7 @@ import { logger } from '@normalfinance/utils';
 import { getAccessToken } from '@/utils/http';
 import { turnkey, buildPasskeyRootUser } from '@/lib/turnkey/server';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import { CHAINS, pickAddresses, ADDRESS_SELECT } from '@/lib/chains/registry';
 import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from '@/lib/turnkey/account-specs';
 
 const CHAIN_SPECS = {
@@ -28,7 +29,9 @@ export async function GET(request: NextRequest) {
 
   const wallet = await prisma.turnkeyWallet.findUnique({
     where: { supabaseUid: user.id },
-    select: { subOrgId: true, walletId: true, bitcoinAddress: true, ethereumAddress: true, solanaAddress: true, stellarAddress: true },
+    // Address columns come from the registry, so a new chain's column is
+    // selected automatically instead of being added by hand here.
+    select: { subOrgId: true, walletId: true, ...ADDRESS_SELECT },
   });
 
   return NextResponse.json({ wallet: wallet ?? null });
@@ -48,12 +51,7 @@ export async function POST(request: NextRequest) {
   const existing = await prisma.turnkeyWallet.findUnique({ where: { supabaseUid: user.id } });
   if (existing) {
     return NextResponse.json({
-      wallet: {
-        bitcoinAddress: existing.bitcoinAddress,
-        ethereumAddress: existing.ethereumAddress,
-        solanaAddress: existing.solanaAddress,
-        stellarAddress: existing.stellarAddress,
-      },
+      wallet: pickAddresses(existing),
     });
   }
 
@@ -105,10 +103,9 @@ export async function POST(request: NextRequest) {
         supabaseUid: user.id,
         subOrgId,
         walletId,
-        bitcoinAddress: chain === 'bitcoin' ? address : null,
-        stellarAddress: chain === 'stellar' ? address : null,
-        ethereumAddress: chain === 'ethereum' ? address : null,
-        solanaAddress: chain === 'solana' ? address : null,
+        // Lazy provisioning: only the requested chain gets an address, and the
+        // column is looked up from the registry rather than branched per chain.
+        [CHAINS[chain].addressField]: address,
       },
     });
 
@@ -116,12 +113,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        wallet: {
-          bitcoinAddress: saved.bitcoinAddress,
-          ethereumAddress: saved.ethereumAddress,
-          solanaAddress: saved.solanaAddress,
-          stellarAddress: saved.stellarAddress,
-        },
+        wallet: pickAddresses(saved),
       },
       { status: 201 }
     );

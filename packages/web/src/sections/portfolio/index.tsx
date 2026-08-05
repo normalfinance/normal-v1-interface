@@ -25,6 +25,26 @@ import { ActivityCard } from './portfolio-activity-card';
 
 import type { HoldingData } from './_shared';
 
+// Shown until we know whether the user even has a wallet. Beyond that each
+// card owns its own skeleton, so a slow source never blanks the whole page.
+function PortfolioSkeleton() {
+  return (
+    <DashboardContent maxWidth="xl">
+      {/* Hero skeleton */}
+      <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }} />
+
+      {/* Holdings + Savings skeleton */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px', mt: '20px' }}>
+        <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+        <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+      </Box>
+
+      {/* Activity skeleton */}
+      <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }} />
+    </DashboardContent>
+  );
+}
+
 export default function PortfolioView() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -41,11 +61,7 @@ export default function PortfolioView() {
   const { hasWallet: hasTurnkeyWallet } = useTurnkeyWallet(!!user);
 
   const { setGlobalIsLoading } = useAppStore();
-  const {
-    wallet,
-    getAllTokens,
-    tokenState: { tokens },
-  } = usePersistStore();
+  const { wallet, getAllTokens } = usePersistStore();
 
   const hasAnyWallet = !!wallet.address || hasTurnkeyWallet === true;
   // Still resolving whether an authed user has a wallet — keep the skeleton so we
@@ -56,21 +72,25 @@ export default function PortfolioView() {
   const earnings = savings.earnings;
   const savingsLoading = savings.vaultLoading || savings.positionLoading;
 
-  const stellarBalance = useMemo(
-    () =>
-      tokens
-        .reduce(
-          (acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
-          BigNumber(0)
-        )
-        .toNumber(),
-    [tokens]
-  );
+  // True once balances AND savings have both resolved at least once. Used to
+  // gate first-paint skeletons without letting later refetches re-trigger them.
+  const [firstPaintDone, setFirstPaintDone] = useState(false);
+  useEffect(() => {
+    if (!balancesLoading && !savings.positionLoading) setFirstPaintDone(true);
+  }, [balancesLoading, savings.positionLoading]);
 
-  // Native (non-Stellar) chain tokens with a balance — BTC, ETH, SOL
-  const nativeTokens = useMemo(
+
+  // ONE source for every chain, including XLM/USDC.
+  //
+  // This page used to read Stellar assets from the persisted token store while
+  // the home hero and the account drawer read them from the portfolio
+  // aggregator. Two paths for the same two assets meant every loading bug had
+  // to be fixed twice and this page always lagged behind the others. The token
+  // list is exactly XLM + USDC on mainnet (Blend USDC on testnet) — the same
+  // assets the aggregator returns — so there is nothing to lose by unifying.
+  const walletTokens = useMemo(
     () =>
-      (['BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[])
+      (['XLM', 'USDC', 'BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[])
         .filter(
           (a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0)
         )
@@ -78,37 +98,26 @@ export default function PortfolioView() {
     [getAsset]
   );
 
-  const nativeValue = useMemo(
+  // "Wallet" = everything the user holds outside of savings, on any chain
+  const walletBalance = useMemo(
     () =>
-      nativeTokens.reduce(
+      walletTokens.reduce(
         (acc, tkn) => acc + BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber(),
         0
       ),
-    [nativeTokens]
+    [walletTokens]
   );
-
-  // "Wallet" = everything the user holds outside of savings, on any chain
-  const walletBalance = stellarBalance + nativeValue;
   const totalBalance = walletBalance + savingsValue;
 
-  const holdingsWithBalance = useMemo(
-    () => tokens.filter((tkn) => BigNumber(tkn.balance).gt(0)),
-    [tokens]
-  );
-
   const holdingsData: HoldingData[] = useMemo(() => {
-    const entries: HoldingData[] = holdingsWithBalance.map((tkn) => ({
-      token: tkn,
-      value: BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber(),
-      percentage:
-        totalBalance > 0
-          ? BigNumber(tkn.balance)
-              .multipliedBy(tkn.price)
-              .dividedBy(totalBalance)
-              .multipliedBy(100)
-              .toNumber()
-          : 0,
-    }));
+    const entries: HoldingData[] = walletTokens.map((tkn) => {
+      const value = BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber();
+      return {
+        token: tkn,
+        value,
+        percentage: totalBalance > 0 ? (value / totalBalance) * 100 : 0,
+      };
+    });
 
     if (savingsValue > 0) {
       entries.push({
@@ -131,18 +140,13 @@ export default function PortfolioView() {
       });
     }
 
-    nativeTokens.forEach((tkn) => {
-      const value = BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber();
-      entries.push({
-        token: tkn,
-        value,
-        percentage: totalBalance > 0 ? (value / totalBalance) * 100 : 0,
-      });
-    });
-
     return entries.sort((a, b) => b.value - a.value);
-  }, [holdingsWithBalance, totalBalance, savingsValue, nativeTokens]);
+  }, [walletTokens, totalBalance, savingsValue]);
 
+  // Nothing on this page reads the token store any more, but the swap card and
+  // the account drawer still do — so we keep refreshing it here and simply
+  // stop blocking this page's rendering on it. Retiring the store entirely is
+  // the remaining half of the duplicate-data-path cleanup (#7/#12).
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
@@ -158,21 +162,7 @@ export default function PortfolioView() {
   }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
   if (!mounted || walletChecking) {
-    return (
-      <DashboardContent maxWidth="xl">
-        {/* Hero skeleton */}
-        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }} />
-
-        {/* Holdings + Savings skeleton */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px', mt: '20px' }}>
-          <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-          <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-        </Box>
-
-        {/* Activity skeleton */}
-        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }} />
-      </DashboardContent>
-    );
+    return <PortfolioSkeleton />;
   }
 
   if (!hasAnyWallet) {
@@ -268,7 +258,10 @@ export default function PortfolioView() {
         walletBalance={walletBalance}
         savingsValue={savingsValue}
         earnings={earnings}
-        loading={savingsLoading}
+        // The totals here sum BOTH sources — native-chain balances and the
+        // Stellar token store. Gating on savings alone let the figure paint
+        // before XLM/USDC landed, so the number visibly jumped a beat later.
+        loading={savingsLoading || balancesLoading}
         holdingsData={holdingsData}
       />
 
@@ -283,7 +276,12 @@ export default function PortfolioView() {
         <HoldingsCard
           holdingsData={holdingsData}
           totalBalance={totalBalance}
-          loading={balancesLoading || (savings.positionLoading && holdingsData.length === 0)}
+          // Savings is one of the holdings rows, so the card must wait for it
+          // too — otherwise the coins paint and the savings row drops in a
+          // couple of seconds later. Only on the FIRST paint: once real data
+          // has rendered, a background refetch must never flash the skeleton
+          // back, which would be worse than the late row.
+          loading={!firstPaintDone && (balancesLoading || savings.positionLoading)}
         />
         <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
       </Box>
