@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
+import { withRateLimitRetry } from '@/server/defindex';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 
 export const dynamic = 'force-dynamic';
@@ -73,9 +74,18 @@ export async function GET(_request: NextRequest) {
       );
     }
 
+    // Both calls go out together and DeFindex limits per second, so a cold load
+    // trips the limit. One retry on their own `retryAfter` turns that into a
+    // success instead of a stale fallback.
     const [vaultInfoResult, apyResult] = await Promise.all([
-      withTimeout(sdk.getVaultInfo(VAULT_ADDRESS), 10_000, 'getVaultInfo'),
-      withTimeout(sdk.getVaultAPY(VAULT_ADDRESS), 10_000, 'getVaultAPY'),
+      withRateLimitRetry(
+        () => withTimeout(sdk.getVaultInfo(VAULT_ADDRESS), 10_000, 'getVaultInfo'),
+        'getVaultInfo'
+      ),
+      withRateLimitRetry(
+        () => withTimeout(sdk.getVaultAPY(VAULT_ADDRESS), 10_000, 'getVaultAPY'),
+        'getVaultAPY'
+      ),
     ]);
 
     const totalDeposits = Array.isArray(vaultInfoResult.totalManagedFunds)
