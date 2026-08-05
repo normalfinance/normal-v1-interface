@@ -3,10 +3,32 @@ import type { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { redis } from '@/server/rateLimiter';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 export const dynamic = 'force-dynamic';
+
+// Deliberately shorter than the vault cache (120s) and with the opposite
+// failure rule. Vault figures are the same for everyone and an old APY beats a
+// broken card; a savings BALANCE is the number a user checks to confirm their
+// money is still there, so we never serve a stale one. On failure this route
+// already returns `userPosition: null` so the client keeps its own last value
+// rather than us asserting something out of date.
+const CACHE_TTL_SECONDS = 30;
+// A just-deposited user must see the change immediately, so the client may ask
+// for a bypass. That bypass makes our server call DeFindex on demand, so it is
+// floored: at most one forced refresh per address per window, the same guard
+// used on the activity routes.
+const REFRESH_FLOOR_SECONDS = 30;
+
+interface UserPositionPayload {
+  shares: string;
+  currentValue: string;
+  totalDeposited: string;
+  earnings: string;
+  lifetimeEarnings?: string;
+}
 
 const DECIMALS = 1e7;
 const DEFINDEX_API_BASE = 'https://api.defindex.io';
@@ -96,6 +118,22 @@ export async function GET(request: NextRequest) {
         { success: false, error: 'Valid user address required' },
         { status: 400 }
       );
+    }
+
+    // Per address AND network: a testnet position must never be served to a
+    // mainnet user.
+    const cacheKey = `savings:pos:${userAddress}:${network}`;
+    const floorKey = `savings:pos:floor:${userAddress}:${network}`;
+    const wantsFresh = searchParams.get('refresh') === '1';
+
+    try {
+      const withinFloor = wantsFresh ? await redis.get(floorKey) : null;
+      if (!wantsFresh || withinFloor) {
+        const cached = await redis.get<UserPositionPayload>(cacheKey);
+        if (cached) return NextResponse.json({ success: true, userPosition: cached });
+      }
+    } catch {
+      /* cache unavailable — fall through to a live read */
     }
 
     const sdk = new DefindexSDK({
@@ -243,6 +281,16 @@ export async function GET(request: NextRequest) {
     };
 
     console.log('[user-position] computed:', userPosition);
+
+    // Only a genuinely computed position is cached. The `userPosition: null`
+    // path above is deliberately NOT cached — that would turn one failed read
+    // into 30 seconds of "no position" for the user.
+    try {
+      await redis.set(cacheKey, userPosition, { ex: CACHE_TTL_SECONDS });
+      if (wantsFresh) await redis.set(floorKey, 1, { ex: REFRESH_FLOOR_SECONDS });
+    } catch {
+      /* non-fatal */
+    }
 
     return NextResponse.json({ success: true, userPosition });
   } catch (error) {
