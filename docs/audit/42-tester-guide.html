@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Normal — Testing Guide</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #16161a; line-height: 1.55; font-size: 11pt; margin: 0; padding: 24px;
+    max-width: 190mm; margin-inline: auto;
+  }
+  h1 { font-size: 22pt; margin: 0 0 4px; letter-spacing: -0.02em; }
+  h2 {
+    font-size: 14pt; margin: 26px 0 8px; padding-top: 12px;
+    border-top: 2px solid #16161a; letter-spacing: -0.01em;
+  }
+  h3 { font-size: 11.5pt; margin: 18px 0 6px; }
+  .sub { color: #5b5b66; font-size: 10.5pt; margin: 0 0 18px; }
+  .box {
+    border: 1px solid #d8d8de; border-radius: 6px; padding: 12px 14px; margin: 12px 0;
+    background: #fafafb;
+  }
+  .warn { border-color: #E5A100; background: #FFF9EC; }
+  .stop { border-color: #E5484D; background: #FFF1F1; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 10pt; }
+  th, td { border: 1px solid #d8d8de; padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: #f2f2f4; font-weight: 600; }
+  td:first-child { width: 42px; text-align: center; font-weight: 600; }
+  .chk { width: 34px; text-align: center; }
+  code { background: #f2f2f4; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; }
+  ul, ol { margin: 8px 0 8px 18px; padding: 0; }
+  li { margin: 4px 0; }
+  .pagebreak { page-break-before: always; }
+  .footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #d8d8de;
+            color: #5b5b66; font-size: 9.5pt; }
+  @media print { body { padding: 0; } .noprint { display: none; } }
+</style>
+</head>
+<body>
+
+<h1>Normal — Testing Guide</h1>
+<p class="sub">For the staging release. No technical experience needed — every test says what to do, what should happen, and what a problem looks like.</p>
+
+<div class="box warn">
+  <strong>Before you start</strong>
+  <ul>
+    <li>Test on <strong>staging</strong>, not the live site.</li>
+    <li>Press <strong>Ctrl+Shift+R</strong> (Windows) or <strong>Cmd+Shift+R</strong> (Mac) once to load a fresh copy.</li>
+    <li><strong>Staging uses the real database and real money.</strong> Use tiny amounts — a few cents. Every transaction is real.</li>
+  </ul>
+</div>
+
+<h2>What changed, in one paragraph</h2>
+<p>We made the app fetch data more efficiently and fixed several bugs where numbers appeared late or briefly showed wrong values. <strong>Almost nothing should look different.</strong> That is the point: the main way we find a problem is if something that used to work now looks wrong. Trust your instincts — if it looks odd, report it.</p>
+
+<h2>Part 1 · Nothing should look different <span style="font-weight:400;font-size:10pt;color:#5b5b66">(most important)</span></h2>
+
+<table>
+  <tr><th class="chk">✓</th><th>#</th><th>Do this</th><th>Should happen</th><th>Problem looks like</th></tr>
+  <tr><td class="chk">☐</td><td>1.1</td><td>Open the <strong>Portfolio</strong> page</td><td>All your assets appear: BTC, ETH, SOL, XLM, USDC and savings</td><td>An asset missing, or a wrong balance</td></tr>
+  <tr><td class="chk">☐</td><td>1.2</td><td>Open the <strong>account drawer</strong> (avatar, top right) → Assets tab</td><td>Same assets, same amounts as the Portfolio page</td><td>The two screens disagree</td></tr>
+  <tr><td class="chk">☐</td><td>1.3</td><td>Open the <strong>homepage</strong> while logged in</td><td>The portfolio card shows the same total</td><td>A different total</td></tr>
+  <tr><td class="chk">☐</td><td>1.4</td><td>Look at <strong>Activity</strong></td><td>Past transactions listed, correct dates and amounts</td><td>Missing transactions, wrong amounts</td></tr>
+  <tr><td class="chk">☐</td><td>1.5</td><td>Open <strong>Savings</strong></td><td>Your balance, deposits and earnings show</td><td>Empty or zero when you have a deposit</td></tr>
+</table>
+
+<div class="box">
+  <strong>The three screens in 1.1–1.3 must agree.</strong> They used to read data from different places and could disagree. If they show different numbers, that is the single most valuable bug you can find.
+</div>
+
+<h2>Part 2 · Loading should look calm</h2>
+<p>Screens used to fill in piece by piece. Watch carefully while a page loads.</p>
+
+<table>
+  <tr><th class="chk">✓</th><th>#</th><th>Do this</th><th>Should happen</th><th>Problem looks like</th></tr>
+  <tr><td class="chk">☐</td><td>2.1</td><td>Hard-reload the <strong>Portfolio</strong> page and watch</td><td>Grey placeholder boxes, then everything appears <strong>together</strong></td><td>Some assets appear first, others pop in a second later</td></tr>
+  <tr><td class="chk">☐</td><td>2.2</td><td>Same for the <strong>account drawer</strong> Assets tab</td><td>Placeholder rows, then all assets at once</td><td>List appears with assets missing, then they arrive</td></tr>
+  <tr><td class="chk">☐</td><td>2.3</td><td>Same for the <strong>homepage</strong> card</td><td>Placeholder, then the full list</td><td>Numbers change right after you see them</td></tr>
+  <tr><td class="chk">☐</td><td>2.4</td><td>Watch <strong>Activity</strong> load</td><td>Placeholder rows, then all transactions</td><td>Some rows appear, others arrive later</td></tr>
+  <tr><td class="chk">☐</td><td>2.5</td><td>Open the same page a <strong>second time</strong></td><td>Noticeably faster than the first time</td><td>Just as slow every time</td></tr>
+</table>
+
+<p><em>A brief grey placeholder is correct.</em> What is wrong is content arriving in stages, or a number changing right after it appears.</p>
+
+<div class="pagebreak"></div>
+
+<h2>Part 3 · Savings <span style="font-weight:400;font-size:10pt;color:#5b5b66">(several bugs were fixed here)</span></h2>
+
+<table>
+  <tr><th class="chk">✓</th><th>#</th><th>Do this</th><th>Should happen</th></tr>
+  <tr><td class="chk">☐</td><td>3.1</td><td><strong>Deposit</strong> a small amount into Savings. Watch the numbers through the <em>whole</em> process, not just at the end</td><td>“Your Deposits” <strong>and</strong> “Current Value” both go up by the amount. Earnings stay roughly the same</td></tr>
+  <tr><td class="chk">☐</td><td>3.2</td><td>Watch the <strong>“Wallet:”</strong> figure above the deposit box</td><td>Drops once by the amount deposited, then settles. <strong>Never drops twice</strong></td></tr>
+  <tr><td class="chk">☐</td><td>3.3</td><td><strong>Withdraw</strong> a small amount. Again watch the whole process</td><td>Balance drops once and settles. <strong>Never drops twice</strong></td></tr>
+  <tr><td class="chk">☐</td><td>3.4</td><td>After depositing, check the <strong>Activity</strong> list</td><td>The deposit appears within a few seconds, without reloading</td></tr>
+</table>
+
+<div class="box stop">
+  <strong>Report immediately if:</strong> your deposit shows up as “Earnings”, or a balance drops twice, or a number jumps to something clearly wrong even briefly. These are the exact bugs we fixed, so seeing one means it is not fully fixed.
+</div>
+
+<h2>Part 4 · Sending and swapping <span style="font-weight:400;font-size:10pt;color:#5b5b66">(use tiny amounts)</span></h2>
+
+<table>
+  <tr><th class="chk">✓</th><th>#</th><th>Do this</th><th>Should happen</th></tr>
+  <tr><td class="chk">☐</td><td>4.1</td><td>Send a small amount of <strong>XLM</strong></td><td>Face ID / passkey prompt, then success. Appears in Activity within seconds</td></tr>
+  <tr><td class="chk">☐</td><td>4.2</td><td>Send a small amount of <strong>ETH</strong></td><td>Same</td></tr>
+  <tr><td class="chk">☐</td><td>4.3</td><td>Send a small amount of <strong>SOL</strong></td><td>Same</td></tr>
+  <tr><td class="chk">☐</td><td>4.4</td><td>Send a small amount of <strong>BTC</strong></td><td>Same</td></tr>
+  <tr><td class="chk">☐</td><td>4.5</td><td><strong>Swap</strong> XLM ↔ USDC</td><td>Completes, and the swap appears in Activity <strong>without reloading</strong></td></tr>
+  <tr><td class="chk">☐</td><td>4.6</td><td>Open <strong>MoneyGram</strong> (buy or sell)</td><td>The MoneyGram window opens normally</td></tr>
+  <tr><td class="chk">☐</td><td>4.7</td><td>Try a <strong>cross-chain swap</strong> (e.g. USDC → ETH) if you can</td><td>Completes and appears in Activity</td></tr>
+</table>
+
+<div class="box warn">
+  <strong>Known issue — do not report:</strong> swapping <em>from Bitcoin</em> to another coin currently fails with a signing error. We know, and we are waiting on our partner to respond. Everything else should work.
+</div>
+
+<h2>Part 5 · Accounts and wallets</h2>
+
+<table>
+  <tr><th class="chk">✓</th><th>#</th><th>Do this</th><th>Should happen</th></tr>
+  <tr><td class="chk">☐</td><td>5.1</td><td>Create a <strong>brand new account</strong> and set up a wallet</td><td>Works, wallet appears</td></tr>
+  <tr><td class="chk">☐</td><td>5.2</td><td>Add a <strong>second asset</strong> to that account (e.g. set up BTC)</td><td>Works, new address appears in the drawer</td></tr>
+  <tr><td class="chk">☐</td><td>5.3</td><td><strong>Log out and back in</strong></td><td>Everything returns as it was</td></tr>
+  <tr><td class="chk">☐</td><td>5.4</td><td>Use the app for ~15 minutes, switching pages</td><td><strong>XLM and USDC never disappear.</strong> If they vanish while BTC/ETH/SOL stay, report immediately</td></tr>
+  <tr><td class="chk">☐</td><td>5.5</td><td>Log out, then try to open Portfolio</td><td>You are asked to sign in — not shown someone’s data</td></tr>
+</table>
+
+<div class="pagebreak"></div>
+
+<h2>How to report a problem</h2>
+
+<p>Send one message with as many of these as you can:</p>
+<ol>
+  <li><strong>The test number</strong> (for example “3.2”)</li>
+  <li><strong>What you saw</strong>, and what the guide said should happen</li>
+  <li><strong>Which asset</strong> (BTC, XLM…) and roughly <strong>what time</strong></li>
+  <li><strong>A screenshot</strong> of the whole browser window</li>
+  <li><strong>Console screenshot</strong> — see below. This is often the single most useful thing.</li>
+  <li>For anything in Part 4, the <strong>transaction ID</strong> if you have one</li>
+</ol>
+
+<h3>How to take a console screenshot (30 seconds, no experience needed)</h3>
+<ol>
+  <li>Press <strong>F12</strong> on your keyboard (on Mac: <strong>Cmd+Option+I</strong>).</li>
+  <li>A panel opens. Click the tab labelled <strong>Console</strong>.</li>
+  <li>Screenshot anything shown in <strong>red</strong>.</li>
+  <li>Press <strong>F12</strong> again to close it.</li>
+</ol>
+<p>If there is nothing red, that is useful too — say so.</p>
+
+<div class="box">
+  <strong>Do not worry about whether it is “really” a bug.</strong> If it looked wrong to you, report it. A false alarm costs a minute; a missed bug costs far more. You are not expected to know which is which.
+</div>
+
+<h2>If you only have 15 minutes</h2>
+<p>Do these five, in this order. They cover the highest-risk changes:</p>
+<ol>
+  <li><strong>1.1, 1.2, 1.3</strong> — the three screens must agree</li>
+  <li><strong>3.1</strong> — deposit to savings, watch all three numbers</li>
+  <li><strong>4.1</strong> — send a small amount of XLM</li>
+</ol>
+
+<div class="footer">
+  Normal Finance — staging test guide. Questions go to Niko.<br />
+  Print or save as PDF: <strong>Ctrl+P</strong> (Windows) or <strong>Cmd+P</strong> (Mac), then choose “Save as PDF”.
+</div>
+
+</body>
+</html>

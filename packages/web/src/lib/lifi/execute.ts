@@ -2,6 +2,7 @@
 
 import type { ChainAddresses } from '@/lib/chains/registry';
 
+import { describePsbt } from '@/lib/lifi/psbt-debug';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 
@@ -12,7 +13,8 @@ import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 // CRITICAL (Bitcoin): LI.FI returns a PSBT with a FIXED output structure
 // (bridge deposit, OP_RETURN memo, refund output). It must be signed EXACTLY
 // as returned — modifying outputs can make deposits unrefundable (permanent
-// loss on Chainflip). We pass it straight to Turnkey untouched.
+// loss on Chainflip). We only ever ADD signatures to it; see lib/lifi/btc-sign.ts
+// for why Turnkey's PSBT parser is bypassed.
 // ---------------------------------------------------------------------------
 
 export const LIFI_CHAIN_IDS = {
@@ -191,34 +193,54 @@ async function executeBtc(
   const psbtHex = psbtToHex(quote.transactionRequest.data);
 
   const turnkey = await getTurnkeyClient();
-  // If Turnkey still rejects the script, these three facts identify why:
-  // which address we asked it to sign with (must be the P2WPKH bc1q… one),
-  // and the PSBT's size and opening bytes.
-  // Turnkey rejects this PSBT with "UnrecognizedScript". The prime suspect is
-  // the OP_RETURN memo output Chainflip includes (script starts 6a) — it has
-  // no address by definition, so an address-extraction pass over every output
-  // would fail on it. Surface the evidence rather than guessing again.
-  log('BTC: signing PSBT', {
-    signWith: bitcoinAddress,
-    psbtBytes: psbtHex.length / 2,
-    psbtHead: psbtHex.slice(0, 24),
-    hasOpReturn: /6a[0-9a-f]{2}/i.test(psbtHex),
-    // Script-type markers present anywhere in the PSBT: 0014 = P2WPKH,
-    // 0020 = P2WSH, 5120 = P2TR (taproot), 6a = OP_RETURN.
-    markers: ['0014', '0020', '5120'].filter((m) => psbtHex.includes(m)),
-  });
-  const signResult = await turnkey.signTransaction({
-    type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
-    timestampMs: String(Date.now()),
-    organizationId: subOrgId,
-    parameters: {
-      signWith: bitcoinAddress,
-      unsignedTransaction: psbtHex,
-      type: 'TRANSACTION_TYPE_BITCOIN',
-    },
-  });
-  const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
-  if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
+  // Decode what LI.FI actually sent, so any failure names the broken rule
+  // instead of leaving us to guess (see psbt-debug.ts).
+  const summary = describePsbt(psbtHex);
+  // Compact, one-line form — attached to any signing error below so the
+  // diagnosis travels WITH the error rather than sitting in a separate console
+  // line someone has to go and find.
+  const psbtDescription =
+    `bytes=${psbtHex.length / 2} signWith=${bitcoinAddress} ` +
+    `inputs=[${summary.inputs
+      .map((inp) => `#${inp.index} ${inp.witnessUtxoScript ?? 'no-witness_utxo'} {${inp.fields.join(',')}}`)
+      .join(' | ')}] ` +
+    `outputs=[${summary.outputs.map((o) => o.script).join(', ')}]` +
+    (summary.error ? ` decodeError=${summary.error}` : '');
+
+  log('BTC: signing PSBT', psbtDescription);
+
+  // Fail before asking Turnkey when the PSBT breaks a documented rule — a clear
+  // message beats "UnrecognizedScript" from three layers away.
+  const offending = summary.inputs.find(
+    (inp) => inp.fields.includes('non_witness_utxo') && inp.witnessUtxoScript?.startsWith('P2W')
+  );
+  if (offending) {
+    throw new Error(
+      `PSBT input ${offending.index} carries non_witness_utxo on a ${offending.witnessUtxoScript} ` +
+        `input. Turnkey forbids that field for segwit inputs (LI.FI PSBT format issue). ${psbtDescription}`
+    );
+  }
+
+  // NOT TRANSACTION_TYPE_BITCOIN. Turnkey's PSBT parser derives an address from
+  // every script and fails on LI.FI's OP_RETURN memo output, which has no
+  // address — verified by decoding the PSBT: our inputs meet every documented
+  // requirement. Instead we compute the sighashes locally and sign those with
+  // SIGN_RAW_PAYLOADS, which is Turnkey's own documented alternative. The
+  // transaction itself is never modified; we only add signatures.
+  //
+  // Imported dynamically, like viem and web3.js above: it pulls in
+  // bitcoinjs-lib, and only Bitcoin-source swaps need it. A static import puts
+  // that weight in the bundle of every user who opens /swap.
+  let signedTx: string;
+  try {
+    const { signLifiBtcPsbt } = await import('@/lib/lifi/btc-sign');
+    signedTx = await signLifiBtcPsbt(psbtHex, bitcoinAddress, subOrgId, turnkey);
+  } catch (err: any) {
+    // Keep the decode attached: any Bitcoin signing failure should say what was
+    // in the PSBT, or it can't be acted on or reported upstream.
+    const msg = err?.shortMessage ?? err?.message ?? String(err);
+    throw new Error(`${msg} — PSBT: ${psbtDescription}`);
+  }
 
   log('BTC: broadcasting');
   const res = await fetch('/api/turnkey/broadcast-btc', {
