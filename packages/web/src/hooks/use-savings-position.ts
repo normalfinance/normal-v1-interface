@@ -120,9 +120,21 @@ async function fetchUserPosition(
   const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Failed to fetch user position');
 
+  // The route returns `userPosition: null` when it could not read the balance
+  // (e.g. DeFindex rate-limits us), on the assumption the client still holds a
+  // previous value. On a cold browser there is no previous value, and treating
+  // null as "no position" rendered a confident 0.0 — a false statement about
+  // someone's money, which is exactly what this whole path exists to avoid.
+  // Throwing instead keeps SWR in its loading/retry state until a real answer
+  // arrives, so the UI shows a skeleton rather than a wrong number.
+  const cachedPosition = getCachedPosition(address);
+  if (data.userPosition == null && !cachedPosition) {
+    throw new Error('Position unavailable — upstream read failed and no cached value');
+  }
+
   // Reconcile against the cached value (never clobber a held position with a
   // transient 0; handle indexer lag) — pure + unit-tested in ./normalize.
-  const result = reconcileSavingsPosition(data.userPosition, getCachedPosition(address));
+  const result = reconcileSavingsPosition(data.userPosition, cachedPosition);
   setCachedPosition(address, result);
   return result;
 }
