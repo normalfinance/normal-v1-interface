@@ -501,17 +501,28 @@ passkey. What each wallet type can actually do:
 | Wallet | Signs | Can do XLM↔USDC (Soroswap) | Can do cross-chain / CCTP |
 |---|---|---|---|
 | Normal (Turnkey) | Stellar + EVM/BTC/SOL (passkey) | ✅ | ✅ |
-| External Stellar (Lobstr/Freighter/xBull/Ledger/WC/HANA) | **Stellar only** | ✅ | ❌ — needs EVM signing they can't provide |
+| External Stellar (Freighter/Lobstr/Ledger/WalletConnect) | **Stellar only** | ✅ | ⚠ only after a Turnkey wallet is provisioned for them |
 
-Current state: we **gate** cross-chain/CCTP to Normal-wallet users
-(swap-card.tsx) so external wallets never hit an unsignable step. Correct
-safety floor, but it means external-wallet users (most of the 400 legacy +
-any Lobstr user) are locked out of cross-chain. Unblock paths (Phase 3
-decides): (a) offer them a Normal/Turnkey wallet (make the gate an actionable
-"create wallet" CTA); (b) the outbound-hook approach in #33 — sign ONE
-Stellar burn, relayer/hook does the EVM side → external Stellar wallets could
-do outbound CCTP with no EVM signing at all. **Not in Phase 0; add to Phase 2
-verification + Phase 3 ranking.**
+> **CORRECTED 2026-08-05 — this section was out of date.** It previously said
+> we *"gate cross-chain/CCTP to Normal-wallet users (swap-card.tsx)"*. **There
+> is no such gate today** — a grep for `walletType` across `sections/swap/`
+> returns nothing. Lazy provisioning replaced it: the LI.FI and CCTP engines
+> open `ChainSetupDialog` when an address is missing, and `ensureChainAccount`
+> creates a passkey + sub-org for a first-timer. So option (a) below is
+> effectively already shipped, though the cross-chain swap then runs on the
+> user's **new Turnkey addresses, not their external wallet balance** — a
+> product point worth confirming.
+>
+> Also corrected: **xBull and HANA are no longer supported** (modules deleted
+> in `9a2fff6`, 2026-05-14). Four wallets are connectable, not six.
+>
+> Full verification, plus two findings this turned up, in
+> [46-external-wallets.md](46-external-wallets.md).
+
+Remaining unblock path (Phase 3 decides): the outbound-hook approach in #33 —
+sign ONE Stellar burn, relayer/hook does the EVM side → external Stellar
+wallets could do outbound CCTP with no EVM signing and no Turnkey wallet at
+all.
 
 ### #33 — Signature reduction → single-signature goal (esp. CCTP)
 

@@ -32,7 +32,7 @@ import { useCctpEngine } from './engines/use-cctp-engine';
 import { useSoroswapEngine } from './engines/use-soroswap-engine';
 import { canPair, pairTypeOf, SWAP_ASSETS, assetBySymbol, counterpartOf } from './engines/types';
 
-import type { SwapSymbol, StellarSymbol, CrosschainSymbol } from './engines/types';
+import type { SwapSymbol, StellarSymbol, CrosschainSymbol, SwapEngineButton } from './engines/types';
 
 // ---------------------------------------------------------------------------
 // Unified swap card. One asset picker over all five assets; the source's group
@@ -47,7 +47,7 @@ const ZERO = BigNumber(0);
 
 export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const { t } = useTranslate();
-  const { tokenState } = usePersistStore();
+  const { tokenState, wallet } = usePersistStore();
   const config = useStellarConfig();
   const btc = useBtcPortfolio(true);
   const eth = useEthPortfolio(true);
@@ -110,6 +110,26 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   // 'stellar' | 'crosschain' (same-group) or 'cctp' (cross-ecosystem composite).
   const pairType = pairTypeOf(fromSymbol, toSymbol);
 
+  // External Stellar wallets (Freighter/Lobstr/Ledger/WalletConnect) are
+  // deliberately Stellar-only. LI.FI and CCTP both need Base/EVM signing, which
+  // only the Normal (Turnkey passkey) wallet can do, so those pairs are blocked
+  // — computed here, above the engines, so the block reaches both the quote
+  // fetch and the CTA.
+  //
+  // Two reasons this has to be a gate rather than an error at signing time:
+  //
+  // 1. Without it the engines offer to provision a Turnkey wallet mid-swap
+  //    (ChainSetupDialog), which contradicts "external wallets are
+  //    Stellar-only" and hands the user a second wallet they never asked for.
+  // 2. `action: null` below means no signature ever fires. Outbound CCTP burns
+  //    on Stellar FIRST and only then needs the passkey for the Base pivot, so
+  //    a half-executed route would strand USDC on Base awaiting recovery.
+  //
+  // XLM ↔ USDC stays fully enabled. Restores the gate from 3e1ab40, which was
+  // lost in the squash that produced PR #466 — see docs/audit/46-external-wallets.md.
+  const isExternalWallet = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+  const needsNormalWallet = isExternalWallet && pairType !== 'stellar';
+
   // `amount` is always the canonical token amount; in fiat mode the typed value
   // is USD, divided by the live price (0 until the price loads).
   const rawInput = BigNumber(amountIn || 0);
@@ -153,7 +173,10 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     amount: pairType === 'crosschain' ? amount : ZERO,
     fromBalance: pairType === 'crosschain' ? fromBalance : ZERO,
     fromPrice: pairType === 'crosschain' ? fromPrice : ZERO,
-    enabled: pairType === 'crosschain',
+    // Not just `pairType === 'crosschain'`: a hybrid user (external Stellar
+    // wallet plus Turnkey chain addresses) would otherwise pass the address
+    // checks and burn LI.FI quota on quotes the gate below can never execute.
+    enabled: pairType === 'crosschain' && !needsNormalWallet,
     resetInput,
     refetchChain,
   });
@@ -164,12 +187,31 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     amount: pairType === 'cctp' ? amount : ZERO,
     fromBalance: pairType === 'cctp' ? fromBalance : ZERO,
     fromPrice: pairType === 'cctp' ? fromPrice : ZERO,
-    enabled: pairType === 'cctp',
+    enabled: pairType === 'cctp' && !needsNormalWallet,
     resetInput,
     refetchChain,
   });
   const engine = pairType === 'stellar' ? soroswap : pairType === 'crosschain' ? lifi : cctp;
   const { toAmount, quoteLoading, quoteError } = engine;
+
+  // The CTA for the gate computed above. `action: null` is the load-bearing
+  // part: it is what guarantees no signature fires.
+  const button: SwapEngineButton = needsNormalWallet
+    ? {
+        label: t('Cross-chain swaps need your Normal wallet'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography
+            sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', lineHeight: 1.5 }}
+          >
+            {t(
+              'Your connected wallet can only swap XLM ↔ USDC. Swapping BTC, ETH or SOL signs on other chains, which needs your Normal passkey wallet.'
+            )}
+          </Typography>
+        ),
+      }
+    : engine.button;
 
   // --- selection (destination constrained to pairable assets) ---
   const selectFrom = (sym: SwapSymbol) => {
@@ -450,19 +492,20 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         </Box>
       )}
 
-      {/* Gating notice (trustline / activation) */}
-      {engine.button.helper && <Box sx={{ mt: '14px' }}>{engine.button.helper}</Box>}
+      {/* Gating notice (trustline / activation / external-wallet block) */}
+      {button.helper && <Box sx={{ mt: '14px' }}>{button.helper}</Box>}
 
-      {/* CTA */}
+      {/* CTA — `button`, never `engine.button`: the external-wallet gate above
+          overrides the engine's own state machine and must win. */}
       <Button
         fullWidth
         variant="contained"
         size="large"
-        disabled={!engine.button.action || engine.button.loading}
-        onClick={() => engine.button.action?.()}
-        startIcon={engine.button.loading ? <CircularProgress size={16} color="inherit" /> : undefined}
+        disabled={!button.action || button.loading}
+        onClick={() => button.action?.()}
+        startIcon={button.loading ? <CircularProgress size={16} color="inherit" /> : undefined}
         sx={{
-          mt: engine.button.helper ? '10px' : '14px',
+          mt: button.helper ? '10px' : '14px',
           borderRadius: '12px',
           bgcolor: '#0A0A0F',
           fontWeight: 700,
@@ -474,7 +517,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
         }}
       >
-        {engine.button.label}
+        {button.label}
       </Button>
 
       {engine.footer}

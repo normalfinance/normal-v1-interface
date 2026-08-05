@@ -320,3 +320,88 @@ also blocks Phase 5 (load testing) — we cannot safely load-test against prod
 data. Sev 3 · Lik 3 · Eff 3 → **Priority 27**. Fix sketch: a separate staging
 Postgres (Supabase project already exists as the 30-day backup) + staging-scoped
 `DATABASE_*` vars. Needed **before Phase 5**.
+
+---
+
+## #41 — External wallets cannot log transactions (REGRESSION, 2026-08-05)
+
+Found while checking whether the tester guide holds for Freighter/Lobstr/
+Ledger/WalletConnect users. Full analysis: [46-external-wallets.md](46-external-wallets.md).
+
+Connecting an external wallet never writes a `linked_wallets` row — all four
+`linkWallet()` call sites are Normal-wallet paths. Commit `245d7ad` (today)
+added `userOwnsWallet()`, which accepts only `linked_wallets` OR
+`turnkey_wallets`. So `/api/swap/log-transaction` and
+`/api/savings/log-transaction` now return **403** for every external-wallet
+user. Verified against `245d7ad^` that this worked before today.
+
+Impact: completed swaps do not appear as Swap rows in Activity (that feed is
+DB-only); Dune under-counts. Savings positions stay correct — the DeFindex
+events API is authoritative and the DB is a third-tier fallback. **Silent to
+the user** (one `console.error`).
+
+Sev 3 · Lik 3 · Eff 1 → **Priority 9 (low effort, ship before staging).**
+Fix: call `linkWallet(address)` inside the kit store's `connectWallet` after a
+successful connect — one place, so a future connect path cannot forget it.
+Must tolerate failure (the link route is weekly-rate-limited) and never block
+the connection.
+
+## #42 — Wallet self-heal is Turnkey-only and may switch a hybrid user's wallet
+
+Code-path reading, **not yet reproduced**. The self-heal added for the XLM/USDC
+data-loss bug (`use-normal-wallet.tsx:114`) restores the missing address from
+Turnkey regardless of the connected wallet type. Pure external users get no
+protection (no-op). A hybrid user — external Stellar wallet plus a Turnkey
+wallet provisioned for BTC/ETH/SOL — whose address is cleared gets the
+**Turnkey** Stellar address silently connected on the next load, with a
+different XLM/USDC balance and no notification.
+
+Sev 3 · Lik 2 · Eff 2 → **Priority 12.** Reproduce first: connect Freighter,
+provision BTC via a swap, disconnect, reload.
+
+## #43 — Dead wallet types (`xbull`, `hana`)
+
+PRE-EXISTING, not from the optimisation batch.
+
+Both modules were deleted in `9a2fff6` (2026-05-14) but survive in the
+`walletType` union and in the `getWalletIdFromType` restore switch, where they
+resolve to null and force a disconnect. Harmless; it is why the docs and memory
+listed six supported wallets when four are connectable. Sev 1 · Lik 2 · Eff 1 →
+**Priority 2.** Cleanup.
+
+## Batch attribution for #41–#43 (asked 2026-08-05)
+
+Which of the external-wallet findings the **staging batch** caused, verified in
+git rather than assumed:
+
+- **#41 — ours.** `245d7ad`, today. Verified working at `245d7ad^`. The only
+  true regression in the set.
+- **#42 — ours.** The self-heal effect added for the wallet data-loss fix.
+  Behaviour change, not yet reproduced.
+- **#43 — not ours.** `9a2fff6`, 2026-05-14.
+- **Missing cross-chain gate — not ours.** Committed as `3e1ab40` on
+  `feat/advanced-xlm-swaps` (2026-07-11), never an ancestor of HEAD, and absent
+  from the PR that merged that work (`d644679`, #466). Lost in that squash,
+  before the optimisation work began.
+- **`/api/wallet/activity` unauthenticated — not ours.** Already Block C #2.
+
+Cleared on inspection: `postTransactionLog`'s `nf:activity-updated` dispatch
+does not fire for external wallets (403), but at `245d7ad^` savings dispatched
+nothing at all, so this is a missed improvement rather than a regression. Swaps
+are unaffected — `use-soroswap-engine.tsx:107` dispatches independently.
+
+### #41 — FIXED 2026-08-05
+
+`use-stellar-wallets-kit.tsx`: `ensureWalletLinked()` called from
+`connectWallet` (covers all three UI connect paths, which all use this hook)
+**and** from the session-restore effect (backfills users who connected before
+the fix, without asking them to reconnect). Checks `isWalletLinked` before
+POSTing, because that route charges the "3 wallets per day" creation quota even
+for an already-linked address. Never throws.
+
+Shipped alongside a second change from the same decision: **cross-chain swaps
+are now gated off for external wallets** (`swap-card.tsx`), restoring `3e1ab40`
+and additionally disabling the LI.FI/CCTP quote fetches so hybrid users don't
+burn quota on swaps the CTA cannot execute. Product decision: external wallets
+are Stellar-only, so the previous behaviour — silently provisioning a Turnkey
+wallet mid-swap — was wrong.
