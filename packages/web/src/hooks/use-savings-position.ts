@@ -133,7 +133,8 @@ async function fetchUserPosition(
   }
 
   // Reconcile against the cached value (never clobber a held position with a
-  // transient 0; handle indexer lag) — pure + unit-tested in ./normalize.
+  // transient 0; handle indexer lag) — pure logic in ./normalize (not yet
+  // covered by tests; no runner is configured in this package).
   const result = reconcileSavingsPosition(data.userPosition, cachedPosition);
   setCachedPosition(address, result);
   return result;
