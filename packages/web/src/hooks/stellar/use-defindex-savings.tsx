@@ -11,6 +11,7 @@ import type { VaultInfo, SavingsPosition } from '@/types/savings';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
+import { postTransactionLog } from '@/lib/log-transaction';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
@@ -314,19 +315,15 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         }
 
         // Log deposit to DB (fire-and-forget)
-        fetch('/api/savings/log-transaction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            walletAddress,
-            vaultAddress: vaultInfo.address,
-            type: 'deposit',
-            amount: netAmount.toFixed(7),
-            txHash: depositResult.hash,
-            feeAmount: feeAmount.toFixed(2),
-            feeTxHash: feeResult.hash,
-          }),
-        }).catch(console.error);
+        postTransactionLog('/api/savings/log-transaction', {
+          walletAddress,
+          vaultAddress: vaultInfo.address,
+          type: 'deposit',
+          amount: netAmount.toFixed(7),
+          txHash: depositResult.hash,
+          feeAmount: feeAmount.toFixed(2),
+          feeTxHash: feeResult.hash,
+        });
 
         enqueueSuccessWithStellarExpert(
           enqueueSnackbar,
@@ -520,19 +517,15 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         }
 
         // Log withdrawal to DB (fire-and-forget)
-        fetch('/api/savings/log-transaction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            walletAddress,
-            vaultAddress: vaultInfo.address,
-            type: 'withdraw',
-            amount,
-            txHash: withdrawResult.hash,
-            feeAmount: commissionAmount > 0 ? commissionAmount.toFixed(7) : null,
-            feeTxHash: commissionTxHash,
-          }),
-        }).catch(console.error);
+        postTransactionLog('/api/savings/log-transaction', {
+          walletAddress,
+          vaultAddress: vaultInfo.address,
+          type: 'withdraw',
+          amount,
+          txHash: withdrawResult.hash,
+          feeAmount: commissionAmount > 0 ? commissionAmount.toFixed(7) : null,
+          feeTxHash: commissionTxHash,
+        });
 
         enqueueSuccessWithStellarExpert(
           enqueueSnackbar,

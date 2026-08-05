@@ -271,11 +271,11 @@ export function useUserActivity(
   // Refresh the feed immediately when a swap/deposit just completed, instead
   // of waiting for focus/interval revalidation. Dispatched by the swap cards.
   useEffect(() => {
-    const handler = () => {
-      setTimeout(() => {
-        mutate();
-      }, 800);
-    };
+    // No delay: the log write now dispatches this event only AFTER the row is
+    // saved, so there is nothing left to wait for. The 800ms here was a
+    // workaround for the refresh racing the write — with the race removed at
+    // its source, the wait is pure latency on every refresh.
+    const handler = () => mutate();
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);
   }, [mutate]);

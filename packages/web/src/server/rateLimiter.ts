@@ -111,6 +111,15 @@ const ipRateLimiter = new Ratelimit({
   limiter: Ratelimit.slidingWindow(50, '10 s'),
 });
 
+// Quote routes stay UNAUTHENTICATED on purpose — users see prices before
+// connecting a wallet — but they proxy services we pay for (Soroswap, LI.FI),
+// so they need a ceiling keyed on the only identity we have: the IP.
+export const quoteRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, '10 s'),
+  prefix: 'quote',
+});
+
 // Allow 3 requests per 10 minutes, sliding window (for mnemonic export)
 export const exportMnemonicRateLimiter = new Ratelimit({
   redis,

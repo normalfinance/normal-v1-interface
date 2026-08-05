@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { quoteRateLimiter } from '@/server/rateLimiter';
 
 // ---------------------------------------------------------------------------
 // POST /api/lifi/quote
@@ -34,6 +35,14 @@ async function fetchQuote(params: URLSearchParams): Promise<Response> {
 }
 
 export async function POST(request: NextRequest) {
+  // Unauthenticated by design, but this proxies a service we pay for, so it
+  // needs a ceiling. Keyed on IP — the only identity available here.
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
+  const { success: withinLimit } = await quoteRateLimiter.limit(ip);
+  if (!withinLimit) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   let body: {
     fromSymbol?: string;
     toSymbol?: string;

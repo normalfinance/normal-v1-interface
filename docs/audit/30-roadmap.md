@@ -27,9 +27,27 @@ safer. Target: ~1,000 users first, then toward 10k.
 | — | **Savings caching**: vault-info 120s + 1h stale fallback; user-position 30s + refresh bypass + floor, never stale; client dedupe 60s → 20s |
 | — | **Savings correctness (4 bugs)**: spentOnDeposits never reset; optimistic writes from live state; null position rendering 0.0; reconcile threshold letting a deposit display as earnings |
 
+## ✅ DONE (continued)
+
+| # | Item |
+|---|---|
+| 429 | DeFindex burst: shared 429-only single retry honouring `retryAfter`, + events history cached 300s (skips the paginated loop). Verified: no 429s, user-position 8112ms → 146ms warm |
+| 1 | **Both log-transaction routes secured**: session required, wallet **ownership verified** (auth alone would still let a logged-in user write against another address), rate limited. All 3 callers now send auth via `lib/log-transaction.ts` and **report failures** instead of failing silently |
+| 3 | `lifi/quote` + `swap/quote`: IP-keyed rate limit (they stay unauthenticated by design — prices are shown before a wallet is connected) |
+| — | **Race fixed, exposed by the above**: engines dispatched `activity-updated` before the log write finished, hidden by an 800ms delay. The event now fires *after* a successful write, and the 800ms wait on the wallet-activity refresh is removed |
+
 ## ▶ NEXT — in order
 
-### 1. DeFindex 429 burst (S) — *found 2026-08-05, unfixed*
+### 0. #19 — cache session verification (M) — *promoted 2026-08-05*
+Every authenticated route calls Supabase `auth.getUser()` live, with **no
+timeout** — a network round trip before the route does any work (464ms warm,
+7.7s cold in dev logs). Adding auth to the log routes made this visible as
+user-facing latency: a swap row took seconds to appear. Fixing it speeds up
+**all 36 authenticated routes** and removes the app-wide hang risk.
+*Optional smaller win first: render the new activity row optimistically, as
+savings already does, so swaps feel instant regardless of write latency.*
+
+### 1. ~~DeFindex 429 burst~~ — **DONE**
 Caching removed repeat load but not the **burst**: a cold savings load fires ~5
 upstream calls at once (vault-info 2; user-position: getVaultBalance +
 fetchAllEvents **paginated loop** + accountPosition). Their limit is per-second
