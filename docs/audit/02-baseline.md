@@ -106,12 +106,11 @@ architecture (workstream B) is *required*, not optional. Decision in Phase 3.
   (2026-07-25) — the rest are legacy local-key wallets. Consequence: Turnkey
   Enterprise negotiation stays a before-the-10k-push item; balance webhooks
   are a later bolt-on (Layer 2), not part of the first cache build (Layer 1).
-- ~~Pending-receive watchers exist for BTC, ETH and SOL~~ **CORRECTED by
-  Phase 1 (1.E, 2026-07-26): only BTC has a watcher** (WebSocket +20 s poll,
-  modal-scoped — exemplary). ETH/SOL have NO pending detection; the real
-  Helius Enhanced-API burner is the activity feed polling
-  `/api/activity/solana` every 30 s (100 credits per upstream call ≈ 12k
-  credits/hour/tab on cache miss). See system-map cand #22.
+- **Pending-receive watchers exist for BTC, ETH *and* SOL** (2026-07-25) —
+  the ETH/SOL watchers poll the PAID providers (Alchemy/Helius) per client;
+  likely the main driver of Helius "Enhanced API = 94 %" usage. Layer-1 fix:
+  watchers keep the feature but poll our cached server route, modal-open
+  only, auto-stop ~30 min. Exact current intervals: pin in Phase 1 map.
 - Supabase Query Performance (production `normal-stellar`, FREE plan): 97 slow
   queries · 100 % cache hit rate · 4.4 avg rows/call.
 - **Finding P0-2 — Supabase Realtime churn:** the top FOUR queries by total
@@ -141,13 +140,6 @@ Per-flow request totals (browser → destination):
 
 **Findings from the captures:**
 
-- **P0-3 ✅ FIXED AND VERIFIED (2026-07-26, HAR 08 after the org-Upstash
-  swap with All-Environments scoping):** `/api/wallet/portfolio` on staging
-  went from **~22,000 ms every call → median 356 ms, max 1,153 ms**, with
-  30–40 ms Redis cache hits appearing for the first time (staging cache +
-  rate limiting now live). Remaining slowest route is now
-  `/api/turnkey/wallet` (3.2–4.4 s cold, called 26× per session — P0-5's
-  dedupe failure is the next-biggest visible target).
 - **P0-3 ROOT CAUSE CONFIRMED (2026-07-25, Vercel env screenshot):**
   `UPSTASH_REDIS_MAINNET_REST_URL/TOKEN` are scoped to **Production only**;
   staging deploys from develop as **Preview** in the same project → Preview
