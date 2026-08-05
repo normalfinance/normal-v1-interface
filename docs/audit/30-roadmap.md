@@ -101,6 +101,12 @@ Importing a Normal Stellar wallet hides the Turnkey one. **Verified cosmetic**
 | 24 | DB-back Coinbase off-ramp tracking (device-local today) |
 | 7/12 | Consolidate the two activity systems (+ move the misfiled `hooks/stellar/use-user-activity.ts`) |
 
+## Block G2 — deferred upgrades with a trigger (not date-based)
+
+| # | Item | Trigger |
+|---|---|---|
+| 19b | **Two-tier auth cache: memory → Redis → Supabase.** #19 shipped an in-memory cache, which is per serverless instance: every new instance pays its own first verification. A shared Redis tier raises the hit rate across instances. In-memory was chosen deliberately (a memory read is free; Redis is still a network call ~5–20ms), so this is an upgrade, not a correction. | Past a few hundred concurrent users, or if verification latency shows up in production traces |
+
 ## Block H — strategic
 | # | Item |
 |---|---|
