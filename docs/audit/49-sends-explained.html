@@ -208,6 +208,7 @@
 <table>
 <tr><th>#</th><th>Do this</th><th>Expect</th></tr>
 <tr><td>1</td><td>Send a little XLM to another wallet</td><td>Pending row in Activity <strong>immediately</strong>, confirmed within ~10s, balance updates within ~15s, <strong>no reload at any point</strong></td></tr>
+<tr><td>1b</td><td>Click <strong>View</strong> on a pending row for each asset</td><td>Opens the RIGHT explorer: stellar.expert for XLM, mempool.space for BTC, etherscan for ETH, solscan for SOL. (An ETH hash in stellar.expert was a real staging bug)</td></tr>
 <tr><td>2</td><td>Send BTC, then reload the page mid-confirmation</td><td>The pending row is <strong>still there</strong> after the reload</td></tr>
 <tr><td>3</td><td>Paste a Coinbase deposit address into Send, leave the memo empty</td><td>Warning names Coinbase, memo field opens itself, button disabled until you paste the memo</td></tr>
 <tr><td>4</td><td>Try the same from the savings withdraw form</td><td>Refused, with a message pointing to the Send dialog</td></tr>

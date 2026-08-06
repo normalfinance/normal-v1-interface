@@ -196,6 +196,7 @@ list carelessly, a test named after the incident fails.
 | # | Do this | Expect |
 |---|---|---|
 | 1 | Send a little XLM to another wallet | Pending row in Activity **immediately**, confirmed within ~10s, balance updates within ~15s, **no reload at any point** |
+| 1b | Click **View** on a pending row for each asset | Opens the RIGHT explorer: stellar.expert for XLM, mempool.space for BTC, etherscan for ETH, solscan for SOL. (An ETH hash in stellar.expert was a real staging bug) |
 | 2 | Send BTC, then reload the page mid-confirmation | The pending row is **still there** after the reload |
 | 3 | Paste a Coinbase deposit address into Send, leave the memo empty | Warning names Coinbase, memo field opens itself, button disabled until you paste the memo |
 | 4 | Try the same from the savings withdraw form | Refused, with a message pointing to the Send dialog |

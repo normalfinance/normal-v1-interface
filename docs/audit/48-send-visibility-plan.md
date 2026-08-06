@@ -10,6 +10,15 @@ As-built deltas from the plan, both small:
   row (it no-ops without local fills, so it costs nothing).
 - The savings-card listener skips only NON-Stellar scoped events: a Stellar
   send moves XLM, which its low-XLM warning reads.
+- **Found on staging within the hour (2026-08-06): the pending row's View
+  link sent every hash to stellar.expert** — an ETH pending row opened an
+  Ethereum hash in a Stellar explorer (endless spinner). Cause: the activity
+  card routes explorers by id prefix and the pending id carried no chain.
+  Fixed: pending ids are now `pending-send:<chain>:<hash>` and the card
+  resolves ALL explorer links from the chain registry's `explorerTx` (which
+  existed but the card predated). Swept every other consumer of activity
+  rows: the drawer renders no links, savings history filters sends out —
+  the bug lived in exactly one place.
 - One bug caught by the new unit suite before it ever ran in a browser:
   `getPendingSends` was too lazy and skipped localStorage hydration on a
   fresh page load — a pending BTC send would have vanished on reload, the

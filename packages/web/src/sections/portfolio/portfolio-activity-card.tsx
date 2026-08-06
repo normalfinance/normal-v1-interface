@@ -1,8 +1,10 @@
 'use client';
 
 import type { Activity } from '@/types/activity';
+import type { ChainId } from '@/lib/chains/registry';
 
 import { useTranslate } from '@/locales';
+import { CHAINS } from '@/lib/chains/registry';
 import { fCurrency } from '@/utils/format-number';
 import { useMemo, useState, useEffect } from 'react';
 import { useUserActivity } from '@/hooks/stellar/use-user-activity';
@@ -41,14 +43,26 @@ function formatRelative(ts: number): string {
 }
 
 function getExplorerUrl(a: Activity): string | null {
+  // Pending sends carry their chain inside the id
+  // (`pending-send:<chain>:<hash>`) — the hash alone doesn't say where it
+  // lives, and an ETH hash opened in stellar.expert renders an endless
+  // spinner. Explorer bases come from the chain registry, the single source
+  // of truth, so a new chain cannot reintroduce this bug here.
+  if (a.id.startsWith('pending-send:')) {
+    const rest = a.id.slice('pending-send:'.length);
+    const sep = rest.indexOf(':');
+    const chain = rest.slice(0, sep) as ChainId;
+    const hash = rest.slice(sep + 1);
+    return CHAINS[chain] && hash ? CHAINS[chain].explorerTx(hash) : null;
+  }
   if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('btc:') && a.txHash) {
-    return `https://mempool.space/tx/${a.txHash}`;
+    return CHAINS.bitcoin.explorerTx(a.txHash);
   }
   if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('eth:') && a.txHash) {
-    return `https://etherscan.io/tx/${a.txHash}`;
+    return CHAINS.ethereum.explorerTx(a.txHash);
   }
   if ((a.type === 'Sent' || a.type === 'Receive') && a.id.startsWith('sol:') && a.txHash) {
-    return `https://solscan.io/tx/${a.txHash}`;
+    return CHAINS.solana.explorerTx(a.txHash);
   }
   // Cross-chain (LI.FI) swap — link to LI.FI's own explorer, which shows the
   // whole journey (source + bridge + destination + status) in one view,
@@ -65,10 +79,10 @@ function getExplorerUrl(a: Activity): string | null {
     case 'Savings Deposit':
     case 'Savings Withdraw':
     case 'Swap':
-      return a.txHash ? `https://stellar.expert/explorer/public/tx/${a.txHash}` : null;
+      return a.txHash ? CHAINS.stellar.explorerTx(a.txHash) : null;
     case 'Sent':
     case 'Receive':
-      if (a.txHash) return `https://stellar.expert/explorer/public/tx/${a.txHash}`;
+      if (a.txHash) return CHAINS.stellar.explorerTx(a.txHash);
       if (a.id.startsWith('horizon:')) return `https://stellar.expert/explorer/public/op/${a.id.slice(8)}`;
       return null;
     default:
