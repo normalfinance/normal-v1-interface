@@ -3,8 +3,8 @@
 import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import useSWR from 'swr';
-import { useMemo, useEffect } from 'react';
 import { buildAuthHeaders } from '@/utils/http';
+import { useMemo, useEffect, useCallback } from 'react';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 
 // ---------------------------------------------------------------------------
@@ -60,21 +60,27 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
   // a chain-only wallet (e.g. BTC-first) still gets its balances.
   const swrKey = enabled ? `${stellar || 'none'}:${network}` : null;
 
-  const { data, error, isLoading, isValidating, mutate } = useSWR<PortfolioPayload>(
-    swrKey,
-    async (key: string) => {
+  const fetchPayload = useCallback(
+    async (cacheKey: string, fresh: boolean): Promise<PortfolioPayload> => {
       const headers = await buildAuthHeaders();
       const res = await fetch(
-        `/api/wallet/portfolio?stellar=${encodeURIComponent(stellar)}&network=${network}`,
+        `/api/wallet/portfolio?stellar=${encodeURIComponent(stellar)}&network=${network}` +
+          (fresh ? '&refresh=1' : ''),
         { headers }
       );
       if (!res.ok) throw new Error(`portfolio ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error ?? 'portfolio error');
       const payload: PortfolioPayload = { updatedAt: json.updatedAt, assets: json.assets };
-      writeCache(key, payload);
+      writeCache(cacheKey, payload);
       return payload;
     },
+    [stellar, network]
+  );
+
+  const { data, error, isLoading, isValidating, mutate } = useSWR<PortfolioPayload>(
+    swrKey,
+    (key: string) => fetchPayload(key, false),
     {
       fallbackData: swrKey ? readCache(swrKey) : undefined,
       revalidateOnFocus: true,
@@ -84,12 +90,18 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
     }
   );
 
-  // Refresh promptly after a send/swap/off-ramp settles.
+  // Refresh promptly after a send/swap/off-ramp settles — with `refresh=1`, so
+  // the server's 15s response cache is skipped for this one fetch and the new
+  // balance is actually new (the route floors the bypass server-side). Seeded
+  // back into SWR without revalidating, mirroring the activity hook's pattern.
   useEffect(() => {
-    const handler = () => setTimeout(() => mutate(), 800);
+    const handler = () => {
+      if (!swrKey) return;
+      setTimeout(() => mutate(fetchPayload(swrKey, true), { revalidate: false }), 800);
+    };
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);
-  }, [mutate]);
+  }, [mutate, swrKey, fetchPayload]);
 
   const assets = useMemo(() => data?.assets ?? [], [data]);
 

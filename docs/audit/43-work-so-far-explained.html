@@ -24,8 +24,19 @@
 </style></head><body>
 <h1>43 — Everything done so far, explained</h1>
 <p>For a developer new to this work. Covers what was changed, why, and the</p>
-<p>reasoning behind the decisions. Companion documents: <code>40-savings-explained.md</code></p>
-<p>(savings in depth), <code>42-tester-guide.html</code> (the tester-facing version).</p>
+<p>reasoning behind the decisions.</p>
+<p><strong>This is the entry point for the staging push.</strong> Read it first, then go</p>
+<p>deeper only where you need to:</p>
+<table>
+<tr><th>Document</th><th>When to read it</th></tr>
+<tr><td><code>40-savings-explained.md</code></td><td>savings in depth (section 3 here summarises it)</td></tr>
+<tr><td><code>45-btc-swap-explained.md</code></td><td>the Bitcoin signing fix, from first principles</td></tr>
+<tr><td><code>46-external-wallets.md</code></td><td>external wallets, the full capability matrix</td></tr>
+<tr><td><code>20-findings.md</code></td><td>the ranked register, every finding with severity</td></tr>
+<tr><td><code>30-roadmap.md</code></td><td>what is scheduled next, and why in that order</td></tr>
+<tr><td><code>42-tester-guide.html</code></td><td>the tester-facing version, printable to PDF</td></tr>
+</table>
+<p>Everything in sections 1 to 7 below is in the staging push.</p>
 <hr />
 <h2>The starting point</h2>
 <p>The app worked, but it wasn't built to work <em>cheaply or reliably at volume</em>. An</p>
@@ -203,9 +214,98 @@
 <li><strong>Tests.</strong> <code>normalize.ts</code> is pure, has caused two money-display bugs, and has</li>
 </ul>
 <p>  zero coverage — comments claiming otherwise were wrong. Best first suite.</p>
+<hr />
+<h2>6. Bitcoin-source swaps, fixed</h2>
+<p>Full detail in <a href="45-btc-swap-explained.md">45-btc-swap-explained.md</a>.</p>
+<p>Swapping <em>from</em> Bitcoin failed at signing with <code>UnrecognizedScript</code>. Two</p>
+<p>theories were written down early and both turned out to be wrong, which is</p>
+<p>worth recording because ruling them out is what produced the real answer:</p>
+<ul>
+<li><em>"The PSBT is base64 and we send hex."</em> The magic bytes said it was already</li>
+</ul>
+<p>  valid hex. Disproven.</p>
+<ul>
+<li><em>"There is a taproot output."</em> The hex contained <code>5120</code>, the taproot prefix,</li>
+</ul>
+<p>  but a proper decode showed it was a coincidental substring in the middle of</p>
+<p>  other data. There is no taproot. Disproven.</p>
+<p>The actual cause: Turnkey's PSBT parser derives an address from <strong>every</strong></p>
+<p>script, and LI.FI's PSBT contains an <strong>OP_RETURN</strong> output, which by definition</p>
+<p>has no address. Their docs list what they reject and OP_RETURN is not on it, so</p>
+<p>it is an undocumented limitation on their side, not a malformed PSBT and not a</p>
+<p>bug in our code.</p>
+<p>The fix is Turnkey's own documented alternative. Rather than handing them the</p>
+<p>PSBT to parse, we compute the signature hashes locally with bitcoinjs-lib and</p>
+<p>ask Turnkey to sign those raw 32-byte digests. It never sees the OP_RETURN.</p>
+<p>Three things worth carrying forward:</p>
+<ul>
+<li><strong>The transaction is never modified.</strong> Only signatures are added. The</li>
+</ul>
+<p>  standing "never rewrite a Chainflip PSBT" rule is about changing outputs and</p>
+<p>  is fully respected.</p>
+<ul>
+<li><strong>All inputs are signed in one Turnkey activity</strong>, so a multi-input swap</li>
+</ul>
+<p>  still costs one passkey prompt rather than one per input.</p>
+<ul>
+<li><strong>Low-S normalisation.</strong> A high-S signature is valid cryptography but</li>
+</ul>
+<p>  non-standard, so relays silently drop it. That failure looks like "broadcast</p>
+<p>  succeeded and nothing happened", which is the worst kind to debug. Four lines</p>
+<p>  removed the whole category.</p>
+<p>Also worth knowing before anyone edits that file: it is the first client-side</p>
+<p>use of <code>bitcoinjs-lib</code> in the app, Next does not polyfill the <code>Buffer</code> global</p>
+<p>for browser bundles, and bitcoinjs v7 is <code>Uint8Array</code>-only. Do not add</p>
+<p><code>Buffer.from</code> there. And it is imported with <code>await import(...)</code>, because a</p>
+<p>static import put 45 kB of Bitcoin library into the bundle of everyone who</p>
+<p>opens the swap page.</p>
+<hr />
+<h2>7. External wallets</h2>
+<p>Full detail in <a href="46-external-wallets.md">46-external-wallets.md</a>.</p>
+<p>Checking whether the tester guide held for someone signed in with Freighter or</p>
+<p>Lobstr turned up two things in this batch and corrected two stale beliefs.</p>
+<p><strong>The product rule, now explicit: external wallets are Stellar-only.</strong> They can</p>
+<p>hold and move XLM and USDC, swap between them, use savings and MoneyGram.</p>
+<p>Bitcoin, Ethereum and Solana need the Turnkey passkey, because a Stellar wallet</p>
+<p>physically cannot produce those signatures.</p>
+<p><strong>The regression.</strong> Section 4 above closed the transaction-log routes by</p>
+<p>checking that the wallet belongs to the signed-in account. That check reads</p>
+<p><code>linked_wallets</code> or <code>turnkey_wallets</code>, and connecting an external wallet never</p>
+<p>wrote a <code>linked_wallets</code> row. So the security fix silently 403'd every external</p>
+<p>wallet: their swaps stopped reaching the database and vanished from Activity.</p>
+<p>Fixed with one <code>ensureWalletLinked()</code> helper called from two places. On connect,</p>
+<p>where all three UI paths share the same hook so a fourth cannot forget. And on</p>
+<p>session restore, which backfills people who connected before the fix without</p>
+<p>asking them to reconnect. It checks before writing, because that route charges</p>
+<p>a "3 wallets per day" quota even for an address that is already linked.</p>
+<p><strong>The gate that came back.</strong> Cross-chain swaps were reachable from an external</p>
+<p>wallet, and offered to provision a Turnkey wallet mid-swap. That contradicts</p>
+<p>the Stellar-only rule and hands someone a second wallet they never asked for.</p>
+<p>A gate for exactly this was written in July, committed to a feature branch, and</p>
+<p>lost in the squash that produced its PR. Restored, and improved: it now also</p>
+<p>switches the quote fetches off, so a user with both wallet types does not burn</p>
+<p>LI.FI quota on swaps the button will not run.</p>
+<p><code>action: null</code> on that button is the load-bearing part. Outbound CCTP burns on</p>
+<p>Stellar first and only then needs the passkey, so a half-executed route would</p>
+<p>leave USDC on Base awaiting recovery.</p>
+<p><strong>Two beliefs corrected.</strong> The system map said cross-chain was gated to Normal</p>
+<p>wallets; it was not, and the file it named did not contain the check. And we</p>
+<p>had six external wallets recorded as supported when only four are connectable,</p>
+<p>xBull and HANA having been removed in May.</p>
+<hr />
 <h2>Known broken</h2>
-<p><strong>Bitcoin-source swaps</strong> fail at signing. The PSBT from LI.FI contains a taproot</p>
-<p>output and an OP_RETURN, and Turnkey rejects it. This worked before, so an</p>
-<p>upstream format change is the leading theory. <strong>Do not rewrite the PSBT</strong> —</p>
-<p>Chainflip deposits can become unrefundable. Waiting on LI.FI.</p>
+<p>Nothing known-broken is shipping in this push.</p>
+<p>Two items are open but neither blocks it:</p>
+<ul>
+<li><strong>#42</strong> — the self-heal that restores a missing Stellar address reads it from</li>
+</ul>
+<p>  Turnkey regardless of wallet type. For someone using an external wallet <em>and</em></p>
+<p>  a Turnkey wallet, that could silently swap which Stellar address is active.</p>
+<p>  Not yet reproduced, and deliberately not "fixed" first: when the address is</p>
+<p>  wiped the wallet type is wiped with it, so the obvious guard would not</p>
+<p>  actually work. Needs the repro.</p>
+<ul>
+<li><strong>#43</strong> — <code>xbull</code> and <code>hana</code> linger in the wallet-type union after the</li>
+</ul>
+<p>  modules were deleted. Cosmetic.</p>
 </body></html>

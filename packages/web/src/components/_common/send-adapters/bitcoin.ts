@@ -4,6 +4,7 @@ import type { Token } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
 import { buildAuthHeaders } from '@/utils/http';
+import { announceTransaction } from '@/lib/tx-events';
 
 import type { SendParams, SendAdapter } from './index';
 
@@ -47,9 +48,10 @@ async function buildBtcTransaction(
 }
 
 async function broadcastBtcTransaction(signedTxHex: string): Promise<string> {
+  const headers = await buildAuthHeaders();
   const res = await fetch('/api/turnkey/broadcast-btc', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ signedTxHex }),
   });
   if (!res.ok) {
@@ -113,6 +115,19 @@ export function createBitcoinAdapter(
 
         // Step 3 — broadcast via our server (avoids CORS issues with mempool.space)
         const txid = await broadcastBtcTransaction(signedTx);
+
+        // Pending row + cache-bypassed refresh. Matters most on Bitcoin: the
+        // row is the only feedback until the chain confirms, possibly hours.
+        announceTransaction({
+          chain: 'bitcoin',
+          pendingSend: {
+            txHash: txid,
+            symbol: 'BTC',
+            amount: params.amount,
+            destination: params.destination,
+          },
+        });
+
         return txid;
       } catch (err: any) {
         const msg: string = err?.message ?? 'Bitcoin transaction failed';

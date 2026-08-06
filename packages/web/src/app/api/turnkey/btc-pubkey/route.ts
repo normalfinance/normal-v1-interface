@@ -43,8 +43,15 @@ export async function GET(request: NextRequest) {
       walletId: wallet.walletId,
     });
 
+    // Match by the ADDRESS we sign with, not just the format: signing uses
+    // `signWith: bitcoinAddress`, so if a wallet ever carries two BTC accounts
+    // a format-only match could return the other account's key and the client
+    // would refuse to sign with a confusing "account mismatch". The format
+    // check stays as a sanity assertion.
     const account = accounts.find(
-      (a) => a.addressFormat === CHAINS.bitcoin.turnkeyAddressFormat
+      (a) =>
+        a.address === wallet.bitcoinAddress &&
+        a.addressFormat === CHAINS.bitcoin.turnkeyAddressFormat
     );
 
     // `publicKey` is optional in Turnkey's schema, so treat its absence as a

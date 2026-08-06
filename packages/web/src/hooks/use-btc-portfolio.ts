@@ -3,6 +3,7 @@
 import type { Token } from '@normalfinance/types';
 
 import { cdn } from '@normalfinance/utils';
+import { chainOfActivityEvent } from '@/lib/tx-events';
 import { useState, useEffect, useCallback } from 'react';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
@@ -80,9 +81,14 @@ export function useBtcPortfolio(enabled = true) {
   }, [loadBalance]);
 
   // Auto-refresh when a swap settles (fires `nf:activity-updated`), so the BTC
-  // balance updates everywhere without a manual page refresh.
+  // balance updates everywhere without a manual page refresh. Chain-scoped
+  // events (plain sends) refresh only their own chain — skip the others.
   useEffect(() => {
-    const onUpdate = () => loadBalance();
+    const onUpdate = (e: Event) => {
+      const only = chainOfActivityEvent(e);
+      if (only && only !== 'bitcoin') return;
+      loadBalance();
+    };
     window.addEventListener('nf:activity-updated', onUpdate);
     return () => window.removeEventListener('nf:activity-updated', onUpdate);
   }, [loadBalance]);

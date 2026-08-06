@@ -90,6 +90,25 @@ Importing a Normal Stellar wallet hides the Turnkey one. **Verified cosmetic**
 | 28 | XLM fee preflight in savings |
 | 26 | Fee-first: **ratify or restructure** — decision |
 
+## Block F2 — next batch, after staging feedback (scheduled 2026-08-06)
+
+The post-push re-review findings and the test foundation. Ordered; all sized S
+except the component tests.
+
+| # | Item | Size |
+|---|---|---|
+| 48 | ~~**Memo-less sends to exchanges**~~ **fixed 2026-08-06** — real 5 XLM loss to Coinbase's pooled account; seed list + live directory route + forced memo UI; withdraw-card hard-blocks. Ships with the next push | done |
+| 47 | **Send visibility** — sends fire no `nf:activity-updated`, so no refresh and no pending row; found by live testing (5 XLM to Coinbase: success toast, then nothing until reload + cache TTL). Plan: [48-send-visibility-plan.md](48-send-visibility-plan.md). Phases A (announce, S) + C (portfolio refresh bypass, S) close the incident; B (pending-sends ledger, M) makes BTC/ETH sends honest. **Ranked first in this block: user-visible money feedback** | S+S+M |
+| 44 | ~~broadcast-btc open relay~~ **fixed in tree** — goes out with the next push | done |
+| 45 | ~~btc-pubkey format-only account match~~ **fixed in tree** — same push | done |
+| 46 | **`withAuth` route wrapper** — third unauthenticated-route finding (#3, Block C #2, #44); make auth the default, public routes the explicit exception, then sweep all routes onto it | S |
+| 42 | **Self-heal repro** — Freighter + provisioned BTC, disconnect, reload; does the Turnkey Stellar address silently take over? Fix designed only after the repro | S |
+| 43 | Remove dead `xbull`/`hana` wallet types + restore-switch branches | S |
+| T1 | ~~Test foundation: Jest wired (`yarn test`), first suite on `normalize.ts`~~ **done 2026-08-06** — 16 cases, all anchored to shipped bugs | done |
+| T2 | **Test wave 2:** `wallet-ownership.ts`, `reconcile` edge cases as found, `describePsbt` against the real failing-PSBT fixture, low-S normalisation | S |
+| T3 | **Test wave 3 (components):** the external-wallet swap gate (the decision that was already lost once in a squash), savings card loading states | M |
+| T4 | Stale Playwright specs — `tests/*.spec.ts` target a deleted `/explore` page; delete or rewrite as smoke tests against today's pages | S |
+
 ## Block G — capacity (before the 10k push)
 | # | Item |
 |---|---|

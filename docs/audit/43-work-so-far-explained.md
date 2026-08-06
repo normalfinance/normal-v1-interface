@@ -1,8 +1,21 @@
 # 43 — Everything done so far, explained
 
 For a developer new to this work. Covers what was changed, why, and the
-reasoning behind the decisions. Companion documents: `40-savings-explained.md`
-(savings in depth), `42-tester-guide.html` (the tester-facing version).
+reasoning behind the decisions.
+
+**This is the entry point for the staging push.** Read it first, then go
+deeper only where you need to:
+
+| Document | When to read it |
+|---|---|
+| `40-savings-explained.md` | savings in depth (section 3 here summarises it) |
+| `45-btc-swap-explained.md` | the Bitcoin signing fix, from first principles |
+| `46-external-wallets.md` | external wallets, the full capability matrix |
+| `20-findings.md` | the ranked register, every finding with severity |
+| `30-roadmap.md` | what is scheduled next, and why in that order |
+| `42-tester-guide.html` | the tester-facing version, printable to PDF |
+
+Everything in sections 1 to 7 below is in the staging push.
 
 ---
 
@@ -220,9 +233,107 @@ simpler *and* faster.
 - **Tests.** `normalize.ts` is pure, has caused two money-display bugs, and has
   zero coverage — comments claiming otherwise were wrong. Best first suite.
 
+---
+
+## 6. Bitcoin-source swaps, fixed
+
+Full detail in [45-btc-swap-explained.md](45-btc-swap-explained.md).
+
+Swapping *from* Bitcoin failed at signing with `UnrecognizedScript`. Two
+theories were written down early and both turned out to be wrong, which is
+worth recording because ruling them out is what produced the real answer:
+
+- *"The PSBT is base64 and we send hex."* The magic bytes said it was already
+  valid hex. Disproven.
+- *"There is a taproot output."* The hex contained `5120`, the taproot prefix,
+  but a proper decode showed it was a coincidental substring in the middle of
+  other data. There is no taproot. Disproven.
+
+The actual cause: Turnkey's PSBT parser derives an address from **every**
+script, and LI.FI's PSBT contains an **OP_RETURN** output, which by definition
+has no address. Their docs list what they reject and OP_RETURN is not on it, so
+it is an undocumented limitation on their side, not a malformed PSBT and not a
+bug in our code.
+
+The fix is Turnkey's own documented alternative. Rather than handing them the
+PSBT to parse, we compute the signature hashes locally with bitcoinjs-lib and
+ask Turnkey to sign those raw 32-byte digests. It never sees the OP_RETURN.
+
+Three things worth carrying forward:
+
+- **The transaction is never modified.** Only signatures are added. The
+  standing "never rewrite a Chainflip PSBT" rule is about changing outputs and
+  is fully respected.
+- **All inputs are signed in one Turnkey activity**, so a multi-input swap
+  still costs one passkey prompt rather than one per input.
+- **Low-S normalisation.** A high-S signature is valid cryptography but
+  non-standard, so relays silently drop it. That failure looks like "broadcast
+  succeeded and nothing happened", which is the worst kind to debug. Four lines
+  removed the whole category.
+
+Also worth knowing before anyone edits that file: it is the first client-side
+use of `bitcoinjs-lib` in the app, Next does not polyfill the `Buffer` global
+for browser bundles, and bitcoinjs v7 is `Uint8Array`-only. Do not add
+`Buffer.from` there. And it is imported with `await import(...)`, because a
+static import put 45 kB of Bitcoin library into the bundle of everyone who
+opens the swap page.
+
+---
+
+## 7. External wallets
+
+Full detail in [46-external-wallets.md](46-external-wallets.md).
+
+Checking whether the tester guide held for someone signed in with Freighter or
+Lobstr turned up two things in this batch and corrected two stale beliefs.
+
+**The product rule, now explicit: external wallets are Stellar-only.** They can
+hold and move XLM and USDC, swap between them, use savings and MoneyGram.
+Bitcoin, Ethereum and Solana need the Turnkey passkey, because a Stellar wallet
+physically cannot produce those signatures.
+
+**The regression.** Section 4 above closed the transaction-log routes by
+checking that the wallet belongs to the signed-in account. That check reads
+`linked_wallets` or `turnkey_wallets`, and connecting an external wallet never
+wrote a `linked_wallets` row. So the security fix silently 403'd every external
+wallet: their swaps stopped reaching the database and vanished from Activity.
+
+Fixed with one `ensureWalletLinked()` helper called from two places. On connect,
+where all three UI paths share the same hook so a fourth cannot forget. And on
+session restore, which backfills people who connected before the fix without
+asking them to reconnect. It checks before writing, because that route charges
+a "3 wallets per day" quota even for an address that is already linked.
+
+**The gate that came back.** Cross-chain swaps were reachable from an external
+wallet, and offered to provision a Turnkey wallet mid-swap. That contradicts
+the Stellar-only rule and hands someone a second wallet they never asked for.
+A gate for exactly this was written in July, committed to a feature branch, and
+lost in the squash that produced its PR. Restored, and improved: it now also
+switches the quote fetches off, so a user with both wallet types does not burn
+LI.FI quota on swaps the button will not run.
+
+`action: null` on that button is the load-bearing part. Outbound CCTP burns on
+Stellar first and only then needs the passkey, so a half-executed route would
+leave USDC on Base awaiting recovery.
+
+**Two beliefs corrected.** The system map said cross-chain was gated to Normal
+wallets; it was not, and the file it named did not contain the check. And we
+had six external wallets recorded as supported when only four are connectable,
+xBull and HANA having been removed in May.
+
+---
+
 ## Known broken
 
-**Bitcoin-source swaps** fail at signing. The PSBT from LI.FI contains a taproot
-output and an OP_RETURN, and Turnkey rejects it. This worked before, so an
-upstream format change is the leading theory. **Do not rewrite the PSBT** —
-Chainflip deposits can become unrefundable. Waiting on LI.FI.
+Nothing known-broken is shipping in this push.
+
+Two items are open but neither blocks it:
+
+- **#42** — the self-heal that restores a missing Stellar address reads it from
+  Turnkey regardless of wallet type. For someone using an external wallet *and*
+  a Turnkey wallet, that could silently swap which Stellar address is active.
+  Not yet reproduced, and deliberately not "fixed" first: when the address is
+  wiped the wallet type is wiped with it, so the obvious guard would not
+  actually work. Needs the repro.
+- **#43** — `xbull` and `hana` linger in the wallet-type union after the
+  modules were deleted. Cosmetic.

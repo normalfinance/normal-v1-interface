@@ -4613,6 +4613,7 @@ __metadata:
     "@turnkey/webauthn-stamper": ^0.6.0
     "@types/autosuggest-highlight": ^3.2.3
     "@types/canvas-confetti": ^1.9.0
+    "@types/jest": ^29.5.2
     "@types/node": ^22.10.3
     "@types/nprogress": ^0.2.3
     "@types/qrcode": ^1.5.5

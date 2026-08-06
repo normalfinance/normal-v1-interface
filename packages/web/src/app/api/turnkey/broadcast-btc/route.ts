@@ -2,15 +2,27 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { getAccessToken } from '@/utils/http';
 import { Psbt, networks } from 'bitcoinjs-lib';
+import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // POST /api/turnkey/broadcast-btc
 // Receives a signed Bitcoin transaction hex and broadcasts it via mempool.space.
 // Body: { signedTxHex: string }
 // Response: { txid: string }
+//
+// Authenticated: not because a signed transaction is secret (anyone holding it
+// can broadcast it themselves), but because an open route makes us a public
+// Bitcoin relay — strangers proxying arbitrary transactions through our server
+// IP, whose abuse or rate-limit flags land on us, not them.
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const user = await getAuthenticatedUser(getAccessToken(request));
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   let body: { signedTxHex: string };
   try {
     body = await request.json();

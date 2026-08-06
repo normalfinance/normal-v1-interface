@@ -1,6 +1,7 @@
 'use client';
 
 import type { Token } from '@normalfinance/types';
+import type { MemoRequirement } from '@/lib/stellar/memo-required';
 
 import { useSnackbar } from 'notistack';
 import { BigNumber } from 'bignumber.js';
@@ -14,6 +15,7 @@ import { useSendToken } from '@/hooks/stellar/use-send-token';
 import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { spendableXlm, SAVINGS_XLM_BUFFER } from '@/utils/stellar-reserve';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { knownMemoRequirement, fetchMemoRequirement } from '@/lib/stellar/memo-required';
 import {
   getMaxAmount,
   getCryptoIconUrl,
@@ -217,6 +219,39 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     [destination, adapter],
   );
 
+  // Exchange deposit addresses pool every customer's funds into one account;
+  // the memo routes the payment to the right customer. A memo-less send to
+  // one succeeds on-chain and vanishes into the exchange's omnibus balance
+  // (finding #48 — it happened, with Coinbase). Seed list answers instantly;
+  // the route adds the live directory + SEP-29 flag for addresses we don't
+  // know. null = not required / still checking, and the Review gate below
+  // fails CLOSED only on a positive answer, so a slow check can never block
+  // an ordinary send.
+  const [memoRequirement, setMemoRequirement] = useState<MemoRequirement | null>(null);
+  useEffect(() => {
+    setMemoRequirement(null);
+    if (adapter?.network !== 'stellar' || !destination || !isAddressValid) return undefined;
+
+    const known = knownMemoRequirement(destination);
+    if (known) {
+      setMemoRequirement(known);
+      setShowMemo(true);
+      return undefined;
+    }
+
+    let cancelled = false;
+    fetchMemoRequirement(destination).then((req) => {
+      if (cancelled || !req.required) return;
+      setMemoRequirement(req);
+      setShowMemo(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [destination, isAddressValid, adapter?.network]);
+
+  const memoMissing = !!memoRequirement?.required && !memo.trim();
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(sanitizeAmountInput(e.target.value));
   };
@@ -285,6 +320,9 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     }
     if (!amount || coinAmount.isZero()) return t('Enter an amount');
     if (insufficientBalance) return t('Insufficient {{symbol}} balance', { symbol: sendToken.symbol });
+    // Fail closed for exchange destinations: without the memo the funds
+    // arrive at the exchange but are never credited to the user's account.
+    if (memoMissing) return t('Enter the memo from the exchange');
     return t('Review transaction');
   };
 
@@ -599,30 +637,58 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               )}
             </Box>
 
-            {/* Memo — Stellar only */}
+            {/* Memo — Stellar only. When the destination is a known exchange
+                the field is forced open and required: the toggle disappears so
+                it cannot be dismissed, and Review stays disabled without it. */}
             {adapter?.hasMemo && (
               <Box>
-                <Box
-                  component="button"
-                  onClick={() => setShowMemo((p) => !p)}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    border: 'none',
-                    bgcolor: 'transparent',
-                    color: 'rgba(10,10,15,0.5)',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    p: 0,
-                    transition: 'color 150ms ease',
-                    '&:hover': { color: '#0A0A0F' },
-                  }}
-                >
-                  <Iconify icon={showMemo ? 'eva:minus-circle-outline' : 'eva:plus-circle-outline'} width={16} />
-                  {showMemo ? t('Remove memo') : t('Add memo (optional)')}
-                </Box>
+                {memoRequirement?.required ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      p: '12px 14px',
+                      borderRadius: '12px',
+                      bgcolor: 'rgba(245,158,11,0.08)',
+                      border: '1px solid rgba(245,158,11,0.35)',
+                    }}
+                  >
+                    <Iconify icon="eva:alert-triangle-outline" width={18} sx={{ color: '#B45309', mt: '1px', flexShrink: 0 }} />
+                    <Typography sx={{ fontSize: '12.5px', color: '#78350F', lineHeight: 1.5 }}>
+                      {memoRequirement.name
+                        ? t(
+                            '{{name}} requires a memo. It is shown next to the deposit address in your {{name}} account. Without it your funds will not be credited.',
+                            { name: memoRequirement.name }
+                          )
+                        : t(
+                            'This address requires a memo. It is shown next to the deposit address at the receiving service. Without it your funds will not be credited.'
+                          )}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box
+                    component="button"
+                    onClick={() => setShowMemo((p) => !p)}
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      border: 'none',
+                      bgcolor: 'transparent',
+                      color: 'rgba(10,10,15,0.5)',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      p: 0,
+                      transition: 'color 150ms ease',
+                      '&:hover': { color: '#0A0A0F' },
+                    }}
+                  >
+                    <Iconify icon={showMemo ? 'eva:minus-circle-outline' : 'eva:plus-circle-outline'} width={16} />
+                    {showMemo ? t('Remove memo') : t('Add memo (optional)')}
+                  </Box>
+                )}
                 {showMemo && (
                   <Box
                     sx={{
@@ -636,7 +702,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     }}
                   >
                     <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '10px' }}>
-                      {t('Memo')}
+                      {memoRequirement?.required ? t('Memo (required)') : t('Memo')}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Box

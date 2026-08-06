@@ -5,6 +5,7 @@ import type { ChainId } from '@/lib/chains/registry';
 
 import { BigNumber } from 'bignumber.js';
 import { getChain } from '@/lib/chains/registry';
+import { announceTransaction } from '@/lib/tx-events';
 import { ETH_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 
@@ -128,6 +129,20 @@ export function createEthereumAdapter(
         const txHash = await client.sendRawTransaction({
           serializedTransaction: rawTx as `0x${string}`,
         });
+
+        // Pending row + cache-bypassed refresh. On Ethereum the row also
+        // covers Etherscan's indexing lag, which can run minutes behind an
+        // already-confirmed transaction.
+        announceTransaction({
+          chain: 'ethereum',
+          pendingSend: {
+            txHash,
+            symbol: 'ETH',
+            amount: params.amount,
+            destination: params.destination,
+          },
+        });
+
         return txHash;
       } catch (err: any) {
         const msg: string = err?.shortMessage ?? err?.message ?? 'Ethereum transaction failed';

@@ -243,9 +243,10 @@ async function executeBtc(
   }
 
   log('BTC: broadcasting');
+  const { buildAuthHeaders } = await import('@/utils/http');
   const res = await fetch('/api/turnkey/broadcast-btc', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
     body: JSON.stringify({ signedTxHex: signedTx }),
   });
   if (!res.ok) {

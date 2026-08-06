@@ -9,6 +9,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { ModalType, type Token } from '@normalfinance/types';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { knownMemoRequirement } from '@/lib/stellar/memo-required-list';
 import {
   getMaxAmount,
   getCryptoIconUrl,
@@ -189,6 +190,20 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
       }
       if (destination == persist.wallet.address) {
         enqueueSnackbar(t('Cannot send assets to yourself'), { variant: 'error' });
+        return;
+      }
+      // This flow has NO memo input, so a send to an exchange's pooled
+      // deposit account can never be attributed to the user — block it and
+      // point at the Send dialog, which enforces the memo (finding #48).
+      const exchange = knownMemoRequirement(destination);
+      if (exchange?.required) {
+        enqueueSnackbar(
+          t(
+            '{{name}} deposits need a memo, which this form does not support. Use the Send button on the portfolio page instead.',
+            { name: exchange.name ?? t('This exchange') }
+          ),
+          { variant: 'error' }
+        );
         return;
       }
       setReviewOpen(true);

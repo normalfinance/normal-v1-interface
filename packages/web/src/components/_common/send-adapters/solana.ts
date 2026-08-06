@@ -3,6 +3,7 @@
 import type { Token } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
+import { announceTransaction } from '@/lib/tx-events';
 import { SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 
@@ -117,6 +118,18 @@ export function createSolanaAdapter(
         const txid = await connection.sendRawTransaction(tx.serialize(), {
           skipPreflight: false,
         });
+
+        // Pending row + cache-bypassed refresh (see lib/tx-events.ts).
+        announceTransaction({
+          chain: 'solana',
+          pendingSend: {
+            txHash: txid,
+            symbol: 'SOL',
+            amount: params.amount,
+            destination: params.destination,
+          },
+        });
+
         return txid;
       } catch (err: any) {
         const msg: string = err?.message ?? 'Solana transaction failed';
