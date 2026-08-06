@@ -97,6 +97,7 @@ except the component tests.
 
 | # | Item | Size |
 |---|---|---|
+| 47 | **Send visibility** — sends fire no `nf:activity-updated`, so no refresh and no pending row; found by live testing (5 XLM to Coinbase: success toast, then nothing until reload + cache TTL). Plan: [48-send-visibility-plan.md](48-send-visibility-plan.md). Phases A (announce, S) + C (portfolio refresh bypass, S) close the incident; B (pending-sends ledger, M) makes BTC/ETH sends honest. **Ranked first in this block: user-visible money feedback** | S+S+M |
 | 44 | ~~broadcast-btc open relay~~ **fixed in tree** — goes out with the next push | done |
 | 45 | ~~btc-pubkey format-only account match~~ **fixed in tree** — same push | done |
 | 46 | **`withAuth` route wrapper** — third unauthenticated-route finding (#3, Block C #2, #44); make auth the default, public routes the explicit exception, then sweep all routes onto it | S |

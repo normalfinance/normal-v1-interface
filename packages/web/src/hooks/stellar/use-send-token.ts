@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useStellarConfig } from '@/hooks';
+import { announceTransaction } from '@/lib/tx-events';
 import { detectMemoType } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { spendableXlm, stellarMinReserve } from '@/utils/stellar-reserve';
@@ -155,6 +156,20 @@ export function useSendToken(): ReturnType {
       );
 
       const result = await horizonServer.submitTransaction(transaction);
+
+      // Announce at the primitive, not the UI: every caller (send modal,
+      // withdraw card, off-ramp) gets the pending row + cache-bypassed
+      // refresh, and a future caller cannot forget it.
+      announceTransaction({
+        chain: 'stellar',
+        pendingSend: {
+          txHash: result.hash,
+          symbol: args.token.symbol,
+          amount: args.amount,
+          destination: args.destination,
+        },
+      });
+
       return result.hash;
     } catch (err: any) {
       if (err instanceof WalletSessionExpiredError) return '';

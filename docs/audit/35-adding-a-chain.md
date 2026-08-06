@@ -39,7 +39,11 @@ All of the above, plus:
    sign for the chain, nothing downstream matters. Do not assume.
 2. Add the address column to `TurnkeyWallet` + migration, and a new
    `AddressField` in the registry (types derive from it automatically).
-3. Write a send adapter implementing the `SendAdapter` contract.
+3. Write a send adapter implementing the `SendAdapter` contract. On broadcast
+   success it MUST call `announceTransaction({chain, pendingSend})` from
+   `lib/tx-events.ts` — that is what puts the pending row in the activity feed
+   and refreshes balances without a reload (see 48-send-visibility-plan.md).
+   Also give the new chain an expiry in `lib/pending-sends.ts`.
 4. Provide an activity source.
 
 ## What's done vs. what's honest

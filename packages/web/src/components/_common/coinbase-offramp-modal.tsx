@@ -267,7 +267,8 @@ export function CoinbaseOfframpModal({
         return;
       }
       markFill(txn.transactionId, hash);
-      window.dispatchEvent(new Event('nf:activity-updated'));
+      // No dispatch here: useSendToken announces the send itself now
+      // (pending row + refresh) — a second event would double-fetch.
       getAllTokens(true).catch(() => {}); // refresh USDC/XLM balance in the store
       setStage('confirming');
       pollSettle(txn.transactionId);
@@ -334,7 +335,8 @@ export function CoinbaseOfframpModal({
     }
 
     markFill(txn.transactionId, txHash);
-    window.dispatchEvent(new Event('nf:activity-updated'));
+    // No dispatch here: the send adapter announces the send itself now
+    // (pending row + refresh) — a second event would double-fetch.
     setStage('confirming');
     pollSettle(txn.transactionId);
   };

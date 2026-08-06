@@ -4,12 +4,20 @@ import type { ChainAddresses } from '@/lib/chains/registry';
 import type { WalletActivityItem, WalletActivityResponse } from '@/types/wallet-activity';
 
 import useSWR from 'swr';
-import { useMemo, useEffect } from 'react';
 import { buildAuthHeaders } from '@/utils/http';
+import { chainOfActivityEvent } from '@/lib/tx-events';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { CHAINS, getChainAddress } from '@/lib/chains/registry';
+import { useMemo, useEffect, useSyncExternalStore } from 'react';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
 import { FAILED_MGI_STATUSES, PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
+import {
+  toHashSet,
+  getPendingSends,
+  subscribePendingSends,
+  getServerPendingSends,
+  reconcilePendingSends,
+} from '@/lib/pending-sends';
 
 // Coinbase off-ramp sends are recorded client-side as { coinbaseTxnId: ourTxHash }
 // when we broadcast the on-chain transfer (see coinbase-offramp-modal). We join
@@ -275,7 +283,13 @@ export function useUserActivity(
     // saved, so there is nothing left to wait for. The 800ms here was a
     // workaround for the refresh racing the write — with the race removed at
     // its source, the wait is pure latency on every refresh.
-    const handler = () => mutate();
+    //
+    // Chain-scoped events are plain wallet sends (see lib/tx-events.ts); those
+    // never write to this DB-backed feed, so skip the refetch for them.
+    const handler = (e: Event) => {
+      if (chainOfActivityEvent(e)) return;
+      mutate();
+    };
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);
   }, [mutate]);
@@ -318,21 +332,29 @@ export function useUserActivity(
 
   // A send/swap the user just made must appear at once. Bypass both caches
   // (SWR's and the server's) for that one fetch, then seed the result back
-  // into SWR so the longer dedupe window applies again from here. Covers all
-  // four chains that are served through our routes.
+  // into SWR so the longer dedupe window applies again from here.
+  //
+  // A chain-scoped event (a plain send — see lib/tx-events.ts) refreshes ONLY
+  // that chain's feed: the send cannot have changed the other three, and each
+  // skipped refresh is an upstream call (Etherscan/Helius) not spent.
+  // Detail-less events keep the original refresh-everything behaviour.
   useEffect(() => {
     const refresh = (
       url: string,
       mutateFn: (data: Promise<Activity[]>, opts: { revalidate: boolean }) => unknown
     ) => mutateFn(fetchChainActivity(`${url}&refresh=1`), { revalidate: false });
 
-    const handler = () => {
+    const handler = (e: Event) => {
+      const only = chainOfActivityEvent(e);
       setTimeout(() => {
-        if (ethereumAddress)
+        if (ethereumAddress && (!only || only === 'ethereum'))
           refresh(`${CHAINS.ethereum.activityPath}?address=${ethereumAddress}`, mutateEth);
-        if (solanaAddress) refresh(`${CHAINS.solana.activityPath}?address=${solanaAddress}`, mutateSol);
-        if (walletAddress) refresh(`${CHAINS.stellar.activityPath}?address=${walletAddress}`, mutateStellar);
-        if (bitcoinAddress) refresh(`${CHAINS.bitcoin.activityPath}?address=${bitcoinAddress}`, mutateBtc);
+        if (solanaAddress && (!only || only === 'solana'))
+          refresh(`${CHAINS.solana.activityPath}?address=${solanaAddress}`, mutateSol);
+        if (walletAddress && (!only || only === 'stellar'))
+          refresh(`${CHAINS.stellar.activityPath}?address=${walletAddress}`, mutateStellar);
+        if (bitcoinAddress && (!only || only === 'bitcoin'))
+          refresh(`${CHAINS.bitcoin.activityPath}?address=${bitcoinAddress}`, mutateBtc);
       }, 800);
     };
     window.addEventListener('nf:activity-updated', handler);
@@ -356,7 +378,12 @@ export function useUserActivity(
     { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
   );
   useEffect(() => {
-    const handler = () => setTimeout(() => mutateCctp(), 800);
+    // A plain send (chain-scoped event) cannot create or advance a CCTP
+    // transfer — skip the refetch for those.
+    const handler = (e: Event) => {
+      if (chainOfActivityEvent(e)) return;
+      setTimeout(() => mutateCctp(), 800);
+    };
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);
   }, [mutateCctp]);
@@ -373,7 +400,11 @@ export function useUserActivity(
     { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
   );
 
-  // Refresh off-ramp statuses too when a send/settle just happened.
+  // Refresh off-ramp statuses too when a send/settle just happened. This one
+  // deliberately reacts to chain-scoped events as well: an off-ramp IS a plain
+  // send (the modal marks the fill, the primitive announces it), and this
+  // fetch is what re-labels the Sent row. Cheap — the fetcher is a no-op with
+  // no local fills.
   useEffect(() => {
     const handler = () => setTimeout(() => mutateOfframp(), 800);
     window.addEventListener('nf:activity-updated', handler);
@@ -499,7 +530,60 @@ export function useUserActivity(
     );
   };
 
+  // --- Pending sends (docs/audit/48-send-visibility-plan.md) ----------------
+  // A just-broadcast send, visible before the chain's indexer has it. The
+  // ledger row is dropped the moment any feed carries its hash — same
+  // hash-dedupe idea as `swapTxHashes` above. Zero requests of its own: it
+  // only watches data these SWRs already fetched.
+  const pendingSends = useSyncExternalStore(
+    subscribePendingSends,
+    getPendingSends,
+    getServerPendingSends
+  );
+
+  // Every hash the feeds know about this render, lowercased once.
+  const knownFeedHashes = useMemo(
+    () =>
+      toHashSet(
+        [
+          ...(data ?? []),
+          ...(stellarData ?? []),
+          ...(btcData ?? []),
+          ...(ethData ?? []),
+          ...(solData ?? []),
+        ].map((a) => ('txHash' in a ? a.txHash : null))
+      ),
+    [data, stellarData, btcData, ethData, solData]
+  );
+
+  // Retire reconciled/expired entries. In an effect, not in render — this
+  // mutates the shared store and re-notifies subscribers.
+  useEffect(() => {
+    reconcilePendingSends(knownFeedHashes);
+  }, [knownFeedHashes]);
+
+  // Same-render defence: a hash that is already in a feed must not show twice
+  // while the effect above is still queued.
+  const pendingRows: Activity[] = pendingSends
+    .filter((p) => !knownFeedHashes.has(p.txHash.toLowerCase()))
+    .map((p) => ({
+      id: `pending-send:${p.txHash}`,
+      timestamp: p.createdAt,
+      type: 'Sent',
+      address: p.destination,
+      token: {
+        address: '',
+        symbol: p.symbol,
+        iconUrl: getCryptoIconUrl(p.symbol),
+        amount: parseFloat(p.amount) || 0,
+      },
+      txHash: p.txHash,
+      // The exact shape the card already renders with a Pending badge.
+      confirmed: false,
+    }));
+
   const recentActivity = [
+    ...pendingRows,
     ...(data ?? []),
     ...cctpActivities,
     ...(mgiData ?? []),

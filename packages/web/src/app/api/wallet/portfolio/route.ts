@@ -62,11 +62,22 @@ export async function GET(req: NextRequest) {
 
     const cacheKey = `portfolio:${user.id}:${network}:${stellar ?? 'none'}`;
     const snapshotKey = `portfolio:snap:${user.id}:${network}:${stellar ?? 'none'}`;
+    const floorKey = `portfolio:floor:${user.id}`;
+    const wantsFresh = req.nextUrl.searchParams.get('refresh') === '1';
 
     // Fresh response still cached → return immediately (dedups bursts of views).
+    //
+    // `refresh=1` skips the cached copy so a just-made send/swap shows its new
+    // balance at once — the same bypass the four activity routes have, and the
+    // reason a send used to need a page reload (docs/audit/48). Floored per
+    // user so the bypass can't be leaned on to hammer the chain sources.
     try {
-      const cached = await redis.get<{ updatedAt: number; assets: PortfolioAsset[] }>(cacheKey);
-      if (cached) return NextResponse.json({ success: true, ...cached });
+      const withinFloor = wantsFresh ? await redis.get(floorKey) : null;
+      if (!wantsFresh || withinFloor) {
+        const cached = await redis.get<{ updatedAt: number; assets: PortfolioAsset[] }>(cacheKey);
+        if (cached) return NextResponse.json({ success: true, ...cached });
+      }
+      if (wantsFresh && !withinFloor) await redis.set(floorKey, 1, { ex: 5 });
     } catch {
       /* cache unavailable — aggregate fresh */
     }

@@ -3,6 +3,7 @@
 import type { Token } from '@normalfinance/types';
 
 import { cdn } from '@normalfinance/utils';
+import { chainOfActivityEvent } from '@/lib/tx-events';
 import { useState, useEffect, useCallback } from 'react';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
@@ -138,12 +139,19 @@ function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
   }, [loadBalance]);
 
   // Auto-refresh when a swap (cross-chain or Stellar) settles, so every surface
-  // showing this balance updates without a manual page refresh.
+  // showing this balance updates without a manual page refresh. A chain-scoped
+  // event (a plain send — see lib/tx-events.ts) only refreshes its own chain:
+  // an ETH send cannot have moved the SOL balance, and each skipped call is an
+  // RPC request not spent.
   useEffect(() => {
-    const onUpdate = () => loadBalance();
+    const onUpdate = (e: Event) => {
+      const only = chainOfActivityEvent(e);
+      if (only && only !== chain) return;
+      loadBalance();
+    };
     window.addEventListener('nf:activity-updated', onUpdate);
     return () => window.removeEventListener('nf:activity-updated', onUpdate);
-  }, [loadBalance]);
+  }, [loadBalance, chain]);
 
   return {
     token,

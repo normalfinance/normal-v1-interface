@@ -4,6 +4,7 @@ import type { BoxProps } from '@mui/material';
 
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
+import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
@@ -218,9 +219,15 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   }, [setupOpen, accountExists]);
 
   // Re-check the account (XLM balance included) after any buy/receive/setup flow
-  // so the low-XLM warning clears once the user tops up.
+  // so the low-XLM warning clears once the user tops up. A send scoped to a
+  // non-Stellar chain (see lib/tx-events.ts) cannot change this account — skip
+  // those; a Stellar send CAN (it moves XLM), so it still re-checks.
   useEffect(() => {
-    const handler = () => refetchRef.current();
+    const handler = (e: Event) => {
+      const only = chainOfActivityEvent(e);
+      if (only && only !== 'stellar') return;
+      refetchRef.current();
+    };
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);
   }, []);
