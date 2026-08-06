@@ -11,11 +11,12 @@ deeper only where you need to:
 | `40-savings-explained.md` | savings in depth (section 3 here summarises it) |
 | `45-btc-swap-explained.md` | the Bitcoin signing fix, from first principles |
 | `46-external-wallets.md` | external wallets, the full capability matrix |
+| `49-sends-explained.md` | the sends work: pending rows + the exchange-memo guard |
 | `20-findings.md` | the ranked register, every finding with severity |
 | `30-roadmap.md` | what is scheduled next, and why in that order |
 | `42-tester-guide.html` | the tester-facing version, printable to PDF |
 
-Everything in sections 1 to 7 below is in the staging push.
+Everything in sections 1 to 8 below is in the staging push.
 
 ---
 
@@ -320,6 +321,38 @@ leave USDC on Base awaiting recovery.
 wallets; it was not, and the file it named did not contain the check. And we
 had six external wallets recorded as supported when only four are connectable,
 xBull and HANA having been removed in May.
+
+---
+
+## 8. Sends
+
+Full walkthrough in [49-sends-explained.md](49-sends-explained.md).
+
+One live test — 5 XLM sent to Coinbase — exposed two independent bugs, both
+now fixed:
+
+**Our app showed nothing (#47).** Sends were the only money flow that never
+fired the app's "money moved" event, so no screen refreshed and no pending
+state existed. Now every send announces itself from the send primitive,
+appears in the feed immediately as a pending row (persisted, so a
+pending Bitcoin send survives reloads), and the balance route gained the same
+cache bypass the activity routes had. No polling anywhere: three bounded
+refreshes per send action, then reconciliation rides on fetches the app
+already makes.
+
+**Coinbase credited nothing (#48).** The send had no memo, and Coinbase pools
+all customer deposits into one account where the memo is the routing key.
+The ecosystem's official guard (SEP-29) ran and passed, because Coinbase
+never set the flag — so the fix cannot rely on it. Exchange destinations are
+now recognised (seed list of ~33 verified addresses + a live directory
+lookup, Redis-cached) and the modal fails closed: memo field forces open,
+button disabled until it is filled. The savings withdraw form, which has no
+memo input at all, refuses exchange addresses outright.
+
+Also worth noting from this work: the new unit tests caught a real bug before
+staging (the pending ledger skipped localStorage on a fresh load — a pending
+BTC send would have vanished on reload), and the memo test fixture is the
+literal address from the incident.
 
 ---
 

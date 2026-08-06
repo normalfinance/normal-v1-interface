@@ -567,7 +567,10 @@ export function useUserActivity(
   const pendingRows: Activity[] = pendingSends
     .filter((p) => !knownFeedHashes.has(p.txHash.toLowerCase()))
     .map((p) => ({
-      id: `pending-send:${p.txHash}`,
+      // Chain is part of the id: the activity card derives the explorer link
+      // from id prefixes, and an ETH hash opening in stellar.expert renders
+      // an endless spinner (real bug, caught on staging within the hour).
+      id: `pending-send:${p.chain}:${p.txHash}`,
       timestamp: p.createdAt,
       type: 'Sent',
       address: p.destination,

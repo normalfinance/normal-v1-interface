@@ -32,11 +32,12 @@
 <tr><td><code>40-savings-explained.md</code></td><td>savings in depth (section 3 here summarises it)</td></tr>
 <tr><td><code>45-btc-swap-explained.md</code></td><td>the Bitcoin signing fix, from first principles</td></tr>
 <tr><td><code>46-external-wallets.md</code></td><td>external wallets, the full capability matrix</td></tr>
+<tr><td><code>49-sends-explained.md</code></td><td>the sends work: pending rows + the exchange-memo guard</td></tr>
 <tr><td><code>20-findings.md</code></td><td>the ranked register, every finding with severity</td></tr>
 <tr><td><code>30-roadmap.md</code></td><td>what is scheduled next, and why in that order</td></tr>
 <tr><td><code>42-tester-guide.html</code></td><td>the tester-facing version, printable to PDF</td></tr>
 </table>
-<p>Everything in sections 1 to 7 below is in the staging push.</p>
+<p>Everything in sections 1 to 8 below is in the staging push.</p>
 <hr />
 <h2>The starting point</h2>
 <p>The app worked, but it wasn't built to work <em>cheaply or reliably at volume</em>. An</p>
@@ -292,6 +293,31 @@
 <p>wallets; it was not, and the file it named did not contain the check. And we</p>
 <p>had six external wallets recorded as supported when only four are connectable,</p>
 <p>xBull and HANA having been removed in May.</p>
+<hr />
+<h2>8. Sends</h2>
+<p>Full walkthrough in <a href="49-sends-explained.md">49-sends-explained.md</a>.</p>
+<p>One live test — 5 XLM sent to Coinbase — exposed two independent bugs, both</p>
+<p>now fixed:</p>
+<p><strong>Our app showed nothing (#47).</strong> Sends were the only money flow that never</p>
+<p>fired the app's "money moved" event, so no screen refreshed and no pending</p>
+<p>state existed. Now every send announces itself from the send primitive,</p>
+<p>appears in the feed immediately as a pending row (persisted, so a</p>
+<p>pending Bitcoin send survives reloads), and the balance route gained the same</p>
+<p>cache bypass the activity routes had. No polling anywhere: three bounded</p>
+<p>refreshes per send action, then reconciliation rides on fetches the app</p>
+<p>already makes.</p>
+<p><strong>Coinbase credited nothing (#48).</strong> The send had no memo, and Coinbase pools</p>
+<p>all customer deposits into one account where the memo is the routing key.</p>
+<p>The ecosystem's official guard (SEP-29) ran and passed, because Coinbase</p>
+<p>never set the flag — so the fix cannot rely on it. Exchange destinations are</p>
+<p>now recognised (seed list of ~33 verified addresses + a live directory</p>
+<p>lookup, Redis-cached) and the modal fails closed: memo field forces open,</p>
+<p>button disabled until it is filled. The savings withdraw form, which has no</p>
+<p>memo input at all, refuses exchange addresses outright.</p>
+<p>Also worth noting from this work: the new unit tests caught a real bug before</p>
+<p>staging (the pending ledger skipped localStorage on a fresh load — a pending</p>
+<p>BTC send would have vanished on reload), and the memo test fixture is the</p>
+<p>literal address from the incident.</p>
 <hr />
 <h2>Known broken</h2>
 <p>Nothing known-broken is shipping in this push.</p>
