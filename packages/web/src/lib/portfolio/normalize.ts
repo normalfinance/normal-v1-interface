@@ -5,11 +5,11 @@ import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
 
 // ---------------------------------------------------------------------------
 // Pure portfolio/savings normalization + reconciliation. NO I/O, no server-only
-// imports — so it is unit-testABLE in isolation. NOTE: there is no test file
-// yet and no runner configured; the claim that it is tested was inaccurate.
-// This module has now produced one money-display bug (see reconcile below), so
-// it is the strongest candidate in the codebase for the first real test suite.
-// shared by the server aggregator and the client savings read.
+// imports. Shared by the server aggregator and the client savings read.
+//
+// Tested in normalize.test.ts (`yarn test`). Every case there is anchored to a
+// bug this module actually produced or a rule promised below — if a change
+// fails one, it is re-introducing a bug users have already seen.
 // ---------------------------------------------------------------------------
 
 // Native assets derive from the chain registry so this can't drift out of sync

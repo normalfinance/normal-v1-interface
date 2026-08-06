@@ -90,6 +90,23 @@ Importing a Normal Stellar wallet hides the Turnkey one. **Verified cosmetic**
 | 28 | XLM fee preflight in savings |
 | 26 | Fee-first: **ratify or restructure** — decision |
 
+## Block F2 — next batch, after staging feedback (scheduled 2026-08-06)
+
+The post-push re-review findings and the test foundation. Ordered; all sized S
+except the component tests.
+
+| # | Item | Size |
+|---|---|---|
+| 44 | ~~broadcast-btc open relay~~ **fixed in tree** — goes out with the next push | done |
+| 45 | ~~btc-pubkey format-only account match~~ **fixed in tree** — same push | done |
+| 46 | **`withAuth` route wrapper** — third unauthenticated-route finding (#3, Block C #2, #44); make auth the default, public routes the explicit exception, then sweep all routes onto it | S |
+| 42 | **Self-heal repro** — Freighter + provisioned BTC, disconnect, reload; does the Turnkey Stellar address silently take over? Fix designed only after the repro | S |
+| 43 | Remove dead `xbull`/`hana` wallet types + restore-switch branches | S |
+| T1 | ~~Test foundation: Jest wired (`yarn test`), first suite on `normalize.ts`~~ **done 2026-08-06** — 16 cases, all anchored to shipped bugs | done |
+| T2 | **Test wave 2:** `wallet-ownership.ts`, `reconcile` edge cases as found, `describePsbt` against the real failing-PSBT fixture, low-S normalisation | S |
+| T3 | **Test wave 3 (components):** the external-wallet swap gate (the decision that was already lost once in a squash), savings card loading states | M |
+| T4 | Stale Playwright specs — `tests/*.spec.ts` target a deleted `/explore` page; delete or rewrite as smoke tests against today's pages | S |
+
 ## Block G — capacity (before the 10k push)
 | # | Item |
 |---|---|

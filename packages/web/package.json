@@ -38,6 +38,8 @@
     "check": "npm run i18n:check && npm run lint && npm run fm:check && echo 'All checks passed✅'",
     "convert:contract": "node ./scripts/convert-contract-address.js",
     "commit": "cz",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "test:e2e": "playwright test"
   },
   "engines": {
@@ -134,6 +136,7 @@
     "@testing-library/react": "^14.2.0",
     "@types/autosuggest-highlight": "^3.2.3",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/jest": "^29.5.2",
     "@types/node": "^22.10.3",
     "@types/nprogress": "^0.2.3",
     "@types/react": "^18.3.18",
