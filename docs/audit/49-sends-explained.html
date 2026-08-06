@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>49-sends-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>49 — The sends work, explained</h1>
+<p>Companion to <a href="48-send-visibility-plan.md">48-send-visibility-plan.md</a> (the</p>
+<p>plan and file manifest). This explains the same work from scratch, for someone</p>
+<p>new to the codebase.</p>
+<p>The whole story starts with one test: **5 XLM sent from the portfolio page to</p>
+<p>a Coinbase deposit address.** That single send exposed two completely</p>
+<p>independent bugs:</p>
+<ol>
+<li><strong>Our app showed nothing.</strong> No pending entry, no activity row, and the</li>
+</ol>
+<p>   balance only changed after a reload. (Finding #47)</p>
+<ol>
+<li><strong>Coinbase credited nothing.</strong> The XLM left our wallet, arrived on-chain,</li>
+</ol>
+<p>   and vanished into Coinbase without ever reaching the user's account.</p>
+<p>   (Finding #48)</p>
+<p>One tiny transaction, two findings, both fixed. That is what test</p>
+<p>transactions are for.</p>
+<hr />
+<h2>Part 1 — Why our own app showed nothing (#47)</h2>
+<h3>The one-sentence cause</h3>
+<p>Sends were the <strong>only money flow in the app that never announced itself</strong> —</p>
+<p>so nothing knew to refresh.</p>
+<h3>The mechanism, step by step</h3>
+<p>The app has an internal announcement: the <code>nf:activity-updated</code> browser</p>
+<p>event. When it fires, every screen showing money re-fetches — balances, the</p>
+<p>activity feed, the savings card. And the activity feed's re-fetch carries a</p>
+<p>special <code>refresh=1</code> flag that bypasses the server's caches, built precisely</p>
+<p>so a just-made transaction shows up instantly.</p>
+<p>Swaps fire this event. Savings deposits fire it. On-ramp, off-ramp, CCTP —</p>
+<p>all fire it. <strong>Sends did not.</strong> The send flow ended with a success toast and</p>
+<p><code>onClose()</code>. Nothing else.</p>
+<p>So after the 5 XLM send:</p>
+<ul>
+<li>The activity feed kept serving its <strong>server-side cached copy</strong> (60 seconds</li>
+</ul>
+<p>  for Stellar) because nothing asked for a bypass. Even a page reload fetched</p>
+<p>  <em>without</em> the flag — hence "the table did not update for some time".</p>
+<ul>
+<li>The balance route caches for 15 seconds and — unlike every activity route —</li>
+</ul>
+<p>  <strong>had no bypass parameter at all</strong>. Hence the balance only moving after a</p>
+<p>  reload happened to land past the cache window.</p>
+<ul>
+<li>And there was no such thing as a <strong>pending send</strong> anywhere in the code: the</li>
+</ul>
+<p>  feed only renders what chain indexers have already seen. The gap between</p>
+<p>  "broadcast" and "indexed" displayed as <em>nothing happened</em>.</p>
+<p>The machinery to fix all of this already existed. The send flow was simply</p>
+<p>never plugged into it.</p>
+<h3>The fix, in three pieces</h3>
+<p><strong>1. Sends announce themselves</strong> (<code>lib/tx-events.ts</code>). One call,</p>
+<p><code>announceTransaction()</code>, made from inside each send primitive — the Stellar</p>
+<p>send hook and the BTC/ETH/SOL adapters — at the moment the network accepts</p>
+<p>the transaction. In the <em>primitives</em>, not the UI, so any future button that</p>
+<p>sends money inherits the behaviour and cannot forget it.</p>
+<p>It fires the refresh event immediately, again at +8s, and again at +45s.</p>
+<p>Those three moments are chosen, not guessed: a Stellar transaction is usually</p>
+<p>indexed ~5s after submit (so the instant refresh alone can miss it), Bitcoin</p>
+<p>appears in the mempool within seconds, and Etherscan can lag minutes. After</p>
+<p>the third shot: never again. <strong>This is not a poller</strong> — a send that stays</p>
+<p>pending for three hours costs zero further requests.</p>
+<p><strong>2. A pending-sends ledger</strong> (<code>lib/pending-sends.ts</code>). A small client-side</p>
+<p>list of in-flight sends, shown in the activity feed with the same pending</p>
+<p>badge that Bitcoin receives already use (the feed's UI needed <em>zero</em> changes</p>
+<p>— the rows arrive in a shape it already renders). An entry is removed the</p>
+<p>moment any feed contains a row with the same transaction hash — the same</p>
+<p>hash-matching idea the feed already used to de-duplicate swap legs.</p>
+<p>Two design points worth understanding:</p>
+<ul>
+<li><strong>It lives in localStorage</strong>, because a Bitcoin send can stay pending for</li>
+</ul>
+<p>  hours and must survive a page reload. Each chain has its own expiry</p>
+<p>  (Stellar 10 minutes, Bitcoin 48 hours) so an entry that never reconciles</p>
+<p>  cannot haunt the feed forever.</p>
+<ul>
+<li><strong>It makes no network requests of its own.</strong> Reconciliation watches feed</li>
+</ul>
+<p>  data the app already fetched. Pending state is one user's ephemeral UI</p>
+<p>  state — putting it in a server cache would add load for zero sharing</p>
+<p>  benefit. Server caches are for answers many users share; this is the</p>
+<p>  opposite case. Knowing which tool NOT to use is part of the design.</p>
+<p><strong>3. The balance route got its bypass.</strong> <code>/api/wallet/portfolio</code> now accepts</p>
+<p><code>refresh=1</code> like the four activity routes, floored to once per 5 seconds per</p>
+<p>user so it cannot be leaned on to hammer the chain sources.</p>
+<p>Plus one refinement: the event now carries <em>which chain</em> the send was on, so</p>
+<p>an ETH send refreshes one feed and one balance instead of all of them. Every</p>
+<p>skipped refresh is an Etherscan/Helius request not spent. Old-style events</p>
+<p>(swaps, savings) still refresh everything, exactly as before.</p>
+<h3>A bug the tests caught before any user could</h3>
+<p>The first version of the ledger skipped loading from localStorage on a fresh</p>
+<p>page — meaning **a pending Bitcoin send would have vanished on reload, the</p>
+<p>exact case the ledger exists for.** The unit test simulating a reload failed,</p>
+<p>the fix followed, and no user ever saw it. We had argued for tests on</p>
+<p>principle two days earlier; this was the argument winning on day one.</p>
+<hr />
+<h2>Part 2 — Why Coinbase credited nothing (#48)</h2>
+<h3>The one-sentence cause</h3>
+<p>Exchanges pool every customer's deposits into <strong>one shared Stellar account</strong>,</p>
+<p>and the <strong>memo</strong> is the only thing that says which customer a payment belongs</p>
+<p>to — our send went out without one.</p>
+<h3>The mechanism</h3>
+<p>Think of the exchange's deposit address as a hotel's street address, and the</p>
+<p>memo as the room number. Coinbase's deposit page shows both. Our send modal</p>
+<p>had a memo field, but it was collapsed behind a link literally labelled</p>
+<p><strong>"Add memo (optional)"</strong>. For an exchange deposit, "optional" is exactly</p>
+<p>wrong — the payment reached the hotel and no room.</p>
+<p>Two details make this worse than a simple UI oversight:</p>
+<ul>
+<li><strong>The ecosystem's own guard ran, and passed.</strong> Stellar has a standard</li>
+</ul>
+<p>  (SEP-29) where an account can declare "I require memos", and our SDK checks</p>
+<p>  it automatically at submit time. We verified on the real transaction:</p>
+<p>  the check executed — and Coinbase has simply <strong>never set the flag</strong> on that</p>
+<p>  account. The official safety net exists and the biggest exchange doesn't</p>
+<p>  use it. That is why the fix cannot rely on it.</p>
+<ul>
+<li>The funds are not lost on-chain — they sit unattributed inside Coinbase.</li>
+</ul>
+<p>  Recovery is a support ticket with the transaction hash; slow and not</p>
+<p>  guaranteed.</p>
+<h3>The fix: fail closed, three layers</h3>
+<p>The moment a pasted destination is recognised as an exchange, the send modal</p>
+<p>changes behaviour: an amber warning names the exchange, the memo field</p>
+<p><strong>opens by itself</strong> (the "optional" toggle disappears — it cannot be</p>
+<p>dismissed), and the button reads <em>"Enter the memo from the exchange"</em> and</p>
+<p>stays disabled until one is provided. Ordinary wallet-to-wallet sends are</p>
+<p>untouched. A slow lookup can never block a normal send — the gate only</p>
+<p>closes on a positive answer.</p>
+<p>How the app recognises an exchange:</p>
+<ol>
+<li><strong>A seed list</strong> (<code>lib/stellar/memo-required-list.ts</code>) of ~33 exchange</li>
+</ol>
+<p>   deposit accounts — instant, works offline. Not hand-typed: fetched from</p>
+<p>   stellar.expert's public community directory, and it includes <strong>all five</strong></p>
+<p>   Coinbase deposit accounts, because exchanges rotate them. The address</p>
+<p>   from our incident is the first entry.</p>
+<ol>
+<li><strong>A live server route</strong> (<code>/api/stellar/memo-required</code>) for addresses the</li>
+</ol>
+<p>   seed list doesn't know: it checks the community directory's</p>
+<p>   <code>memo-required</code> tag, then the SEP-29 on-chain flag. Authenticated (every</p>
+<p>   new route is, after finding #44), cached in Redis for 24 hours — so a</p>
+<p>   thousand users asking about the same exchange cost two upstream calls a</p>
+<p>   day — and failing open to the seed list if the directory is ever down.</p>
+<ol>
+<li><strong>The SDK's submit-time check</strong> stays behind everything, for whatever it</li>
+</ol>
+<p>   still catches.</p>
+<p>Each layer covers the others' blind spot: the seed list is instant but can go</p>
+<p>stale; the directory is current but external; the SDK check is official but</p>
+<p>empirically ignored by the exchanges themselves.</p>
+<p>One more door closed while there: the <strong>savings withdraw card</strong> also accepts</p>
+<p>any destination address — and has <strong>no memo input at all</strong>, so a careful user</p>
+<p>couldn't comply even knowingly. It now refuses exchange addresses outright</p>
+<p>and points to the Send dialog.</p>
+<p>And the regression is pinned permanently: the unit-test fixture for the seed</p>
+<p>list <strong>is the literal address that ate the 5 XLM</strong>. If anyone ever trims that</p>
+<p>list carelessly, a test named after the incident fails.</p>
+<hr />
+<h2>Part 3 — What to take away</h2>
+<ul>
+<li><strong>One real transaction beats hours of code reading.</strong> Both findings were</li>
+</ul>
+<p>  invisible in review and obvious within seconds of a live test.</p>
+<ul>
+<li><strong>Wire new flows into existing machinery.</strong> The event, the cache bypass,</li>
+</ul>
+<p>  the pending badge all existed; sends just never called them. When adding a</p>
+<p>  money flow, the checklist question is "who else needs to know this</p>
+<p>  happened?" — it is now literally a checklist line in</p>
+<p>  <a href="35-adding-a-chain.md">35-adding-a-chain.md</a>.</p>
+<ul>
+<li><strong>"Optional" is a design claim, not a default.</strong> The memo field was</li>
+</ul>
+<p>  optional for the common case and catastrophic for the exchange case. When</p>
+<p>  a field's importance depends on the destination, the UI has to know the</p>
+<p>  destination.</p>
+<ul>
+<li><strong>Verify, then hardcode.</strong> The seed list came from a live directory fetch</li>
+</ul>
+<p>  and the incident's own on-chain data — not from memory or guesswork.</p>
+<h3>How to test it (staging, tiny amounts)</h3>
+<table>
+<tr><th>#</th><th>Do this</th><th>Expect</th></tr>
+<tr><td>1</td><td>Send a little XLM to another wallet</td><td>Pending row in Activity <strong>immediately</strong>, confirmed within ~10s, balance updates within ~15s, <strong>no reload at any point</strong></td></tr>
+<tr><td>2</td><td>Send BTC, then reload the page mid-confirmation</td><td>The pending row is <strong>still there</strong> after the reload</td></tr>
+<tr><td>3</td><td>Paste a Coinbase deposit address into Send, leave the memo empty</td><td>Warning names Coinbase, memo field opens itself, button disabled until you paste the memo</td></tr>
+<tr><td>4</td><td>Try the same from the savings withdraw form</td><td>Refused, with a message pointing to the Send dialog</td></tr>
+</table>
+</body></html>
