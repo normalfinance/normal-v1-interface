@@ -1,14 +1,26 @@
 name: Web CI
 
+# HISTORY (2026-08-06): this workflow had failed 40/40 runs back to at least
+# July 25 — every run died at the Prettier step, which SKIPPED every real gate
+# behind it (ESLint, tsc, build). Nobody was typechecking in CI at all.
+# The July loss of the external-wallet gate (PR #466) happened with no net.
+# Changes made: PR trigger enabled, push narrowed (PRs already cover feature
+# branches), Prettier made non-blocking until the scheduled repo-wide reformat
+# lands, the unit-test step added, build made non-blocking until repo secrets
+# exist (Vercel builds every push with real env and is the authoritative
+# build signal today). Details: docs/audit/50-ci-and-withauth-plan.md.
+
 on:
-  # pull_request:
-  #   paths:
-  #     - 'packages/web/**'
+  pull_request:
+    branches: [develop, master]
   push:
-    branches:
-      - '**'
-    # paths:
-    #   - 'packages/web/**'
+    branches: [develop, master]
+
+# A force-push or rapid follow-up commit cancels the superseded run instead of
+# queueing behind it.
+concurrency:
+  group: web-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   web:
@@ -36,8 +48,13 @@ jobs:
         run: npx turbo build --filter="!@normalfinance/web" --cache-dir=.turbo
 
       # ---------- Quality Gates ----------
-      - name: Prettier – formatting check
+      # NON-BLOCKING until the scheduled repo-wide reformat lands: 321 files
+      # currently fail this check, and it has been the wall that skipped every
+      # gate below since at least July. Flip back to blocking the moment the
+      # reformat commit is in.
+      - name: Prettier – formatting check (non-blocking, see comment)
         working-directory: packages/web
+        continue-on-error: true
         run: yarn fm:check
 
       - name: ESLint – code-quality check
@@ -81,8 +98,24 @@ jobs:
         working-directory: packages/web
         run: npx tsc --noEmit --project tsconfig.json
 
-      - name: Next.js – production build
+      # The unit suite: money-math and regression tests, each anchored to a
+      # shipped bug (see docs/audit/47-testing-plan.md). Runs in seconds; a
+      # red here means a promise users already relied on has been broken.
+      - name: Jest – unit tests
         working-directory: packages/web
+        run: yarn test
+
+      # NON-BLOCKING until CI secrets exist: several modules read env at
+      # import time (e.g. server/rateLimiter constructs its Redis client from
+      # UPSTASH_* vars), and next build imports every route module — on a
+      # secretless runner this can detonate regardless of code health. Vercel
+      # builds every push with real env and is the authoritative build gate
+      # today. To make this blocking: add the UPSTASH_*/DATABASE_URL/Supabase
+      # secrets in repo Settings → Secrets → Actions, then remove
+      # continue-on-error.
+      - name: Next.js – production build (non-blocking, see comment)
+        working-directory: packages/web
+        continue-on-error: true
         env:
           NEXT_PUBLIC_APP_ENV: ci
           EDGE_CONFIG: ${{ secrets.EDGE_CONFIG }}

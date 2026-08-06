@@ -1,12 +1,11 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { turnkey } from '@/lib/turnkey/server';
 import { CHAINS } from '@/lib/chains/registry';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // GET /api/turnkey/btc-pubkey
@@ -22,12 +21,7 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 // signature ends up in a Bitcoin transaction.
 // ---------------------------------------------------------------------------
 
-export async function GET(request: NextRequest) {
-  const user = await getAuthenticatedUser(getAccessToken(request));
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const GET = withAuth(async (_request: NextRequest, { user }) => {
   const wallet = await prisma.turnkeyWallet.findUnique({
     where: { supabaseUid: user.id },
     select: { subOrgId: true, walletId: true, bitcoinAddress: true },
@@ -77,4 +71,4 @@ export async function GET(request: NextRequest) {
     logger.error('[btc-pubkey] error:', error);
     return NextResponse.json({ error: 'Failed to fetch Bitcoin public key' }, { status: 500 });
   }
-}
+});
