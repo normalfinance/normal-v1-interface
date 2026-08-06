@@ -56,7 +56,6 @@ const cardPadding = { xs: 2.5, md: 4 };
 const SmallCardItem: React.FC<SmallCard> = (c) => {
   const router = useRouter();
   const isLink = Boolean(c.url);
-  const [hovered, setHovered] = React.useState(false);
 
   const isIndexesArt = !!c.image && hasSrc(c.image) && c.image.src.includes('basket.svg');
 
@@ -69,12 +68,6 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
         ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
         cursor: isLink ? 'pointer' : 'default',
       })}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocus={() => setHovered(true)} // keyboard focus
-      onBlur={() => setHovered(false)}
-      onTouchStart={() => setHovered(true)} // mobile
-      onTouchEnd={() => setHovered(false)}
       onClick={() => isLink && router.push(c.url!)}
       role={isLink ? 'link' : undefined}
       tabIndex={isLink ? 0 : undefined}

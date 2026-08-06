@@ -96,7 +96,6 @@ export function useTrustLine(): ReturnType {
       storePersist.wallet.walletType,
       publicKey,
       signTransaction,
-      signOrReconnect,
       config,
       isNormalWallet,
       normalWalletCanSign,

@@ -100,7 +100,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
   const moneyGramAmountDialog = useBoolean();
   const mgiLimits = useMgiLimits();
 
-  const [mgiLoading, setMgiLoading] = useState(false);
+  const [, setMgiLoading] = useState(false);
   // Set once the user commits inside MoneyGram's UI — the dialog then shows
   // the "complete your cash deposit" state instead of the provider list.
   const [mgiCommitted, setMgiCommitted] = useState<{

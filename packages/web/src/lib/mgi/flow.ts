@@ -107,7 +107,7 @@ export function openMoneyGram(
       window.removeEventListener('message', onMsg);
       try {
         w?.close();
-      } catch (err) {
+      } catch {
         // ignore
       }
       onReadyToTransfer(tx);

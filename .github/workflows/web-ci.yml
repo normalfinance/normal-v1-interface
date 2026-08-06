@@ -61,34 +61,9 @@ jobs:
         working-directory: packages/web
         run: yarn lint
 
-      # Extract translation keys before downloading to ensure English files are current
-      - name: i18n – extract translation keys
-        working-directory: packages/web
-        run: yarn i18n:extract
-
-      # - name: i18n – download latest translations
-      #   working-directory: packages/web
-      #   env:
-      #     CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
-      #     CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
-      #   run: |
-      #     if [ -n "$CROWDIN_PROJECT_ID" ] && [ -n "$CROWDIN_API_TOKEN" ]; then
-      #       echo "Downloading latest translations from Crowdin..."
-      #       yarn i18n:download || echo "Warning: Failed to download translations, continuing with existing ones"
-      #     else
-      #       echo "Crowdin credentials not available, skipping translation download"
-      #     fi
-
-      # Sync keys from 'en' to other languages to ensure no missing keys
-      - name: i18n – sync missing keys
-        working-directory: packages/web
-        run: yarn i18n:sync-keys
-
-      # Check for untranslated / missing keys across all locale JSON files
-      - name: i18n – translation completeness check
-        working-directory: packages/web
-        continue-on-error: true
-        run: yarn i18n:check
+      # (i18n steps removed 2026-08-06 — translations retired, English-only.
+      #  The t() runtime keys are the English strings themselves, so no
+      #  extraction/sync is needed to render correctly.)
 
       - name: Prisma - Generate Prisma Client
         working-directory: packages/web

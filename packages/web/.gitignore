@@ -55,3 +55,4 @@ _static
 
 test-results/
 freighter/
+lint-report.txt

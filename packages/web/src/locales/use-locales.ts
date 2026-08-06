@@ -57,7 +57,7 @@ export function useTranslate(ns?: string) {
         logger.error(error);
       }
     },
-    [i18n, router, settings]
+    [router, settings]
   );
 
   return {

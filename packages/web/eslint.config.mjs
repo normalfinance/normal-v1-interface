@@ -246,8 +246,10 @@ export const customConfig = {
     ...sortImportsRules(),
     // i18n translation rules
     'i18next/no-literal-string': 'off',
-    // Custom rule to catch dynamic translation keys
-    'custom-i18n/dynamic-translation-key': 'warn',
+    // Translations are retired (2026-08-06, English-only): the reminder to
+    // add dynamic keys to locale files no longer has an audience. The t()
+    // runtime stays — its keys ARE the English strings.
+    'custom-i18n/dynamic-translation-key': 'off',
   },
 };
 

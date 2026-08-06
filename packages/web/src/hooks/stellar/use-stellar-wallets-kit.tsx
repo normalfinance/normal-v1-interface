@@ -168,6 +168,9 @@ export const useStellarWalletsKit = () => {
     ) {
       checkConnection();
     }
+    // Deliberately field-scoped: the store objects change identity on every
+    // state update; depending on them would re-run the restore constantly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     persistStore.wallet.walletType,
     persistStore.wallet.address,

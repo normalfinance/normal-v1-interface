@@ -122,6 +122,9 @@ export function useReferralTracking(): UseReferralTrackingReturn {
     if (wallet.address && referralState.hasReferral && referralState.referralCode) {
       syncWithDatabase();
     }
+    // syncWithDatabase is recreated per render (it sets state in finally);
+    // listing it would refire the sync every render. Keyed on the real triggers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallet.address, referralState.hasReferral, referralState.referralCode]);
 
   const hasUnusedReferral = referralState.hasReferral && !referralState.referralUsed;

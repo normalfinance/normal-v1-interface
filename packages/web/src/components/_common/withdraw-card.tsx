@@ -192,8 +192,8 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
         enqueueSnackbar(t('Cannot send assets to yourself'), { variant: 'error' });
         return;
       }
-      // This flow has NO memo input, so a send to an exchange's pooled
-      // deposit account can never be attributed to the user — block it and
+      // This flow's memo support is paste-only and not enforced, so an
+      // exchange deposit could still go out unattributed — block it and
       // point at the Send dialog, which enforces the memo (finding #48).
       const exchange = knownMemoRequirement(destination);
       if (exchange?.required) {
@@ -224,7 +224,6 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
 
   // Main button with multiple states
   const persist = usePersistStore();
-  const isConnected = !!persist.wallet.address;
   const isSendReady = getButtonLabel() === 'Send';
 
   return (

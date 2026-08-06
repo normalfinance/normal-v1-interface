@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars --
+   Parked implementations kept on purpose: geo-blocking (BLOCKED_COUNTRIES,
+   lookup, parseGeoCookie, cache helpers) awaits the team decision in finding
+   #35, and referral tracking is wired but disabled. Remove this directive
+   when #35 lands. */
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';

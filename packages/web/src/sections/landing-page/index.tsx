@@ -68,7 +68,8 @@ export default function LandingPage() {
       }
     };
     refreshTokens();
-  }, [wallet.address]);
+    // getAllTokens/setGlobalIsLoading are store actions with stable identity.
+  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
   return (
     <>

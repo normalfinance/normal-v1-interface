@@ -96,7 +96,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   const moneyGramAmountDialog = useBoolean();
   const mgiLimits = useMgiLimits();
 
-  const [mgiLoading, setMgiLoading] = useState(false);
+  const [, setMgiLoading] = useState(false);
   // Coinbase amount-entry step (only when assetBalance is provided)
   const [cbStep, setCbStep] = useState(false);
   const [cbAmount, setCbAmount] = useState('');

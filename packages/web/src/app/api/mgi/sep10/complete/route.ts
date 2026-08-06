@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     let data: any = raw;
     try {
       data = JSON.parse(raw);
-    } catch (err) {
+    } catch {
       data = raw;
     }
 

@@ -1,3 +1,5 @@
+import type * as WithAuthModule from '@/lib/with-auth';
+
 import { it, jest, expect, describe, beforeEach } from '@jest/globals';
 
 // Explicit mock-then-require ordering, NOT hoisting-dependent: the real
@@ -12,7 +14,7 @@ const { getAuthenticatedUser } = jest.requireMock('@/lib/createSupabaseServerCli
   getAuthenticatedUser: jest.Mock<() => Promise<{ id: string } | null>>;
 };
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { withAuth } = require('@/lib/with-auth') as typeof import('@/lib/with-auth');
+const { withAuth } = require('@/lib/with-auth') as typeof WithAuthModule;
 
 const request = new Request('http://localhost/api/test') as never;
 

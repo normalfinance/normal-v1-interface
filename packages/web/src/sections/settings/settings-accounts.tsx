@@ -56,6 +56,9 @@ export function SettingsAccounts() {
 
   useEffect(() => {
     loadWallets();
+    // Mount-only load; loadWallets is recreated per render — listing it would refire
+    // the fetch on every render. eslint-disable documents the intent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleEditName = (wallet: LinkedWallet) => {

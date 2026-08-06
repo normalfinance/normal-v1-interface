@@ -60,7 +60,8 @@ export function useVaultApy(): number | null {
   useEffect(() => {
     if (apy != null) return;
     getOrFetchApy().then((val) => { if (val != null) setApy(val); });
-  }, []);
+    // Re-running once `apy` is set exits on the guard above — safe and rule-clean.
+  }, [apy]);
 
   return apy;
 }

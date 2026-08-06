@@ -55,7 +55,8 @@ export default function AssetsView() {
       }
     };
     refreshTokens();
-  }, [wallet.address]);
+    // getAllTokens/setGlobalIsLoading are store actions with stable identity.
+  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
   const { btcToken } = useBtcPortfolio(true);
   const { ethToken } = useEthPortfolio(true);
