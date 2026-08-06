@@ -97,6 +97,7 @@ except the component tests.
 
 | # | Item | Size |
 |---|---|---|
+| 48 | ~~**Memo-less sends to exchanges**~~ **fixed 2026-08-06** — real 5 XLM loss to Coinbase's pooled account; seed list + live directory route + forced memo UI; withdraw-card hard-blocks. Ships with the next push | done |
 | 47 | **Send visibility** — sends fire no `nf:activity-updated`, so no refresh and no pending row; found by live testing (5 XLM to Coinbase: success toast, then nothing until reload + cache TTL). Plan: [48-send-visibility-plan.md](48-send-visibility-plan.md). Phases A (announce, S) + C (portfolio refresh bypass, S) close the incident; B (pending-sends ledger, M) makes BTC/ETH sends honest. **Ranked first in this block: user-visible money feedback** | S+S+M |
 | 44 | ~~broadcast-btc open relay~~ **fixed in tree** — goes out with the next push | done |
 | 45 | ~~btc-pubkey format-only account match~~ **fixed in tree** — same push | done |

@@ -452,3 +452,32 @@ sanity assertion. Sev 2 · Lik 1 · Eff 1.
 opt-in per route. The structural fix is a shared `withAuth` route wrapper (or
 middleware allowlist) making authentication the default and public routes the
 explicit exception. Registered as the recommended follow-up, sized S.
+
+## #48 — Memo-less sends to exchange deposit addresses (FIXED 2026-08-06)
+
+Found by a real loss on staging: 5 XLM sent to Coinbase
+(`GDS2WFLI…QTG6`, tx `d6ff2018…f66c`) with no memo. On-chain success; Coinbase
+credited nothing. Exchanges pool all customer deposits into one Stellar
+account and the memo is the only routing key — without it the funds sit
+unattributed in the exchange's omnibus balance.
+
+Root cause in our UI: the memo field was collapsed behind "Add memo
+(optional)". The SDK's SEP-29 submit-time check DID run and passed — verified:
+Coinbase has never set the `config.memo_required` flag on that account, so the
+ecosystem's own guard is empirically insufficient.
+
+**Fix (fail closed, three layers):**
+- `lib/stellar/memo-required-list.ts` — seed list of ~33 verified exchange
+  deposit accounts (fetched from stellar.expert's directory, incl. all five
+  Coinbase accounts — they rotate). Instant, offline.
+- `GET /api/stellar/memo-required` — live lookup: stellar.expert directory
+  tag, then the SEP-29 account flag. Authenticated (the #44 lesson), Redis
+  24h cache, fails open to the seed list.
+- Send modal: for a flagged destination the memo field force-opens with a
+  warning naming the exchange, the toggle disappears, and Review is disabled
+  until a memo is entered. Savings withdraw-card (which has NO memo input)
+  hard-blocks exchange destinations and points at the Send dialog.
+
+Unit-tested with the incident address itself as the fixture. Recovery of the
+5 XLM: Coinbase support ticket with the tx hash (manual attribution, not
+guaranteed).
