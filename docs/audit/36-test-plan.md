@@ -1,5 +1,12 @@
 # 36 — Test plan for the optimisation changes (written for non-testers)
 
+> **SUPERSEDED — use [42-tester-guide.html](42-tester-guide.html).** That is the
+> version testers are given, it is kept current, and it has diverged from this
+> file: different part numbering, a Part 6 for external wallets, the BTC swap
+> test (4.8), and the stale "BTC swaps are broken, do not report" notice
+> removed now that the swap is fixed. This file is kept only as the original
+> draft.
+
 You don't need testing experience to run this. Each test says **what to do**,
 **what should happen**, and **what "broken" looks like**. If something doesn't
 match, that's a finding — report it using the template at the bottom.

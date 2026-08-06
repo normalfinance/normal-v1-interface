@@ -405,3 +405,50 @@ and additionally disabling the LI.FI/CCTP quote fetches so hybrid users don't
 burn quota on swaps the CTA cannot execute. Product decision: external wallets
 are Stellar-only, so the previous behaviour — silently provisioning a Turnkey
 wallet mid-swap — was wrong.
+
+## Fable re-review of the staging push (2026-08-06)
+
+Fresh-eyes pass over the push's touched surface after it went to staging. Two
+real issues found, both fixed same-day; everything else checked out.
+
+### #44 — /api/turnkey/broadcast-btc was an open relay (FIXED)
+
+The only Bitcoin route with no auth gate: anyone on the internet could POST a
+raw transaction and have our server broadcast it to mempool.space. Not a fund
+risk (a signed tx is broadcastable by its holder anyway), but strangers
+proxying through our IP means their abuse and rate-limit flags land on us.
+Same class as the Block C log-transaction findings; it was simply not in that
+sweep's scope. Fixed: `getAuthenticatedUser` gate + auth headers on all three
+callers (bitcoin send adapter, LI.FI executeBtc, dev sweep page). Sev 2 · Lik 2
+· Eff 1.
+
+### #45 — btc-pubkey matched the wallet account by format, not address (FIXED)
+
+`accounts.find(a => a.addressFormat === …)` returns the FIRST P2WPKH account.
+Signing uses `signWith: bitcoinAddress`, so if a wallet ever carries two BTC
+accounts the route could return the other account's key and the client-side
+verification would refuse with "account mismatch" — a false hard failure.
+Fixed: match on `a.address === wallet.bitcoinAddress` with the format kept as a
+sanity assertion. Sev 2 · Lik 1 · Eff 1.
+
+### Checked and cleared in the same pass
+
+- **LI.FI swap logging** (`/api/lifi/record`) — authenticated, and the server
+  derives the Stellar address from `turnkey_wallets` rather than trusting the
+  body. No linked_wallets dependency, so unaffected by #41.
+- **CCTP logging** — separate `/api/cctp/transfers` routes, auth headers sent.
+- **build-btc-tx / build-btc-sweep** — both authenticated.
+- **`ensureWalletLinked` ordering** — deliberately awaited in `connectWallet`
+  so the link lands before the first possible log write; the restore-path call
+  is fire-and-forget and once per session.
+- **The swap gate** — `walletType` undefined (signed in, no wallet) leaves
+  engines enabled and the address gates in charge; Normal-wallet users see no
+  behaviour change; hybrid users stop fetching quotes they cannot execute.
+
+### Root-cause note (third occurrence)
+
+#44 is the third unauthenticated-route finding (#3 log-transaction, Block C
+#2 wallet/activity, now broadcast-btc). Routes are born open because auth is
+opt-in per route. The structural fix is a shared `withAuth` route wrapper (or
+middleware allowlist) making authentication the default and public routes the
+explicit exception. Registered as the recommended follow-up, sized S.

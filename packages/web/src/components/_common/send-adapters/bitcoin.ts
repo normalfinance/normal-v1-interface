@@ -47,9 +47,10 @@ async function buildBtcTransaction(
 }
 
 async function broadcastBtcTransaction(signedTxHex: string): Promise<string> {
+  const headers = await buildAuthHeaders();
   const res = await fetch('/api/turnkey/broadcast-btc', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ signedTxHex }),
   });
   if (!res.ok) {
